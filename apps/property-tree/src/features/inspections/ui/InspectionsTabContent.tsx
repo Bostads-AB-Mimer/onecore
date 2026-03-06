@@ -15,7 +15,7 @@ import { isCompleted } from '../constants/statuses'
 import { CreateInspectionDialog } from './CreateInspectionDialog'
 import { InspectionsTable } from './InspectionsTable'
 
-type Inspection = components['schemas']['InspectionWithSource']
+type InspectionWithSource = components['schemas']['InspectionWithSource']
 
 interface InspectionsTabContentProps {
   residenceId: string
@@ -54,11 +54,11 @@ export function InspectionsTabContent({
     (inspection: Inspection) => !isCompleted(inspection.status)
   )
 
-  const completedInspections = inspections.filter((inspection: Inspection) =>
-    isCompleted(inspection.status)
+  const completedInspections = inspections.filter(
+    (inspection: InspectionWithSource) => isCompleted(inspection.status)
   )
 
-  const renderInspectionsTable = (inspectionsData: Inspection[]) => {
+  const renderInspectionsTable = (inspectionsData: InspectionWithSource[]) => {
     return (
       <InspectionsTable
         inspections={inspectionsData}

@@ -30,7 +30,7 @@ export { useInspectionSorting } from './hooks/useInspectionSorting'
 export { useInspectionValidation } from './hooks/useInspectionValidation'
 export { useInspectorInfo } from './hooks/useInspectorInfo'
 export { useRoomInspection } from './hooks/useRoomInspection'
-export { useUpdateInspectionStatus } from './hooks/useUpdateInspectionStatus'
+export { useUpdateInspector } from './hooks/useUpdateInspector'
 
 // Constants
 export * from './constants'

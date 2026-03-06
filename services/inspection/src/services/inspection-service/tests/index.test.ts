@@ -229,7 +229,7 @@ describe('inspection-service', () => {
         status: 'Påbörjad',
       })
       const updateSpy = jest
-        .spyOn(dbAdapter, 'updateInspectionStatus')
+        .spyOn(dbAdapter, 'updateInternalInspection')
         .mockResolvedValueOnce({ ok: true, data: mockInspection })
 
       const res = await request(app.callback())
@@ -242,6 +242,47 @@ describe('inspection-service', () => {
       expect(updateSpy).toHaveBeenCalled()
     })
 
+    it('updates inspector successfully', async () => {
+      const inspectionId = '1'
+      const mockInspection = DetailedXpandInspectionFactory.build({
+        id: inspectionId,
+        inspector: 'New Inspector',
+      })
+      const updateSpy = jest
+        .spyOn(dbAdapter, 'updateInternalInspection')
+        .mockResolvedValueOnce({ ok: true, data: mockInspection })
+
+      const res = await request(app.callback())
+        .patch(`/inspections/internal/${inspectionId}`)
+        .send({ inspector: 'New Inspector' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspection.inspector).toBe('New Inspector')
+      expect(updateSpy).toHaveBeenCalledWith(expect.anything(), inspectionId, {
+        inspector: 'New Inspector',
+      })
+    })
+
+    it('updates both status and inspector', async () => {
+      const inspectionId = '1'
+      const mockInspection = DetailedXpandInspectionFactory.build({
+        id: inspectionId,
+        status: 'Påbörjad',
+        inspector: 'New Inspector',
+      })
+      jest
+        .spyOn(dbAdapter, 'updateInternalInspection')
+        .mockResolvedValueOnce({ ok: true, data: mockInspection })
+
+      const res = await request(app.callback())
+        .patch(`/inspections/internal/${inspectionId}`)
+        .send({ status: 'Påbörjad', inspector: 'New Inspector' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspection.status).toBe('Påbörjad')
+      expect(res.body.content.inspection.inspector).toBe('New Inspector')
+    })
+
     it('returns 400 for invalid request body', async () => {
       const res = await request(app.callback())
         .patch('/inspections/internal/1')
@@ -251,7 +292,7 @@ describe('inspection-service', () => {
       expect(res.body.error).toBe('Invalid request body')
     })
 
-    it('returns 400 for missing status', async () => {
+    it('returns 400 for empty body', async () => {
       const res = await request(app.callback())
         .patch('/inspections/internal/1')
         .send({})
@@ -263,7 +304,7 @@ describe('inspection-service', () => {
     it('returns 400 for invalid status transition', async () => {
       const inspectionId = '1'
       jest
-        .spyOn(dbAdapter, 'updateInspectionStatus')
+        .spyOn(dbAdapter, 'updateInternalInspection')
         .mockResolvedValueOnce({ ok: false, err: 'invalid-status-transition' })
 
       const res = await request(app.callback())
@@ -277,7 +318,7 @@ describe('inspection-service', () => {
     it('returns 404 when inspection not found', async () => {
       const inspectionId = '999'
       jest
-        .spyOn(dbAdapter, 'updateInspectionStatus')
+        .spyOn(dbAdapter, 'updateInternalInspection')
         .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
@@ -291,9 +332,11 @@ describe('inspection-service', () => {
     })
 
     it('returns 500 on unexpected errors', async () => {
-      jest.spyOn(dbAdapter, 'updateInspectionStatus').mockImplementation(() => {
-        throw new Error('Database connection failed')
-      })
+      jest
+        .spyOn(dbAdapter, 'updateInternalInspection')
+        .mockImplementation(() => {
+          throw new Error('Database connection failed')
+        })
 
       const res = await request(app.callback())
         .patch('/inspections/internal/1')

@@ -573,6 +573,165 @@ describe('db-adapter', () => {
     })
   })
 
+  describe('updateInternalInspection', () => {
+    const mockInspectionRow = {
+      id: 1,
+      status: 'Registrerad',
+      date: new Date('2023-01-01T10:00:00Z'),
+      startedAt: null,
+      endedAt: null,
+      inspector: 'Test Inspector',
+      type: 'Move-in',
+      residenceId: 'RES-001',
+      address: '123 Test Street',
+      apartmentCode: 'APT-001',
+      isFurnished: false,
+      leaseId: 'LEASE-001',
+      isTenantPresent: true,
+      isNewTenantPresent: false,
+      masterKeyAccess: null,
+      hasRemarks: false,
+      notes: null,
+      totalCost: null,
+      remarkCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    function createMockTrxForInternalUpdate(
+      inspection: typeof mockInspectionRow | undefined,
+      rooms: Array<{
+        id: number
+        inspectionId: number
+        roomName: string
+        createdAt: Date
+      }> = [],
+      remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
+    ) {
+      let currentOperation: 'select' | 'update' = 'select'
+      let tableName = ''
+      let updateData: Record<string, unknown> = {}
+
+      const chain: Record<string, jest.Mock> = {
+        select: jest.fn(() => {
+          currentOperation = 'select'
+          return chain
+        }),
+        update: jest.fn((data: Record<string, unknown>) => {
+          currentOperation = 'update'
+          updateData = data
+          return chain
+        }),
+        from: jest.fn((table: string) => {
+          tableName = table
+          return chain
+        }),
+        where: jest.fn((_column: string, value: unknown) => {
+          if (currentOperation === 'select') {
+            if (tableName === 'inspection') {
+              return Promise.resolve(inspection ? [inspection] : [])
+            }
+            if (tableName === 'inspection_room') {
+              return Promise.resolve(rooms)
+            }
+            if (tableName === 'inspection_remark') {
+              return Promise.resolve(remarksByRoomId[value as number] || [])
+            }
+            return Promise.resolve([])
+          }
+          return chain
+        }),
+        returning: jest.fn(() => {
+          if (currentOperation === 'update' && tableName === 'inspection') {
+            return Promise.resolve(
+              inspection ? [{ ...inspection, ...updateData }] : []
+            )
+          }
+          return Promise.resolve([])
+        }),
+      }
+
+      return chain
+    }
+
+    function createMockDbForInternalUpdate(
+      inspection: typeof mockInspectionRow | undefined,
+      rooms: Array<{
+        id: number
+        inspectionId: number
+        roomName: string
+        createdAt: Date
+      }> = [],
+      remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
+    ) {
+      const mockTrx = createMockTrxForInternalUpdate(
+        inspection,
+        rooms,
+        remarksByRoomId
+      )
+
+      return {
+        transaction: jest.fn((callback) => callback(mockTrx)),
+      } as unknown as Knex
+    }
+
+    it('updates inspector only without changing status', async () => {
+      const mockDb = createMockDbForInternalUpdate(mockInspectionRow, [
+        {
+          id: 1,
+          inspectionId: 1,
+          roomName: 'Kitchen',
+          createdAt: new Date(),
+        },
+      ])
+
+      const result = await dbAdapter.updateInternalInspection(mockDb, '1', {
+        inspector: 'New Inspector',
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.inspector).toBe('New Inspector')
+        expect(result.data.status).toBe('Registrerad')
+      }
+    })
+
+    it('updates both status and inspector', async () => {
+      const mockDb = createMockDbForInternalUpdate(mockInspectionRow, [
+        {
+          id: 1,
+          inspectionId: 1,
+          roomName: 'Kitchen',
+          createdAt: new Date(),
+        },
+      ])
+
+      const result = await dbAdapter.updateInternalInspection(mockDb, '1', {
+        status: 'Påbörjad',
+        inspector: 'New Inspector',
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.status).toBe('Påbörjad')
+        expect(result.data.inspector).toBe('New Inspector')
+      }
+    })
+
+    it('returns not-found when inspection does not exist', async () => {
+      const mockDb = createMockDbForInternalUpdate(undefined)
+
+      const result = await dbAdapter.updateInternalInspection(mockDb, '999', {
+        inspector: 'New Inspector',
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('not-found')
+      }
+    })
+  })
+
   describe('getInspections', () => {
     function createMockQueryDb(rows: Record<string, unknown>[]) {
       const chain: Record<string, jest.Mock> = {}
