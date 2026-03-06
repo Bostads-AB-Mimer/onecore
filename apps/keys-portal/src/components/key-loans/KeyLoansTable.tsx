@@ -371,12 +371,7 @@ export function KeyLoansTable({
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {isExpanded && !isLoadingThis && expansion.loadedData
-                            ? (expansion.loadedData.loanDetails.keysArray
-                                ?.length || 0) +
-                              (expansion.loadedData.loanDetails.keyCardsArray
-                                ?.length || 0)
-                            : '-'}
+                          {(loan.keyCount ?? 0) + (loan.cardCount ?? 0)}
                         </Badge>
                       </TableCell>
                       <TableCell>

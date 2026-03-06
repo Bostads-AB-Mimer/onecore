@@ -124,9 +124,8 @@ export function LeaseKeyStatusList({
     setCards(fetchedCards)
   }
 
-  const handleKeyCreated = async () => {
+  const handleKeysAdded = async () => {
     setShowAddKeyForm(false)
-    // Refresh keys after a new key is created
     await refreshStatuses()
   }
 
@@ -286,7 +285,7 @@ export function LeaseKeyStatusList({
             keys={keys}
             selectedKeyIds={keySelection.selectedIds}
             rentalObjectCode={lease.rentalPropertyId}
-            onKeyCreated={handleKeyCreated}
+            onComplete={handleKeysAdded}
             onCancel={() => setShowAddKeyForm(false)}
           />
         )}
@@ -344,7 +343,7 @@ export function LeaseKeyStatusList({
             keys={keys}
             selectedKeyIds={keySelection.selectedIds}
             rentalObjectCode={lease.rentalPropertyId}
-            onKeyCreated={handleKeyCreated}
+            onComplete={handleKeysAdded}
             onCancel={() => setShowAddKeyForm(false)}
           />
         )}

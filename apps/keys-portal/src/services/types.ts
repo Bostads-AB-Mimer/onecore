@@ -205,6 +205,7 @@ export const KeyEventTypeLabels = {
   FLEX: 'Flex',
   ORDER: 'Extranyckel',
   LOST: 'Bortappad',
+  REPLACEMENT: 'Ersättning',
 } as const
 
 export type KeyEventType = keyof typeof KeyEventTypeLabels
@@ -249,6 +250,7 @@ export interface ReceiptData {
   keys: KeyDetails[] // Keys with keySystem included for display
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
+  loanId?: string // Key loan UUID, used for QR code on printed receipt
   missingKeys?: KeyDetails[] // For RETURN: keys not returned (unchecked, non-disposed)
   disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
@@ -264,6 +266,7 @@ export interface MaintenanceReceiptData {
   keys: KeyDetails[] // Keys with keySystem included for display
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
+  loanId?: string // Key loan UUID, used for QR code on printed receipt
   missingKeys?: KeyDetails[] // For RETURN: keys not returned (unchecked, non-disposed)
   disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)

@@ -70,6 +70,8 @@ export const KeyLoanSchema = z.object({
   updatedAt: z.coerce.date(),
   createdBy: z.string().nullable().optional(),
   updatedBy: z.string().nullable().optional(),
+  keyCount: z.number().optional(),
+  cardCount: z.number().optional(),
 })
 
 export const KeySystemSchema = z.object({
@@ -128,7 +130,12 @@ export const KeyBundleSchema = z.object({
 // Removed: KeyLoanMaintenanceKeysWithDetailsSchema - use KeyLoanWithDetailsSchema instead
 
 // Key Event schemas (defined here before usage in KeyWithMaintenanceLoanStatusSchema)
-export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])
+export const KeyEventTypeSchema = z.enum([
+  'FLEX',
+  'ORDER',
+  'LOST',
+  'REPLACEMENT',
+])
 export const KeyEventStatusSchema = z.enum(['ORDERED', 'RECEIVED', 'COMPLETED'])
 
 export const KeyEventSchema = z.object({

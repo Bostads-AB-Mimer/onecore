@@ -197,7 +197,7 @@ describe('assembleMaintenanceLoanReceipt', () => {
     vi.mocked(keyLoanService.get).mockResolvedValue({
       id: 'loan-1',
       contact: 'F001',
-      description: 'Loan description',
+      notes: 'Loan description',
       keysArray: [],
       keyCardsArray: [],
     } as any)
@@ -211,7 +211,7 @@ describe('assembleMaintenanceLoanReceipt', () => {
     vi.mocked(keyLoanService.get).mockResolvedValue({
       id: 'loan-2',
       contact: 'F001',
-      description: null,
+      notes: null,
       keysArray: [],
       keyCardsArray: [],
     } as any)

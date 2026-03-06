@@ -241,12 +241,13 @@ export const routes = (router: KoaRouter) => {
     const requestKeys = ctx.request.body?.keys
     const keyCount = Array.isArray(requestKeys) ? requestKeys.length : 0
 
-    const eventTypeLabel =
-      keyEvent.type === 'FLEX'
-        ? 'Flex'
-        : keyEvent.type === 'ORDER'
-          ? 'Extranyckel'
-          : 'Bortappad'
+    const eventTypeLabelMap: Record<string, string> = {
+      FLEX: 'Flex',
+      ORDER: 'Extranyckel',
+      LOST: 'Bortappad',
+      REPLACEMENT: 'Ersättning',
+    }
+    const eventTypeLabel = eventTypeLabelMap[keyEvent.type] ?? keyEvent.type
     const description = `Skapad ${eventTypeLabel}-händelse för ${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}, status: ${keyEvent.status}`
 
     await createLogEntry(ctx, {
@@ -339,12 +340,13 @@ export const routes = (router: KoaRouter) => {
       ? requestKeysForUpdate.length
       : 0
 
-    const eventTypeLabel =
-      keyEvent.type === 'FLEX'
-        ? 'Flex'
-        : keyEvent.type === 'ORDER'
-          ? 'Extranyckel'
-          : 'Bortappad'
+    const eventTypeLabelMap: Record<string, string> = {
+      FLEX: 'Flex',
+      ORDER: 'Extranyckel',
+      LOST: 'Bortappad',
+      REPLACEMENT: 'Ersättning',
+    }
+    const eventTypeLabel = eventTypeLabelMap[keyEvent.type] ?? keyEvent.type
     const statusLabel =
       keyEvent.status === 'ORDERED'
         ? 'Beställd'

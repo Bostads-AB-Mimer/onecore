@@ -10,6 +10,7 @@ import { routes as keyBundleRoutes } from './routes/key-bundles'
 import { routes as signatureRoutes } from './routes/signatures'
 import { routes as daxRoutes } from './routes/dax'
 import { routes as cardRoutes } from './routes/cards'
+import { routes as scanReceiptRoutes } from './routes/scan-receipt'
 
 export const routes = (router: KoaRouter) => {
   keyRoutes(router)
@@ -23,4 +24,5 @@ export const routes = (router: KoaRouter) => {
   signatureRoutes(router)
   daxRoutes(router)
   cardRoutes(router)
+  scanReceiptRoutes(router)
 }

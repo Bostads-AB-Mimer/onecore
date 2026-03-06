@@ -43,7 +43,7 @@ type Props = {
   keys: Key[]
   selectedKeyIds?: string[]
   rentalObjectCode: string
-  onKeyCreated: (key: Key) => void
+  onComplete: () => void
   onCancel: () => void
 }
 
@@ -51,7 +51,7 @@ export function AddKeyForm({
   keys,
   selectedKeyIds = [],
   rentalObjectCode,
-  onKeyCreated,
+  onComplete,
   onCancel,
 }: Props) {
   const { toast } = useToast()
@@ -144,21 +144,14 @@ export function AddKeyForm({
         keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ??
         1
 
-      const defaultKeyType: KeyType = 'LGH'
-      const defaultKeyName = `${defaultKeyType}-1`
-
       setRows([
         {
           id: crypto.randomUUID(),
-          keyType: defaultKeyType,
-          keyName: defaultKeyName,
+          keyType: 'LGH',
+          keyName: '',
           flexNumber: defaultFlexNumber,
           quantity: 1,
-          startingSequenceNumber: calculateNextSequenceNumber(
-            defaultKeyType,
-            defaultKeyName,
-            defaultFlexNumber
-          ),
+          startingSequenceNumber: 1,
           keySystemId: selectedKeySystem?.id,
         },
       ])
@@ -222,23 +215,15 @@ export function AddKeyForm({
     const defaultFlexNumber =
       keys.find((k) => k.rentalObjectCode === rentalObjectCode)?.flexNumber ?? 1
 
-    const defaultKeyType: KeyType = 'LGH'
-    const defaultKeyName = `${defaultKeyType}-1`
-
     setRows([
       ...rows,
       {
         id: crypto.randomUUID(),
-        keyType: defaultKeyType,
-        keyName: defaultKeyName,
+        keyType: 'LGH',
+        keyName: '',
         flexNumber: defaultFlexNumber,
         quantity: 1,
-        startingSequenceNumber: calculateNextSequenceNumber(
-          defaultKeyType,
-          defaultKeyName,
-          defaultFlexNumber,
-          rows // Pass current rows to check for conflicts
-        ),
+        startingSequenceNumber: 1,
         keySystemId: selectedKeySystem?.id,
       },
     ])
@@ -252,7 +237,7 @@ export function AddKeyForm({
     setRows(
       rows.map((r) => {
         if (r.id === id) {
-          const newQuantity = Math.max(1, r.quantity + delta)
+          const newQuantity = Math.min(20, Math.max(1, r.quantity + delta))
           return { ...r, quantity: newQuantity }
         }
         return r
@@ -299,8 +284,8 @@ export function AddKeyForm({
     const invalidRows = rows.filter((r) => !r.keyName.trim())
     if (invalidRows.length > 0) {
       toast({
-        title: 'Validation Error',
-        description: 'All rows must have a key name',
+        title: 'Valideringsfel',
+        description: 'Alla rader måste ha ett nyckelnamn',
         variant: 'destructive',
       })
       return
@@ -341,14 +326,11 @@ export function AddKeyForm({
 
       // Create all keys and collect their IDs
       const createdKeyIds: string[] = []
-      let createdCount = 0
       for (const keyPayload of keysToCreate) {
         const created = await keyService.createKey({
           ...keyPayload,
         })
         createdKeyIds.push(created.id)
-        onKeyCreated(created)
-        createdCount++
       }
 
       // Create ORDER event for all created keys
@@ -363,12 +345,13 @@ export function AddKeyForm({
 
       toast({
         title: 'Nycklar skapade',
-        description: `${createdCount} ${createdCount === 1 ? 'nyckel skapad' : 'nycklar skapade'}`,
+        description: `${createdKeyIds.length} ${createdKeyIds.length === 1 ? 'nyckel skapad' : 'nycklar skapade'}`,
       })
 
       setRows([])
       setKeySystemSearch('')
       setSelectedKeySystem(null)
+      onComplete()
     } catch (e: any) {
       toast({
         title: 'Kunde inte skapa nycklar',
@@ -504,7 +487,7 @@ export function AddKeyForm({
                   size="sm"
                   variant="outline"
                   onClick={() => handleQuantityChange(row.id, 1)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || row.quantity >= 20}
                   className="h-8 w-8 p-0"
                 >
                   <Plus className="h-3 w-3" />

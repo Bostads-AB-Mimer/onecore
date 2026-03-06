@@ -59,6 +59,10 @@ export interface Config {
     tenantDefault: string
     dev: string
   }
+  scanner: {
+    allowedIps: string[]
+    errorNotificationEmail: string
+  }
   health: {
     leasing: {
       systemName: string
@@ -136,6 +140,10 @@ const config = configPackage({
       leasing: '',
       tenantDefault: '',
     },
+    scanner: {
+      allowedIps: [],
+      errorNotificationEmail: '',
+    },
     health: {
       leasing: {
         systemName: 'leasing',
@@ -184,4 +192,5 @@ export default {
   propertyBaseService: config.get('propertyBaseService'),
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
+  scanner: config.get('scanner'),
 } as Config

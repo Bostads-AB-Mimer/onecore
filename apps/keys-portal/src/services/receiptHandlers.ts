@@ -113,6 +113,7 @@ async function assembleFromReceipt(
     keys,
     receiptType: receipt.receiptType,
     operationDate,
+    loanId: receipt.keyLoanId,
     cards: cards.length > 0 ? cards : undefined,
   }
 }
@@ -177,7 +178,7 @@ export async function assembleMaintenanceLoanReceipt(
 
   // Merge loan description with optional comment for the PDF comment box
   const description =
-    [loan.description, comment].filter(Boolean).join('\n\n') || undefined
+    [loan.notes, comment].filter(Boolean).join('\n\n') || undefined
 
   return {
     contact: loan.contact || 'Unknown',
@@ -187,6 +188,7 @@ export async function assembleMaintenanceLoanReceipt(
     keys,
     receiptType: 'LOAN',
     operationDate: new Date(),
+    loanId,
     cards: cards.length > 0 ? cards : undefined,
   }
 }
@@ -376,8 +378,21 @@ export async function openMaintenanceReceiptInNewTab(
   comment?: string
 ): Promise<void> {
   const receiptData = await assembleMaintenanceLoanReceipt(loanId, comment)
-  const { blob, fileName } =
-    await generateMaintenanceLoanReceiptBlob(receiptData)
+
+  // Fetch the receipt ID so it appears on the PDF footer
+  let receiptId: string | undefined
+  try {
+    const receipts = await receiptService.getByKeyLoan(loanId)
+    const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
+    receiptId = loanReceipt?.id
+  } catch {
+    // Non-critical - PDF still generates without the receipt ID
+  }
+
+  const { blob, fileName } = await generateMaintenanceLoanReceiptBlob(
+    receiptData,
+    receiptId
+  )
 
   openPdfBlobInNewTab(blob, fileName)
 }
