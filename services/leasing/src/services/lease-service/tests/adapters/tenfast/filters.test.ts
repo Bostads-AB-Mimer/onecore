@@ -1,46 +1,19 @@
-import { add, sub } from 'date-fns'
-
 import { filterByStatus } from '../../../adapters/tenfast/filters'
 import * as factory from '../../factories'
 
 describe(filterByStatus, () => {
   it('filters leases by status', () => {
-    const currentLease = factory.tenfastLease.build({
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: null,
-      stage: 'signed',
-      signed: true,
-    })
-    const upcomingLease = factory.tenfastLease.build({
-      startDate: add(new Date(), { days: 1 }),
-      endDate: null,
-      stage: 'signed',
-      signed: true,
-    })
-    const aboutToEndLease = factory.tenfastLease.build({
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: add(new Date(), { days: 1 }),
-      stage: 'cancelled',
-      signed: true,
-    })
+    const currentLease = factory.tenfastLease.build({ stage: 'Gällande' })
+    const upcomingLease = factory.tenfastLease.build({ stage: 'Kommande' })
+    const aboutToEndLease = factory.tenfastLease.build({ stage: 'Uppsagt' })
     const preliminaryTerminatedLease = factory.tenfastLease.build({
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: add(new Date(), { days: 30 }),
-      stage: 'requestedCancellation',
-      signed: true,
+      stage: 'Preliminärt uppsagt',
     })
-    const endedLease = factory.tenfastLease.build({
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: sub(new Date(), { days: 1 }),
-      stage: 'cancelled',
-      signed: true,
-    })
+    const endedLease = factory.tenfastLease.build({ stage: 'Upphört' })
     const pendingSignatureLease = factory.tenfastLease.build({
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: null,
-      stage: 'signingInProgress',
-      signed: false,
+      stage: 'Inväntar signering',
     })
+    const notSentLease = factory.tenfastLease.build({ stage: 'Ej skickat' })
 
     const leases = [
       currentLease,
@@ -49,6 +22,7 @@ describe(filterByStatus, () => {
       preliminaryTerminatedLease,
       endedLease,
       pendingSignatureLease,
+      notSentLease,
     ]
 
     expect(filterByStatus(leases, ['current'])).toEqual([currentLease])
@@ -57,51 +31,22 @@ describe(filterByStatus, () => {
     expect(filterByStatus(leases, ['preliminary-terminated'])).toEqual([
       preliminaryTerminatedLease,
     ])
-
-    // preliminaryCancellation stage should also be classified as preliminary-terminated
-    const preliminaryCancellationLease = factory.tenfastLease.build({
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: add(new Date(), { days: 30 }),
-      stage: 'preliminaryCancellation',
-      signed: true,
-    })
-    expect(
-      filterByStatus([preliminaryCancellationLease], [
-        'preliminary-terminated',
-      ])
-    ).toEqual([preliminaryCancellationLease])
     expect(filterByStatus(leases, ['ended'])).toEqual([endedLease])
     expect(filterByStatus(leases, ['pending-signature'])).toEqual([
       pendingSignatureLease,
     ])
+    expect(filterByStatus(leases, ['not-sent'])).toEqual([notSentLease])
   })
 
-  it('filters leases by multiple statuses without duplicates', () => {
-    // A signed lease with future start and future end matches both
-    // 'upcoming' (future startDate + signed) and 'about-to-end' (future endDate)
-    const overlappingLease = factory.tenfastLease.build({
-      startDate: add(new Date(), { days: 1 }),
-      endDate: add(new Date(), { days: 30 }),
-      stage: 'signed',
-      signed: true,
-    })
+  it('filters leases by multiple statuses', () => {
+    const upcomingLease = factory.tenfastLease.build({ stage: 'Kommande' })
+    const currentLease = factory.tenfastLease.build({ stage: 'Gällande' })
+    const endedLease = factory.tenfastLease.build({ stage: 'Upphört' })
 
-    const currentLease = factory.tenfastLease.build({
-      startDate: sub(new Date(), { days: 1 }),
-      endDate: null,
-      stage: 'signed',
-      signed: true,
-    })
+    const leases = [upcomingLease, currentLease, endedLease]
 
-    const leases = [overlappingLease, currentLease]
+    const result = filterByStatus(leases, ['upcoming', 'current'])
 
-    // overlappingLease matches 'upcoming' first, so it should not appear again for 'about-to-end'
-    const result = filterByStatus(leases, [
-      'upcoming',
-      'about-to-end',
-      'current',
-    ])
-
-    expect(result).toEqual([overlappingLease, currentLease])
+    expect(result).toEqual([upcomingLease, currentLease])
   })
 })
