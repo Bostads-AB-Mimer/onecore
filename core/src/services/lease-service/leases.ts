@@ -4,7 +4,14 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { Contact, Lease, leasing, schemas } from '@onecore/types'
+import {
+  Contact,
+  Lease,
+  LeaseWithContactAndRentalObjectInfoSchema,
+  leasing,
+  schemas,
+  LeaseStatus,
+} from '@onecore/types'
 import z from 'zod'
 
 import {
@@ -14,6 +21,7 @@ import {
 } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
@@ -215,6 +223,223 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = result
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error searching leases')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred during lease search',
+        ...metadata,
+      }
+    }
+  })
+
+  router.get('/leases/upcoming-moveins', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    //ska vi ens ta några sökparametrar? Ska kollas med Aktivbo
+    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const leaseSearchParams = {
+        ...ctx.query,
+        objectType: 'bostad',
+        status: LeaseStatus[LeaseStatus.Current],
+        startDateFrom: new Date(
+          Date.UTC(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
+        ).toISOString(),
+        startDateTo: new Date(
+          Date.UTC(
+            new Date().getFullYear(),
+            new Date().getMonth() + 1,
+            0,
+            23,
+            59,
+            59,
+            999
+          )
+        ).toISOString(),
+      }
+      console.log('leaseSearchParams', leaseSearchParams)
+
+      const leaseSearchResult =
+        await leasingAdapter.searchLeases(leaseSearchParams)
+
+      console.log('leaseSearchResult', leaseSearchResult)
+
+      if (
+        !leaseSearchResult.content ||
+        leaseSearchResult.content.length === 0
+      ) {
+        ctx.status = 200
+        ctx.body = {
+          content: [],
+          ...metadata,
+        }
+        return
+      }
+
+      console.log('leaseSearchResult.content[0]', leaseSearchResult.content[0])
+
+      console.log(
+        'Lease result before filters',
+        leaseSearchResult.content.length
+      )
+
+      let gotIt = false
+
+      // Hämta contact och rental object för varje lease innan mappning
+      const parsedContent = await Promise.all(
+        leaseSearchResult.content.map(async (lease: any) => {
+          const rentalObjectCode =
+            lease.leaseId.split('/')[0] != ''
+              ? lease.leaseId.split('/')[0]
+              : lease.leaseId.substring(0, lease.leaseId.lastIndexOf('-'))
+
+          // console.log('lease', lease)
+
+          // Hämta kontaktinfo
+          const contactResult = await leasingAdapter.getContactByContactCode(
+            lease.contacts[0].contactCode
+          )
+          if (!contactResult.ok) {
+            logger.error(
+              {
+                status: contactResult.statusCode,
+                error: contactResult.err,
+                contactCode: lease.contacts[0].contactCode,
+              },
+              'Failed to fetch contact data'
+            )
+            return null
+          }
+          if (!contactResult.data) {
+            logger.warn(
+              {
+                contactCode: lease.contacts[0].contactCode,
+              },
+              'No contact data found'
+            )
+            return null
+          }
+
+          const contactData = contactResult.data
+
+          console.log('contactData', contactData)
+
+          let rentalPropertyResult =
+            await propertyManagementAdapter.getRentalPropertyInfoFromXpand(
+              rentalObjectCode
+            )
+          if (rentalPropertyResult.status != 200) {
+            logger.error(
+              {
+                status: rentalPropertyResult.status,
+                data: rentalPropertyResult.data,
+                rentalObjectCode,
+              },
+              'Failed to fetch rental property data'
+            )
+            return null
+          }
+          if (!rentalPropertyResult.data) {
+            logger.warn(
+              {
+                rentalObjectCode,
+              },
+              'No rental property data found'
+            )
+            return null
+          }
+
+          const rentalObjectData = rentalPropertyResult.data
+
+          if (!gotIt) console.log('rentalPropertyResult', rentalPropertyResult)
+          gotIt = true
+
+          //filtrera bort property.rentalTypeCode != STD && 55PLUS
+          if (
+            rentalObjectData.property.rentalTypeCode != 'STD' &&
+            rentalObjectData.property.rentalTypeCode != '55PLUS'
+          )
+            return null
+
+          //filtrera bort fastighetsbeteckningar: KOLAREN 1, KOLMILAN 1, BERGATROLLET 1, KÅRE 5, MALUNG VÄSTRA SÄLEN 7:203
+          if (
+            rentalObjectData.property.estate === 'KOLAREN 1' ||
+            rentalObjectData.property.estate === 'KOLMILAN 1' ||
+            rentalObjectData.property.estate === 'BERGATROLLET 1' ||
+            rentalObjectData.property.estate === 'KÅRE 5' ||
+            rentalObjectData.property.estate === 'MALUNG VÄSTRA SÄLEN 7:203'
+          )
+            return null
+
+          //filtrera bort de med skyddade personuppgifter
+          if (contactData.protectedIdentity) return null
+
+          //filtrera bort Hyresgäst.Avliden är tom/false
+          if (contactData.deceased) return null
+
+          //TODO: filtrera bort Avtal.Debitering != Extern
+          //TODO: filtrera bort Avtal.Fritext är Direktflytt pga rot
+
+          const mappedLease = {
+            leaseId: lease.leaseId,
+            fromDate: lease.startDate ? new Date(lease.startDate) : undefined,
+            leaseAddress: lease.address,
+            contact: {
+              contactCode: contactData.contactCode,
+              name:
+                contactData.fullName ||
+                contactData.firstName + ' ' + contactData.lastName,
+              email: contactData.emailAddress,
+              phoneNumber:
+                contactData.phoneNumbers?.find(
+                  (number: any) => number.isMainNumber
+                )?.phoneNumber ?? '',
+              address: contactData.address?.street,
+              zipCode: contactData.address?.postalCode,
+              city: contactData.address?.city,
+            },
+            rentalObjectInfo: {
+              rentalObjectCode: rentalObjectData.id,
+              districtCode: rentalObjectData.districtCode,
+              estate: rentalObjectData.property.estate,
+              building: rentalObjectData.property.building,
+              district: rentalObjectData.district,
+            },
+          }
+
+          const parseResult =
+            LeaseWithContactAndRentalObjectInfoSchema.safeParse(mappedLease)
+          if (parseResult.success) {
+            return parseResult.data
+          } else {
+            logger.warn(
+              { issues: parseResult.error.issues, lease },
+              'Lease validation failed'
+            )
+            return null
+          }
+        })
+      )
+
+      ctx.status = 200
+      ctx.body = { content: parsedContent.filter(Boolean), ...metadata }
     } catch (error: unknown) {
       logger.error({ error, metadata }, 'Error searching leases')
       ctx.status = 500
