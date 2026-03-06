@@ -47,10 +47,18 @@ export function useRentalBlocksFilters() {
   const params: RentalBlocksSearchParams = useMemo(
     () => ({
       q: filters.debouncedSearch || undefined,
-      kategori: filters.getFilterValue('kategori') ? [filters.getFilterValue('kategori')!] : undefined,
-      distrikt: filters.getFilterValue('distrikt') ? [filters.getFilterValue('distrikt')!] : undefined,
-      blockReason: filters.getFilterValue('orsak') ? [filters.getFilterValue('orsak')!] : undefined,
-      fastighet: filters.getFilterValue('fastighet') ? [filters.getFilterValue('fastighet')!] : undefined,
+      kategori: filters.getFilterValue('kategori')
+        ? [filters.getFilterValue('kategori')!]
+        : undefined,
+      distrikt: filters.getFilterValue('distrikt')
+        ? [filters.getFilterValue('distrikt')!]
+        : undefined,
+      blockReason: filters.getFilterValue('orsak')
+        ? [filters.getFilterValue('orsak')!]
+        : undefined,
+      fastighet: filters.getFilterValue('fastighet')
+        ? [filters.getFilterValue('fastighet')!]
+        : undefined,
       fromDateGte: filters.getFilterValue('fromDate') || undefined,
       toDateLte: filters.getFilterValue('toDate') || undefined,
       active: activeFilter,
