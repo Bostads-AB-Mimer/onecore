@@ -5,15 +5,10 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
-import {
-  isPreliminaryTerminated,
-  isPendingSignature,
-} from '../adapters/tenfast/filters'
 
 const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const { stage } = lease
 
-  // New Tenfast stage values (from 2026-03-04)
   switch (stage) {
     case 'Inväntar signering':
       return LeaseStatus.PendingSignature
@@ -29,37 +24,9 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
       return LeaseStatus.Ended
     case 'Ej skickat':
       return LeaseStatus.PendingSignature
+    default:
+      return LeaseStatus.Current
   }
-
-  // TODO START: Remove legacy Tenfast stage fallbacks once all leases have been migrated to new stage values
-  const today = new Date()
-  const { startDate, endDate } = lease
-
-  if (isPendingSignature(lease)) return LeaseStatus.PendingSignature
-  if (isPreliminaryTerminated(lease)) return LeaseStatus.PreliminaryTerminated
-
-  if (
-    (stage === 'cancelled' || stage === 'archived') &&
-    endDate &&
-    endDate < today
-  ) {
-    return LeaseStatus.Ended
-  }
-
-  if (endDate && endDate >= today) {
-    return LeaseStatus.AboutToEnd
-  }
-
-  if (startDate >= today && stage === 'signed') {
-    return LeaseStatus.Upcoming
-  }
-
-  if (stage === 'signed' && startDate < today && !endDate) {
-    return LeaseStatus.Current
-  }
-  // TODO END: Remove legacy Tenfast stage fallbacks
-
-  return LeaseStatus.Current
 }
 
 const mapToOnecoreRentalObject = (
