@@ -13,7 +13,7 @@ import { useCompanyExpansion } from './CompanyExpansionContext'
 import { PropertyList } from './PropertyList'
 
 interface CompanyNavigationProps {
-  company: Company
+  company: Company & { organizationNumber: string }
 }
 
 export function CompanyNavigation({ company }: CompanyNavigationProps) {
@@ -21,7 +21,7 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
   const { isCompanyInHierarchy, selectionState } = useHierarchicalSelection()
   const { expandedCompanyCodes } = useCompanyExpansion()
 
-  const isInHierarchy = isCompanyInHierarchy(company.organizationNumber!)
+  const isInHierarchy = isCompanyInHierarchy(company.organizationNumber)
   const isDirectlySelected =
     selectionState.selectedOrganizationNumber === company.organizationNumber &&
     matchesRoute(routes.company, location.pathname)
@@ -54,7 +54,7 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={paths.company(company.organizationNumber!)}
+          to={paths.company(company.organizationNumber)}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <Building2 />

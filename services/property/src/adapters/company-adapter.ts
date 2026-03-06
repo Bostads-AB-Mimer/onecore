@@ -65,6 +65,7 @@ export const getCompanyByOrganizationNumber = async (
   organizationNumber: string
 ): Promise<CompanyDetails | null> => {
   try {
+    // organizationNumber is not marked as @unique in the schema, so we use findFirst
     const row = await prisma.company.findFirst({
       where: { organizationNumber },
       select: companyDetailsSelect,
