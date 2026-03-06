@@ -5,7 +5,7 @@ import { Company } from '@/services/types'
 
 export const useProperties = (company: Company) => {
   return useQuery({
-    queryKey: ['propertiesForCompanyId', company.id],
+    queryKey: ['propertiesForCompany', company.id],
     queryFn: () => propertyService.getFromCompany(company),
   })
 }

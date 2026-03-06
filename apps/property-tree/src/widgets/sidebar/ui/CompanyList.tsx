@@ -1,5 +1,7 @@
 import { useCompanies } from '@/features/companies'
 
+import { Company } from '@/services/types'
+
 import { NavigationError, NavigationSkeleton } from '@/shared/ui/layout'
 import { SidebarMenu } from '@/shared/ui/Sidebar'
 
@@ -12,8 +14,11 @@ export function CompanyList() {
   if (error) return <NavigationError label="companies" />
 
   // Filter to only show companies 001 (BOSTADS AB MIMER) and 006 (BJÖRNKLOCKAN)
+  // Also exclude companies without organizationNumber (test companies)
   const visibleCompanies = companies?.filter(
-    (company) => company.code === '001' || company.code === '006'
+    (company): company is Company & { organizationNumber: string } =>
+      (company.code === '001' || company.code === '006') &&
+      company.organizationNumber !== null
   )
 
   return (
