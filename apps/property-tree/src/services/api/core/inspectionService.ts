@@ -1,17 +1,19 @@
 import { InspectionStatusFilter } from '@/shared/types/inspection'
 
-import { GET, POST } from './baseApi'
+import { GET, PATCH, POST } from './baseApi'
 import { components } from './generated/api-types'
 
-type Inspection = components['schemas']['Inspection']
+type InspectionWithSource = components['schemas']['InspectionWithSource']
 type DetailedInspection = components['schemas']['DetailedInspection']
 type TenantContactsResponse = components['schemas']['TenantContactsResponse']
 type SendProtocolRequest = components['schemas']['SendProtocolRequest']
 type SendProtocolResponse = components['schemas']['SendProtocolResponse']
 type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
+type UpdateInspectionStatusRequest =
+  components['schemas']['UpdateInspectionStatusRequest']
 
 export interface PaginatedInspectionsResponse {
-  content: Inspection[]
+  content: InspectionWithSource[]
   _meta?: components['schemas']['PaginationMeta']
   _links?: components['schemas']['PaginationLinks'][]
 }
@@ -24,7 +26,7 @@ export const inspectionService = {
     inspector?: string
     address?: string
   }): Promise<PaginatedInspectionsResponse> {
-    const externalInspections = await GET('/inspections/xpand', {
+    const response = await GET('/inspections', {
       params: {
         query: {
           page: params?.page,
@@ -36,18 +38,13 @@ export const inspectionService = {
       },
     })
 
-    if (externalInspections.error) throw externalInspections.error
-    if (!externalInspections.data.content)
-      throw new Error('No data returned from API')
+    if (response.error) throw response.error
+    if (!response.data?.content) throw new Error('No data returned from API')
 
     return {
-      content: externalInspections.data.content.map((v) => ({
-        _tag: 'external' as const,
-        ...v,
-      })),
-      _meta: externalInspections.data
-        ._meta as components['schemas']['PaginationMeta'],
-      _links: externalInspections.data
+      content: response.data.content,
+      _meta: response.data._meta as components['schemas']['PaginationMeta'],
+      _links: response.data
         ._links as components['schemas']['PaginationLinks'][],
     }
   },
@@ -55,24 +52,17 @@ export const inspectionService = {
   async getInspectionsForResidence(
     residenceId: string,
     statusFilter?: InspectionStatusFilter
-  ): Promise<Inspection[]> {
-    const externalInspections = await GET(
-      '/inspections/xpand/residence/{residenceId}',
-      {
-        params: {
-          path: { residenceId },
-          query: { statusFilter },
-        },
-      }
-    )
-    if (externalInspections.error) throw externalInspections.error
-    if (!externalInspections.data.content)
-      throw new Error('No data returned from API')
+  ): Promise<InspectionWithSource[]> {
+    const response = await GET('/inspections/residence/{residenceId}', {
+      params: {
+        path: { residenceId },
+        query: { statusFilter },
+      },
+    })
+    if (response.error) throw response.error
+    if (!response.data?.content) throw new Error('No data returned from API')
 
-    return (externalInspections.data.content.inspections ?? []).map((v) => ({
-      _tag: 'external' as const,
-      ...v,
-    }))
+    return response.data.content.inspections ?? []
   },
 
   async getInspectionById(inspectionId: string): Promise<DetailedInspection> {
@@ -141,5 +131,20 @@ export const inspectionService = {
     if (!response.data.content) throw new Error('No data returned from API')
 
     return response.data.content as SendProtocolResponse
+  },
+
+  async updateInspectionStatus(
+    inspectionId: string,
+    status: UpdateInspectionStatusRequest['status']
+  ): Promise<DetailedInspection> {
+    const response = await PATCH('/inspections/internal/{inspectionId}', {
+      params: { path: { inspectionId } },
+      body: { status },
+    })
+    if (response.error) throw response.error
+    if (!response.data.content?.inspection)
+      throw new Error('Failed to update inspection status')
+
+    return response.data.content.inspection
   },
 }

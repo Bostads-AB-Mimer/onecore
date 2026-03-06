@@ -4,23 +4,27 @@ import { useQuery } from '@tanstack/react-query'
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 
+import { useToast } from '@/shared/hooks/useToast'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
 import {
+  canStart,
   getCompletedInspectionColumns,
   getOngoingInspectionColumns,
+  INSPECTION_STATUS,
   type InspectionTableColumn,
   renderInspectionMobileCard,
 } from '../constants'
-import { INSPECTION_STATUS } from '../constants'
+import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
 import { InspectionFormDialog } from './InspectionFormDialog'
 import { InspectionProtocol } from './InspectionProtocol'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InspectionWithSource']
 type DetailedInspection = components['schemas']['DetailedInspection']
 
 interface InspectionsTableProps {
   inspections: Inspection[]
+  rentalId?: string
   isCompleted?: boolean
   hiddenColumns?: string[]
   columns?: InspectionTableColumn[]
@@ -29,6 +33,7 @@ interface InspectionsTableProps {
 
 export function InspectionsTable({
   inspections,
+  rentalId,
   isCompleted = false,
   hiddenColumns = [],
   columns,
@@ -40,6 +45,24 @@ export function InspectionsTable({
     string | null
   >(null)
 
+  const { toast } = useToast()
+  const { startInspection, isPending } = useUpdateInspectionStatus({
+    rentalId,
+    onSuccess: () => {
+      toast({
+        title: 'Status uppdaterad',
+        description: 'Besiktningsstatus har uppdaterats.',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte uppdatera besiktningsstatus.',
+        variant: 'destructive',
+      })
+    },
+  })
+
   // Fetch detailed inspection when selected
   const { data: detailedInspection } = useQuery<DetailedInspection>({
     queryKey: ['inspections', selectedInspectionId],
@@ -49,12 +72,17 @@ export function InspectionsTable({
   })
 
   const handleInspectionClick = (inspection: Inspection) => {
+    if (isPending) return
+
     setSelectedInspectionId(inspection.id)
 
     if (inspection.status === INSPECTION_STATUS.COMPLETED) {
       setIsProtocolDialogOpen(true)
       setIsResumeDialogOpen(false)
     } else {
+      if (canStart(inspection.status)) {
+        startInspection(inspection.id)
+      }
       setIsResumeDialogOpen(true)
       setIsProtocolDialogOpen(false)
     }

@@ -128,8 +128,24 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *       '400':
    *         description: Invalid query parameters.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid query parameters
    *       '500':
    *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
    *     security:
    *       - bearerAuth: []
    */
@@ -263,6 +279,14 @@ export const routes = (router: KoaRouter) => {
    *                         $ref: '#/components/schemas/InspectionWithSource'
    *       '500':
    *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
    *     security:
    *       - bearerAuth: []
    */

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InspectionWithSource']
 
 export function useInspectionFilters(inspections: Inspection[]) {
   const [openInspectorDropdown, setOpenInspectorDropdown] = useState(false)

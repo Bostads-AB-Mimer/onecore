@@ -15,7 +15,7 @@ import { isCompleted } from '../constants/statuses'
 import { CreateInspectionDialog } from './CreateInspectionDialog'
 import { InspectionsTable } from './InspectionsTable'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InspectionWithSource']
 
 interface InspectionsTabContentProps {
   residenceId: string
@@ -50,7 +50,7 @@ export function InspectionsTabContent({
 
   const inspections = inspectionsQuery.data ?? []
 
-  const activeInspection = inspections.find(
+  const activeInspections = inspections.filter(
     (inspection: Inspection) => !isCompleted(inspection.status)
   )
 
@@ -63,6 +63,7 @@ export function InspectionsTabContent({
       <InspectionsTable
         inspections={inspectionsData}
         hiddenColumns={['address']}
+        rentalId={rentalId}
       />
     )
   }
@@ -94,8 +95,8 @@ export function InspectionsTabContent({
         </TabsList>
 
         <TabsContent value="active">
-          {activeInspection ? (
-            renderInspectionsTable([activeInspection])
+          {activeInspections.length > 0 ? (
+            renderInspectionsTable(activeInspections)
           ) : (
             <p className="text-slate-500 p-2">
               Ingen aktiv besiktning för denna lägenhet.
@@ -140,7 +141,7 @@ export function InspectionsTabContent({
         </TabsContent>
       </Tabs>
 
-      {leaseId && (
+      {leaseId && rentalId && (
         <CreateInspectionDialog
           isOpen={isCreateDialogOpen}
           onClose={() => setIsCreateDialogOpen(false)}
@@ -159,7 +160,6 @@ export function InspectionsTabContent({
             })
           }}
           rentalId={rentalId}
-          residenceId={residenceId}
           address={address}
           apartmentCode={apartmentCode}
           leaseId={leaseId}
