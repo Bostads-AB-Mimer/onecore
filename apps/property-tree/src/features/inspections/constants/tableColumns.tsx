@@ -6,7 +6,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { CirclePlay, Eye, Play } from 'lucide-react'
+import { Eye, Loader2, Play, PlayCircle } from 'lucide-react'
 
 import { components } from '@/services/api/core/generated/api-types'
 
@@ -14,15 +14,7 @@ import { formatISODate } from '@/shared/lib/formatters'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
-import { getStatusConfig } from './statuses'
-
-const ACTION_ICONS = { CirclePlay, Eye, Play } as const
-type ActionIconName = keyof typeof ACTION_ICONS
-
-function ActionIcon({ name }: { name: ActionIconName }) {
-  const Icon = ACTION_ICONS[name]
-  return <Icon className="h-4 w-4 mr-1" />
-}
+import { canResume, canStart, getStatusConfig } from './statuses'
 
 type Inspection = components['schemas']['InspectionWithSource']
 
@@ -148,25 +140,48 @@ export const INSPECTION_TABLE_COLUMNS = {
 } as const
 
 /**
- * Create actions column with click handler
+ * Get the appropriate action icon based on inspection status
+ */
+function getActionIcon(status?: string) {
+  if (canStart(status)) return Play
+  if (canResume(status)) return PlayCircle
+  return Eye
+}
+
+export interface ActionColumnLoadingState {
+  isPending: boolean
+  pendingInspectionId?: string
+}
+
+/**
+ * Create actions column with click handler and loading state
  */
 export function createActionsColumn(
-  onAction: (inspection: Inspection) => void
+  onAction: (inspection: Inspection) => void,
+  loading?: ActionColumnLoadingState
 ): InspectionTableColumn {
   return {
     key: 'actions',
     label: 'Åtgärder',
+    className: 'text-right',
     render: (inspection: Inspection) => {
-      const config = getStatusConfig(inspection.status)
+      const isThisPending =
+        loading?.isPending && loading.pendingInspectionId === inspection.id
+      const ActionIcon = getActionIcon(inspection.status)
+
       return (
         <Button
           variant="ghost"
           size="sm"
-          className="w-48 justify-start hover:bg-foreground hover:text-background"
           onClick={() => onAction(inspection)}
+          disabled={loading?.isPending}
         >
-          <ActionIcon name={config.actionIcon as ActionIconName} />
-          {config.actionLabel}
+          {isThisPending ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <ActionIcon className="h-4 w-4 mr-1" />
+          )}
+          {getStatusConfig(inspection.status).actionLabel}
         </Button>
       )
     },
@@ -178,7 +193,8 @@ export function createActionsColumn(
  * Get columns for ongoing inspections
  */
 export function getOngoingInspectionColumns(
-  onAction: (inspection: Inspection) => void
+  onAction: (inspection: Inspection) => void,
+  loading?: ActionColumnLoadingState
 ): InspectionTableColumn[] {
   return [
     INSPECTION_TABLE_COLUMNS.inspector,
@@ -191,7 +207,7 @@ export function getOngoingInspectionColumns(
     INSPECTION_TABLE_COLUMNS.date,
     INSPECTION_TABLE_COLUMNS.id,
     INSPECTION_TABLE_COLUMNS.status,
-    createActionsColumn(onAction),
+    createActionsColumn(onAction, loading),
   ]
 }
 
@@ -199,7 +215,8 @@ export function getOngoingInspectionColumns(
  * Get columns for completed inspections
  */
 export function getCompletedInspectionColumns(
-  onAction: (inspection: Inspection) => void
+  onAction: (inspection: Inspection) => void,
+  loading?: ActionColumnLoadingState
 ): InspectionTableColumn[] {
   return [
     INSPECTION_TABLE_COLUMNS.inspector,
@@ -212,7 +229,7 @@ export function getCompletedInspectionColumns(
     INSPECTION_TABLE_COLUMNS.dateCompleted,
     INSPECTION_TABLE_COLUMNS.id,
     INSPECTION_TABLE_COLUMNS.status,
-    createActionsColumn(onAction),
+    createActionsColumn(onAction, loading),
   ]
 }
 
@@ -221,42 +238,51 @@ export function getCompletedInspectionColumns(
  * Provides compact mobile view with essential information
  */
 export function renderInspectionMobileCard(
-  onAction: (inspection: Inspection) => void
+  onAction: (inspection: Inspection) => void,
+  loading?: ActionColumnLoadingState
 ) {
-  return (inspection: Inspection): ReactNode => (
-    <div className="space-y-2 w-full">
-      <div className="flex justify-between items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="font-medium truncate">{inspection.address || 'N/A'}</p>
-          <p className="text-sm text-muted-foreground">
-            {inspection.inspector || 'N/A'}
-          </p>
+  return (inspection: Inspection): ReactNode => {
+    const isThisPending =
+      loading?.isPending && loading.pendingInspectionId === inspection.id
+    const ActionIcon = getActionIcon(inspection.status)
+
+    return (
+      <div className="space-y-2 w-full">
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium truncate">
+              {inspection.address || 'N/A'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {inspection.inspector || 'N/A'}
+            </p>
+          </div>
+          <Badge
+            variant={getStatusConfig(inspection.status).badgeVariant}
+            className="shrink-0"
+          >
+            {getStatusConfig(inspection.status).label}
+          </Badge>
         </div>
-        <Badge
-          variant={getStatusConfig(inspection.status).badgeVariant}
-          className="shrink-0"
-        >
-          {getStatusConfig(inspection.status).label}
-        </Badge>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">
+            {formatISODate(inspection.date)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onAction(inspection)}
+            disabled={loading?.isPending}
+          >
+            {isThisPending ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <ActionIcon className="h-4 w-4 mr-1" />
+            )}
+            {getStatusConfig(inspection.status).actionLabel}
+          </Button>
+        </div>
       </div>
-      <div className="flex justify-between items-center">
-        <span className="text-sm text-muted-foreground">
-          {formatISODate(inspection.date)}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="hover:bg-foreground hover:text-background"
-          onClick={() => onAction(inspection)}
-        >
-          <ActionIcon
-            name={
-              getStatusConfig(inspection.status).actionIcon as ActionIconName
-            }
-          />
-          {getStatusConfig(inspection.status).actionLabel}
-        </Button>
-      </div>
-    </div>
-  )
+    )
+  }
 }
