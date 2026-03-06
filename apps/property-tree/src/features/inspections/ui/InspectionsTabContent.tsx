@@ -51,7 +51,7 @@ export function InspectionsTabContent({
   const inspections = inspectionsQuery.data ?? []
 
   const activeInspections = inspections.filter(
-    (inspection: Inspection) => !isCompleted(inspection.status)
+    (inspection: InspectionWithSource) => !isCompleted(inspection.status)
   )
 
   const completedInspections = inspections.filter(

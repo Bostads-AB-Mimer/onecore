@@ -68,6 +68,19 @@ export function InspectionsTable({
 
   const { startInspection, isPending } = useUpdateInspectionStatus({
     rentalId,
+    onSuccess: () => {
+      toast({
+        title: 'Status uppdaterad',
+        description: 'Besiktningsstatus har uppdaterats.',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte uppdatera besiktningsstatus.',
+        variant: 'destructive',
+      })
+    },
   })
 
   const handleUpdateInspector = (inspectionId: string, inspector: string) => {
