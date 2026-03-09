@@ -389,7 +389,6 @@ export interface TenantCommentsResponse {
 
 export type DocumentWithUrl = components['schemas']['DocumentWithUrl']
 
-
 // Bulk communication result types
 export type BulkSmsResult = components['schemas']['BulkSmsResult']
 export type BulkEmailResult = components['schemas']['BulkEmailResult']

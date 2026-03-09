@@ -8,7 +8,10 @@ import {
   Newspaper,
 } from 'lucide-react'
 
-import { RELEASE_NOTES, sortReleaseNotesByPinned } from '@/entities/release-note'
+import {
+  RELEASE_NOTES,
+  sortReleaseNotesByPinned,
+} from '@/entities/release-note'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 

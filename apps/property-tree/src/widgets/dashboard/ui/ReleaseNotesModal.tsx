@@ -1,7 +1,10 @@
 import { useEffect, useMemo } from 'react'
 import { Newspaper } from 'lucide-react'
 
-import { RELEASE_NOTES, sortReleaseNotesByPinned } from '@/entities/release-note'
+import {
+  RELEASE_NOTES,
+  sortReleaseNotesByPinned,
+} from '@/entities/release-note'
 
 import {
   Dialog,
