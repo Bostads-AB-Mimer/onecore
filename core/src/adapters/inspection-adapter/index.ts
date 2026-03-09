@@ -253,6 +253,68 @@ export const createInspection = async (
   }
 }
 
+export type InternalInspection = components['schemas']['InternalInspection']
+
+export const getInternalInspectionById = async (
+  inspectionId: string
+): Promise<AdapterResult<InternalInspection, 'unknown' | 'not-found'>> => {
+  try {
+    const fetchResponse = await client().GET(
+      '/inspections/internal/{inspectionId}',
+      {
+        params: { path: { inspectionId } },
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data.content?.inspection) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.inspection,
+    }
+  } catch (error) {
+    logger.error(
+      { error, inspectionId },
+      'inspection-adapter.getInternalInspectionById'
+    )
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const saveInspectionDraft = async (
+  inspectionId: string,
+  body: components['schemas']['SaveInspectionDraftRequest']
+): Promise<AdapterResult<void, string>> => {
+  try {
+    const fetchResponse = await client().PATCH(
+      '/inspections/internal/{inspectionId}/draft',
+      {
+        params: { path: { inspectionId } },
+        body,
+      }
+    )
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    return { ok: true, data: undefined }
+  } catch (error) {
+    logger.error(
+      { error, inspectionId },
+      'inspection-adapter.saveInspectionDraft'
+    )
+    return { ok: false, err: 'Failed to save inspection draft' }
+  }
+}
+
 export const updateInspectionStatus = async (
   inspectionId: string,
   body: components['schemas']['UpdateInspectionStatus']

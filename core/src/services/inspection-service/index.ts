@@ -50,6 +50,10 @@ export const routes = (router: KoaRouter) => {
     schemas.UpdateInspectionStatusRequestSchema
   )
   registerSchema('InspectionWithSource', schemas.InspectionWithSourceSchema)
+  registerSchema(
+    'SaveInspectionDraftRequest',
+    schemas.SaveInspectionDraftRequestSchema
+  )
 
   /**
    * @swagger
@@ -1386,6 +1390,121 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (error) {
       logger.error({ error, inspectionId }, 'Error updating inspection status')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Get internal inspection by ID including draft room data
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       '200':
+   *         description: Internal inspection with draft room data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/Inspection'
+   *       '404':
+   *         description: Inspection not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/internal/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result = await inspectionAdapter.getInternalInspectionById(inspectionId)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not-found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not-found'
+              ? `Inspection ${inspectionId} not found`
+              : 'Failed to fetch inspection',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: { inspection: result.data }, ...metadata }
+    } catch (error) {
+      logger.error({ error, inspectionId }, 'Error fetching internal inspection')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/draft:
+   *   patch:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Save inspection draft data (rooms and inspector name)
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SaveInspectionDraftRequest'
+   *     responses:
+   *       '200':
+   *         description: Draft saved successfully
+   *       '404':
+   *         description: Inspection not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.patch('/inspections/internal/:inspectionId/draft', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result = await inspectionAdapter.saveInspectionDraft(
+        inspectionId,
+        ctx.request.body
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: { success: true }, ...metadata }
+    } catch (error) {
+      logger.error({ error, inspectionId }, 'Error saving inspection draft')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

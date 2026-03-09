@@ -239,6 +239,15 @@ export type UpdateInspectionStatusRequest = z.infer<
   typeof UpdateInspectionStatusRequestSchema
 >
 
+export const SaveInspectionDraftRequestSchema = z.object({
+  inspectorName: z.string(),
+  rooms: z.array(InspectionRoomSchema),
+})
+
+export type SaveInspectionDraftRequest = z.infer<
+  typeof SaveInspectionDraftRequestSchema
+>
+
 export type TenantContact = z.infer<typeof TenantContactSchema>
 export type TenantInfo = z.infer<typeof TenantInfoSchema>
 export type TenantContactsResponse = z.infer<
