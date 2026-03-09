@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
+import type { Room } from '@/services/types'
 
 import { useToast } from '@/shared/hooks/useToast'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
@@ -31,6 +32,7 @@ interface InspectionsTableProps {
   hiddenColumns?: string[]
   columns?: InspectionTableColumn[]
   emptyMessage?: string
+  rooms?: Room[]
 }
 
 export function InspectionsTable({
@@ -40,6 +42,7 @@ export function InspectionsTable({
   hiddenColumns = [],
   columns,
   emptyMessage,
+  rooms = [],
 }: InspectionsTableProps) {
   const { data: inspectors } = useInspectors()
   const { toast } = useToast()
@@ -130,7 +133,7 @@ export function InspectionsTable({
           isOpen={isResumeDialogOpen}
           onClose={() => setIsResumeDialogOpen(false)}
           onSubmit={() => {}}
-          rooms={[]}
+          rooms={rooms}
         />
       )}
 
