@@ -43,11 +43,8 @@ describe('parkingspaces', () => {
       [contactCode: string, from?: Date],
       any
     >
-    let sendNotificationToContactSpy: jest.SpyInstance<
-      Promise<any>,
-      [recipientContact: Contact, subject: string, message: string],
-      any
-    >
+    let sendNonScoredParkingSpaceApprovedEmailSpy: jest.SpyInstance
+    let sendNonScoredParkingSpaceDeniedEmailSpy: jest.SpyInstance
     let sendNotificationToRoleSpy: jest.SpyInstance<
       Promise<any>,
       [recipientRole: string, subject: string, message: string],
@@ -90,9 +87,12 @@ describe('parkingspaces', () => {
       getInvoicesSentToDebtCollectionSpy = jest
         .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
         .mockResolvedValue({ ok: true, data: [] })
-      sendNotificationToContactSpy = jest
-        .spyOn(communcationAdapter, 'sendNotificationToContact')
-        .mockResolvedValue({})
+      sendNonScoredParkingSpaceApprovedEmailSpy = jest
+        .spyOn(communcationAdapter, 'sendNonScoredParkingSpaceApprovedEmail')
+        .mockResolvedValue({ ok: true, data: null })
+      sendNonScoredParkingSpaceDeniedEmailSpy = jest
+        .spyOn(communcationAdapter, 'sendNonScoredParkingSpaceDeniedEmail')
+        .mockResolvedValue({ ok: true, data: null })
       sendNotificationToRoleSpy = jest
         .spyOn(communcationAdapter, 'sendNotificationToRole')
         .mockResolvedValue({})
@@ -221,7 +221,7 @@ describe('parkingspaces', () => {
 
     it('sends a notification to the applicant if external credit check fails', async () => {
       getCreditInformationSpy.mockResolvedValue(failedConsumerReport)
-      sendNotificationToContactSpy.mockReset()
+      sendNonScoredParkingSpaceDeniedEmailSpy.mockReset()
 
       await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
@@ -229,10 +229,10 @@ describe('parkingspaces', () => {
         '2034-04-21'
       )
 
-      expect(sendNotificationToContactSpy).toHaveBeenCalledWith(
-        expect.anything(),
-        'Nekad ansökan om extern bilplats',
-        expect.any(String)
+      expect(sendNonScoredParkingSpaceDeniedEmailSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Nekad ansökan om bilplats',
+        })
       )
     })
 
