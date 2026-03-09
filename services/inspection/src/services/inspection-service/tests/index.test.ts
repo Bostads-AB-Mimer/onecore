@@ -395,6 +395,188 @@ describe('inspection-service', () => {
     })
   })
 
+  describe('GET /inspections/internal/:inspectionId', () => {
+    it('returns inspection with draft rooms', async () => {
+      const inspectionId = '1'
+      const mockInspection = {
+        ...XpandInspectionFactory.build({ id: inspectionId }),
+        rooms: [
+          {
+            roomId: 'room-1',
+            conditions: {
+              wall1: 'good',
+              wall2: '',
+              wall3: '',
+              wall4: '',
+              floor: '',
+              ceiling: '',
+              details: '',
+            },
+            actions: {
+              wall1: [],
+              wall2: [],
+              wall3: [],
+              wall4: [],
+              floor: [],
+              ceiling: [],
+              details: [],
+            },
+            componentNotes: {
+              wall1: '',
+              wall2: '',
+              wall3: '',
+              wall4: '',
+              floor: '',
+              ceiling: '',
+              details: '',
+            },
+            componentPhotos: {
+              wall1: [],
+              wall2: [],
+              wall3: [],
+              wall4: [],
+              floor: [],
+              ceiling: [],
+              details: [],
+            },
+            photos: [],
+            isApproved: false,
+            isHandled: true,
+          },
+        ],
+      }
+      jest
+        .spyOn(dbAdapter, 'getInspectionById')
+        .mockResolvedValueOnce({ ok: true, data: mockInspection })
+
+      const res = await request(app.callback()).get(
+        `/inspections/internal/${inspectionId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspection.id).toBe(inspectionId)
+      expect(res.body.content.inspection.rooms).toHaveLength(1)
+    })
+
+    it('returns 404 when inspection not found', async () => {
+      jest
+        .spyOn(dbAdapter, 'getInspectionById')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get('/inspections/internal/999')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 on unexpected errors', async () => {
+      jest.spyOn(dbAdapter, 'getInspectionById').mockImplementation(() => {
+        throw new Error('Database connection failed')
+      })
+
+      const res = await request(app.callback()).get('/inspections/internal/1')
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
+  describe('PATCH /inspections/internal/:inspectionId/draft', () => {
+    const validDraftBody = {
+      inspectorName: 'Test Inspector',
+      rooms: [
+        {
+          roomId: 'room-1',
+          conditions: {
+            wall1: 'good',
+            wall2: '',
+            wall3: '',
+            wall4: '',
+            floor: '',
+            ceiling: '',
+            details: '',
+          },
+          actions: {
+            wall1: [],
+            wall2: [],
+            wall3: [],
+            wall4: [],
+            floor: [],
+            ceiling: [],
+            details: [],
+          },
+          componentNotes: {
+            wall1: '',
+            wall2: '',
+            wall3: '',
+            wall4: '',
+            floor: '',
+            ceiling: '',
+            details: '',
+          },
+          componentPhotos: {
+            wall1: [],
+            wall2: [],
+            wall3: [],
+            wall4: [],
+            floor: [],
+            ceiling: [],
+            details: [],
+          },
+          photos: [],
+          isApproved: false,
+          isHandled: true,
+        },
+      ],
+    }
+
+    it('saves draft successfully', async () => {
+      jest
+        .spyOn(dbAdapter, 'saveInspectionDraft')
+        .mockResolvedValueOnce({ ok: true, data: undefined })
+
+      const res = await request(app.callback())
+        .patch('/inspections/internal/1/draft')
+        .send(validDraftBody)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.success).toBe(true)
+    })
+
+    it('returns 400 for invalid request body', async () => {
+      const res = await request(app.callback())
+        .patch('/inspections/internal/1/draft')
+        .send({ invalid: 'data' })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+    })
+
+    it('returns 404 when inspection not found', async () => {
+      jest
+        .spyOn(dbAdapter, 'saveInspectionDraft')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback())
+        .patch('/inspections/internal/999/draft')
+        .send(validDraftBody)
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 on unexpected errors', async () => {
+      jest.spyOn(dbAdapter, 'saveInspectionDraft').mockImplementation(() => {
+        throw new Error('Database connection failed')
+      })
+
+      const res = await request(app.callback())
+        .patch('/inspections/internal/1/draft')
+        .send(validDraftBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
   describe('GET /inspections/internal/residence/:residenceId', () => {
     it('responds with inspections for the residence from local DB', async () => {
       const residenceId = 'RES001'

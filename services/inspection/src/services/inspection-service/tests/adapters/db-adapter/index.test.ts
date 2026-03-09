@@ -893,4 +893,261 @@ describe('db-adapter', () => {
       }
     })
   })
+
+  describe('saveInspectionDraft', () => {
+    const mockDraftParams = {
+      inspectorName: 'Test Inspector',
+      rooms: [
+        {
+          roomId: 'room-1',
+          conditions: {
+            wall1: 'good',
+            wall2: 'good',
+            wall3: 'good',
+            wall4: 'good',
+            floor: 'good',
+            ceiling: 'good',
+            details: '',
+          },
+          actions: {
+            wall1: [],
+            wall2: [],
+            wall3: [],
+            wall4: [],
+            floor: [],
+            ceiling: [],
+            details: [],
+          },
+          componentNotes: {
+            wall1: '',
+            wall2: '',
+            wall3: '',
+            wall4: '',
+            floor: '',
+            ceiling: '',
+            details: '',
+          },
+          componentPhotos: {
+            wall1: [],
+            wall2: [],
+            wall3: [],
+            wall4: [],
+            floor: [],
+            ceiling: [],
+            details: [],
+          },
+          photos: [],
+          isApproved: false,
+          isHandled: true,
+        },
+      ],
+    }
+
+    function createMockDbForDraft(inspectionExists: boolean) {
+      const chain: Record<string, jest.Mock> = {}
+      chain.select = jest.fn().mockReturnValue(chain)
+      chain.from = jest.fn().mockReturnValue(chain)
+      chain.where = jest
+        .fn()
+        .mockResolvedValueOnce(inspectionExists ? [{ id: '1' }] : [])
+        .mockReturnValue(chain)
+      chain.update = jest.fn().mockResolvedValue(1)
+
+      const mockDb = jest.fn().mockReturnValue(chain)
+      // Also support dbConnection.select(...) pattern
+      Object.assign(mockDb, chain)
+      return mockDb as unknown as Knex
+    }
+
+    it('saves draft successfully for existing inspection', async () => {
+      const mockDb = createMockDbForDraft(true)
+
+      const result = await dbAdapter.saveInspectionDraft(
+        mockDb,
+        '1',
+        mockDraftParams
+      )
+
+      expect(result.ok).toBe(true)
+    })
+
+    it('returns not-found when inspection does not exist', async () => {
+      const mockDb = createMockDbForDraft(false)
+
+      const result = await dbAdapter.saveInspectionDraft(
+        mockDb,
+        '999',
+        mockDraftParams
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('not-found')
+      }
+    })
+
+    it('returns error when database fails', async () => {
+      const chain: Record<string, jest.Mock> = {}
+      chain.select = jest.fn().mockImplementation(() => {
+        throw new Error('DB connection failed')
+      })
+      chain.from = jest.fn().mockReturnValue(chain)
+      chain.where = jest.fn().mockReturnValue(chain)
+
+      const mockDb = Object.assign(
+        jest.fn().mockReturnValue(chain),
+        chain
+      ) as unknown as Knex
+
+      const result = await dbAdapter.saveInspectionDraft(
+        mockDb,
+        '1',
+        mockDraftParams
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+  })
+
+  describe('getInspectionById', () => {
+    function createMockDbForGetById(
+      inspection: Record<string, unknown> | undefined
+    ) {
+      const chain: Record<string, jest.Mock> = {}
+      chain.select = jest.fn().mockReturnValue(chain)
+      chain.from = jest.fn().mockReturnValue(chain)
+      chain.where = jest.fn().mockResolvedValue(inspection ? [inspection] : [])
+
+      const mockDb = Object.assign(
+        jest.fn().mockReturnValue(chain),
+        chain
+      ) as unknown as Knex
+      return mockDb
+    }
+
+    it('returns inspection with parsed draft rooms', async () => {
+      const draftRooms = [
+        {
+          roomId: 'room-1',
+          conditions: {
+            wall1: 'good',
+            wall2: '',
+            wall3: '',
+            wall4: '',
+            floor: '',
+            ceiling: '',
+            details: '',
+          },
+          actions: {
+            wall1: [],
+            wall2: [],
+            wall3: [],
+            wall4: [],
+            floor: [],
+            ceiling: [],
+            details: [],
+          },
+          componentNotes: {
+            wall1: '',
+            wall2: '',
+            wall3: '',
+            wall4: '',
+            floor: '',
+            ceiling: '',
+            details: '',
+          },
+          componentPhotos: {
+            wall1: [],
+            wall2: [],
+            wall3: [],
+            wall4: [],
+            floor: [],
+            ceiling: [],
+            details: [],
+          },
+          photos: [],
+          isApproved: false,
+          isHandled: true,
+        },
+      ]
+      const mockDb = createMockDbForGetById({
+        id: 1,
+        status: 'Påbörjad',
+        date: new Date('2024-01-01'),
+        inspector: 'Inspector A',
+        type: 'Move-in',
+        address: '123 Main St',
+        apartmentCode: 'APT001',
+        leaseId: 'LEASE001',
+        masterKeyAccess: null,
+        draftRooms: JSON.stringify(draftRooms),
+      })
+
+      const result = await dbAdapter.getInspectionById(mockDb, '1')
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.id).toBe('1')
+        expect(result.data.rooms).toHaveLength(1)
+        expect(result.data.rooms![0].roomId).toBe('room-1')
+      }
+    })
+
+    it('returns inspection with null rooms when no draft data', async () => {
+      const mockDb = createMockDbForGetById({
+        id: 1,
+        status: 'Registrerad',
+        date: new Date('2024-01-01'),
+        inspector: 'Inspector A',
+        type: 'Move-in',
+        address: '123 Main St',
+        apartmentCode: 'APT001',
+        leaseId: 'LEASE001',
+        masterKeyAccess: null,
+        draftRooms: null,
+      })
+
+      const result = await dbAdapter.getInspectionById(mockDb, '1')
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.rooms).toBeNull()
+      }
+    })
+
+    it('returns not-found when inspection does not exist', async () => {
+      const mockDb = createMockDbForGetById(undefined)
+
+      const result = await dbAdapter.getInspectionById(mockDb, '999')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('not-found')
+      }
+    })
+
+    it('returns error when database fails', async () => {
+      const chain: Record<string, jest.Mock> = {}
+      chain.select = jest.fn().mockImplementation(() => {
+        throw new Error('DB connection failed')
+      })
+      chain.from = jest.fn().mockReturnValue(chain)
+      chain.where = jest.fn().mockReturnValue(chain)
+
+      const mockDb = Object.assign(
+        jest.fn().mockReturnValue(chain),
+        chain
+      ) as unknown as Knex
+
+      const result = await dbAdapter.getInspectionById(mockDb, '1')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+  })
 })
