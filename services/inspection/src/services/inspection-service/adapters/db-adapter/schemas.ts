@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { InspectionRoom } from '../../schemas'
 
 export const CreateInspectionRemarkSchema = z.object({
   remarkId: z.string({ required_error: 'Remark ID is required' }),
