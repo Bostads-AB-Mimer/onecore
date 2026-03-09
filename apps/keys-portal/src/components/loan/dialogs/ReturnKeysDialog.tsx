@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
 import type {
-  Key,
+  KeyDetails,
   Lease,
   CardDetails,
   KeyLoanWithDetails,
@@ -20,9 +20,7 @@ import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 type KeysByLoan = {
   loanId: string
   contact: string | null
-  keys: Key[]
-  disposedKeys: Key[]
-  nonDisposedKeys: Key[]
+  keys: KeyDetails[]
 }
 
 type CardsByLoan = {
@@ -36,7 +34,7 @@ type Props = {
   onOpenChange: (open: boolean) => void
   keyIds: string[] // Key IDs selected for return
   cardIds?: string[] // Card IDs selected for return
-  allKeys: Key[] // All keys to look up key details
+  allKeys: KeyDetails[] // All keys to look up key details
   allCards?: CardDetails[] // All cards to look up card details
   lease: Lease
   onSuccess: () => void
@@ -138,8 +136,6 @@ export function ReturnKeysDialog({
               loanId,
               contact: enrichedLoan.contact || null,
               keys: loanKeys,
-              disposedKeys: loanKeys.filter((k) => k.disposed),
-              nonDisposedKeys: loanKeys.filter((k) => !k.disposed),
             })
           }
 
@@ -161,14 +157,16 @@ export function ReturnKeysDialog({
         setKeysByLoan(Array.from(keysLoansMap.values()))
         setCardsByLoan(Array.from(cardsLoansMap.values()))
 
-        // Initialize selected keys - only check keys that were originally selected
+        // Initialize selected keys - only check non-disposed keys that were originally selected
         const initialSelectedKeys = new Set<string>()
         keysLoansMap.forEach((loanInfo) => {
-          loanInfo.nonDisposedKeys.forEach((key) => {
-            if (keyIds.includes(key.id)) {
-              initialSelectedKeys.add(key.id)
-            }
-          })
+          loanInfo.keys
+            .filter((k) => !k.disposed)
+            .forEach((key) => {
+              if (keyIds.includes(key.id)) {
+                initialSelectedKeys.add(key.id)
+              }
+            })
         })
         setSelectedKeyIds(initialSelectedKeys)
 
@@ -268,6 +266,8 @@ export function ReturnKeysDialog({
           )}
           {keysByLoan.map((loanInfo, index) => {
             const showLoanGrouping = keysByLoan.length > 1
+            const nonDisposedKeys = loanInfo.keys.filter((k) => !k.disposed)
+            const disposedKeys = loanInfo.keys.filter((k) => k.disposed)
 
             return (
               <div
@@ -285,9 +285,9 @@ export function ReturnKeysDialog({
                 )}
 
                 {/* Non-disposed keys with checkboxes */}
-                {loanInfo.nonDisposedKeys.length > 0 && (
+                {nonDisposedKeys.length > 0 && (
                   <div className="space-y-2">
-                    {loanInfo.nonDisposedKeys.map((key) => (
+                    {nonDisposedKeys.map((key) => (
                       <div
                         key={key.id}
                         className="p-3 border rounded-lg bg-muted/50 text-sm flex items-start gap-3"
@@ -309,6 +309,8 @@ export function ReturnKeysDialog({
                           <div className="font-medium">{key.keyName}</div>
                           <div className="text-xs text-muted-foreground">
                             {KeyTypeLabels[key.keyType]}
+                            {key.keySystem?.systemCode &&
+                              ` • ${key.keySystem.systemCode}`}
                             {key.flexNumber !== undefined &&
                               ` • Flex: ${key.flexNumber}`}
                             {key.keySequenceNumber !== undefined &&
@@ -321,13 +323,13 @@ export function ReturnKeysDialog({
                 )}
 
                 {/* Disposed keys (no checkboxes) */}
-                {loanInfo.disposedKeys.length > 0 && (
+                {disposedKeys.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-xs text-destructive flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
                       Kasserade:
                     </div>
-                    {loanInfo.disposedKeys.map((key) => (
+                    {disposedKeys.map((key) => (
                       <div
                         key={key.id}
                         className="p-3 border rounded-lg bg-destructive/5 border-destructive/20 text-sm"
@@ -337,6 +339,8 @@ export function ReturnKeysDialog({
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {KeyTypeLabels[key.keyType]}
+                          {key.keySystem?.systemCode &&
+                            ` • ${key.keySystem.systemCode}`}
                           {key.flexNumber !== undefined &&
                             ` • Flex: ${key.flexNumber}`}
                           {key.keySequenceNumber !== undefined &&
