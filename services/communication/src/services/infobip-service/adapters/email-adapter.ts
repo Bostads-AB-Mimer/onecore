@@ -8,6 +8,8 @@ import {
   WorkOrderEmail,
   ParkingSpaceAcceptOfferEmail,
   BulkEmail,
+  NonScoredParkingSpaceApprovedEmail,
+  NonScoredParkingSpaceDeniedEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
@@ -19,6 +21,8 @@ const ReplaceParkingSpaceOfferTemplateId = 200000000094058
 const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 const WorkOrderEmailTemplateId = 200000000146435
 const WorkOrderExternalContractorEmailTemplateId = 200000000173744
+const NonScoredParkingSpaceApprovedTemplateId = 205000000040764
+const NonScoredParkingSpaceDeniedTemplateId = 205000000040765
 
 // Email sender identity
 const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
@@ -152,6 +156,82 @@ export const sendParkingSpaceAcceptOffer = async (
           },
         ],
         content: { templateId: AcceptParkingSpaceOfferTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendNonScoredParkingSpaceApproved = async (
+  email: NonScoredParkingSpaceApprovedEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending Non-Scored Parking Space Approved Email'
+  )
+
+  try {
+    const placeholders = JSON.stringify({
+      leaseId: email.leaseId,
+      address: email.address,
+      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+      parkingSpaceId: email.parkingSpaceId,
+      objectId: email.objectId,
+      type: email.type,
+      rent: formatToSwedishCurrency(email.rent),
+      parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
+    })
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId: NonScoredParkingSpaceApprovedTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendNonScoredParkingSpaceDenied = async (
+  email: NonScoredParkingSpaceDeniedEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending Non-Scored Parking Space Denied Email'
+  )
+
+  try {
+    const placeholders = JSON.stringify({
+      address: email.address,
+      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+      parkingSpaceId: email.parkingSpaceId,
+      objectId: email.objectId,
+      type: email.type,
+      rent: formatToSwedishCurrency(email.rent),
+    })
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId: NonScoredParkingSpaceDeniedTemplateId },
       },
     ])
 

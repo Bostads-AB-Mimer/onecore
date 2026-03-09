@@ -1,6 +1,7 @@
 import {
-  sendNotificationToContact,
   sendNotificationToRole,
+  sendNonScoredParkingSpaceApprovedEmail,
+  sendNonScoredParkingSpaceDeniedEmail,
 } from '../../../adapters/communication-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
 import {
@@ -222,11 +223,18 @@ export const createLeaseForExternalParkingSpace = async (
         )
       }
 
-      await sendNotificationToContact(
-        applicantContact,
-        'Godkänd ansökan om bilplats',
-        `Din ansökan om bilplats har godkänts!\n\nDet här händer nu:\n\n * Kontraktet: Du kommer snart få ett digitalt kontrakt att skriva under. En av våra medarbetare kommer att göra i ordning kontraktet och skicka det till dig för digital signering. Kontraktet skickas vanligtvis kommande arbetsdag men under semesterperioden kan det dröja lite längre, håll utkik i din inkorg. Kontraktsnumret är: ${leaseId}.\n\n * Faktura: Din första faktura finns på Mina sidor. Logga in och klicka på Mina fakturor för att se förfallodatum och betalningsuppgifter.\n\n * Eventuella nycklar: Om det behövs nycklar till bilplatsen så hämtar du dom på Mimers kundcenter, Gasverksgatan 7, efter kl. 12.00 den dag kontraktet börjar gälla. Om det är en helgdag, kan du hämta dem kommande vardag efter kl. 12.00.\n\nHälsningar\n\nBostads AB Mimer\n`
-      )
+      await sendNonScoredParkingSpaceApprovedEmail({
+        to: applicantContact.emailAddress ?? '',
+        subject: 'Godkänd ansökan om bilplats',
+        text: 'Din ansökan om bilplats har godkänts.',
+        leaseId: leaseId,
+        address: listing.rentalObject?.address ?? '',
+        availableFrom: startDate ?? new Date().toISOString(),
+        parkingSpaceId: listing.rentalObjectCode,
+        objectId: listing.id.toString(),
+        type: listing.rentalObject?.objectTypeCaption ?? 'Bilplats',
+        rent: String(listing.rentalObject?.monthlyRent ?? ''),
+      })
       await sendNotificationToRole(
         'leasing',
         'Godkänd ansökan om bilplats',
@@ -248,11 +256,17 @@ export const createLeaseForExternalParkingSpace = async (
         `Ansökan kunde inte beviljas på grund av ouppfyllda kreditkrav (se ovan).`
       )
 
-      await sendNotificationToContact(
-        applicantContact,
-        'Nekad ansökan om extern bilplats',
-        'Din ansökan om bilplats kunde tyvärr inte godkännas på grund av ouppfyllda kreditkrav.\n\nOm du har frågor kring din ansökan, kontakta Mimers kundcenter. Du hittar kontaktuppgifter på https://www.mimer.nu/kontakta-oss/.\n\nMed vänlig hälsning,\nBostads Mimer AB'
-      )
+      await sendNonScoredParkingSpaceDeniedEmail({
+        to: applicantContact.emailAddress ?? '',
+        subject: 'Nekad ansökan om bilplats',
+        text: 'Din ansökan om bilplats kunde inte godkännas.',
+        address: listing.rentalObject?.address ?? '',
+        availableFrom: startDate ?? new Date().toISOString(),
+        parkingSpaceId: listing.rentalObjectCode,
+        objectId: listing.id.toString(),
+        type: listing.rentalObject?.objectTypeCaption ?? 'Bilplats',
+        rent: String(listing.rentalObject?.monthlyRent ?? ''),
+      })
       await sendNotificationToRole(
         'leasing',
         'Nekad ansökan om extern bilplats',
