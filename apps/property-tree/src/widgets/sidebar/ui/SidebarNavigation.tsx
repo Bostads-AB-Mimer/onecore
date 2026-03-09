@@ -7,6 +7,7 @@ import {
 } from '@radix-ui/react-collapsible'
 import {
   ChevronRight,
+  ClipboardList,
   Contact,
   FileText,
   Home,
@@ -141,6 +142,11 @@ function SidebarNavigationContent() {
         <SidebarNavLink to="/tenants" icon={Contact} label="Kunder" />
         <SidebarNavLink to="/rental-blocks" icon={ShieldX} label="Spärrar" />
         <SidebarNavLink to="/leases" icon={FileText} label="Hyreskontrakt" />
+        <SidebarNavLink
+          to="/besiktningar"
+          icon={ClipboardList}
+          label="Besiktningar"
+        />
         <SidebarNavLink
           to="/components"
           icon={Settings}

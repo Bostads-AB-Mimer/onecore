@@ -6,7 +6,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { Eye } from 'lucide-react'
+import { CirclePlay, Eye, Play } from 'lucide-react'
 
 import { components } from '@/services/api/core/generated/api-types'
 
@@ -15,6 +15,14 @@ import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
 import { getStatusConfig } from './statuses'
+
+const ACTION_ICONS = { CirclePlay, Eye, Play } as const
+type ActionIconName = keyof typeof ACTION_ICONS
+
+function ActionIcon({ name }: { name: ActionIconName }) {
+  const Icon = ACTION_ICONS[name]
+  return <Icon className="h-4 w-4 mr-1" />
+}
 
 type Inspection = components['schemas']['InspectionWithSource']
 
@@ -148,13 +156,20 @@ export function createActionsColumn(
   return {
     key: 'actions',
     label: 'Åtgärder',
-    className: 'text-right',
-    render: (inspection: Inspection) => (
-      <Button variant="ghost" size="sm" onClick={() => onAction(inspection)}>
-        <Eye className="h-4 w-4 mr-1" />
-        {getStatusConfig(inspection.status).actionLabel}
-      </Button>
-    ),
+    render: (inspection: Inspection) => {
+      const config = getStatusConfig(inspection.status)
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-48 justify-start hover:bg-foreground hover:text-background"
+          onClick={() => onAction(inspection)}
+        >
+          <ActionIcon name={config.actionIcon as ActionIconName} />
+          {config.actionLabel}
+        </Button>
+      )
+    },
     hideOnMobile: false,
   }
 }
@@ -228,8 +243,13 @@ export function renderInspectionMobileCard(
         <span className="text-sm text-muted-foreground">
           {formatISODate(inspection.date)}
         </span>
-        <Button variant="ghost" size="sm" onClick={() => onAction(inspection)}>
-          <Eye className="h-4 w-4 mr-1" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hover:bg-foreground hover:text-background"
+          onClick={() => onAction(inspection)}
+        >
+          <ActionIcon name={getStatusConfig(inspection.status).actionIcon as ActionIconName} />
           {getStatusConfig(inspection.status).actionLabel}
         </Button>
       </div>

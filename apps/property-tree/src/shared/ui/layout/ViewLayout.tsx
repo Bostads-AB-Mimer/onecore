@@ -15,7 +15,7 @@ export function ViewLayout({ children, className }: ViewLayoutProps) {
   return (
     <div
       className={cn(
-        'w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 animate-in',
+        'w-full max-w-screen-3xl mx-auto px-2 py-4 animate-in',
         className
       )}
     >
