@@ -16,6 +16,7 @@ import {
   ShieldX,
 } from 'lucide-react'
 
+import { routes } from '@/shared/routes'
 import { SidebarNavLink } from '@/shared/ui/layout'
 import {
   Sidebar,
@@ -52,7 +53,7 @@ function SidebarNavigationContent() {
     React.useState(true)
   const [isForetagExpanded, setIsForetagExpanded] = React.useState(false)
 
-  const isPropertiesActive = location.pathname === '/properties'
+  const isPropertiesActive = location.pathname === routes.properties
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -84,7 +85,7 @@ function SidebarNavigationContent() {
   return (
     <Sidebar>
       <SidebarContent className="gap-0">
-        <SidebarNavLink to="/" icon={Home} label="Startsida" />
+        <SidebarNavLink to={routes.dashboard} icon={Home} label="Startsida" />
 
         {/* FASTIGHETSDATA - Parent collapsible section */}
         <Collapsible
@@ -101,7 +102,10 @@ function SidebarNavigationContent() {
                     isActive={isPropertiesActive}
                     tooltip="Fastighetsdata"
                   >
-                    <Link to="/properties" onClick={handleFastighetsdataClick}>
+                    <Link
+                      to={routes.properties}
+                      onClick={handleFastighetsdataClick}
+                    >
                       <LayoutGrid />
                       <span>Fastighetsdata</span>
                       <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
@@ -139,16 +143,24 @@ function SidebarNavigationContent() {
           </SidebarGroup>
         </Collapsible>
 
-        <SidebarNavLink to="/tenants" icon={Contact} label="Kunder" />
-        <SidebarNavLink to="/rental-blocks" icon={ShieldX} label="Spärrar" />
-        <SidebarNavLink to="/leases" icon={FileText} label="Hyreskontrakt" />
+        <SidebarNavLink to={routes.tenants} icon={Contact} label="Kunder" />
         <SidebarNavLink
-          to="/besiktningar"
+          to={routes.rentalBlocks}
+          icon={ShieldX}
+          label="Spärrar"
+        />
+        <SidebarNavLink
+          to={routes.leases}
+          icon={FileText}
+          label="Hyreskontrakt"
+        />
+        <SidebarNavLink
+          to={routes.inspections}
           icon={ClipboardList}
           label="Besiktningar"
         />
         <SidebarNavLink
-          to="/components"
+          to={routes.components}
           icon={Settings}
           label="Administrera Komponenter"
         />
