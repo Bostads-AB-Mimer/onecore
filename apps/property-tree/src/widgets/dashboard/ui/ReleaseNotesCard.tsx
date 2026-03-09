@@ -8,9 +8,9 @@ import {
   Newspaper,
 } from 'lucide-react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import { RELEASE_NOTES, sortReleaseNotesByPinned } from '@/entities/release-note'
 
-import { RELEASE_NOTES, sortReleaseNotesByPinned } from '@/data/release-notes'
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
 import { ReleaseNoteItem } from './ReleaseNoteItem'
 import { ReleaseNotesModal } from './ReleaseNotesModal'

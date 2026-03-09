@@ -1,16 +1,15 @@
 import { Pin } from 'lucide-react'
 
-import type { ReleaseNote } from '@/services/types'
-
-import { Badge } from '@/shared/ui/Badge'
-
 import {
   formatReleaseNoteDate,
   RELEASE_NOTE_BADGE_STYLES,
   RELEASE_NOTE_CATEGORY_ICONS,
   RELEASE_NOTE_CATEGORY_LABELS,
   RELEASE_NOTE_ICON_STYLES,
-} from '@/data/release-notes'
+  type ReleaseNote,
+} from '@/entities/release-note'
+
+import { Badge } from '@/shared/ui/Badge'
 
 interface ReleaseNoteItemProps {
   note: ReleaseNote

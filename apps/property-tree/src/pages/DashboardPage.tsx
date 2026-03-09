@@ -5,6 +5,7 @@ import {
   type DashboardCard,
   DashboardCardItem,
   dashboardCards,
+  ReleaseNotesCard,
 } from '@/widgets/dashboard'
 
 import { useUser } from '@/entities/user'
@@ -12,8 +13,6 @@ import { useUser } from '@/entities/user'
 import onecoreLogo from '@/shared/assets/logos/stacked/onecore_logo_stacked_black.svg'
 import { Card, CardContent } from '@/shared/ui/Card'
 import { ViewLayout } from '@/shared/ui/layout'
-
-import { ReleaseNotesCard } from '@/components/dashboard/ReleaseNotesCard'
 
 export function DashboardPage() {
   const navigate = useNavigate()

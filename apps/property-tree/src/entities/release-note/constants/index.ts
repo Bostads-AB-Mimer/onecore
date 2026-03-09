@@ -1,13 +1,13 @@
 import { AlertTriangle, Bug, Info, Sparkles, Zap } from 'lucide-react'
 
-import type { ReleaseNote, ReleaseNoteCategory } from '@/services/types'
+import type { ReleaseNote, ReleaseNoteCategory } from '../model/types'
 
 /**
- * Auto-import all release note JSON files from this folder
+ * Auto-import all release note JSON files from the data folder.
  * To add a new release, just create a new JSON file: YYYY-MM-DD-vX.X.X.json
  * No need to update this file!
  */
-const releaseModules = import.meta.glob<ReleaseNote[]>('./*.json', {
+const releaseModules = import.meta.glob<ReleaseNote[]>('../data/*.json', {
   eager: true,
   import: 'default',
 })
@@ -66,26 +66,4 @@ export const RELEASE_NOTE_ICON_STYLES: Record<ReleaseNoteCategory, string> = {
   info: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400',
   warning:
     'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
-}
-
-/**
- * Format a release note date in Swedish locale
- */
-export function formatReleaseNoteDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('sv-SE', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-/**
- * Sort release notes with pinned items first, preserving date order otherwise
- */
-export function sortReleaseNotesByPinned(notes: ReleaseNote[]): ReleaseNote[] {
-  return [...notes].sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1
-    if (!a.pinned && b.pinned) return 1
-    return 0 // Keep original order (already sorted by date)
-  })
 }

@@ -1,14 +1,14 @@
 import { useEffect, useMemo } from 'react'
 import { Newspaper } from 'lucide-react'
 
+import { RELEASE_NOTES, sortReleaseNotesByPinned } from '@/entities/release-note'
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
-
-import { RELEASE_NOTES, sortReleaseNotesByPinned } from '@/data/release-notes'
 
 import { ReleaseNoteItem } from './ReleaseNoteItem'
 import { SupportMessage } from './SupportMessage'
