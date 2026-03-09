@@ -249,7 +249,11 @@ export function renderInspectionMobileCard(
           className="hover:bg-foreground hover:text-background"
           onClick={() => onAction(inspection)}
         >
-          <ActionIcon name={getStatusConfig(inspection.status).actionIcon as ActionIconName} />
+          <ActionIcon
+            name={
+              getStatusConfig(inspection.status).actionIcon as ActionIconName
+            }
+          />
           {getStatusConfig(inspection.status).actionLabel}
         </Button>
       </div>
