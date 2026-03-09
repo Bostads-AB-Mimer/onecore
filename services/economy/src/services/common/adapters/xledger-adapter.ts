@@ -1117,17 +1117,19 @@ export const submitMiscellaneousInvoice = async (
   const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
 
   /*
-    TODO
-    Hur ska vi sätta ourRef? Behöver hämta contact för att få dbId baserat på något, men vad?
-    Hur kan vi få användare i Xledger från inloggad användare i Onecore?
-    Behöver vi hämta alla contacts från Xledger och välja manuellt ur en lista när fakturaunderlaget skapas?
-
-    ourRef: {
-      dbId: "12345"
-    }
+    Workaround:
+    We can't send in a free text field as reference, so we use this workaround where we
+    add it as an invoice row
   */
+  const referenceRow: XledgerInvoiceRow = {
+    amount: 0,
+    price: 0,
+    articleId: 'KONTAKT', // TODO This article id has to be the same as the id in Xledger which will be updated.
+    articleName: invoice.reference,
+  }
+  const rowsWithReference = invoice.invoiceRows.concat(referenceRow)
 
-  const nodes = invoice.invoiceRows.map(
+  const nodes = rowsWithReference.map(
     (ir, index) => gql`
       {
         node: {
@@ -1199,7 +1201,7 @@ export const submitMiscellaneousInvoice = async (
   }
 }
 
-interface InvoiceRow {
+interface XledgerInvoiceRow {
   text?: string
   price: number
   amount: number
@@ -1215,7 +1217,7 @@ interface MiscellaneousInvoicePayload {
   leaseId: string
   costCentre: string
   propertyCode: string
-  invoiceRows: InvoiceRow[]
+  invoiceRows: XledgerInvoiceRow[]
   comment?: string
   projectCode?: string
   attachment?: any // TODO formidable file PersistentFileStorage
