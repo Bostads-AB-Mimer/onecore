@@ -201,7 +201,7 @@ export const sendNonScoredParkingSpaceApprovedEmail = async (
       return { ok: false, err: 'unknown', statusCode: result.status }
     }
 
-    return { ok: true, data: result.data.content }
+    return { ok: true, data: null }
   } catch (error) {
     logger.error(
       error,
@@ -239,7 +239,7 @@ export const sendNonScoredParkingSpaceDeniedEmail = async (
       return { ok: false, err: 'unknown', statusCode: result.status }
     }
 
-    return { ok: true, data: result.data.content }
+    return { ok: true, data: null }
   } catch (error) {
     logger.error(
       error,

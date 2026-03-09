@@ -4,10 +4,7 @@ import {
   sendNonScoredParkingSpaceDeniedEmail,
 } from '../../../adapters/communication-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
-import {
-  ListingStatus,
-  parkingSpaceApplicationCategoryTranslation,
-} from '@onecore/types'
+import { ListingStatus } from '@onecore/types'
 import {
   createLease,
   getContactByContactCode,
