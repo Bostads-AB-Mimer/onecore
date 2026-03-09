@@ -36,6 +36,15 @@ interface FormErrors {
   articles?: string
 }
 
+const formatReference = (reference: string) => {
+  const nameParts = reference.trim().split(' ')
+  if (nameParts.length === 1) {
+    return nameParts[0]
+  }
+
+  return `${nameParts[0]} ${nameParts[1].substring(0, 1)}`
+}
+
 export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
@@ -64,8 +73,11 @@ export function MiscellaneousInvoiceForm() {
     },
   })
 
-  const reference =
-    userState.tag === 'success' ? userState.user.name : 'Ej inloggad'
+  const [reference, setReference] = useState(
+    userState.tag === 'success'
+      ? formatReference(userState.user.name)
+      : 'Ej inloggad'
+  )
 
   const [errors, setErrors] = useState<FormErrors>({})
 
@@ -257,7 +269,10 @@ export function MiscellaneousInvoiceForm() {
 
             <div className="space-y-3">
               <Label>Referens</Label>
-              <Input value={reference} readOnly disabled className="bg-muted" />
+              <Input
+                value={reference}
+                onChange={(e) => setReference(e.currentTarget.value)}
+              />
             </div>
           </div>
 
