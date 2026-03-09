@@ -10,6 +10,7 @@ import {
   getContactByContactCode,
   getCreditInformation,
   getActiveListingByRentalObjectCode,
+  getParkingSpaceByCode,
   updateListingStatus,
 } from '../../../adapters/leasing-adapter'
 import { logger } from '@onecore/utilities'
@@ -61,6 +62,22 @@ export const createLeaseForExternalParkingSpace = async (
     }
 
     const listing = listingResponse.data
+
+    // Fetch rental object separately (listing doesn't include full rental object data)
+    const parkingSpaceResult = await getParkingSpaceByCode(parkingSpaceId)
+
+    if (!parkingSpaceResult.ok || !parkingSpaceResult.data) {
+      return {
+        processStatus: ProcessStatus.failed,
+        error: 'rental-object-not-found',
+        httpStatus: 404,
+        response: {
+          message: `The rental object ${parkingSpaceId} could not be retrieved.`,
+        },
+      }
+    }
+
+    const rentalObject = parkingSpaceResult.data
 
     if (listing.rentalRule != 'NON_SCORED') {
       return {
@@ -220,18 +237,20 @@ export const createLeaseForExternalParkingSpace = async (
         )
       }
 
-      await sendNonScoredParkingSpaceApprovedEmail({
-        to: applicantContact.emailAddress ?? '',
-        subject: 'Godkänd ansökan om bilplats',
-        text: 'Din ansökan om bilplats har godkänts.',
-        leaseId: leaseId,
-        address: listing.rentalObject?.address ?? '',
-        availableFrom: startDate ?? new Date().toISOString(),
-        parkingSpaceId: listing.rentalObjectCode,
-        objectId: listing.id.toString(),
-        type: listing.rentalObject?.objectTypeCaption ?? 'Bilplats',
-        rent: String(listing.rentalObject?.monthlyRent ?? ''),
-      })
+      if (applicantContact.emailAddress) {
+        await sendNonScoredParkingSpaceApprovedEmail({
+          to: applicantContact.emailAddress,
+          subject: 'Godkänd ansökan om bilplats',
+          text: 'Din ansökan om bilplats har godkänts.',
+          leaseId: leaseId,
+          address: rentalObject.address,
+          availableFrom: startDate ?? new Date().toISOString(),
+          parkingSpaceId: listing.rentalObjectCode,
+          objectId: listing.id.toString(),
+          type: rentalObject.objectTypeCaption ?? 'Bilplats',
+          rent: String(rentalObject.monthlyRent ?? ''),
+        })
+      }
       await sendNotificationToRole(
         'leasing',
         'Godkänd ansökan om bilplats',
@@ -253,17 +272,19 @@ export const createLeaseForExternalParkingSpace = async (
         `Ansökan kunde inte beviljas på grund av ouppfyllda kreditkrav (se ovan).`
       )
 
-      await sendNonScoredParkingSpaceDeniedEmail({
-        to: applicantContact.emailAddress ?? '',
-        subject: 'Nekad ansökan om bilplats',
-        text: 'Din ansökan om bilplats kunde inte godkännas.',
-        address: listing.rentalObject?.address ?? '',
-        availableFrom: startDate ?? new Date().toISOString(),
-        parkingSpaceId: listing.rentalObjectCode,
-        objectId: listing.id.toString(),
-        type: listing.rentalObject?.objectTypeCaption ?? 'Bilplats',
-        rent: String(listing.rentalObject?.monthlyRent ?? ''),
-      })
+      if (applicantContact.emailAddress) {
+        await sendNonScoredParkingSpaceDeniedEmail({
+          to: applicantContact.emailAddress,
+          subject: 'Nekad ansökan om bilplats',
+          text: 'Din ansökan om bilplats kunde inte godkännas.',
+          address: rentalObject.address,
+          availableFrom: startDate ?? new Date().toISOString(),
+          parkingSpaceId: listing.rentalObjectCode,
+          objectId: listing.id.toString(),
+          type: rentalObject.objectTypeCaption ?? 'Bilplats',
+          rent: String(rentalObject.monthlyRent ?? ''),
+        })
+      }
       await sendNotificationToRole(
         'leasing',
         'Nekad ansökan om extern bilplats',

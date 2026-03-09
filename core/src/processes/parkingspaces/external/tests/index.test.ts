@@ -43,6 +43,7 @@ describe('parkingspaces', () => {
       [contactCode: string, from?: Date],
       any
     >
+    let getParkingSpaceByCodeSpy: jest.SpyInstance
     let sendNonScoredParkingSpaceApprovedEmailSpy: jest.SpyInstance
     let sendNonScoredParkingSpaceDeniedEmailSpy: jest.SpyInstance
     let sendNotificationToRoleSpy: jest.SpyInstance<
@@ -87,6 +88,20 @@ describe('parkingspaces', () => {
       getInvoicesSentToDebtCollectionSpy = jest
         .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
         .mockResolvedValue({ ok: true, data: [] })
+      getParkingSpaceByCodeSpy = jest
+        .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            rentalObjectCode: '705-808-00-0006',
+            address: 'Testgatan 1',
+            monthlyRent: 500,
+            objectTypeCaption: 'Bilplats',
+            objectTypeCode: 'BP',
+            residentialAreaCaption: 'Test',
+            residentialAreaCode: 'TST',
+          },
+        })
       sendNonScoredParkingSpaceApprovedEmailSpy = jest
         .spyOn(communcationAdapter, 'sendNonScoredParkingSpaceApprovedEmail')
         .mockResolvedValue({ ok: true, data: null })
