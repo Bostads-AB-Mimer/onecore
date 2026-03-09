@@ -77,6 +77,7 @@ interface KeyLoansTableProps {
     after: string | null
     before: string | null
   }) => void
+  autoExpandLoanId?: string | null
 }
 
 export function KeyLoansTable({
@@ -97,6 +98,7 @@ export function KeyLoansTable({
   onPickedUpDateChange,
   returnedDateFilter,
   onReturnedDateChange,
+  autoExpandLoanId,
 }: KeyLoansTableProps) {
   const [contactData, setContactData] = useState<
     Record<
@@ -128,6 +130,13 @@ export function KeyLoansTable({
       return { loanDetails, keySystemMap: systemMap }
     },
   })
+
+  // Auto-expand a specific loan when navigating from another page
+  useEffect(() => {
+    if (autoExpandLoanId && keyLoans.length > 0) {
+      expansion.expand(autoExpandLoanId)
+    }
+  }, [autoExpandLoanId, keyLoans])
 
   // Fetch contact names for all loans
   useEffect(() => {

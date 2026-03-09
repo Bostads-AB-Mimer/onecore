@@ -24,6 +24,7 @@ export default function KeyLoans() {
   const searchQuery = pagination.searchParams.get('q') || ''
   const loanTypeFilter = pagination.searchParams.get('loanType') || null
   const editLoanIdFromUrl = pagination.searchParams.get('editLoanId')
+  const expandLoanIdFromUrl = pagination.searchParams.get('expandLoanId')
   const minKeys = pagination.searchParams.get('minKeys')
     ? parseInt(pagination.searchParams.get('minKeys')!, 10)
     : null
@@ -170,30 +171,44 @@ export default function KeyLoans() {
     setSearchInput(searchQuery)
   }, [searchQuery])
 
+  // Ensure the loan to auto-expand is in the list (it may not be on the current page)
+  useEffect(() => {
+    if (expandLoanIdFromUrl && keyLoans.length > 0) {
+      const exists = keyLoans.some((loan) => loan.id === expandLoanIdFromUrl)
+      if (!exists) {
+        keyLoanService
+          .get(expandLoanIdFromUrl)
+          .then((loan) => {
+            setKeyLoans((prev) => [loan as KeyLoan, ...prev])
+          })
+          .catch((error) => {
+            console.error('Failed to load loan for expand:', error)
+          })
+      }
+    }
+  }, [expandLoanIdFromUrl, keyLoans])
+
   // Auto-open edit form when editLoanId is in URL
   useEffect(() => {
     if (editLoanIdFromUrl && keyLoans.length > 0) {
-      const loanToEdit = keyLoans.find((loan) => loan.id === editLoanIdFromUrl)
-      if (loanToEdit) {
-        setEditingKeyLoan(loanToEdit)
-        setShowEditForm(true)
-      } else {
-        // Loan not in current page - fetch it directly
-        keyLoanService
-          .get(editLoanIdFromUrl)
-          .then((loan) => {
-            setEditingKeyLoan(loan)
-            setShowEditForm(true)
+      // Always fetch with details so keysArray is available in the edit form
+      keyLoanService
+        .get(editLoanIdFromUrl, {
+          includeKeySystem: true,
+          includeCards: true,
+        })
+        .then((loan) => {
+          setEditingKeyLoan(loan as KeyLoan)
+          setShowEditForm(true)
+        })
+        .catch((error) => {
+          console.error('Failed to load loan for editing:', error)
+          toast({
+            title: 'Fel',
+            description: 'Kunde inte ladda lånet för redigering',
+            variant: 'destructive',
           })
-          .catch((error) => {
-            console.error('Failed to load loan for editing:', error)
-            toast({
-              title: 'Fel',
-              description: 'Kunde inte ladda lånet för redigering',
-              variant: 'destructive',
-            })
-          })
-      }
+        })
       // Clear the URL param after opening
       pagination.updateUrlParams({ editLoanId: null })
     }
@@ -292,9 +307,19 @@ export default function KeyLoans() {
     [pagination]
   )
 
-  const handleEdit = useCallback((loan: KeyLoan) => {
-    setEditingKeyLoan(loan)
-    setShowEditForm(true)
+  const handleEdit = useCallback(async (loan: KeyLoan) => {
+    try {
+      const enriched = await keyLoanService.get(loan.id, {
+        includeKeySystem: true,
+        includeCards: true,
+      })
+      setEditingKeyLoan(enriched as KeyLoan)
+      setShowEditForm(true)
+    } catch {
+      // Fall back to plain loan if fetch fails
+      setEditingKeyLoan(loan)
+      setShowEditForm(true)
+    }
   }, [])
 
   const handleSave = useCallback(
@@ -559,6 +584,7 @@ export default function KeyLoans() {
         }
         onEdit={handleEdit}
         onDelete={handleDelete}
+        autoExpandLoanId={expandLoanIdFromUrl}
         loanTypeFilter={loanTypeFilter}
         onLoanTypeFilterChange={handleLoanTypeFilterChange}
         minKeys={minKeys}

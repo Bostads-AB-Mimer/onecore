@@ -17,6 +17,7 @@ import {
   UpdateKeyLoanRequest,
   Receipt,
 } from '@/services/types'
+import { KeyTypeLabels } from '@/services/types'
 import { receiptService } from '@/services/api/receiptService'
 import { X, FileText, Download, Trash2, Upload } from 'lucide-react'
 import { format } from 'date-fns'
@@ -232,15 +233,6 @@ export function EditKeyLoanForm({
     } catch {
       return 'Ogiltigt datum'
     }
-  }
-
-  // Get key count from keysArray if available
-  const getKeyCount = () => {
-    const withDetails = editingKeyLoan as KeyLoanWithDetails
-    if (withDetails.keysArray) {
-      return withDetails.keysArray.length
-    }
-    return '-'
   }
 
   return (
@@ -535,11 +527,39 @@ export function EditKeyLoanForm({
           </div>
 
           {/* Keys info (read-only) */}
-          <div className="space-y-1 pt-2">
+          <div className="space-y-2 pt-2">
             <h3 className="font-medium text-sm">Nycklar i detta lån</h3>
-            <div className="text-sm text-muted-foreground">
-              {getKeyCount()} {getKeyCount() === 1 ? 'nyckel' : 'nycklar'}
-            </div>
+            {(() => {
+              const withDetails = editingKeyLoan as KeyLoanWithDetails
+              if (withDetails.keysArray && withDetails.keysArray.length > 0) {
+                return (
+                  <div className="flex flex-wrap gap-1.5">
+                    {withDetails.keysArray.map((key) => (
+                      <div
+                        key={key.id}
+                        className="p-2 border rounded bg-card text-xs min-w-[200px]"
+                      >
+                        <div className="font-medium">{key.keyName}</div>
+                        <div className="text-muted-foreground">
+                          {KeyTypeLabels[key.keyType]}
+                          {key.keySystem?.systemCode &&
+                            ` • ${key.keySystem.systemCode}`}
+                          {key.flexNumber !== undefined &&
+                            ` • Flex: ${key.flexNumber}`}
+                          {key.keySequenceNumber !== undefined &&
+                            ` • Löpnr: ${key.keySequenceNumber}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+              return (
+                <div className="text-sm text-muted-foreground">
+                  {editingKeyLoan.keyCount ?? '-'} nycklar
+                </div>
+              )
+            })()}
           </div>
 
           {/* Form actions */}
