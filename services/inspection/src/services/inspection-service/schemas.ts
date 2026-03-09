@@ -103,3 +103,46 @@ export type DetailedXpandInspectionRoom = z.infer<
 export type DetailedXpandInspection = z.infer<
   typeof DetailedXpandInspectionSchema
 >
+
+const InspectionRoomConditionsSchema = z.object({
+  wall1: z.string(),
+  wall2: z.string(),
+  wall3: z.string(),
+  wall4: z.string(),
+  floor: z.string(),
+  ceiling: z.string(),
+  details: z.string(),
+})
+
+const InspectionRoomActionsSchema = z.object({
+  wall1: z.array(z.string()),
+  wall2: z.array(z.string()),
+  wall3: z.array(z.string()),
+  wall4: z.array(z.string()),
+  floor: z.array(z.string()),
+  ceiling: z.array(z.string()),
+  details: z.array(z.string()),
+})
+
+export const InspectionRoomSchema = z.object({
+  roomId: z.string(),
+  conditions: InspectionRoomConditionsSchema,
+  actions: InspectionRoomActionsSchema,
+  componentNotes: InspectionRoomConditionsSchema,
+  componentPhotos: InspectionRoomActionsSchema,
+  photos: z.array(z.string()),
+  isApproved: z.boolean(),
+  isHandled: z.boolean(),
+})
+
+export const InternalInspectionSchema = XpandInspectionSchema.extend({
+  rooms: z.array(InspectionRoomSchema).nullable(),
+})
+
+export const SaveInspectionDraftRequestSchema = z.object({
+  inspectorName: z.string(),
+  rooms: z.array(InspectionRoomSchema),
+})
+
+export type InspectionRoom = z.infer<typeof InspectionRoomSchema>
+export type InternalInspection = z.infer<typeof InternalInspectionSchema>
