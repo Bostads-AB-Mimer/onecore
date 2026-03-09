@@ -13,7 +13,6 @@ import {
   getOngoingInspectionColumns,
   INSPECTION_STATUS,
   type InspectionTableColumn,
-  type Inspector,
   renderInspectionMobileCard,
 } from '../constants'
 import { useInspectors } from '../hooks/useInspectors'
@@ -118,7 +117,7 @@ export function InspectionsTable({
     (isCompleted
       ? getCompletedInspectionColumns(handleInspectionClick)
       : getOngoingInspectionColumns(handleInspectionClick, {
-          inspectors: inspectors as Inspector[] | undefined,
+          inspectors: inspectors,
           onUpdateInspector: handleUpdateInspector,
         }))
 

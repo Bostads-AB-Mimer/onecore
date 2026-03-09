@@ -5,7 +5,12 @@ import {
   UpdateInspectionStatusSchema,
   validateStatusTransition,
 } from '../../../adapters/db-adapter/schemas'
-import { CreateInspectionParamsFactory } from '../../factories/inspection'
+import { DbInspectionRoom } from '../../../adapters/db-adapter/types'
+import {
+  CreateInspectionParamsFactory,
+  DbInspectionFactory,
+  DbInspectionRoomFactory,
+} from '../../factories/inspection'
 
 jest.mock('@onecore/utilities', () => ({
   logger: { info: jest.fn(), error: jest.fn() },
@@ -391,12 +396,7 @@ describe('db-adapter', () => {
 
     function createMockTrxForUpdate(
       inspection: typeof mockInspectionRow | undefined,
-      rooms: Array<{
-        id: number
-        inspectionId: number
-        roomName: string
-        createdAt: Date
-      }> = [],
+      rooms: DbInspectionRoom[] = [],
       remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
     ) {
       let currentOperation: 'select' | 'update' = 'select'
@@ -447,12 +447,7 @@ describe('db-adapter', () => {
 
     function createMockDbForUpdate(
       inspection: typeof mockInspectionRow | undefined,
-      rooms: Array<{
-        id: number
-        inspectionId: number
-        roomName: string
-        createdAt: Date
-      }> = [],
+      rooms: DbInspectionRoom[] = [],
       remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
     ) {
       const mockTrx = createMockTrxForUpdate(inspection, rooms, remarksByRoomId)
@@ -574,38 +569,11 @@ describe('db-adapter', () => {
   })
 
   describe('updateInternalInspection', () => {
-    const mockInspectionRow = {
-      id: 1,
-      status: 'Registrerad',
-      date: new Date('2023-01-01T10:00:00Z'),
-      startedAt: null,
-      endedAt: null,
-      inspector: 'Test Inspector',
-      type: 'Move-in',
-      residenceId: 'RES-001',
-      address: '123 Test Street',
-      apartmentCode: 'APT-001',
-      isFurnished: false,
-      leaseId: 'LEASE-001',
-      isTenantPresent: true,
-      isNewTenantPresent: false,
-      masterKeyAccess: null,
-      hasRemarks: false,
-      notes: null,
-      totalCost: null,
-      remarkCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
+    const mockInspectionRow = DbInspectionFactory.build()
 
     function createMockTrxForInternalUpdate(
       inspection: typeof mockInspectionRow | undefined,
-      rooms: Array<{
-        id: number
-        inspectionId: number
-        roomName: string
-        createdAt: Date
-      }> = [],
+      rooms: DbInspectionRoom[] = [],
       remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
     ) {
       let currentOperation: 'select' | 'update' = 'select'
@@ -656,12 +624,7 @@ describe('db-adapter', () => {
 
     function createMockDbForInternalUpdate(
       inspection: typeof mockInspectionRow | undefined,
-      rooms: Array<{
-        id: number
-        inspectionId: number
-        roomName: string
-        createdAt: Date
-      }> = [],
+      rooms: DbInspectionRoom[] = [],
       remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
     ) {
       const mockTrx = createMockTrxForInternalUpdate(
@@ -677,12 +640,7 @@ describe('db-adapter', () => {
 
     it('updates inspector only without changing status', async () => {
       const mockDb = createMockDbForInternalUpdate(mockInspectionRow, [
-        {
-          id: 1,
-          inspectionId: 1,
-          roomName: 'Kitchen',
-          createdAt: new Date(),
-        },
+        DbInspectionRoomFactory.build({ inspectionId: mockInspectionRow.id }),
       ])
 
       const result = await dbAdapter.updateInternalInspection(mockDb, '1', {
@@ -698,12 +656,7 @@ describe('db-adapter', () => {
 
     it('updates both status and inspector', async () => {
       const mockDb = createMockDbForInternalUpdate(mockInspectionRow, [
-        {
-          id: 1,
-          inspectionId: 1,
-          roomName: 'Kitchen',
-          createdAt: new Date(),
-        },
+        DbInspectionRoomFactory.build({ inspectionId: mockInspectionRow.id }),
       ])
 
       const result = await dbAdapter.updateInternalInspection(mockDb, '1', {

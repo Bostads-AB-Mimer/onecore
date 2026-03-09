@@ -24,12 +24,7 @@ import {
 import { getStatusConfig } from './statuses'
 
 type Inspection = components['schemas']['InspectionWithSource']
-
-export interface Inspector {
-  id: string
-  firstName: string
-  lastName: string
-}
+type KeycloakUser = components['schemas']['KeycloakUser']
 
 /**
  * Column configuration interface (compatible with ResponsiveTable)
@@ -65,7 +60,7 @@ function formatMasterKeyAccess(value: string | null | undefined): string {
  * Create an inspector column with inline Select for internal inspections
  */
 export function createInspectorColumn(
-  inspectors: Inspector[],
+  inspectors: KeycloakUser[],
   onUpdateInspector: (inspectionId: string, inspector: string) => void
 ): InspectionTableColumn {
   return {
@@ -219,7 +214,7 @@ export function createActionsColumn(
 export function getOngoingInspectionColumns(
   onAction: (inspection: Inspection) => void,
   options?: {
-    inspectors?: Inspector[]
+    inspectors?: KeycloakUser[]
     onUpdateInspector?: (inspectionId: string, inspector: string) => void
   }
 ): InspectionTableColumn[] {
