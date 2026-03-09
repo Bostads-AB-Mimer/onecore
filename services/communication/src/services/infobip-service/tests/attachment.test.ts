@@ -3,7 +3,7 @@ import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
 import { Email } from '@onecore/types'
-import * as infobipAdapter from '../adapters/infobip-adapter'
+import * as emailAdapter from '../adapters/email-adapter'
 import { routes } from '../'
 
 jest.mock('@onecore/utilities', () => {
@@ -30,7 +30,7 @@ describe('/sendMessageWithAttachment', () => {
   let sendEmailSpy: jest.SpyInstance<Promise<any>, [message: Email], any>
 
   beforeEach(() => {
-    sendEmailSpy = jest.spyOn(infobipAdapter, 'sendEmail')
+    sendEmailSpy = jest.spyOn(emailAdapter, 'sendEmail')
     sendEmailSpy.mockReset()
   })
 

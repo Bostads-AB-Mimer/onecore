@@ -20,10 +20,6 @@ import { PDFDocument } from 'pdf-lib'
 import { logger } from '@onecore/utilities'
 import * as receiptsAdapter from './adapters/receipts-adapter'
 
-
-
-
-
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -81,7 +77,7 @@ function isPdf(buffer: Buffer): boolean {
 async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
   const { createCanvas } = await import('@napi-rs/canvas')
   const data = new Uint8Array(buffer)
-  const pdfjsLib = await importPdfLib()
+  const pdfjsLib = await import('pdfjs-dist')
   const doc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise
   const frames: Frame[] = []
 
