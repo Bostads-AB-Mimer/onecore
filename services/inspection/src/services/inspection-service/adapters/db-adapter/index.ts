@@ -11,7 +11,10 @@ import {
 } from '../../schemas'
 import {
   CreateInspectionParams,
+  INSPECTION_STATUS,
+  InspectionRoom,
   InspectionStatus,
+  SaveInspectionDraftParams,
   UpdateInternalInspectionParams,
   validateStatusTransition,
 } from './schemas'
@@ -394,6 +397,102 @@ export async function getInspectionsByResidenceId(
       { error },
       `Database error while fetching inspections from local database for residenceId: ${residenceId}`
     )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function saveInspectionDraft(
+  dbConnection: Knex = db,
+  inspectionId: string,
+  params: SaveInspectionDraftParams
+): Promise<AdapterResult<void, 'not-found' | 'unknown'>> {
+  try {
+    const [inspection] = await dbConnection
+      .select('id')
+      .from<DbInspection>('inspection')
+      .where('id', inspectionId)
+
+    if (!inspection) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    await dbConnection('inspection')
+      .where('id', inspectionId)
+      .update({
+        inspector: params.inspectorName,
+        draftRooms: JSON.stringify(params.rooms),
+        status: INSPECTION_STATUS.STARTED,
+      })
+
+    return { ok: true, data: undefined }
+  } catch (error) {
+    logger.error(
+      { error },
+      `Error saving inspection draft for inspectionId: ${inspectionId}`
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getInspectionById(
+  dbConnection: Knex = db,
+  inspectionId: string
+): Promise<
+  AdapterResult<
+    XpandInspection & { rooms: InspectionRoom[] | null },
+    'not-found' | 'unknown'
+  >
+> {
+  try {
+    const [inspection] = await dbConnection
+      .select(
+        'id',
+        'status',
+        'date',
+        'inspector',
+        'type',
+        'address',
+        'apartmentCode',
+        'leaseId',
+        'masterKeyAccess',
+        'draftRooms'
+      )
+      .from<DbInspection>('inspection')
+      .where('id', inspectionId)
+
+    if (!inspection) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    let rooms: InspectionRoom[] | null = null
+    if (inspection.draftRooms) {
+      try {
+        rooms = JSON.parse(inspection.draftRooms) as InspectionRoom[]
+      } catch {
+        logger.error(
+          { inspectionId },
+          'Failed to parse draftRooms JSON for inspection'
+        )
+      }
+    }
+
+    return {
+      ok: true,
+      data: {
+        id: String(inspection.id),
+        status: inspection.status,
+        date: inspection.date,
+        inspector: inspection.inspector,
+        type: inspection.type,
+        address: inspection.address,
+        apartmentCode: inspection.apartmentCode,
+        leaseId: inspection.leaseId,
+        masterKeyAccess: inspection.masterKeyAccess,
+        rooms,
+      },
+    }
+  } catch (error) {
+    logger.error({ error }, `Error fetching inspection by ID: ${inspectionId}`)
     return { ok: false, err: 'unknown' }
   }
 }
