@@ -64,6 +64,7 @@ export function InspectionsTabContent({
         inspections={inspectionsData}
         hiddenColumns={['address']}
         rentalId={rentalId}
+        rooms={roomsQuery.data ?? []}
       />
     )
   }
