@@ -171,6 +171,8 @@ export const getBosociala = async (): Promise<BosocialaObject[]> => {
 
     all.push({
       ...i,
+      invoiceDate: new Date(i.invoiceDate),
+      expirationDate: i.expirationDate ? new Date(i.expirationDate) : undefined,
       lease,
       contact,
       daysSinceExpirationDate,
