@@ -134,7 +134,7 @@ const router = createBrowserRouter([
       {
         path: 'economy',
         element: <EconomyPage />,
-        handle: { title: 'Hyreskontrakt' },
+        handle: { title: 'Ekonomi' },
       },
     ],
   },
