@@ -10,7 +10,10 @@ import {
   CreateInspectionParamsFactory,
   DbInspectionFactory,
   DbInspectionRoomFactory,
+  InspectionRoomFactory,
+  SaveInspectionDraftParamsFactory,
 } from '../../factories/inspection'
+import { DbInspection } from '../../../adapters/db-adapter/types'
 
 jest.mock('@onecore/utilities', () => ({
   logger: { info: jest.fn(), error: jest.fn() },
@@ -370,32 +373,10 @@ describe('db-adapter', () => {
   })
 
   describe('updateInspectionStatus', () => {
-    const mockInspectionRow = {
-      id: 1,
-      status: 'Registrerad',
-      date: new Date('2023-01-01T10:00:00Z'),
-      startedAt: null,
-      endedAt: null,
-      inspector: 'Test Inspector',
-      type: 'Move-in',
-      residenceId: 'RES-001',
-      address: '123 Test Street',
-      apartmentCode: 'APT-001',
-      isFurnished: false,
-      leaseId: 'LEASE-001',
-      isTenantPresent: true,
-      isNewTenantPresent: false,
-      masterKeyAccess: null,
-      hasRemarks: false,
-      notes: null,
-      totalCost: null,
-      remarkCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
+    const mockInspectionRow = DbInspectionFactory.build({ id: 1 })
 
     function createMockTrxForUpdate(
-      inspection: typeof mockInspectionRow | undefined,
+      inspection: DbInspection | undefined,
       rooms: DbInspectionRoom[] = [],
       remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
     ) {
@@ -446,7 +427,7 @@ describe('db-adapter', () => {
     }
 
     function createMockDbForUpdate(
-      inspection: typeof mockInspectionRow | undefined,
+      inspection: DbInspection | undefined,
       rooms: DbInspectionRoom[] = [],
       remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
     ) {
@@ -886,6 +867,176 @@ describe('db-adapter', () => {
         mockDb,
         'RES001'
       )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+  })
+
+  describe('saveInspectionDraft', () => {
+    const mockDraftParams = SaveInspectionDraftParamsFactory.build({
+      rooms: [InspectionRoomFactory.build({ isHandled: true })],
+    })
+
+    function createMockDbForDraft(inspectionExists: boolean) {
+      const chain: Record<string, jest.Mock> = {}
+      chain.select = jest.fn().mockReturnValue(chain)
+      chain.from = jest.fn().mockReturnValue(chain)
+      chain.where = jest
+        .fn()
+        .mockResolvedValueOnce(inspectionExists ? [{ id: '1' }] : [])
+        .mockReturnValue(chain)
+      chain.update = jest.fn().mockResolvedValue(1)
+
+      const mockDb = jest.fn().mockReturnValue(chain)
+      // Also support dbConnection.select(...) pattern
+      Object.assign(mockDb, chain)
+      return mockDb as unknown as Knex
+    }
+
+    it('saves draft successfully for existing inspection', async () => {
+      const mockDb = createMockDbForDraft(true)
+
+      const result = await dbAdapter.saveInspectionDraft(
+        mockDb,
+        '1',
+        mockDraftParams
+      )
+
+      expect(result.ok).toBe(true)
+    })
+
+    it('returns not-found when inspection does not exist', async () => {
+      const mockDb = createMockDbForDraft(false)
+
+      const result = await dbAdapter.saveInspectionDraft(
+        mockDb,
+        '999',
+        mockDraftParams
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('not-found')
+      }
+    })
+
+    it('returns error when database fails', async () => {
+      const chain: Record<string, jest.Mock> = {}
+      chain.select = jest.fn().mockImplementation(() => {
+        throw new Error('DB connection failed')
+      })
+      chain.from = jest.fn().mockReturnValue(chain)
+      chain.where = jest.fn().mockReturnValue(chain)
+
+      const mockDb = Object.assign(
+        jest.fn().mockReturnValue(chain),
+        chain
+      ) as unknown as Knex
+
+      const result = await dbAdapter.saveInspectionDraft(
+        mockDb,
+        '1',
+        mockDraftParams
+      )
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+  })
+
+  describe('getInspectionById', () => {
+    function createMockDbForGetById(
+      inspection: Record<string, unknown> | undefined
+    ) {
+      const chain: Record<string, jest.Mock> = {}
+      chain.select = jest.fn().mockReturnValue(chain)
+      chain.from = jest.fn().mockReturnValue(chain)
+      chain.where = jest.fn().mockResolvedValue(inspection ? [inspection] : [])
+
+      const mockDb = Object.assign(
+        jest.fn().mockReturnValue(chain),
+        chain
+      ) as unknown as Knex
+      return mockDb
+    }
+
+    it('returns inspection with parsed draft rooms', async () => {
+      const draftRooms = [InspectionRoomFactory.build({ isHandled: true })]
+      const mockDb = createMockDbForGetById({
+        id: 1,
+        status: 'Påbörjad',
+        date: new Date('2024-01-01'),
+        inspector: 'Inspector A',
+        type: 'Move-in',
+        address: '123 Main St',
+        apartmentCode: 'APT001',
+        leaseId: 'LEASE001',
+        masterKeyAccess: null,
+        draftRooms: JSON.stringify(draftRooms),
+      })
+
+      const result = await dbAdapter.getInspectionById(mockDb, '1')
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.id).toBe('1')
+        expect(result.data.rooms).toHaveLength(1)
+        expect(result.data.rooms![0].roomId).toBe('room-1')
+      }
+    })
+
+    it('returns inspection with null rooms when no draft data', async () => {
+      const mockDb = createMockDbForGetById({
+        id: 1,
+        status: 'Registrerad',
+        date: new Date('2024-01-01'),
+        inspector: 'Inspector A',
+        type: 'Move-in',
+        address: '123 Main St',
+        apartmentCode: 'APT001',
+        leaseId: 'LEASE001',
+        masterKeyAccess: null,
+        draftRooms: null,
+      })
+
+      const result = await dbAdapter.getInspectionById(mockDb, '1')
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.rooms).toBeNull()
+      }
+    })
+
+    it('returns not-found when inspection does not exist', async () => {
+      const mockDb = createMockDbForGetById(undefined)
+
+      const result = await dbAdapter.getInspectionById(mockDb, '999')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('not-found')
+      }
+    })
+
+    it('returns error when database fails', async () => {
+      const chain: Record<string, jest.Mock> = {}
+      chain.select = jest.fn().mockImplementation(() => {
+        throw new Error('DB connection failed')
+      })
+      chain.from = jest.fn().mockReturnValue(chain)
+      chain.where = jest.fn().mockReturnValue(chain)
+
+      const mockDb = Object.assign(
+        jest.fn().mockReturnValue(chain),
+        chain
+      ) as unknown as Knex
+
+      const result = await dbAdapter.getInspectionById(mockDb, '1')
 
       expect(result.ok).toBe(false)
       if (!result.ok) {

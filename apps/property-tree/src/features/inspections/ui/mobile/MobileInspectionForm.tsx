@@ -18,7 +18,7 @@ import { useInspectionForm } from '../../hooks/useInspectionForm'
 import { InspectorSelectionCard } from '../InspectorSelectionCard'
 import { RoomInspectionEditor } from '../RoomInspectionEditor'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface MobileInspectionFormProps {

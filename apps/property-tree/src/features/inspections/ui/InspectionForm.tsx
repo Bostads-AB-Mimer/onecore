@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 
 import type {
@@ -15,13 +15,23 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/AlertDialog'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
 import { useInspectionForm } from '../hooks/useInspectionForm'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface InspectionFormProps {
@@ -73,6 +83,8 @@ export function InspectionForm({
 
   const canComplete = inspectorName && completedRooms === rooms.length
 
+  const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
+
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
     if (!tenant) return undefined
     return {
@@ -95,14 +107,13 @@ export function InspectionForm({
   //   }
   // }
 
-  // const handleSaveDraft = () => {
-  //   if (inspectorName.trim()) {
-  //     onSave(inspectorName, inspectionData, 'draft', {
-  //       needsMasterKey,
-  //       tenant: createTenantSnapshot(),
-  //     })
-  //   }
-  // }
+  const handleConfirmSaveDraft = () => {
+    onSave(inspectorName, inspectionData, 'draft', {
+      needsMasterKey,
+      tenant: createTenantSnapshot(),
+    })
+    setIsDraftConfirmOpen(false)
+  }
 
   return (
     <div className="space-y-6 min-w-0">
@@ -184,17 +195,39 @@ export function InspectionForm({
         <Button variant="outline" onClick={onCancel}>
           Avbryt
         </Button>
-        {/* <Button
+        <Button
           variant="secondary"
-          onClick={handleSaveDraft}
+          onClick={() => setIsDraftConfirmOpen(true)}
           disabled={!inspectorName.trim()}
         >
           Spara utkast
         </Button>
+
+        {/*
         <Button onClick={handleSubmit} disabled={!canComplete}>
           Slutför besiktning
         </Button> */}
       </div>
+
+      <AlertDialog
+        open={isDraftConfirmOpen}
+        onOpenChange={setIsDraftConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Spara utkast?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dina framsteg sparas och du kan fortsätta besiktningen senare.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSaveDraft}>
+              Spara utkast
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -9,6 +9,8 @@ import * as dbAdapter from '../adapters/db-adapter'
 import {
   XpandInspectionFactory,
   DetailedXpandInspectionFactory,
+  InspectionRoomFactory,
+  SaveInspectionDraftParamsFactory,
 } from './factories'
 
 const app = new Koa()
@@ -392,6 +394,101 @@ describe('inspection-service', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Database connection failed')
+    })
+  })
+
+  describe('GET /inspections/internal/:inspectionId', () => {
+    it('returns inspection with draft rooms', async () => {
+      const inspectionId = '1'
+      const mockInspection = {
+        ...XpandInspectionFactory.build({ id: inspectionId }),
+        rooms: [InspectionRoomFactory.build({ isHandled: true })],
+      }
+      jest
+        .spyOn(dbAdapter, 'getInspectionById')
+        .mockResolvedValueOnce({ ok: true, data: mockInspection })
+
+      const res = await request(app.callback()).get(
+        `/inspections/internal/${inspectionId}`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.inspection.id).toBe(inspectionId)
+      expect(res.body.content.inspection.rooms).toHaveLength(1)
+    })
+
+    it('returns 404 when inspection not found', async () => {
+      jest
+        .spyOn(dbAdapter, 'getInspectionById')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get('/inspections/internal/999')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 on unexpected errors', async () => {
+      jest.spyOn(dbAdapter, 'getInspectionById').mockImplementation(() => {
+        throw new Error('Database connection failed')
+      })
+
+      const res = await request(app.callback()).get('/inspections/internal/1')
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
+  describe('PATCH /inspections/internal/:inspectionId/draft', () => {
+    const validDraftBody = SaveInspectionDraftParamsFactory.build({
+      rooms: [InspectionRoomFactory.build({ isHandled: true })],
+    })
+
+    it('saves draft successfully', async () => {
+      jest
+        .spyOn(dbAdapter, 'saveInspectionDraft')
+        .mockResolvedValueOnce({ ok: true, data: undefined })
+
+      const res = await request(app.callback())
+        .patch('/inspections/internal/1/draft')
+        .send(validDraftBody)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.success).toBe(true)
+    })
+
+    it('returns 400 for invalid request body', async () => {
+      const res = await request(app.callback())
+        .patch('/inspections/internal/1/draft')
+        .send({ invalid: 'data' })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+    })
+
+    it('returns 404 when inspection not found', async () => {
+      jest
+        .spyOn(dbAdapter, 'saveInspectionDraft')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback())
+        .patch('/inspections/internal/999/draft')
+        .send(validDraftBody)
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 on unexpected errors', async () => {
+      jest.spyOn(dbAdapter, 'saveInspectionDraft').mockImplementation(() => {
+        throw new Error('Database connection failed')
+      })
+
+      const res = await request(app.callback())
+        .patch('/inspections/internal/1/draft')
+        .send(validDraftBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
     })
   })
 

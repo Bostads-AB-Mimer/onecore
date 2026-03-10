@@ -5832,6 +5832,42 @@ export interface paths {
     };
   };
   "/inspections/internal/{inspectionId}": {
+    /** Get internal inspection by ID including draft room data */
+    get: {
+      parameters: {
+        path: {
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Internal inspection with draft room data */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                inspection?: components["schemas"]["InternalInspection"];
+              };
+            };
+          };
+        };
+        /** @description Inspection not found */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
     /**
      * Update internal inspection
      * @description Updates an internal inspection. Supports updating status (with valid transitions Registrerad → Påbörjad → Genomförd) and/or inspector. At least one field must be provided.
@@ -5860,6 +5896,51 @@ export interface paths {
           };
         };
         /** @description Invalid request body or invalid status transition */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Inspection not found */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/draft": {
+    /** Save inspection draft data (rooms and inspector name) */
+    patch: {
+      parameters: {
+        path: {
+          inspectionId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["SaveInspectionDraftRequest"];
+        };
+      };
+      responses: {
+        /** @description Draft saved successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid request body */
         400: {
           content: {
             "application/json": {
@@ -12105,6 +12186,105 @@ export interface components {
             specialAttention?: boolean;
           }[];
       }) | null;
+    };
+    InternalInspection: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      inspector: string;
+      type: string;
+      address: string;
+      apartmentCode: string | null;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      rooms: {
+          roomId: string;
+          conditions: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          actions: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          componentNotes: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          componentPhotos: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          photos: string[];
+          isApproved: boolean;
+          isHandled: boolean;
+        }[] | null;
+    };
+    SaveInspectionDraftRequest: {
+      inspectorName: string;
+      rooms: {
+          roomId: string;
+          conditions: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          actions: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          componentNotes: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          componentPhotos: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          photos: string[];
+          isApproved: boolean;
+          isHandled: boolean;
+        }[];
     };
     FileListItem: {
       /** @description Full file path/name */

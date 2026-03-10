@@ -6,7 +6,7 @@ import type { Room } from '@/services/types'
 import { Sheet, SheetContent } from '@/shared/ui/Sheet'
 
 import { MobileInspectionForm } from './MobileInspectionForm'
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface MobileInspectionSheetProps {

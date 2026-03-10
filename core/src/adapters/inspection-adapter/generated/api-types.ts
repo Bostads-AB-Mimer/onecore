@@ -302,6 +302,40 @@ export interface paths {
     }
   }
   '/inspections/internal/{inspectionId}': {
+    /** Get internal inspection by ID including draft room data */
+    get: {
+      parameters: {
+        path: {
+          inspectionId: string
+        }
+      }
+      responses: {
+        /** @description Internal inspection with draft room data */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                inspection?: components['schemas']['InternalInspection']
+              }
+            }
+          }
+        }
+        404: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Update internal inspection
      * @description Updates an internal inspection. Supports updating status (with valid transitions Registrerad → Påbörjad → Genomförd) and/or inspector. At least one field must be provided.
@@ -355,6 +389,53 @@ export interface paths {
             'application/json': {
               error?: string
               metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/internal/{inspectionId}/draft': {
+    /** Save inspection draft data (rooms and inspector name) */
+    patch: {
+      parameters: {
+        path: {
+          inspectionId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['SaveInspectionDraftRequest']
+        }
+      }
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                success?: boolean
+              }
+            }
+          }
+        }
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+        404: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+        500: {
+          content: {
+            'application/json': {
+              error?: string
             }
           }
         }
@@ -541,6 +622,65 @@ export interface components {
       /** @enum {string} */
       status?: 'Registrerad' | 'Påbörjad' | 'Genomförd'
       inspector?: string
+    }
+    InspectionRoom: {
+      roomId: string
+      conditions: {
+        wall1: string
+        wall2: string
+        wall3: string
+        wall4: string
+        floor: string
+        ceiling: string
+        details: string
+      }
+      actions: {
+        wall1: string[]
+        wall2: string[]
+        wall3: string[]
+        wall4: string[]
+        floor: string[]
+        ceiling: string[]
+        details: string[]
+      }
+      componentNotes: {
+        wall1: string
+        wall2: string
+        wall3: string
+        wall4: string
+        floor: string
+        ceiling: string
+        details: string
+      }
+      componentPhotos: {
+        wall1: string[]
+        wall2: string[]
+        wall3: string[]
+        wall4: string[]
+        floor: string[]
+        ceiling: string[]
+        details: string[]
+      }
+      photos: string[]
+      isApproved: boolean
+      isHandled: boolean
+    }
+    InternalInspection: {
+      id: string
+      status: string
+      /** Format: date-time */
+      date: string
+      inspector: string
+      type: string
+      address: string
+      apartmentCode: string | null
+      leaseId: string
+      masterKeyAccess: string | null
+      rooms: components['schemas']['InspectionRoom'][] | null
+    }
+    SaveInspectionDraftRequest: {
+      inspectorName: string
+      rooms: components['schemas']['InspectionRoom'][]
     }
   }
   responses: never

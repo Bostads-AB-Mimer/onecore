@@ -7,7 +7,7 @@ import { useInspectionValidation } from './useInspectionValidation'
 import { useInspectorInfo } from './useInspectorInfo'
 import { useRoomInspection } from './useRoomInspection'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InternalInspection']
 
 export function useInspectionForm(
   rooms: Room[],

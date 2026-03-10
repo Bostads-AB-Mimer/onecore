@@ -19,6 +19,7 @@ export type DbInspection = {
   notes: string | null
   totalCost: number | null
   remarkCount: number
+  draftRooms: string | null
   createdAt: Date
   updatedAt: Date
 }

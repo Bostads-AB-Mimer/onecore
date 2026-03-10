@@ -9,12 +9,16 @@ import {
   DetailedXpandInspectionSchema,
   GetInspectionsFromXpandQuerySchema,
   GetInspectionsByResidenceIdQuerySchema,
+  InspectionRoomSchema,
+  InternalInspectionSchema,
+  SaveInspectionDraftRequestSchema,
   XpandInspectionSchema,
 } from './schemas'
 import * as xpandAdapter from './adapters/xpand-adapter'
 import * as dbAdapter from './adapters/db-adapter'
 import {
   CreateInspectionSchema,
+  SaveInspectionDraftSchema,
   UpdateInternalInspectionSchema,
   UpdateInspectionStatusSchema,
 } from './adapters/db-adapter/schemas'
@@ -34,7 +38,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema('DetailedXpandInspectionRoom', DetailedXpandInspectionSchema)
   registerSchema('DetailedXpandInspectionRemark', DetailedXpandInspectionSchema)
   registerSchema('CreateInspection', CreateInspectionSchema)
-  registerSchema('UpdateInspectionStatus', UpdateInternalInspectionSchema)
+  registerSchema('UpdateInspectionStatus', UpdateInspectionStatusSchema)
+  registerSchema('InspectionRoom', InspectionRoomSchema)
+  registerSchema('InternalInspection', InternalInspectionSchema)
+  registerSchema('SaveInspectionDraftRequest', SaveInspectionDraftRequestSchema)
 
   /**
    * @swagger
@@ -798,6 +805,146 @@ export const routes = (router: KoaRouter) => {
    *                 metadata:
    *                   type: object
    */
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}:
+   *   get:
+   *     tags:
+   *       - Inspection
+   *     summary: Get internal inspection by ID including draft room data
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Internal inspection with draft room data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/InternalInspection'
+   *       404:
+   *         description: Inspection not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/inspections/internal/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result = await dbAdapter.getInspectionById(db, inspectionId)
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: `Inspection with ID ${inspectionId} not found`,
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 500
+        ctx.body = { error: 'Failed to fetch inspection', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: { inspection: result.data }, ...metadata }
+    } catch (error) {
+      logger.error(error, `Error fetching inspection by ID: ${inspectionId}`)
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/draft:
+   *   patch:
+   *     tags:
+   *       - Inspection
+   *     summary: Save inspection draft data (rooms and inspector name)
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SaveInspectionDraftRequest'
+   *     responses:
+   *       200:
+   *         description: Draft saved successfully
+   *       400:
+   *         description: Invalid request body
+   *       404:
+   *         description: Inspection not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.patch('(.*)/inspections/internal/:inspectionId/draft', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    const validationResult = SaveInspectionDraftSchema.safeParse(
+      ctx.request.body
+    )
+    if (!validationResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: validationResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await dbAdapter.saveInspectionDraft(
+        db,
+        inspectionId,
+        validationResult.data
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: `Inspection with ID ${inspectionId} not found`,
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 500
+        ctx.body = { error: 'Failed to save draft', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: { success: true }, ...metadata }
+    } catch (error) {
+      logger.error(
+        error,
+        `Error saving draft for inspectionId: ${inspectionId}`
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
   router.patch('(.*)/inspections/internal/:inspectionId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params

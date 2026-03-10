@@ -5,12 +5,15 @@ import { components } from './generated/api-types'
 
 type InspectionWithSource = components['schemas']['InspectionWithSource']
 type DetailedInspection = components['schemas']['DetailedInspection']
+type InternalInspection = components['schemas']['InternalInspection']
 type TenantContactsResponse = components['schemas']['TenantContactsResponse']
 type SendProtocolRequest = components['schemas']['SendProtocolRequest']
 type SendProtocolResponse = components['schemas']['SendProtocolResponse']
 type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
 type UpdateInspectionStatusRequest =
   components['schemas']['UpdateInspectionStatusRequest']
+type SaveInspectionDraftRequest =
+  components['schemas']['SaveInspectionDraftRequest']
 
 export interface PaginatedInspectionsResponse {
   content: InspectionWithSource[]
@@ -161,5 +164,29 @@ export const inspectionService = {
       throw new Error('Failed to update inspection status')
 
     return response.data.content.inspection
+  },
+
+  async getInternalInspectionById(
+    inspectionId: string
+  ): Promise<InternalInspection> {
+    const response = await GET('/inspections/internal/{inspectionId}', {
+      params: { path: { inspectionId } },
+    })
+    if (response.error) throw response.error
+    if (!response.data?.content?.inspection)
+      throw new Error('No data returned from API')
+
+    return response.data.content.inspection
+  },
+
+  async saveInspectionDraft(
+    inspectionId: string,
+    body: SaveInspectionDraftRequest
+  ): Promise<void> {
+    const response = await PATCH('/inspections/internal/{inspectionId}/draft', {
+      params: { path: { inspectionId } },
+      body,
+    })
+    if (response.error) throw response.error
   },
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { InspectionRoom } from '../../schemas'
 
 export const CreateInspectionRemarkSchema = z.object({
   remarkId: z.string({ required_error: 'Remark ID is required' }),
@@ -65,6 +66,12 @@ export const INSPECTION_STATUSES = [
 
 export type InspectionStatus = (typeof INSPECTION_STATUSES)[number]
 
+export const INSPECTION_STATUS = {
+  REGISTERED: 'Registrerad',
+  STARTED: 'Påbörjad',
+  COMPLETED: 'Genomförd',
+} as const satisfies Record<string, InspectionStatus>
+
 export const VALID_STATUS_TRANSITIONS: Record<string, string> = {
   Registrerad: 'Påbörjad',
   Påbörjad: 'Genomförd',
@@ -103,4 +110,15 @@ export function validateStatusTransition(
     }
   }
   return { ok: true }
+}
+
+export {
+  InspectionRoomSchema,
+  SaveInspectionDraftRequestSchema as SaveInspectionDraftSchema,
+} from '../../schemas'
+export type { InspectionRoom } from '../../schemas'
+
+export type SaveInspectionDraftParams = {
+  inspectorName: string
+  rooms: InspectionRoom[]
 }

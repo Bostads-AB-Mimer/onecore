@@ -15,8 +15,8 @@ import {
 
 import { InspectionForm } from './InspectionForm'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
-type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
+type Inspection = components['schemas']['InternalInspection']
 
 import type { InspectionSubmitData } from '@/features/inspections/types/index'
 
@@ -72,9 +72,15 @@ export function InspectionFormDialog({
     }
   }
 
-  // Determine which inspection data to use based on user choice
+  // Determine which inspection data to use based on user choice.
+  // When starting fresh, preserve the existing inspection metadata (e.g. inspector)
+  // but clear rooms so the form starts blank.
   const inspectionToUse =
-    userChoice === 'fresh' ? undefined : existingInspection
+    userChoice === 'fresh'
+      ? existingInspection
+        ? { ...existingInspection, rooms: null }
+        : undefined
+      : existingInspection
 
   // Show choice dialog if there's saved data and user hasn't chosen yet
   if (hasSavedData && userChoice === null) {
