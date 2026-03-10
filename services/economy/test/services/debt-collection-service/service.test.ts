@@ -49,7 +49,7 @@ import {
 } from './__mocks__/xpand-db-adapter'
 
 import {
-  getContacts as getXledgerContacts,
+  getCustomers as getXledgerCustomers,
   setupDefaultMocks as setupXledgerDefaultMocks,
   resetMocks as resetXledgerMocks,
 } from './__mocks__/xledger-adapter'
@@ -265,7 +265,7 @@ describe('Debt Collection Service', () => {
 
     it('should return error on missing contacts', async () => {
       getContacts.mockResolvedValueOnce([])
-      getXledgerContacts.mockResolvedValueOnce([])
+      getXledgerCustomers.mockResolvedValueOnce([])
 
       const result = await enrichOtherInvoices(validCsv)
 

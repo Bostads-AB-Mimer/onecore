@@ -6,8 +6,8 @@ import {
   getInvoiceRows,
 } from '../common/adapters/xpand-db-adapter'
 import {
-  getContacts as getXledgerContacts,
-  XledgerContact,
+  getCustomers as getXledgerCustomers,
+  XledgerCustomer,
 } from '../common/adapters/xledger-adapter'
 import generateBalanceCorrectionFile from './converters/generateBalanceCorrectionFile'
 import generateInkassoSergelFile from './converters/generateInkassoSergelFile'
@@ -87,22 +87,22 @@ export const importBalanceCorrectionsFromCsv = (
   })
 }
 
-const transformXledgerContactToXpandContact = (
-  xledgerContact: XledgerContact
+const transformXledgerCustomerToXpandContact = (
+  xledgerCustomer: XledgerCustomer
 ): XpandContact => {
   return {
-    contactCode: xledgerContact.contactCode,
+    contactCode: xledgerCustomer.contactCode,
     address: {
-      street: xledgerContact.address.street,
-      city: xledgerContact.address.city,
-      postalCode: xledgerContact.address.postalCode,
+      street: xledgerCustomer.address.street,
+      city: xledgerCustomer.address.city,
+      postalCode: xledgerCustomer.address.postalCode,
       number: '',
     },
-    fullName: xledgerContact.fullName,
-    nationalRegistrationNumber: xledgerContact.nationalRegistrationNumber,
+    fullName: xledgerCustomer.fullName,
+    nationalRegistrationNumber: xledgerCustomer.nationalRegistrationNumber,
     phoneNumbers: [
       {
-        phoneNumber: xledgerContact.phoneNumber ?? '',
+        phoneNumber: xledgerCustomer.phoneNumber ?? '',
         type: '',
         isMainNumber: true,
       },
@@ -228,12 +228,12 @@ export const enrichOtherInvoices = async (
     const rows = importInvoicesFromCsv(csv, ';')
     const contactCodes = rows.map((row) => row.contactCode)
 
-    const [xpandContacts, xledgerContacts] = await Promise.all([
+    const [xpandContacts, xledgerCustomers] = await Promise.all([
       getXpandContacts(contactCodes),
-      getXledgerContacts(contactCodes),
+      getXledgerCustomers(contactCodes),
     ])
     const allContacts = xpandContacts.concat(
-      xledgerContacts.map(transformXledgerContactToXpandContact)
+      xledgerCustomers.map(transformXledgerCustomerToXpandContact)
     )
 
     const enrichedInvoices = rows.map((row): EnrichedXledgerRentCase => {
