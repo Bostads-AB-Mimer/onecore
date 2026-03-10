@@ -8,6 +8,7 @@ import {
   InvoicePaymentEvent,
   InvoiceTransactionType,
   PaymentStatus,
+  XledgerContact,
 } from '@onecore/types'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 import { match, P } from 'ts-pattern'
@@ -279,17 +280,28 @@ export interface XledgerCustomer {
   phoneNumber?: string
 }
 
-const transformToCustomer = (contactData: any): XledgerCustomer => {
+const transformToContact = (contactData: any): XledgerContact => {
   return {
-    contactCode: contactData.code,
-    address: {
-      street: contactData.address.streetAddress,
-      postalCode: contactData.address.zipCode,
-      city: contactData.address.place,
-    },
-    fullName: contactData.description,
-    nationalRegistrationNumber: contactData.company.companyNumber,
+    dbId: contactData.dbId,
+    fullName: contactData.name,
+    firstName: contactData.firstName,
+    lastName: contactData.lastName,
     phoneNumber: contactData.phone,
+    email: contactData.email,
+  }
+}
+
+const transformToCustomer = (customerData: any): XledgerCustomer => {
+  return {
+    contactCode: customerData.code,
+    address: {
+      street: customerData.address.streetAddress,
+      postalCode: customerData.address.zipCode,
+      city: customerData.address.place,
+    },
+    fullName: customerData.description,
+    nationalRegistrationNumber: customerData.company.companyNumber,
+    phoneNumber: customerData.phone,
   }
 }
 
@@ -461,6 +473,54 @@ export const getCustomers = async (
   }
 
   return customers
+}
+
+export const getContacts = async (
+  after?: string
+): Promise<XledgerContact[]> => {
+  const query = {
+    query: gql`
+      query ($first: Int, $after: String) {
+        contacts(first: $first, after: $after) {
+          edges {
+            node {
+              dbId
+              name
+              firstName
+              lastName
+              phone
+              email
+            }
+          }
+          pageInfo {
+            hasNextPage
+          }
+        }
+      }
+    `,
+    variables: {
+      first: 100,
+      after: after,
+    },
+  }
+
+  const result = await makeXledgerRequest(query)
+
+  if (!result.data && result.data.errors) {
+    logger.error(result.data.errors[0], 'Error querying Xledger')
+  }
+
+  const contacts = result.data.contacts.edges.map((e: any) =>
+    transformToContact(e.node)
+  )
+
+  if (result.data.contacts.pageInfo.hasNextPage) {
+    const lastEdge = result.data.contacts.edges.at(-1)
+    const nextContacts = await getContacts(lastEdge.cursor)
+    contacts.push(...nextContacts)
+  }
+
+  return contacts
 }
 
 const invoiceNodeFragment = `
