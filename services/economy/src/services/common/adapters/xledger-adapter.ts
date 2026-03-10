@@ -267,7 +267,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
   return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
 }
 
-export interface XledgerContact {
+export interface XledgerCustomer {
   contactCode: string
   address: {
     street: string
@@ -279,7 +279,7 @@ export interface XledgerContact {
   phoneNumber?: string
 }
 
-const transformToContact = (contactData: any): XledgerContact => {
+const transformToCustomer = (contactData: any): XledgerCustomer => {
   return {
     contactCode: contactData.code,
     address: {
@@ -293,7 +293,7 @@ const transformToContact = (contactData: any): XledgerContact => {
   }
 }
 
-const getContact = async (contactCode: string) => {
+const getCustomer = async (contactCode: string) => {
   const query = {
     query: `{
       customers(first: 1, filter: { code: "${contactCode}" }) {
@@ -385,7 +385,7 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
   }
 }
 
-const getContactDbId = async (contactCode: string): Promise<string | null> => {
+const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
     query: `{
       customers (first: 1, filter: { code: "${contactCode}" }) {
@@ -405,10 +405,10 @@ const getContactDbId = async (contactCode: string): Promise<string | null> => {
   return result.data?.customers?.edges?.[0].node.dbId ?? null
 }
 
-export const getContacts = async (
+export const getCustomers = async (
   contactCodes: string[],
   after?: string
-): Promise<XledgerContact[]> => {
+): Promise<XledgerCustomer[]> => {
   const query = {
     query: gql`
       query ($first: Int!, $filter: Customer_Filter, $after: String) {
@@ -450,17 +450,17 @@ export const getContacts = async (
     logger.error(result.data.errors[0], 'Error querying Xledger')
   }
 
-  const contacts = result.data.customers.edges.map((e: any) =>
-    transformToContact(e.node)
+  const customers = result.data.customers.edges.map((e: any) =>
+    transformToCustomer(e.node)
   )
 
   if (result.data.customers.pageInfo.hasNextPage) {
     const lastEdge = result.data.customers.edges.at(-1)
-    const nextContacts = await getContacts(contactCodes, lastEdge.cursor)
-    contacts.push(...nextContacts)
+    const nextCustomers = await getCustomers(contactCodes, lastEdge.cursor)
+    customers.push(...nextCustomers)
   }
 
-  return contacts
+  return customers
 }
 
 const invoiceNodeFragment = `
@@ -620,7 +620,7 @@ export const getInvoicesByContactCode = async (
   contactCode: string,
   filters?: { from?: Date }
 ): Promise<Invoice[] | null> => {
-  const xledgerId = await getContactDbId(contactCode)
+  const xledgerId = await getCustomerDbId(contactCode)
 
   if (!xledgerId) {
     logger.error(
@@ -837,7 +837,7 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
 export const syncContact = async (
   dbContact: any
 ): Promise<AdapterResult<any, string>> => {
-  const xledgerContact = await getContact(dbContact.ContactCode)
+  const xledgerContact = await getCustomer(dbContact.ContactCode)
 
   try {
     if (!xledgerContact) {
