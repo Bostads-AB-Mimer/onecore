@@ -92,6 +92,8 @@ export const LeaseSearchResultSchema = z.object({
   leaseType: z.string(),
   contacts: z.array(ContactInfoSchema),
   address: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  city: z.string().nullable(),
   startDate: z.date().nullable(),
   lastDebitDate: z.date().nullable(),
   status: z.nativeEnum(LeaseStatus),

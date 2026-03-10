@@ -279,6 +279,8 @@ interface RentalPropertyInfo {
   maintenanceUnits?: MaintenanceUnitInfo[]
   districtCode: string
   district: string
+  marketAreaCode: string
+  marketArea: string
 }
 
 interface ApartmentInfo {
