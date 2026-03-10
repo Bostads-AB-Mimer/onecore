@@ -6,6 +6,8 @@ export const RentalPropertyInfoFactory = Factory.define<RentalPropertyInfo>(
   () => ({
     id: '705-022-04-0201',
     type: 'Lägenhet',
+    districtCode: '61132',
+    district: 'Distrikt Öst',
     property: {
       rentalTypeCode: 'KORTTID',
       rentalType: 'Korttidskontrakt',

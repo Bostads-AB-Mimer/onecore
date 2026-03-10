@@ -3,6 +3,8 @@ import { RentalPropertyInfo } from '@onecore/types'
 export const rentalPropertyInfoMockData: RentalPropertyInfo = {
   id: '705-022-04-0201',
   type: 'Apartment',
+  districtCode: '61132',
+  district: 'Distrikt Öst',
   property: {
     rentalTypeCode: 'KORTTID',
     rentalType: 'Korttidskontrakt',
