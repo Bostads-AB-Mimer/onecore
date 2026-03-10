@@ -1124,7 +1124,7 @@ export const submitMiscellaneousInvoice = async (
   const referenceRow: XledgerInvoiceRow = {
     amount: 0,
     price: 0,
-    articleId: 'KONTAKT', // TODO This article id has to be the same as the id in Xledger which will be updated.
+    articleId: 'Vår referens',
     articleName: invoice.reference,
   }
   const rowsWithReference = invoice.invoiceRows.concat(referenceRow)
