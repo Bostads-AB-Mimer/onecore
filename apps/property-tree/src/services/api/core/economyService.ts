@@ -1,6 +1,6 @@
 import { MiscellaneousInvoicePayload } from '@/components/economy/types'
 import { GET, POST } from './base-api'
-import { Invoice, InvoicePaymentEvent } from '@onecore/types'
+import { Invoice, InvoicePaymentEvent, XledgerContact } from '@onecore/types'
 
 // TODO: Fix the @ts-expect-error by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(
@@ -98,9 +98,23 @@ async function submitMiscellaneousInvoice(
   return data
 }
 
+async function getXledgerContacts(): Promise<XledgerContact[]> {
+  // @ts-expect-error
+  const { data, error } = await GET(`/xledger-contacts`, {})
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content as XledgerContact[]
+}
+
 export const economyService = {
   getInvoicesByContactCode,
   getInvoicePaymentEvents,
   getMiscellaneousInvoiceDataForLease,
   submitMiscellaneousInvoice,
+  getXledgerContacts,
 }

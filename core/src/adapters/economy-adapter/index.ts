@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { Invoice, InvoicePaymentEvent } from '@onecore/types'
+import { Invoice, InvoicePaymentEvent, XledgerContact } from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from './../types'
@@ -126,4 +126,16 @@ export async function submitMiscellaneousInvoice(
     logger.error(err, 'Error submitting miscellaneous invoice')
     return { ok: false, err: 'unknown' }
   }
+}
+
+export async function getContacts(): Promise<
+  AdapterResult<XledgerContact[], 'unknown'>
+> {
+  const url = `${config.economyService.url}/contacts`
+  const response = await axios.get(url)
+  if (response.status === 200) {
+    return { ok: true, data: response.data.content }
+  }
+
+  return { ok: false, err: 'unknown' }
 }
