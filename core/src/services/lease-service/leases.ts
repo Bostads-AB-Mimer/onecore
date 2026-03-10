@@ -271,6 +271,7 @@ export const routes = (router: KoaRouter) => {
     try {
       // Filter leases on startdate within the current month, and object type residence. This is done to get a list of upcoming move-ins for residential leases.
       const leaseSearchParams = {
+        limit: '500',
         ...ctx.query,
         objectType: 'bostad',
         status: LeaseStatus[LeaseStatus.Current],
@@ -289,6 +290,9 @@ export const routes = (router: KoaRouter) => {
           )
         ).toISOString(),
       }
+
+      // Set limit to max 500
+      if (Number(leaseSearchParams.limit) > 500) leaseSearchParams.limit = '500'
 
       const leaseSearchResult =
         await leasingAdapter.searchLeases(leaseSearchParams)
@@ -393,6 +397,8 @@ export const routes = (router: KoaRouter) => {
             leaseId: lease.leaseId,
             fromDate: lease.startDate ? new Date(lease.startDate) : undefined,
             leaseAddress: lease.address,
+            leasePostalCode: lease.postalCode,
+            leaseCity: lease.city,
             contact: {
               contactCode: tenant.contactCode,
               name: tenant.fullName || tenant.firstName + ' ' + tenant.lastName,
@@ -410,6 +416,211 @@ export const routes = (router: KoaRouter) => {
               estate: rentalObjectData.property.estate,
               building: rentalObjectData.property.building,
               district: rentalObjectData.district,
+              marketArea: rentalObjectData.marketArea,
+            },
+          }
+
+          const parseResult =
+            LeaseWithContactAndRentalObjectInfoSchema.safeParse(mappedLease)
+          if (parseResult.success) {
+            return parseResult.data
+          } else {
+            logger.warn(
+              { issues: parseResult.error.issues, lease },
+              'Lease validation failed'
+            )
+            return null
+          }
+        })
+      )
+
+      ctx.status = 200
+      ctx.body = { content: parsedContent.filter(Boolean), ...metadata }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error getting upcoming leases')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred while fetching upcoming leases',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/for-CSC:
+   *   get:
+   *     summary: Get all tenants with info required for CSC, including their leases and related entities
+   *     tags:
+   *       - Lease service
+   *     description: Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved upcoming move-ins
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/LeaseWithContactAndRentalObjectInfo'
+   *                 _meta:
+   *                   type: object
+   *       '400':
+   *         description: Invalid query parameters
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/for-CSC', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      // Filter leases on startdate within the current month, and object type residence. This is done to get a list of upcoming move-ins for residential leases.
+      const leaseSearchParams = {
+        limit: '500',
+        ...ctx.query,
+        objectType: 'bostad',
+        status: LeaseStatus[LeaseStatus.Current],
+      }
+
+      // Set limit to max 500
+      if (Number(leaseSearchParams.limit) > 500) leaseSearchParams.limit = '500'
+
+      const leaseSearchResult =
+        await leasingAdapter.searchLeases(leaseSearchParams)
+
+      if (
+        !leaseSearchResult.content ||
+        leaseSearchResult.content.length === 0
+      ) {
+        ctx.status = 200
+        ctx.body = {
+          content: [],
+          ...metadata,
+        }
+        return
+      }
+
+      //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
+      const parsedContent = await Promise.all(
+        leaseSearchResult.content.map(async (lease: any) => {
+          const rentalObjectCode =
+            lease.leaseId.split('/')[0] != ''
+              ? lease.leaseId.split('/')[0]
+              : lease.leaseId.substring(0, lease.leaseId.lastIndexOf('-'))
+
+          const contactResult = await leasingAdapter.getContactByContactCode(
+            lease.contacts[0].contactCode
+          )
+          if (!contactResult.ok) {
+            logger.error(
+              {
+                status: contactResult.statusCode,
+                error: contactResult.err,
+                contactCode: lease.contacts[0].contactCode,
+              },
+              'Failed to fetch contact data'
+            )
+            return null
+          }
+          if (!contactResult.data) {
+            logger.warn(
+              {
+                contactCode: lease.contacts[0].contactCode,
+              },
+              'No contact data found'
+            )
+            return null
+          }
+
+          const tenant = contactResult.data
+
+          let rentalPropertyResult =
+            await propertyManagementAdapter.getRentalPropertyInfoFromXpand(
+              rentalObjectCode
+            )
+          if (rentalPropertyResult.status != 200) {
+            logger.error(
+              {
+                status: rentalPropertyResult.status,
+                data: rentalPropertyResult.data,
+                rentalObjectCode,
+              },
+              'Failed to fetch rental property data'
+            )
+            return null
+          }
+          if (!rentalPropertyResult.data) {
+            logger.warn(
+              {
+                rentalObjectCode,
+              },
+              'No rental property data found'
+            )
+            return null
+          }
+
+          const rentalObjectData = rentalPropertyResult.data
+
+          //Filter out leases for apartments that is not of rental type STD and 55PLUS
+          if (
+            rentalObjectData.property.rentalTypeCode != 'STD' &&
+            rentalObjectData.property.rentalTypeCode != '55PLUS' &&
+            rentalObjectData.property.rentalTypeCode != 'KOOPHYRES'
+          )
+            return null
+
+          //Filter out leases for apartments in the following estates: SKULTUNA-TIBBLE 2:85, STENRIKET 5, VÄSTRA SÄLEN 7:203
+          if (
+            rentalObjectData.property.estate === 'SKULTUNA-TIBBLE 2:85' ||
+            rentalObjectData.property.estate === 'STENRIKET 5' ||
+            rentalObjectData.property.estate === 'VÄSTRA SÄLEN 7:203'
+          )
+            return null
+
+          //Filter out leases for contacts with protected identity.
+          if (tenant.protectedIdentity) return null
+
+          //Filter out leases for deceased contacts.
+          if (tenant.deceased) return null
+
+          //företag lika med 001
+          //Hyresgast.kontakt börjar med P
+          //Hyresgast.SPärra hyresvärdsinformation lika med Nej
+          //rental object code börjar inte med 000-000
+          //hyresobjektstyp lika med poängfritt
+
+          const mappedLease = {
+            leaseId: lease.leaseId,
+            fromDate: lease.startDate ? new Date(lease.startDate) : undefined,
+            leaseAddress: lease.address,
+            leasePostalCode: lease.postalCode,
+            leaseCity: lease.city,
+            contact: {
+              contactCode: tenant.contactCode,
+              name: tenant.fullName || tenant.firstName + ' ' + tenant.lastName,
+              email: tenant.emailAddress,
+              phoneNumber:
+                tenant.phoneNumbers?.find((number: any) => number.isMainNumber)
+                  ?.phoneNumber ?? '',
+              address: tenant.address?.street,
+              zipCode: tenant.address?.postalCode,
+              city: tenant.address?.city,
+            },
+            rentalObjectInfo: {
+              rentalObjectCode: rentalObjectData.id,
+              districtCode: rentalObjectData.districtCode,
+              estate: rentalObjectData.property.estate,
+              building: rentalObjectData.property.building,
+              district: rentalObjectData.district,
+              marketArea: rentalObjectData.marketArea,
             },
           }
 

@@ -16,12 +16,15 @@ const RentalObjectInfoSchema = z.object({
   estate: z.string(),
   building: z.string(),
   district: z.string(),
+  marketArea: z.string(),
 })
 
 export const LeaseWithContactAndRentalObjectInfoSchema = z.object({
   leaseId: z.string(),
   fromDate: z.date(),
   leaseAddress: z.string(),
+  leasePostalCode: z.string(),
+  leaseCity: z.string(),
   contact: ContactInfoSchema,
   rentalObjectInfo: RentalObjectInfoSchema,
 })
