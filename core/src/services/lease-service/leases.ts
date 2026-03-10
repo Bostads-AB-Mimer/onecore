@@ -236,26 +236,40 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  //todo:swagger documentation for this endpoint
+  /**
+   * @swagger
+   * /leases/upcoming-moveins:
+   *   get:
+   *     summary: Get upcoming move-ins for residential leases
+   *     tags:
+   *       - Lease service
+   *     description: Returns a list of residential leases with move-in dates within the current month, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved upcoming move-ins
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/LeaseWithContactAndRentalObjectInfo'
+   *                 _meta:
+   *                   type: object
+   *       '400':
+   *         description: Invalid query parameters
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/leases/upcoming-moveins', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    //ska vi ens ta några sökparametrar? Ska kollas med Aktivbo
-    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
-      ctx.query
-    )
-
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Invalid query parameters',
-        details: queryParams.error.issues,
-        ...metadata,
-      }
-      return
-    }
-
     try {
+      // Filter leases on startdate within the current month, and object type residence. This is done to get a list of upcoming move-ins for residential leases.
       const leaseSearchParams = {
         ...ctx.query,
         objectType: 'bostad',
@@ -275,12 +289,9 @@ export const routes = (router: KoaRouter) => {
           )
         ).toISOString(),
       }
-      console.log('leaseSearchParams', leaseSearchParams)
 
       const leaseSearchResult =
         await leasingAdapter.searchLeases(leaseSearchParams)
-
-      console.log('leaseSearchResult', leaseSearchResult)
 
       if (
         !leaseSearchResult.content ||
@@ -294,16 +305,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      console.log('leaseSearchResult.content[0]', leaseSearchResult.content[0])
-
-      console.log(
-        'Lease result before filters',
-        leaseSearchResult.content.length
-      )
-
-      let gotIt = false
-
-      // Hämta contact och rental object för varje lease innan mappning
+      //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
       const parsedContent = await Promise.all(
         leaseSearchResult.content.map(async (lease: any) => {
           const rentalObjectCode =
@@ -311,9 +313,6 @@ export const routes = (router: KoaRouter) => {
               ? lease.leaseId.split('/')[0]
               : lease.leaseId.substring(0, lease.leaseId.lastIndexOf('-'))
 
-          // console.log('lease', lease)
-
-          // Hämta kontaktinfo
           const contactResult = await leasingAdapter.getContactByContactCode(
             lease.contacts[0].contactCode
           )
@@ -338,9 +337,7 @@ export const routes = (router: KoaRouter) => {
             return null
           }
 
-          const contactData = contactResult.data
-
-          console.log('contactData', contactData)
+          const tenant = contactResult.data
 
           let rentalPropertyResult =
             await propertyManagementAdapter.getRentalPropertyInfoFromXpand(
@@ -369,17 +366,14 @@ export const routes = (router: KoaRouter) => {
 
           const rentalObjectData = rentalPropertyResult.data
 
-          if (!gotIt) console.log('rentalPropertyResult', rentalPropertyResult)
-          gotIt = true
-
-          //filtrera bort property.rentalTypeCode != STD && 55PLUS
+          //Filter out leases for apartments that is not of rental type STD and 55PLUS
           if (
             rentalObjectData.property.rentalTypeCode != 'STD' &&
             rentalObjectData.property.rentalTypeCode != '55PLUS'
           )
             return null
 
-          //filtrera bort fastighetsbeteckningar: KOLAREN 1, KOLMILAN 1, BERGATROLLET 1, KÅRE 5, MALUNG VÄSTRA SÄLEN 7:203
+          //Filter out leases for apartments in the following estates: KOLAREN 1, KOLMILAN 1, BERGATROLLET 1, KÅRE 5, MALUNG VÄSTRA SÄLEN 7:203
           if (
             rentalObjectData.property.estate === 'KOLAREN 1' ||
             rentalObjectData.property.estate === 'KOLMILAN 1' ||
@@ -389,32 +383,26 @@ export const routes = (router: KoaRouter) => {
           )
             return null
 
-          //filtrera bort de med skyddade personuppgifter
-          if (contactData.protectedIdentity) return null
+          //Filter out leases for contacts with protected identity.
+          if (tenant.protectedIdentity) return null
 
-          //filtrera bort Hyresgäst.Avliden är tom/false
-          if (contactData.deceased) return null
-
-          //TODO: filtrera bort Avtal.Debitering != Extern
-          //TODO: filtrera bort Avtal.Fritext är Direktflytt pga rot
+          //Filter out leases for deceased contacts.
+          if (tenant.deceased) return null
 
           const mappedLease = {
             leaseId: lease.leaseId,
             fromDate: lease.startDate ? new Date(lease.startDate) : undefined,
             leaseAddress: lease.address,
             contact: {
-              contactCode: contactData.contactCode,
-              name:
-                contactData.fullName ||
-                contactData.firstName + ' ' + contactData.lastName,
-              email: contactData.emailAddress,
+              contactCode: tenant.contactCode,
+              name: tenant.fullName || tenant.firstName + ' ' + tenant.lastName,
+              email: tenant.emailAddress,
               phoneNumber:
-                contactData.phoneNumbers?.find(
-                  (number: any) => number.isMainNumber
-                )?.phoneNumber ?? '',
-              address: contactData.address?.street,
-              zipCode: contactData.address?.postalCode,
-              city: contactData.address?.city,
+                tenant.phoneNumbers?.find((number: any) => number.isMainNumber)
+                  ?.phoneNumber ?? '',
+              address: tenant.address?.street,
+              zipCode: tenant.address?.postalCode,
+              city: tenant.address?.city,
             },
             rentalObjectInfo: {
               rentalObjectCode: rentalObjectData.id,
@@ -442,13 +430,13 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { content: parsedContent.filter(Boolean), ...metadata }
     } catch (error: unknown) {
-      logger.error({ error, metadata }, 'Error searching leases')
+      logger.error({ error, metadata }, 'Error getting upcoming leases')
       ctx.status = 500
       ctx.body = {
         error:
           error instanceof Error
             ? error.message
-            : 'Unknown error occurred during lease search',
+            : 'Unknown error occurred while fetching upcoming leases',
         ...metadata,
       }
     }
