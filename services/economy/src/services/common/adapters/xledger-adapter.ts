@@ -1125,7 +1125,7 @@ export const submitMiscellaneousInvoice = async (
     articleId: 'Vår referens',
     articleName: invoice.reference,
   }
-  const rowsWithReference = invoice.invoiceRows.concat(referenceRow)
+  const rowsWithReference = [referenceRow, ...invoice.invoiceRows]
 
   const nodes = rowsWithReference.map(
     (ir, index) => gql`
