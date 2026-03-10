@@ -5833,8 +5833,8 @@ export interface paths {
   };
   "/inspections/internal/{inspectionId}": {
     /**
-     * Update inspection status
-     * @description Updates the status of an inspection. Only valid transitions are allowed (Registrerad → Påbörjad → Genomförd).
+     * Update internal inspection
+     * @description Updates an internal inspection. Supports updating status (with valid transitions Registrerad → Påbörjad → Genomförd) and/or inspector. At least one field must be provided.
      */
     patch: {
       parameters: {
@@ -5849,7 +5849,7 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Inspection status updated successfully */
+        /** @description Inspection updated successfully */
         200: {
           content: {
             "application/json": {
@@ -11986,7 +11986,8 @@ export interface components {
     };
     UpdateInspectionStatusRequest: {
       /** @enum {string} */
-      status: "Registrerad" | "Påbörjad" | "Genomförd";
+      status?: "Registrerad" | "Påbörjad" | "Genomförd";
+      inspector?: string;
     };
     InspectionWithSource: {
       id: string;

@@ -49,22 +49,23 @@ export function InspectionsTable({
     string | null
   >(null)
 
-  const { startInspection, isPending, pendingInspectionId } = useUpdateInspectionStatus({
-    rentalId,
-    onSuccess: () => {
-      toast({
-        title: 'Status uppdaterad',
-        description: 'Besiktningsstatus har uppdaterats.',
-      })
-    },
-    onError: () => {
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte uppdatera besiktningsstatus.',
-        variant: 'destructive',
-      })
-    },
-  })
+  const { startInspection, isPending, pendingInspectionId } =
+    useUpdateInspectionStatus({
+      rentalId,
+      onSuccess: () => {
+        toast({
+          title: 'Status uppdaterad',
+          description: 'Besiktningsstatus har uppdaterats.',
+        })
+      },
+      onError: () => {
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte uppdatera besiktningsstatus.',
+          variant: 'destructive',
+        })
+      },
+    })
 
   const { mutate: updateInspector } = useUpdateInspector()
 
