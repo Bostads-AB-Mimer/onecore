@@ -24,25 +24,25 @@ import { InvoiceRow, MiscellaneousInvoicePayload } from '../types'
 import { TenantSearchResult } from '@/hooks/useTenantSearch'
 import { useLeases } from '@/components/hooks/useLeases'
 import { useUser } from '@/auth/useUser'
-import { economyService } from '@/services/api/core/economyService'
+import { economyService } from '@/services/api/core'
 import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
 import { useMiscellaneousInvoiceDataForLease } from '@/components/hooks/useMiscellaneousInvoiceDataForLease'
 import { Lease as CoreLease } from '@/services/api/core'
 import { useRentalProperties } from '@/components/hooks/useRentalProperties'
+import { useXledgerContacts } from '@/components/hooks/useXledgerContacts'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
+import { XledgerContact } from '@onecore/types'
 
 interface FormErrors {
   contactCode?: string
   leaseId?: string
   articles?: string
-}
-
-const formatReference = (reference: string) => {
-  const nameParts = reference.trim().split(' ')
-  if (nameParts.length === 1) {
-    return nameParts[0]
-  }
-
-  return `${nameParts[0]} ${nameParts[1].substring(0, 1)}`
 }
 
 export function MiscellaneousInvoiceForm() {
@@ -73,11 +73,17 @@ export function MiscellaneousInvoiceForm() {
     },
   })
 
-  const [reference, setReference] = useState(
-    userState.tag === 'success'
-      ? formatReference(userState.user.name)
-      : 'Ej inloggad'
-  )
+  const { data: contacts, isLoading: isLoadingContacts } = useXledgerContacts()
+
+  const [reference, setReference] = useState<XledgerContact | null>(null)
+
+  useEffect(() => {
+    if (userState.tag === 'success' && contacts) {
+      setReference(
+        contacts.find((c) => c.email === userState.user.email) ?? null
+      )
+    }
+  }, [JSON.stringify(userState), contacts])
 
   const [errors, setErrors] = useState<FormErrors>({})
 
@@ -118,6 +124,13 @@ export function MiscellaneousInvoiceForm() {
   const [comment, setComment] = useState('')
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
+
+  const handleSelectContact = (dbId: string) => {
+    const selectedContact = contacts?.find((c) => c.dbId === dbId)
+    if (selectedContact) {
+      setReference(selectedContact)
+    }
+  }
 
   const handleSelectTenant = (tenant: TenantSearchResult | null) => {
     setSelectedTenant(tenant)
@@ -200,7 +213,7 @@ export function MiscellaneousInvoiceForm() {
 
     // Prepare invoice payload
     const invoicePayload: MiscellaneousInvoicePayload = {
-      reference,
+      reference: reference?.dbId || '',
       invoiceDate: invoiceDate,
       contactCode: selectedTenant?.contactCode ?? '',
       tenantName: selectedTenant?.fullName ?? '',
@@ -269,10 +282,25 @@ export function MiscellaneousInvoiceForm() {
 
             <div className="space-y-3">
               <Label>Referens</Label>
-              <Input
-                value={reference}
-                onChange={(e) => setReference(e.currentTarget.value)}
-              />
+              {isLoadingContacts ? (
+                <div>Laddar kontakter...</div>
+              ) : (
+                <Select
+                  value={reference?.dbId}
+                  onValueChange={(dbId) => handleSelectContact(dbId)}
+                >
+                  <SelectTrigger id="contact">
+                    <SelectValue placeholder="Välj referens" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts?.map((contact) => (
+                      <SelectItem key={contact.dbId} value={contact.dbId}>
+                        {contact.fullName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
