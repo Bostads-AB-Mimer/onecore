@@ -38,6 +38,12 @@ export function TenantSearchSection({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    if (!tenantName) {
+      setSearchQuery('')
+    }
+  }, [tenantName, setSearchQuery])
+
   const handleSearch = (query: string) => {
     setSearchQuery(query)
   }

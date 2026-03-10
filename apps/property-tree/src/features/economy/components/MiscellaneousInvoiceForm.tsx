@@ -261,11 +261,18 @@ export function MiscellaneousInvoiceForm() {
     setSelectedTenant(null)
     setLeaseId('')
     setSelectedLease(null)
-    setInvoiceRows([{ price: 0, amount: 1, articleId: '', articleName: '' }])
+    setInvoiceRows([
+      { price: 0, amount: 1, articleId: '', articleName: '', text: '' },
+    ])
     setProjectCode('')
     setComment('')
     setAdministrativeCosts(false)
     setErrors({})
+
+    // Wait a tick before scrolling up since other page updates can interfere with the scroll
+    setTimeout(() => {
+      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 0)
   }
 
   return (
