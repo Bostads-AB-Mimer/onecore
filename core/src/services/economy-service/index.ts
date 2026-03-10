@@ -134,4 +134,20 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody({ data: result.data }, metadata)
     }
   })
+
+  router.get('/xledger-contacts', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.getContacts()
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+      }
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  })
 }

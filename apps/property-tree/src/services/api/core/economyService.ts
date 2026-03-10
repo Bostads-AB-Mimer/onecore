@@ -1,5 +1,6 @@
 import { Invoice, InvoicePaymentEvent } from '@onecore/types'
 import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
+import { XledgerContact } from '@onecore/types/src/types'
 
 import { GET, POST } from './baseApi'
 
@@ -99,9 +100,23 @@ async function submitMiscellaneousInvoice(
   return data
 }
 
+async function getXledgerContacts(): Promise<XledgerContact[]> {
+  // @ts-expect-error
+  const { data, error } = await GET(`/xledger-contacts`, {})
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content as XledgerContact[]
+}
+
 export const economyService = {
   getInvoicesByContactCode,
   getInvoicePaymentEvents,
   getMiscellaneousInvoiceDataForLease,
   submitMiscellaneousInvoice,
+  getXledgerContacts,
 }
