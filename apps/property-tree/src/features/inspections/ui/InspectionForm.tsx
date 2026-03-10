@@ -217,7 +217,7 @@ export function InspectionForm({
           <AlertDialogHeader>
             <AlertDialogTitle>Spara utkast?</AlertDialogTitle>
             <AlertDialogDescription>
-              Ditt framsteg sparas och du kan fortsätta besiktningen senare.
+              Dina framsteg sparas och du kan fortsätta besiktningen senare.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
