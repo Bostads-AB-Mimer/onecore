@@ -12,6 +12,7 @@ import {
 import {
   CreateInspectionParams,
   InspectionStatus,
+  UpdateInternalInspectionParams,
   validateStatusTransition,
 } from './schemas'
 import { DbInspection, DbInspectionRoom, DbInspectionRemark } from './types'
@@ -156,10 +157,10 @@ export async function createInspection(
   }
 }
 
-export async function updateInspectionStatus(
+export async function updateInternalInspection(
   dbConnection: Knex = db,
   inspectionId: string,
-  newStatus: InspectionStatus
+  params: UpdateInternalInspectionParams
 ): Promise<
   AdapterResult<
     DetailedXpandInspection,
@@ -177,16 +178,25 @@ export async function updateInspectionStatus(
         return { ok: false as const, err: 'not-found' as const }
       }
 
-      const transition = validateStatusTransition(inspection.status, newStatus)
-      if (!transition.ok) {
-        return {
-          ok: false as const,
-          err: 'invalid-status-transition' as const,
+      if (params.status) {
+        const transition = validateStatusTransition(
+          inspection.status,
+          params.status
+        )
+        if (!transition.ok) {
+          return {
+            ok: false as const,
+            err: 'invalid-status-transition' as const,
+          }
         }
       }
 
+      const updatePayload: Partial<DbInspection> = {}
+      if (params.status) updatePayload.status = params.status
+      if (params.inspector) updatePayload.inspector = params.inspector
+
       const [updated] = await trx
-        .update({ status: newStatus })
+        .update(updatePayload)
         .from<DbInspection>('inspection')
         .where('id', inspectionId)
         .returning<DbInspection[]>('*')
@@ -217,9 +227,24 @@ export async function updateInspectionStatus(
 
     return result
   } catch (error) {
-    logger.error(error, 'Error updating inspection status in local database')
+    logger.error(error, 'Error updating internal inspection in local database')
     return { ok: false, err: 'unknown' }
   }
+}
+
+export async function updateInspectionStatus(
+  dbConnection: Knex = db,
+  inspectionId: string,
+  newStatus: InspectionStatus
+): Promise<
+  AdapterResult<
+    DetailedXpandInspection,
+    'not-found' | 'invalid-status-transition' | 'unknown'
+  >
+> {
+  return updateInternalInspection(dbConnection, inspectionId, {
+    status: newStatus,
+  })
 }
 
 export async function getInspections(

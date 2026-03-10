@@ -15,7 +15,9 @@ import {
   type InspectionTableColumn,
   renderInspectionMobileCard,
 } from '../constants'
+import { useInspectors } from '../hooks/useInspectors'
 import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
+import { useUpdateInspector } from '../hooks/useUpdateInspector'
 import { InspectionFormDialog } from './InspectionFormDialog'
 import { InspectionProtocol } from './InspectionProtocol'
 
@@ -39,13 +41,14 @@ export function InspectionsTable({
   columns,
   emptyMessage,
 }: InspectionsTableProps) {
+  const { data: inspectors } = useInspectors()
+  const { toast } = useToast()
   const [isResumeDialogOpen, setIsResumeDialogOpen] = useState(false)
   const [isProtocolDialogOpen, setIsProtocolDialogOpen] = useState(false)
   const [selectedInspectionId, setSelectedInspectionId] = useState<
     string | null
   >(null)
 
-  const { toast } = useToast()
   const { startInspection, isPending, pendingInspectionId } =
     useUpdateInspectionStatus({
       rentalId,
@@ -63,6 +66,8 @@ export function InspectionsTable({
         })
       },
     })
+
+  const { mutate: updateInspector } = useUpdateInspector()
 
   // Fetch detailed inspection when selected
   const { data: detailedInspection } = useQuery<DetailedInspection>({
@@ -95,7 +100,11 @@ export function InspectionsTable({
     columns ||
     (isCompleted
       ? getCompletedInspectionColumns(handleInspectionClick, loading)
-      : getOngoingInspectionColumns(handleInspectionClick, loading))
+      : getOngoingInspectionColumns(handleInspectionClick, loading, {
+          inspectors: inspectors ?? [],
+          onUpdateInspector: (inspectionId, inspector) =>
+            updateInspector({ inspectionId, inspector }),
+        }))
 
   // Filter columns if hiddenColumns is used
   const filteredColumns =

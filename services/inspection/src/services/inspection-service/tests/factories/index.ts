@@ -6,4 +6,6 @@ export {
   DetailedXpandInspectionRoomFactory,
   XpandDbDetailedInspectionRemarkFactory,
   DetailedXpandInspectionRemarkFactory,
+  DbInspectionFactory,
+  DbInspectionRoomFactory,
 } from './inspection'

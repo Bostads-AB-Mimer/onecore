@@ -11,6 +11,7 @@ import {
   DetailedXpandInspectionRemark,
 } from '../../schemas'
 import { CreateInspectionParams } from '../../adapters/db-adapter/schemas'
+import { DbInspection, DbInspectionRoom } from '../../adapters/db-adapter/types'
 
 export const XpandDbInspectionFactory = Factory.define<XpandDbInspection>(
   () => ({
@@ -142,6 +143,41 @@ export const DetailedXpandInspectionRemarkFactory =
     workOrderCreated: true,
     workOrderStatus: null,
   }))
+
+export const DbInspectionFactory = Factory.define<DbInspection>(
+  ({ sequence }) => ({
+    id: sequence,
+    status: 'Registrerad',
+    date: new Date('2023-01-01T10:00:00Z'),
+    startedAt: null,
+    endedAt: null,
+    inspector: 'Test Inspector',
+    type: 'Move-in',
+    residenceId: 'RES-001',
+    address: '123 Test Street',
+    apartmentCode: 'APT-001',
+    isFurnished: false,
+    leaseId: 'LEASE-001',
+    isTenantPresent: true,
+    isNewTenantPresent: false,
+    masterKeyAccess: null,
+    hasRemarks: false,
+    notes: null,
+    totalCost: null,
+    remarkCount: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+)
+
+export const DbInspectionRoomFactory = Factory.define<DbInspectionRoom>(
+  ({ sequence }) => ({
+    id: sequence,
+    inspectionId: 1,
+    roomName: 'Kitchen',
+    createdAt: new Date(),
+  })
+)
 
 export const CreateInspectionParamsFactory =
   Factory.define<CreateInspectionParams>(() => ({
