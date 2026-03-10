@@ -131,7 +131,7 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
           {
             path: 'economy',
             element: <EconomyPage />,
-            handle: { title: 'Hyreskontrakt' },
+            handle: { title: 'Ekonomi' },
           },
           {
             path: routes.inspections,
