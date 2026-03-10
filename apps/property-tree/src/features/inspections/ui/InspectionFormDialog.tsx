@@ -78,7 +78,7 @@ export function InspectionFormDialog({
   const inspectionToUse =
     userChoice === 'fresh'
       ? existingInspection
-        ? { ...existingInspection, rooms: undefined }
+        ? { ...existingInspection, rooms: null }
         : undefined
       : existingInspection
 
