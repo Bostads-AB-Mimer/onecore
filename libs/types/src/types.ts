@@ -18,6 +18,7 @@ import {
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
   InvoiceSchema,
+  XledgerContactSchema,
 } from './schemas/v1'
 
 interface Contact {
@@ -366,6 +367,7 @@ type CommentThread = z.infer<typeof CommentThreadSchema>
 type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
+type XledgerContact = z.infer<typeof XledgerContactSchema>
 
 export type {
   Contact,
@@ -384,6 +386,7 @@ export type {
   Invoice,
   InvoiceRow,
   InvoicePaymentEvent,
+  XledgerContact,
   RentalObject,
   ParkingSpace,
   Email,
