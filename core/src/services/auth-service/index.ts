@@ -330,7 +330,7 @@ export const routes = (router: KoaRouter) => {
    *       '500':
    *         description: Internal server error
    */
-  router.get('(.*)/auth/roles/:roleName/users', requireAuth, async (ctx) => {
+  router.get('(.*)/auth/roles/:roleName/users', extractToken, requireAuth, async (ctx) => {
     const { roleName } = ctx.params
     const result = await getUsersByRole(roleName)
 
