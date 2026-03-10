@@ -1174,20 +1174,7 @@ export const submitMiscellaneousInvoice = async (
 ) => {
   const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
 
-  /*
-    Workaround:
-    We can't send in a free text field as reference, so we use this workaround where we
-    add it as an invoice row
-  */
-  const referenceRow: XledgerInvoiceRow = {
-    amount: 0,
-    price: 0,
-    articleId: 'Vår referens',
-    articleName: invoice.reference,
-  }
-  const rowsWithReference = [referenceRow, ...invoice.invoiceRows]
-
-  const nodes = rowsWithReference.map(
+  const nodes = invoice.invoiceRows.map(
     (ir, index) => gql`
       {
         node: {
@@ -1208,6 +1195,9 @@ export const submitMiscellaneousInvoice = async (
           headerInfo: ${quote(headerInfo)}
           approved: true
           invoiceDate: ${quote(dateToGraphQlDateString(new Date(invoice.invoiceDate)))}
+          ourRef: {
+            dbId: ${quote(invoice.reference)}
+          }
           ${
             invoice.projectCode
               ? `
