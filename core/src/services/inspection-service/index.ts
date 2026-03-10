@@ -1433,7 +1433,8 @@ export const routes = (router: KoaRouter) => {
     const { inspectionId } = ctx.params
 
     try {
-      const result = await inspectionAdapter.getInternalInspectionById(inspectionId)
+      const result =
+        await inspectionAdapter.getInternalInspectionById(inspectionId)
 
       if (!result.ok) {
         ctx.status = result.err === 'not-found' ? 404 : 500
@@ -1450,7 +1451,10 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { content: { inspection: result.data }, ...metadata }
     } catch (error) {
-      logger.error({ error, inspectionId }, 'Error fetching internal inspection')
+      logger.error(
+        { error, inspectionId },
+        'Error fetching internal inspection'
+      )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

@@ -895,55 +895,55 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.patch(
-    '(.*)/inspections/internal/:inspectionId/draft',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { inspectionId } = ctx.params
+  router.patch('(.*)/inspections/internal/:inspectionId/draft', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
 
-      const validationResult = SaveInspectionDraftSchema.safeParse(
-        ctx.request.body
+    const validationResult = SaveInspectionDraftSchema.safeParse(
+      ctx.request.body
+    )
+    if (!validationResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: validationResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await dbAdapter.saveInspectionDraft(
+        db,
+        inspectionId,
+        validationResult.data
       )
-      if (!validationResult.success) {
-        ctx.status = 400
-        ctx.body = {
-          error: 'Invalid request body',
-          details: validationResult.error.errors,
-          ...metadata,
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: `Inspection with ID ${inspectionId} not found`,
+            ...metadata,
+          }
+          return
         }
+        ctx.status = 500
+        ctx.body = { error: 'Failed to save draft', ...metadata }
         return
       }
 
-      try {
-        const result = await dbAdapter.saveInspectionDraft(
-          db,
-          inspectionId,
-          validationResult.data
-        )
-
-        if (!result.ok) {
-          if (result.err === 'not-found') {
-            ctx.status = 404
-            ctx.body = {
-              error: `Inspection with ID ${inspectionId} not found`,
-              ...metadata,
-            }
-            return
-          }
-          ctx.status = 500
-          ctx.body = { error: 'Failed to save draft', ...metadata }
-          return
-        }
-
-        ctx.status = 200
-        ctx.body = { content: { success: true }, ...metadata }
-      } catch (error) {
-        logger.error(error, `Error saving draft for inspectionId: ${inspectionId}`)
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-      }
+      ctx.status = 200
+      ctx.body = { content: { success: true }, ...metadata }
+    } catch (error) {
+      logger.error(
+        error,
+        `Error saving draft for inspectionId: ${inspectionId}`
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
-  )
+  })
 
   router.patch('(.*)/inspections/internal/:inspectionId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
