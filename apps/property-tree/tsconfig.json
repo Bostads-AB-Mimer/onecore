@@ -10,7 +10,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["jest", "node", "react", "react-dom"],
+    "types": ["node", "react", "react-dom"],
     "allowJs": true,
     "esModuleInterop": true
   },

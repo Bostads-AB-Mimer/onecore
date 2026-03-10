@@ -9,10 +9,13 @@ import { BuildingNavigation } from './Building'
 
 interface BuildingListProps {
   property: Property
-  companyId?: string
+  organizationNumber?: string
 }
 
-export function BuildingList({ property, companyId }: BuildingListProps) {
+export function BuildingList({
+  property,
+  organizationNumber,
+}: BuildingListProps) {
   const { data: buildings, isLoading, error } = useBuildings(property.code)
 
   if (isLoading) return <NavigationSkeleton />
@@ -25,7 +28,7 @@ export function BuildingList({ property, companyId }: BuildingListProps) {
           key={building.code}
           property={property}
           building={building}
-          companyId={companyId}
+          organizationNumber={organizationNumber}
         />
       ))}
     </SidebarMenu>

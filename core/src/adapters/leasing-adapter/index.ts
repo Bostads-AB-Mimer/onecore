@@ -21,7 +21,7 @@ import { z } from 'zod'
 import { AdapterResult } from './../types'
 import config from '../../common/config'
 import { getListingByListingId } from './listings'
-import { getParkingSpaceByCode, getParkingSpaces } from './rental-objects'
+import { getParkingSpaceByCode } from './rental-objects'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -166,14 +166,23 @@ const getContactForPnr = async (
 }
 
 const getContactsDataBySearchQuery = async (
-  q: string
+  q: string,
+  contactType?: 'company' | 'person'
 ): Promise<
-  AdapterResult<Array<Pick<Contact, 'fullName' | 'contactCode'>>, unknown>
+  AdapterResult<
+    Array<
+      Pick<Contact, 'fullName' | 'contactCode' | 'nationalRegistrationNumber'>
+    >,
+    unknown
+  >
 > => {
   try {
-    const response = await axios.get<{ content: Array<Contact> }>(
-      `${tenantsLeasesServiceUrl}/contacts/search?q=${q}`
-    )
+    let url = `${tenantsLeasesServiceUrl}/contacts/search?q=${q}`
+    if (contactType) {
+      url += `&contactType=${contactType}`
+    }
+
+    const response = await axios.get<{ content: Array<Contact> }>(url)
 
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
@@ -227,7 +236,8 @@ const getContactByContactCode = async (
 }
 
 const getContactCommentsByContactCode = async (
-  contactCode: string
+  contactCode: string,
+  commentType?: string
 ): Promise<
   AdapterResult<
     z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>,
@@ -235,9 +245,12 @@ const getContactCommentsByContactCode = async (
   >
 > => {
   try {
+    const params = commentType ? { commentType } : undefined
     const res = await axios.get<{
       content: z.infer<typeof leasing.v1.GetContactCommentsResponseSchema>
-    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`)
+    }>(`${tenantsLeasesServiceUrl}/contacts/${contactCode}/comments`, {
+      params,
+    })
 
     if (res.status === 404) {
       return { ok: false, err: 'contact-not-found' }
@@ -794,9 +807,179 @@ async function createOrUpdateApplicationProfileByContactCode(
   }
 }
 
+// Text Content functions
+type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
+type CreateListingTextContentRequest = z.infer<
+  typeof leasing.v1.CreateListingTextContentRequestSchema
+>
+type UpdateListingTextContentRequest = z.infer<
+  typeof leasing.v1.UpdateListingTextContentRequestSchema
+>
+
+const getListingTextContentByRentalObjectCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.get<{
+      content: ListingTextContent
+    }>(`${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`)
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      err,
+      'Error getting listing text content by rental object code:'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const createListingTextContent = async (
+  data: CreateListingTextContentRequest
+): Promise<AdapterResult<ListingTextContent, 'conflict' | 'unknown'>> => {
+  try {
+    const response = await axios.post<{
+      content: ListingTextContent
+    }>(`${tenantsLeasesServiceUrl}/listing-text-content`, data)
+
+    if (response.status === 201) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 409) {
+      return { ok: false, err: 'conflict' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'Error creating listing text content:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const updateListingTextContent = async (
+  rentalObjectCode: string,
+  data: UpdateListingTextContentRequest
+): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.put<{
+      content: ListingTextContent
+    }>(
+      `${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`,
+      data
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'Error updating listing text content:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const deleteListingTextContent = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<void, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.delete(
+      `${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: undefined }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'Error deleting listing text content:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getContactsByFilters = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<AdapterResult<{ content: leasing.v1.ContactInfo[] }, 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/contacts/from-lease-search`,
+      {
+        params: queryParams,
+        paramsSerializer: {
+          indexes: null,
+        },
+      }
+    )
+
+    return { ok: true, data: response.data }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.getContactsByFilters')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+interface ExportLeasesResult {
+  data: Buffer
+  contentType: string
+  contentDisposition: string
+}
+
+const exportLeasesToExcel = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<AdapterResult<ExportLeasesResult, 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/export`,
+      {
+        params: queryParams,
+        responseType: 'arraybuffer',
+        paramsSerializer: {
+          indexes: null,
+        },
+      }
+    )
+
+    return {
+      ok: true,
+      data: {
+        data: response.data,
+        contentType:
+          response.headers['content-type'] ||
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        contentDisposition:
+          response.headers['content-disposition'] ||
+          `attachment; filename="hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx"`,
+      },
+    }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.exportLeasesToExcel')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   createLease,
+  exportLeasesToExcel,
+  getContactsByFilters,
   getApplicantByContactCodeAndListingId,
   getApplicantsAndListingByContactCode,
   getApplicantsByContactCode,
@@ -826,6 +1009,10 @@ export {
   validateResidentialAreaRentalRules,
   withdrawApplicantByManager,
   withdrawApplicantByUser,
+  getListingTextContentByRentalObjectCode,
+  createListingTextContent,
+  updateListingTextContent,
+  deleteListingTextContent,
 }
 
 export {

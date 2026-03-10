@@ -5,6 +5,13 @@ enum LeaseStatus {
   Ended = 3, //Upphört
 }
 
+const LeaseStatusLabel: Record<LeaseStatus, string> = {
+  [LeaseStatus.Current]: 'Gällande',
+  [LeaseStatus.Upcoming]: 'Kommande',
+  [LeaseStatus.AboutToEnd]: 'Uppsagt',
+  [LeaseStatus.Ended]: 'Upphört',
+}
+
 enum ParkingSpaceType {
   WarmGarage,
   ColdGarage,
@@ -67,6 +74,7 @@ enum ApplicantStatus {
   OfferAccepted = 7,
   OfferDeclined = 8,
   OfferExpired = 9,
+  Disqualified = 10, // Applicant has been disqualified from the listing for no longer meeting the requirements to rent this object.
   //PendingReview = 6 // ?
   //Rejected = 7 // ?
 }
@@ -86,6 +94,7 @@ enum WaitingListType {
 
 export {
   LeaseStatus,
+  LeaseStatusLabel,
   ParkingSpaceType,
   ParkingSpaceApplicationCategory,
   PaymentStatus,

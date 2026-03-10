@@ -128,7 +128,10 @@ const coreAdapter = (options: AuthOptions = defaultOptions): AuthAdapter => {
         }
 
         ctx.session.isAuthenticated = true
-        ctx.session.account = response.data
+        ctx.session.account = {
+          ...response.data,
+          username: response.data.preferred_username ?? response.data.username,
+        }
 
         for (const cookie of response.headers['set-cookie'] ?? []) {
           const [key, value] = cookie.split('=')

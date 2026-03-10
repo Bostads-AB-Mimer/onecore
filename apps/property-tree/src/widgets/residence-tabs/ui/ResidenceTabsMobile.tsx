@@ -3,6 +3,7 @@ import {
   FileText,
   Folder,
   Info,
+  KeyRound,
   Lock,
   Map,
   MessageSquare,
@@ -18,6 +19,8 @@ import { RentalBlocksTabContent } from '@/features/rental-blocks'
 import { ResidenceFloorplanTabsContent } from '@/features/residences'
 import { TenantsTabContent } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
+
+import { RentalObjectKeys } from '@/entities/component/ui/RentalObjectKeys'
 
 import { Lease } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
@@ -84,6 +87,20 @@ export const ResidenceTabsMobile = ({
           lease={currentLease}
         />
       ),
+    },
+    {
+      id: 'contracts',
+      icon: FileText,
+      title: 'Kontrakt',
+      content: <LeasesTabContent rentalPropertyId={rentalId} />,
+    },
+    {
+      id: 'keys',
+      icon: KeyRound,
+      title: 'Nycklar',
+      content: rentalId ? (
+        <RentalObjectKeys rentalObjectCode={rentalId} />
+      ) : null,
     },
     {
       id: 'work-orders',

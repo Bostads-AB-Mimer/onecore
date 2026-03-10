@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-02-05-v186-1",
+    "date": "2026-02-05",
+    "title": "Buggfix i toppsöket",
+    "description": "Fixar ett problem där vissa adresser inte gav några resultat alls när de söktes på",
+    "category": "fix"
+  }
+]

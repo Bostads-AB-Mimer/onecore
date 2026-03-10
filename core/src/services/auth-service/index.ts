@@ -6,6 +6,7 @@ import hash from './hash'
 import { createToken } from './jwt'
 import auth from './keycloak'
 import { getUsersByRole } from './keycloak-admin-adapter'
+import { extractToken } from '../../middlewares/extract-token'
 import { requireAuth } from '../../middlewares/keycloak-auth'
 
 /**
@@ -255,7 +256,7 @@ export const routes = (router: KoaRouter) => {
    *       '401':
    *         description: Unauthorized
    */
-  router.get('(.*)/auth/profile', requireAuth, async (ctx) => {
+  router.get('(.*)/auth/profile', extractToken, requireAuth, async (ctx) => {
     ctx.body = ctx.state.user
   })
 

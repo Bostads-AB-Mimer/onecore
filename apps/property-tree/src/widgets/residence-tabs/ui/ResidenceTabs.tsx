@@ -3,6 +3,7 @@ import {
   FileText,
   Folder,
   Info,
+  KeyRound,
   Lock,
   Map,
   MessageSquare,
@@ -18,6 +19,8 @@ import { RentalBlocksTabContent } from '@/features/rental-blocks'
 import { ResidenceFloorplanTabsContent } from '@/features/residences'
 import { TenantsTabContent } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
+
+import { RentalObjectKeys } from '@/entities/component/ui/RentalObjectKeys'
 
 import { Lease } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
@@ -77,6 +80,14 @@ export const ResidenceTabs = ({
           <Users className="h-4 w-4" />
           <span className="hidden sm:inline">Hyresgäst</span>
         </TabsTrigger>
+        <TabsTrigger value="contracts" className="flex items-center gap-1.5">
+          <FileText className="h-4 w-4" />
+          <span className="hidden sm:inline">Kontrakt</span>
+        </TabsTrigger>
+        <TabsTrigger value="keys" className="flex items-center gap-1.5">
+          <KeyRound className="h-4 w-4" />
+          <span className="hidden sm:inline">Nycklar</span>
+        </TabsTrigger>
         <TabsTrigger value="work-orders" className="flex items-center gap-1.5">
           <MessageSquare className="h-4 w-4" />
           <span className="hidden sm:inline">Ärenden</span>
@@ -124,6 +135,14 @@ export const ResidenceTabs = ({
           error={leasesError}
           lease={currentLease}
         />
+      </TabsContent>
+
+      <TabsContent value="contracts">
+        <LeasesTabContent rentalPropertyId={rentalId} />
+      </TabsContent>
+
+      <TabsContent value="keys">
+        {rentalId && <RentalObjectKeys rentalObjectCode={rentalId} />}
       </TabsContent>
 
       <TabsContent value="work-orders">

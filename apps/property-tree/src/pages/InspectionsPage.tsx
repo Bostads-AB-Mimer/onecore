@@ -270,99 +270,65 @@ export default function InspectionsPage() {
             value={INSPECTION_STATUS_FILTER.ONGOING}
             className="space-y-4"
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Alla pågående registrerade besiktningar
-                  <Badge variant="outline">{ongoingTotalRecords}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {ongoingQuery.isLoading ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      Laddar besiktningar...
-                    </p>
-                  </div>
-                ) : ongoingInspections.length > 0 ? (
-                  <InspectionsTable inspections={ongoingInspections} />
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      Inga besiktningar i denna kategori
-                    </p>
-                  </div>
-                )}
-                <Pagination
-                  currentPage={ongoingPage}
-                  totalPages={ongoingTotalPages}
-                  totalRecords={ongoingTotalRecords}
-                  pageSize={limit}
-                  onPageChange={setOngoingPage}
-                  isFetching={ongoingQuery.isFetching}
-                />
-              </CardContent>
-            </Card>
+            {ongoingQuery.isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Laddar besiktningar...</p>
+              </div>
+            ) : ongoingInspections.length > 0 ? (
+              <InspectionsTable inspections={ongoingInspections} />
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Inga besiktningar i denna kategori
+                </p>
+              </div>
+            )}
+            <Pagination
+              currentPage={ongoingPage}
+              totalPages={ongoingTotalPages}
+              totalRecords={ongoingTotalRecords}
+              pageSize={limit}
+              onPageChange={setOngoingPage}
+              isFetching={ongoingQuery.isFetching}
+            />
           </TabsContent>
 
           <TabsContent value="mine" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Mina besiktningar
-                  <Badge variant="outline">{myInspections.length}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Inga besiktningar i denna kategori
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                Inga besiktningar i denna kategori
+              </p>
+            </div>
           </TabsContent>
 
           <TabsContent
             value={INSPECTION_STATUS_FILTER.COMPLETED}
             className="space-y-4"
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Skickade/avslutade besiktningar
-                  <Badge variant="outline">{completedTotalRecords}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {completedQuery.isLoading ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      Laddar besiktningar...
-                    </p>
-                  </div>
-                ) : completedInspections.length > 0 ? (
-                  <InspectionsTable
-                    inspections={completedInspections}
-                    isCompleted
-                  />
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      Inga besiktningar i denna kategori
-                    </p>
-                  </div>
-                )}
-                <Pagination
-                  currentPage={completedPage}
-                  totalPages={completedTotalPages}
-                  totalRecords={completedTotalRecords}
-                  pageSize={limit}
-                  onPageChange={setCompletedPage}
-                  isFetching={completedQuery.isFetching}
-                />
-              </CardContent>
-            </Card>
+            {completedQuery.isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Laddar besiktningar...</p>
+              </div>
+            ) : completedInspections.length > 0 ? (
+              <InspectionsTable
+                inspections={completedInspections}
+                isCompleted
+              />
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Inga besiktningar i denna kategori
+                </p>
+              </div>
+            )}
+            <Pagination
+              currentPage={completedPage}
+              totalPages={completedTotalPages}
+              totalRecords={completedTotalRecords}
+              pageSize={limit}
+              onPageChange={setCompletedPage}
+              isFetching={completedQuery.isFetching}
+            />
           </TabsContent>
         </Tabs>
       </div>

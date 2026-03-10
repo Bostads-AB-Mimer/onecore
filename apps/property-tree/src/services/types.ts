@@ -66,10 +66,10 @@ export type RentalBlockWithRentalObject =
 export interface RentalBlocksSearchParams {
   q?: string
   fields?: string
-  kategori?: string
-  distrikt?: string
-  blockReason?: string
-  fastighet?: string
+  kategori?: string[]
+  distrikt?: string[]
+  blockReason?: string[]
+  fastighet?: string[]
   fromDateGte?: string
   toDateLte?: string
   active?: boolean
@@ -374,7 +374,9 @@ export interface TenantComment {
   commentKey: string
   text: string
   author: string
-  createdAt: string // ISO datetime combining date + time
+  createdAt: string | null // ISO datetime combining date + time, or null if missing
+  hasTime: boolean // Whether the original note had a time (false for manually typed date-only signatures)
+  commentType?: 'Standard' | 'Sökande'
 }
 
 /**
@@ -386,3 +388,7 @@ export interface TenantCommentsResponse {
 }
 
 export type DocumentWithUrl = components['schemas']['DocumentWithUrl']
+
+// Bulk communication result types
+export type BulkSmsResult = components['schemas']['BulkSmsResult']
+export type BulkEmailResult = components['schemas']['BulkEmailResult']

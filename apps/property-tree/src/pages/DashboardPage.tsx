@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 
 import {
   type DashboardCard,
   DashboardCardItem,
   dashboardCards,
+  ReleaseNotesCard,
 } from '@/widgets/dashboard'
 
 import { useUser } from '@/entities/user'
@@ -53,15 +55,25 @@ export function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-        {dashboardCards.map((config, index) => (
-          <DashboardCardItem
-            key={config.id}
-            config={config}
-            index={index}
-            onClick={handleCardClick}
-          />
-        ))}
+      <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {dashboardCards.map((config, index) => (
+            <DashboardCardItem
+              key={config.id}
+              config={config}
+              index={index}
+              onClick={handleCardClick}
+            />
+          ))}
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="order-first lg:order-last lg:w-80 lg:flex-shrink-0"
+        >
+          <ReleaseNotesCard />
+        </motion.div>
       </div>
     </ViewLayout>
   )

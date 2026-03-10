@@ -49,23 +49,7 @@ export function InspectionsTable({
     string | null
   >(null)
 
-  const { mutate: updateInspector } = useUpdateInspector({
-    onSuccess: () => {
-      toast({
-        title: 'Besiktningsman uppdaterad',
-        description: 'Tilldelad besiktningsman har ändrats.',
-      })
-    },
-    onError: () => {
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte uppdatera besiktningsman.',
-        variant: 'destructive',
-      })
-    },
-  })
-
-  const { startInspection, isPending } = useUpdateInspectionStatus({
+  const { startInspection, isPending, pendingInspectionId } = useUpdateInspectionStatus({
     rentalId,
     onSuccess: () => {
       toast({
@@ -82,9 +66,7 @@ export function InspectionsTable({
     },
   })
 
-  const handleUpdateInspector = (inspectionId: string, inspector: string) => {
-    updateInspector({ inspectionId, inspector })
-  }
+  const { mutate: updateInspector } = useUpdateInspector()
 
   // Fetch detailed inspection when selected
   const { data: detailedInspection } = useQuery<DetailedInspection>({
@@ -112,13 +94,15 @@ export function InspectionsTable({
   }
 
   // Determine which columns to use
+  const loading = { isPending, pendingInspectionId }
   const tableColumns =
     columns ||
     (isCompleted
-      ? getCompletedInspectionColumns(handleInspectionClick)
-      : getOngoingInspectionColumns(handleInspectionClick, {
-          inspectors: inspectors,
-          onUpdateInspector: handleUpdateInspector,
+      ? getCompletedInspectionColumns(handleInspectionClick, loading)
+      : getOngoingInspectionColumns(handleInspectionClick, loading, {
+          inspectors: inspectors ?? [],
+          onUpdateInspector: (inspectionId, inspector) =>
+            updateInspector({ inspectionId, inspector }),
         }))
 
   // Filter columns if hiddenColumns is used
@@ -134,7 +118,10 @@ export function InspectionsTable({
         columns={filteredColumns}
         keyExtractor={(inspection: Inspection) => inspection.id}
         emptyMessage={emptyMessage || 'Inga besiktningar i denna kategori'}
-        mobileCardRenderer={renderInspectionMobileCard(handleInspectionClick)}
+        mobileCardRenderer={renderInspectionMobileCard(
+          handleInspectionClick,
+          loading
+        )}
       />
 
       {isResumeDialogOpen && (

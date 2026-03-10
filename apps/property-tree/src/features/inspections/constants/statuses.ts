@@ -22,16 +22,19 @@ export const STATUS_CONFIG = {
     label: 'Registrerad',
     badgeVariant: 'secondary' as const,
     actionLabel: 'Starta besiktning',
+    actionIcon: 'Play' as const,
   },
   [INSPECTION_STATUS.IN_PROGRESS]: {
     label: 'Påbörjad',
     badgeVariant: 'secondary' as const,
     actionLabel: 'Återuppta besiktning',
+    actionIcon: 'CirclePlay' as const,
   },
   [INSPECTION_STATUS.COMPLETED]: {
     label: 'Genomförd',
     badgeVariant: 'default' as const,
     actionLabel: 'Visa protokoll',
+    actionIcon: 'Eye' as const,
   },
 } as const
 
@@ -40,6 +43,7 @@ const DEFAULT_STATUS_CONFIG = {
   label: 'Okänd',
   badgeVariant: 'secondary' as const,
   actionLabel: 'Visa detaljer',
+  actionIcon: 'Eye' as const,
 } as const
 
 /**

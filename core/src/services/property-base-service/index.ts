@@ -498,20 +498,20 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /companies/{id}:
+   * /companies/{organizationNumber}:
    *   get:
    *     summary: Get detailed information about a specific company
    *     tags:
    *       - Property base Service
    *     description: |
-   *       Retrieves comprehensive information about a company using its unique identifier.
+   *       Retrieves comprehensive information about a company using its organization number.
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: organizationNumber
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the company.
+   *         description: The organization number of the company.
    *     responses:
    *       '200':
    *         description: Successfully retrieved company information
@@ -545,12 +545,15 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/companies/:id', async (ctx) => {
+  router.get('(.*)/companies/:organizationNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { id } = ctx.params
+    const { organizationNumber } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getCompanyById(id)
+      const result =
+        await propertyBaseAdapter.getCompanyByOrganizationNumber(
+          organizationNumber
+        )
 
       if (!result.ok) {
         if (result.err === 'not-found') {
@@ -1135,23 +1138,39 @@ export const routes = (router: KoaRouter) => {
    *       - in: query
    *         name: kategori
    *         schema:
-   *           type: string
-   *         description: Filter by category
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by category (supports multiple values)
    *       - in: query
    *         name: distrikt
    *         schema:
-   *           type: string
-   *         description: Filter by district
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by district (supports multiple values)
    *       - in: query
    *         name: blockReason
    *         schema:
-   *           type: string
-   *         description: Filter by block reason
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason (supports multiple values)
    *       - in: query
    *         name: fastighet
    *         schema:
-   *           type: string
-   *         description: Filter by property
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by property (supports multiple values)
    *       - in: query
    *         name: fromDateGte
    *         schema:
@@ -1177,17 +1196,10 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-blocks/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.RentalBlocksFilterQuerySchema.safeParse(ctx.query)
-
-    if (!params.success) {
-      ctx.status = 400
-      ctx.body = { error: params.error.errors, ...metadata }
-      return
-    }
 
     try {
       const result = await propertyBaseAdapter.exportRentalBlocksToExcel(
-        params.data
+        ctx.query
       )
 
       if (!result.ok) {
@@ -1237,23 +1249,39 @@ export const routes = (router: KoaRouter) => {
    *       - in: query
    *         name: kategori
    *         schema:
-   *           type: string
-   *         description: Filter by category (Bostad, Bilplats, Lokal, Förråd)
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by category (Bostad, Bilplats, Lokal, Förråd) - supports multiple values
    *       - in: query
    *         name: distrikt
    *         schema:
-   *           type: string
-   *         description: Filter by district
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by district (supports multiple values)
    *       - in: query
    *         name: blockReason
    *         schema:
-   *           type: string
-   *         description: Filter by block reason
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason (supports multiple values)
    *       - in: query
    *         name: fastighet
    *         schema:
-   *           type: string
-   *         description: Filter by property code/name
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by property code/name (supports multiple values)
    *       - in: query
    *         name: fromDateGte
    *         schema:
@@ -1317,16 +1345,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/residences/rental-blocks/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const params = schemas.SearchRentalBlocksQuerySchema.safeParse(ctx.query)
-
-    if (!params.success) {
-      ctx.status = 400
-      ctx.body = { error: params.error.errors, ...metadata }
-      return
-    }
 
     try {
-      const result = await propertyBaseAdapter.searchRentalBlocks(params.data)
+      const result = await propertyBaseAdapter.searchRentalBlocks(ctx.query)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Internal server error')

@@ -5,6 +5,8 @@ enum ReplyToOfferErrorCodes {
   CreateLeaseFailure = 'create-lease-failure',
   CloseOfferFailure = 'close-offer-failure',
   Unknown = 'unknown',
+  ApplicantNotTenant = 'applicant-not-tenant',
+  NotEligibleToRent = 'not-eligible-to-rent',
 }
 
 export { ReplyToOfferErrorCodes }

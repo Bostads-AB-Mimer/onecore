@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { InfoIcon } from 'lucide-react'
 
@@ -14,6 +15,8 @@ import {
 
 import { Lease } from '@/services/api/core/leaseService'
 
+import { paths } from '@/shared/routes'
+import { Button } from '@/shared/ui/Button'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 import {
@@ -111,13 +114,48 @@ export function TenantLeasesTabContent({
     },
     {
       key: 'identifier',
-      label: 'Lägenhetsnummer/Skyltnummer',
+      label: 'Lägenhets/Skyltnummer',
       render: (lease: Lease) =>
         renderPropertyField(
           lease,
           (property) => getPropertyIdentifier(property),
           'Data ej tillgänglig'
         ),
+    },
+    {
+      key: 'tenant',
+      label: 'Hyresgäst',
+      render: (lease: Lease) => {
+        if (!lease.tenants || lease.tenants.length === 0) {
+          return <span className="text-muted-foreground">-</span>
+        }
+        return (
+          <div className="space-y-1">
+            {lease.tenants.map((tenant) => {
+              const isValidContact =
+                tenant.contactCode.startsWith('P') ||
+                tenant.contactCode.startsWith('F')
+              return (
+                <div key={tenant.contactCode}>
+                  {isValidContact ? (
+                    <Link
+                      to={paths.tenant(tenant.contactCode)}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {tenant.fullName}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{tenant.fullName}</span>
+                  )}
+                  <div className="text-sm text-muted-foreground">
+                    {tenant.contactCode}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      },
     },
     {
       key: 'startDate',
@@ -181,6 +219,10 @@ export function TenantLeasesTabContent({
                 <span>{formatAddress(property.property.address)}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-muted-foreground">Objektkod:</span>
+                <span>{lease.rentalPropertyId}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Nummer:</span>
                 <span>{getPropertyIdentifier(property)}</span>
               </div>
@@ -194,6 +236,46 @@ export function TenantLeasesTabContent({
               </div>
             </>
           )}
+        </div>
+
+        {/* Tenant Info Section */}
+        {lease.tenants && lease.tenants.length > 0 && (
+          <div className="space-y-2 text-sm">
+            {lease.tenants.map((tenant, index) => {
+              const isValidContact =
+                tenant.contactCode.startsWith('P') ||
+                tenant.contactCode.startsWith('F')
+              return (
+                <div key={tenant.contactCode} className="space-y-1">
+                  {index > 0 && <div className="border-t pt-2" />}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Hyresgäst:</span>
+                    {isValidContact ? (
+                      <Link
+                        to={paths.tenant(tenant.contactCode)}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {tenant.fullName}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">{tenant.fullName}</span>
+                    )}
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Kundnummer:</span>
+                    <span>{tenant.contactCode}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Action Button */}
+        <div className="flex justify-end pt-2 border-t">
+          <Button variant="outline" size="sm" disabled>
+            Visa kontrakt
+          </Button>
         </div>
       </LeaseMobileCard>
     )

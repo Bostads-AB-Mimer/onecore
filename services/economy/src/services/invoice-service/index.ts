@@ -4,7 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy } from '@onecore/types'
+import { economy, Invoice } from '@onecore/types'
 
 import {
   getInvoiceByInvoiceNumber,
@@ -42,9 +42,29 @@ export const routes = (router: KoaRouter) => {
         (invoice) => invoice.invoiceId
       )
 
+      const regularInvoices: Invoice[] = []
+      const losses: Invoice[] = []
+
+      xledgerInvoices.forEach((i) => {
+        // A loss is recorded as a transaction on account 1529
+        if (i.accountCode === '1529') {
+          losses.push(i)
+        } else {
+          regularInvoices.push(i)
+        }
+      })
+
+      // An invoice is marked as an expected loss if there is a recorded loss with the same invoice number
+      regularInvoices.forEach((i) => {
+        const lossForInvoice = losses.find((l) => l.invoiceId === i.invoiceId)
+        if (lossForInvoice) {
+          i.expectedLoss = true
+        }
+      })
+
       // If invoice exists in xpand, use period (fromDate, toDate) from xpand invoice
       // Otherwise use period from xledger invoice
-      const invoices = xledgerInvoices
+      const invoices = regularInvoices
         .map((invoice) => {
           const xpandInvoice = xpandInvoices.find(
             (v) => v.invoiceId === invoice.invoiceId
