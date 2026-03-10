@@ -52,6 +52,8 @@ export const mockedApplicantWithoutLeases: Contact = {
   phoneNumbers: [],
   emailAddress: 'test@mimer.nu',
   isTenant: true,
+  protectedIdentity: false,
+  deceased: false,
 }
 
 export const mockedApplicantWithoutAddress: any = {

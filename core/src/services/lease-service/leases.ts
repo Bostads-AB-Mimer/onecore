@@ -236,6 +236,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  //todo:swagger documentation for this endpoint
   router.get('/leases/upcoming-moveins', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
