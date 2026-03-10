@@ -69,7 +69,6 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
 
     const invoices = invoicesResult.data
     const counterPartCustomers = await getCounterPartCustomers()
-    console.table(counterPartCustomers)
 
     for (const invoice of invoices) {
       await enrichInvoiceWithAccounting(invoice)
