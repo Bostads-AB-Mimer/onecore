@@ -13,6 +13,8 @@ import {
   getOngoingInspectionColumns,
   INSPECTION_STATUS,
   type InspectionTableColumn,
+  isCompleted as isCompletedStatus,
+  isXpandSource,
   renderInspectionMobileCard,
 } from '../constants'
 import { useInspectors } from '../hooks/useInspectors'
@@ -79,6 +81,14 @@ export function InspectionsTable({
 
   const handleInspectionClick = (inspection: Inspection) => {
     if (isPending) return
+
+    // Xpand inspections that aren't completed must be handled in Xpand
+    if (
+      isXpandSource(inspection.source) &&
+      !isCompletedStatus(inspection.status)
+    ) {
+      return
+    }
 
     setSelectedInspectionId(inspection.id)
 

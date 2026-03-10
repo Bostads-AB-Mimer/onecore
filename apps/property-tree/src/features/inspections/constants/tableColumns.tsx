@@ -6,7 +6,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { Eye, Loader2, Play, PlayCircle } from 'lucide-react'
+import { ExternalLink, Eye, Loader2, Play, PlayCircle } from 'lucide-react'
 
 import { components } from '@/services/api/core/generated/api-types'
 
@@ -21,7 +21,14 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 
-import { canResume, canStart, getStatusConfig } from './statuses'
+import {
+  canResume,
+  canStart,
+  getStatusConfig,
+  isCompleted,
+  isXpandSource,
+  XPAND_ACTION_LABEL,
+} from './statuses'
 
 type Inspection = components['schemas']['InspectionWithSource']
 type KeycloakUser = components['schemas']['KeycloakUser']
@@ -214,6 +221,15 @@ export function createActionsColumn(
     label: 'Åtgärder',
     className: 'text-right',
     render: (inspection: Inspection) => {
+      if (isXpandSource(inspection.source) && !isCompleted(inspection.status)) {
+        return (
+          <Button variant="ghost" size="sm" disabled>
+            <ExternalLink className="h-4 w-4 mr-1" />
+            {XPAND_ACTION_LABEL}
+          </Button>
+        )
+      }
+
       const isThisPending =
         loading?.isPending && loading.pendingInspectionId === inspection.id
       const ActionIcon = getActionIcon(inspection.status)
@@ -326,19 +342,27 @@ export function renderInspectionMobileCard(
           <span className="text-sm text-muted-foreground">
             {formatISODate(inspection.date)}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onAction(inspection)}
-            disabled={loading?.isPending}
-          >
-            {isThisPending ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <ActionIcon className="h-4 w-4 mr-1" />
-            )}
-            {getStatusConfig(inspection.status).actionLabel}
-          </Button>
+          {isXpandSource(inspection.source) &&
+          !isCompleted(inspection.status) ? (
+            <Button variant="ghost" size="sm" disabled>
+              <ExternalLink className="h-4 w-4 mr-1" />
+              {XPAND_ACTION_LABEL}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onAction(inspection)}
+              disabled={loading?.isPending}
+            >
+              {isThisPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <ActionIcon className="h-4 w-4 mr-1" />
+              )}
+              {getStatusConfig(inspection.status).actionLabel}
+            </Button>
+          )}
         </div>
       </div>
     )
