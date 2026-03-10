@@ -30,21 +30,33 @@ export function useLeaseFilters() {
     pageSize: PAGE_SIZE,
   })
 
-  const selectedObjectTypes = filters.getFilterValues('objectType')
-  const selectedStatuses = filters.getFilterValues('status') as (
-    | '0'
-    | '1'
-    | '2'
-    | '3'
-  )[]
-  const selectedProperties = filters.getFilterValues('property')
-  const selectedDistricts = filters.getFilterValues('district')
-  const selectedBuildingManagers = filters.getFilterValues('buildingManager')
+  const { searchParams: urlSearchParams } = filters
 
-  const startDateFrom = filters.getFilterValue('startDateFrom')
-  const startDateTo = filters.getFilterValue('startDateTo')
-  const endDateFrom = filters.getFilterValue('endDateFrom')
-  const endDateTo = filters.getFilterValue('endDateTo')
+  const selectedObjectTypes = useMemo(
+    () => urlSearchParams.getAll('objectType'),
+    [urlSearchParams]
+  )
+  const selectedStatuses = useMemo(
+    () => urlSearchParams.getAll('status') as ('0' | '1' | '2' | '3')[],
+    [urlSearchParams]
+  )
+  const selectedProperties = useMemo(
+    () => urlSearchParams.getAll('property'),
+    [urlSearchParams]
+  )
+  const selectedDistricts = useMemo(
+    () => urlSearchParams.getAll('district'),
+    [urlSearchParams]
+  )
+  const selectedBuildingManagers = useMemo(
+    () => urlSearchParams.getAll('buildingManager'),
+    [urlSearchParams]
+  )
+
+  const startDateFrom = urlSearchParams.get('startDateFrom') || ''
+  const startDateTo = urlSearchParams.get('startDateTo') || ''
+  const endDateFrom = urlSearchParams.get('endDateFrom') || ''
+  const endDateTo = urlSearchParams.get('endDateTo') || ''
 
   const searchParams = useMemo(
     () => ({
