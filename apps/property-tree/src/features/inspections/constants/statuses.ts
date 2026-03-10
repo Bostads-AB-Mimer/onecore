@@ -12,6 +12,9 @@ export const INSPECTION_STATUS = {
   COMPLETED: 'Genomförd',
 } as const
 
+// Xpand-specific action label for non-completed inspections
+export const XPAND_ACTION_LABEL = 'Genomför i Xpand'
+
 // Internal status types (for type safety)
 export type InspectionStatusType =
   (typeof INSPECTION_STATUS)[keyof typeof INSPECTION_STATUS]
@@ -83,4 +86,13 @@ export function canResume(status?: string): boolean {
  */
 export function canStart(status?: string): boolean {
   return status === INSPECTION_STATUS.REGISTERED
+}
+
+/**
+ * Check if inspection is from Xpand
+ * @param source - The source string
+ * @returns true if source is 'xpand'
+ */
+export function isXpandSource(source?: string): boolean {
+  return source === 'xpand'
 }
