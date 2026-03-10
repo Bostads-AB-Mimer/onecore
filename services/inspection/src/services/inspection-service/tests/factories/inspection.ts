@@ -9,8 +9,12 @@ import {
   DetailedXpandInspection,
   DetailedXpandInspectionRoom,
   DetailedXpandInspectionRemark,
+  InspectionRoom,
 } from '../../schemas'
-import { CreateInspectionParams } from '../../adapters/db-adapter/schemas'
+import {
+  CreateInspectionParams,
+  SaveInspectionDraftParams,
+} from '../../adapters/db-adapter/schemas'
 import { DbInspection, DbInspectionRoom } from '../../adapters/db-adapter/types'
 
 export const XpandDbInspectionFactory = Factory.define<XpandDbInspection>(
@@ -165,6 +169,7 @@ export const DbInspectionFactory = Factory.define<DbInspection>(
     notes: null,
     totalCost: null,
     remarkCount: 0,
+    draftRooms: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   })
@@ -220,4 +225,41 @@ export const CreateInspectionParamsFactory =
         ],
       },
     ],
+  }))
+
+const emptyConditions = {
+  wall1: '',
+  wall2: '',
+  wall3: '',
+  wall4: '',
+  floor: '',
+  ceiling: '',
+  details: '',
+}
+
+const emptyActions = {
+  wall1: [],
+  wall2: [],
+  wall3: [],
+  wall4: [],
+  floor: [],
+  ceiling: [],
+  details: [],
+}
+
+export const InspectionRoomFactory = Factory.define<InspectionRoom>(() => ({
+  roomId: 'room-1',
+  conditions: { ...emptyConditions },
+  actions: { ...emptyActions },
+  componentNotes: { ...emptyConditions },
+  componentPhotos: { ...emptyActions },
+  photos: [],
+  isApproved: false,
+  isHandled: false,
+}))
+
+export const SaveInspectionDraftParamsFactory =
+  Factory.define<SaveInspectionDraftParams>(() => ({
+    inspectorName: 'Test Inspector',
+    rooms: [InspectionRoomFactory.build()],
   }))

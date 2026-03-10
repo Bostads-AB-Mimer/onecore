@@ -10,7 +10,10 @@ import {
   CreateInspectionParamsFactory,
   DbInspectionFactory,
   DbInspectionRoomFactory,
+  InspectionRoomFactory,
+  SaveInspectionDraftParamsFactory,
 } from '../../factories/inspection'
+import { DbInspection } from '../../../adapters/db-adapter/types'
 
 jest.mock('@onecore/utilities', () => ({
   logger: { info: jest.fn(), error: jest.fn() },
@@ -370,32 +373,10 @@ describe('db-adapter', () => {
   })
 
   describe('updateInspectionStatus', () => {
-    const mockInspectionRow = {
-      id: 1,
-      status: 'Registrerad',
-      date: new Date('2023-01-01T10:00:00Z'),
-      startedAt: null,
-      endedAt: null,
-      inspector: 'Test Inspector',
-      type: 'Move-in',
-      residenceId: 'RES-001',
-      address: '123 Test Street',
-      apartmentCode: 'APT-001',
-      isFurnished: false,
-      leaseId: 'LEASE-001',
-      isTenantPresent: true,
-      isNewTenantPresent: false,
-      masterKeyAccess: null,
-      hasRemarks: false,
-      notes: null,
-      totalCost: null,
-      remarkCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
+    const mockInspectionRow = DbInspectionFactory.build({ id: 1 })
 
     function createMockTrxForUpdate(
-      inspection: typeof mockInspectionRow | undefined,
+      inspection: DbInspection | undefined,
       rooms: DbInspectionRoom[] = [],
       remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
     ) {
@@ -446,7 +427,7 @@ describe('db-adapter', () => {
     }
 
     function createMockDbForUpdate(
-      inspection: typeof mockInspectionRow | undefined,
+      inspection: DbInspection | undefined,
       rooms: DbInspectionRoom[] = [],
       remarksByRoomId: Record<number, Array<Record<string, unknown>>> = {}
     ) {
@@ -895,53 +876,9 @@ describe('db-adapter', () => {
   })
 
   describe('saveInspectionDraft', () => {
-    const mockDraftParams = {
-      inspectorName: 'Test Inspector',
-      rooms: [
-        {
-          roomId: 'room-1',
-          conditions: {
-            wall1: 'good',
-            wall2: 'good',
-            wall3: 'good',
-            wall4: 'good',
-            floor: 'good',
-            ceiling: 'good',
-            details: '',
-          },
-          actions: {
-            wall1: [],
-            wall2: [],
-            wall3: [],
-            wall4: [],
-            floor: [],
-            ceiling: [],
-            details: [],
-          },
-          componentNotes: {
-            wall1: '',
-            wall2: '',
-            wall3: '',
-            wall4: '',
-            floor: '',
-            ceiling: '',
-            details: '',
-          },
-          componentPhotos: {
-            wall1: [],
-            wall2: [],
-            wall3: [],
-            wall4: [],
-            floor: [],
-            ceiling: [],
-            details: [],
-          },
-          photos: [],
-          isApproved: false,
-          isHandled: true,
-        },
-      ],
-    }
+    const mockDraftParams = SaveInspectionDraftParamsFactory.build({
+      rooms: [InspectionRoomFactory.build({ isHandled: true })],
+    })
 
     function createMockDbForDraft(inspectionExists: boolean) {
       const chain: Record<string, jest.Mock> = {}
@@ -1029,50 +966,7 @@ describe('db-adapter', () => {
     }
 
     it('returns inspection with parsed draft rooms', async () => {
-      const draftRooms = [
-        {
-          roomId: 'room-1',
-          conditions: {
-            wall1: 'good',
-            wall2: '',
-            wall3: '',
-            wall4: '',
-            floor: '',
-            ceiling: '',
-            details: '',
-          },
-          actions: {
-            wall1: [],
-            wall2: [],
-            wall3: [],
-            wall4: [],
-            floor: [],
-            ceiling: [],
-            details: [],
-          },
-          componentNotes: {
-            wall1: '',
-            wall2: '',
-            wall3: '',
-            wall4: '',
-            floor: '',
-            ceiling: '',
-            details: '',
-          },
-          componentPhotos: {
-            wall1: [],
-            wall2: [],
-            wall3: [],
-            wall4: [],
-            floor: [],
-            ceiling: [],
-            details: [],
-          },
-          photos: [],
-          isApproved: false,
-          isHandled: true,
-        },
-      ]
+      const draftRooms = [InspectionRoomFactory.build({ isHandled: true })]
       const mockDb = createMockDbForGetById({
         id: 1,
         status: 'Påbörjad',

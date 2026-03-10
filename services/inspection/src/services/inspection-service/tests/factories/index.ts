@@ -8,4 +8,6 @@ export {
   DetailedXpandInspectionRemarkFactory,
   DbInspectionFactory,
   DbInspectionRoomFactory,
+  InspectionRoomFactory,
+  SaveInspectionDraftParamsFactory,
 } from './inspection'

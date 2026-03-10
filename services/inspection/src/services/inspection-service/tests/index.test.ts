@@ -9,6 +9,8 @@ import * as dbAdapter from '../adapters/db-adapter'
 import {
   XpandInspectionFactory,
   DetailedXpandInspectionFactory,
+  InspectionRoomFactory,
+  SaveInspectionDraftParamsFactory,
 } from './factories'
 
 const app = new Koa()
@@ -400,50 +402,7 @@ describe('inspection-service', () => {
       const inspectionId = '1'
       const mockInspection = {
         ...XpandInspectionFactory.build({ id: inspectionId }),
-        rooms: [
-          {
-            roomId: 'room-1',
-            conditions: {
-              wall1: 'good',
-              wall2: '',
-              wall3: '',
-              wall4: '',
-              floor: '',
-              ceiling: '',
-              details: '',
-            },
-            actions: {
-              wall1: [],
-              wall2: [],
-              wall3: [],
-              wall4: [],
-              floor: [],
-              ceiling: [],
-              details: [],
-            },
-            componentNotes: {
-              wall1: '',
-              wall2: '',
-              wall3: '',
-              wall4: '',
-              floor: '',
-              ceiling: '',
-              details: '',
-            },
-            componentPhotos: {
-              wall1: [],
-              wall2: [],
-              wall3: [],
-              wall4: [],
-              floor: [],
-              ceiling: [],
-              details: [],
-            },
-            photos: [],
-            isApproved: false,
-            isHandled: true,
-          },
-        ],
+        rooms: [InspectionRoomFactory.build({ isHandled: true })],
       }
       jest
         .spyOn(dbAdapter, 'getInspectionById')
@@ -481,53 +440,9 @@ describe('inspection-service', () => {
   })
 
   describe('PATCH /inspections/internal/:inspectionId/draft', () => {
-    const validDraftBody = {
-      inspectorName: 'Test Inspector',
-      rooms: [
-        {
-          roomId: 'room-1',
-          conditions: {
-            wall1: 'good',
-            wall2: '',
-            wall3: '',
-            wall4: '',
-            floor: '',
-            ceiling: '',
-            details: '',
-          },
-          actions: {
-            wall1: [],
-            wall2: [],
-            wall3: [],
-            wall4: [],
-            floor: [],
-            ceiling: [],
-            details: [],
-          },
-          componentNotes: {
-            wall1: '',
-            wall2: '',
-            wall3: '',
-            wall4: '',
-            floor: '',
-            ceiling: '',
-            details: '',
-          },
-          componentPhotos: {
-            wall1: [],
-            wall2: [],
-            wall3: [],
-            wall4: [],
-            floor: [],
-            ceiling: [],
-            details: [],
-          },
-          photos: [],
-          isApproved: false,
-          isHandled: true,
-        },
-      ],
-    }
+    const validDraftBody = SaveInspectionDraftParamsFactory.build({
+      rooms: [InspectionRoomFactory.build({ isHandled: true })],
+    })
 
     it('saves draft successfully', async () => {
       jest
