@@ -103,6 +103,10 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
     id: row.rental_property_id,
     type: rentalPropertyType,
     property: property,
+    districtCode: row.districtCode,
+    district: row.district,
+    marketAreaCode: row.marketAreaCode,
+    marketArea: row.marketArea,
   }
 }
 
@@ -146,12 +150,19 @@ const getRentalPropertyInfo = async (
       'balgh.uppgang as floor',
       'balgh.hiss as has_elevator',
       'balgh.hygienutr as wash_space',
-      'cmvalboa.value as apartment_area'
+      'cmvalboa.value as apartment_area',
+      'babuf.fencode as districtCode',
+      'bafen.distrikt as district',
+      'babya.code as marketAreaCode',
+      'babya.caption as marketArea'
     )
     .innerJoin('cmobt', 'cmobj.keycmobt', 'cmobt.keycmobt')
     .innerJoin('hyinf', 'cmobj.keycmobj', 'hyinf.keycmobj')
     .innerJoin('hyint', 'hyinf.keyhyint', 'hyint.keyhyint')
     .innerJoin('babuf', 'cmobj.keycmobj', 'babuf.keycmobj')
+    .innerJoin('bafen', 'babuf.fencode', 'bafen.code')
+    .innerJoin('bafst', 'babuf.keyobjfst', 'bafst.keycmobj')
+    .innerJoin('babya', 'bafst.keybabya', 'babya.keybabya')
     .leftJoin('balgh', 'cmobj.keycmobj', 'balgh.keycmobj')
     .leftJoin('balgt', 'balgh.keybalgt', 'balgt.keybalgt')
     .leftJoin('cmval as cmvalboa', function () {

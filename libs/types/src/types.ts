@@ -40,6 +40,8 @@ interface Contact {
   housingWaitingList?: WaitingList
   storageWaitingList?: WaitingList
   specialAttention?: boolean
+  protectedIdentity: boolean
+  deceased: boolean
 }
 
 type NonEmptyArray<T> = [T, ...T[]]
@@ -275,6 +277,10 @@ interface RentalPropertyInfo {
   type: string
   property: ApartmentInfo | CommercialSpaceInfo | ParkingSpaceInfo
   maintenanceUnits?: MaintenanceUnitInfo[]
+  districtCode: string
+  district: string
+  marketAreaCode: string
+  marketArea: string
 }
 
 interface ApartmentInfo {

@@ -802,6 +802,38 @@ export async function getLeaseByExternalId(
   }
 }
 
+export async function getLeasesByStartDateRange(
+  fromDate: Date,
+  toDate: Date,
+  filters: GetLeasesFilters = defaultFilters
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?filter[startDate]=${fromDate.toISOString()},${toDate.toISOString()}&populate=hyresobjekt,hyresgaster`,
+    })
+
+    const leases = TenfastLeaseSchema.array().safeParse(res.data)
+
+    if (!leases.success) {
+      logger.error(
+        { error: JSON.stringify(leases.error, null, 2) },
+        'getLeasesByStartDateRange: Failed to parse Tenfast response'
+      )
+
+      return { ok: false, err: { tag: 'schema-error', error: leases.error } }
+    }
+
+    return {
+      ok: true,
+      data: filterByStatus(leases.data, filters.status),
+    }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByStartDateRange')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function updateLeaseInvoiceRows(params: {
   leaseId: string
   rowsToDelete: string[]
