@@ -119,6 +119,8 @@ const transformXledgerCustomerToXpandContact = (
     isTenant: false,
     autogiro: false,
     invoiceDeliveryMethod: InvoiceDeliveryMethod.Other,
+    protectedIdentity: false,
+    deceased: false,
   }
 }
 

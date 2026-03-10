@@ -20,4 +20,6 @@ export const ContactFactory = Factory.define<Contact>(({ sequence }) => ({
   isTenant: true,
   leaseIds: [],
   leases: undefined,
+  protectedIdentity: false,
+  deceased: false,
 }))
