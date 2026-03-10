@@ -50,6 +50,7 @@ export const routes = (router: KoaRouter) => {
     schemas.UpdateInspectionStatusRequestSchema
   )
   registerSchema('InspectionWithSource', schemas.InspectionWithSourceSchema)
+  registerSchema('InternalInspection', schemas.InternalInspectionSchema)
   registerSchema(
     'SaveInspectionDraftRequest',
     schemas.SaveInspectionDraftRequestSchema
@@ -1420,11 +1421,25 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   properties:
    *                     inspection:
-   *                       $ref: '#/components/schemas/Inspection'
+   *                       $ref: '#/components/schemas/InternalInspection'
    *       '404':
    *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '500':
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *     security:
    *       - bearerAuth: []
    */
@@ -1482,10 +1497,33 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '200':
    *         description: Draft saved successfully
+   *       '400':
+   *         description: Invalid request body
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '404':
    *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '500':
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *     security:
    *       - bearerAuth: []
    */
@@ -1493,10 +1531,23 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 
+    const validationResult = schemas.SaveInspectionDraftRequestSchema.safeParse(
+      ctx.request.body
+    )
+    if (!validationResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: validationResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
     try {
       const result = await inspectionAdapter.saveInspectionDraft(
         inspectionId,
-        ctx.request.body
+        validationResult.data
       )
 
       if (!result.ok) {

@@ -31,7 +31,7 @@ import { Button } from '@/shared/ui/Button'
 import { useInspectionForm } from '../hooks/useInspectionForm'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface InspectionFormProps {

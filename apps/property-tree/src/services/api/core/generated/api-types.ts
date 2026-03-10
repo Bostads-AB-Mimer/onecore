@@ -5845,18 +5845,26 @@ export interface paths {
           content: {
             "application/json": {
               content?: {
-                inspection?: components["schemas"]["Inspection"];
+                inspection?: components["schemas"]["InternalInspection"];
               };
             };
           };
         };
         /** @description Inspection not found */
         404: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
         /** @description Internal server error */
         500: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
       };
     };
@@ -5932,13 +5940,29 @@ export interface paths {
         200: {
           content: never;
         };
+        /** @description Invalid request body */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
         /** @description Inspection not found */
         404: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
         /** @description Internal server error */
         500: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
       };
     };
@@ -12162,6 +12186,60 @@ export interface components {
             specialAttention?: boolean;
           }[];
       }) | null;
+    };
+    InternalInspection: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      inspector: string;
+      type: string;
+      address: string;
+      apartmentCode: string | null;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      rooms: {
+          roomId: string;
+          conditions: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          actions: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          componentNotes: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          componentPhotos: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          photos: string[];
+          isApproved: boolean;
+          isHandled: boolean;
+        }[] | null;
     };
     SaveInspectionDraftRequest: {
       inspectorName: string;

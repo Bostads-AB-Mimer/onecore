@@ -5,10 +5,7 @@ import { components } from './generated/api-types'
 
 type InspectionWithSource = components['schemas']['InspectionWithSource']
 type DetailedInspection = components['schemas']['DetailedInspection']
-type InspectionRoom = components['schemas']['InspectionRoom']
-type InternalInspection = components['schemas']['Inspection'] & {
-  rooms?: InspectionRoom[] | null
-}
+type InternalInspection = components['schemas']['InternalInspection']
 type TenantContactsResponse = components['schemas']['TenantContactsResponse']
 type SendProtocolRequest = components['schemas']['SendProtocolRequest']
 type SendProtocolResponse = components['schemas']['SendProtocolResponse']
@@ -172,27 +169,24 @@ export const inspectionService = {
   async getInternalInspectionById(
     inspectionId: string
   ): Promise<InternalInspection> {
-    const response = await GET('/inspections/internal/{inspectionId}' as any, {
+    const response = await GET('/inspections/internal/{inspectionId}', {
       params: { path: { inspectionId } },
     })
     if (response.error) throw response.error
-    if (!(response.data as any)?.content?.inspection)
+    if (!response.data?.content?.inspection)
       throw new Error('No data returned from API')
 
-    return (response.data as any).content.inspection as InternalInspection
+    return response.data.content.inspection
   },
 
   async saveInspectionDraft(
     inspectionId: string,
     body: SaveInspectionDraftRequest
   ): Promise<void> {
-    const response = await PATCH(
-      '/inspections/internal/{inspectionId}/draft' as any,
-      {
-        params: { path: { inspectionId } },
-        body,
-      }
-    )
+    const response = await PATCH('/inspections/internal/{inspectionId}/draft', {
+      params: { path: { inspectionId } },
+      body,
+    })
     if (response.error) throw response.error
   },
 }

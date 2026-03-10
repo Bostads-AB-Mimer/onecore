@@ -24,10 +24,7 @@ import { InspectionProtocol } from './InspectionProtocol'
 
 type Inspection = components['schemas']['InspectionWithSource']
 type DetailedInspection = components['schemas']['DetailedInspection']
-type InspectionRoom = components['schemas']['InspectionRoom']
-type InternalInspection = components['schemas']['Inspection'] & {
-  rooms?: InspectionRoom[] | null
-}
+type InternalInspection = components['schemas']['InternalInspection']
 
 interface InspectionsTableProps {
   inspections: Inspection[]

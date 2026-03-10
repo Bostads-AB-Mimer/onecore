@@ -15,8 +15,8 @@ import {
 
 import { InspectionForm } from './InspectionForm'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
-type Inspection = components['schemas']['Inspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
+type Inspection = components['schemas']['InternalInspection']
 
 import type { InspectionSubmitData } from '@/features/inspections/types/index'
 

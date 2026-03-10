@@ -5,7 +5,7 @@ import type { Room } from '@/services/types'
 
 import { initializeInspectionData } from '../lib/initialFormData'
 
-type Inspection = components['schemas']['Inspection']
+type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 export interface UseInspectionFormStateReturn {
