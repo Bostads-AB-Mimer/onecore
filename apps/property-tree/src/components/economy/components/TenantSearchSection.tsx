@@ -16,13 +16,7 @@ export function TenantSearchSection({
   onSelectTenant,
   error,
 }: TenantSearchSectionProps) {
-  const {
-    searchQuery,
-    setSearchQuery,
-    searchResults,
-    showSearchResults,
-    isSearching,
-  } = useTenantSearch()
+  const { searchQuery, setSearchQuery, searchResults } = useTenantSearch()
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -38,6 +32,12 @@ export function TenantSearchSection({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (!tenantName) {
+      setSearchQuery('')
+    }
+  }, [tenantName, setSearchQuery])
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)

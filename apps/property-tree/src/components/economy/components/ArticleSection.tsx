@@ -90,6 +90,7 @@ export function ArticleSection({
               <div className="space-y-2">
                 <Label htmlFor="artikel">Artikel</Label>
                 <Select
+                  value={row.articleId}
                   onValueChange={(articleId) =>
                     handleChangeRowArticle(index, articleId)
                   }
