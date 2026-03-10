@@ -127,7 +127,7 @@ export function ArticleSection({
             </div>
             <div className="grid grid-cols-4 items-center gap-2">
               <div className="space-y-1 sm:space-y-0">
-                <Label>Text</Label>
+                <Label>Text på faktura</Label>
                 <Input
                   value={row.text}
                   onChange={(e) => handleChangeRowText(index, e.target.value)}
