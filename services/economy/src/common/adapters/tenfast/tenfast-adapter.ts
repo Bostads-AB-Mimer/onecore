@@ -182,11 +182,6 @@ export const getInvoiceByOcr = async (
       const tenantResult = await getTenantById(
         parsedResponse.data.records[0].recipientId
       )
-
-      console.log(
-        'tenant',
-        tenantResult.ok ? tenantResult.data : tenantResult.err
-      )
     }
 
     return {
@@ -287,22 +282,10 @@ export const getInvoicesNotExported = async (
   // Dummy implementation awaiting exported flag in Tenfast
   const invoices: InvoiceWithAccounting[] = []
   const ocrNumbers = [
-    '2002125123137',
-    '2007725123130',
-    '2002925123139',
-    '2007925123138',
-    '2007625123131',
-    '2007225123135',
-    '2002825123130',
-    '2004225123132',
-    '2004125123133',
-    '2004025123134',
-    '2003925123137',
-    '2003825123138',
-    '2003725123139',
-    '2003625123130',
-    '2003525123131',
-    '2003425123132',
+    '552603000765167',
+    '552603000765142',
+    '552603000765126',
+    '552603000765100',
   ]
 
   for (const ocrNumber of ocrNumbers) {
