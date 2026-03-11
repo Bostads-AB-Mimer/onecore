@@ -6,7 +6,6 @@ import { CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Calendar } from '@/components/ui/Calendar'
-import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import {
   Popover,
@@ -49,22 +48,22 @@ export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // Mutation for submitting the invoice
+
   const submitInvoiceMutation = useMutation({
     mutationFn: async (invoice: MiscellaneousInvoicePayload) => {
       return await economyService.submitMiscellaneousInvoice(invoice)
     },
     onSuccess: (data, variables) => {
       toast({
-        title: 'Underlag sparat',
-        description: `Ströfaktura-underlag för ${variables.contactCode} har skapats.`,
+        title: 'Underlag skickat',
+        description: `Ströfaktura-underlag för ${variables.contactCode} har skickats.`,
       })
       handleReset()
     },
     onError: () => {
       toast({
         title: 'Fel',
-        description: 'Kunde inte spara underlaget. Försök igen.',
+        description: 'Kunde inte skicka underlaget. Försök igen.',
         variant: 'destructive',
       })
     },
@@ -394,8 +393,8 @@ export function MiscellaneousInvoiceForm() {
               }
             >
               {isSubmitting || submitInvoiceMutation.isPending
-                ? 'Sparar...'
-                : 'Spara underlag'}
+                ? 'Skickar...'
+                : 'Skicka underlag'}
             </Button>
           </div>
         </div>
