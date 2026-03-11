@@ -833,8 +833,22 @@ export const routes = (router: KoaRouter) => {
    *                       $ref: '#/components/schemas/InternalInspection'
    *       404:
    *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    */
   router.get('(.*)/inspections/internal/:inspectionId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -888,12 +902,37 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Draft saved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
    *       400:
    *         description: Invalid request body
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       404:
    *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    */
   router.patch('(.*)/inspections/internal/:inspectionId/draft', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

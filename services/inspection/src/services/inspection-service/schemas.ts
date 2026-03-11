@@ -136,6 +136,7 @@ export const InspectionRoomSchema = z.object({
 })
 
 export const InternalInspectionSchema = XpandInspectionSchema.extend({
+  residenceId: z.string(),
   rooms: z.array(InspectionRoomSchema).nullable(),
 })
 

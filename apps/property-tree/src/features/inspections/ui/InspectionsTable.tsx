@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { residenceService, roomService } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import type { Room } from '@/services/types'
@@ -98,6 +99,25 @@ export function InspectionsTable({
       enabled: !!selectedInspectionId && isResumeDialogOpen,
     })
 
+  // internalInspection.residenceId stores the Xpand rentalId, not the property service UUID.
+  // We first resolve the residence UUID via the rentalId, then fetch rooms by UUID.
+  const rentalIdForRooms =
+    rooms.length === 0 ? internalInspection?.residenceId : undefined
+
+  const { data: residenceForRooms, isLoading: isLoadingResidence } = useQuery({
+    queryKey: ['residence', rentalIdForRooms],
+    queryFn: () => residenceService.getByRentalId(rentalIdForRooms!),
+    enabled: !!rentalIdForRooms,
+  })
+
+  const { data: fetchedRooms, isLoading: isLoadingRooms } = useQuery({
+    queryKey: ['rooms', residenceForRooms?.id],
+    queryFn: () => roomService.getByResidenceId(residenceForRooms!.id),
+    enabled: !!residenceForRooms?.id,
+  })
+
+  const resolvedRooms = rooms.length > 0 ? rooms : (fetchedRooms ?? [])
+
   const handleInspectionClick = (inspection: Inspection) => {
     if (isPending) return
 
@@ -155,44 +175,47 @@ export function InspectionsTable({
         )}
       />
 
-      {isResumeDialogOpen && !isLoadingInternal && (
-        <InspectionFormDialog
-          isOpen={isResumeDialogOpen}
-          onClose={() => setIsResumeDialogOpen(false)}
-          onSubmit={async (inspectorName, inspectionRooms, status) => {
-            // TODO: handle 'completed' status when "Slutför besiktning" is enabled
-            if (status !== 'draft') return
-            try {
-              await inspectionService.saveInspectionDraft(
-                selectedInspectionId as string,
-                {
-                  inspectorName,
-                  rooms: Object.values(inspectionRooms),
-                }
-              )
-              await queryClient.invalidateQueries({
-                queryKey: ['inspections'],
-              })
-              await queryClient.invalidateQueries({
-                queryKey: ['inspections-internal', selectedInspectionId],
-              })
-              toast({
-                title: 'Utkast sparat',
-                description: 'Besiktningen har sparats som utkast.',
-              })
-              setIsResumeDialogOpen(false)
-            } catch {
-              toast({
-                title: 'Fel',
-                description: 'Kunde inte spara utkast.',
-                variant: 'destructive',
-              })
-            }
-          }}
-          rooms={rooms}
-          existingInspection={internalInspection}
-        />
-      )}
+      {isResumeDialogOpen &&
+        !isLoadingInternal &&
+        !isLoadingResidence &&
+        !isLoadingRooms && (
+          <InspectionFormDialog
+            isOpen={isResumeDialogOpen}
+            onClose={() => setIsResumeDialogOpen(false)}
+            onSubmit={async (inspectorName, inspectionRooms, status) => {
+              // TODO: handle 'completed' status when "Slutför besiktning" is enabled
+              if (status !== 'draft') return
+              try {
+                await inspectionService.saveInspectionDraft(
+                  selectedInspectionId as string,
+                  {
+                    inspectorName,
+                    rooms: Object.values(inspectionRooms),
+                  }
+                )
+                await queryClient.invalidateQueries({
+                  queryKey: ['inspections'],
+                })
+                await queryClient.invalidateQueries({
+                  queryKey: ['inspections-internal', selectedInspectionId],
+                })
+                toast({
+                  title: 'Utkast sparat',
+                  description: 'Besiktningen har sparats som utkast.',
+                })
+                setIsResumeDialogOpen(false)
+              } catch {
+                toast({
+                  title: 'Fel',
+                  description: 'Kunde inte spara utkast.',
+                  variant: 'destructive',
+                })
+              }
+            }}
+            rooms={resolvedRooms}
+            existingInspection={internalInspection}
+          />
+        )}
 
       {isProtocolDialogOpen && (
         <InspectionProtocol

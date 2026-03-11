@@ -76,6 +76,7 @@ export const InspectionSchema = XpandInspectionSchema.extend({
 })
 
 export const InternalInspectionSchema = XpandInspectionSchema.extend({
+  residenceId: z.string(),
   rooms: z.array(InspectionRoomSchema).nullable(),
 })
 

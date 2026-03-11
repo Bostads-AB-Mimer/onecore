@@ -4,6 +4,7 @@ import { db } from '../db'
 import { AdapterResult } from '../../types'
 import {
   DetailedXpandInspection,
+  InternalInspection,
   XpandInspection,
   XpandInspectionSchema,
   InspectionStatusFilter,
@@ -437,12 +438,7 @@ export async function saveInspectionDraft(
 export async function getInspectionById(
   dbConnection: Knex = db,
   inspectionId: string
-): Promise<
-  AdapterResult<
-    XpandInspection & { rooms: InspectionRoom[] | null },
-    'not-found' | 'unknown'
-  >
-> {
+): Promise<AdapterResult<InternalInspection, 'not-found' | 'unknown'>> {
   try {
     const [inspection] = await dbConnection
       .select(
@@ -455,6 +451,7 @@ export async function getInspectionById(
         'apartmentCode',
         'leaseId',
         'masterKeyAccess',
+        'residenceId',
         'draftRooms'
       )
       .from<DbInspection>('inspection')
@@ -488,6 +485,7 @@ export async function getInspectionById(
         apartmentCode: inspection.apartmentCode,
         leaseId: inspection.leaseId,
         masterKeyAccess: inspection.masterKeyAccess,
+        residenceId: inspection.residenceId,
         rooms,
       },
     }
