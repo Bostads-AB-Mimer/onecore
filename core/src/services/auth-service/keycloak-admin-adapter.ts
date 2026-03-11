@@ -132,10 +132,17 @@ export async function getUsersByRole(
     if (error instanceof AxiosError) {
       if (!error.response)
         return { ok: false, err: 'keycloak_unreachable', statusCode: 502 }
+      const status = error.response.status
+      if (status === 401)
+        return { ok: false, err: 'unauthorized', statusCode: status }
+      if (status === 403)
+        return { ok: false, err: 'forbidden', statusCode: status }
+      if (status === 404)
+        return { ok: false, err: 'role_not_found', statusCode: status }
       return {
         ok: false,
         err: 'unknown',
-        statusCode: error.response.status,
+        statusCode: status,
       }
     }
     return { ok: false, err: 'unknown', statusCode: 500 }
