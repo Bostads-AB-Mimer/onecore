@@ -18,7 +18,6 @@ import { InspectionsTable } from './InspectionsTable'
 type InspectionWithSource = components['schemas']['InspectionWithSource']
 
 interface InspectionsTabContentProps {
-  residenceId: string
   rentalId: string | undefined
   leaseId: string | undefined
   residence?: ResidenceDetails
@@ -27,7 +26,6 @@ interface InspectionsTabContentProps {
 const INITIAL_DISPLAY_COUNT = 5
 
 export function InspectionsTabContent({
-  residenceId,
   rentalId,
   leaseId,
   residence,
@@ -43,9 +41,9 @@ export function InspectionsTabContent({
   })
 
   const roomsQuery = useQuery({
-    queryKey: ['rooms', residenceId],
-    queryFn: () => roomService.getByResidenceId(residenceId),
-    enabled: !!residenceId,
+    queryKey: ['rooms', rentalId],
+    queryFn: () => roomService.getByRentalId(rentalId!),
+    enabled: !!rentalId,
   })
 
   const inspections = inspectionsQuery.data ?? []

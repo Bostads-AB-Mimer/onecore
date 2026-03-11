@@ -463,7 +463,7 @@ export const FacilityDetailsSchema = z.object({
 })
 
 export const GetRoomsQueryParamsSchema = z.object({
-  residenceId: z.string().min(1, { message: 'residenceId is required.' }),
+  rentalId: z.string().min(1, { message: 'rentalId is required.' }),
   roomCode: z.string().optional(),
 })
 

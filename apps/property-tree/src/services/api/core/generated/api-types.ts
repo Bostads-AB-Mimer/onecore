@@ -4932,14 +4932,14 @@ export interface paths {
   };
   "/rooms": {
     /**
-     * Get rooms by residence id.
+     * Get rooms by rental id.
      * @description Returns all rooms belonging to a residence.
      */
     get: {
       parameters: {
         query: {
-          /** @description The id of the residence. */
-          residenceId: string;
+          /** @description The rental id of the residence. */
+          rentalId: string;
           /** @description The code of the room (optional). */
           roomCode?: string;
         };

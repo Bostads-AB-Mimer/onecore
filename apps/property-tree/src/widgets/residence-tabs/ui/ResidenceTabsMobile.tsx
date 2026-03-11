@@ -55,7 +55,7 @@ export const ResidenceTabsMobile = ({
       id: 'rooms',
       icon: Info,
       title: 'Rumsinformation',
-      content: <RoomsTabContent residenceId={residence.id} />,
+      content: <RoomsTabContent rentalId={rentalId} />,
     },
     {
       id: 'floorplan',
@@ -69,7 +69,6 @@ export const ResidenceTabsMobile = ({
       title: 'Besiktningar',
       content: (
         <InspectionsTabContent
-          residenceId={residence.id}
           rentalId={rentalId || undefined}
           leaseId={currentLease?.leaseId}
           residence={residence}

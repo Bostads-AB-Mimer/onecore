@@ -84,36 +84,25 @@ async function getRoomsByPropertyObjectIds(
   return rooms.map(mapToRoom)
 }
 
-export async function getRooms(residenceId: string, roomCode?: string) {
-  const residence = await prisma.residence
-    .findFirst({
-      where: {
-        id: residenceId,
-      },
-      include: {
-        residenceType: true,
-        propertyObject: {
-          include: {
-            property: true,
-            building: true,
-            propertyStructures: {
-              select: {
-                rentalId: true,
-              },
-            },
-          },
-        },
-      },
-    })
-    .then(trimStrings)
+export async function getRooms(rentalId: string, roomCode?: string) {
+  const propertyStructure = await prisma.propertyStructure.findFirst({
+    where: {
+      rentalId,
+      propertyObject: { objectTypeId: 'balgh' },
+      NOT: { rentalId: { endsWith: 'X' } },
+    },
+    select: {
+      residenceId: true,
+    },
+  })
 
-  if (!residence) {
-    throw new Error(`Residence not found: ${residenceId}`)
+  if (!propertyStructure || !propertyStructure.residenceId) {
+    throw new Error(`Residence not found for rentalId: ${rentalId}`)
   }
 
   const propertyStructures = await prisma.propertyStructure.findMany({
     where: {
-      residenceId: residence.propertyObjectId,
+      residenceId: propertyStructure.residenceId,
       NOT: {
         staircaseId: null,
         residenceId: null,

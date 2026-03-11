@@ -1799,17 +1799,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /rooms:
    *   get:
-   *     summary: Get rooms by residence id.
+   *     summary: Get rooms by rental id.
    *     description: Returns all rooms belonging to a residence.
    *     tags:
    *       - Property base Service
    *     parameters:
    *       - in: query
-   *         name: residenceId
+   *         name: rentalId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The id of the residence.
+   *         description: The rental id of the residence.
    *       - in: query
    *         name: roomCode
    *         required: false
@@ -1841,12 +1841,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { residenceId, roomCode } = queryParams.data
+    const { rentalId, roomCode } = queryParams.data
 
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      const result = await propertyBaseAdapter.getRooms(residenceId, roomCode)
+      const result = await propertyBaseAdapter.getRooms(rentalId, roomCode)
       if (!result.ok) {
         logger.error(
           { err: result.err, metadata },
