@@ -339,7 +339,7 @@ export const routes = (router: KoaRouter) => {
       const result = await getUsersByRole(roleName)
 
       if (!result.ok) {
-        ctx.status = 500
+        ctx.status = result.statusCode ?? 500
         ctx.body = { error: result.err }
         return
       }
