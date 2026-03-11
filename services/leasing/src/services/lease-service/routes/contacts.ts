@@ -4,6 +4,7 @@ import { leasing, WaitingListType, RouteErrorResponse } from '@onecore/types'
 import { z } from 'zod'
 
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
+import { valid as isValidPersonnummer } from '../../../helpers/personnummer'
 import * as applicationProfileAdapter from '../adapters/application-profile-adapter'
 import * as contactCommentsAdapter from '../adapters/xpand/contact-comments-adapter'
 import {
@@ -160,7 +161,7 @@ export const routes = (router: KoaRouter) => {
    * /contacts/for-identity-check:
    *   get:
    *     summary: Get contacts for deceased/protected identity check
-   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Filters out organizations, deceased contacts, and those with invalid registration numbers.
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Filters out organizations, deceased contacts, and those with invalid registration numbers. Note - Results are validated using the personnummer package, so the actual count may be fewer than the requested limit if invalid personnummer are filtered out.
    *     tags: [Contacts]
    *     parameters:
    *       - in: query
@@ -225,8 +226,21 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await tenantLeaseAdapter.getContactsForIdentityCheck(ctx)
 
+      // Filter out contacts with invalid personnummer
+      const validContacts = result.content.filter((contact) =>
+        isValidPersonnummer(contact.nationalRegistrationNumber)
+      )
+
       ctx.status = 200
-      ctx.body = { ...metadata, ...result }
+      ctx.body = {
+        ...metadata,
+        ...result,
+        content: validContacts,
+        _meta: {
+          ...result._meta,
+          count: validContacts.length,
+        },
+      }
     } catch (err) {
       logger.error({ err }, 'contacts.for-identity-check')
       ctx.status = 500
