@@ -4,7 +4,7 @@ import { authService } from '@/services/api/core'
 
 export function useInspectors() {
   return useQuery({
-    queryKey: ['inspectors', 'besiktning'],
-    queryFn: () => authService.getUsersByRole('besiktning'),
+    queryKey: ['inspectors', 'inspections:write'],
+    queryFn: () => authService.getUsersByRole('inspections:write'),
   })
 }
