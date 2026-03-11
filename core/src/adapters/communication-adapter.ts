@@ -10,6 +10,8 @@ import {
   BulkEmail,
   BulkSmsResult,
   BulkEmailResult,
+  NonScoredParkingSpaceApprovedEmail,
+  NonScoredParkingSpaceDeniedEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from './types'
@@ -166,6 +168,82 @@ export const sendParkingSpaceAcceptOfferEmail = async (
     logger.error(
       error,
       `Error sending parking space accept offer to ${parkingSpaceDetails.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendNonScoredParkingSpaceApprovedEmail = async (
+  details: NonScoredParkingSpaceApprovedEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: details,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    if (process.env.NODE_ENV !== 'production')
+      details.to = config.emailAddresses.tenantDefault
+
+    const result = await axios(
+      `${config.communicationService.url}/sendNonScoredParkingSpaceApproved`,
+      axiosOptions
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending non-scored parking space approved email to ${details.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendNonScoredParkingSpaceDeniedEmail = async (
+  details: NonScoredParkingSpaceDeniedEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: details,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    if (process.env.NODE_ENV !== 'production')
+      details.to = config.emailAddresses.tenantDefault
+
+    const result = await axios(
+      `${config.communicationService.url}/sendNonScoredParkingSpaceDenied`,
+      axiosOptions
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending non-scored parking space denied email to ${details.to}`
     )
     return { ok: false, err: 'unknown', statusCode: 500 }
   }

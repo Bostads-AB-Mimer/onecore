@@ -8,6 +8,8 @@ import {
   sendWorkOrderEmail,
   sendParkingSpaceAcceptOffer,
   sendBulkEmail,
+  sendNonScoredParkingSpaceApproved,
+  sendNonScoredParkingSpaceDenied,
 } from './adapters/email-adapter'
 import {
   sendParkingSpaceOfferSms,
@@ -24,6 +26,8 @@ import {
   WorkOrderEmail,
   BulkSms,
   BulkEmail,
+  NonScoredParkingSpaceApprovedEmail,
+  NonScoredParkingSpaceDeniedEmail,
 } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
@@ -116,6 +120,79 @@ export const routes = (router: KoaRouter) => {
         logger.error(
           { error: error.message },
           'Error in sendParkingSpaceAcceptOffer'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
+
+  const NonScoredParkingSpaceApprovedEmailSchema = z.object({
+    to: z.string().email(),
+    subject: z.string(),
+    text: z.string(),
+    leaseId: z.string(),
+    address: z.string(),
+    availableFrom: z.string(),
+    parkingSpaceId: z.string(),
+    objectId: z.string(),
+    type: z.string(),
+    rent: z.string(),
+  })
+  router.post(
+    '(.*)/sendNonScoredParkingSpaceApproved',
+    parseRequestBody(NonScoredParkingSpaceApprovedEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as NonScoredParkingSpaceApprovedEmail
+
+      try {
+        const result = await sendNonScoredParkingSpaceApproved(body)
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendNonScoredParkingSpaceApproved'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
+
+  const NonScoredParkingSpaceDeniedEmailSchema = z.object({
+    to: z.string().email(),
+    subject: z.string(),
+    text: z.string(),
+    address: z.string(),
+    availableFrom: z.string(),
+    parkingSpaceId: z.string(),
+    objectId: z.string(),
+    type: z.string(),
+    rent: z.string(),
+  })
+  router.post(
+    '(.*)/sendNonScoredParkingSpaceDenied',
+    parseRequestBody(NonScoredParkingSpaceDeniedEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as NonScoredParkingSpaceDeniedEmail
+
+      try {
+        const result = await sendNonScoredParkingSpaceDenied(body)
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendNonScoredParkingSpaceDenied'
         )
         ctx.status = 500
         ctx.body = {

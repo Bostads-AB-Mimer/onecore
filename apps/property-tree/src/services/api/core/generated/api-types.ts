@@ -8249,6 +8249,7 @@ export interface components {
             type: number;
           };
           specialAttention?: boolean;
+          leaseContactType?: string;
         }[];
     };
     IdentityCheckContact: {
