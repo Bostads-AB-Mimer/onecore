@@ -45,9 +45,7 @@ describe('Rooms API', () => {
   })
 
   it('should validate required query parameters', async () => {
-    const response = await request(app.callback())
-      .get('/rooms')
-      .query({}) // Missing required rentalId
+    const response = await request(app.callback()).get('/rooms').query({}) // Missing required rentalId
 
     expect(response.status).toBe(400)
     expect(response.body.errors).toBeDefined()
