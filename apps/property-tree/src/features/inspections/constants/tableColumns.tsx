@@ -219,12 +219,10 @@ export function createActionsColumn(
   return {
     key: 'actions',
     label: 'Åtgärder',
-    className: 'text-right',
     render: (inspection: Inspection) => {
       if (isXpandSource(inspection.source) && !isCompleted(inspection.status)) {
         return (
           <Button variant="ghost" size="sm" disabled>
-            <ExternalLink className="h-4 w-4 mr-1" />
             {XPAND_ACTION_LABEL}
           </Button>
         )
@@ -345,7 +343,6 @@ export function renderInspectionMobileCard(
           {isXpandSource(inspection.source) &&
           !isCompleted(inspection.status) ? (
             <Button variant="ghost" size="sm" disabled>
-              <ExternalLink className="h-4 w-4 mr-1" />
               {XPAND_ACTION_LABEL}
             </Button>
           ) : (
