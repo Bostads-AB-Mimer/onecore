@@ -525,8 +525,12 @@ export const routes = (router: KoaRouter) => {
         // Apply ordering after filtering
         query.orderBy('eventTime', 'desc')
       } else {
-        // No filters, use the original query directly
-        query = baseQuery
+        // No filters, but still wrap in subquery for pagination
+        // (UNION ALL queries break when paginate calls clearSelect/count)
+        query = db
+          .from(baseQuery.clear('order').as('union_result'))
+          .select('*')
+          .orderBy('eventTime', 'desc')
       }
 
       const paginatedResult = await paginate(query, ctx)
@@ -667,8 +671,12 @@ export const routes = (router: KoaRouter) => {
         // Apply ordering after filtering
         query.orderBy('eventTime', 'desc')
       } else {
-        // No filters, use the original query directly
-        query = baseQuery
+        // No filters, but still wrap in subquery for pagination
+        // (UNION ALL queries break when paginate calls clearSelect/count)
+        query = db
+          .from(baseQuery.clear('order').as('union_result'))
+          .select('*')
+          .orderBy('eventTime', 'desc')
       }
 
       const paginatedResult = await paginate(query, ctx)

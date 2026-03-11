@@ -204,7 +204,7 @@ export function getLogsByRentalObjectCodeQuery(
     })
     .where('kn.rentalObjectCode', rentalObjectCode)
 
-  // 6. objectType='keyBundle' - Extract first key from JSON
+  // 6. objectType='keyBundle' - Via junction table to keys
   const keyBundleLogs = db(`${TABLE} as logs`)
     .select('logs.*')
     .innerJoin('key_bundles as kb', function () {
@@ -214,8 +214,13 @@ export function getLogsByRentalObjectCodeQuery(
         db.raw('?', ['keyBundle'])
       )
     })
-    .innerJoin(db.raw(`keys ON keys.id = JSON_VALUE(kb.keys, '$[0]')`))
-    .where('keys.rentalObjectCode', rentalObjectCode)
+    .whereExists(function () {
+      this.select(db.raw('1'))
+        .from('key_bundle_keys as kbk')
+        .join('keys', 'keys.id', 'kbk.keyId')
+        .whereRaw('kbk.keyBundleId = kb.id')
+        .where('keys.rentalObjectCode', rentalObjectCode)
+    })
 
   // 7. objectType='signature' - Via receipt → keyLoan chain
   const signatureLogs = db(`${TABLE} as logs`)

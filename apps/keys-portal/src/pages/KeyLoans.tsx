@@ -4,11 +4,11 @@ import { Badge } from '@/components/ui/badge'
 import { KeyLoansTable } from '@/components/key-loans/KeyLoansTable'
 import { EditKeyLoanForm } from '@/components/key-loans/EditKeyLoanForm'
 
-import { KeyLoan, UpdateKeyLoanRequest } from '@/services/types'
+import { KeyLoan } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import { keyLoanService } from '@/services/api/keyLoanService'
-import { receiptService } from '@/services/api/receiptService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { useEditKeyLoanHandlers } from '@/hooks/useEditKeyLoanHandlers'
 import { useStaleGuard } from '@/hooks/useStaleGuard'
 
 export default function KeyLoans() {
@@ -24,6 +24,7 @@ export default function KeyLoans() {
   const searchQuery = pagination.searchParams.get('q') || ''
   const loanTypeFilter = pagination.searchParams.get('loanType') || null
   const editLoanIdFromUrl = pagination.searchParams.get('editLoanId')
+  const expandLoanIdFromUrl = pagination.searchParams.get('expandLoanId')
   const minKeys = pagination.searchParams.get('minKeys')
     ? parseInt(pagination.searchParams.get('minKeys')!, 10)
     : null
@@ -170,30 +171,44 @@ export default function KeyLoans() {
     setSearchInput(searchQuery)
   }, [searchQuery])
 
+  // Ensure the loan to auto-expand is in the list (it may not be on the current page)
+  useEffect(() => {
+    if (expandLoanIdFromUrl && keyLoans.length > 0) {
+      const exists = keyLoans.some((loan) => loan.id === expandLoanIdFromUrl)
+      if (!exists) {
+        keyLoanService
+          .get(expandLoanIdFromUrl)
+          .then((loan) => {
+            setKeyLoans((prev) => [loan as KeyLoan, ...prev])
+          })
+          .catch((error) => {
+            console.error('Failed to load loan for expand:', error)
+          })
+      }
+    }
+  }, [expandLoanIdFromUrl, keyLoans])
+
   // Auto-open edit form when editLoanId is in URL
   useEffect(() => {
     if (editLoanIdFromUrl && keyLoans.length > 0) {
-      const loanToEdit = keyLoans.find((loan) => loan.id === editLoanIdFromUrl)
-      if (loanToEdit) {
-        setEditingKeyLoan(loanToEdit)
-        setShowEditForm(true)
-      } else {
-        // Loan not in current page - fetch it directly
-        keyLoanService
-          .get(editLoanIdFromUrl)
-          .then((loan) => {
-            setEditingKeyLoan(loan)
-            setShowEditForm(true)
+      // Always fetch with details so keysArray is available in the edit form
+      keyLoanService
+        .get(editLoanIdFromUrl, {
+          includeKeySystem: true,
+          includeCards: true,
+        })
+        .then((loan) => {
+          setEditingKeyLoan(loan as KeyLoan)
+          setShowEditForm(true)
+        })
+        .catch((error) => {
+          console.error('Failed to load loan for editing:', error)
+          toast({
+            title: 'Fel',
+            description: 'Kunde inte ladda lånet för redigering',
+            variant: 'destructive',
           })
-          .catch((error) => {
-            console.error('Failed to load loan for editing:', error)
-            toast({
-              title: 'Fel',
-              description: 'Kunde inte ladda lånet för redigering',
-              variant: 'destructive',
-            })
-          })
-      }
+        })
       // Clear the URL param after opening
       pagination.updateUrlParams({ editLoanId: null })
     }
@@ -292,47 +307,48 @@ export default function KeyLoans() {
     [pagination]
   )
 
-  const handleEdit = useCallback((loan: KeyLoan) => {
-    setEditingKeyLoan(loan)
-    setShowEditForm(true)
+  const handleEdit = useCallback(async (loan: KeyLoan) => {
+    try {
+      const enriched = await keyLoanService.get(loan.id, {
+        includeKeySystem: true,
+        includeCards: true,
+      })
+      setEditingKeyLoan(enriched as KeyLoan)
+      setShowEditForm(true)
+    } catch {
+      // Fall back to plain loan if fetch fails
+      setEditingKeyLoan(loan)
+      setShowEditForm(true)
+    }
   }, [])
 
-  const handleSave = useCallback(
-    async (loanData: UpdateKeyLoanRequest, receiptFile?: File | null) => {
-      if (!editingKeyLoan) return
+  const refreshList = useCallback(
+    () => loadKeyLoans(pagination.currentPage, pagination.currentLimit),
+    [loadKeyLoans, pagination.currentPage, pagination.currentLimit]
+  )
 
-      try {
-        setIsLoading(true)
-        await keyLoanService.update(editingKeyLoan.id, loanData)
-
-        toast({
-          title: 'Uppdaterat',
-          description: 'Nyckellånet har uppdaterats',
-        })
-
-        setShowEditForm(false)
-        setEditingKeyLoan(null)
-
-        // Refresh the list
-        await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
-      } catch (error) {
-        console.error('Failed to update key loan:', error)
-        toast({
-          title: 'Fel',
-          description: 'Kunde inte uppdatera nyckellånet',
-          variant: 'destructive',
-        })
-      } finally {
-        setIsLoading(false)
-      }
+  const {
+    handleSave: sharedHandleSave,
+    handleReceiptUpload,
+    handleReceiptDownload,
+    handleReceiptDelete,
+    handleDelete: sharedHandleDelete,
+  } = useEditKeyLoanHandlers({
+    onSuccess: refreshList,
+    onClose: () => {
+      setShowEditForm(false)
+      setEditingKeyLoan(null)
     },
-    [
-      editingKeyLoan,
-      toast,
-      pagination.currentPage,
-      pagination.currentLimit,
-      loadKeyLoans,
-    ]
+  })
+
+  const handleSave = useCallback(
+    async (loanData: Parameters<typeof sharedHandleSave>[1]) => {
+      if (!editingKeyLoan) return
+      setIsLoading(true)
+      await sharedHandleSave(editingKeyLoan.id, loanData)
+      setIsLoading(false)
+    },
+    [editingKeyLoan, sharedHandleSave]
   )
 
   const handleCancel = useCallback(() => {
@@ -340,117 +356,10 @@ export default function KeyLoans() {
     setEditingKeyLoan(null)
   }, [])
 
-  const handleReceiptUpload = useCallback(
-    async (loanId: string, file: File) => {
-      try {
-        // Get existing receipts for this loan
-        const receipts = await receiptService.getByKeyLoan(loanId)
-        const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
-
-        // Create receipt with file or upload to existing receipt
-        if (!loanReceipt) {
-          // Create new receipt with file in single call
-          await receiptService.createWithFile(
-            {
-              keyLoanId: loanId,
-              receiptType: 'LOAN',
-              type: 'DIGITAL',
-            },
-            file
-          )
-        } else {
-          // Upload/replace file on existing receipt
-          await receiptService.uploadFile(loanReceipt.id, file)
-        }
-
-        toast({
-          title: loanReceipt?.fileId ? 'Kvittens ersatt' : 'Kvittens uppladdad',
-          description: loanReceipt?.fileId
-            ? 'Den nya kvittensen har ersatt den gamla'
-            : 'Kvittensen har laddats upp',
-        })
-
-        // Refresh the list
-        await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
-      } catch (error) {
-        console.error('Failed to upload receipt:', error)
-        toast({
-          title: 'Fel',
-          description: 'Kunde inte ladda upp kvittensen',
-          variant: 'destructive',
-        })
-        throw error
-      }
-    },
-    [toast, pagination.currentPage, pagination.currentLimit, loadKeyLoans]
-  )
-
-  const handleReceiptDownload = useCallback(
-    async (loanId: string) => {
-      try {
-        // Get receipts for this loan
-        const receipts = await receiptService.getByKeyLoan(loanId)
-        const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
-
-        if (loanReceipt) {
-          await receiptService.downloadFile(loanReceipt.id)
-        }
-      } catch (error) {
-        console.error('Failed to download receipt:', error)
-        toast({
-          title: 'Fel',
-          description: 'Kunde inte ladda ner kvittensen',
-          variant: 'destructive',
-        })
-        throw error
-      }
-    },
-    [toast]
-  )
-
-  const handleReceiptDelete = useCallback(
-    async (loanId: string) => {
-      try {
-        // Get receipts for this loan
-        const receipts = await receiptService.getByKeyLoan(loanId)
-        const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
-
-        if (loanReceipt) {
-          // Delete the receipt file
-          await receiptService.remove(loanReceipt.id)
-
-          // Clear pickedUpAt to revert loan to "Ej upphämtat" status
-          await keyLoanService.update(loanId, {
-            pickedUpAt: null,
-          })
-
-          toast({
-            title: 'Kvittens borttagen',
-            description:
-              'Kvittensen har tagits bort och lånet är nu markerat som ej upphämtat',
-          })
-
-          // Refresh the list
-          await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
-        }
-      } catch (error) {
-        console.error('Failed to delete receipt:', error)
-        toast({
-          title: 'Fel',
-          description: 'Kunde inte ta bort kvittensen',
-          variant: 'destructive',
-        })
-        throw error
-      }
-    },
-    [toast, pagination.currentPage, pagination.currentLimit, loadKeyLoans]
-  )
-
   const handleDelete = useCallback(
     async (loan: KeyLoan) => {
-      // Check if loan is active (frontend validation - UX improvement)
+      // Frontend validation - UX improvement
       const isActive = loan.pickedUpAt && !loan.returnedAt
-
       if (isActive) {
         toast({
           title: 'Kan inte ta bort aktivt lån',
@@ -461,7 +370,6 @@ export default function KeyLoans() {
         return
       }
 
-      // Confirm deletion
       if (
         !confirm(
           'Är du säker på att du vill ta bort detta lån? Detta går inte att ångra.'
@@ -470,51 +378,11 @@ export default function KeyLoans() {
         return
       }
 
-      try {
-        setIsLoading(true)
-        await keyLoanService.remove(loan.id)
-
-        toast({
-          title: 'Nyckellån borttaget',
-          description: 'Lånet har tagits bort',
-        })
-
-        // Close edit form if we're deleting the loan being edited
-        if (editingKeyLoan?.id === loan.id) {
-          setShowEditForm(false)
-          setEditingKeyLoan(null)
-        }
-
-        // Refresh list
-        await loadKeyLoans(pagination.currentPage, pagination.currentLimit)
-      } catch (error: any) {
-        console.error('Failed to delete loan:', error)
-
-        // Check for specific error code from backend
-        if (error?.data?.code === 'ACTIVE_LOAN_CANNOT_DELETE') {
-          toast({
-            title: 'Kan inte ta bort aktivt lån',
-            description: 'Lånet kan inte tas bort medan nycklar är uthyrda.',
-            variant: 'destructive',
-          })
-        } else {
-          toast({
-            title: 'Kunde inte ta bort lånet',
-            description: 'Ett fel uppstod när lånet skulle tas bort',
-            variant: 'destructive',
-          })
-        }
-      } finally {
-        setIsLoading(false)
-      }
+      setIsLoading(true)
+      await sharedHandleDelete(loan.id)
+      setIsLoading(false)
     },
-    [
-      editingKeyLoan,
-      toast,
-      pagination.currentPage,
-      pagination.currentLimit,
-      loadKeyLoans,
-    ]
+    [toast, sharedHandleDelete]
   )
 
   // Count active and returned loans
@@ -548,6 +416,10 @@ export default function KeyLoans() {
           onReceiptUpload={handleReceiptUpload}
           onReceiptDownload={handleReceiptDownload}
           onReceiptDelete={handleReceiptDelete}
+          onDelete={async (loanId) => {
+            const loan = keyLoans.find((l) => l.id === loanId)
+            if (loan) await handleDelete(loan)
+          }}
         />
       )}
 
@@ -559,6 +431,7 @@ export default function KeyLoans() {
         }
         onEdit={handleEdit}
         onDelete={handleDelete}
+        autoExpandLoanId={expandLoanIdFromUrl}
         loanTypeFilter={loanTypeFilter}
         onLoanTypeFilterChange={handleLoanTypeFilterChange}
         minKeys={minKeys}
