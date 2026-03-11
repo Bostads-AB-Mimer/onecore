@@ -1195,7 +1195,7 @@ export const submitMiscellaneousInvoice = async (
             code: ${quote(invoice.propertyCode)}
           }
           headerInfo: ${quote(headerInfo)}
-          approved: true
+          approved: false
           invoiceDate: ${quote(dateToGraphQlDateString(new Date(invoice.invoiceDate)))}
           ourRef: {
             dbId: ${quote(invoice.reference)}
