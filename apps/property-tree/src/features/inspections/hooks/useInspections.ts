@@ -14,7 +14,8 @@ export function useInspections(
   page = 1,
   limit = 25,
   inspector?: string,
-  address?: string
+  address?: string,
+  enabled = true
 ) {
   const queryClient = useQueryClient()
 
@@ -29,6 +30,7 @@ export function useInspections(
         address: address || undefined,
       }),
     placeholderData: keepPreviousData,
+    enabled,
   })
 
   // Prefetch next page for instant navigation

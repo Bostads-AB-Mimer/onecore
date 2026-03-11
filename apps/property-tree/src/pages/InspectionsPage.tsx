@@ -6,6 +6,8 @@ import { INSPECTION_STATUS_FILTER } from '@/features/inspections/constants/inspe
 import { useInspectionFilters } from '@/features/inspections/hooks/useInspectionFilters'
 import { useInspections } from '@/features/inspections/hooks/useInspections'
 
+import { useUser } from '@/entities/user/hooks/useUser'
+
 import { components } from '@/services/api/core/generated/api-types'
 
 import { useUrlPagination } from '@/shared/hooks'
@@ -28,7 +30,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 type Inspection = components['schemas']['InspectionWithSource']
 
+const MINE_TAB = 'mine' as const
+
 export default function InspectionsPage() {
+  const userState = useUser()
+  const userName = userState.tag === 'success' ? userState.user.name : undefined
+
   const [activeTab, setActiveTab] = useState<string>(
     INSPECTION_STATUS_FILTER.ONGOING
   )
@@ -40,6 +47,7 @@ export default function InspectionsPage() {
   } = useUrlPagination({ defaultLimit: 25 })
 
   const [completedPage, setCompletedPage] = useState(1)
+  const [myPage, setMyPage] = useState(1)
 
   // Filter state needs to be initialized before queries so we can pass filter
   // values as server-side query params. The dropdown options are derived from
@@ -60,6 +68,14 @@ export default function InspectionsPage() {
     limit,
     selectedInspector,
     selectedAddress
+  )
+  const myQuery = useInspections(
+    INSPECTION_STATUS_FILTER.ONGOING,
+    myPage,
+    limit,
+    userName,
+    undefined,
+    !!userName
   )
 
   const ongoingInspections = ongoingQuery.data ?? []
@@ -99,18 +115,21 @@ export default function InspectionsPage() {
     setCompletedPage(1)
   }
 
-  const myInspections: Inspection[] = []
+  const myInspections = myQuery.data ?? []
+  const myTotalRecords = myQuery.meta?.totalRecords ?? 0
+  const myTotalPages = Math.ceil(myTotalRecords / limit)
 
   const ongoingTotalRecords = ongoingQuery.meta?.totalRecords ?? 0
   const completedTotalRecords = completedQuery.meta?.totalRecords ?? 0
 
-  const isLoading = ongoingQuery.isLoading && completedQuery.isLoading
+  const isLoading =
+    ongoingQuery.isLoading && completedQuery.isLoading && myQuery.isLoading
 
   if (isLoading) {
     return <div>Loading inspections...</div>
   }
 
-  if (ongoingQuery.error && completedQuery.error) {
+  if (ongoingQuery.error && completedQuery.error && myQuery.error) {
     return <div>Error loading inspections</div>
   }
 
@@ -129,125 +148,129 @@ export default function InspectionsPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Inspector Filter */}
-            <Popover
-              open={openInspectorDropdown}
-              onOpenChange={setOpenInspectorDropdown}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openInspectorDropdown}
-                  className="w-full sm:w-[250px] justify-between"
-                >
-                  {selectedInspector
-                    ? selectedInspector
-                    : 'Välj besiktningsman...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-[300px] p-0 bg-background z-50"
-                align="start"
+        {/* Filters - hidden on "Mina besiktningar" tab */}
+        {activeTab !== MINE_TAB && (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Inspector Filter */}
+              <Popover
+                open={openInspectorDropdown}
+                onOpenChange={setOpenInspectorDropdown}
               >
-                <Command>
-                  <CommandInput placeholder="Sök besiktningsman..." />
-                  <CommandList>
-                    <CommandEmpty>Ingen besiktningsman hittades.</CommandEmpty>
-                    <CommandGroup>
-                      {uniqueInspectors.map((inspector) => (
-                        <CommandItem
-                          key={inspector}
-                          value={inspector}
-                          onSelect={() => {
-                            setSelectedInspector(
-                              selectedInspector === inspector ? '' : inspector
-                            )
-                            setOpenInspectorDropdown(false)
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              selectedInspector === inspector
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            )}
-                          />
-                          {inspector}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-
-            {/* Address Filter */}
-            <Popover
-              open={openAddressDropdown}
-              onOpenChange={setOpenAddressDropdown}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openAddressDropdown}
-                  className="w-full sm:w-[250px] justify-between"
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openInspectorDropdown}
+                    className="w-full sm:w-[250px] justify-between"
+                  >
+                    {selectedInspector
+                      ? selectedInspector
+                      : 'Välj besiktningsman...'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[300px] p-0 bg-background z-50"
+                  align="start"
                 >
-                  {selectedAddress ? selectedAddress : 'Välj adress...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-[300px] p-0 bg-background z-50"
-                align="start"
-              >
-                <Command>
-                  <CommandInput placeholder="Sök adress..." />
-                  <CommandList>
-                    <CommandEmpty>Ingen adress hittades.</CommandEmpty>
-                    <CommandGroup>
-                      {uniqueAddresses.map((address) => (
-                        <CommandItem
-                          key={address}
-                          value={address}
-                          onSelect={() => {
-                            setSelectedAddress(
-                              selectedAddress === address ? '' : address
-                            )
-                            setOpenAddressDropdown(false)
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              'mr-2 h-4 w-4',
-                              selectedAddress === address
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            )}
-                          />
-                          {address}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+                  <Command>
+                    <CommandInput placeholder="Sök besiktningsman..." />
+                    <CommandList>
+                      <CommandEmpty>
+                        Ingen besiktningsman hittades.
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {uniqueInspectors.map((inspector) => (
+                          <CommandItem
+                            key={inspector}
+                            value={inspector}
+                            onSelect={() => {
+                              setSelectedInspector(
+                                selectedInspector === inspector ? '' : inspector
+                              )
+                              setOpenInspectorDropdown(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                selectedInspector === inspector
+                                  ? 'opacity-100'
+                                  : 'opacity-0'
+                              )}
+                            />
+                            {inspector}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
 
-            {(selectedInspector || selectedAddress) && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-2" />
-                Rensa filter
-              </Button>
-            )}
+              {/* Address Filter */}
+              <Popover
+                open={openAddressDropdown}
+                onOpenChange={setOpenAddressDropdown}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openAddressDropdown}
+                    className="w-full sm:w-[250px] justify-between"
+                  >
+                    {selectedAddress ? selectedAddress : 'Välj adress...'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[300px] p-0 bg-background z-50"
+                  align="start"
+                >
+                  <Command>
+                    <CommandInput placeholder="Sök adress..." />
+                    <CommandList>
+                      <CommandEmpty>Ingen adress hittades.</CommandEmpty>
+                      <CommandGroup>
+                        {uniqueAddresses.map((address) => (
+                          <CommandItem
+                            key={address}
+                            value={address}
+                            onSelect={() => {
+                              setSelectedAddress(
+                                selectedAddress === address ? '' : address
+                              )
+                              setOpenAddressDropdown(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                selectedAddress === address
+                                  ? 'opacity-100'
+                                  : 'opacity-0'
+                              )}
+                            />
+                            {address}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {(selectedInspector || selectedAddress) && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="h-4 w-4 mr-2" />
+                  Rensa filter
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <Tabs
           defaultValue={INSPECTION_STATUS_FILTER.ONGOING}
@@ -258,8 +281,8 @@ export default function InspectionsPage() {
             <TabsTrigger value={INSPECTION_STATUS_FILTER.ONGOING}>
               Pågående ({ongoingTotalRecords})
             </TabsTrigger>
-            <TabsTrigger value="mine">
-              Mina besiktningar ({myInspections.length})
+            <TabsTrigger value={MINE_TAB}>
+              Mina besiktningar ({myTotalRecords})
             </TabsTrigger>
             <TabsTrigger value={INSPECTION_STATUS_FILTER.COMPLETED}>
               Avslutade ({completedTotalRecords})
@@ -293,12 +316,28 @@ export default function InspectionsPage() {
             />
           </TabsContent>
 
-          <TabsContent value="mine" className="space-y-4">
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Inga besiktningar i denna kategori
-              </p>
-            </div>
+          <TabsContent value={MINE_TAB} className="space-y-4">
+            {myQuery.isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Laddar besiktningar...</p>
+              </div>
+            ) : myInspections.length > 0 ? (
+              <InspectionsTable inspections={myInspections} />
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Inga besiktningar i denna kategori
+                </p>
+              </div>
+            )}
+            <Pagination
+              currentPage={myPage}
+              totalPages={myTotalPages}
+              totalRecords={myTotalRecords}
+              pageSize={limit}
+              onPageChange={setMyPage}
+              isFetching={myQuery.isFetching}
+            />
           </TabsContent>
 
           <TabsContent
