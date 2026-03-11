@@ -40,7 +40,7 @@ export const TenfastInvoiceRowSchema = z.object({
   hyresobjekt: z.string().optional(),
   article: z.string().nullable(),
   label: z.string().nullable(),
-  accountingRows: z.array(z.any()),
+  accountingRows: z.array(z.any()).optional(),
   consolidationLabel: z.string().nullable().optional(),
   _id: z.string(),
 })
@@ -187,9 +187,11 @@ export const TenfastTenantSchema = z.object({
   displayName: z.string(),
 })
 
-export const TenfastTenantByContactCodeResponseSchema = z.object({
+/*export const TenfastTenantByContactCodeResponseSchema = z.object({
   records: z.array(TenfastTenantSchema),
-})
+})*/
+
+export const TenfastTenantByContactCodeResponseSchema = TenfastTenantSchema
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
@@ -209,8 +211,6 @@ export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
-  label: z.string(),
-  type: z.string(),
   accountNr: z.string().nullable(),
   createdAt: z.string(),
   hyresvard: z.string(),

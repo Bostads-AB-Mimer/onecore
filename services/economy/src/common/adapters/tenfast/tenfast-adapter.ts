@@ -72,7 +72,7 @@ export const getTenantByContactCode = async (
 
     return {
       ok: true,
-      data: parsedResponse.data.records[0] ?? null,
+      data: parsedResponse.data ?? null,
     }
   } catch (err: any) {
     logger.error(err)
@@ -101,7 +101,7 @@ const getTenantById = async (
 
     return {
       ok: true,
-      data: parsedResponse.data.records[0] ?? null,
+      data: parsedResponse.data ?? null,
     }
   } catch (err: any) {
     logger.error(err)
@@ -178,7 +178,8 @@ export const getInvoiceByOcr = async (
       ? transformToInvoice(parsedResponse.data.records[0])
       : null
 
-    if (invoice && parsedResponse.data.records[0].recipientId) {
+    if (invoice && parsedResponse.data.records?.[0].recipientId) {
+      console.log(parsedResponse.data.records[0].recipientId)
       const tenantResult = await getTenantById(
         parsedResponse.data.records[0].recipientId
       )
@@ -207,6 +208,7 @@ export const getInvoiceArticle = async (
 
     const parsedResponse = TenfastRentArticleSchema.safeParse(result.data)
     if (!parsedResponse.success) {
+      logger.error(parsedResponse)
       return { ok: false, err: 'schema-error' }
     }
 
@@ -301,6 +303,7 @@ export const getInvoicesNotExported = async (
         }
         if (invoiceRow.rentArticle) {
           const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
+
           if (articleResult.ok) {
             const article = articleResult.data
             invoiceRowWithAccounting.account = article.accountNr ?? undefined
@@ -318,6 +321,8 @@ export const getInvoicesNotExported = async (
       invoices.push(invoiceWithAccounting)
     }
   }
+
+  //console.log(JSON.stringify(invoices, null, 2))
 
   return { ok: true, data: invoices }
 }
