@@ -84,7 +84,8 @@ const getStorageWaitingList = (rows: Array<any>): WaitingList | undefined => {
 const transformFromDbContact = (
   rows: Array<any>,
   phoneNumbers: any,
-  leases: any
+  leaseIds: string[],
+  isTenant: boolean
 ): Contact => {
   const row = trimRow(rows[0])
   const protectedIdentity = row.protectedIdentity !== null
@@ -95,7 +96,7 @@ const transformFromDbContact = (
     firstName: protectedIdentity ? undefined : row.firstName,
     lastName: protectedIdentity ? undefined : row.lastName,
     fullName: protectedIdentity ? undefined : row.fullName,
-    leaseIds: leases,
+    leaseIds,
     nationalRegistrationNumber: protectedIdentity
       ? undefined
       : row.nationalRegistrationNumber,
@@ -113,7 +114,7 @@ const transformFromDbContact = (
           ? undefined
           : row.emailAddress
         : 'redacted',
-    isTenant: leases.length > 0,
+    isTenant,
     parkingSpaceWaitingList: getParkingSpaceWaitingList(rows),
     housingWaitingList: getHousingWaitingList(rows),
     storageWaitingList: getStorageWaitingList(rows),
@@ -373,7 +374,7 @@ const getContactsForLeaseIds = async (
     const phoneNumbers = phonesByKeycmobj.get(row.keycmobj as string) ?? []
     contactsByKey.set(
       contactKey,
-      transformFromDbContact([row], phoneNumbers, [])
+      transformFromDbContact([row], phoneNumbers, [], false)
     )
   }
 
@@ -611,11 +612,11 @@ const getContactByNationalRegistrationNumber = async (
 
   if (rows && rows.length > 0) {
     const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-    const leases = await getLeaseIds(
+    const { leaseIds, isInnehavare } = await getLeaseIds(
       rows[0].contactKey,
       includeTerminatedLeases
     )
-    return transformFromDbContact(rows, phoneNumbers, leases)
+    return transformFromDbContact(rows, phoneNumbers, leaseIds, isInnehavare)
   }
 
   return null
@@ -632,12 +633,17 @@ const getContactByContactCode = async (
     }
 
     const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-    const leases = await getLeaseIds(
+    const { leaseIds, isInnehavare } = await getLeaseIds(
       rows[0].contactKey,
       includeTerminatedLeases
     )
 
-    const contact = transformFromDbContact(rows, phoneNumbers, leases)
+    const contact = transformFromDbContact(
+      rows,
+      phoneNumbers,
+      leaseIds,
+      isInnehavare
+    )
 
     return {
       ok: true,
@@ -661,11 +667,11 @@ const getContactByPhoneNumber = async (
 
     if (rows && rows.length > 0) {
       const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-      const leases = await getLeaseIds(
+      const { leaseIds, isInnehavare } = await getLeaseIds(
         rows[0].contactKey,
         includeTerminatedLeases
       )
-      return transformFromDbContact(rows, phoneNumbers, leases)
+      return transformFromDbContact(rows, phoneNumbers, leaseIds, isInnehavare)
     }
   }
 }
@@ -690,7 +696,12 @@ const getContactsByLeaseId = async (leaseId: string) => {
         const phoneNumbers = await getPhoneNumbersForContact(
           contactRows[0].keycmobj
         )
-        const contact = transformFromDbContact(contactRows, phoneNumbers, [])
+        const contact = transformFromDbContact(
+          contactRows,
+          phoneNumbers,
+          [],
+          false
+        )
         return {
           ...contact,
           leaseContactType: (row.leaseContactType as string)?.trim(),
@@ -781,15 +792,28 @@ const getLeaseIds = async (
     .select(
       'hyobj.hyobjben as leaseId',
       'hyobj.fdate as leaseStartDate',
-      'hyobj.sistadeb as lastDebitDate'
+      'hyobj.sistadeb as lastDebitDate',
+      'hyavk.keyhyakt as leaseContactType'
     )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .where({ keycmctc: keycmctc })
 
   if (!includeTerminatedLeases) {
-    return rows.filter(isLeaseActive).map((x) => x.leaseId)
+    return {
+      leaseIds: rows.filter(isLeaseActive).map((x) => x.leaseId),
+      isInnehavare: rows.some(
+        (x) =>
+          (x.leaseContactType as string)?.trim() === 'INNEHAVARE' &&
+          isLeaseActive(x)
+      ),
+    }
   }
-  return rows.map((x) => x.leaseId)
+  return {
+    leaseIds: rows.map((x) => x.leaseId),
+    isInnehavare: rows.some(
+      (x) => (x.leaseContactType as string)?.trim() === 'INNEHAVARE'
+    ),
+  }
 }
 
 const getLeasesByContactKey = async (keycmctc: string) => {
