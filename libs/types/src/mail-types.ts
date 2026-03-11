@@ -72,6 +72,26 @@ interface ParkingSpaceNotificationEmail extends Email {
   parkingSpaceId: string
 }
 
+// External (NON_SCORED) parking space application emails
+interface NonScoredParkingSpaceApprovedEmail extends Email {
+  leaseId: string
+  address: string
+  availableFrom: string
+  parkingSpaceId: string
+  objectId: string
+  type: string
+  rent: string
+}
+
+interface NonScoredParkingSpaceDeniedEmail extends Email {
+  address: string
+  availableFrom: string
+  parkingSpaceId: string
+  objectId: string
+  type: string
+  rent: string
+}
+
 export type {
   ParkingSpaceOfferEmail,
   ParkingSpaceNotificationEmail,
@@ -84,4 +104,6 @@ export type {
   BulkEmail,
   BulkSmsResult,
   BulkEmailResult,
+  NonScoredParkingSpaceApprovedEmail,
+  NonScoredParkingSpaceDeniedEmail,
 }
