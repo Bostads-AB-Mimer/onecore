@@ -188,11 +188,11 @@ describe('GET /contacts/for-identity-check', () => {
         content: [
           {
             contactCode: 'P12345',
-            nationalRegistrationNumber: '198501011234',
+            nationalRegistrationNumber: '198501011239',
           },
           {
             contactCode: 'P67890',
-            nationalRegistrationNumber: '197012315678',
+            nationalRegistrationNumber: '197012316394',
           },
         ],
         _meta: {
@@ -217,7 +217,7 @@ describe('GET /contacts/for-identity-check', () => {
     expect(res.body.content).toHaveLength(2)
     expect(res.body.content[0]).toEqual({
       contactCode: 'P12345',
-      nationalRegistrationNumber: '198501011234',
+      nationalRegistrationNumber: '198501011239',
     })
     expect(res.body._meta.totalRecords).toBe(2)
   })
@@ -242,7 +242,7 @@ describe('GET /contacts/for-identity-check', () => {
         content: [
           {
             contactCode: 'P12345',
-            nationalRegistrationNumber: '198501011234',
+            nationalRegistrationNumber: '198501011239',
           },
         ],
         _meta: {
