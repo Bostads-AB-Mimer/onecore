@@ -124,6 +124,36 @@ describe('inspection-service index', () => {
       expect(res.body._meta.totalRecords).toBe(0)
     })
 
+    it('should return 200 with lease: null when a lease cannot be found', async () => {
+      const leaseId = 'LEASE-NOT-FOUND'
+      const inspectionWithMissingLease = XpandInspectionFactory.build({
+        id: 'INT-MISSING-LEASE',
+        leaseId,
+      })
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspections')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            content: [inspectionWithMissingLease],
+            _meta: { totalRecords: 1, page: 1, limit: 25, count: 1 },
+            _links: [],
+          },
+        })
+      jest
+        .spyOn(inspectionAdapter, 'getXpandInspections')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+      // getLeases returns empty: lease ID not found in leasing service
+      jest.spyOn(leasingAdapter, 'getLeases').mockResolvedValue({})
+
+      const res = await request(app.callback()).get('/inspections')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].id).toBe('INT-MISSING-LEASE')
+      expect(res.body.content[0].lease).toBeNull()
+    })
+
     it('should pass filter params to both adapters', async () => {
       const getInternalSpy = jest
         .spyOn(inspectionAdapter, 'getInternalInspections')

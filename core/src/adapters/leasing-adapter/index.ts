@@ -68,6 +68,7 @@ const getLeases = async (
   const leases = leaseResults
     .filter((result) => result.status === 'fulfilled')
     .map((result) => result.value)
+    .filter((lease): lease is Lease => lease != null)
 
   return Object.fromEntries(leases.map((lease) => [lease.leaseId, lease]))
 }
