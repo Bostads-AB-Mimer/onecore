@@ -309,14 +309,18 @@ const getLeasesForPropertyId = async (
 
 const getContactsForLeaseIds = async (
   leaseIds: string[]
-): Promise<Map<string, Contact[]>> => {
+): Promise<Map<string, NonNullable<Lease['tenants']>>> => {
   if (leaseIds.length === 0) {
     return new Map()
   }
 
   const leaseContactRows = await xpandDb
     .from('hyavk')
-    .select('hyavk.keycmctc as contactKey', 'hyobj.hyobjben as leaseId')
+    .select(
+      'hyavk.keycmctc as contactKey',
+      'hyobj.hyobjben as leaseId',
+      'hyavk.keyhyakt as leaseContactType'
+    )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .whereIn('hyobj.hyobjben', leaseIds)
 
@@ -374,14 +378,18 @@ const getContactsForLeaseIds = async (
   }
 
   // Map contacts to leases
-  const result = new Map<string, Contact[]>()
+  const result = new Map<string, NonNullable<Lease['tenants']>>()
   for (const leaseId of leaseIds) {
     result.set(leaseId, [])
   }
-  for (const { leaseId, contactKey } of leaseContactRows) {
+  for (const { leaseId, contactKey, leaseContactType } of leaseContactRows) {
     const contact = contactsByKey.get(contactKey as string)
     if (contact) {
-      result.get(leaseId as string)!.push(contact)
+      const leaseContact = {
+        ...contact,
+        leaseContactType: (leaseContactType as string)?.trim(),
+      }
+      result.get(leaseId as string)!.push(leaseContact)
     }
   }
 
@@ -665,7 +673,10 @@ const getContactByPhoneNumber = async (
 const getContactsByLeaseId = async (leaseId: string) => {
   const rows = await xpandDb
     .from('hyavk')
-    .select('hyavk.keycmctc as contactKey')
+    .select(
+      'hyavk.keycmctc as contactKey',
+      'hyavk.keyhyakt as leaseContactType'
+    )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .where({ hyobjben: leaseId })
 
@@ -679,13 +690,17 @@ const getContactsByLeaseId = async (leaseId: string) => {
         const phoneNumbers = await getPhoneNumbersForContact(
           contactRows[0].keycmobj
         )
-        return transformFromDbContact(contactRows, phoneNumbers, [])
+        const contact = transformFromDbContact(contactRows, phoneNumbers, [])
+        return {
+          ...contact,
+          leaseContactType: (row.leaseContactType as string)?.trim(),
+        }
       }
       return null
     })
   )
 
-  return contacts.filter((c): c is Contact => c !== null)
+  return contacts.filter((c) => c !== null)
 }
 
 const getContactQuery = () => {
