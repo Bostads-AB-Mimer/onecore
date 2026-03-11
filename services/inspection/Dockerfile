@@ -8,7 +8,7 @@ ENV CI=true
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
 
 # Copy package files for dependency installation
 COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -30,11 +30,15 @@ RUN pnpm deploy --filter @onecore/inspection --prod /out
 # ==========================
 FROM node:23-slim AS runner
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10.28.0 --activate
+
 WORKDIR /app
-
 COPY --from=builder /out ./
+COPY --from=builder /app/services/inspection/knexfile.js .
+COPY --from=builder /app/services/inspection/migrations ./migrations
 
-ENV PORT 80
+ENV PORT=80
 EXPOSE 80
 
-CMD ["node", "build/index.js"]
+CMD ["pnpm", "run", "start"]
