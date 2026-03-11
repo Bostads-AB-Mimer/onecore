@@ -67,6 +67,7 @@ describe('Rooms API', () => {
       const room = response.body.content
       expect(room.id).toBe(roomId)
       expect(room.code).toBeDefined()
+      expect(response.body._links).toBeDefined()
     }
   })
 

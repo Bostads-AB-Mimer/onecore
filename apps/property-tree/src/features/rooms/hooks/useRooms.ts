@@ -15,5 +15,6 @@ export function useRooms(
   return useQuery({
     queryKey: ['rooms', id, params.roomCode],
     queryFn,
+    enabled: !!id,
   })
 }

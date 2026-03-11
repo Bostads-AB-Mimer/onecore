@@ -22,7 +22,7 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /rooms:
    *   get:
-   *     summary: Get rooms by residence id.
+   *     summary: Get rooms by rental id.
    *     description: Returns all rooms belonging to a residence.
    *     tags:
    *       - Rooms

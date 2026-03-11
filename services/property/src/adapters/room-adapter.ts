@@ -1,6 +1,8 @@
 import { Prisma } from '@prisma/client'
 import { map } from 'lodash'
 
+import { logger } from '@onecore/utilities'
+
 import { Room } from '@src/types/room'
 import { trimStrings } from '@src/utils/data-conversion'
 
@@ -85,37 +87,42 @@ async function getRoomsByPropertyObjectIds(
 }
 
 export async function getRooms(rentalId: string, roomCode?: string) {
-  const propertyStructure = await prisma.propertyStructure.findFirst({
-    where: {
-      rentalId,
-      propertyObject: { objectTypeId: 'balgh' },
-      NOT: { rentalId: { endsWith: 'X' } },
-    },
-    select: {
-      residenceId: true,
-    },
-  })
-
-  if (!propertyStructure || !propertyStructure.residenceId) {
-    throw new Error(`Residence not found for rentalId: ${rentalId}`)
-  }
-
-  const propertyStructures = await prisma.propertyStructure.findMany({
-    where: {
-      residenceId: propertyStructure.residenceId,
-      NOT: {
-        staircaseId: null,
-        residenceId: null,
-        roomId: null,
+  try {
+    const propertyStructure = await prisma.propertyStructure.findFirst({
+      where: {
+        rentalId,
+        propertyObject: { objectTypeId: 'balgh' },
+        NOT: { rentalId: { endsWith: 'X' } },
       },
-      localeId: null,
-      ...(roomCode ? { roomCode } : {}),
-    },
-  })
+      select: {
+        residenceId: true,
+      },
+    })
 
-  return getRoomsByPropertyObjectIds(
-    map(propertyStructures, 'propertyObjectId')
-  )
+    if (!propertyStructure || !propertyStructure.residenceId) {
+      throw new Error(`Residence not found for rentalId: ${rentalId}`)
+    }
+
+    const propertyStructures = await prisma.propertyStructure.findMany({
+      where: {
+        residenceId: propertyStructure.residenceId,
+        NOT: {
+          staircaseId: null,
+          residenceId: null,
+          roomId: null,
+        },
+        localeId: null,
+        ...(roomCode ? { roomCode } : {}),
+      },
+    })
+
+    return getRoomsByPropertyObjectIds(
+      map(propertyStructures, 'propertyObjectId')
+    )
+  } catch (err) {
+    logger.error({ err }, 'room-adapter.getRooms')
+    throw err
+  }
 }
 
 export async function getRoomsByFacilityId(facilityId: string) {
