@@ -32,12 +32,21 @@ import {
 } from '../../common/types'
 import {
   createCustomerLedgerRow,
+  getAllInvoicePaymentEvents,
   transformAggregatedInvoiceRow,
   transformContact,
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
 import { Contact } from '@onecore/types'
 import { logger } from '@onecore/utilities'
+import {
+  getCostCentreForRentalId,
+  getInvoiceRows,
+} from '../common/adapters/xpand-db-adapter'
+import {
+  extractLeaseIdsFromInvoiceRows,
+  getRentalIdFromLeaseId,
+} from '../common/helpers'
 
 const createRoundOffRow = async (
   invoice: Invoice,
@@ -808,4 +817,42 @@ const verifyAccountTotals = (
   }
 
   return true
+}
+
+export const fetchInvoiceRows = async (invoiceIds: string[]) => {
+  return getInvoiceRows(invoiceIds)
+}
+
+export const fetchPaymentEvents = async (matchIds: number[]) => {
+  return getAllInvoicePaymentEvents(matchIds)
+}
+
+export const getLeaseDetails = async (invoiceIds: string[]) => {
+  const invoiceRows = await getInvoiceRows(invoiceIds)
+
+  return Promise.all(
+    invoiceIds.map(async (id) => {
+      const invoiceRowsForInvoice = invoiceRows.filter(
+        (r) => r.invoiceNumber === id
+      )
+      const year = invoiceRowsForInvoice[0]?.fromDate.getFullYear()
+      const leaseIds = extractLeaseIdsFromInvoiceRows(invoiceRowsForInvoice)
+      const details = await Promise.all(
+        leaseIds.map(async (leaseId) => {
+          const rentalId = getRentalIdFromLeaseId(leaseId)
+          const costCentre = await getCostCentreForRentalId(rentalId, year)
+
+          return {
+            leaseId,
+            costCentre,
+          }
+        })
+      )
+
+      return {
+        invoiceId: id,
+        details,
+      }
+    })
+  )
 }

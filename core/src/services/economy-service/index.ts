@@ -98,4 +98,34 @@ export const routes = (router: KoaRouter) => {
       )
     }
   })
+
+  router.get('/invoices', async (ctx) => {
+    const queryParams = economy.GetInvoicesQueryParams.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.getInvoices({
+      from: queryParams.data?.from,
+      to: queryParams.data?.to,
+      remainingAmountGreaterThan: queryParams.data?.remainingAmountGreaterThan,
+    })
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+      }
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        { data: result.data, totalCount: result.data.length },
+        metadata
+      )
+    }
+  })
 }
