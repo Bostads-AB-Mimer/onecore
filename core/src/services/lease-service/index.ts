@@ -1299,7 +1299,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get contacts for deceased/protected identity check
    *     tags:
    *       - Lease service
-   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification.
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Note - Results are validated using the personnummer package, so the actual count may be fewer than the requested limit if invalid personnummer are filtered out.
    *     parameters:
    *       - in: query
    *         name: page
