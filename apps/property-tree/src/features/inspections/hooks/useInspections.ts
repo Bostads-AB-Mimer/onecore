@@ -9,14 +9,23 @@ import { inspectionService } from '@/services/api/core/inspectionService'
 
 import { InspectionStatusFilter } from '../constants/inspectionTypes'
 
-export function useInspections(
-  statusFilter: InspectionStatusFilter,
+interface UseInspectionsOptions {
+  statusFilter: InspectionStatusFilter
+  page?: number
+  limit?: number
+  inspector?: string
+  address?: string
+  enabled?: boolean
+}
+
+export function useInspections({
+  statusFilter,
   page = 1,
   limit = 25,
-  inspector?: string,
-  address?: string,
-  enabled = true
-) {
+  inspector,
+  address,
+  enabled = true,
+}: UseInspectionsOptions) {
   const queryClient = useQueryClient()
 
   const inspectionsQuery = useQuery({

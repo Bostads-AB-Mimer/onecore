@@ -30,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 type Inspection = components['schemas']['InspectionWithSource']
 
-const MINE_TAB = 'mine' as const
+const MY_INSPECTIONS_TAB = 'mine' as const
 
 export default function InspectionsPage() {
   const userState = useUser()
@@ -55,28 +55,27 @@ export default function InspectionsPage() {
   const [selectedInspector, setSelectedInspectorRaw] = useState('')
   const [selectedAddress, setSelectedAddressRaw] = useState('')
 
-  const ongoingQuery = useInspections(
-    INSPECTION_STATUS_FILTER.ONGOING,
-    ongoingPage,
+  const ongoingQuery = useInspections({
+    statusFilter: INSPECTION_STATUS_FILTER.ONGOING,
+    page: ongoingPage,
     limit,
-    selectedInspector,
-    selectedAddress
-  )
-  const completedQuery = useInspections(
-    INSPECTION_STATUS_FILTER.COMPLETED,
-    completedPage,
+    inspector: selectedInspector,
+    address: selectedAddress,
+  })
+  const completedQuery = useInspections({
+    statusFilter: INSPECTION_STATUS_FILTER.COMPLETED,
+    page: completedPage,
     limit,
-    selectedInspector,
-    selectedAddress
-  )
-  const myQuery = useInspections(
-    INSPECTION_STATUS_FILTER.ONGOING,
-    myPage,
+    inspector: selectedInspector,
+    address: selectedAddress,
+  })
+  const myQuery = useInspections({
+    statusFilter: INSPECTION_STATUS_FILTER.ONGOING,
+    page: myPage,
     limit,
-    userName,
-    undefined,
-    !!userName
-  )
+    inspector: userName,
+    enabled: !!userName,
+  })
 
   const ongoingInspections = ongoingQuery.data ?? []
   const completedInspections = completedQuery.data ?? []
@@ -149,7 +148,7 @@ export default function InspectionsPage() {
         </div>
 
         {/* Filters - hidden on "Mina besiktningar" tab */}
-        {activeTab !== MINE_TAB && (
+        {activeTab !== MY_INSPECTIONS_TAB && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Inspector Filter */}
@@ -281,7 +280,7 @@ export default function InspectionsPage() {
             <TabsTrigger value={INSPECTION_STATUS_FILTER.ONGOING}>
               Pågående ({ongoingTotalRecords})
             </TabsTrigger>
-            <TabsTrigger value={MINE_TAB}>
+            <TabsTrigger value={MY_INSPECTIONS_TAB}>
               Mina besiktningar ({myTotalRecords})
             </TabsTrigger>
             <TabsTrigger value={INSPECTION_STATUS_FILTER.COMPLETED}>
@@ -316,7 +315,7 @@ export default function InspectionsPage() {
             />
           </TabsContent>
 
-          <TabsContent value={MINE_TAB} className="space-y-4">
+          <TabsContent value={MY_INSPECTIONS_TAB} className="space-y-4">
             {myQuery.isLoading ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">Laddar besiktningar...</p>
