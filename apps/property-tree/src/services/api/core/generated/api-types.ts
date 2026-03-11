@@ -12198,6 +12198,7 @@ export interface components {
       apartmentCode: string | null;
       leaseId: string;
       masterKeyAccess: string | null;
+      residenceId: string;
       rooms: {
           roomId: string;
           conditions: {

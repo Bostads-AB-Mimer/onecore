@@ -10,7 +10,7 @@ export function registerSchema(name: string, schema: z.ZodType) {
     throw new Error(`Schema with name ${name} already exists`)
   }
 
-  schemaRegistry[name] = zodToJsonSchema(schema)
+  schemaRegistry[name] = zodToJsonSchema(schema, { $refStrategy: 'none' })
 }
 
 export function swaggerMiddleware({

@@ -402,6 +402,7 @@ describe('inspection-service', () => {
       const inspectionId = '1'
       const mockInspection = {
         ...XpandInspectionFactory.build({ id: inspectionId }),
+        residenceId: 'RES001',
         rooms: [InspectionRoomFactory.build({ isHandled: true })],
       }
       jest

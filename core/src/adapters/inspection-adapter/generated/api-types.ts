@@ -320,6 +320,7 @@ export interface paths {
             }
           }
         }
+        /** @description Inspection not found */
         404: {
           content: {
             'application/json': {
@@ -327,6 +328,7 @@ export interface paths {
             }
           }
         }
+        /** @description Internal server error */
         500: {
           content: {
             'application/json': {
@@ -409,15 +411,13 @@ export interface paths {
         }
       }
       responses: {
+        /** @description Draft saved successfully */
         200: {
           content: {
-            'application/json': {
-              content?: {
-                success?: boolean
-              }
-            }
+            'application/json': Record<string, never>
           }
         }
+        /** @description Invalid request body */
         400: {
           content: {
             'application/json': {
@@ -425,6 +425,7 @@ export interface paths {
             }
           }
         }
+        /** @description Inspection not found */
         404: {
           content: {
             'application/json': {
@@ -432,6 +433,7 @@ export interface paths {
             }
           }
         }
+        /** @description Internal server error */
         500: {
           content: {
             'application/json': {
@@ -676,11 +678,96 @@ export interface components {
       apartmentCode: string | null
       leaseId: string
       masterKeyAccess: string | null
-      rooms: components['schemas']['InspectionRoom'][] | null
+      residenceId: string
+      rooms:
+        | {
+            roomId: string
+            conditions: {
+              wall1: string
+              wall2: string
+              wall3: string
+              wall4: string
+              floor: string
+              ceiling: string
+              details: string
+            }
+            actions: {
+              wall1: string[]
+              wall2: string[]
+              wall3: string[]
+              wall4: string[]
+              floor: string[]
+              ceiling: string[]
+              details: string[]
+            }
+            componentNotes: {
+              wall1: string
+              wall2: string
+              wall3: string
+              wall4: string
+              floor: string
+              ceiling: string
+              details: string
+            }
+            componentPhotos: {
+              wall1: string[]
+              wall2: string[]
+              wall3: string[]
+              wall4: string[]
+              floor: string[]
+              ceiling: string[]
+              details: string[]
+            }
+            photos: string[]
+            isApproved: boolean
+            isHandled: boolean
+          }[]
+        | null
     }
     SaveInspectionDraftRequest: {
       inspectorName: string
-      rooms: components['schemas']['InspectionRoom'][]
+      rooms: {
+        roomId: string
+        conditions: {
+          wall1: string
+          wall2: string
+          wall3: string
+          wall4: string
+          floor: string
+          ceiling: string
+          details: string
+        }
+        actions: {
+          wall1: string[]
+          wall2: string[]
+          wall3: string[]
+          wall4: string[]
+          floor: string[]
+          ceiling: string[]
+          details: string[]
+        }
+        componentNotes: {
+          wall1: string
+          wall2: string
+          wall3: string
+          wall4: string
+          floor: string
+          ceiling: string
+          details: string
+        }
+        componentPhotos: {
+          wall1: string[]
+          wall2: string[]
+          wall3: string[]
+          wall4: string[]
+          floor: string[]
+          ceiling: string[]
+          details: string[]
+        }
+        photos: string[]
+        isApproved: boolean
+        isHandled: boolean
+      }[]
     }
   }
   responses: never
