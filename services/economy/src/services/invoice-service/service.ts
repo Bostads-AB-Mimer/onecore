@@ -835,7 +835,7 @@ export const getInvoiceDetails = async (
 
         return {
           ...ir,
-          invoiceRowText: article?.label ?? null,
+          invoiceRowText: article?.title ?? null,
         }
       }
     )
