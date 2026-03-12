@@ -8,7 +8,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "nodemon -e ts,js --exec ts-node src/index ",
+    "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node src/index ",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -18,7 +18,7 @@
     "migrate:up": "knex migrate:latest --env dev",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
-    "start": "node build/index.js",
+    "start": "pnpm migrate:up && node -r dotenv/config build/index",
     "test": "jest",
     "test:ci": "jest --silent",
     "typecheck": "tsc --noEmit"
