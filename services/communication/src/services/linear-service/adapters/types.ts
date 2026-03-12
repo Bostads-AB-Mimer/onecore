@@ -1,54 +1,26 @@
-// Linear GraphQL Response Types
+// Re-export shared types from @onecore/types
+export type {
+  LinearUser,
+  LinearComment,
+  LinearState,
+  LinearTeam,
+  LinearLabel,
+  LinearIssue,
+  LinearPageInfo,
+  GetLinearTicketsResult,
+  LinearPaginationParams,
+  CreateLinearErrandRequest,
+} from '@onecore/types'
 
-export interface LinearUser {
-  id: string
-  name: string
-  email: string
-}
+import type { LinearIssue, LinearLabel, LinearPageInfo } from '@onecore/types'
 
-export interface LinearComment {
-  id: string
-  body: string
-  createdAt: string
-  user: LinearUser
-}
+// Internal GraphQL Response Types (not shared)
 
-export interface LinearState {
-  name: string
-  type: string
-}
-
-export interface LinearTeam {
-  name: string
-  key: string
-}
-
-export interface LinearLabel {
-  id?: string
-  name: string
-}
-
-export interface LinearIssue {
-  id: string
-  identifier: string
-  title: string
-  url: string
-  description: string | null
-  createdAt: string
-  assignee: LinearUser | null
-  comments: {
-    nodes: LinearComment[]
-  }
-  state: LinearState
-  team: LinearTeam
-  labels: {
-    nodes: LinearLabel[]
-  }
-}
-
-export interface LinearPageInfo {
-  hasNextPage: boolean
-  endCursor: string | null
+export interface LinearGraphQLError {
+  message: string
+  locations?: Array<{ line: number; column: number }>
+  path?: string[]
+  extensions?: Record<string, unknown>
 }
 
 export interface GetLinearTicketsResponse {
@@ -59,16 +31,6 @@ export interface GetLinearTicketsResponse {
     }
   }
   errors?: LinearGraphQLError[]
-}
-
-export interface GetLinearTicketsResult {
-  tickets: LinearIssue[]
-  pageInfo: LinearPageInfo
-}
-
-export interface LinearPaginationParams {
-  first?: number
-  after?: string
 }
 
 export interface CreateLinearErrandResponse {
@@ -88,18 +50,4 @@ export interface GetLinearLabelsResponse {
     }
   }
   errors?: LinearGraphQLError[]
-}
-
-export interface LinearGraphQLError {
-  message: string
-  locations?: Array<{ line: number; column: number }>
-  path?: string[]
-  extensions?: Record<string, unknown>
-}
-
-// Request types
-export interface CreateLinearErrandRequest {
-  title: string
-  description: string
-  categoryLabelId: string
 }
