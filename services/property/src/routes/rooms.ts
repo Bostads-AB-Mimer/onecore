@@ -22,17 +22,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /rooms:
    *   get:
-   *     summary: Get rooms by residence id.
+   *     summary: Get rooms by rental id.
    *     description: Returns all rooms belonging to a residence.
    *     tags:
    *       - Rooms
    *     parameters:
    *       - in: query
-   *         name: residenceId
+   *         name: rentalId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The id of the residence.
+   *         description: The rental id of the residence.
    *       - in: query
    *         name: roomCode
    *         required: false
@@ -60,12 +60,12 @@ export const routes = (router: KoaRouter) => {
     '(.*)/rooms',
     parseRequest({ query: roomsQueryParamsSchema }),
     async (ctx) => {
-      const { residenceId, roomCode } = ctx.request.parsedQuery
+      const { rentalId, roomCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const rooms = await getRooms(residenceId, roomCode)
+        const rooms = await getRooms(rentalId, roomCode)
         ctx.body = {
           content: rooms,
           ...metadata,
