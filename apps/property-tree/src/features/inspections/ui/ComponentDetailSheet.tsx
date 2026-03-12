@@ -1,7 +1,6 @@
-import { Camera, Clock, FileText, MessageSquare, Wrench } from 'lucide-react'
+import { Camera, MessageSquare, Wrench } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/Badge'
-import { Button } from '@/shared/ui/Button'
 import { Separator } from '@/shared/ui/Separator'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/Sheet'
 import { Textarea } from '@/shared/ui/Textarea'
@@ -109,9 +108,8 @@ export function ComponentDetailSheet({
             />
           </div>
 
-          <Separator />
-
-          {/* History Section */}
+          {/* History Section - hidden until dynamic data is available */}
+          {/* <Separator />
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Clock className="h-4 w-4 text-muted-foreground" />
@@ -121,15 +119,14 @@ export function ComponentDetailSheet({
               <p>• 2024-01-15: God (Anna A.)</p>
               <p>• 2023-06-20: God (Erik E.)</p>
             </div>
-          </div>
+          </div> */}
 
-          <Separator />
-
-          {/* Create Order Button */}
+          {/* Create Order Button - hidden until dynamic data is available */}
+          {/* <Separator />
           <Button className="w-full" variant="outline">
             <FileText className="h-4 w-4 mr-2" />
             Skapa ärende
-          </Button>
+          </Button> */}
         </div>
       </SheetContent>
     </Sheet>
