@@ -295,13 +295,12 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Token refresh failed' }
     }
   })
-
   /**
    * @swagger
    * /auth/roles/{roleName}/users:
    *   get:
-   *     summary: Get users by realm role
-   *     description: Returns all users assigned to the given Keycloak realm role
+   *     summary: Get users by realm role (via group membership)
+   *     description: Returns all users that belong to groups assigned the given Keycloak realm role. Users are deduplicated across groups.
    *     tags:
    *       - Auth
    *     security:
@@ -327,6 +326,12 @@ export const routes = (router: KoaRouter) => {
    *                     $ref: '#/components/schemas/KeycloakUser'
    *       '401':
    *         description: Unauthorized
+   *       '403':
+   *         description: Forbidden — insufficient permissions to query role members
+   *       '404':
+   *         description: Role not found
+   *       '502':
+   *         description: Keycloak unreachable
    *       '500':
    *         description: Internal server error
    */
@@ -339,7 +344,7 @@ export const routes = (router: KoaRouter) => {
       const result = await getUsersByRole(roleName)
 
       if (!result.ok) {
-        ctx.status = 500
+        ctx.status = result.statusCode ?? 500
         ctx.body = { error: result.err }
         return
       }

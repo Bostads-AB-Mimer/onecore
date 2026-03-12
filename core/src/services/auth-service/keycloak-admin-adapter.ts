@@ -6,6 +6,7 @@ import { AdapterResult } from '../../adapters/types'
 type GetUsersByRoleError =
   | 'keycloak_unreachable'
   | 'unauthorized'
+  | 'forbidden'
   | 'role_not_found'
   | 'unknown'
 
@@ -47,12 +48,65 @@ async function getAdminToken(): Promise<string> {
   return tokenPromise
 }
 
-async function fetchUsersByRole(roleName: string, token: string) {
+// Returns users with the role directly assigned (not via group).
+// Kept for potential future use — prefixed with _ to satisfy lint.
+async function _fetchUsersByRole(roleName: string, token: string) {
   const { url, realm } = config.auth.keycloak
   return loggedAxios.get(
     `${url}/admin/realms/${realm}/roles/${encodeURIComponent(roleName)}/users`,
     { headers: { Authorization: `Bearer ${token}` } }
   )
+}
+
+async function fetchGroupsByRole(roleName: string, token: string) {
+  const { url, realm } = config.auth.keycloak
+  return loggedAxios.get(
+    `${url}/admin/realms/${realm}/roles/${encodeURIComponent(roleName)}/groups`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      validateStatus: (status) => status >= 200 && status < 300,
+    }
+  )
+}
+
+async function fetchGroupMembers(groupId: string, token: string) {
+  const { url, realm } = config.auth.keycloak
+  return loggedAxios.get(
+    `${url}/admin/realms/${realm}/groups/${encodeURIComponent(groupId)}/members`,
+    {
+      params: { max: 1000 },
+      headers: { Authorization: `Bearer ${token}` },
+      validateStatus: (status) => status >= 200 && status < 300,
+    }
+  )
+}
+
+async function fetchUsersByRoleViaGroups(roleName: string, token: string) {
+  const groupsRes = await fetchGroupsByRole(roleName, token)
+  const groups: { id: string }[] = Array.isArray(groupsRes.data)
+    ? groupsRes.data
+    : []
+
+  if (groups.length === 0) return []
+
+  const memberResults = await Promise.all(
+    groups.map((group) => fetchGroupMembers(group.id, token))
+  )
+
+  const seen = new Set<string>()
+  const uniqueUsers: unknown[] = []
+
+  for (const res of memberResults) {
+    const members = Array.isArray(res.data) ? res.data : []
+    for (const user of members) {
+      if (!seen.has(user.id)) {
+        seen.add(user.id)
+        uniqueUsers.push(user)
+      }
+    }
+  }
+
+  return uniqueUsers
 }
 
 export async function getUsersByRole(
@@ -61,27 +115,36 @@ export async function getUsersByRole(
   try {
     const token = await getAdminToken()
     try {
-      const res = await fetchUsersByRole(roleName, token)
-      return { ok: true, data: res.data }
+      const data = await fetchUsersByRoleViaGroups(roleName, token)
+      return { ok: true, data }
     } catch (error) {
       // Token may have been revoked — clear cache and retry once with a fresh token
       if (error instanceof AxiosError && error.response?.status === 401) {
         cachedToken = null
         const freshToken = await getAdminToken()
-        const res = await fetchUsersByRole(roleName, freshToken)
-        return { ok: true, data: res.data }
+        const data = await fetchUsersByRoleViaGroups(roleName, freshToken)
+        return { ok: true, data }
       }
       throw error
     }
   } catch (error) {
     logger.error(error, 'keycloak-admin-adapter.getUsersByRole')
     if (error instanceof AxiosError) {
-      if (!error.response) return { ok: false, err: 'keycloak_unreachable' }
-      if (error.response.status === 401)
-        return { ok: false, err: 'unauthorized' }
-      if (error.response.status === 404)
-        return { ok: false, err: 'role_not_found' }
+      if (!error.response)
+        return { ok: false, err: 'keycloak_unreachable', statusCode: 502 }
+      const status = error.response.status
+      if (status === 401)
+        return { ok: false, err: 'unauthorized', statusCode: status }
+      if (status === 403)
+        return { ok: false, err: 'forbidden', statusCode: status }
+      if (status === 404)
+        return { ok: false, err: 'role_not_found', statusCode: status }
+      return {
+        ok: false,
+        err: 'unknown',
+        statusCode: status,
+      }
     }
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
