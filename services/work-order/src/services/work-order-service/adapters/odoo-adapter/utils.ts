@@ -26,6 +26,8 @@ const equipmentCodes: Record<string, string> = {
   KF: 'Kyl/frys',
   MU: 'Microvågsugn',
   DM: 'Diskmaskin',
+  SD: 'Skadedjur',
+  DJUR: 'Skadedjur',
 }
 
 export const transformSpaceCode = (space_code: string): string => {
