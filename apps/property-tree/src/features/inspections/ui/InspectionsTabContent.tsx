@@ -82,7 +82,8 @@ export function InspectionsTabContent({
         <Button
           size="sm"
           onClick={() => setIsCreateDialogOpen(true)}
-          disabled={!leaseId}
+          // disabled={!leaseId}
+          disabled={true}
           className="flex items-center gap-1"
         >
           <Plus className="h-4 w-4" /> Skapa ny
