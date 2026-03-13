@@ -8,6 +8,8 @@ import {
   ReleaseNotesCard,
 } from '@/widgets/dashboard'
 
+import { GlobalSearchBar } from '@/features/search'
+
 import { useUser } from '@/entities/user'
 
 import onecoreLogo from '@/shared/assets/logos/stacked/onecore_logo_stacked_black.svg'
@@ -37,6 +39,10 @@ export function DashboardPage() {
         <h1 className="text-3xl font-bold">Hej {givenName} välkommen till</h1>
         <img src={onecoreLogo} alt="OneCore" className="h-20 md:h-24 mx-auto" />
       </header>
+
+      <div className="mx-auto max-w-2xl">
+        <GlobalSearchBar placeholder="Sök..." />
+      </div>
 
       <Card className="max-w-2xl mx-auto hover:shadow-xl transition-shadow duration-200">
         <CardContent className="p-8 text-center space-y-4">

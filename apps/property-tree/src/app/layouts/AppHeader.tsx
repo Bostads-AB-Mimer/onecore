@@ -1,9 +1,8 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, Search } from 'lucide-react'
 
 import { useAuth } from '@/features/auth'
-import { GlobalSearchBar } from '@/features/search'
+import { GlobalSearchBar, useCommandPalette } from '@/features/search'
 
 import { useUser } from '@/entities/user'
 
@@ -11,7 +10,7 @@ import onecoreLogo from '@/shared/assets/logos/full/onecore_logo_black.svg'
 import { Button } from '@/shared/ui/Button'
 
 export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
-  const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const { open: openSearch } = useCommandPalette()
 
   const { logout } = useAuth()
   const userState = useUser()
@@ -28,16 +27,16 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
     onMenuClick()
   }
 
-  const handleSearchToggle = (e: React.MouseEvent) => {
+  const handleSearchClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setShowMobileSearch(!showMobileSearch)
+    openSearch()
   }
 
   const handleSearchTouch = (e: React.TouchEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setShowMobileSearch(!showMobileSearch)
+    openSearch()
   }
 
   return (
@@ -73,7 +72,7 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
             variant="ghost"
             size="icon"
             className="sm:hidden min-h-[44px] min-w-[44px] relative z-[71] touch-manipulation active:scale-95 transition-transform"
-            onClick={handleSearchToggle}
+            onClick={handleSearchClick}
             onTouchStart={handleSearchTouch}
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
@@ -93,13 +92,6 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
           )}
         </div>
       </div>
-
-      {/* Mobile search bar */}
-      {showMobileSearch && (
-        <div className="px-4 py-2 bg-background sm:hidden border-t relative z-[60]">
-          <GlobalSearchBar />
-        </div>
-      )}
     </nav>
   )
 }
