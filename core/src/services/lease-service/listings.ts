@@ -19,7 +19,7 @@ import { z } from 'zod'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { ProcessStatus } from '../../common/types'
-import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from './helpers/lease'
+
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -142,32 +142,27 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { content: listingsWithRentalObjects, ...metadata }
       } else {
         //filter listings on validToRentForContactCode
-        const tenantResult = await leasingAdapter.getTenantByContactCode(
-          query.data?.validToRentForContactCode
-        )
-        let isTenant = true
-
-        if (!tenantResult.ok) {
-          if (tenantResult.err === 'contact-not-tenant') {
-            isTenant = false
-          } else {
-            ctx.status = 500
-            ctx.body = { error: 'Tenant could not be retrieved', ...metadata }
-            return
+        const leases = await leasingAdapter.getLeasesForContactCode(
+          query.data.validToRentForContactCode,
+          {
+            includeUpcomingLeases: true,
+            includeTerminatedLeases: false,
+            includeContacts: false,
           }
-        }
+        )
+
+        const leaseAreaCodes = new Set(
+          leases
+            .map((lease) => lease.residentialArea?.code)
+            .filter(Boolean)
+        )
 
         var listings = listingsWithRentalObjects.filter((listing) => {
           return (
             listing.rentalRule == 'NON_SCORED' || //all NON_SCORED will be included
             (listing.rentalRule == 'SCORED' &&
-              isTenant &&
-              tenantResult.ok &&
               listing.rentalObject.residentialAreaCode &&
-              isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
-                listing.rentalObject.residentialAreaCode,
-                tenantResult.data
-              )) // all SCORED where tenant is allowed to rent will be included
+              leaseAreaCodes.has(listing.rentalObject.residentialAreaCode)) // all SCORED where contact has a lease in the area will be included
           )
         })
 
