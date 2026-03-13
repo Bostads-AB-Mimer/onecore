@@ -1,0 +1,44 @@
+[
+  {
+    "id": "rn-2026-03-13-v210-1",
+    "date": "2026-03-13",
+    "title": "Besiktningsöversikt",
+    "description": "En ny huvudvy för besiktningar som visar alla besiktningar från Xpand.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-13-v210-10",
+    "date": "2026-03-13",
+    "title": "Besiktningsflik på lägenhetsvy",
+    "description": "En ny flik för besiktningar har lagts till i lägenhetsvyn som visar alla besiktningar kopplade till den specifika lägenheten.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-13-v210-3",
+    "date": "2026-03-13",
+    "title": "Besiktningsprotokoll",
+    "description": "Möjlighet att visa och generera PDF-protokoll för genomförda besiktningar.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-13-v210-4",
+    "date": "2026-03-13",
+    "title": "Skicka besiktningsprotokoll till hyresgäst",
+    "description": "Besiktningsprotokoll kan nu skickas direkt till hyresgästen via e-post från systemet efter att besiktningen är genomförd. Skickas protokollet till avflyttande hyresgäster, inkluderas kostnadsinformation i PDF:en, medan det inte gör det för inflyttande hyresgäster.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-13-v210-11",
+    "date": "2026-03-13",
+    "title": "Nedladdning av protokoll med eller utan kostnader",
+    "description": "Vid nedladdning av besiktningsprotokoll kan man välja om kostnadsinformation ska inkluderas i PDF:en eller inte, beroende på vem protokollet är avsett för.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-13-v210-2",
+    "date": "2026-03-13",
+    "title": "Refaktorering av frontenden onecore.mimer.nu",
+    "description": "En omfattande refaktorering av frontenden har genomförts för att förbättra kodkvaliteten, prestandan och underlätta framtida utveckling.",
+    "category": "improvement"
+  }
+]
