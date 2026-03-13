@@ -84,7 +84,7 @@ async function getRoomsByPropertyObjectIds(
   return rooms.map(mapToRoom)
 }
 
-export async function getRooms(residenceId: string) {
+export async function getRooms(residenceId: string, roomCode?: string) {
   const residence = await prisma.residence
     .findFirst({
       where: {
@@ -120,6 +120,7 @@ export async function getRooms(residenceId: string) {
         roomId: null,
       },
       localeId: null,
+      ...(roomCode ? { roomCode } : {}),
     },
   })
 

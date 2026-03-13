@@ -1,0 +1,367 @@
+/**
+ * InspectionsTable Column Configurations
+ *
+ * Defines reusable column configurations for inspection tables.
+ * Uses ResponsiveTable column format for mobile/desktop support.
+ */
+
+import type { ReactNode } from 'react'
+import { ExternalLink, Eye, Loader2, Play, PlayCircle } from 'lucide-react'
+
+import { components } from '@/services/api/core/generated/api-types'
+
+import { formatISODate } from '@/shared/lib/formatters'
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
+
+import {
+  canResume,
+  canStart,
+  getStatusConfig,
+  isCompleted,
+  isXpandSource,
+  XPAND_ACTION_LABEL,
+} from './statuses'
+
+type Inspection = components['schemas']['InspectionWithSource']
+type KeycloakUser = components['schemas']['KeycloakUser']
+
+/**
+ * Column configuration interface (compatible with ResponsiveTable)
+ */
+export interface InspectionTableColumn {
+  key: string
+  label: string
+  render: (inspection: Inspection) => ReactNode
+  className?: string
+  hideOnMobile?: boolean
+}
+
+/**
+ * Helper: Get main phone number from inspection
+ */
+function getMainPhoneNumber(inspection: Inspection): string {
+  return (
+    inspection.lease?.tenants?.[0]?.phoneNumbers?.find(
+      (number) => number.isMainNumber
+    )?.phoneNumber || 'N/A'
+  )
+}
+
+/**
+ * Helper: Format master key access
+ */
+function formatMasterKeyAccess(value: string | null | undefined): string {
+  if (!value) return 'Okänt'
+  return value === 'Huvudnyckel' ? 'Ja' : 'Nej'
+}
+
+/**
+ * Create an inspector column with inline Select for internal inspections
+ */
+export function createInspectorColumn(
+  inspectors: KeycloakUser[],
+  onUpdateInspector: (inspectionId: string, inspector: string) => void
+): InspectionTableColumn {
+  return {
+    key: 'inspector',
+    label: 'Tilldelad',
+    render: (inspection: Inspection) => {
+      const source = inspection.source
+      if (source === 'xpand') {
+        return inspection.inspector || 'N/A'
+      }
+
+      return (
+        <Select
+          value={inspection.inspector || ''}
+          onValueChange={(value) => onUpdateInspector(inspection.id, value)}
+        >
+          <SelectTrigger className="h-8 w-[180px] py-6">
+            <SelectValue placeholder="Välj besiktningsman" />
+          </SelectTrigger>
+          <SelectContent>
+            {inspectors.map((user) => {
+              const name = `${user.firstName} ${user.lastName}`
+              return (
+                <SelectItem key={user.id} value={name}>
+                  {name}
+                </SelectItem>
+              )
+            })}
+          </SelectContent>
+        </Select>
+      )
+    },
+    hideOnMobile: false,
+  }
+}
+
+/**
+ * Base inspection table columns (without actions)
+ */
+export const INSPECTION_TABLE_COLUMNS = {
+  inspector: {
+    key: 'inspector',
+    label: 'Tilldelad',
+    render: (inspection: Inspection) => inspection.inspector || 'N/A',
+    hideOnMobile: false,
+  },
+  type: {
+    key: 'type',
+    label: 'Prioritet',
+    render: (inspection: Inspection) => inspection.type || 'inflytt',
+    hideOnMobile: true,
+  },
+  leaseId: {
+    key: 'leaseId',
+    label: 'Kontrakt ID',
+    render: (inspection: Inspection) => inspection.leaseId || 'N/A',
+    hideOnMobile: true,
+  },
+  address: {
+    key: 'address',
+    label: 'Adress',
+    render: (inspection: Inspection) => inspection.address || 'N/A',
+    hideOnMobile: false,
+  },
+  phone: {
+    key: 'phone',
+    label: 'Telefonnummer',
+    render: (inspection: Inspection) => getMainPhoneNumber(inspection),
+    hideOnMobile: true,
+  },
+  masterKey: {
+    key: 'masterKey',
+    label: 'Huvudnyckel',
+    render: (inspection: Inspection) =>
+      formatMasterKeyAccess(inspection.masterKeyAccess),
+    hideOnMobile: true,
+  },
+  terminationDate: {
+    key: 'terminationDate',
+    label: 'Uppsägning',
+    render: (inspection: Inspection) => (
+      <span className="whitespace-nowrap">
+        {formatISODate(inspection.lease?.lastDebitDate)}
+      </span>
+    ),
+    hideOnMobile: true,
+  },
+  date: {
+    key: 'date',
+    label: 'Planerat datum/tid',
+    render: (inspection: Inspection) => (
+      <span className="whitespace-nowrap">
+        {formatISODate(inspection.date)}
+      </span>
+    ),
+    hideOnMobile: true,
+  },
+  dateCompleted: {
+    key: 'dateCompleted',
+    label: 'Utfört',
+    render: (inspection: Inspection) => (
+      <span className="whitespace-nowrap">
+        {formatISODate(inspection.date)}
+      </span>
+    ),
+    hideOnMobile: true,
+  },
+  id: {
+    key: 'id',
+    label: 'Besiktningsnummer',
+    render: (inspection: Inspection) => (
+      <span className="text-sm">{inspection.id || 'N/A'}</span>
+    ),
+    hideOnMobile: true,
+  },
+  status: {
+    key: 'status',
+    label: 'Status',
+    render: (inspection: Inspection) => (
+      <Badge variant={getStatusConfig(inspection.status).badgeVariant}>
+        {getStatusConfig(inspection.status).label}
+      </Badge>
+    ),
+    hideOnMobile: false,
+  },
+} as const
+
+/**
+ * Get the appropriate action icon based on inspection status
+ */
+function getActionIcon(status?: string) {
+  if (canStart(status)) return Play
+  if (canResume(status)) return PlayCircle
+  return Eye
+}
+
+export interface ActionColumnLoadingState {
+  isPending: boolean
+  pendingInspectionId?: string
+}
+
+/**
+ * Create actions column with click handler and loading state
+ */
+export function createActionsColumn(
+  onAction: (inspection: Inspection) => void,
+  loading?: ActionColumnLoadingState
+): InspectionTableColumn {
+  return {
+    key: 'actions',
+    label: 'Åtgärder',
+    render: (inspection: Inspection) => {
+      if (isXpandSource(inspection.source) && !isCompleted(inspection.status)) {
+        return (
+          <Button variant="ghost" size="sm" disabled>
+            {XPAND_ACTION_LABEL}
+          </Button>
+        )
+      }
+
+      const isThisPending =
+        loading?.isPending && loading.pendingInspectionId === inspection.id
+      const ActionIcon = getActionIcon(inspection.status)
+
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onAction(inspection)}
+          disabled={loading?.isPending}
+        >
+          {isThisPending ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <ActionIcon className="h-4 w-4 mr-1" />
+          )}
+          {getStatusConfig(inspection.status).actionLabel}
+        </Button>
+      )
+    },
+    hideOnMobile: false,
+  }
+}
+
+/**
+ * Get columns for ongoing inspections
+ */
+export function getOngoingInspectionColumns(
+  onAction: (inspection: Inspection) => void,
+  loading?: ActionColumnLoadingState,
+  options?: {
+    inspectors?: KeycloakUser[]
+    onUpdateInspector?: (inspectionId: string, inspector: string) => void
+  }
+): InspectionTableColumn[] {
+  const inspectorCol =
+    options?.inspectors && options?.onUpdateInspector
+      ? createInspectorColumn(options.inspectors, options.onUpdateInspector)
+      : INSPECTION_TABLE_COLUMNS.inspector
+
+  return [
+    inspectorCol,
+    INSPECTION_TABLE_COLUMNS.type,
+    INSPECTION_TABLE_COLUMNS.leaseId,
+    INSPECTION_TABLE_COLUMNS.address,
+    INSPECTION_TABLE_COLUMNS.phone,
+    INSPECTION_TABLE_COLUMNS.masterKey,
+    INSPECTION_TABLE_COLUMNS.terminationDate,
+    INSPECTION_TABLE_COLUMNS.date,
+    INSPECTION_TABLE_COLUMNS.id,
+    INSPECTION_TABLE_COLUMNS.status,
+    createActionsColumn(onAction, loading),
+  ]
+}
+
+/**
+ * Get columns for completed inspections
+ */
+export function getCompletedInspectionColumns(
+  onAction: (inspection: Inspection) => void,
+  loading?: ActionColumnLoadingState
+): InspectionTableColumn[] {
+  return [
+    INSPECTION_TABLE_COLUMNS.inspector,
+    INSPECTION_TABLE_COLUMNS.type,
+    INSPECTION_TABLE_COLUMNS.leaseId,
+    INSPECTION_TABLE_COLUMNS.address,
+    INSPECTION_TABLE_COLUMNS.phone,
+    INSPECTION_TABLE_COLUMNS.masterKey,
+    INSPECTION_TABLE_COLUMNS.terminationDate,
+    INSPECTION_TABLE_COLUMNS.dateCompleted,
+    INSPECTION_TABLE_COLUMNS.id,
+    INSPECTION_TABLE_COLUMNS.status,
+    createActionsColumn(onAction, loading),
+  ]
+}
+
+/**
+ * Mobile card renderer for inspections
+ * Provides compact mobile view with essential information
+ */
+export function renderInspectionMobileCard(
+  onAction: (inspection: Inspection) => void,
+  loading?: ActionColumnLoadingState
+) {
+  return (inspection: Inspection): ReactNode => {
+    const isThisPending =
+      loading?.isPending && loading.pendingInspectionId === inspection.id
+    const ActionIcon = getActionIcon(inspection.status)
+
+    return (
+      <div className="space-y-2 w-full">
+        <div className="flex justify-between items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="font-medium truncate">
+              {inspection.address || 'N/A'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {inspection.inspector || 'N/A'}
+            </p>
+          </div>
+          <Badge
+            variant={getStatusConfig(inspection.status).badgeVariant}
+            className="shrink-0"
+          >
+            {getStatusConfig(inspection.status).label}
+          </Badge>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">
+            {formatISODate(inspection.date)}
+          </span>
+          {isXpandSource(inspection.source) &&
+          !isCompleted(inspection.status) ? (
+            <Button variant="ghost" size="sm" disabled>
+              {XPAND_ACTION_LABEL}
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onAction(inspection)}
+              disabled={loading?.isPending}
+            >
+              {isThisPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <ActionIcon className="h-4 w-4 mr-1" />
+              )}
+              {getStatusConfig(inspection.status).actionLabel}
+            </Button>
+          )}
+        </div>
+      </div>
+    )
+  }
+}

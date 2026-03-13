@@ -62,6 +62,10 @@ interface WorkOrderEmail extends Email {
   externalContractorName?: string
 }
 
+interface InspectionProtocolEmail extends Email {
+  firstName: string
+}
+
 // Can be used for both positive and negative notifications
 interface ParkingSpaceNotificationEmail extends Email {
   address: string
@@ -95,6 +99,7 @@ export type {
   ParkingSpaceOfferSms,
   WorkOrderSms,
   WorkOrderEmail,
+  InspectionProtocolEmail,
   BulkSms,
   BulkEmail,
   BulkSmsResult,

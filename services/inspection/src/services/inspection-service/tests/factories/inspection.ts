@@ -1,0 +1,265 @@
+import { Factory } from 'fishery'
+import {
+  XpandDbInspection,
+  XpandDbDetailedInspection,
+  XpandDbDetailedInspectionRemark,
+} from '../../adapters/xpand-adapter'
+import {
+  XpandInspection,
+  DetailedXpandInspection,
+  DetailedXpandInspectionRoom,
+  DetailedXpandInspectionRemark,
+  InspectionRoom,
+} from '../../schemas'
+import {
+  CreateInspectionParams,
+  SaveInspectionDraftParams,
+} from '../../adapters/db-adapter/schemas'
+import { DbInspection, DbInspectionRoom } from '../../adapters/db-adapter/types'
+
+export const XpandDbInspectionFactory = Factory.define<XpandDbInspection>(
+  () => ({
+    id: 'INSPECTION001',
+    status: 1,
+    date: new Date('2023-01-01T10:00:00Z'),
+    inspector: 'INSPECTOR001',
+    type: 'Type A',
+    address: '123 Main St',
+    apartmentCode: 'APT001',
+    leaseId: 'LEASE001',
+    masterKeyAccess: 'Huvudnyckel',
+  })
+)
+
+export const XpandInspectionFactory = Factory.define<XpandInspection>(() => ({
+  id: 'INSPECTION001',
+  status: 'Genomförd',
+  date: new Date('2023-01-01T10:00:00Z'),
+  inspector: 'INSPECTOR001',
+  type: 'Type A',
+  address: '123 Main St',
+  apartmentCode: 'APT001',
+  leaseId: 'LEASE001',
+  masterKeyAccess: 'Huvudnyckel',
+}))
+
+export const XpandDbDetailedInspectionFactory =
+  Factory.define<XpandDbDetailedInspection>(() => ({
+    id: 'INSPECTION001',
+    status: 1,
+    date: new Date('2023-01-01T10:00:00Z'),
+    startedAt: new Date('2023-01-01T10:15:00Z'),
+    endedAt: new Date('2023-01-01T11:00:00Z'),
+    inspector: 'INSPECTOR001',
+    type: 'Type A',
+    residenceId: 'RESIDENCE001',
+    address: '123 Main St',
+    apartmentCode: 'APT001',
+    isFurnished: 0,
+    leaseId: 'LEASE001',
+    isTenantPresent: 1,
+    isNewTenantPresent: 0,
+    masterKeyAccess: 'Huvudnyckel',
+    hasRemarks: true,
+    notes: 'Some notes about the inspection.',
+    totalCost: 1500,
+  }))
+
+export const DetailedXpandInspectionFactory =
+  Factory.define<DetailedXpandInspection>(() => ({
+    id: 'INSPECTION001',
+    status: 'Genomförd',
+    date: new Date('2023-01-01T10:00:00Z'),
+    startedAt: new Date('2023-01-01T10:15:00Z'),
+    endedAt: new Date('2023-01-01T11:00:00Z'),
+    inspector: 'INSPECTOR001',
+    type: 'Type A',
+    residenceId: 'RESIDENCE001',
+    address: '123 Main St',
+    apartmentCode: 'APT001',
+    isFurnished: false,
+    leaseId: 'LEASE001',
+    isTenantPresent: true,
+    isNewTenantPresent: false,
+    masterKeyAccess: 'Huvudnyckel',
+    hasRemarks: true,
+    notes: 'Some notes about the inspection.',
+    totalCost: 1500,
+    remarkCount: 2,
+    rooms: [
+      {
+        room: 'Living Room',
+        remarks: [
+          DetailedXpandInspectionRemarkFactory.build({
+            remarkId: 'REMARK001',
+            location: 'Living Room',
+          }),
+        ],
+      },
+      {
+        room: 'Bedroom',
+        remarks: [
+          DetailedXpandInspectionRemarkFactory.build({
+            remarkId: 'REMARK002',
+            location: 'Bedroom',
+          }),
+        ],
+      },
+    ],
+  }))
+
+export const DetailedXpandInspectionRoomFactory =
+  Factory.define<DetailedXpandInspectionRoom>(() => ({
+    room: 'Living Room',
+    remarks: [],
+  }))
+
+export const XpandDbDetailedInspectionRemarkFactory =
+  Factory.define<XpandDbDetailedInspectionRemark>(() => ({
+    remarkId: 'REMARK001',
+    location: 'Living Room',
+    buildingComponent: 'Wall',
+    notes: 'Crack in the wall.',
+    remarkGrade: 2,
+    remarkStatus: 'Open',
+    cost: 500,
+    invoice: 1,
+    quantity: 1,
+    isMissing: 0,
+    fixedDate: new Date('2023-02-01T00:00:00Z'),
+    workOrderCreated: 1,
+    workOrderStatus: null,
+  }))
+
+export const DetailedXpandInspectionRemarkFactory =
+  Factory.define<DetailedXpandInspectionRemark>(() => ({
+    remarkId: 'REMARK001',
+    location: 'Living Room',
+    buildingComponent: 'Wall',
+    notes: 'Crack in the wall.',
+    remarkGrade: 2,
+    remarkStatus: 'Open',
+    cost: 500,
+    invoice: true,
+    quantity: 1,
+    isMissing: false,
+    fixedDate: new Date('2023-02-01T00:00:00Z'),
+    workOrderCreated: true,
+    workOrderStatus: null,
+  }))
+
+export const DbInspectionFactory = Factory.define<DbInspection>(
+  ({ sequence }) => ({
+    id: sequence,
+    status: 'Registrerad',
+    date: new Date('2023-01-01T10:00:00Z'),
+    startedAt: null,
+    endedAt: null,
+    inspector: 'Test Inspector',
+    type: 'Move-in',
+    residenceId: 'RES-001',
+    address: '123 Test Street',
+    apartmentCode: 'APT-001',
+    isFurnished: false,
+    leaseId: 'LEASE-001',
+    isTenantPresent: true,
+    isNewTenantPresent: false,
+    masterKeyAccess: null,
+    hasRemarks: false,
+    notes: null,
+    totalCost: null,
+    remarkCount: 0,
+    draftRooms: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+)
+
+export const DbInspectionRoomFactory = Factory.define<DbInspectionRoom>(
+  ({ sequence }) => ({
+    id: sequence,
+    inspectionId: 1,
+    roomName: 'Kitchen',
+    createdAt: new Date(),
+  })
+)
+
+export const CreateInspectionParamsFactory =
+  Factory.define<CreateInspectionParams>(() => ({
+    status: 'ongoing',
+    date: new Date('2023-01-01T10:00:00Z'),
+    startedAt: new Date('2023-01-01T10:15:00Z'),
+    endedAt: null,
+    inspector: 'Test Inspector',
+    type: 'Move-in',
+    residenceId: 'RESIDENCE001',
+    address: '123 Test Street',
+    apartmentCode: 'APT001',
+    isFurnished: false,
+    leaseId: 'LEASE001',
+    isTenantPresent: true,
+    isNewTenantPresent: false,
+    masterKeyAccess: 'Yes',
+    hasRemarks: true,
+    notes: 'Test notes',
+    totalCost: 1000,
+    rooms: [
+      {
+        room: 'Kitchen',
+        remarks: [
+          {
+            remarkId: 'R1',
+            location: 'Kitchen sink',
+            buildingComponent: 'Sink',
+            notes: 'Minor scratch',
+            remarkGrade: 1,
+            remarkStatus: 'Open',
+            cost: 200,
+            invoice: false,
+            quantity: 1,
+            isMissing: false,
+            fixedDate: null,
+            workOrderCreated: false,
+            workOrderStatus: null,
+          },
+        ],
+      },
+    ],
+  }))
+
+const emptyConditions = {
+  wall1: '',
+  wall2: '',
+  wall3: '',
+  wall4: '',
+  floor: '',
+  ceiling: '',
+  details: '',
+}
+
+const emptyActions = {
+  wall1: [],
+  wall2: [],
+  wall3: [],
+  wall4: [],
+  floor: [],
+  ceiling: [],
+  details: [],
+}
+
+export const InspectionRoomFactory = Factory.define<InspectionRoom>(() => ({
+  roomId: 'room-1',
+  conditions: { ...emptyConditions },
+  actions: { ...emptyActions },
+  componentNotes: { ...emptyConditions },
+  componentPhotos: { ...emptyActions },
+  photos: [],
+  isApproved: false,
+  isHandled: false,
+}))
+
+export const SaveInspectionDraftParamsFactory =
+  Factory.define<SaveInspectionDraftParams>(() => ({
+    inspectorName: 'Test Inspector',
+    rooms: [InspectionRoomFactory.build()],
+  }))

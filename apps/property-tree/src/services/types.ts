@@ -1,11 +1,12 @@
-import type { components } from './api/core/generated/api-types'
 import type {
-  ResidentialArea,
-  ApplicantStatus,
-  WaitingListType,
-  ApplicationProfileHousingReference,
   Address,
+  ApplicantStatus,
+  ApplicationProfileHousingReference,
+  ResidentialArea,
+  WaitingListType,
 } from '@onecore/types'
+
+import type { components } from './api/core/generated/api-types'
 
 export interface WaitingListResponse {
   queueTime: string
@@ -43,8 +44,8 @@ export interface ApplicationProfileResponse {
 // Re-export shared types for convenience
 export type {
   ApplicantStatus,
-  WaitingListType,
   ApplicationProfileHousingReference,
+  WaitingListType,
 }
 
 // Extract types from the generated schemas
@@ -217,16 +218,6 @@ export interface NavigationItem {
   }
 }
 
-export interface DashboardCard {
-  id: string
-  title: string
-  icon: any // LucideIcon type from lucide-react
-  description: string
-  path: string
-  isExternal: boolean
-  isDisabled: boolean
-}
-
 // Tenant-related types
 export interface ContractType {
   leaseId: string
@@ -397,23 +388,6 @@ export interface TenantCommentsResponse {
 }
 
 export type DocumentWithUrl = components['schemas']['DocumentWithUrl']
-
-// Release Notes types
-export type ReleaseNoteCategory =
-  | 'feature'
-  | 'fix'
-  | 'improvement'
-  | 'info'
-  | 'warning'
-
-export interface ReleaseNote {
-  id: string
-  date: string // ISO date string, e.g., '2026-02-03'
-  title: string
-  description: string
-  category: ReleaseNoteCategory
-  pinned?: boolean // Pinned items always appear at the top
-}
 
 // Bulk communication result types
 export type BulkSmsResult = components['schemas']['BulkSmsResult']

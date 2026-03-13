@@ -18,7 +18,7 @@ jest.mock('@onecore/utilities', () => ({
 jest.mock('../../../../common/config', () => ({
   __esModule: true,
   default: {
-    port: 5090,
+    port: 5092,
     keysDatabase: {},
     simplesign: {
       apiUrl: 'https://test-simplesign.com',

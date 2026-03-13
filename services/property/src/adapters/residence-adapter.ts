@@ -154,10 +154,19 @@ export const getResidenceByRentalId = async (rentalId: string) => {
         },
         propertyObject: {
           select: {
+            energyClass: true,
+            energyRegistered: true,
+            energyReceived: true,
+            energyIndex: true,
             rentalInformation: {
               select: {
                 apartmentNumber: true,
                 rentalInformationType: { select: { name: true, code: true } },
+              },
+            },
+            rentalBlocks: {
+              include: {
+                blockReason: true,
               },
             },
             residence: {
@@ -170,12 +179,50 @@ export const getResidenceByRentalId = async (rentalId: string) => {
                 hygieneFacility: true,
                 name: true,
                 wheelchairAccessible: true,
+                location: true,
+                residenceAdapted: true,
+                balcony1Location: true,
+                balcony1Type: true,
+                balcony2Location: true,
+                balcony2Type: true,
+                patioLocation: true,
+                sauna: true,
+                extraToilet: true,
+                sharedKitchen: true,
+                petAllergyFree: true,
+                electricAllergyIntolerance: true,
+                smokeFree: true,
+                asbestos: true,
+                fromDate: true,
+                toDate: true,
+                partNo: true,
+                part: true,
                 residenceType: {
                   select: {
+                    id: true,
                     code: true,
                     name: true,
                     roomCount: true,
                     kitchen: true,
+                    systemStandard: true,
+                    checklistId: true,
+                    componentTypeActionId: true,
+                    statisticsGroupSCBId: true,
+                    statisticsGroup2Id: true,
+                    statisticsGroup3Id: true,
+                    statisticsGroup4Id: true,
+                    timestamp: true,
+                  },
+                },
+                comments: {
+                  where: {
+                    template: {
+                      type: 'balgh',
+                      caption: 'Anläggningsid',
+                    },
+                  },
+                  select: {
+                    text: true,
                   },
                 },
               },
@@ -194,71 +241,35 @@ export const getResidenceByRentalId = async (rentalId: string) => {
     )
 
     const {
-      propertyObject: { residence, rentalInformation },
+      propertyObject: {
+        residence,
+        rentalInformation,
+        energyClass,
+        energyRegistered,
+        energyReceived,
+        energyIndex,
+        rentalBlocks,
+      },
       staircase,
     } = propertyStructure
 
     return trimStrings({
       ...propertyStructure,
-      propertyObject: { residence, rentalInformation },
+      propertyObject: {
+        residence,
+        rentalInformation,
+        energyClass,
+        energyRegistered,
+        energyReceived,
+        energyIndex,
+        rentalBlocks,
+      },
       staircase,
     })
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getResidenceByRentalId')
     throw err
   }
-}
-
-export const getResidenceById = async (
-  id: string,
-  options?: { active?: boolean }
-): Promise<ResidenceWithRelations | null> => {
-  const activeFilter = buildActiveFilter(options?.active)
-  const hasActiveFilter = Object.keys(activeFilter).length > 0
-
-  const response = await prisma.residence
-    .findFirst({
-      where: {
-        id: id,
-      },
-      include: {
-        residenceType: true,
-        propertyObject: {
-          include: {
-            rentalInformation: { include: { rentalInformationType: true } },
-            rentalBlocks: {
-              ...(hasActiveFilter && { where: activeFilter }),
-              include: {
-                blockReason: true,
-              },
-            },
-            propertyStructures: {
-              select: {
-                rentalId: true,
-                buildingCode: true,
-                buildingName: true,
-                propertyCode: true,
-                propertyName: true,
-              },
-            },
-          },
-        },
-        comments: {
-          where: {
-            template: {
-              type: 'balgh',
-              caption: 'Anläggningsid',
-            },
-          },
-          select: {
-            text: true,
-          },
-        },
-      },
-    })
-    .then(trimStrings)
-
-  return response
 }
 
 export const getResidencesByBuildingCode = async (

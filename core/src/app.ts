@@ -9,7 +9,7 @@ import { routes as healthRoutes } from './services/health-service'
 
 import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
-import { routes as swagggerRoutes } from './services/swagger'
+import { routes as swaggerRoutes } from './services/swagger'
 import { extractToken } from './middlewares/extract-token'
 import { requireAuth, requireRole } from './middlewares/keycloak-auth'
 
@@ -50,7 +50,7 @@ const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
-swagggerRoutes(publicRouter)
+swaggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 // Token extraction (cookie -> Bearer -> Basic Auth)

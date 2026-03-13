@@ -417,69 +417,6 @@ describe('@onecore/property-adapter', () => {
       })
     })
   })
-  describe('getResidenceDetails', () => {
-    it('returns err if request fails', async () => {
-      const residenceDetailsMock = factory.residenceDetails.build()
-
-      mockServer.use(
-        http.get(
-          `${config.propertyBaseService.url}/residences/${residenceDetailsMock.id}`,
-          () => new HttpResponse(null, { status: 500 })
-        )
-      )
-
-      const result = await propertyBaseAdapter.getResidenceDetails(
-        residenceDetailsMock.id
-      )
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) expect(result.err).toBe('unknown')
-    })
-
-    it('returns not-found if residence is not found', async () => {
-      const residenceDetailsMock = factory.residenceDetails.build()
-
-      mockServer.use(
-        http.get(
-          `${config.propertyBaseService.url}/residences/${residenceDetailsMock.id}`,
-          () => new HttpResponse(null, { status: 404 })
-        )
-      )
-
-      const result = await propertyBaseAdapter.getResidenceDetails(
-        residenceDetailsMock.id
-      )
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) expect(result.err).toBe('not-found')
-    })
-
-    it('returns residence', async () => {
-      const residenceDetailsMock = factory.residenceDetails.build()
-      mockServer.use(
-        http.get(
-          `${config.propertyBaseService.url}/residences/${residenceDetailsMock.id}`,
-          () =>
-            HttpResponse.json(
-              {
-                content: residenceDetailsMock,
-              },
-              { status: 200 }
-            )
-        )
-      )
-
-      const result = await propertyBaseAdapter.getResidenceDetails(
-        residenceDetailsMock.id
-      )
-
-      expect(result).toMatchObject({
-        ok: true,
-        data: residenceDetailsMock,
-      })
-    })
-  })
-
   describe('getStaircases', () => {
     it('returns err if request fails', async () => {
       mockServer.use(

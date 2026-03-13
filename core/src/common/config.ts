@@ -35,10 +35,12 @@ export interface Config {
   economyService: {
     url: string
   }
+  inspectionService: {
+    url: string
+  }
   keysService: {
     url: string
   }
-
   fileStorageService: {
     url: string
   }
@@ -84,6 +86,18 @@ export interface Config {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
+    economy: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    inspection: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    fileStorage: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
     keys: {
       systemName: string
       minimumMinutesBetweenRequests: number
@@ -119,8 +133,11 @@ const config = configPackage({
     economyService: {
       url: 'http://localhost:5080',
     },
-    keysService: {
+    inspectionService: {
       url: 'http://localhost:5090',
+    },
+    keysService: {
+      url: 'http://localhost:5092',
     },
     fileStorageService: {
       url: 'http://localhost:5091',
@@ -169,6 +186,14 @@ const config = configPackage({
         systemName: 'economy',
         minimumMinutesBetweenRequests: 1,
       },
+      inspection: {
+        systemName: 'inspection',
+        minimumMinutesBetweenRequests: 1,
+      },
+      fileStorage: {
+        systemName: 'file-storage',
+        minimumMinutesBetweenRequests: 1,
+      },
       keys: {
         systemName: 'keys',
         minimumMinutesBetweenRequests: 1,
@@ -185,6 +210,7 @@ export default {
   communicationService: config.get('communicationService'),
   workOrderService: config.get('workOrderService'),
   economyService: config.get('economyService'),
+  inspectionService: config.get('inspectionService'),
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),

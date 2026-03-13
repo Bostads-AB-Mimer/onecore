@@ -124,6 +124,7 @@ export const routes = (router: KoaRouter) => {
       (property): schemas.PropertySearchResult => ({
         id: property.id,
         type: 'property',
+        code: property.code,
         name: property.designation,
       })
     )
@@ -132,6 +133,7 @@ export const routes = (router: KoaRouter) => {
       (building): schemas.BuildingSearchResult => ({
         id: building.id,
         type: 'building',
+        code: building.code,
         name: building.name,
         property: building.property,
       })

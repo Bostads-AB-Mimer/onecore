@@ -177,15 +177,21 @@ export async function getCompanies(): Promise<
   }
 }
 
-type GetCompanyByIdResponse = components['schemas']['CompanyDetails']
+type GetCompanyByOrganizationNumberResponse =
+  components['schemas']['CompanyDetails']
 
-export async function getCompanyById(
-  id: string
-): Promise<AdapterResult<GetCompanyByIdResponse, 'not-found' | 'unknown'>> {
+export async function getCompanyByOrganizationNumber(
+  organizationNumber: string
+): Promise<
+  AdapterResult<GetCompanyByOrganizationNumberResponse, 'not-found' | 'unknown'>
+> {
   try {
-    const fetchResponse = await client().GET('/companies/{id}', {
-      params: { path: { id } },
-    })
+    const fetchResponse = await client().GET(
+      '/companies/{organizationNumber}',
+      {
+        params: { path: { organizationNumber } },
+      }
+    )
 
     if (fetchResponse.data?.content) {
       return {
@@ -200,7 +206,10 @@ export async function getCompanyById(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error(err, '@onecore/property-adapter.getCompanyById')
+    logger.error(
+      err,
+      '@onecore/property-adapter.getCompanyByOrganizationNumber'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -230,11 +239,11 @@ export async function getProperties(
 type GetPropertyDetailsResponse = components['schemas']['PropertyDetails']
 
 export async function getPropertyDetails(
-  propertyId: string
+  propertyCode: string
 ): Promise<AdapterResult<GetPropertyDetailsResponse, 'not-found' | 'unknown'>> {
   try {
-    const fetchResponse = await client().GET('/properties/{id}', {
-      params: { path: { id: propertyId } },
+    const fetchResponse = await client().GET('/properties/{code}', {
+      params: { path: { code: propertyCode } },
     })
 
     if (fetchResponse.data?.content) {
@@ -276,39 +285,6 @@ export async function getResidences(
   }
 }
 
-type GetResidenceDetailsResponse = components['schemas']['ResidenceDetails']
-
-export async function getResidenceDetails(
-  residenceId: string,
-  options?: { active?: boolean }
-): Promise<
-  AdapterResult<GetResidenceDetailsResponse, 'not-found' | 'unknown'>
-> {
-  try {
-    const fetchResponse = await client().GET('/residences/{id}', {
-      params: {
-        path: { id: residenceId },
-        query: { active: options?.active },
-      },
-    })
-
-    if (fetchResponse.data?.content) {
-      return { ok: true, data: fetchResponse.data.content }
-    }
-
-    if (fetchResponse.response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    throw new Error(
-      `Unexpected response status: ${fetchResponse.response.status}`
-    )
-  } catch (err) {
-    logger.error({ err }, '@onecore/property-adapter.getResidenceDetails')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 type GetResidenceByRentalIdResponse =
   components['schemas']['GetResidenceByRentalIdResponse']['content']
 
@@ -345,11 +321,12 @@ export async function getResidenceByRentalId(
 type GetStaircasesResponse = components['schemas']['Staircase'][]
 
 export async function getStaircases(
-  buildingCode: string
+  buildingCode: string,
+  staircaseCode?: string
 ): Promise<AdapterResult<GetStaircasesResponse, 'not-found' | 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/staircases', {
-      params: { query: { buildingCode } },
+      params: { query: { buildingCode, staircaseCode } },
     })
 
     if (fetchResponse.data?.content) {
@@ -366,11 +343,12 @@ export async function getStaircases(
 type GetRoomsResponse = components['schemas']['Room'][]
 
 export async function getRooms(
-  residenceId: string
+  residenceId: string,
+  roomCode?: string
 ): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/rooms', {
-      params: { query: { residenceId } },
+      params: { query: { residenceId, roomCode } },
     })
 
     if (!fetchResponse.data?.content) {

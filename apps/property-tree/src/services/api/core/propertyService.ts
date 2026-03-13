@@ -1,5 +1,5 @@
 import type { Company } from '../../types'
-import { GET } from './base-api'
+import { GET } from './baseApi'
 
 /** Display-only type for property search results */
 interface PropertySearchResult {
@@ -20,9 +20,9 @@ export const propertyService = {
     return data?.content
   },
 
-  async getPropertyById(propertyId: string) {
-    const { data, error } = await GET(`/properties/{propertyId}`, {
-      params: { path: { propertyId } },
+  async getPropertyByCode(propertyCode: string) {
+    const { data, error } = await GET(`/properties/{propertyCode}`, {
+      params: { path: { propertyCode } },
     })
     if (error) throw error
     return data?.content

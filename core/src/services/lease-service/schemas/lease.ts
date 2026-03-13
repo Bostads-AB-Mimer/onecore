@@ -104,7 +104,7 @@ export const Lease = z.object({
     .optional(),
   noticeGivenBy: z.string().optional(),
   noticeDate: z.coerce.date().optional(),
-  noticeTimeTenant: z.string().optional(),
+  noticeTimeTenant: z.union([z.string(), z.number()]).optional(),
   preferredMoveOutDate: z.coerce.date().optional(),
   terminationDate: z.coerce.date().optional(),
   contractDate: z.coerce.date().optional(),

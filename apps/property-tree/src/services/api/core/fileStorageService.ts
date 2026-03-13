@@ -1,5 +1,6 @@
-import { GET, POST, DELETE } from './base-api'
 import type { FileListItem, FileMetadata } from '@onecore/types'
+
+import { DELETE, GET, POST } from './baseApi'
 
 export const fileStorageService = {
   // Upload a file

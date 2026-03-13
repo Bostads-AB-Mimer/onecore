@@ -16,7 +16,6 @@
 import { Knex } from 'knex'
 import { Jimp } from 'jimp'
 import jsQR from 'jsqr'
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { PDFDocument } from 'pdf-lib'
 import { logger } from '@onecore/utilities'
 import * as receiptsAdapter from './adapters/receipts-adapter'
@@ -78,7 +77,8 @@ function isPdf(buffer: Buffer): boolean {
 async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
   const { createCanvas } = await import('@napi-rs/canvas')
   const data = new Uint8Array(buffer)
-  const doc = await getDocument({ data, useSystemFonts: true }).promise
+  const pdfjsLib = await import('pdfjs-dist')
+  const doc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise
   const frames: Frame[] = []
 
   for (let i = 1; i <= doc.numPages; i++) {

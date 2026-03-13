@@ -59,7 +59,13 @@ lib-cov
 *.sw?
 .turbo
 
+.claude/*
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/prereview.md
 
-# --- Private Keys --- 
+CLAUDE.md
+
+# --- Private Keys ---
 *.pem
 

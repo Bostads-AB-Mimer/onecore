@@ -8,6 +8,7 @@ import {
   WorkOrderEmail,
   ParkingSpaceAcceptOfferEmail,
   BulkEmail,
+  InspectionProtocolEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
 } from '@onecore/types'
@@ -21,6 +22,7 @@ const ReplaceParkingSpaceOfferTemplateId = 200000000094058
 const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 const WorkOrderEmailTemplateId = 200000000146435
 const WorkOrderExternalContractorEmailTemplateId = 200000000173744
+const InspectionProtocolEmailTemplateId = 205000000035322
 const NonScoredParkingSpaceApprovedTemplateId = 205000000040764
 const NonScoredParkingSpaceDeniedTemplateId = 205000000040765
 
@@ -342,6 +344,66 @@ export const sendBulkEmail = async (email: BulkEmail) => {
     return { data: response }
   } catch (error) {
     logger.error(error, 'Error sending bulk email')
+    throw error
+  }
+}
+
+export const sendInspectionProtocolEmail = async (
+  email: InspectionProtocolEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending inspection protocol email'
+  )
+
+  try {
+    const baseUrl = config.infobip.baseUrl.replace(/\/$/, '')
+    const url = `${baseUrl}/email/4/messages`
+    const apiKey = config.infobip.apiKey
+
+    const placeholders = JSON.stringify({ firstName: email.firstName })
+    const messages = JSON.stringify([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId: InspectionProtocolEmailTemplateId },
+      },
+    ])
+
+    const formData = new FormData()
+    formData.append('messages', messages)
+
+    if (email.attachments && email.attachments.length > 0) {
+      for (const att of email.attachments) {
+        const buffer = Buffer.from(att.content, 'base64')
+        const blob = new Blob([buffer], { type: att.contentType })
+        formData.append('attachment', blob, att.filename)
+      }
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `App ${apiKey}`,
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      throw new Error(
+        `Infobip Email API error: ${response.status} - ${errorBody}`
+      )
+    }
+
+    const data = await response.json()
+    return { data }
+  } catch (error) {
+    logger.error(error)
     throw error
   }
 }

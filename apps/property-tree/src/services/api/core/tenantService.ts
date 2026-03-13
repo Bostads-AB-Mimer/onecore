@@ -1,5 +1,6 @@
-import { GET, POST } from './base-api'
-import type { Tenant, BulkSmsResult, BulkEmailResult } from '@/services/types'
+import type { BulkEmailResult, BulkSmsResult, Tenant } from '@/services/types'
+
+import { GET, POST } from './baseApi'
 
 export interface ContactSearchResult {
   fullName: string

@@ -10,7 +10,7 @@ import { z } from 'zod'
 import { etagMiddleware } from '../middleware/etag'
 import {
   getProperties,
-  getPropertyById,
+  getPropertyByCode,
   getPropertyValuesByPropertyObjectId,
   searchProperties,
 } from '../adapters/property-adapter'
@@ -194,22 +194,22 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /properties/{id}:
+   * /properties/{code}:
    *   get:
    *     summary: Get detailed information about a specific property
    *     description: |
-   *       Retrieves comprehensive information about a real estate property using its unique identifier.
+   *       Retrieves comprehensive information about a real estate property using its unique code.
    *       Returns detailed property information including property code, tract, designation,
    *       and associated property objects.
    *     tags:
    *       - Properties
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: code
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the property.
+   *         description: The code of the property.
    *     responses:
    *       200:
    *         description: Successfully retrieved the property.
@@ -225,12 +225,12 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/properties/:id', async (ctx) => {
+  router.get('(.*)/properties/:code', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const id = ctx.params.id
+    const code = ctx.params.code
 
     try {
-      const property = await getPropertyById(id)
+      const property = await getPropertyByCode(code)
 
       if (!property) {
         ctx.status = 404

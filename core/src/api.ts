@@ -5,6 +5,7 @@ import { routes as workOrderRoutes } from './services/work-order-service'
 import { routes as propertyBaseRoutes } from './services/property-base-service'
 import { routes as searchRoutes } from './services/search-service'
 import { routes as economyRoutes } from './services/economy-service'
+import { routes as inspectionRoutes } from './services/inspection-service'
 import { routes as fileStorageRoutes } from './services/file-storage-service'
 import { routes as communicationRoutes } from './services/communication-service'
 
@@ -21,6 +22,7 @@ propertyBaseRoutes(router)
 keyRoutes(router)
 searchRoutes(router)
 economyRoutes(router)
+inspectionRoutes(router)
 fileStorageRoutes(router)
 communicationRoutes(router)
 

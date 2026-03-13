@@ -1,5 +1,5 @@
 import { Component } from '../../types'
-import { GET, POST, PUT } from './base-api'
+import { GET, POST, PUT } from './baseApi'
 
 export const componentService = {
   async getByRoomId(roomId: string): Promise<Component[]> {

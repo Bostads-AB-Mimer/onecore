@@ -51,10 +51,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Room', schemas.RoomSchema)
   registerSchema('ParkingSpace', schemas.ParkingSpaceSchema)
   registerSchema('MaintenanceUnit', schemas.MaintenanceUnitSchema)
-  registerSchema(
-    'ResidenceByRentalIdDetails',
-    schemas.ResidenceByRentalIdSchema
-  )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
   registerSchema('RentalBlock', schemas.RentalBlockSchema)
   registerSchema(
@@ -502,20 +498,20 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /companies/{id}:
+   * /companies/{organizationNumber}:
    *   get:
    *     summary: Get detailed information about a specific company
    *     tags:
    *       - Property base Service
    *     description: |
-   *       Retrieves comprehensive information about a company using its unique identifier.
+   *       Retrieves comprehensive information about a company using its organization number.
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: organizationNumber
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the company.
+   *         description: The organization number of the company.
    *     responses:
    *       '200':
    *         description: Successfully retrieved company information
@@ -549,12 +545,15 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/companies/:id', async (ctx) => {
+  router.get('(.*)/companies/:organizationNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { id } = ctx.params
+    const { organizationNumber } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getCompanyById(id)
+      const result =
+        await propertyBaseAdapter.getCompanyByOrganizationNumber(
+          organizationNumber
+        )
 
       if (!result.ok) {
         if (result.err === 'not-found') {
@@ -847,19 +846,19 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /properties/{propertyId}:
+   * /properties/{propertyCode}:
    *   get:
-   *     summary: Get property by property id
+   *     summary: Get property by property code
    *     tags:
    *       - Property base Service
-   *     description: Retrieves property by property id
+   *     description: Retrieves property by property code
    *     parameters:
    *       - in: path
-   *         name: propertyId
+   *         name: propertyCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The id of the property
+   *         description: The code of the property
    *     responses:
    *       200:
    *         description: Successfully retrieved property
@@ -893,12 +892,12 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/properties/:propertyId', async (ctx) => {
+  router.get('(.*)/properties/:propertyCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { propertyId } = ctx.params
+    const { propertyCode } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getPropertyDetails(propertyId)
+      const result = await propertyBaseAdapter.getPropertyDetails(propertyCode)
 
       if (!result.ok) {
         if (result.err === 'not-found') {
@@ -948,7 +947,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ResidenceByRentalIdDetails'
+   *                   $ref: '#/components/schemas/ResidenceDetails'
    *       404:
    *         description: Residence not found
    *         content:
@@ -992,9 +991,25 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const residence = getResidence.data
+    const rentalPropertyId = residence.propertyObject.rentalId
+
+    let status: schemas.ResidenceDetails['status'] = null
+    if (rentalPropertyId) {
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        rentalPropertyId,
+        {
+          includeUpcomingLeases: true,
+          includeTerminatedLeases: false,
+          includeContacts: false,
+        }
+      )
+      status = calculateResidenceStatus(leases)
+    }
+
     ctx.status = 200
     ctx.body = {
-      content: getResidence.data satisfies schemas.ResidenceByRentalIdDetails,
+      content: schemas.ResidenceDetailsSchema.parse({ ...residence, status }),
       ...metadata,
     }
   })
@@ -1606,135 +1621,6 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /residences/{residenceId}:
-   *   get:
-   *     summary: Get residence data by residenceId
-   *     tags:
-   *       - Property base Service
-   *     description: Retrieves residence data by residenceId
-   *     parameters:
-   *       - in: path
-   *         name: residenceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Id for the residence to fetch
-   *       - in: query
-   *         name: active
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved residence.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/ResidenceDetails'
-   *       404:
-   *         description: Residence not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Residence not found
-   *       500:
-   *         description: Internal server error. Failed to retrieve residence data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('(.*)/residences/:residenceId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { residenceId } = ctx.params
-    const queryParams = schemas.GetResidenceDetailsQueryParamsSchema.safeParse(
-      ctx.query
-    )
-
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { error: queryParams.error.errors, ...metadata }
-      return
-    }
-
-    const { active: rentalBlockActive } = queryParams.data
-
-    try {
-      const getResidence = await propertyBaseAdapter.getResidenceDetails(
-        residenceId,
-        { active: rentalBlockActive }
-      )
-
-      if (!getResidence.ok) {
-        if (getResidence.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { error: 'Residence not found', ...metadata }
-          return
-        }
-
-        logger.error(
-          { err: getResidence.err, metadata },
-          'Internal server error'
-        )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      if (!getResidence.data.propertyObject.rentalId) {
-        ctx.status = 200
-        ctx.body = {
-          content: schemas.ResidenceDetailsSchema.parse({
-            ...getResidence.data,
-            status: null,
-          }),
-          ...metadata,
-        }
-        return
-      }
-
-      const leases = await leasingAdapter.getLeasesForPropertyId(
-        getResidence.data.propertyObject.rentalId,
-        {
-          includeContacts: false,
-          includeTerminatedLeases: false,
-          includeUpcomingLeases: true,
-        }
-      )
-
-      const status = calculateResidenceStatus(leases)
-
-      ctx.status = 200
-      ctx.body = {
-        content: schemas.ResidenceDetailsSchema.parse({
-          ...getResidence.data,
-          status,
-        }),
-        ...metadata,
-      }
-    } catch (error) {
-      logger.error({ error, metadata }, 'Internal server error')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
    * /residences/summary/by-building-code/{buildingCode}:
    *   get:
    *     summary: Get residences by building code, optionally filtered by staircase code.
@@ -1834,6 +1720,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Code for the building to fetch staircases for
+   *       - in: query
+   *         name: staircaseCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the staircase (optional).
    *     responses:
    *       200:
    *         description: Successfully retrieved staircases.
@@ -1877,10 +1769,13 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { errors: queryParams.error.errors }
       return
     }
-    const { buildingCode } = queryParams.data
+    const { buildingCode, staircaseCode } = queryParams.data
 
     try {
-      const result = await propertyBaseAdapter.getStaircases(buildingCode)
+      const result = await propertyBaseAdapter.getStaircases(
+        buildingCode,
+        staircaseCode
+      )
       if (!result.ok) {
         logger.error({ metadata, err: result.err }, 'Internal server error')
         ctx.status = 500
@@ -1915,6 +1810,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The id of the residence.
+   *       - in: query
+   *         name: roomCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the room (optional).
    *     responses:
    *       200:
    *         description: Successfully retrieved the rooms.
@@ -1940,12 +1841,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { residenceId } = queryParams.data
+    const { residenceId, roomCode } = queryParams.data
 
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      const result = await propertyBaseAdapter.getRooms(residenceId)
+      const result = await propertyBaseAdapter.getRooms(residenceId, roomCode)
       if (!result.ok) {
         logger.error(
           { err: result.err, metadata },

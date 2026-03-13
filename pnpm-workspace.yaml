@@ -1,9 +1,15 @@
 packages:
- - apps/*
- - apps/internal-portal/*
- - core
- - libs/*
- - services/*
+  - apps/*
+  - apps/internal-portal/*
+  - core
+  - libs/*
+  - services/*
+
+injectWorkspacePackages: true
 
 minimumReleaseAge: 5760
-injectWorkspacePackages: true
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma

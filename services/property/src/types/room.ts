@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const roomsQueryParamsSchema = z.object({
   residenceId: z.string().min(1, { message: 'residenceId is required.' }),
+  roomCode: z.string().optional(),
 })
 
 export const roomsByFacilityQueryParamsSchema = z.object({
@@ -46,6 +47,7 @@ export const RoomSchema = z.object({
   deleted: z.boolean(),
   timestamp: z.string(),
   roomType: RoomTypeSchema.nullable(),
+  area: z.number().optional(),
 })
 
 export type Room = z.infer<typeof RoomSchema>
