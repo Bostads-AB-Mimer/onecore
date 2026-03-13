@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import type { Key, KeySystem } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
+import { sortKeys } from '@/utils/sortKeys'
 
 interface KeyAutocompleteProps {
   selectedKeys: Key[]
@@ -40,7 +41,7 @@ export function KeyAutocomplete({
       disposed: 'false',
       ...(selectedKeySystem?.id && { keySystemId: selectedKeySystem.id }),
     })
-    return results.content
+    return sortKeys(results.content)
   }
 
   // Search function for key systems
