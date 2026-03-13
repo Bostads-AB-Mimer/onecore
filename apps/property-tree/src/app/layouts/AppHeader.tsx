@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Menu, Search } from 'lucide-react'
+import { Menu, Search, MessageSquarePlus } from 'lucide-react'
 
 import { useAuth } from '@/features/auth'
 import { GlobalSearchBar, useCommandPalette } from '@/features/search'
@@ -8,9 +8,11 @@ import { useUser } from '@/entities/user'
 
 import onecoreLogo from '@/shared/assets/logos/full/onecore_logo_black.svg'
 import { Button } from '@/shared/ui/Button'
+import { useFeedbackModal } from '@/shared/hooks/useFeedbackModal'
 
 export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
   const { open: openSearch } = useCommandPalette()
+  const { open: openFeedback } = useFeedbackModal()
 
   const { logout } = useAuth()
   const userState = useUser()
@@ -78,6 +80,16 @@ export function AppHeader({ onMenuClick }: { onMenuClick: () => void }) {
           >
             <Search className="h-5 w-5" />
             <span className="sr-only">Toggle Search</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={openFeedback}
+            className="min-h-[44px] min-w-[44px]"
+            title="Feedback"
+          >
+            <MessageSquarePlus className="h-5 w-5" />
+            <span className="sr-only">Feedback</span>
           </Button>
           {userState.tag === 'success' && (
             <div className="flex items-center gap-4">
