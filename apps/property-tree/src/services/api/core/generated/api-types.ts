@@ -155,8 +155,8 @@ export interface paths {
   };
   "/auth/roles/{roleName}/users": {
     /**
-     * Get users by realm role
-     * @description Returns all users assigned to the given Keycloak realm role
+     * Get users by realm role (via group membership)
+     * @description Returns all users that belong to groups assigned the given Keycloak realm role. Users are deduplicated across groups.
      */
     get: {
       parameters: {
@@ -178,8 +178,20 @@ export interface paths {
         401: {
           content: never;
         };
+        /** @description Forbidden — insufficient permissions to query role members */
+        403: {
+          content: never;
+        };
+        /** @description Role not found */
+        404: {
+          content: never;
+        };
         /** @description Internal server error */
         500: {
+          content: never;
+        };
+        /** @description Keycloak unreachable */
+        502: {
           content: never;
         };
       };
@@ -900,7 +912,7 @@ export interface paths {
   "/contacts/for-identity-check": {
     /**
      * Get contacts for deceased/protected identity check
-     * @description Returns paginated list of person contacts eligible for deceased/protected identity verification.
+     * @description Returns paginated list of person contacts eligible for deceased/protected identity verification. Note - Results are validated using the personnummer package, so the actual count may be fewer than the requested limit if invalid personnummer are filtered out.
      */
     get: {
       parameters: {
