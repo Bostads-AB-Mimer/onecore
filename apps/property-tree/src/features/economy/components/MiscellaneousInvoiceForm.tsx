@@ -33,7 +33,7 @@ import {
 } from '@/shared/ui/Select'
 import { Separator } from '@/shared/ui/Separator'
 
-import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
+import { getArticleById } from '@/data/articles/miscellaneousInvoiceArticles'
 
 import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
 import { useXledgerContacts } from '../hooks/useXledgerContacts'

@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 
-import { SelectableInvoiceArticles } from '@/data/articles/MiscellaneousInvoiceArticles'
+import { SelectableInvoiceArticles } from '@/data/articles/miscellaneousInvoiceArticles'
 
 interface ArticleSectionProps {
   invoiceRows: MiscellaneousInvoiceRow[]
