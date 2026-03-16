@@ -20,7 +20,6 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { ProcessStatus } from '../../common/types'
 
-
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -152,9 +151,7 @@ export const routes = (router: KoaRouter) => {
         )
 
         const leaseAreaCodes = new Set(
-          leases
-            .map((lease) => lease.residentialArea?.code)
-            .filter(Boolean)
+          leases.map((lease) => lease.residentialArea?.code).filter(Boolean)
         )
 
         var listings = listingsWithRentalObjects.filter((listing) => {
