@@ -32,6 +32,7 @@
     "release-please": "^16.8.0"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "eslint": "^9.31.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-n": "17.21.3",

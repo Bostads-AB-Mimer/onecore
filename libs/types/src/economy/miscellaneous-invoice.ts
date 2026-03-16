@@ -1,3 +1,5 @@
+import type { File } from 'node:buffer'
+
 export interface MiscellaneousInvoicePayload {
   reference: string
   invoiceDate: Date
