@@ -75,28 +75,46 @@ type EnrichedIMDRow = IMDRow & {
   leaseId: string
 }
 
+type UnmatchedIMDRow = IMDRow & {
+  reason: 'no-rental-object' | 'no-active-lease'
+}
+
+type EnrichResult = {
+  enriched: Array<EnrichedIMDRow>
+  unmatched: Array<UnmatchedIMDRow>
+}
+
 async function enrichIMDRows(
   imdRows: Array<IMDRow>
-): Promise<Result<Array<EnrichedIMDRow>>> {
+): Promise<Result<EnrichResult>> {
   try {
     const period = {
       start: imdRows[0].from,
       end: imdRows[0].to,
     }
 
-    const leases = await getActiveLeasesByRentalObjectCodes({
+    const leaseMap = await getActiveLeasesByRentalObjectCodes({
       rentalObjectCodes: imdRows.map((row) => row.rentalObjectCode),
       periodStart: period.start,
       periodEnd: period.end,
     })
 
-    return {
-      ok: true,
-      data: imdRows.map((row) => ({
-        ...row,
-        leaseId: leases.get(row.rentalObjectCode) ?? '',
-      })),
+    const enriched: Array<EnrichedIMDRow> = []
+    const unmatched: Array<UnmatchedIMDRow> = []
+
+    for (const row of imdRows) {
+      const lookup = leaseMap.get(row.rentalObjectCode)
+
+      if (lookup === undefined) {
+        unmatched.push({ ...row, reason: 'no-rental-object' })
+      } else if (lookup === null) {
+        unmatched.push({ ...row, reason: 'no-active-lease' })
+      } else {
+        enriched.push({ ...row, leaseId: lookup })
+      }
     }
+
+    return { ok: true, data: { enriched, unmatched } }
   } catch (err) {
     logger.error(err)
     return { ok: false, error: err }

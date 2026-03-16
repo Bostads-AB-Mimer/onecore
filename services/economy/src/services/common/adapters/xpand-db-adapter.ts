@@ -277,12 +277,13 @@ export const getInvoiceRows = async (
 }
 
 /**
- * Finds the active lease (hyobj) for each rental object code (babuf.hyresid)
- * during the given period.
+ * For each rental object code, finds the active lease during the given period.
+ * Returns rentalObjectCode + leaseId (null if no active lease).
+ * Codes not found in babuf at all are absent from the results.
  *
- * Join path: babuf.keycmobj -> hykop.keycmobj (ordning=1) -> hyobj.keyhyobj
- * Filters: not deleted, not cancelled, lease started before period end,
- *          last debit date is null or >= period start.
+ * Uses LEFT JOIN so rental objects without an active lease still appear
+ * (with leaseId = null), letting callers distinguish "no rental object"
+ * from "no active lease".
  *
  * Batches in chunks of 2000 to stay under SQL Server's 2100 parameter limit.
  */
@@ -290,13 +291,13 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
   rentalObjectCodes: string[]
   periodStart: Date
   periodEnd: Date
-}): Promise<Map<string, string>> => {
+}): Promise<Map<string, string | null>> => {
   if (params.rentalObjectCodes.length === 0) {
     return new Map()
   }
 
   const BATCH_SIZE = 2000
-  const results = new Map<string, string>()
+  const results = new Map<string, string | null>()
 
   for (let i = 0; i < params.rentalObjectCodes.length; i += BATCH_SIZE) {
     const batch = params.rentalObjectCodes.slice(i, i + BATCH_SIZE)
@@ -304,31 +305,33 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
     const rows = await db
       .select('babuf.hyresid AS rentalObjectCode', 'hyobj.hyobjben AS leaseId')
       .from('babuf')
-      .innerJoin('hykop', function () {
+      .leftJoin('hykop', function () {
         this.on('hykop.keycmobj', '=', 'babuf.keycmobj').andOn(
           'hykop.ordning',
           '=',
           db.raw('?', [1])
         )
       })
-      .innerJoin('hyobj', 'hyobj.keyhyobj', 'hykop.keyhyobj')
-      .whereIn('babuf.hyresid', batch)
-      .where('hyobj.deletemark', 0)
-      .whereNull('hyobj.makuldatum')
-      .where('hyobj.fdate', '<=', params.periodEnd)
-      .andWhere(function () {
-        this.whereNull('hyobj.sistadeb').orWhere(
-          'hyobj.sistadeb',
-          '>=',
-          params.periodStart
-        )
+      .leftJoin('hyobj', function () {
+        this.on('hyobj.keyhyobj', '=', 'hykop.keyhyobj')
+          .andOn('hyobj.deletemark', '=', db.raw('?', [0]))
+          .andOnNull('hyobj.makuldatum')
+          .andOn('hyobj.fdate', '<=', db.raw('?', [params.periodEnd]))
+          .andOn(function () {
+            this.onNull('hyobj.sistadeb').orOn(
+              'hyobj.sistadeb',
+              '>=',
+              db.raw('?', [params.periodStart])
+            )
+          })
       })
+      .whereIn('babuf.hyresid', batch)
       .orderBy('hyobj.fdate', 'desc')
       .then(trimStrings)
 
     for (const row of rows) {
       if (!results.has(row.rentalObjectCode)) {
-        results.set(row.rentalObjectCode, row.leaseId)
+        results.set(row.rentalObjectCode, row.leaseId ?? null)
       }
     }
   }
