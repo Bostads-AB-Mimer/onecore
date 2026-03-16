@@ -71,7 +71,7 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Current)
   })
 
-  it('returns Current as fallback for unexpected stage', () => {
+  it('returns Ended as fallback for unexpected stage', () => {
     const lease = factory.tenfastLease.build({
       stage: 'unknownStage',
       signed: false,
@@ -79,6 +79,6 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
       endDate: null,
     })
 
-    expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Current)
+    expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Ended)
   })
 })
