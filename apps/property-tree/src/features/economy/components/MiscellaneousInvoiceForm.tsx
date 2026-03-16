@@ -43,6 +43,7 @@ import { LeaseContractSection } from './LeaseContractSection'
 import { TenantSearchSection } from './TenantSearchSection'
 
 interface FormErrors {
+  reference?: string
   contactCode?: string
   leaseId?: string
   articles?: string
@@ -160,6 +161,10 @@ export function MiscellaneousInvoiceForm() {
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
+
+    if (!reference) {
+      newErrors.reference = 'Referens måste väljas'
+    }
 
     if (!selectedTenant) {
       newErrors.contactCode = 'Kund måste väljas'
@@ -298,6 +303,11 @@ export function MiscellaneousInvoiceForm() {
                     ))}
                   </SelectContent>
                 </Select>
+              )}
+              {errors.reference && (
+                <span className={cn('text-destructive')}>
+                  {errors.reference}
+                </span>
               )}
             </div>
           </div>
