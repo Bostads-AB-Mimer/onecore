@@ -240,7 +240,7 @@ export function MiscellaneousInvoiceForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Card>
+      <Card className="p-4">
         Nytt ströfaktura-underlag
         <div className="space-y-6">
           {/* Datum och Referens */}
