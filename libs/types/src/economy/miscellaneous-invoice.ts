@@ -10,9 +10,7 @@ export interface MiscellaneousInvoicePayload {
   administrativeCosts: boolean
   comment?: string
   projectCode?: string
-  // @ts-expect-error
-  // eslint-disable-next-line n/no-unsupported-features/node-builtins
-  attachment?: File // TODO fix type
+  attachment?: File
 }
 
 export interface MiscellaneousInvoiceRow {
