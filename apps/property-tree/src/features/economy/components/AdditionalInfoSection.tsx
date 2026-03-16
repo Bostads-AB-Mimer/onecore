@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { FileText, Paperclip, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
@@ -12,6 +11,7 @@ interface AdditionalInfoSectionProps {
   onProjektChange: (value: string) => void
   onInternInfoChange: (value: string) => void
   onFileAttached: (file: File | null) => void
+  attachedFile?: File | null
 }
 
 export function AdditionalInfoSection({
@@ -20,20 +20,17 @@ export function AdditionalInfoSection({
   onProjektChange,
   onInternInfoChange,
   onFileAttached,
+  attachedFile,
 }: AdditionalInfoSectionProps) {
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([])
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files)
-      setAttachedFiles((prev) => [...prev, ...newFiles])
-      onFileAttached(e.target.files[0])
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      onFileAttached(file)
     }
     e.target.value = ''
   }
 
-  const removeFile = (index: number) => {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+  const removeFile = () => {
     onFileAttached(null)
   }
 
@@ -65,31 +62,24 @@ export function AdditionalInfoSection({
       </div>
 
       <div className="space-y-2">
-        <Label>Bifogade filer</Label>
+        <Label>Bifogad fil</Label>
         <div className="space-y-2">
-          {attachedFiles.length > 0 && (
-            <ul className="space-y-1">
-              {attachedFiles.map((file, index) => (
-                <li
-                  key={index}
-                  className="flex items-center justify-between gap-2 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{file.name}</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 shrink-0"
-                    onClick={() => removeFile(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
+          {attachedFile && (
+            <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">{attachedFile.name}</span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={removeFile}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           )}
           <div>
             <input
@@ -97,7 +87,6 @@ export function AdditionalInfoSection({
               id="file-upload"
               className="sr-only"
               onChange={handleFileChange}
-              multiple
             />
             <label htmlFor="file-upload">
               <Button

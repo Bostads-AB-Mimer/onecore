@@ -242,6 +242,7 @@ export function MiscellaneousInvoiceForm() {
     setProjectCode('')
     setComment('')
     setAdministrativeCosts(false)
+    setAttachedFile(null)
     setErrors({})
   }
 
@@ -370,6 +371,7 @@ export function MiscellaneousInvoiceForm() {
               onProjektChange={setProjectCode}
               onInternInfoChange={setComment}
               onFileAttached={setAttachedFile}
+              attachedFile={attachedFile}
             />
           </div>
 
