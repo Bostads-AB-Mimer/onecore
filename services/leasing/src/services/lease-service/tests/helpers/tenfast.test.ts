@@ -5,25 +5,25 @@ import { mapToOnecoreLease } from '../../helpers/tenfast'
 import * as factory from '../factories'
 
 describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
-  it('returns PendingSignature for Inväntar signering stage', () => {
+  it('returns PendingSignature for signingInProgress stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'Inväntar signering',
+      stage: 'signingInProgress',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.PendingSignature)
   })
 
-  it('returns NotSent for Ej skickat stage', () => {
+  it('returns NotSent for draft stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'Ej skickat',
+      stage: 'draft',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.NotSent)
   })
 
-  it('returns PreliminaryTerminated for Preliminärt uppsagt stage', () => {
+  it('returns PreliminaryTerminated for preTermination stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'Preliminärt uppsagt',
+      stage: 'preTermination',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(
@@ -31,33 +31,41 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     )
   })
 
-  it('returns Ended for Upphört stage', () => {
+  it('returns Ended for archived stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'Upphört',
+      stage: 'archived',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Ended)
   })
 
-  it('returns AboutToEnd for Uppsagt stage', () => {
+  it('returns Ended for terminated stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'Uppsagt',
+      stage: 'terminated',
+    })
+
+    expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Ended)
+  })
+
+  it('returns AboutToEnd for terminationScheduled stage', () => {
+    const lease = factory.tenfastLease.build({
+      stage: 'terminationScheduled',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.AboutToEnd)
   })
 
-  it('returns Upcoming for Kommande stage', () => {
+  it('returns Upcoming for upcoming stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'Kommande',
+      stage: 'upcoming',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Upcoming)
   })
 
-  it('returns Current for Gällande stage', () => {
+  it('returns Current for active stage', () => {
     const lease = factory.tenfastLease.build({
-      stage: 'Gällande',
+      stage: 'active',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Current)

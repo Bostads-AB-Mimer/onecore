@@ -3,24 +3,26 @@ import * as factory from '../../factories'
 
 describe(filterByStatus, () => {
   it('filters leases by status', () => {
-    const currentLease = factory.tenfastLease.build({ stage: 'Gällande' })
-    const upcomingLease = factory.tenfastLease.build({ stage: 'Kommande' })
-    const aboutToEndLease = factory.tenfastLease.build({ stage: 'Uppsagt' })
+    const currentLease = factory.tenfastLease.build({ stage: 'active' })
+    const upcomingLease = factory.tenfastLease.build({ stage: 'upcoming' })
+    const aboutToEndLease = factory.tenfastLease.build({ stage: 'terminationScheduled' })
     const preliminaryTerminatedLease = factory.tenfastLease.build({
-      stage: 'Preliminärt uppsagt',
+      stage: 'preTermination',
     })
-    const endedLease = factory.tenfastLease.build({ stage: 'Upphört' })
+    const archivedLease = factory.tenfastLease.build({ stage: 'archived' })
+    const terminatedLease = factory.tenfastLease.build({ stage: 'terminated' })
     const pendingSignatureLease = factory.tenfastLease.build({
-      stage: 'Inväntar signering',
+      stage: 'signingInProgress',
     })
-    const notSentLease = factory.tenfastLease.build({ stage: 'Ej skickat' })
+    const notSentLease = factory.tenfastLease.build({ stage: 'draft' })
 
     const leases = [
       currentLease,
       upcomingLease,
       aboutToEndLease,
       preliminaryTerminatedLease,
-      endedLease,
+      archivedLease,
+      terminatedLease,
       pendingSignatureLease,
       notSentLease,
     ]
@@ -31,7 +33,7 @@ describe(filterByStatus, () => {
     expect(filterByStatus(leases, ['preliminary-terminated'])).toEqual([
       preliminaryTerminatedLease,
     ])
-    expect(filterByStatus(leases, ['ended'])).toEqual([endedLease])
+    expect(filterByStatus(leases, ['ended'])).toEqual([archivedLease, terminatedLease])
     expect(filterByStatus(leases, ['pending-signature'])).toEqual([
       pendingSignatureLease,
     ])
@@ -39,9 +41,9 @@ describe(filterByStatus, () => {
   })
 
   it('filters leases by multiple statuses', () => {
-    const upcomingLease = factory.tenfastLease.build({ stage: 'Kommande' })
-    const currentLease = factory.tenfastLease.build({ stage: 'Gällande' })
-    const endedLease = factory.tenfastLease.build({ stage: 'Upphört' })
+    const upcomingLease = factory.tenfastLease.build({ stage: 'upcoming' })
+    const currentLease = factory.tenfastLease.build({ stage: 'active' })
+    const endedLease = factory.tenfastLease.build({ stage: 'archived' })
 
     const leases = [upcomingLease, currentLease, endedLease]
 

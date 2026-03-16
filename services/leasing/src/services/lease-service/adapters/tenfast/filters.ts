@@ -13,13 +13,14 @@ export type GetLeasesFilters = {
 }
 
 const stageToStatus: Record<string, GetLeasesFilters['status'][number]> = {
-  Gällande: 'current',
-  Kommande: 'upcoming',
-  Uppsagt: 'about-to-end',
-  Upphört: 'ended',
-  'Preliminärt uppsagt': 'preliminary-terminated',
-  'Inväntar signering': 'pending-signature',
-  'Ej skickat': 'not-sent',
+  active: 'current',
+  upcoming: 'upcoming',
+  terminationScheduled: 'about-to-end',
+  archived: 'ended',
+  terminated: 'ended',
+  preTermination: 'preliminary-terminated',
+  signingInProgress: 'pending-signature',
+  draft: 'not-sent',
 }
 
 export const filterByStatus = (

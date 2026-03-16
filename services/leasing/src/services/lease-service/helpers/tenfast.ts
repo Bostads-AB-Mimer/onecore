@@ -10,19 +10,20 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const { stage } = lease
 
   switch (stage) {
-    case 'Inväntar signering':
+    case 'signingInProgress':
       return LeaseStatus.PendingSignature
-    case 'Kommande':
+    case 'upcoming':
       return LeaseStatus.Upcoming
-    case 'Gällande':
+    case 'active':
       return LeaseStatus.Current
-    case 'Preliminärt uppsagt':
+    case 'preTermination':
       return LeaseStatus.PreliminaryTerminated
-    case 'Uppsagt':
+    case 'terminationScheduled':
       return LeaseStatus.AboutToEnd
-    case 'Upphört':
+    case 'archived':
+    case 'terminated':
       return LeaseStatus.Ended
-    case 'Ej skickat':
+    case 'draft':
       return LeaseStatus.NotSent
     default:
       return LeaseStatus.Current
