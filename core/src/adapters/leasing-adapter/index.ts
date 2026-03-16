@@ -123,7 +123,7 @@ const getLeasesForPropertyId = async (
   return leasesResponse.data.content
 }
 
-const getLeases = async (leaseIds: string[]): Promise<Lease[]> => {
+const getLeasesBatch = async (leaseIds: string[]): Promise<Lease[]> => {
   const pageSize = 500
   let allLeases: Lease[] = []
 
@@ -1032,7 +1032,7 @@ export {
   getLeasesForPnr,
   getLeasesForContactCode,
   getLeasesForPropertyId,
-  getLeases,
+  getLeasesBatch,
   searchLeases,
   getBuildingManagers,
   getDetailedApplicantsByListingId,

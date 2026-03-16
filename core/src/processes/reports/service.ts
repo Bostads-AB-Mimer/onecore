@@ -140,7 +140,7 @@ export const getBosociala = async (): Promise<BosocialaObject[]> => {
 
   const allLeaseDetails = allLeaseDetailsResult.data
   const [allLeases, allContacts] = await Promise.all([
-    leasingAdapter.getLeases(
+    leasingAdapter.getLeasesBatch(
       allLeaseDetails
         .map((ld) => ld.details[0]?.leaseId)
         .filter((leaseId) => leaseId !== undefined)
