@@ -276,6 +276,66 @@ export const getInvoiceRows = async (
   })
 }
 
+/**
+ * Finds the active lease (hyobj) for each rental object code (babuf.hyresid)
+ * during the given period.
+ *
+ * Join path: babuf.keycmobj -> hykop.keycmobj (ordning=1) -> hyobj.keyhyobj
+ * Filters: not deleted, not cancelled, lease started before period end,
+ *          last debit date is null or >= period start.
+ *
+ * Batches in chunks of 2000 to stay under SQL Server's 2100 parameter limit.
+ */
+export const getActiveLeasesByRentalObjectCodes = async (params: {
+  rentalObjectCodes: string[]
+  periodStart: Date
+  periodEnd: Date
+}): Promise<Map<string, string>> => {
+  if (params.rentalObjectCodes.length === 0) {
+    return new Map()
+  }
+
+  const BATCH_SIZE = 2000
+  const results = new Map<string, string>()
+
+  for (let i = 0; i < params.rentalObjectCodes.length; i += BATCH_SIZE) {
+    const batch = params.rentalObjectCodes.slice(i, i + BATCH_SIZE)
+
+    const rows = await db
+      .select('babuf.hyresid AS rentalObjectCode', 'hyobj.hyobjben AS leaseId')
+      .from('babuf')
+      .innerJoin('hykop', function () {
+        this.on('hykop.keycmobj', '=', 'babuf.keycmobj').andOn(
+          'hykop.ordning',
+          '=',
+          db.raw('?', [1])
+        )
+      })
+      .innerJoin('hyobj', 'hyobj.keyhyobj', 'hykop.keyhyobj')
+      .whereIn('babuf.hyresid', batch)
+      .where('hyobj.deletemark', 0)
+      .whereNull('hyobj.makuldatum')
+      .where('hyobj.fdate', '<=', params.periodEnd)
+      .andWhere(function () {
+        this.whereNull('hyobj.sistadeb').orWhere(
+          'hyobj.sistadeb',
+          '>=',
+          params.periodStart
+        )
+      })
+      .orderBy('hyobj.fdate', 'desc')
+      .then(trimStrings)
+
+    for (const row of rows) {
+      if (!results.has(row.rentalObjectCode)) {
+        results.set(row.rentalObjectCode, row.leaseId)
+      }
+    }
+  }
+
+  return results
+}
+
 export const getContacts = async (
   contactCodes: string[]
 ): Promise<XpandContact[]> => {
