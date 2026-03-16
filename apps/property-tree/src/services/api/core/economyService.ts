@@ -75,6 +75,14 @@ async function submitMiscellaneousInvoice(
 ) {
   const formData = new FormData()
 
+  const invoiceForSubmission = {
+    ...invoice,
+    invoiceRows: invoice.invoiceRows.map((row) => ({
+      ...row,
+      price: parseFloat(row.price),
+    })),
+  }
+
   if (invoice.attachment) {
     const attachmentBytes = await invoice.attachment.bytes()
     formData.append(
@@ -82,10 +90,10 @@ async function submitMiscellaneousInvoice(
       new Blob([attachmentBytes]),
       invoice.attachment.name
     )
-    delete invoice['attachment']
+    delete invoiceForSubmission['attachment']
   }
 
-  formData.append('invoice', JSON.stringify(invoice))
+  formData.append('invoice', JSON.stringify(invoiceForSubmission))
 
   const { data, error } = await POST(
     // @ts-expect-error

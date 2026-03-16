@@ -114,7 +114,7 @@ export function MiscellaneousInvoiceForm() {
   )
 
   const [invoiceRows, setInvoiceRows] = useState<MiscellaneousInvoiceRow[]>([
-    { price: 0, amount: 1, articleId: '', articleName: '' },
+    { price: '', amount: 1, articleId: '', articleName: '' },
   ])
   const [projectCode, setProjectCode] = useState('')
   const [comment, setComment] = useState('')
@@ -170,7 +170,7 @@ export function MiscellaneousInvoiceForm() {
     }
 
     const hasValidInvoiceRows = invoiceRows.some(
-      (row) => row.articleId !== '' && row.price !== 0
+      (row) => row.articleId !== '' && !isNaN(parseFloat(row.price))
     )
     if (!hasValidInvoiceRows) {
       newErrors.articles = 'Minst en artikel eller tjänst måste läggas till'
@@ -199,7 +199,7 @@ export function MiscellaneousInvoiceForm() {
         rows.push({
           articleId: article.id,
           articleName: article.name,
-          price: article.standardPrice,
+          price: article.standardPrice.toString(),
           amount: 1,
         })
       }
@@ -231,7 +231,9 @@ export function MiscellaneousInvoiceForm() {
     setSelectedTenant(null)
     setLeaseId('')
     setSelectedLease(null)
-    setInvoiceRows([{ price: 0, amount: 1, articleId: '', articleName: '' }])
+    setInvoiceRows([
+      { price: '', amount: 1, articleId: '', articleName: '', text: '' },
+    ])
     setProjectCode('')
     setComment('')
     setAdministrativeCosts(false)

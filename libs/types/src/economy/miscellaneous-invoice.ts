@@ -17,7 +17,7 @@ export interface MiscellaneousInvoicePayload {
 
 export interface MiscellaneousInvoiceRow {
   amount: number
-  price: number
+  price: string
   articleName: string
   articleId: string
   text?: string

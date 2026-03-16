@@ -33,9 +33,9 @@ export function ArticleSection({
   onAdministrativaKostnaderChange,
   errors,
 }: ArticleSectionProps) {
-  const handleChangeRowPrice = (index: number, value: string | number) => {
+  const handleChangeRowPrice = (index: number, value: string) => {
     const newRows = [...invoiceRows]
-    newRows[index] = { ...newRows[index], price: Number(value) || 0 }
+    newRows[index] = { ...newRows[index], price: value }
     onInvoiceRowsChange(newRows)
   }
 
@@ -60,14 +60,15 @@ export function ArticleSection({
 
     newRows[index].articleId = articleId
     newRows[index].articleName = article.name
-    newRows[index].price = article.standardPrice
+    newRows[index].price =
+      article.standardPrice === 0 ? '' : article.standardPrice.toString()
     onInvoiceRowsChange(newRows)
   }
 
   const handleAddRow = () => {
     onInvoiceRowsChange([
       ...invoiceRows,
-      { price: 0, amount: 1, articleId: '', articleName: '' },
+      { price: '0', amount: 1, articleId: '', articleName: '' },
     ])
   }
 
@@ -139,9 +140,8 @@ export function ArticleSection({
               <div className="space-y-1 sm:space-y-0">
                 <Label>Pris (ink. moms)</Label>
                 <Input
-                  type="number"
+                  type="text"
                   value={row.price}
-                  min={0}
                   onChange={(e) => handleChangeRowPrice(index, e.target.value)}
                 />
               </div>
