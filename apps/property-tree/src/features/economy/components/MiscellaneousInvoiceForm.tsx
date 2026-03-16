@@ -244,6 +244,11 @@ export function MiscellaneousInvoiceForm() {
     setAdministrativeCosts(false)
     setAttachedFile(null)
     setErrors({})
+
+    // Wait a tick before scrolling up since other page updates can interfere with the scroll
+    setTimeout(() => {
+      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 0)
   }
 
   return (
