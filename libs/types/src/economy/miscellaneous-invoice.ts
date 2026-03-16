@@ -1,5 +1,3 @@
-import type { File } from 'node:buffer'
-
 export interface MiscellaneousInvoicePayload {
   reference: string
   invoiceDate: Date
@@ -12,7 +10,7 @@ export interface MiscellaneousInvoicePayload {
   administrativeCosts: boolean
   comment?: string
   projectCode?: string
-  attachment?: File
+  attachment?: any // TODO Fix type, should be File
 }
 
 export interface MiscellaneousInvoiceRow {
