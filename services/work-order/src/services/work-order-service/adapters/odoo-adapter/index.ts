@@ -455,7 +455,8 @@ const createWorkOrderRecord = async (
     })
 
     const name =
-      uniqueEquipmentCodes.includes('SD') || uniqueEquipmentCodes.includes('DJUR')
+      uniqueEquipmentCodes.includes('SD') ||
+      uniqueEquipmentCodes.includes('DJUR')
         ? `Felanmäld Skadedjur - ${uniqueSpaceCaptions.join(', ')}`
         : uniqueEquipmentCodes.length > 1
           ? `Felanmälda vitvaror - ${uniqueEquipmentCodes.map(transformEquipmentCode).join(', ')}`
@@ -477,8 +478,10 @@ const createWorkOrderRecord = async (
       master_key: details.AccessOptions.Type === 0,
       space_caption: uniqueSpaceCaptions.join(', '),
       maintenance_team_id: maintenanceTeamId,
-      maintenance_request_category_id:
-        await getMaintenanceRequestCategoryId(uniqueSpaceCaptions, uniqueEquipmentCodes),
+      maintenance_request_category_id: await getMaintenanceRequestCategoryId(
+        uniqueSpaceCaptions,
+        uniqueEquipmentCodes
+      ),
       creation_origin: 'mimer-nu',
     })
   } catch (error) {
@@ -509,7 +512,10 @@ const getMaintenanceRequestCategoryId = async (
   uniqueEquipmentCodes: string[]
 ): Promise<number> => {
   try {
-    if (uniqueEquipmentCodes.includes('SD') || uniqueEquipmentCodes.includes('DJUR')) {
+    if (
+      uniqueEquipmentCodes.includes('SD') ||
+      uniqueEquipmentCodes.includes('DJUR')
+    ) {
       const categories = await odoo.search('maintenance.request.category', {
         name: 'Skadedjur',
       })
