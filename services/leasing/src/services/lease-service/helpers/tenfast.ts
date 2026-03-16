@@ -1,4 +1,5 @@
 import { Lease, LeaseStatus, LeaseRentRow, RentalObject } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import {
   TenfastLease,
@@ -26,7 +27,11 @@ const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
     case 'draft':
       return LeaseStatus.NotSent
     default:
-      return LeaseStatus.Current
+      logger.warn(
+        { stage, leaseId: lease.externalId },
+        'calculateLeaseStatus: Unknown Tenfast stage'
+      )
+      return LeaseStatus.Ended
   }
 }
 
