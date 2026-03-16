@@ -5,10 +5,9 @@ import { AlertTriangle } from 'lucide-react'
 
 import { TenantTabs } from '@/widgets/tenant-tabs'
 
-import { useLeasesByContactCode, useRentalProperties } from '@/features/leases'
-import { useTenant } from '@/features/tenants'
-
-import { TenantCard } from '@/entities/tenant'
+import { useLeasesByContactCode } from '@/entities/lease'
+import { useRentalProperties } from '@/entities/rental-property'
+import { TenantCard, useTenant } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 import type { Tenant } from '@/services/types'

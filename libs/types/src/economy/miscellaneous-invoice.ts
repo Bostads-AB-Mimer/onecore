@@ -1,4 +1,5 @@
 export interface MiscellaneousInvoicePayload {
+  reference: string
   invoiceDate: Date
   contactCode: string
   tenantName: string
@@ -7,7 +8,6 @@ export interface MiscellaneousInvoicePayload {
   propertyCode?: string
   invoiceRows: MiscellaneousInvoiceRow[]
   administrativeCosts: boolean
-  handlingFee: boolean
   comment?: string
   projectCode?: string
   // @ts-expect-error
@@ -16,9 +16,9 @@ export interface MiscellaneousInvoicePayload {
 }
 
 export interface MiscellaneousInvoiceRow {
-  text: string
   amount: number
   price: number
   articleName: string
   articleId: string
+  text?: string
 }

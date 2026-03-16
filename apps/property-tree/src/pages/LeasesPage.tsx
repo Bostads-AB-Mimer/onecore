@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
-import {
-  leaseColumns,
-  LeaseMobileCard,
-  useLeaseFilters,
-} from '@/features/leases'
+import { leaseColumns, LeaseMobileCard } from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
+
+import { useLeaseFilters } from '@/entities/lease'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 import { leaseSearchService } from '@/services/api/core/leaseSearchService'

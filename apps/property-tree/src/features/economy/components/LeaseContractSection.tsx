@@ -1,15 +1,17 @@
-import { Label } from '@/components/ui/Label'
-import { Input } from '@/components/ui/Input'
+import { LeaseStatus, RentalPropertyInfo } from '@onecore/types'
+
+import { Lease } from '@/services/api/core'
+
+import { cn } from '@/shared/lib/utils'
+import { Input } from '@/shared/ui/Input'
+import { Label } from '@/shared/ui/Label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/Select'
-import { cn } from '@/lib/utils'
-import { Lease } from '@/services/api/core'
-import { LeaseStatus, RentalPropertyInfo } from '@onecore/types'
+} from '@/shared/ui/Select'
 
 interface LeaseContractSectionProps {
   leaseContracts: Lease[]

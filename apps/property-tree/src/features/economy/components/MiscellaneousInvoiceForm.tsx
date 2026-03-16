@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react'
 import {
   MiscellaneousInvoicePayload,
   MiscellaneousInvoiceRow,
+  XledgerContact,
 } from '@onecore/types'
 import { useMutation } from '@tanstack/react-query'
-<<<<<<< HEAD:apps/property-tree/src/features/economy/components/MiscellaneousInvoiceForm.tsx
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
-<<<<<<< HEAD:apps/property-tree/src/features/economy/components/MiscellaneousInvoiceForm.tsx
 
 import { useLeasesByContactCode } from '@/entities/lease'
+import { useRentalProperties } from '@/entities/rental-property'
 import { TenantSearchResult } from '@/entities/tenant/hooks/useTenantSearch'
 import { useUser } from '@/entities/user'
 
@@ -22,51 +22,25 @@ import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import { Calendar } from '@/shared/ui/Calendar'
 import { Card } from '@/shared/ui/Card'
-import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
-import { Separator } from '@/shared/ui/Separator'
-
-import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
-
-import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
-import { AdditionalInfoSection } from './AdditionalInfoSection'
-import { ArticleSection } from './ArticleSection'
-import { LeaseContractSection } from './LeaseContractSection'
-import { TenantSearchSection } from './TenantSearchSection'
-import { useRentalProperties } from '@/entities/rental-property'
-=======
-import { cn } from '@/lib/utils'
-=======
->>>>>>> 94788dacd (Remove date picker):apps/property-tree/src/components/economy/components/MiscellaneousInvoiceForm.tsx
-import { Button } from '@/components/ui/Button'
-import { Label } from '@/components/ui/Label'
-import { Card } from '@/components/ui/Card'
-import { Separator } from '@/components/ui/Separator'
-import { useToast } from '@/components/hooks/useToast'
-import { TenantSearchSection } from './TenantSearchSection'
-import { LeaseContractSection } from './LeaseContractSection'
-import { ArticleSection } from './ArticleSection'
-import { AdditionalInfoSection } from './AdditionalInfoSection'
-import { InvoiceRow, MiscellaneousInvoicePayload } from '../types'
-import { TenantSearchResult } from '@/hooks/useTenantSearch'
-import { useLeases } from '@/components/hooks/useLeases'
-import { useUser } from '@/auth/useUser'
-import { economyService } from '@/services/api/core'
-import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
-import { useMiscellaneousInvoiceDataForLease } from '@/components/hooks/useMiscellaneousInvoiceDataForLease'
-import { Lease as CoreLease } from '@/services/api/core'
-import { useRentalProperties } from '@/components/hooks/useRentalProperties'
-import { useXledgerContacts } from '@/components/hooks/useXledgerContacts'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/Select'
-import { XledgerContact } from '@onecore/types'
->>>>>>> ccf4ea251 (Select reference from xledger contacts):apps/property-tree/src/components/economy/components/MiscellaneousInvoiceForm.tsx
+} from '@/shared/ui/Select'
+import { Separator } from '@/shared/ui/Separator'
+
+import { getArticleById } from '@/data/articles/MiscellaneousInvoiceArticles'
+
+import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
+import { useXledgerContacts } from '../hooks/useXledgerContacts'
+import { AdditionalInfoSection } from './AdditionalInfoSection'
+import { ArticleSection } from './ArticleSection'
+import { LeaseContractSection } from './LeaseContractSection'
+import { TenantSearchSection } from './TenantSearchSection'
 
 interface FormErrors {
   contactCode?: string
@@ -78,22 +52,22 @@ export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
-
+  // Mutation for submitting the invoice
   const submitInvoiceMutation = useMutation({
     mutationFn: async (invoice: MiscellaneousInvoicePayload) => {
       return await economyService.submitMiscellaneousInvoice(invoice)
     },
     onSuccess: (data, variables) => {
       toast({
-        title: 'Underlag skickat',
-        description: `Ströfaktura-underlag för ${variables.contactCode} har skickats.`,
+        title: 'Underlag sparat',
+        description: `Ströfaktura-underlag för ${variables.contactCode} har skapats.`,
       })
       handleReset()
     },
     onError: () => {
       toast({
         title: 'Fel',
-        description: 'Kunde inte skicka underlaget. Försök igen.',
+        description: 'Kunde inte spara underlaget. Försök igen.',
         variant: 'destructive',
       })
     },
@@ -257,18 +231,11 @@ export function MiscellaneousInvoiceForm() {
     setSelectedTenant(null)
     setLeaseId('')
     setSelectedLease(null)
-    setInvoiceRows([
-      { price: 0, amount: 1, articleId: '', articleName: '', text: '' },
-    ])
+    setInvoiceRows([{ price: 0, amount: 1, articleId: '', articleName: '' }])
     setProjectCode('')
     setComment('')
     setAdministrativeCosts(false)
     setErrors({})
-
-    // Wait a tick before scrolling up since other page updates can interfere with the scroll
-    setTimeout(() => {
-      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
-    }, 0)
   }
 
   return (
@@ -277,7 +244,38 @@ export function MiscellaneousInvoiceForm() {
         Nytt ströfaktura-underlag
         <div className="space-y-6">
           {/* Datum och Referens */}
-          <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Label>Datum</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !invoiceDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {invoiceDate ? (
+                      format(invoiceDate, 'PPP', { locale: sv })
+                    ) : (
+                      <span>Välj datum</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={invoiceDate}
+                    onSelect={(date) => date && setInvoiceDate(date)}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <div className="space-y-3">
               <Label>Referens</Label>
               {isLoadingContacts ? (
@@ -385,8 +383,8 @@ export function MiscellaneousInvoiceForm() {
               }
             >
               {isSubmitting || submitInvoiceMutation.isPending
-                ? 'Skickar...'
-                : 'Skicka underlag'}
+                ? 'Sparar...'
+                : 'Spara underlag'}
             </Button>
           </div>
         </div>
