@@ -125,9 +125,10 @@ export const getBosociala = async (): Promise<BosocialaObject[]> => {
     throw new Error()
   }
 
-  const expiredUnpaidInvoices = invoicesResult.data
-    .filter((i) => i.expirationDate && new Date(i.expirationDate) < now)
-    .slice(0, 20)
+  const expiredUnpaidInvoices = invoicesResult.data.filter(
+    (i) => i.expirationDate && new Date(i.expirationDate) < now
+  )
+
   const allLeaseDetailsResult = await economyAdapter.getLeaseDetailsForInvoices(
     expiredUnpaidInvoices
       .filter((i) => i.type === 'Regular')
