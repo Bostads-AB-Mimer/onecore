@@ -1,3 +1,5 @@
+import { logger } from '@onecore/utilities'
+
 import { TenfastLease } from './schemas'
 
 export type GetLeasesFilters = {
@@ -29,6 +31,13 @@ export const filterByStatus = (
 ) => {
   return leases.filter((l) => {
     const mappedStatus = stageToStatus[l.stage]
-    return mappedStatus !== undefined && statuses.includes(mappedStatus)
+    if (!mappedStatus) {
+      logger.warn(
+        { stage: l.stage, leaseId: l.externalId },
+        'filterByStatus: Unknown Tenfast stage, lease excluded from results'
+      )
+      return false
+    }
+    return statuses.includes(mappedStatus)
   })
 }
