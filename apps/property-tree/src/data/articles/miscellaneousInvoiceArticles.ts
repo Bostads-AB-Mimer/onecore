@@ -165,5 +165,5 @@ export const getArticleById = (
 }
 
 export const SelectableInvoiceArticles = MiscellaneousInvoiceArticles.filter(
-  (a) => a.id !== '329000' && a.id !== '329001'
+  (a) => a.id !== '329000'
 )
