@@ -18,9 +18,9 @@ import { SelectableInvoiceArticles } from '@/data/articles/miscellaneousInvoiceA
 
 interface ArticleSectionProps {
   invoiceRows: MiscellaneousInvoiceRow[]
-  administrativaKostnader: boolean
+  administrativeCosts: boolean
   onInvoiceRowsChange: (rows: MiscellaneousInvoiceRow[]) => void
-  onAdministrativaKostnaderChange: (checked: boolean) => void
+  onAdministrativeCostsChange: (checked: boolean) => void
   errors?: {
     articles?: string
   }
@@ -28,9 +28,9 @@ interface ArticleSectionProps {
 
 export function ArticleSection({
   invoiceRows,
-  administrativaKostnader,
+  administrativeCosts,
   onInvoiceRowsChange,
-  onAdministrativaKostnaderChange,
+  onAdministrativeCostsChange,
   errors,
 }: ArticleSectionProps) {
   const handleChangeRowPrice = (index: number, value: string) => {
@@ -183,8 +183,8 @@ export function ArticleSection({
         <div className="flex items-center space-x-2">
           <Checkbox
             id="administrativaKostnader"
-            checked={administrativaKostnader}
-            onCheckedChange={onAdministrativaKostnaderChange}
+            checked={administrativeCosts}
+            onCheckedChange={onAdministrativeCostsChange}
           />
           <Label
             htmlFor="administrativaKostnader"

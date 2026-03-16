@@ -356,9 +356,9 @@ export function MiscellaneousInvoiceForm() {
             <h3 className="font-medium">Artikelinformation</h3>
             <ArticleSection
               invoiceRows={invoiceRows}
-              administrativaKostnader={administrativeCosts}
+              administrativeCosts={administrativeCosts}
               onInvoiceRowsChange={setInvoiceRows}
-              onAdministrativaKostnaderChange={setAdministrativeCosts}
+              onAdministrativeCostsChange={setAdministrativeCosts}
               errors={{
                 articles: errors.articles,
               }}
