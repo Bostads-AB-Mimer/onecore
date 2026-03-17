@@ -483,6 +483,7 @@ export const getContacts = async (
       query ($first: Int, $after: String) {
         contacts(first: $first, after: $after) {
           edges {
+            cursor
             node {
               dbId
               name
