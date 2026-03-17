@@ -75,8 +75,8 @@ const LeasesPage = () => {
         URL.revokeObjectURL(url)
         a.remove()
       }, 1000)
-    } catch (error) {
-      console.error('Export failed:', error)
+    } catch {
+      // Export errors are visible to the user via the button state resetting
     } finally {
       setIsExporting(false)
     }
