@@ -237,19 +237,24 @@ export class LeaseSearchQueryBuilder {
    * Uses STATUS_CONDITIONS lookup for cleaner code
    */
   applyStatusFilter(): this {
-    if (!this.params.status?.length) return this
-
-    const statuses = this.params.status
     const currentDate = new Date().toISOString().split('T')[0]
 
-    this.query.where(function () {
-      for (const status of statuses) {
-        const condition = STATUS_CONDITIONS[normalizeStatus(status)]
-        if (condition) {
-          this.orWhere((qb) => condition(qb, currentDate))
+    if (this.params.status?.length) {
+      // Explicit status filter — use exactly what was requested
+      const statuses = this.params.status
+      this.query.where(function () {
+        for (const status of statuses) {
+          const condition = STATUS_CONDITIONS[normalizeStatus(status)]
+          if (condition) {
+            this.orWhere((qb) => condition(qb, currentDate))
+          }
         }
-      }
-    })
+      })
+    } else if (!this.params.includeEnded) {
+      // Default: exclude Upphört (status 3) for performance
+      const endedCondition = STATUS_CONDITIONS['ended']
+      this.query.whereNot((qb) => endedCondition(qb, currentDate))
+    }
 
     return this
   }
@@ -347,9 +352,11 @@ export class LeaseSearchQueryBuilder {
     // Always join address for display
     this.ensureAddressJoin()
 
+    // Always join babuf for rental object code (objektnummer)
+    this.ensureBabufJoin()
+
     // Force joins for export to ensure all fields are populated
     if (this.options.forExport) {
-      this.ensureBabufJoin()
       this.ensureDistrictJoin()
     }
 
@@ -361,7 +368,8 @@ export class LeaseSearchQueryBuilder {
       'hyobj.sistadeb as lastDebitDate',
       'cmobj.keycmobt as objectTypeCode',
       'hyhav.hyhavben as leaseType',
-      'cmadr.adress1 as address'
+      'cmadr.adress1 as address',
+      'babuf.hyresid as rentalObjectCode'
     )
 
     // Add JSON subquery to fetch contacts with email/phone in one go
@@ -381,8 +389,11 @@ export class LeaseSearchQueryBuilder {
       ) as contactsJson`)
     )
 
-    // Conditionally select if tables were joined by filters
-    if (this.joinedTables.has('babuf')) {
+    // Conditionally select property fields if property/building filter was used or exporting
+    const hasPropertyFilter =
+      (this.params.property && this.params.property.length > 0) ||
+      (this.params.buildingCodes && this.params.buildingCodes.length > 0)
+    if (this.options.forExport || hasPropertyFilter) {
       this.query.select(
         'babuf.fstcaption as property',
         'babuf.bygcode as buildingCode'
@@ -415,10 +426,26 @@ export class LeaseSearchQueryBuilder {
       leaseStartDate: 'hyobj.fdate',
       lastDebitDate: 'hyobj.sistadeb',
       leaseId: 'hyobj.hyobjben',
+      address: 'cmadr.adress1',
+      objectType: 'cmobj.keycmobt',
+      rentalObjectCode: 'babuf.hyresid',
     }
 
-    const sortField = sortFieldMap[sortBy] || 'hyobj.fdate'
-    this.query.orderBy(sortField, sortOrder)
+    if (sortBy === 'address') {
+      // Natural sort: split street name from street number so "2" comes before "10"
+      const dir = sortOrder === 'desc' ? 'DESC' : 'ASC'
+      this.query.orderByRaw(`
+        LEFT(cmadr.adress1, CASE WHEN PATINDEX('%[0-9]%', cmadr.adress1) > 0 THEN PATINDEX('%[0-9]%', cmadr.adress1) - 1 ELSE LEN(cmadr.adress1) END) ${dir},
+        CASE WHEN PATINDEX('%[0-9]%', cmadr.adress1) > 0
+          THEN CAST(SUBSTRING(cmadr.adress1, PATINDEX('%[0-9]%', cmadr.adress1), PATINDEX('%[^0-9]%', SUBSTRING(cmadr.adress1, PATINDEX('%[0-9]%', cmadr.adress1), 100) + ' ') - 1) AS INT)
+          ELSE 0
+        END ${dir},
+        cmadr.adress1 ${dir}
+      `)
+    } else {
+      const sortField = sortFieldMap[sortBy] || 'hyobj.fdate'
+      this.query.orderBy(sortField, sortOrder)
+    }
 
     return this
   }
@@ -437,7 +464,7 @@ export class LeaseSearchQueryBuilder {
 export const getObjectTypeLabel = (objectTypeCode: string): string => {
   const typeMap: Record<string, string> = {
     balgh: 'Bostad',
-    babps: 'Parkering',
+    babps: 'Bilplats',
     balok: 'Lokal',
     bahyr: 'Övrigt',
   }
@@ -473,6 +500,7 @@ export const transformRow = (
     address: trimmedRow.address || null,
     startDate: trimmedRow.startDate || null,
     lastDebitDate: trimmedRow.lastDebitDate || null,
+    rentalObjectCode: trimmedRow.rentalObjectCode || null,
     status,
   }
 

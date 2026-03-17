@@ -132,10 +132,16 @@ export const routes = (router: KoaRouter) => {
    *           maximum: 100
    *         description: Items per page
    *       - in: query
+   *         name: includeEnded
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include Upphört (ended) contracts. Excluded by default for performance.
+   *       - in: query
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -178,6 +184,9 @@ export const routes = (router: KoaRouter) => {
    *                             phone:
    *                               type: string
    *                               nullable: true
+   *                       rentalObjectCode:
+   *                         type: string
+   *                         nullable: true
    *                       address:
    *                         type: string
    *                         nullable: true
@@ -421,6 +430,7 @@ export const routes = (router: KoaRouter) => {
             sheetName: 'Hyreskontrakt',
             columns: [
               { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+              { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
               { header: 'Hyresgäst', key: 'tenantName', width: 30 },
               { header: 'Kundnummer', key: 'contactCode', width: 18 },
               { header: 'E-post', key: 'email', width: 30 },
@@ -436,6 +446,7 @@ export const routes = (router: KoaRouter) => {
             ],
             rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
               leaseId: lease.leaseId,
+              rentalObjectCode: lease.rentalObjectCode || '',
               tenantName: joinField(lease.contacts, (c) => c.name),
               contactCode: joinField(lease.contacts, (c) => c.contactCode),
               email: joinField(lease.contacts, (c) => c.email),
