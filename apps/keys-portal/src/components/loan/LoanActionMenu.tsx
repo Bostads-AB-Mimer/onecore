@@ -10,6 +10,7 @@ import { EditKeyLoanDialog } from './EditKeyLoanDialog'
 import { receiptService } from '@/services/api/receiptService'
 import {
   fetchReceiptData,
+  assembleFromLoan,
   openPdfInNewTab,
   openMaintenanceReceiptInNewTab,
 } from '@/services/receiptHandlers'
@@ -122,8 +123,14 @@ export function LoanActionMenu({
       } else if (lease) {
         // Regular loans need lease context
         const receiptId = loanReceipt?.id
-        const receiptData = await fetchReceiptData(receiptId || loan.id, lease)
-        await openPdfInNewTab(receiptData, receiptId)
+        if (receiptId) {
+          const receiptData = await fetchReceiptData(receiptId, lease)
+          await openPdfInNewTab(receiptData, receiptId)
+        } else {
+          // No receipt record — generate directly from loan data
+          const receiptData = await assembleFromLoan(loan.id, lease)
+          await openPdfInNewTab(receiptData)
+        }
       } else {
         // Non-maintenance loan without lease - show error
         toast({

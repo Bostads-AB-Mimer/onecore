@@ -309,6 +309,33 @@ export async function fetchReceiptData(
 }
 
 /**
+ * Assembles ReceiptData directly from a loan ID (no receipt record needed).
+ * Used when the receipt record has been deleted but the loan still exists.
+ */
+export async function assembleFromLoan(
+  loanId: string,
+  lease: Lease
+): Promise<ReceiptData> {
+  const keyLoan = (await keyLoanService.get(loanId, {
+    includeKeySystem: true,
+    includeCards: true,
+  })) as KeyLoanWithDetails
+
+  const keys = keyLoan.keysArray as KeyDetails[]
+  const cards = keyLoan.keyCardsArray || []
+
+  return {
+    lease,
+    tenants: lease.tenants ?? [],
+    keys,
+    receiptType: 'LOAN',
+    operationDate: keyLoan.createdAt ? new Date(keyLoan.createdAt) : new Date(),
+    loanId,
+    cards: cards.length > 0 ? cards : undefined,
+  }
+}
+
+/**
  * Generates and uploads a return receipt PDF to MinIO for a single loan
  *
  * @param receiptId - The receipt ID
