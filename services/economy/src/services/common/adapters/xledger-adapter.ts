@@ -9,6 +9,7 @@ import {
   InvoiceTransactionType,
   PaymentStatus,
   XledgerContact,
+  XledgerProject,
 } from '@onecore/types'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 import { match, P } from 'ts-pattern'
@@ -291,6 +292,13 @@ const transformToContact = (contactData: any): XledgerContact => {
   }
 }
 
+const transformToProject = (projectData: any): XledgerProject => {
+  return {
+    code: projectData.code,
+    description: projectData.description,
+  }
+}
+
 const transformToCustomer = (customerData: any): XledgerCustomer => {
   return {
     contactCode: customerData.code,
@@ -473,6 +481,51 @@ export const getCustomers = async (
   }
 
   return customers
+}
+
+export const getProjects = async (
+  after?: string
+): Promise<XledgerProject[]> => {
+  const query = {
+    query: gql`
+      query ($first: Int, $after: String) {
+        projects(first: $first, after: $after) {
+          edges {
+            cursor
+            node {
+              code
+              description
+            }
+          }
+          pageInfo {
+            hasNextPage
+          }
+        }
+      }
+    `,
+    variables: {
+      first: 100,
+      after: after,
+    },
+  }
+
+  const result = await makeXledgerRequest(query)
+
+  if (!result.data && result.data.errors) {
+    logger.error(result.data.errors[0], 'Error querying Xledger')
+  }
+
+  const projects = result.data.projects.edges.map((e: any) =>
+    transformToProject(e.node)
+  )
+
+  if (result.data.projects.pageInfo.hasNextPage) {
+    const lastEdge = result.data.projects.edges.at(-1)
+    const nextProjects = await getProjects(lastEdge.cursor)
+    projects.push(...nextProjects)
+  }
+
+  return projects
 }
 
 export const getContacts = async (

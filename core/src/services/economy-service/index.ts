@@ -150,4 +150,20 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody(result.data, metadata)
     }
   })
+
+  router.get('/xledger-projects', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.getProjects()
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+      }
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  })
 }
