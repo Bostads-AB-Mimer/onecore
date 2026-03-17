@@ -4,13 +4,21 @@ jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),
 }))
 
+jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
+  updateLeaseInvoiceRows: jest.fn(),
+}))
+
 import { getActiveLeasesByRentalObjectCodes } from '@src/services/common/adapters/xpand-db-adapter'
+import { updateLeaseInvoiceRows } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { imdService } from '.'
 
 const mockGetActiveLeases =
   getActiveLeasesByRentalObjectCodes as jest.MockedFunction<
     typeof getActiveLeasesByRentalObjectCodes
   >
+
+const mockUpdateLeaseInvoiceRows =
+  updateLeaseInvoiceRows as jest.MockedFunction<typeof updateLeaseInvoiceRows>
 
 const csv = `
 306-008-01-0201;2026-01-01;2026-01-31;VV;129,312;136,892;7,580;621,680;;82,016;m3;;;1
@@ -164,5 +172,102 @@ describe(imdService.enrichIMDRows, () => {
     ])
 
     expect(result.ok).toBe(false)
+  })
+})
+
+const makeEnrichedRow = (
+  rentalObjectCode: string,
+  leaseId: string,
+  cost = 100
+) => ({
+  rentalObjectCode,
+  leaseId,
+  from: new Date('2026-01-01'),
+  to: new Date('2026-01-31'),
+  unit: 'VV',
+  volume: 7.58,
+  cost,
+})
+
+describe(imdService.addRentRows, () => {
+  beforeEach(() => {
+    mockUpdateLeaseInvoiceRows.mockReset()
+  })
+
+  it('calls updateLeaseInvoiceRows for each row with correct params', async () => {
+    mockUpdateLeaseInvoiceRows.mockResolvedValue({ ok: true, data: null })
+
+    await imdService.addRentRows(
+      [makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02', 621.68)],
+      'article-123',
+      'IMD Varmvatten'
+    )
+
+    expect(mockUpdateLeaseInvoiceRows).toHaveBeenCalledWith({
+      leaseId: '306-008-01-0201/02',
+      rowsToDelete: [],
+      rowsToAdd: [
+        {
+          amount: 621.68,
+          vat: 0,
+          from: '2026-01-01',
+          to: '2026-01-31',
+          article: 'article-123',
+          label: 'IMD Varmvatten',
+        },
+      ],
+    })
+  })
+
+  it('reports succeeded and failed rows separately', async () => {
+    mockUpdateLeaseInvoiceRows
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: false, err: 'lease not found' })
+
+    const result = await imdService.addRentRows(
+      [
+        makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02'),
+        makeEnrichedRow('306-008-01-0202', '306-008-01-0202/01'),
+      ],
+      'article-123',
+      'IMD Varmvatten'
+    )
+
+    expect(result.succeeded).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          leaseId: '306-008-01-0201/02',
+          rentalObjectCode: '306-008-01-0201',
+        }),
+      ])
+    )
+    expect(result.failed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          leaseId: '306-008-01-0202/01',
+          rentalObjectCode: '306-008-01-0202',
+          error: 'lease not found',
+        }),
+      ])
+    )
+  })
+
+  it('handles rejected promises without crashing the batch', async () => {
+    mockUpdateLeaseInvoiceRows
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockRejectedValueOnce(new Error('network timeout'))
+
+    const result = await imdService.addRentRows(
+      [
+        makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02'),
+        makeEnrichedRow('306-008-01-0202', '306-008-01-0202/01'),
+      ],
+      'article-123',
+      'IMD Varmvatten'
+    )
+
+    expect(result.succeeded).toHaveLength(1)
+    expect(result.failed).toHaveLength(1)
+    expect(result.failed[0].error).toContain('network timeout')
   })
 })

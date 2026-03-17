@@ -21,6 +21,7 @@ import {
 
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
+const companyId = config.tenfast.companyId
 
 const makeTenfastRequest = async (
   url: string,
@@ -194,6 +195,36 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     // We should maybe add a unique id property to the Invoice type instead
     transactionTypeName: 'some random string',
     credit: null,
+  }
+}
+
+export const updateLeaseInvoiceRows = async (params: {
+  leaseId: string
+  rowsToDelete: string[]
+  rowsToAdd: Omit<TenfastInvoiceRow, '_id' | 'accountingRows'>[]
+}): Promise<AdapterResult<null, string>> => {
+  try {
+    const res = await makeTenfastRequest(
+      `/v1/hyresvard/extras/avtal/${encodeURIComponent(params.leaseId)}/rows`,
+      {
+        method: 'PATCH',
+        params: { hyresvard: companyId },
+        data: {
+          vatEnabled: true,
+          rowsToDelete: params.rowsToDelete,
+          rowsToAdd: params.rowsToAdd,
+        },
+      }
+    )
+
+    if (res.status === 200) {
+      return { ok: true, data: null }
+    }
+
+    return { ok: false, err: `Unexpected status ${res.status}` }
+  } catch (err: any) {
+    logger.error(err, 'tenfast-adapter.updateLeaseInvoiceRows')
+    return { ok: false, err: err.message }
   }
 }
 
