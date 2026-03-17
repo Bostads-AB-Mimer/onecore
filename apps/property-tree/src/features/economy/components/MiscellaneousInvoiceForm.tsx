@@ -62,15 +62,15 @@ export function MiscellaneousInvoiceForm() {
     },
     onSuccess: (data, variables) => {
       toast({
-        title: 'Underlag sparat',
-        description: `Ströfaktura-underlag för ${variables.contactCode} har skapats.`,
+        title: 'Underlag skickat',
+        description: `Ströfaktura-underlag för ${variables.contactCode} har skickats.`,
       })
       handleReset()
     },
     onError: () => {
       toast({
         title: 'Fel',
-        description: 'Kunde inte spara underlaget. Försök igen.',
+        description: 'Kunde inte skicka underlaget. Försök igen.',
         variant: 'destructive',
       })
     },
@@ -402,8 +402,8 @@ export function MiscellaneousInvoiceForm() {
               }
             >
               {isSubmitting || submitInvoiceMutation.isPending
-                ? 'Sparar...'
-                : 'Spara underlag'}
+                ? 'Skickar...'
+                : 'Skicka underlag'}
             </Button>
           </div>
         </div>
