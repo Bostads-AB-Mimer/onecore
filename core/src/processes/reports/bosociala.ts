@@ -26,7 +26,7 @@ export const handleBosociala = async () => {
       try {
         await sendEmail({
           to: config.emailAddresses.bosociala,
-          subject: 'Körning: rapport av obetalda hyresavier',
+          subject: 'Körning: rapport till bosociala',
           body: notification.join('\n'),
           attachments: resultFiles,
         })
