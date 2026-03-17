@@ -6,19 +6,19 @@ import { Label } from '@/shared/ui/Label'
 import { Textarea } from '@/shared/ui/Textarea'
 
 interface AdditionalInfoSectionProps {
-  projekt: string
-  internInfo: string
-  onProjektChange: (value: string) => void
-  onInternInfoChange: (value: string) => void
+  project: string
+  comment: string
+  onProjectChange: (value: string) => void
+  onCommentChange: (value: string) => void
   onFileAttached: (file: File | null) => void
   attachedFile?: File | null
 }
 
 export function AdditionalInfoSection({
-  projekt,
-  internInfo,
-  onProjektChange,
-  onInternInfoChange,
+  project,
+  comment,
+  onProjectChange,
+  onCommentChange,
   onFileAttached,
   attachedFile,
 }: AdditionalInfoSectionProps) {
@@ -37,27 +37,27 @@ export function AdditionalInfoSection({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="projekt">Projekt</Label>
+        <Label htmlFor="project">Projekt</Label>
         <Input
-          id="projekt"
-          value={projekt}
-          onChange={(e) => onProjektChange(e.target.value)}
+          id="project"
+          value={project}
+          onChange={(e) => onProjectChange(e.target.value)}
           placeholder="Projektnummer (valfritt)"
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="internInfo">Intern info</Label>
+        <Label htmlFor="comment">Intern info</Label>
         <Textarea
-          id="internInfo"
-          value={internInfo}
-          onChange={(e) => onInternInfoChange(e.target.value)}
+          id="comment"
+          value={comment}
+          onChange={(e) => onCommentChange(e.target.value)}
           placeholder="Intern information som inte syns på fakturan..."
           maxLength={255}
           rows={2}
         />
         <p className="text-xs text-muted-foreground text-right">
-          {internInfo.length}/255 tecken
+          {comment.length}/255 tecken
         </p>
       </div>
 

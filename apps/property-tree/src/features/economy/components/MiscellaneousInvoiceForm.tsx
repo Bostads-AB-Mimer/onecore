@@ -53,7 +53,7 @@ export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // Mutation for submitting the invoice
+
   const submitInvoiceMutation = useMutation({
     mutationFn: async (invoice: MiscellaneousInvoicePayload) => {
       return await economyService.submitMiscellaneousInvoice(invoice)
@@ -212,7 +212,6 @@ export function MiscellaneousInvoiceForm() {
 
     setIsSubmitting(true)
 
-    // Prepare invoice payload
     const invoicePayload: MiscellaneousInvoicePayload = {
       reference: reference?.dbId || '',
       invoiceDate: invoiceDate,
@@ -256,7 +255,6 @@ export function MiscellaneousInvoiceForm() {
       <Card className="p-4">
         Nytt ströfaktura-underlag
         <div className="space-y-6">
-          {/* Datum och Referens */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-3">
               <Label>Datum</Label>
@@ -320,7 +318,6 @@ export function MiscellaneousInvoiceForm() {
 
           <Separator />
 
-          {/* Kundsektion */}
           <div className="space-y-4">
             <h3 className="font-medium">Kundinformation</h3>
             <TenantSearchSection
@@ -332,7 +329,6 @@ export function MiscellaneousInvoiceForm() {
 
           <Separator />
 
-          {/* Kontraktsektion */}
           <div className="space-y-4">
             <h3 className="font-medium">Kontraktsinformation</h3>
             <LeaseContractSection
@@ -351,7 +347,6 @@ export function MiscellaneousInvoiceForm() {
 
           <Separator />
 
-          {/* Artikelsektion */}
           <div className="space-y-4">
             <h3 className="font-medium">Artikelinformation</h3>
             <ArticleSection
@@ -367,14 +362,13 @@ export function MiscellaneousInvoiceForm() {
 
           <Separator />
 
-          {/* Övrig information */}
           <div className="space-y-4">
             <h3 className="font-medium">Övrig information</h3>
             <AdditionalInfoSection
-              projekt={projectCode}
-              internInfo={comment}
-              onProjektChange={setProjectCode}
-              onInternInfoChange={setComment}
+              project={projectCode}
+              comment={comment}
+              onProjectChange={setProjectCode}
+              onCommentChange={setComment}
               onFileAttached={setAttachedFile}
               attachedFile={attachedFile}
             />
@@ -382,7 +376,6 @@ export function MiscellaneousInvoiceForm() {
 
           <Separator />
 
-          {/* Knappar */}
           <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
             <Button
               type="button"
