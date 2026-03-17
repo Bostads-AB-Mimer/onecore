@@ -11,12 +11,12 @@ import type { RentalBlocksSearchParams } from '@/services/types'
 const hasSearchFilters = (params: RentalBlocksSearchParams) =>
   Boolean(
     params.q ||
-    params.kategori ||
-    params.distrikt ||
-    params.blockReason ||
-    params.fastighet ||
-    params.fromDateGte ||
-    params.toDateLte
+      params.kategori ||
+      params.distrikt ||
+      params.blockReason ||
+      params.fastighet ||
+      params.fromDateGte ||
+      params.toDateLte
   )
 
 const fetchRentalBlocks = (

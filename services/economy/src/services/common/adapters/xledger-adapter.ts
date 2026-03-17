@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { randomUUID } from 'crypto'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
@@ -7,6 +8,8 @@ import {
   InvoicePaymentEvent,
   InvoiceTransactionType,
   PaymentStatus,
+  XledgerContact,
+  XledgerProject,
 } from '@onecore/types'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 import { match, P } from 'ts-pattern'
@@ -17,11 +20,15 @@ import { InvoiceWithMatchId } from '@src/services/report-service/types'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
+const XledgerAuthHeader = {
+  Authorization: 'token ' + config.xledger.apiToken,
+}
+
 const axiosOptions = {
   method: 'POST',
   headers: {
     'Content-type': 'application/json',
-    Authorization: 'token ' + config.xledger.apiToken,
+    ...XledgerAuthHeader,
   },
 }
 
@@ -44,22 +51,25 @@ const getCallerFromError = (error: Error) => {
     .split(' ')[0]
 }
 
-const makeXledgerRequest = async (query: {
-  query: string
-  variables?: Record<string, any>
-}): Promise<any> => {
+const makeXledgerRequest = async (
+  query: {
+    query: string
+    variables?: Record<string, any>
+  },
+  attachment?: any // TODO formidable file PersistentFileStorage
+): Promise<any> => {
   function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
-  const result = await makeXledgerHttpRequest(query)
+  const result = await makeXledgerHttpRequest(query, attachment)
 
   if (result.status === 'ok') {
     return result.data
   } else if (result.status === 'retry') {
     logger.warn('Rate limit exceeded, waiting and retrying')
     await sleep(3000)
-    return await makeXledgerRequest(query)
+    return await makeXledgerRequest(query, attachment)
   } else {
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
@@ -72,14 +82,39 @@ const makeXledgerRequest = async (query: {
   }
 }
 
-const makeXledgerHttpRequest = async (query: {
-  query: string
-  variables?: Record<string, any>
-}): Promise<XledgerResponse> => {
-  const result = await axios(`${config.xledger.url}`, {
-    data: query,
-    ...axiosOptions,
-  })
+const makeXledgerHttpRequest = async (
+  query: {
+    query: string
+    variables?: Record<string, any>
+  },
+  attachment?: any
+): Promise<XledgerResponse> => {
+  let result: axios.AxiosResponse
+
+  if (attachment) {
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const formData = new FormData()
+
+    const fileBuffer = fs.readFileSync(attachment.filepath)
+    formData.append(
+      attachment.originalFilename,
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      new Blob([fileBuffer]),
+      attachment.originalFilename
+    )
+    formData.append('content', JSON.stringify(query))
+
+    result = await axios.postForm(`${config.xledger.url}`, formData, {
+      headers: {
+        ...XledgerAuthHeader,
+      },
+    })
+  } else {
+    result = await axios(`${config.xledger.url}`, {
+      data: query,
+      ...axiosOptions,
+    })
+  }
 
   if (result.status === 200) {
     if (result.data && result.data.errors) {
@@ -234,7 +269,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
   return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
 }
 
-export interface XledgerContact {
+export interface XledgerCustomer {
   contactCode: string
   address: {
     street: string
@@ -248,19 +283,37 @@ export interface XledgerContact {
 
 const transformToContact = (contactData: any): XledgerContact => {
   return {
-    contactCode: contactData.code,
-    address: {
-      street: contactData.address.streetAddress,
-      postalCode: contactData.address.zipCode,
-      city: contactData.address.place,
-    },
-    fullName: contactData.description,
-    nationalRegistrationNumber: contactData.company.companyNumber,
+    dbId: contactData.dbId,
+    fullName: contactData.name,
+    firstName: contactData.firstName,
+    lastName: contactData.lastName,
     phoneNumber: contactData.phone,
+    email: contactData.email,
   }
 }
 
-const getContact = async (contactCode: string) => {
+const transformToProject = (projectData: any): XledgerProject => {
+  return {
+    code: projectData.code,
+    description: projectData.description,
+  }
+}
+
+const transformToCustomer = (customerData: any): XledgerCustomer => {
+  return {
+    contactCode: customerData.code,
+    address: {
+      street: customerData.address.streetAddress,
+      postalCode: customerData.address.zipCode,
+      city: customerData.address.place,
+    },
+    fullName: customerData.description,
+    nationalRegistrationNumber: customerData.company.companyNumber,
+    phoneNumber: customerData.phone,
+  }
+}
+
+const getCustomer = async (contactCode: string) => {
   const query = {
     query: `{
       customers(first: 1, filter: { code: "${contactCode}" }) {
@@ -352,7 +405,7 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
   }
 }
 
-const getContactDbId = async (contactCode: string): Promise<string | null> => {
+const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
     query: `{
       customers (first: 1, filter: { code: "${contactCode}" }) {
@@ -372,10 +425,10 @@ const getContactDbId = async (contactCode: string): Promise<string | null> => {
   return result.data?.customers?.edges?.[0].node.dbId ?? null
 }
 
-export const getContacts = async (
+export const getCustomers = async (
   contactCodes: string[],
   after?: string
-): Promise<XledgerContact[]> => {
+): Promise<XledgerCustomer[]> => {
   const query = {
     query: gql`
       query ($first: Int!, $filter: Customer_Filter, $after: String) {
@@ -417,13 +470,107 @@ export const getContacts = async (
     logger.error(result.data.errors[0], 'Error querying Xledger')
   }
 
-  const contacts = result.data.customers.edges.map((e: any) =>
-    transformToContact(e.node)
+  const customers = result.data.customers.edges.map((e: any) =>
+    transformToCustomer(e.node)
   )
 
   if (result.data.customers.pageInfo.hasNextPage) {
     const lastEdge = result.data.customers.edges.at(-1)
-    const nextContacts = await getContacts(contactCodes, lastEdge.cursor)
+    const nextCustomers = await getCustomers(contactCodes, lastEdge.cursor)
+    customers.push(...nextCustomers)
+  }
+
+  return customers
+}
+
+export const getProjects = async (
+  after?: string
+): Promise<XledgerProject[]> => {
+  const query = {
+    query: gql`
+      query ($first: Int, $after: String) {
+        projects(first: $first, after: $after) {
+          edges {
+            cursor
+            node {
+              code
+              description
+            }
+          }
+          pageInfo {
+            hasNextPage
+          }
+        }
+      }
+    `,
+    variables: {
+      first: 100,
+      after: after,
+    },
+  }
+
+  const result = await makeXledgerRequest(query)
+
+  if (!result.data && result.data.errors) {
+    logger.error(result.data.errors[0], 'Error querying Xledger')
+  }
+
+  const projects = result.data.projects.edges.map((e: any) =>
+    transformToProject(e.node)
+  )
+
+  if (result.data.projects.pageInfo.hasNextPage) {
+    const lastEdge = result.data.projects.edges.at(-1)
+    const nextProjects = await getProjects(lastEdge.cursor)
+    projects.push(...nextProjects)
+  }
+
+  return projects
+}
+
+export const getContacts = async (
+  after?: string
+): Promise<XledgerContact[]> => {
+  const query = {
+    query: gql`
+      query ($first: Int, $after: String) {
+        contacts(first: $first, after: $after) {
+          edges {
+            cursor
+            node {
+              dbId
+              name
+              firstName
+              lastName
+              phone
+              email
+            }
+          }
+          pageInfo {
+            hasNextPage
+          }
+        }
+      }
+    `,
+    variables: {
+      first: 100,
+      after: after,
+    },
+  }
+
+  const result = await makeXledgerRequest(query)
+
+  if (!result.data && result.data.errors) {
+    logger.error(result.data.errors[0], 'Error querying Xledger')
+  }
+
+  const contacts = result.data.contacts.edges.map((e: any) =>
+    transformToContact(e.node)
+  )
+
+  if (result.data.contacts.pageInfo.hasNextPage) {
+    const lastEdge = result.data.contacts.edges.at(-1)
+    const nextContacts = await getContacts(lastEdge.cursor)
     contacts.push(...nextContacts)
   }
 
@@ -587,7 +734,7 @@ export const getInvoicesByContactCode = async (
   contactCode: string,
   filters?: { from?: Date }
 ): Promise<Invoice[] | null> => {
-  const xledgerId = await getContactDbId(contactCode)
+  const xledgerId = await getCustomerDbId(contactCode)
 
   if (!xledgerId) {
     logger.error(
@@ -804,7 +951,7 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
 export const syncContact = async (
   dbContact: any
 ): Promise<AdapterResult<any, string>> => {
-  const xledgerContact = await getContact(dbContact.ContactCode)
+  const xledgerContact = await getCustomer(dbContact.ContactCode)
 
   try {
     if (!xledgerContact) {
@@ -1074,4 +1221,108 @@ export const uploadFile = async (filename: string, csvFile: string) => {
 
 export const healthCheck = async () => {
   return {}
+}
+
+const quote = (s: string | number) => `"${s}"`
+
+export const submitMiscellaneousInvoice = async (
+  invoice: MiscellaneousInvoicePayload
+) => {
+  const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
+
+  const nodes = invoice.invoiceRows.map(
+    (ir, index) => gql`
+      {
+        node: {
+          subledger: { code: ${quote(invoice.contactCode)} }
+          lineNumber: ${index}
+          product: {
+            code: ${quote(ir.articleId)}
+          }
+          text: ${quote(`${ir.articleName}${ir.text ? `: ${ir.text}` : ''}`)}
+          quantity: ${ir.amount}
+          unitPrice: ${ir.price}
+          glObject1: {
+            code: ${quote(invoice.costCentre)}
+          }
+          glObject3: {
+            code: ${quote(invoice.propertyCode)}
+          }
+          headerInfo: ${quote(headerInfo)}
+          approved: false
+          invoiceDate: ${quote(dateToGraphQlDateString(new Date(invoice.invoiceDate)))}
+          ourRef: {
+            dbId: ${quote(invoice.reference)}
+          }
+          ${
+            invoice.projectCode
+              ? `
+                glObject2: {
+                  code: ${quote(invoice.projectCode)}
+                }
+              `
+              : ''
+          }
+          comment: ${quote(invoice.comment ?? '')}
+          ${
+            invoice.attachment
+              ? `
+                attachment: ${quote(invoice.attachment.originalFilename)}
+                `
+              : ''
+          }
+        }
+      }
+    `
+  )
+
+  const mutation = gql`
+    mutation {
+      addInvoiceBaseItems(
+        inputs: [
+          ${nodes}
+        ]
+      ) {
+        edges {
+          node {
+            dbId
+          }
+        }
+      }
+    }
+  `
+
+  try {
+    const result = await makeXledgerRequest(
+      { query: mutation },
+      invoice.attachment
+    )
+
+    return result.data.addInvoiceBaseItems.edges
+  } catch (err: unknown) {
+    logger.error(err, 'Error creating miscellaneous invoice')
+    throw err
+  }
+}
+
+interface XledgerInvoiceRow {
+  text?: string
+  price: number
+  amount: number
+  articleName: string
+  articleId: string
+}
+
+interface MiscellaneousInvoicePayload {
+  reference: string
+  invoiceDate: Date
+  contactCode: string
+  tenantName: string
+  leaseId: string
+  costCentre: string
+  propertyCode: string
+  invoiceRows: XledgerInvoiceRow[]
+  comment?: string
+  projectCode?: string
+  attachment?: any // TODO formidable file PersistentFileStorage
 }

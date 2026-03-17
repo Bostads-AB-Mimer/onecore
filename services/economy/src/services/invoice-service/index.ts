@@ -11,11 +11,13 @@ import {
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
+  submitMiscellaneousInvoice,
 } from '../common/adapters/xledger-adapter'
 import {
   getInvoiceRows,
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
+import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -149,6 +151,52 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(events, metadata)
     } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/invoices/miscellaneous', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const success = await submitMiscellaneousInvoice({
+        ...JSON.parse(ctx.request.body.invoice),
+        attachment: ctx.request.files?.attachment,
+      })
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(success, metadata)
+    } catch (error: any) {
+      logger.error(error)
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  /* 
+    Gets property information required to create a miscellaneous invoice for a lease.
+    We could instead get the required information by making several queries to the leasing- and
+    property-services, but since it is only required in one place at the moment 
+    (creating miscellaneous invoices from the onecore web application) I decided to keep it
+    isolated here.
+  */
+  router.get('(.*)/invoices/miscellaneous/:rentalId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await getPropertyCodeAndCostCentreForLease(
+        ctx.params.rentalId
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result, metadata)
+    } catch (error: any) {
+      logger.error(error)
       ctx.status = 500
       ctx.body = {
         message: error.message,

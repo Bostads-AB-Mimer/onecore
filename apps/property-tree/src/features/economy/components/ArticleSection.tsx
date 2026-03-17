@@ -1,0 +1,199 @@
+import { MiscellaneousInvoiceRow } from '@onecore/types/src/economy/miscellaneous-invoice'
+import { Plus, X } from 'lucide-react'
+
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/Button'
+import { Checkbox } from '@/shared/ui/Checkbox'
+import { Input } from '@/shared/ui/Input'
+import { Label } from '@/shared/ui/Label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
+
+import { SelectableInvoiceArticles } from '@/data/articles/miscellaneousInvoiceArticles'
+
+interface ArticleSectionProps {
+  invoiceRows: MiscellaneousInvoiceRow[]
+  administrativeCosts: boolean
+  onInvoiceRowsChange: (rows: MiscellaneousInvoiceRow[]) => void
+  onAdministrativeCostsChange: (checked: boolean) => void
+  errors?: {
+    articles?: string
+  }
+}
+
+export function ArticleSection({
+  invoiceRows,
+  administrativeCosts,
+  onInvoiceRowsChange,
+  onAdministrativeCostsChange,
+  errors,
+}: ArticleSectionProps) {
+  const handleChangeRowPrice = (index: number, value: string) => {
+    const newRows = [...invoiceRows]
+    newRows[index] = { ...newRows[index], price: value }
+    onInvoiceRowsChange(newRows)
+  }
+
+  const handleChangeRowAmount = (index: number, value: string) => {
+    const newRows = [...invoiceRows]
+    newRows[index] = { ...newRows[index], amount: Number(value) || 0 }
+    onInvoiceRowsChange(newRows)
+  }
+
+  const handleChangeRowText = (index: number, value: string) => {
+    const newRows = [...invoiceRows]
+    newRows[index] = { ...newRows[index], text: value }
+    onInvoiceRowsChange(newRows)
+  }
+
+  const handleChangeRowArticle = (index: number, articleId: string) => {
+    const newRows = [...invoiceRows]
+    const article = SelectableInvoiceArticles.find((a) => a.id === articleId)
+    if (!article) {
+      return
+    }
+
+    newRows[index].articleId = articleId
+    newRows[index].articleName = article.name
+    newRows[index].price =
+      article.standardPrice === 0 ? '' : article.standardPrice.toString()
+    onInvoiceRowsChange(newRows)
+  }
+
+  const handleAddRow = () => {
+    onInvoiceRowsChange([
+      ...invoiceRows,
+      { price: '0', amount: 1, articleId: '', articleName: '' },
+    ])
+  }
+
+  const handleRemoveRow = (index: number) => {
+    if (invoiceRows.length > 1) {
+      onInvoiceRowsChange(invoiceRows.filter((_, i) => i !== index))
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Fakturarader - grupperat */}
+      <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
+        <Label>Fakturarader</Label>
+        {invoiceRows.map((row, index) => (
+          <div
+            key={index}
+            className="space-y-2 sm:space-y-0 sm:grid grid-rows-2 gap-2"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="artikel">Artikel</Label>
+                <Select
+                  value={row.articleId}
+                  onValueChange={(articleId) =>
+                    handleChangeRowArticle(index, articleId)
+                  }
+                >
+                  <SelectTrigger
+                    id="artikel"
+                    className={cn(errors?.articles && 'border-destructive')}
+                  >
+                    <SelectValue placeholder="Välj artikel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SelectableInvoiceArticles.map((article) => (
+                      <SelectItem key={article.id} value={article.id}>
+                        {article.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors?.articles && (
+                  <p className="text-sm text-destructive">{errors.articles}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="artikelnummer">Artikelnummer</Label>
+                <Input
+                  id="artikelnummer"
+                  value={row.articleId}
+                  readOnly
+                  disabled
+                  placeholder="Fylls i automatiskt"
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-2">
+              <div className="space-y-1 sm:space-y-0">
+                <Label>Text på faktura</Label>
+                <Input
+                  value={row.text}
+                  onChange={(e) => handleChangeRowText(index, e.target.value)}
+                  placeholder="Beskrivning..."
+                />
+              </div>
+              <div className="space-y-1 sm:space-y-0">
+                <Label>Pris (ink. moms)</Label>
+                <Input
+                  type="text"
+                  value={row.price}
+                  onChange={(e) => handleChangeRowPrice(index, e.target.value)}
+                />
+              </div>
+              <div className="space-y-1 sm:space-y-0">
+                <Label>Antal</Label>
+                <Input
+                  type="number"
+                  value={row.amount}
+                  min={1}
+                  onChange={(e) => handleChangeRowAmount(index, e.target.value)}
+                />
+              </div>
+              {invoiceRows.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleRemoveRow(index)}
+                >
+                  <X />
+                  Ta bort rad
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAddRow}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Lägg till rad
+        </Button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 pt-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="administrativaKostnader"
+            checked={administrativeCosts}
+            onCheckedChange={onAdministrativeCostsChange}
+          />
+          <Label
+            htmlFor="administrativaKostnader"
+            className="text-sm font-normal cursor-pointer"
+          >
+            Administrativa kostnader
+          </Label>
+        </div>
+      </div>
+    </div>
+  )
+}

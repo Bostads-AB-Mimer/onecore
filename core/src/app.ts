@@ -43,7 +43,7 @@ app.use(loggerMiddlewares.post)
 
 // Body parsing for JSON routes (binary routes like /scan-receipt are naturally skipped
 // since koa-body only parses matching content types like application/json)
-app.use(bodyParser({ jsonLimit: '50mb' }))
+app.use(bodyParser({ multipart: true, jsonLimit: '50mb' }))
 
 // Public routes (no auth required)
 const publicRouter = new KoaRouter()

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 
-import { useTenantSearch } from '@/features/tenants'
+import { useTenantSearch } from '@/entities/tenant'
 
 import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'

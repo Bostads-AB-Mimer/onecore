@@ -9,3 +9,9 @@ export { formatTenantAddress, formatTenantName } from './lib/formatting'
 
 // Classification utilities
 export { getTenantRoles, isOrganization } from './lib/classification'
+
+// Hooks
+export { useTenant } from './hooks/useTenant'
+export { useTenantComments } from './hooks/useTenantComments'
+export { useTenantInvoices } from './hooks/useTenantInvoices'
+export { useTenantSearch } from './hooks/useTenantSearch'
