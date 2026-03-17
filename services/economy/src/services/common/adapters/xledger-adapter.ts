@@ -1257,7 +1257,7 @@ export const submitMiscellaneousInvoice = async (
           ${
             invoice.projectCode
               ? `
-                project: {
+                glObject2: {
                   code: ${quote(invoice.projectCode)}
                 }
               `
