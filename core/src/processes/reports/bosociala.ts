@@ -3,7 +3,6 @@ import config from '../../common/config'
 import { sendEmail } from '../../adapters/communication-adapter'
 import { getBosociala } from './service'
 import { convertBosocialaToXlsx } from './converters/excelConverter'
-import fs from 'node:fs'
 
 export const handleBosociala = async () => {
   const now = new Date()
@@ -23,20 +22,18 @@ export const handleBosociala = async () => {
       `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
     )
 
-    fs.writeFileSync(fileName, xlsxBuffer)
-
-    // if (config.emailAddresses.economy) {
-    //   try {
-    //     await sendEmail({
-    //       to: config.emailAddresses.economy,
-    //       subject: 'Körning: rapport av obetalda hyresavier',
-    //       body: notification.join('\n'),
-    //       attachments: resultFiles,
-    //     })
-    //   } catch (error: any) {
-    //     logger.error(error, 'Error sending notification email')
-    //   }
-    // }
+    if (config.emailAddresses.bosociala) {
+      try {
+        await sendEmail({
+          to: config.emailAddresses.bosociala,
+          subject: 'Körning: rapport av obetalda hyresavier',
+          body: notification.join('\n'),
+          attachments: resultFiles,
+        })
+      } catch (error: any) {
+        logger.error(error, 'Error sending notification email')
+      }
+    }
   } catch (err) {
     logger.error(err)
     throw err

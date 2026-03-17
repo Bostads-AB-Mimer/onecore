@@ -60,6 +60,7 @@ export interface Config {
     leasing: string
     tenantDefault: string
     economy: string
+    bosociala: string
     dev: string
   }
   scanner: {
@@ -158,6 +159,7 @@ const config = configPackage({
       leasing: '',
       tenantDefault: '',
       economy: '',
+      bosociala: '',
     },
     scanner: {
       allowedIps: [],
