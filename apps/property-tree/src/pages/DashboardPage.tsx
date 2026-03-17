@@ -44,23 +44,6 @@ export function DashboardPage() {
         <GlobalSearchBar placeholder="Sök..." />
       </div>
 
-      <Card className="max-w-2xl mx-auto hover:shadow-xl transition-shadow duration-200">
-        <CardContent className="p-8 text-center space-y-4">
-          <p className="text-lg leading-relaxed text-muted-foreground">
-            Vi är glada att ha dig här! ONECore är din digitala arbetsplats där
-            allt du behöver för att göra ditt bästa arbete finns samlat på ett
-            ställe. Ta det i din egen takt och utforska systemet - allt finns
-            ännu inte på plats utan vi uppdaterar löpande.
-          </p>
-          <p className="text-base text-muted-foreground">
-            Har du frågor eller behöver hjälp? Tveka inte att höra av dig till{' '}
-            <span className="font-semibold text-primary">David</span> eller{' '}
-            <span className="font-semibold text-primary">Lina</span> - vi finns
-            här för att stötta dig!
-          </p>
-        </CardContent>
-      </Card>
-
       <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {dashboardCards.map((config, index) => (
@@ -81,6 +64,23 @@ export function DashboardPage() {
           <ReleaseNotesCard />
         </motion.div>
       </div>
+
+      <Card className="max-w-2xl mx-auto hover:shadow-xl transition-shadow duration-200">
+        <CardContent className="p-8 text-center space-y-4">
+          <p className="text-lg leading-relaxed text-muted-foreground">
+            Vi är glada att ha dig här! ONECore är din digitala arbetsplats där
+            allt du behöver för att göra ditt bästa arbete finns samlat på ett
+            ställe. Ta det i din egen takt och utforska systemet - allt finns
+            ännu inte på plats utan vi uppdaterar löpande.
+          </p>
+          <p className="text-base text-muted-foreground">
+            Har du frågor eller behöver hjälp? Tveka inte att höra av dig till{' '}
+            <span className="font-semibold text-primary">David</span> eller{' '}
+            <span className="font-semibold text-primary">Lina</span> - vi finns
+            här för att stötta dig!
+          </p>
+        </CardContent>
+      </Card>
     </ViewLayout>
   )
 }
