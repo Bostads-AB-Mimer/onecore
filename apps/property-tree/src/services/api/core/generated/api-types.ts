@@ -868,7 +868,7 @@ export interface paths {
   "/contacts/for-identity-check": {
     /**
      * Get contacts for deceased/protected identity check
-     * @description Returns paginated list of person contacts eligible for deceased/protected identity verification.
+     * @description Returns paginated list of person contacts eligible for deceased/protected identity verification. Note - Results are validated using the personnummer package, so the actual count may be fewer than the requested limit if invalid personnummer are filtered out.
      */
     get: {
       parameters: {
