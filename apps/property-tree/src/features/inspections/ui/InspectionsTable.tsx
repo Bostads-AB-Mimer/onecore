@@ -183,8 +183,6 @@ export function InspectionsTable({
             isOpen={isResumeDialogOpen}
             onClose={() => setIsResumeDialogOpen(false)}
             onSubmit={async (inspectorName, inspectionRooms, status) => {
-              // TODO: handle 'completed' status when "Slutför besiktning" is enabled
-              if (status !== 'draft') return
               try {
                 await inspectionService.saveInspectionDraft(
                   selectedInspectionId as string,
@@ -193,6 +191,14 @@ export function InspectionsTable({
                     rooms: Object.values(inspectionRooms),
                   }
                 )
+
+                if (status === 'completed') {
+                  await inspectionService.updateInspectionStatus(
+                    selectedInspectionId as string,
+                    'Genomförd'
+                  )
+                }
+
                 await queryClient.invalidateQueries({
                   queryKey: ['inspections'],
                 })
@@ -200,14 +206,23 @@ export function InspectionsTable({
                   queryKey: ['inspections-internal', selectedInspectionId],
                 })
                 toast({
-                  title: 'Utkast sparat',
-                  description: 'Besiktningen har sparats som utkast.',
+                  title:
+                    status === 'completed'
+                      ? 'Besiktning slutförd'
+                      : 'Utkast sparat',
+                  description:
+                    status === 'completed'
+                      ? 'Besiktningen har markerats som genomförd.'
+                      : 'Besiktningen har sparats som utkast.',
                 })
                 setIsResumeDialogOpen(false)
               } catch {
                 toast({
                   title: 'Fel',
-                  description: 'Kunde inte spara utkast.',
+                  description:
+                    status === 'completed'
+                      ? 'Kunde inte slutföra besiktningen.'
+                      : 'Kunde inte spara utkast.',
                   variant: 'destructive',
                 })
               }

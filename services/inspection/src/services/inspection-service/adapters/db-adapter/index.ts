@@ -198,6 +198,10 @@ export async function updateInternalInspection(
       const updatePayload: Partial<DbInspection> = {}
       if (params.status) updatePayload.status = params.status
       if (params.inspector) updatePayload.inspector = params.inspector
+      if (params.status === INSPECTION_STATUS.STARTED)
+        updatePayload.startedAt = new Date()
+      if (params.status === INSPECTION_STATUS.COMPLETED)
+        updatePayload.endedAt = new Date()
 
       const [updated] = await trx
         .update(updatePayload)
@@ -423,6 +427,7 @@ export async function saveInspectionDraft(
         inspector: params.inspectorName,
         draftRooms: JSON.stringify(params.rooms),
         status: INSPECTION_STATUS.STARTED,
+        startedAt: new Date(),
       })
 
     return { ok: true, data: undefined }
