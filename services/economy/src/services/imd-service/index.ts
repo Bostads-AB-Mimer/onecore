@@ -209,9 +209,114 @@ async function addRentRows(
   return { succeeded, failed }
 }
 
+type ProcessResult = {
+  totalRows: number
+  enriched: number
+  unmatched: Array<UnmatchedIMDRow>
+  succeeded: AddRentRowsResult['succeeded']
+  failed: AddRentRowsResult['failed']
+}
+
+async function processIMD(
+  csv: string,
+  articleId: string,
+  label: string
+): Promise<Result<ProcessResult>> {
+  logger.info('IMD: Starting processing')
+
+  const parseResult = parseCsv(csv)
+  if (!parseResult.ok) {
+    return parseResult
+  }
+
+  const rows = parseResult.data
+  logger.info(`IMD: Parsed ${rows.length} rows from CSV`)
+
+  const enrichResult = await enrichIMDRows(rows)
+  if (!enrichResult.ok) {
+    return enrichResult
+  }
+
+  const { enriched, unmatched } = enrichResult.data
+  logger.info(
+    `IMD: Enrichment complete — ${enriched.length} matched, ${unmatched.length} unmatched`
+  )
+
+  if (unmatched.length > 0) {
+    const noRentalObject = unmatched.filter(
+      (r) => r.reason === 'no-rental-object'
+    )
+    const noActiveLease = unmatched.filter(
+      (r) => r.reason === 'no-active-lease'
+    )
+
+    if (noRentalObject.length > 0) {
+      logger.warn(
+        { codes: noRentalObject.map((r) => r.rentalObjectCode) },
+        `IMD: ${noRentalObject.length} rows with unknown rental object codes`
+      )
+    }
+    if (noActiveLease.length > 0) {
+      logger.warn(
+        { codes: noActiveLease.map((r) => r.rentalObjectCode) },
+        `IMD: ${noActiveLease.length} rows with no active lease in period`
+      )
+    }
+  }
+
+  if (enriched.length === 0) {
+    logger.warn('IMD: No rows to process, skipping Tenfast update')
+    return {
+      ok: true,
+      data: {
+        totalRows: rows.length,
+        enriched: 0,
+        unmatched,
+        succeeded: [],
+        failed: [],
+      },
+    }
+  }
+
+  logger.info(
+    `IMD: Adding rent rows in Tenfast for ${enriched.length} leases`
+  )
+  const { succeeded, failed } = await addRentRows(enriched, articleId, label)
+
+  if (failed.length > 0) {
+    logger.warn(
+      { failed },
+      `IMD: ${failed.length} rows failed to update in Tenfast`
+    )
+  }
+
+  logger.info(
+    {
+      totalRows: rows.length,
+      enriched: enriched.length,
+      succeeded: succeeded.length,
+      failed: failed.length,
+      unmatched: unmatched.length,
+    },
+    'IMD: Processing complete'
+  )
+
+  return {
+    ok: true,
+    data: {
+      totalRows: rows.length,
+      enriched: enriched.length,
+      unmatched,
+      succeeded,
+      failed,
+    },
+  }
+}
+
 export const imdService = {
   parseCsv,
   enrichIMDRows,
   addRentRows,
+  processIMD,
   IMDRowSchema,
 }
