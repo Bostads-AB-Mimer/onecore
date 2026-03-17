@@ -117,8 +117,7 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
   }
 
   // ---------- TEXT ----------
-  const isReprint =
-    !isMaintenance && !(props as TenantReceiptProps).receiptId
+  const isReprint = !isMaintenance && !(props as TenantReceiptProps).receiptId
 
   const actionText = isReprint
     ? 'Skriv ut lånkvittens'
