@@ -461,6 +461,8 @@ export function EditKeyLoanForm({
                   variant="ghost"
                   className="h-7 w-7 p-0"
                   onClick={handleDeleteReceipt}
+                  disabled
+                  title="Kvittenser kan inte tas bort"
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
