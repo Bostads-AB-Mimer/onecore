@@ -98,14 +98,14 @@ export function InspectionForm({
     }
   }
 
-  // const handleSubmit = () => {
-  //   if (canComplete) {
-  //     onSave(inspectorName, inspectionData, 'completed', {
-  //       needsMasterKey,
-  //       tenant: createTenantSnapshot(),
-  //     })
-  //   }
-  // }
+  const handleSubmit = () => {
+    if (canComplete) {
+      onSave(inspectorName, inspectionData, 'completed', {
+        needsMasterKey,
+        tenant: createTenantSnapshot(),
+      })
+    }
+  }
 
   const handleConfirmSaveDraft = () => {
     onSave(inspectorName, inspectionData, 'draft', {
@@ -203,10 +203,9 @@ export function InspectionForm({
           Spara utkast
         </Button>
 
-        {/*
         <Button onClick={handleSubmit} disabled={!canComplete}>
           Slutför besiktning
-        </Button> */}
+        </Button>
       </div>
 
       <AlertDialog

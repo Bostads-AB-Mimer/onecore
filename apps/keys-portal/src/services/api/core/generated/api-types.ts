@@ -155,8 +155,8 @@ export interface paths {
   };
   "/auth/roles/{roleName}/users": {
     /**
-     * Get users by realm role
-     * @description Returns all users assigned to the given Keycloak realm role
+     * Get users by realm role (via group membership)
+     * @description Returns all users that belong to groups assigned the given Keycloak realm role. Users are deduplicated across groups.
      */
     get: {
       parameters: {
@@ -178,8 +178,20 @@ export interface paths {
         401: {
           content: never;
         };
+        /** @description Forbidden — insufficient permissions to query role members */
+        403: {
+          content: never;
+        };
+        /** @description Role not found */
+        404: {
+          content: never;
+        };
         /** @description Internal server error */
         500: {
+          content: never;
+        };
+        /** @description Keycloak unreachable */
+        502: {
           content: never;
         };
       };
@@ -12198,6 +12210,7 @@ export interface components {
       apartmentCode: string | null;
       leaseId: string;
       masterKeyAccess: string | null;
+      residenceId: string;
       rooms: {
           roomId: string;
           conditions: {
