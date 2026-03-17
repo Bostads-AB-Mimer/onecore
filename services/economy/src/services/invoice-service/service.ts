@@ -840,14 +840,14 @@ export const getLeaseDetails = async (invoiceIds: string[]) => {
       const details = await Promise.all(
         leaseIds.map(async (leaseId) => {
           const rentalId = getRentalIdFromLeaseId(leaseId)
-          const costCentre = await getPropertyCodeAndCostCentreForLease(
+          const details = await getPropertyCodeAndCostCentreForLease(
             rentalId,
             year
           )
 
           return {
             leaseId,
-            costCentre,
+            costCentre: details?.costCentre ?? null,
           }
         })
       )
