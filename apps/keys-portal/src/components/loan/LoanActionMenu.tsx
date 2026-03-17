@@ -8,12 +8,7 @@ import { ActionMenu } from '@/components/shared/tables/ActionMenu'
 import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 import { EditKeyLoanDialog } from './EditKeyLoanDialog'
 import { receiptService } from '@/services/api/receiptService'
-import {
-  fetchReceiptData,
-  assembleFromLoan,
-  openPdfInNewTab,
-  openMaintenanceReceiptInNewTab,
-} from '@/services/receiptHandlers'
+import { ReceiptDialog } from './dialogs/ReceiptDialog'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { useToast } from '@/hooks/use-toast'
 import { useEditKeyLoanHandlers } from '@/hooks/useEditKeyLoanHandlers'
@@ -58,6 +53,7 @@ export function LoanActionMenu({
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [showReplaceWarning, setShowReplaceWarning] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false)
 
   // Check if loan can be returned (not already returned)
   const canReturn = !loan.returnedAt
@@ -112,45 +108,37 @@ export function LoanActionMenu({
   )
 
   const handlePrintLoanReceipt = async () => {
-    setLoading(true)
-    try {
-      // If there's an uploaded receipt, download it
-      if (loanReceipt?.fileId) {
+    // If there's an uploaded receipt, download it directly
+    if (loanReceipt?.fileId) {
+      setLoading(true)
+      try {
         await receiptService.downloadFile(loanReceipt.id)
-      } else if (loan.loanType === 'MAINTENANCE') {
-        // Maintenance loans have their own receipt generation
-        await openMaintenanceReceiptInNewTab(loan.id)
-      } else if (lease) {
-        // Regular loans need lease context
-        const receiptId = loanReceipt?.id
-        if (receiptId) {
-          const receiptData = await fetchReceiptData(receiptId, lease)
-          await openPdfInNewTab(receiptData, receiptId)
-        } else {
-          // No receipt record — generate directly from loan data
-          const receiptData = await assembleFromLoan(loan.id, lease)
-          await openPdfInNewTab(receiptData)
-        }
-      } else {
-        // Non-maintenance loan without lease - show error
+      } catch (error) {
+        console.error('Error downloading receipt:', error)
         toast({
-          title: 'Kan inte generera kvittens',
-          description:
-            'För att generera en lånkvittens, gå till utlåningssidan för kontraktet.',
+          title: 'Fel',
+          description: 'Kunde inte ladda ner kvittens',
           variant: 'destructive',
         })
-        return
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Error generating receipt:', error)
+      return
+    }
+
+    // For non-maintenance loans without lease context, show error
+    if (loan.loanType !== 'MAINTENANCE' && !lease) {
       toast({
-        title: 'Fel',
-        description: 'Kunde inte generera kvittens',
+        title: 'Kan inte generera kvittens',
+        description:
+          'För att generera en lånkvittens, gå till utlåningssidan för kontraktet.',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
+      return
     }
+
+    // Open receipt dialog with comment input
+    setShowReceiptDialog(true)
   }
 
   const handleViewLoanReceipt = async () => {
@@ -274,6 +262,23 @@ export function LoanActionMenu({
         confirmLabel="Ersätt"
         onConfirm={handleConfirmReplace}
       />
+
+      {loan.loanType === 'MAINTENANCE' ? (
+        <ReceiptDialog
+          isOpen={showReceiptDialog}
+          onClose={() => setShowReceiptDialog(false)}
+          loanType="MAINTENANCE"
+          loanId={loan.id}
+        />
+      ) : lease ? (
+        <ReceiptDialog
+          isOpen={showReceiptDialog}
+          onClose={() => setShowReceiptDialog(false)}
+          receiptId={loanReceipt?.id ?? null}
+          lease={lease}
+          loanId={loan.id}
+        />
+      ) : null}
 
       {enrichedLoan && (
         <EditKeyLoanDialog

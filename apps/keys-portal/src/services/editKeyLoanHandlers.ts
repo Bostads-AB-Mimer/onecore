@@ -59,7 +59,7 @@ export async function uploadLoanReceipt(
 
     if (!loanReceipt) {
       await receiptService.createWithFile(
-        { keyLoanId: loanId, receiptType: 'LOAN', type: 'DIGITAL' },
+        { keyLoanId: loanId, receiptType: 'LOAN', type: 'PHYSICAL' },
         file
       )
     } else {
