@@ -20,6 +20,7 @@ import logoUrl from '../../assets/MimerLogo_RGB_blk-blue.png'
 const PAGE_W = 210
 const MARGIN_X = 20
 const MARGIN_TOP = 20
+const MARGIN_TOP_CONTINUATION = 35
 const FOOTER_H = 40
 const BLUE = { r: 0, g: 123, b: 196 }
 const RED = { r: 200, g: 0, b: 0 }
@@ -76,8 +77,8 @@ const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
     errorCorrectionLevel: 'M',
   })
   const qrSize = 25
-  const x = PAGE_W - MARGIN_X - qrSize
-  const y = MARGIN_TOP
+  const x = PAGE_W - 5 - qrSize
+  const y = 5
   const totalPages = doc.getNumberOfPages()
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page)
@@ -302,7 +303,7 @@ const renderItemsTableSection = (
 
   if (y + minSpaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header in Bison Bold
@@ -327,7 +328,7 @@ const renderItemsTableSection = (
         doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
-        cy = MARGIN_TOP
+        cy = MARGIN_TOP_CONTINUATION
 
         doc.setFont(FONT_BISON, 'bold')
         doc.setFontSize(FONT_SIZE.SECTION_HEADER)
@@ -356,7 +357,7 @@ const renderItemsTableSection = (
 
     if (cy + minSpaceNeeded > bottom) {
       doc.addPage()
-      cy = MARGIN_TOP
+      cy = MARGIN_TOP_CONTINUATION
     }
 
     renderCardsTableHeader(doc, cy)
@@ -370,7 +371,7 @@ const renderItemsTableSection = (
         doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
-        cy = MARGIN_TOP
+        cy = MARGIN_TOP_CONTINUATION
 
         doc.setFont(FONT_BISON, 'bold')
         doc.setFontSize(FONT_SIZE.SECTION_HEADER)
@@ -575,7 +576,7 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header
@@ -630,7 +631,7 @@ const addMaintenanceReturnConfirmation = (
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header
@@ -672,7 +673,7 @@ const addLoanConfirmation = (
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header
@@ -732,7 +733,7 @@ const addReturnConfirmation = (
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header
@@ -773,7 +774,7 @@ const addComment = (doc: jsPDF, y: number, comment?: string): number => {
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header - Bison Bold blue (same style as NYCKLAR, DROPPAR)
