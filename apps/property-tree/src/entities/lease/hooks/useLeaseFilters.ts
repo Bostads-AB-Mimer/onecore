@@ -27,9 +27,6 @@ const FILTER_KEYS = [
   'sortOrder',
 ] as const
 
-// Default statuses exclude "Upphört" (3) for performance
-const DEFAULT_STATUSES: ('0' | '1' | '2')[] = ['0', '1', '2']
-
 const VALID_SORT_KEYS = [
   'leaseStartDate',
   'lastDebitDate',
@@ -75,10 +72,11 @@ export function useLeaseFilters() {
   const rawSortBy = urlSearchParams.get('sortBy')
   const sortBy: ValidSortKey | undefined =
     rawSortBy && isValidSortKey(rawSortBy) ? rawSortBy : undefined
-  const sortOrder = (urlSearchParams.get('sortOrder') || undefined) as
-    | 'asc'
-    | 'desc'
-    | undefined
+  const rawSortOrder = urlSearchParams.get('sortOrder')
+  const sortOrder: 'asc' | 'desc' | undefined =
+    rawSortOrder === 'asc' || rawSortOrder === 'desc'
+      ? rawSortOrder
+      : undefined
 
   const startDateFrom = urlSearchParams.get('startDateFrom') || ''
   const startDateTo = urlSearchParams.get('startDateTo') || ''
@@ -90,15 +88,8 @@ export function useLeaseFilters() {
       q: filters.debouncedSearch || undefined,
       objectType:
         selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
-      // includeEnded is not forwarded to the API — it controls whether DEFAULT_STATUSES is applied:
-      // - false: DEFAULT_STATUSES (['0','1','2']) is used, excluding Upphört (3)
-      // - true: status is omitted entirely so the backend returns all statuses including Upphört
-      status:
-        selectedStatuses.length > 0
-          ? selectedStatuses
-          : includeEnded
-            ? undefined
-            : DEFAULT_STATUSES,
+      status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+      includeEnded: includeEnded || undefined,
       property: selectedProperties.length > 0 ? selectedProperties : undefined,
       districtNames:
         selectedDistricts.length > 0 ? selectedDistricts : undefined,
@@ -143,15 +134,16 @@ export function useLeaseFilters() {
     ? Math.ceil(meta.totalRecords / PAGE_SIZE)
     : 1
 
+  const { updateUrlParams } = filters
   const handleSort = useCallback(
     (key: string, order: 'asc' | 'desc' | undefined) => {
-      filters.updateUrlParams({
+      updateUrlParams({
         sortBy: order ? key : undefined,
         sortOrder: order ?? undefined,
         page: undefined,
       })
     },
-    [filters]
+    [updateUrlParams]
   )
 
   // Building manager filter: fetch once, filter client-side
