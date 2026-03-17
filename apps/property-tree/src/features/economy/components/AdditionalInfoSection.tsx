@@ -1,27 +1,48 @@
 import { FileText, Paperclip, X } from 'lucide-react'
+import { XledgerProject } from '@onecore/types'
 
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
 import { Textarea } from '@/shared/ui/Textarea'
 
 interface AdditionalInfoSectionProps {
-  project: string
+  selectedProject: XledgerProject | null
+  projects?: XledgerProject[]
+  isLoadingProjects?: boolean
   comment: string
-  onProjectChange: (value: string) => void
+  onProjectChange: (project: XledgerProject | null) => void
   onCommentChange: (value: string) => void
   onFileAttached: (file: File | null) => void
   attachedFile?: File | null
 }
 
 export function AdditionalInfoSection({
-  project,
+  selectedProject,
+  projects,
+  isLoadingProjects,
   comment,
   onProjectChange,
   onCommentChange,
   onFileAttached,
   attachedFile,
 }: AdditionalInfoSectionProps) {
+  const handleProjectSelect = (projectCode: string) => {
+    if (projectCode === 'none') {
+      onProjectChange(null)
+    } else {
+      const project = projects?.find((p) => p.code === projectCode)
+      onProjectChange(project || null)
+    }
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
@@ -37,13 +58,30 @@ export function AdditionalInfoSection({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="project">Projekt</Label>
-        <Input
-          id="project"
-          value={project}
-          onChange={(e) => onProjectChange(e.target.value)}
-          placeholder="Projektnummer (valfritt)"
-        />
+        <Label>Projekt</Label>
+        {isLoadingProjects ? (
+          <div>Laddar projekt...</div>
+        ) : (
+          <Select
+            value={selectedProject?.code || 'none'}
+            onValueChange={handleProjectSelect}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Välj projekt (valfritt)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Inget projekt</SelectItem>
+              {projects
+                ?.filter((p) => p.code)
+                .sort((a, b) => a.code.localeCompare(b.code))
+                .map((project) => (
+                  <SelectItem key={project.code} value={project.code}>
+                    {project.code} - {project.description}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="space-y-2">

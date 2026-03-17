@@ -3,6 +3,7 @@ import {
   MiscellaneousInvoicePayload,
   MiscellaneousInvoiceRow,
   XledgerContact,
+  XledgerProject,
 } from '@onecore/types'
 import { useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -37,6 +38,7 @@ import { getArticleById } from '@/data/articles/miscellaneousInvoiceArticles'
 
 import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
 import { useXledgerContacts } from '../hooks/useXledgerContacts'
+import { useXledgerProjects } from '../hooks/useXledgerProjects'
 import { AdditionalInfoSection } from './AdditionalInfoSection'
 import { ArticleSection } from './ArticleSection'
 import { LeaseContractSection } from './LeaseContractSection'
@@ -78,6 +80,7 @@ export function MiscellaneousInvoiceForm() {
   })
 
   const { data: contacts, isLoading: isLoadingContacts } = useXledgerContacts()
+  const { data: projects, isLoading: isLoadingProjects } = useXledgerProjects()
 
   const [reference, setReference] = useState<XledgerContact | null>(null)
 
@@ -117,7 +120,9 @@ export function MiscellaneousInvoiceForm() {
   const [invoiceRows, setInvoiceRows] = useState<MiscellaneousInvoiceRow[]>([
     { price: '', amount: 1, articleId: '', articleName: '' },
   ])
-  const [projectCode, setProjectCode] = useState('')
+  const [selectedProject, setSelectedProject] = useState<XledgerProject | null>(
+    null
+  )
   const [comment, setComment] = useState('')
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
@@ -220,7 +225,7 @@ export function MiscellaneousInvoiceForm() {
       leaseId: leaseId ?? '',
       costCentre: costCentre ?? '',
       propertyCode: propertyCode ?? '',
-      projectCode: projectCode,
+      projectCode: selectedProject?.code ?? '',
       comment: comment,
       invoiceRows: rows,
       administrativeCosts: administrativeCosts,
@@ -238,7 +243,7 @@ export function MiscellaneousInvoiceForm() {
     setInvoiceRows([
       { price: '', amount: 1, articleId: '', articleName: '', text: '' },
     ])
-    setProjectCode('')
+    setSelectedProject(null)
     setComment('')
     setAdministrativeCosts(false)
     setAttachedFile(null)
@@ -365,9 +370,11 @@ export function MiscellaneousInvoiceForm() {
           <div className="space-y-4">
             <h3 className="font-medium">Övrig information</h3>
             <AdditionalInfoSection
-              project={projectCode}
+              selectedProject={selectedProject}
+              projects={projects}
+              isLoadingProjects={isLoadingProjects}
               comment={comment}
-              onProjectChange={setProjectCode}
+              onProjectChange={setSelectedProject}
               onCommentChange={setComment}
               onFileAttached={setAttachedFile}
               attachedFile={attachedFile}
