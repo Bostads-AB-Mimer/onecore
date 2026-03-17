@@ -13,6 +13,7 @@ import { FileText, Printer, AlertCircle } from 'lucide-react'
 import type { ReceiptData, Lease } from '@/services/types'
 import {
   fetchReceiptData,
+  assembleFromLoan,
   openPdfInNewTab,
   openMaintenanceReceiptInNewTab,
 } from '@/services/receiptHandlers'
@@ -25,7 +26,7 @@ type TenantReceiptProps = {
   receiptId: string | null
   lease: Lease
   loanType?: 'TENANT'
-  loanId?: never
+  loanId?: string
 }
 
 type MaintenanceReceiptProps = {
@@ -55,9 +56,9 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
   useEffect(() => {
     if (isMaintenance) return
 
-    const { receiptId, lease } = props as TenantReceiptProps
+    const { receiptId, loanId, lease } = props as TenantReceiptProps
 
-    if (!isOpen || !receiptId) {
+    if (!isOpen || (!receiptId && !loanId)) {
       setReceiptData(null)
       setComment('')
       return
@@ -67,7 +68,9 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
     const loadReceiptData = async () => {
       setIsLoadingReceipt(true)
       try {
-        const data = await fetchReceiptData(receiptId, lease)
+        const data = receiptId
+          ? await fetchReceiptData(receiptId, lease)
+          : await assembleFromLoan(loanId!, lease)
         if (!cancelled) {
           setReceiptData(data)
         }
@@ -114,19 +117,26 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
   }
 
   // ---------- TEXT ----------
-  const actionText = isMaintenance
-    ? 'Nycklar utlånade'
-    : receiptData?.receiptType === 'LOAN'
+  const isReprint =
+    !isMaintenance && !(props as TenantReceiptProps).receiptId
+
+  const actionText = isReprint
+    ? 'Skriv ut lånkvittens'
+    : isMaintenance
       ? 'Nycklar utlånade'
-      : 'Nycklar återlämnade'
+      : receiptData?.receiptType === 'LOAN'
+        ? 'Nycklar utlånade'
+        : 'Nycklar återlämnade'
 
   const signerLabel = isMaintenance ? 'entreprenören' : 'hyresgästen'
 
-  const descriptionText = isMaintenance
-    ? `En utlåningskvittens har skapats. Skriv ut och låt ${signerLabel} signera.`
-    : receiptData?.receiptType === 'LOAN'
+  const descriptionText = isReprint
+    ? `Skriv ut kvittensen och låt ${signerLabel} signera.`
+    : isMaintenance
       ? `En utlåningskvittens har skapats. Skriv ut och låt ${signerLabel} signera.`
-      : 'En återlämningskvittens har skapats. Du kan skriva ut den.'
+      : receiptData?.receiptType === 'LOAN'
+        ? `En utlåningskvittens har skapats. Skriv ut och låt ${signerLabel} signera.`
+        : 'En återlämningskvittens har skapats. Du kan skriva ut den.'
 
   const isLoanReceipt = isMaintenance || receiptData?.receiptType === 'LOAN'
 
@@ -149,7 +159,7 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            {actionText} framgångsrikt
+            {isReprint ? actionText : `${actionText} framgångsrikt`}
           </DialogTitle>
           <DialogDescription>{descriptionText}</DialogDescription>
         </DialogHeader>
