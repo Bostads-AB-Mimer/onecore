@@ -1,5 +1,5 @@
 import { GET } from './baseApi'
-import type { components } from './generated/api-types'
+import type { components, paths } from './generated/api-types'
 
 export type LeaseSearchResult = components['schemas']['LeaseSearchResult']
 export type PaginationMeta = components['schemas']['PaginationMeta']
@@ -11,22 +11,11 @@ export type PaginatedResponse<T> = {
   _links: PaginationLinks[]
 }
 
-export type LeaseSearchQueryParams = {
-  q?: string
-  objectType?: string[]
-  status?: ('0' | '1' | '2' | '3')[]
-  startDateFrom?: string
-  startDateTo?: string
-  endDateFrom?: string
-  endDateTo?: string
-  property?: string[]
-  buildingCodes?: string[]
-  areaCodes?: string[]
-  districtNames?: string[]
-  buildingManager?: string[]
-  sortBy?: 'leaseStartDate' | 'lastDebitDate' | 'leaseId'
-  sortOrder?: 'asc' | 'desc'
-}
+// Derived from generated types — single source of truth
+type SearchQuery = NonNullable<
+  paths['/leases/search']['get']['parameters']['query']
+>
+export type LeaseSearchQueryParams = Omit<SearchQuery, 'page' | 'limit'>
 
 export type ContactInfo = {
   contactCode: string

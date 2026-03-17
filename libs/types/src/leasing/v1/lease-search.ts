@@ -73,8 +73,23 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .optional()
     .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20)),
 
+  // When false (default), Upphört (status 3) is excluded. When true, all statuses are returned.
+  includeEnded: z
+    .union([z.string(), z.boolean()])
+    .transform((val) => val === true || val === 'true')
+    .optional(),
+
   // Sorting (tenantName removed since contacts are fetched separately)
-  sortBy: z.enum(['leaseStartDate', 'lastDebitDate', 'leaseId']).optional(),
+  sortBy: z
+    .enum([
+      'leaseStartDate',
+      'lastDebitDate',
+      'leaseId',
+      'address',
+      'objectType',
+      'rentalObjectCode',
+    ])
+    .optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
 })
 
@@ -95,6 +110,9 @@ export const LeaseSearchResultSchema = z.object({
   startDate: z.date().nullable(),
   lastDebitDate: z.date().nullable(),
   status: z.nativeEnum(LeaseStatus),
+
+  // Rental object code (objektnummer) - always included
+  rentalObjectCode: z.string().nullable(),
 
   // Property/Building/Area fields - optional (only included when filter used)
   // nullable().optional() = omit when not queried, null when queried but empty in DB

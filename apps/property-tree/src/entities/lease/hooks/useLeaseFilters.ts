@@ -22,7 +22,25 @@ const FILTER_KEYS = [
   'startDateTo',
   'endDateFrom',
   'endDateTo',
+  'includeEnded',
+  'sortBy',
+  'sortOrder',
 ] as const
+
+// Default statuses exclude "Upphört" (3) for performance
+const DEFAULT_STATUSES: ('0' | '1' | '2')[] = ['0', '1', '2']
+
+const VALID_SORT_KEYS = [
+  'leaseStartDate',
+  'lastDebitDate',
+  'leaseId',
+  'address',
+  'objectType',
+  'rentalObjectCode',
+] as const
+type ValidSortKey = (typeof VALID_SORT_KEYS)[number]
+const isValidSortKey = (v: string | null): v is ValidSortKey =>
+  VALID_SORT_KEYS.includes(v as ValidSortKey)
 
 export function useLeaseFilters() {
   const filters = useUrlFilters({
@@ -40,6 +58,7 @@ export function useLeaseFilters() {
     () => urlSearchParams.getAll('status') as ('0' | '1' | '2' | '3')[],
     [urlSearchParams]
   )
+  const includeEnded = urlSearchParams.get('includeEnded') === 'true'
   const selectedProperties = useMemo(
     () => urlSearchParams.getAll('property'),
     [urlSearchParams]
@@ -53,6 +72,14 @@ export function useLeaseFilters() {
     [urlSearchParams]
   )
 
+  const rawSortBy = urlSearchParams.get('sortBy')
+  const sortBy: ValidSortKey | undefined =
+    rawSortBy && isValidSortKey(rawSortBy) ? rawSortBy : undefined
+  const sortOrder = (urlSearchParams.get('sortOrder') || undefined) as
+    | 'asc'
+    | 'desc'
+    | undefined
+
   const startDateFrom = urlSearchParams.get('startDateFrom') || ''
   const startDateTo = urlSearchParams.get('startDateTo') || ''
   const endDateFrom = urlSearchParams.get('endDateFrom') || ''
@@ -63,7 +90,15 @@ export function useLeaseFilters() {
       q: filters.debouncedSearch || undefined,
       objectType:
         selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
-      status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+      // includeEnded is not forwarded to the API — it controls whether DEFAULT_STATUSES is applied:
+      // - false: DEFAULT_STATUSES (['0','1','2']) is used, excluding Upphört (3)
+      // - true: status is omitted entirely so the backend returns all statuses including Upphört
+      status:
+        selectedStatuses.length > 0
+          ? selectedStatuses
+          : includeEnded
+            ? undefined
+            : DEFAULT_STATUSES,
       property: selectedProperties.length > 0 ? selectedProperties : undefined,
       districtNames:
         selectedDistricts.length > 0 ? selectedDistricts : undefined,
@@ -75,11 +110,14 @@ export function useLeaseFilters() {
       startDateTo: startDateTo || undefined,
       endDateFrom: endDateFrom || undefined,
       endDateTo: endDateTo || undefined,
+      sortBy,
+      sortOrder,
     }),
     [
       filters.debouncedSearch,
       selectedObjectTypes,
       selectedStatuses,
+      includeEnded,
       selectedProperties,
       selectedDistricts,
       selectedBuildingManagers,
@@ -87,6 +125,8 @@ export function useLeaseFilters() {
       startDateTo,
       endDateFrom,
       endDateTo,
+      sortBy,
+      sortOrder,
     ]
   )
 
@@ -102,6 +142,17 @@ export function useLeaseFilters() {
   const totalPages = meta?.totalRecords
     ? Math.ceil(meta.totalRecords / PAGE_SIZE)
     : 1
+
+  const handleSort = useCallback(
+    (key: string, order: 'asc' | 'desc' | undefined) => {
+      filters.updateUrlParams({
+        sortBy: order ? key : undefined,
+        sortOrder: order ?? undefined,
+        page: undefined,
+      })
+    },
+    [filters]
+  )
 
   // Building manager filter: fetch once, filter client-side
   const buildingManagersRef = useRef<BuildingManager[] | null>(null)
@@ -135,6 +186,7 @@ export function useLeaseFilters() {
     // Resolved filter values
     selectedObjectTypes,
     selectedStatuses,
+    includeEnded,
     selectedProperties,
     selectedDistricts,
     selectedBuildingManagers,
@@ -142,6 +194,11 @@ export function useLeaseFilters() {
     startDateTo,
     endDateFrom,
     endDateTo,
+
+    // Sorting
+    sortBy,
+    sortOrder,
+    handleSort,
 
     // Search function for async filter dropdown
     searchBuildingManagers,

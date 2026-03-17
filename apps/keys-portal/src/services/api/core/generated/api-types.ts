@@ -427,8 +427,10 @@ export interface paths {
           page?: number;
           /** @description Items per page */
           limit?: number;
+          /** @description Include Upphört (ended) contracts. Excluded by default for performance. */
+          includeEnded?: boolean;
           /** @description Sort field */
-          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId";
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
           /** @description Sort direction */
           sortOrder?: "asc" | "desc";
         };
@@ -8928,6 +8930,7 @@ export interface components {
       lastDebitDate: string | null;
       /** @enum {number} */
       status: 0 | 1 | 2 | 3;
+      rentalObjectCode: string | null;
       property?: string | null;
       buildingCode?: string | null;
       area?: string | null;

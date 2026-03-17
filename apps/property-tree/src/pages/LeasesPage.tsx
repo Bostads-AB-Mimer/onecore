@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download } from 'lucide-react'
+import { AlertTriangle, Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
@@ -29,7 +29,7 @@ import { SmsModal } from '@/shared/ui/SmsModal'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
-  { label: 'Parkering', value: 'parkering' },
+  { label: 'Bilplats', value: 'parkering' },
   { label: 'Lokal', value: 'lokal' },
   { label: 'Övrigt', value: 'ovrigt' },
 ] as const
@@ -38,7 +38,6 @@ const statusOptions = [
   { label: 'Gällande', value: '0' },
   { label: 'Kommande', value: '1' },
   { label: 'Uppsagd', value: '2' },
-  { label: 'Upphört', value: '3' },
 ] as const
 
 const districtOptions = [
@@ -255,6 +254,31 @@ const LeasesPage = () => {
                 placeholder="Slutdatum"
               />
             </FilterBar>
+
+            <div className="flex items-center gap-2 mt-3">
+              <Checkbox
+                id="includeEnded"
+                checked={filters.includeEnded}
+                onCheckedChange={(checked) =>
+                  filters.setFilterValues(
+                    'includeEnded',
+                    checked ? ['true'] : []
+                  )
+                }
+              />
+              <label
+                htmlFor="includeEnded"
+                className="text-sm text-muted-foreground cursor-pointer"
+              >
+                Visa upphörda kontrakt
+              </label>
+              {filters.includeEnded && (
+                <span className="text-sm text-amber-600 flex items-center gap-1">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Kan göra sökningen långsammare
+                </span>
+              )}
+            </div>
           </div>
 
           {filters.isLoading ? (
@@ -275,6 +299,9 @@ const LeasesPage = () => {
               columns={[selectColumn, ...leaseColumns]}
               keyExtractor={(lease) => lease.leaseId}
               mobileCardRenderer={LeaseMobileCard}
+              sortBy={filters.sortBy}
+              sortOrder={filters.sortOrder}
+              onSort={filters.handleSort}
             />
           )}
 
