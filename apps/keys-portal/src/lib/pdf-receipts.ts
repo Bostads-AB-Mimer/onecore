@@ -19,9 +19,9 @@ import logoUrl from '../../assets/MimerLogo_RGB_blk-blue.png'
 // Layout constants
 const PAGE_W = 210
 const MARGIN_X = 20
-const MARGIN_TOP = 20
-const MARGIN_TOP_CONTINUATION = 35
-const FOOTER_H = 40
+const MARGIN_TOP = 10
+const MARGIN_TOP_CONTINUATION = 25
+const FOOTER_H = 25
 const BLUE = { r: 0, g: 123, b: 196 }
 const RED = { r: 200, g: 0, b: 0 }
 
@@ -33,7 +33,6 @@ const FONT_SIZE = {
   TABLE_HEADER: 10, // Nyckelnamn, Typ, Löp.nr, Flex.nr
   BODY: 10, // Regular body text
   FOOTER: 8, // Footer text
-  RECEIPT_ID: 7, // Small receipt ID at bottom
 }
 
 // Content area calculation
@@ -78,7 +77,7 @@ const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
   })
   const qrSize = 25
   const x = PAGE_W - 5 - qrSize
-  const y = 5
+  const y = MARGIN_TOP - 5
   const totalPages = doc.getNumberOfPages()
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page)
@@ -125,7 +124,7 @@ const addMeta = (doc: jsPDF, y: number, type: 'loan' | 'return'): number => {
   y += 5
   doc.text(`Tid: ${format(when, 'HH:mm')}`, MARGIN_X, y)
 
-  return y + 12
+  return y + 8
 }
 
 /**
@@ -174,8 +173,13 @@ const addTenantInfo = async (
     leftY += 8
   })
 
-  // Right column: Display lease info
-  doc.text(`Hyresobjekt: ${lease.rentalPropertyId}`, rightCol, rightY)
+  // Right column: Display lease info (rental object ID in bold)
+  const hyresobjektLabel = 'Hyresobjekt: '
+  doc.text(hyresobjektLabel, rightCol, rightY)
+  const labelWidth = doc.getTextWidth(hyresobjektLabel)
+  doc.setFont(FONT_GRAPHIK, 'bold')
+  doc.text(lease.rentalPropertyId, rightCol + labelWidth, rightY)
+  doc.setFont(FONT_GRAPHIK, 'normal')
   rightY += 5
 
   // Wrap long leaseId
@@ -208,7 +212,7 @@ const addTenantInfo = async (
   doc.text(`Adress: ${addressStr || '-'}`, rightCol, rightY)
   rightY += 5
 
-  return Math.max(leftY, rightY) + 10
+  return Math.max(leftY, rightY) + 6
 }
 
 /**
@@ -290,8 +294,7 @@ const renderItemsTableSection = (
   cards: Card[] | undefined,
   y: number,
   headerText: string,
-  headerColor: { r: number; g: number; b: number } = BLUE,
-  reserveAfter: number = 0
+  headerColor: { r: number; g: number; b: number } = BLUE
 ): number => {
   const hasKeys = keys.length > 0
   const hasCards = cards && cards.length > 0
@@ -320,11 +323,8 @@ const renderItemsTableSection = (
     renderKeysTableHeader(doc, cy)
     cy += 9
 
-    keys.forEach((key, index) => {
-      const isLast = index === keys.length - 1 && !hasCards
-      const spaceNeeded = isLast ? reserveAfter + 15 : rowH + 5
-
-      if (cy + spaceNeeded > bottom) {
+    keys.forEach((key) => {
+      if (cy + rowH + 5 > bottom) {
         doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
@@ -363,11 +363,8 @@ const renderItemsTableSection = (
     renderCardsTableHeader(doc, cy)
     cy += 9
 
-    cards.forEach((card, index) => {
-      const isLast = index === cards.length - 1
-      const spaceNeeded = isLast ? reserveAfter + 15 : rowH + 5
-
-      if (cy + spaceNeeded > bottom) {
+    cards.forEach((card) => {
+      if (cy + rowH + 5 > bottom) {
         doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
@@ -411,7 +408,7 @@ const renderItemsTableSection = (
     doc.text(`Totalt antal nycklar: ${keys.length}`, MARGIN_X, cy)
   }
 
-  return cy + 10
+  return cy + 14
 }
 
 /**
@@ -421,20 +418,11 @@ const renderItemsTable = (
   doc: jsPDF,
   keys: ReceiptData['keys'],
   cards: Card[] | undefined,
-  y: number,
-  reserveAfter: number = 0
+  y: number
 ): number => {
   const hasCards = cards && cards.length > 0
   const headerText = hasCards ? 'NYCKLAR OCH DROPPAR' : 'NYCKLAR'
-  return renderItemsTableSection(
-    doc,
-    keys,
-    cards,
-    y,
-    headerText,
-    BLUE,
-    reserveAfter
-  )
+  return renderItemsTableSection(doc, keys, cards, y, headerText, BLUE)
 }
 
 /**
@@ -447,8 +435,7 @@ const renderReturnItemsTable = (
   missingKeys: ReceiptData['keys'] | undefined,
   missingCards: Card[] | undefined,
   disposedKeys: ReceiptData['keys'] | undefined,
-  y: number,
-  reserveAfter: number = 0
+  y: number
 ): number => {
   const hasMissingKeys = missingKeys && missingKeys.length > 0
   const hasMissingCards = missingCards && missingCards.length > 0
@@ -469,21 +456,18 @@ const renderReturnItemsTable = (
   }
 
   // Returned items section
-  const returnedReserve = hasMissing || hasDisposed ? 0 : reserveAfter
   y = renderItemsTableSection(
     doc,
     returnedKeys,
     returnedCards,
     y,
     returnedHeader,
-    BLUE,
-    returnedReserve
+    BLUE
   )
 
   // Missing items section (red)
   if (hasMissing) {
     y += 4
-    const missingReserve = hasDisposed ? 0 : reserveAfter
     const missingHeader = hasCards
       ? 'SAKNADE NYCKLAR OCH DROPPAR'
       : 'SAKNADE NYCKLAR'
@@ -493,8 +477,7 @@ const renderReturnItemsTable = (
       missingCards,
       y,
       missingHeader,
-      RED,
-      missingReserve
+      RED
     )
   }
 
@@ -507,8 +490,7 @@ const renderReturnItemsTable = (
       undefined,
       y,
       'KASSERADE NYCKLAR',
-      BLUE,
-      reserveAfter
+      BLUE
     )
   }
 
@@ -564,7 +546,7 @@ const addMaintenanceInfo = (
     rightY += Array.isArray(descLines) ? descLines.length * 5 : 5
   }
 
-  return Math.max(leftY, rightY) + 10
+  return Math.max(leftY, rightY) + 6
 }
 
 /**
@@ -572,7 +554,7 @@ const addMaintenanceInfo = (
  */
 const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
   const bottom = contentBottom(doc)
-  const spaceNeeded = 55
+  const spaceNeeded = 50
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
@@ -601,7 +583,7 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
     y += 5.5
   })
 
-  y += 15
+  y += 10
 
   // Signature line
   doc.setDrawColor(0, 0, 0)
@@ -669,7 +651,7 @@ const addLoanConfirmation = (
   tenants: ReceiptData['tenants']
 ): number => {
   const bottom = contentBottom(doc)
-  const spaceNeeded = 55
+  const spaceNeeded = 50
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
@@ -698,7 +680,7 @@ const addLoanConfirmation = (
     y += 5.5
   })
 
-  y += 15
+  y += 10
 
   // Signature line
   doc.setDrawColor(0, 0, 0)
@@ -799,7 +781,7 @@ const addComment = (doc: jsPDF, y: number, comment?: string): number => {
 /**
  * Adds footer with Mimer logo and contact info
  */
-const addFooter = async (doc: jsPDF, receiptId?: string): Promise<void> => {
+const addFooter = async (doc: jsPDF): Promise<void> => {
   const h = doc.internal.pageSize.height as number
   const totalPages = doc.getNumberOfPages()
 
@@ -835,12 +817,6 @@ const addFooter = async (doc: jsPDF, receiptId?: string): Promise<void> => {
       footerY + 2
     )
 
-    // Receipt ID if provided
-    if (receiptId) {
-      doc.setFontSize(FONT_SIZE.RECEIPT_ID)
-      doc.text(receiptId, MARGIN_X, h - 8)
-    }
-
     // Page numbering
     if (totalPages > 1) {
       doc.text(`Sida ${i} av ${totalPages}`, PAGE_W - MARGIN_X, h - 8, {
@@ -854,7 +830,7 @@ const addFooter = async (doc: jsPDF, receiptId?: string): Promise<void> => {
  * BUILD FUNCTIONS
  * ============================================================================ */
 
-async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
+async function buildLoanDoc(data: ReceiptData) {
   const doc = new jsPDF()
   registerCustomFonts(doc)
 
@@ -863,11 +839,11 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
 
   // Combined keys and cards table (sorted by type, system, name, flex, sequence)
-  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y, 55)
+  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y)
 
   y = addLoanConfirmation(doc, y, data.tenants)
   addComment(doc, y, data.comment)
-  await addFooter(doc, receiptId)
+  await addFooter(doc)
   if (data.loanId) {
     await addQrCode(doc, data.loanId)
   }
@@ -880,7 +856,7 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   return { doc, fileName }
 }
 
-async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
+async function buildReturnDoc(data: ReceiptData) {
   const doc = new jsPDF()
   registerCustomFonts(doc)
 
@@ -902,13 +878,12 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
     data.missingKeys ? sortKeys(data.missingKeys) : undefined,
     data.missingCards,
     data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
-    y,
-    35
+    y
   )
 
   y = addReturnConfirmation(doc, y, hasMissingItems)
   addComment(doc, y, data.comment)
-  await addFooter(doc, receiptId)
+  await addFooter(doc)
 
   const fileName = `nyckelaterlamning_${data.tenants[0].contactCode}_${format(
     new Date(),
@@ -922,10 +897,7 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
  * MAINTENANCE BUILD FUNCTIONS
  * ============================================================================ */
 
-async function buildMaintenanceLoanDoc(
-  data: MaintenanceReceiptData,
-  receiptId?: string
-) {
+async function buildMaintenanceLoanDoc(data: MaintenanceReceiptData) {
   const doc = new jsPDF()
   registerCustomFonts(doc)
 
@@ -934,11 +906,11 @@ async function buildMaintenanceLoanDoc(
   y = addMaintenanceInfo(doc, data, y)
 
   // Combined keys and cards table (sorted)
-  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y, 55)
+  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y)
 
   y = addMaintenanceLoanConfirmation(doc, y)
   addComment(doc, y, data.description ?? undefined)
-  await addFooter(doc, receiptId)
+  await addFooter(doc)
   if (data.loanId) {
     await addQrCode(doc, data.loanId)
   }
@@ -951,10 +923,7 @@ async function buildMaintenanceLoanDoc(
   return { doc, fileName }
 }
 
-async function buildMaintenanceReturnDoc(
-  data: MaintenanceReceiptData,
-  receiptId?: string
-) {
+async function buildMaintenanceReturnDoc(data: MaintenanceReceiptData) {
   const doc = new jsPDF()
   registerCustomFonts(doc)
 
@@ -975,13 +944,12 @@ async function buildMaintenanceReturnDoc(
     data.missingKeys ? sortKeys(data.missingKeys) : undefined,
     data.missingCards,
     data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
-    y,
-    35
+    y
   )
 
   y = addMaintenanceReturnConfirmation(doc, y, hasMissingItems)
   addComment(doc, y, data.description ?? undefined)
-  await addFooter(doc, receiptId)
+  await addFooter(doc)
 
   const fileName = `nyckelaterlamning_${data.contact}_${format(
     new Date(),
@@ -996,37 +964,33 @@ async function buildMaintenanceReturnDoc(
  * ============================================================================ */
 
 export const generateLoanReceiptBlob = async (
-  data: ReceiptData,
-  receiptId?: string
+  data: ReceiptData
 ): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildLoanDoc(data, receiptId)
+  const { doc, fileName } = await buildLoanDoc(data)
   const blob = doc.output('blob') as Blob
   return { blob, fileName }
 }
 
 export const generateReturnReceiptBlob = async (
-  data: ReceiptData,
-  receiptId?: string
+  data: ReceiptData
 ): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildReturnDoc(data, receiptId)
+  const { doc, fileName } = await buildReturnDoc(data)
   const blob = doc.output('blob') as Blob
   return { blob, fileName }
 }
 
 export const generateMaintenanceLoanReceiptBlob = async (
-  data: MaintenanceReceiptData,
-  receiptId?: string
+  data: MaintenanceReceiptData
 ): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildMaintenanceLoanDoc(data, receiptId)
+  const { doc, fileName } = await buildMaintenanceLoanDoc(data)
   const blob = doc.output('blob') as Blob
   return { blob, fileName }
 }
 
 export const generateMaintenanceReturnReceiptBlob = async (
-  data: MaintenanceReceiptData,
-  receiptId?: string
+  data: MaintenanceReceiptData
 ): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildMaintenanceReturnDoc(data, receiptId)
+  const { doc, fileName } = await buildMaintenanceReturnDoc(data)
   const blob = doc.output('blob') as Blob
   return { blob, fileName }
 }

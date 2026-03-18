@@ -366,7 +366,7 @@ export async function generateAndUploadReturnReceipt(
   )
 
   // Generate PDF blob
-  const { blob } = await generateReturnReceiptBlob(receiptData, receiptId)
+  const { blob } = await generateReturnReceiptBlob(receiptData)
 
   // Convert to File and upload to MinIO
   const file = new File([blob], `return_${receiptId}.pdf`, {
@@ -380,16 +380,12 @@ export async function generateAndUploadReturnReceipt(
  * Opens a PDF receipt in a new browser tab with automatic print dialog
  *
  * @param receiptData - The receipt data to generate the PDF from
- * @param receiptId - Optional receipt ID to include in the PDF
  */
-export async function openPdfInNewTab(
-  receiptData: ReceiptData,
-  receiptId?: string
-): Promise<void> {
+export async function openPdfInNewTab(receiptData: ReceiptData): Promise<void> {
   const { blob, fileName } =
     receiptData.receiptType === 'RETURN'
-      ? await generateReturnReceiptBlob(receiptData, receiptId)
-      : await generateLoanReceiptBlob(receiptData, receiptId)
+      ? await generateReturnReceiptBlob(receiptData)
+      : await generateLoanReceiptBlob(receiptData)
 
   openPdfBlobInNewTab(blob, fileName)
 }
@@ -406,20 +402,8 @@ export async function openMaintenanceReceiptInNewTab(
 ): Promise<void> {
   const receiptData = await assembleMaintenanceLoanReceipt(loanId, comment)
 
-  // Fetch the receipt ID so it appears on the PDF footer
-  let receiptId: string | undefined
-  try {
-    const receipts = await receiptService.getByKeyLoan(loanId)
-    const loanReceipt = receipts.find((r) => r.receiptType === 'LOAN')
-    receiptId = loanReceipt?.id
-  } catch {
-    // Non-critical - PDF still generates without the receipt ID
-  }
-
-  const { blob, fileName } = await generateMaintenanceLoanReceiptBlob(
-    receiptData,
-    receiptId
-  )
+  const { blob, fileName } =
+    await generateMaintenanceLoanReceiptBlob(receiptData)
 
   openPdfBlobInNewTab(blob, fileName)
 }
@@ -461,10 +445,7 @@ export async function generateAndUploadMaintenanceReturnReceipt(
   )
 
   // Generate PDF blob
-  const { blob } = await generateMaintenanceReturnReceiptBlob(
-    receiptData,
-    receiptId
-  )
+  const { blob } = await generateMaintenanceReturnReceiptBlob(receiptData)
 
   // Convert to File and upload to MinIO
   const file = new File([blob], `return_${receiptId}.pdf`, {
