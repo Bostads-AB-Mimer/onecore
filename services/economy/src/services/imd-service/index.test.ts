@@ -50,6 +50,7 @@ describe(imdService.enrichIMDRows, () => {
         unit: 'VV',
         volume: 7.58,
         cost: 621.68,
+        measurementUnit: 'm3',
       },
       {
         rentalObjectCode: '306-008-01-0202',
@@ -58,6 +59,7 @@ describe(imdService.enrichIMDRows, () => {
         unit: 'VV',
         volume: 2.094,
         cost: 171.74,
+        measurementUnit: 'm3',
       },
     ])
 
@@ -93,6 +95,7 @@ describe(imdService.enrichIMDRows, () => {
         unit: 'VV',
         volume: 7.58,
         cost: 621.68,
+        measurementUnit: 'm3',
       },
       {
         rentalObjectCode: '306-008-01-0299',
@@ -101,6 +104,7 @@ describe(imdService.enrichIMDRows, () => {
         unit: 'VV',
         volume: 3.0,
         cost: 250.0,
+        measurementUnit: 'm3',
       },
     ])
 
@@ -134,6 +138,7 @@ describe(imdService.enrichIMDRows, () => {
         unit: 'VV',
         volume: 7.58,
         cost: 621.68,
+        measurementUnit: 'm3',
       },
     ])
 
@@ -160,6 +165,7 @@ describe(imdService.enrichIMDRows, () => {
         unit: 'VV',
         volume: 7.58,
         cost: 621.68,
+        measurementUnit: 'm3',
       },
     ])
 
@@ -170,7 +176,7 @@ describe(imdService.enrichIMDRows, () => {
 const makeEnrichedRow = (
   rentalObjectCode: string,
   leaseId: string,
-  { cost = 100, unit = 'VV' } = {}
+  { cost = 100, unit = 'VV', measurementUnit = 'm3' } = {}
 ) => ({
   rentalObjectCode,
   leaseId,
@@ -179,10 +185,11 @@ const makeEnrichedRow = (
   unit,
   volume: 7.58,
   cost,
+  measurementUnit,
 })
 
 describe(imdService.toTenfastCsv, () => {
-  it('maps VV to IMDM article and Vattenförbrukning label', () => {
+  it('maps VV to IMDM article and builds Avitext with Varmvatten', () => {
     const csv = imdService.toTenfastCsv([
       makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02', { cost: 621.68, unit: 'VV' }),
     ])
@@ -192,11 +199,11 @@ describe(imdService.toTenfastCsv, () => {
       'Kontraktsnummer;Hyresartikel;Avitext;Fr.o.m;T.o.m;Årshyra'
     )
     expect(lines[1]).toBe(
-      '306-008-01-0201/02;IMDM;Vattenförbrukning;2026-01-01;2026-01-31;7460,16'
+      '306-008-01-0201/02;IMDM;Varmvatten januari,7,58,m3(25% moms tillkommer);2026-01-01;2026-01-31;7460,16'
     )
   })
 
-  it('maps VMM to VÄRMEENERGIM article and Värmeenergi label', () => {
+  it('maps VMM to VÄRMEENERGIM article and builds Avitext with Värmeenergi', () => {
     const csv = imdService.toTenfastCsv([
       makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500, unit: 'VMM' }),
     ])
@@ -204,7 +211,7 @@ describe(imdService.toTenfastCsv, () => {
     const dataLine = csv.split('\n')[1]
     const cols = dataLine.split(';')
     expect(cols[1]).toBe('VÄRMEENERGIM')
-    expect(cols[2]).toBe('Värmeenergi')
+    expect(cols[2]).toBe('Värmeenergi januari,7,58,m3(25% moms tillkommer)')
   })
 
   it('throws for unknown unit', () => {

@@ -8,7 +8,7 @@ import { getActiveLeasesByRentalObjectCodes } from '../common/adapters/xpand-db-
  * - There is no header row
  * - ; delimiter
  * - Field structure:
- *   <rentalObjectCode>, <from>, <to>, <unit>, <unknown>, <unknown>, <volume>, <cost>, <unknown>, <unknown>, <unknown>, <unknown>, <unknown>, <unknown>
+ *   <rentalObjectCode>, <from>, <to>, <unit>, <unknown>, <unknown>, <volume>, <cost>, <unknown>, <unknown>, <measurementUnit>, <unknown>, <unknown>, <unknown>
  */
 type IMDCsv = string
 
@@ -19,51 +19,36 @@ const IMDRowSchema = z.object({
   unit: z.string(), // <unit>
   volume: z.coerce.number(), // <volume>
   cost: z.coerce.number(), // <cost>
+  measurementUnit: z.string(), // <measurementUnit>
 })
 
 type IMDRow = z.infer<typeof IMDRowSchema>
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: unknown }
 
-function extractNormalizedCols(
-  line: string
-): [
-  rentalObjectCode: string,
-  from: string,
-  to: string,
-  unit: string,
-  volume: string,
-  cost: string,
-] {
-  const [rentalObjectCode, from, to, unit, volume, cost] = line.split(';')
-  return [
-    rentalObjectCode,
-    from,
-    to,
-    unit,
-    volume.replace(',', '.'),
-    cost.replace(',', '.'),
-  ]
+function extractNormalizedCols(line: string) {
+  const cols = line.split(';')
+  return {
+    rentalObjectCode: cols[0],
+    from: cols[1],
+    to: cols[2],
+    unit: cols[3],
+    volume: cols[6].replace(',', '.'),
+    cost: cols[7].replace(',', '.'),
+    measurementUnit: cols[10],
+  }
 }
 
 function parseCsv(csv: IMDCsv): Result<Array<IMDRow>> {
   try {
+    if (csv.trim() === '') {
+      return { ok: false, error: new Error('Empty CSV') }
+    }
+
     const lines = csv
       .trim()
       .split('\n')
-      .map((line) => {
-        const [rentalObjectCode, from, to, unit, volume, cost] =
-          extractNormalizedCols(line)
-
-        return IMDRowSchema.parse({
-          rentalObjectCode,
-          from,
-          to,
-          unit,
-          volume,
-          cost,
-        })
-      })
+      .map((line) => IMDRowSchema.parse(extractNormalizedCols(line)))
 
     return { ok: true, data: lines }
   } catch (err) {
@@ -89,6 +74,10 @@ async function enrichIMDRows(
   imdRows: Array<IMDRow>
 ): Promise<Result<EnrichResult>> {
   try {
+    if (imdRows.length === 0) {
+      return { ok: false, error: new Error('No rows to enrich') }
+    }
+
     const period = {
       start: imdRows[0].from,
       end: imdRows[0].to,
@@ -126,10 +115,15 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-const UNIT_CONFIG: Record<string, { articleCode: string; label: string }> = {
-  VV: { articleCode: 'IMDM', label: 'Vattenförbrukning' },
-  VMM: { articleCode: 'VÄRMEENERGIM', label: 'Värmeenergi' },
+const UNIT_CONFIG: Record<string, { articleCode: string; description: string }> = {
+  VV: { articleCode: 'IMDM', description: 'Varmvatten' },
+  VMM: { articleCode: 'VÄRMEENERGIM', description: 'Värmeenergi' },
 }
+
+const SWEDISH_MONTHS = [
+  'januari', 'februari', 'mars', 'april', 'maj', 'juni',
+  'juli', 'augusti', 'september', 'oktober', 'november', 'december',
+]
 
 const CSV_HEADER = 'Kontraktsnummer;Hyresartikel;Avitext;Fr.o.m;T.o.m;Årshyra'
 
@@ -141,14 +135,20 @@ function getUnitConfig(unit: string) {
   return config
 }
 
+function buildInvoiceText(row: EnrichedIMDRow, description: string): string {
+  const month = SWEDISH_MONTHS[row.from.getMonth()]
+  const volume = row.volume.toString().replace('.', ',')
+  return `${description} ${month},${volume},${row.measurementUnit}(25% moms tillkommer)`
+}
+
 function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
   const lines = rows.map((row) => {
-    const { articleCode, label } = getUnitConfig(row.unit)
+    const { articleCode, description } = getUnitConfig(row.unit)
     const yearlyRent = (row.cost * 12).toFixed(2).replace('.', ',')
     return [
       row.leaseId,
       articleCode,
-      label,
+      buildInvoiceText(row, description),
       formatDate(row.from),
       formatDate(row.to),
       yearlyRent,
@@ -165,6 +165,7 @@ type ProcessResult = {
   csv: string
 }
 
+// TODO: To small belopp should not be processed
 async function processIMD(csv: string): Promise<Result<ProcessResult>> {
   logger.info('IMD: Starting processing')
 
