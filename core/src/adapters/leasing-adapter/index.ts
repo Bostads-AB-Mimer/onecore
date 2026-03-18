@@ -460,6 +460,7 @@ export {
   deleteLeaseRentRow,
   getBuildingManagers,
   searchLeases,
+  searchTenfastLeases,
 } from './leases'
 
 export {
