@@ -118,7 +118,7 @@ export const dashboardCards: DashboardCard[] = [
     description: 'Nyckelhantering',
     path: resolve('VITE_KEYS_URL', ''),
     isExternal: true,
-    isDisabled: true,
+    isDisabled: false,
   },
   {
     id: 'rental-blocks',
