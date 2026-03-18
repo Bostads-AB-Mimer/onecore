@@ -16,7 +16,7 @@ import { CollapsibleTable } from '@/shared/ui/CollapsibleTable'
 type KeyLoanWithDetails = components['schemas']['KeyLoanWithDetails']
 
 type TableRow =
-  | { kind: 'loan'; loan: KeyLoanWithDetails }
+  | { kind: 'loan'; loan: KeyLoanWithDetails; lease?: Lease }
   | { kind: 'no-loan'; lease: Lease }
 
 const KeyTypeLabels: Record<string, string> = {
@@ -132,54 +132,20 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
     )
   }, [leases])
 
-  const rentalObjectCodes = useMemo(
-    () => [...new Set(activeLeases.map((l) => l.rentalPropertyId))],
-    [activeLeases]
-  )
-
-  const rentalObjectCodesKey = rentalObjectCodes.join(',')
-
   useEffect(() => {
     const fetchLoans = async () => {
       setIsLoading(true)
       setError(null)
       try {
-        let allLoans: KeyLoanWithDetails[] = []
-
-        if (rentalObjectCodes.length > 0) {
-          // Search by rental objects from the tenant's leases — catches loans
-          // regardless of which contact code they were registered under
-          const results = await Promise.all(
-            rentalObjectCodes.map((code) =>
-              GET('/key-loans/by-rental-object/{rentalObjectCode}', {
-                params: { path: { rentalObjectCode: code } },
-              })
-            )
-          )
-          const seen = new Set<string>()
-          for (const { data, error: apiError } of results) {
-            if (apiError) continue
-            for (const loan of data?.content ?? []) {
-              if (!seen.has(loan.id)) {
-                seen.add(loan.id)
-                allLoans.push(loan)
-              }
-            }
-          }
-        } else {
-          // Fallback: search by contact code directly
-          const { data, error: apiError } = await GET(
-            '/key-loans/by-contact/{contact}/with-keys',
-            { params: { path: { contact: contactCode } } }
-          )
-          if (apiError) {
-            setError('Kunde inte hämta nyckellån')
-            return
-          }
-          allLoans = data?.content ?? []
+        const { data, error: apiError } = await GET(
+          '/key-loans/by-contact/{contact}/with-keys',
+          { params: { path: { contact: contactCode } } }
+        )
+        if (apiError) {
+          setError('Kunde inte hämta nyckellån')
+          return
         }
-
-        setLoans(allLoans)
+        setLoans(data?.content ?? [])
       } catch {
         setError('Kunde inte hämta nyckellån')
       } finally {
@@ -188,8 +154,7 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
     }
 
     fetchLoans()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- rentalObjectCodesKey is a stable string derived from rentalObjectCodes
-  }, [contactCode, rentalObjectCodesKey])
+  }, [contactCode])
 
   const keysUrl = resolve('VITE_KEYS_URL', '')
 
@@ -200,7 +165,18 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
 
   // Build table rows: one row per loan, plus rows for active leases with no loans
   const tableRows = useMemo<TableRow[]>(() => {
-    const rows: TableRow[] = loans.map((loan) => ({ kind: 'loan', loan }))
+    // Build a lookup from rental object code to lease for matching loans to their lease type
+    const leaseByRentalObject = new Map(
+      activeLeases.map((l) => [l.rentalPropertyId, l])
+    )
+
+    const rows: TableRow[] = loans.map((loan) => {
+      const rentalCodes = getLoanRentalObjects(loan)
+      const matchedLease = rentalCodes
+        .map((code) => leaseByRentalObject.get(code))
+        .find(Boolean)
+      return { kind: 'loan', loan, lease: matchedLease }
+    })
 
     // Find active leases that have no associated key loans
     const coveredRentalObjects = new Set(
@@ -224,7 +200,7 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
         label: 'Lånetyp',
         render: (row: TableRow) =>
           row.kind === 'loan' ? (
-            formatLoanType(row.loan.loanType)
+            row.lease?.type ?? formatLoanType(row.loan.loanType)
           ) : (
             <span className="text-muted-foreground">{row.lease.type}</span>
           ),
@@ -423,7 +399,7 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-sm font-medium">
-                        {formatLoanType(loan.loanType)}
+                        {row.lease?.type ?? formatLoanType(loan.loanType)}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {formatDateOrDash(loan.createdAt)}

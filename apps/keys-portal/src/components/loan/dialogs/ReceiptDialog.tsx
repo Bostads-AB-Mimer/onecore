@@ -110,9 +110,8 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
       }
     } else {
       if (!receiptData) return
-      const { receiptId } = props as TenantReceiptProps
       const dataWithComment = { ...receiptData, comment: addSignature(comment) }
-      await openPdfInNewTab(dataWithComment, receiptId ?? undefined)
+      await openPdfInNewTab(dataWithComment)
     }
   }
 
