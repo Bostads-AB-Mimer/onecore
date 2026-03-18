@@ -16,7 +16,7 @@ import { CollapsibleTable } from '@/shared/ui/CollapsibleTable'
 type KeyLoanWithDetails = components['schemas']['KeyLoanWithDetails']
 
 type TableRow =
-  | { kind: 'loan'; loan: KeyLoanWithDetails }
+  | { kind: 'loan'; loan: KeyLoanWithDetails; lease?: Lease }
   | { kind: 'no-loan'; lease: Lease }
 
 const KeyTypeLabels: Record<string, string> = {
@@ -44,6 +44,20 @@ function getLoanStatus(loan: KeyLoanWithDetails) {
   return 'not-picked-up'
 }
 
+function getPickupAvailabilityBadge(loan: KeyLoanWithDetails) {
+  const availableFrom = loan.availableToNextTenantFrom
+  if (!availableFrom) return null
+
+  const availableDate = new Date(availableFrom)
+  const now = new Date()
+  const formattedDate = availableDate.toLocaleDateString('sv-SE')
+
+  if (availableDate > now) {
+    return <Badge variant="destructive">Får lämnas ut {formattedDate}</Badge>
+  }
+  return <Badge variant="default">Får lämnas ut från {formattedDate}</Badge>
+}
+
 function getStatusBadge(loan: KeyLoanWithDetails) {
   const status = getLoanStatus(loan)
   switch (status) {
@@ -52,7 +66,12 @@ function getStatusBadge(loan: KeyLoanWithDetails) {
     case 'returned':
       return <Badge variant="secondary">Återlämnad</Badge>
     case 'not-picked-up':
-      return <Badge variant="outline">Ej upphämtad</Badge>
+      return (
+        <div className="flex flex-wrap gap-1">
+          <Badge variant="outline">Ej upphämtad</Badge>
+          {getPickupAvailabilityBadge(loan)}
+        </div>
+      )
   }
 }
 
@@ -81,47 +100,81 @@ function getLoanRentalObjects(loan: KeyLoanWithDetails): string[] {
 
 function LoanKeysDetail({ loan }: { loan: KeyLoanWithDetails }) {
   const keys = loan.keysArray
-  if (keys.length === 0) return null
+  const cards = loan.keyCardsArray ?? []
+  if (keys.length === 0 && cards.length === 0) return null
 
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium text-muted-foreground">
-        Nycklar i lånet
-      </div>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-muted-foreground text-xs">
-            <th className="pb-1 pr-4 font-medium">Nyckelnamn</th>
-            <th className="pb-1 pr-4 font-medium">Typ</th>
-            <th className="pb-1 pr-4 font-medium">Löpnr</th>
-            <th className="pb-1 font-medium">Hyresobjekt</th>
-          </tr>
-        </thead>
-        <tbody>
-          {keys.map((key) => (
-            <tr key={key.id} className="border-t border-border/50">
-              <td className="py-1.5 pr-4">{key.keyName}</td>
-              <td className="py-1.5 pr-4">
-                <Badge variant="secondary">
-                  {KeyTypeLabels[key.keyType] || key.keyType}
-                </Badge>
-              </td>
-              <td className="py-1.5 pr-4 text-muted-foreground">
-                {key.keySequenceNumber ?? '-'}
-              </td>
-              <td className="py-1.5 text-muted-foreground">
-                {key.rentalObjectCode || '-'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      {keys.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">
+            Nycklar i lånet
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-muted-foreground text-xs">
+                <th className="pb-1 pr-4 font-medium">Nyckelnamn</th>
+                <th className="pb-1 pr-4 font-medium">Typ</th>
+                <th className="pb-1 pr-4 font-medium">Löpnr</th>
+                <th className="pb-1 font-medium">Hyresobjekt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map((key) => (
+                <tr key={key.id} className="border-t border-border/50">
+                  <td className="py-1.5 pr-4">{key.keyName}</td>
+                  <td className="py-1.5 pr-4">
+                    <Badge variant="secondary">
+                      {KeyTypeLabels[key.keyType] || key.keyType}
+                    </Badge>
+                  </td>
+                  <td className="py-1.5 pr-4 text-muted-foreground">
+                    {key.keySequenceNumber ?? '-'}
+                  </td>
+                  <td className="py-1.5 text-muted-foreground">
+                    {key.rentalObjectCode || '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {cards.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">
+            Taggar i lånet
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-muted-foreground text-xs">
+                <th className="pb-1 pr-4 font-medium">Taggnamn</th>
+                <th className="pb-1 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cards.map((card) => (
+                <tr key={card.cardId} className="border-t border-border/50">
+                  <td className="py-1.5 pr-4">{card.name || card.cardId}</td>
+                  <td className="py-1.5">
+                    <Badge variant={card.disabled ? 'destructive' : 'success'}>
+                      {card.disabled ? 'Spärrat' : 'Aktivt'}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
 
 export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
-  const [loans, setLoans] = useState<KeyLoanWithDetails[]>([])
+  const [loansByRentalObject, setLoansByRentalObject] = useState<
+    Map<string, KeyLoanWithDetails[]>
+  >(new Map())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -144,30 +197,26 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
       setIsLoading(true)
       setError(null)
       try {
-        let allLoans: KeyLoanWithDetails[] = []
-
         if (rentalObjectCodes.length > 0) {
-          // Search by rental objects from the tenant's leases — catches loans
-          // regardless of which contact code they were registered under
           const results = await Promise.all(
             rentalObjectCodes.map((code) =>
               GET('/key-loans/by-rental-object/{rentalObjectCode}', {
-                params: { path: { rentalObjectCode: code } },
-              })
+                params: {
+                  path: { rentalObjectCode: code },
+                  query: { contact: contactCode },
+                },
+              }).then((res) => ({ code, ...res }))
             )
           )
-          const seen = new Set<string>()
-          for (const { data, error: apiError } of results) {
+
+          const byRentalObject = new Map<string, KeyLoanWithDetails[]>()
+          for (const { code, data, error: apiError } of results) {
             if (apiError) continue
-            for (const loan of data?.content ?? []) {
-              if (!seen.has(loan.id)) {
-                seen.add(loan.id)
-                allLoans.push(loan)
-              }
-            }
+            byRentalObject.set(code, data?.content ?? [])
           }
+          setLoansByRentalObject(byRentalObject)
         } else {
-          // Fallback: search by contact code directly
+          // Fallback: search by contact code when there are no active leases
           const { data, error: apiError } = await GET(
             '/key-loans/by-contact/{contact}/with-keys',
             { params: { path: { contact: contactCode } } }
@@ -176,10 +225,17 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
             setError('Kunde inte hämta nyckellån')
             return
           }
-          allLoans = data?.content ?? []
+          // Group by rental object code from keys
+          const byRentalObject = new Map<string, KeyLoanWithDetails[]>()
+          for (const loan of data?.content ?? []) {
+            const codes = getLoanRentalObjects(loan)
+            const key = codes[0] ?? 'unknown'
+            const existing = byRentalObject.get(key) ?? []
+            existing.push(loan)
+            byRentalObject.set(key, existing)
+          }
+          setLoansByRentalObject(byRentalObject)
         }
-
-        setLoans(allLoans)
       } catch {
         setError('Kunde inte hämta nyckellån')
       } finally {
@@ -200,14 +256,22 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
 
   // Build table rows: one row per loan, plus rows for active leases with no loans
   const tableRows = useMemo<TableRow[]>(() => {
-    const rows: TableRow[] = loans.map((loan) => ({ kind: 'loan', loan }))
-
-    // Find active leases that have no associated key loans
-    const coveredRentalObjects = new Set(
-      loans.flatMap((loan) =>
-        loan.keysArray.map((k) => k.rentalObjectCode).filter(Boolean)
-      )
+    const leaseByRentalObject = new Map(
+      activeLeases.map((l) => [l.rentalPropertyId, l])
     )
+
+    const rows: TableRow[] = []
+    const coveredRentalObjects = new Set<string>()
+
+    for (const [rentalObjectCode, loans] of loansByRentalObject) {
+      const lease = leaseByRentalObject.get(rentalObjectCode)
+      for (const loan of loans) {
+        rows.push({ kind: 'loan', loan, lease })
+      }
+      coveredRentalObjects.add(rentalObjectCode)
+    }
+
+    // Add rows for active leases that have no key loans
     for (const lease of activeLeases) {
       if (!coveredRentalObjects.has(lease.rentalPropertyId)) {
         rows.push({ kind: 'no-loan', lease })
@@ -215,7 +279,7 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
     }
 
     return rows
-  }, [loans, activeLeases])
+  }, [loansByRentalObject, activeLeases])
 
   const columns = useMemo(
     () => [
@@ -224,7 +288,7 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
         label: 'Lånetyp',
         render: (row: TableRow) =>
           row.kind === 'loan' ? (
-            formatLoanType(row.loan.loanType)
+            (row.lease?.type ?? formatLoanType(row.loan.loanType))
           ) : (
             <span className="text-muted-foreground">{row.lease.type}</span>
           ),
@@ -423,7 +487,7 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-sm font-medium">
-                        {formatLoanType(loan.loanType)}
+                        {row.lease?.type ?? formatLoanType(loan.loanType)}
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {formatDateOrDash(loan.createdAt)}
