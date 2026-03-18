@@ -4,6 +4,7 @@ export const TenfastLeaseSchema = z.object({
   _id: z.string(),
   hyresgaster: z.array(
     z.object({
+      externalId: z.string(),
       name: z.object({
         first: z.string(),
         last: z.string(),
@@ -152,7 +153,7 @@ export const TenfastInvoicesByOcrResponseSchema = z.object({
       avtal: data.avtal.map((x) => x.id),
       recipientId: data.snapshot?.hyresgaster[0]?.originalId,
       contractCode: data.snapshot?.avtal[0]?.externalId,
-      recipientContactCode: '', // TODO: Add
+      recipientContactCode: data.avtal[0]?.hyresgaster[0]?.externalId, // TODO: Add
       recipientName:
         data.snapshot?.hyresgaster[0]?.displayName ??
         data.avtal[0]?.hyresgaster[0]?.displayName,

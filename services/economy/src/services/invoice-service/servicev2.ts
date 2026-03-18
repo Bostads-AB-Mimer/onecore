@@ -399,42 +399,30 @@ const createLedgerCsv = async (invoices: InvoiceWithAccounting[]) => {
 export const createLedgerRows = async (
   invoices: InvoiceWithAccounting[]
 ): Promise<LedgerRow[]> => {
-  let ledgerRows: LedgerRow[] = []
-  let chunkLedgerAccount = invoices[0].ledgerAccount
-  let chunkInvoiceDate = dateString(invoices[0].invoiceDate)
-  let chunkInvoices: InvoiceWithAccounting[] = []
-  let voucherIndex = 0
+  const invoiceChunks: Record<string, InvoiceWithAccounting[]> = {}
 
-  const finishChunk = (invoice: InvoiceWithAccounting) => {
+  invoices.forEach((invoice) => {
+    const key = invoice.ledgerAccount + ':' + dateString(invoice.invoiceDate)
+    if (!invoiceChunks[key]) {
+      invoiceChunks[key] = []
+    }
+
+    invoiceChunks[key].push(invoice)
+  })
+
+  let voucherIndex = 0
+  let ledgerRows: LedgerRow[] = []
+  Object.values(invoiceChunks).forEach((chunkInvoices) => {
     const voucherNumber =
       '2' +
       Date.now().toString().substring(6, 12) +
       voucherIndex.toString().padStart(3, '0')
     voucherIndex++
-    // create aggregate rows, reset current values, add row as first new batch
+
     const chunkRows = convertToLedgerRows(chunkInvoices, voucherNumber)
     ledgerRows.push(...chunkRows)
     const chunkTotalRow = createLedgerTotalRow(chunkInvoices, voucherNumber)
     ledgerRows.push(chunkTotalRow)
-
-    chunkLedgerAccount = invoice.ledgerAccount
-    chunkInvoices = [invoice]
-  }
-
-  invoices.forEach((invoice, index) => {
-    if (
-      dateString(invoice.invoiceDate) == chunkInvoiceDate &&
-      invoice.ledgerAccount == chunkLedgerAccount
-    ) {
-      // Add row to current batch
-      chunkInvoices.push(invoice)
-
-      if (index === invoices.length - 1) {
-        finishChunk(invoice)
-      }
-    } else {
-      finishChunk(invoice)
-    }
   })
 
   console.table(ledgerRows)

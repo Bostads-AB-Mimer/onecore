@@ -283,12 +283,7 @@ export const getInvoicesNotExported = async (
 ): Promise<AdapterResult<InvoiceWithAccounting[], string>> => {
   // Dummy implementation awaiting exported flag in Tenfast
   const invoices: InvoiceWithAccounting[] = []
-  const ocrNumbers = [
-    '552603000765167',
-    '552603000765142',
-    '552603000765126',
-    '552603000765100',
-  ]
+  const ocrNumbers = ['552604000765181', '552603000765142', '552603000765100']
 
   for (const ocrNumber of ocrNumbers) {
     const tenfastInvoicesResult = await getInvoiceByOcr(ocrNumber)
@@ -320,6 +315,8 @@ export const getInvoicesNotExported = async (
       invoices.push(invoiceWithAccounting)
     }
   }
+
+  console.table(invoices)
 
   //console.log(JSON.stringify(invoices, null, 2))
 
