@@ -27,6 +27,7 @@
     "dev:script:import-procurement-invoices": "ts-node -r tsconfig-paths/register src/scripts/import-procurement-invoices",
     "dev:script:import-debt-collection": "ts-node -r tsconfig-paths/register src/scripts/import-debt-collection",
     "dev:script:get-contact-details": "ts-node -r tsconfig-paths/register src/scripts/get-contact-details",
+    "dev:script:process-imd": "ts-node -r tsconfig-paths/register src/scripts/process-imd",
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "NODE_ENV=test-ci jest --silent",
     "ts:ci": " tsc --noEmit",
