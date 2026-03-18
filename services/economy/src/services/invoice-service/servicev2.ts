@@ -251,63 +251,6 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
   console.table(aggregatedRows)
 
   return aggregatedRows
-
-  /*  let currentStartDate = dateString(invoiceRows[0].fromDate)
-  let currentEndDate = dateString(invoiceRows[0].toDate)
-  let currentTotalAccount = invoiceRows[0].totalAccount
-  let currentRows: ExportedInvoiceRow[] = []
-  let aggregatedRows: AggregatedRow[] = []
-  let voucherIndex = 0
-
-  // Sort rows to get fewer chunks.
-  invoiceRows.sort((a, b) => {
-    return (
-      a.ledgerAccount?.localeCompare(b.ledgerAccount ?? '') ||
-      a.totalAccount?.localeCompare(b.totalAccount ?? '') ||
-      dateString(a.fromDate)?.localeCompare(dateString(b.fromDate) ?? '') ||
-      dateString(a.toDate)?.localeCompare(dateString(b.toDate) ?? '') ||
-      a.invoiceNumber?.localeCompare(b.invoiceNumber ?? '') ||
-      0
-    )
-  })
-
-  const finishChunk = (invoiceRow: ExportedInvoiceRow) => {
-    const voucherNumber =
-      '1' +
-      Date.now().toString().substring(6, 12) +
-      voucherIndex.toString().padStart(3, '0')
-    voucherIndex++
-    // create aggregate rows, reset current values, add row as first new batch
-    const chunkRows = groupAggregateRows(currentRows, voucherNumber)
-    aggregatedRows.push(...chunkRows)
-    const chunkTotalRow = createAggregatedTotalRow(chunkRows, voucherNumber)
-    aggregatedRows.push(chunkTotalRow)
-
-    currentStartDate = dateString(invoiceRow.fromDate)
-    currentEndDate = dateString(invoiceRow.toDate)
-    currentTotalAccount = invoiceRow.totalAccount
-    currentRows = [invoiceRow]
-  }
-
-  invoiceRows.forEach((invoiceRow, index) => {
-    if (
-      dateString(invoiceRow.fromDate) == currentStartDate &&
-      dateString(invoiceRow.toDate) == currentEndDate &&
-      invoiceRow.totalAccount == currentTotalAccount
-    ) {
-      // Add row to current batch
-      currentRows.push(invoiceRow)
-
-      if (index === invoiceRows.length - 1) {
-        finishChunk(invoiceRow)
-      }
-    } else {
-      finishChunk(invoiceRow)
-    }
-  })
-
-  console.table(aggregatedRows)
-  return aggregatedRows*/
 }
 
 const dateString = (date: Date | undefined) => {
