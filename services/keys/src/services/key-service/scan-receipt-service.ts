@@ -77,7 +77,7 @@ function isPdf(buffer: Buffer): boolean {
 async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
   const { createCanvas } = await import('@napi-rs/canvas')
   const data = new Uint8Array(buffer)
-  const pdfjsLib = await import('pdfjs-dist')
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
   const doc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise
   const frames: Frame[] = []
 
@@ -89,7 +89,7 @@ async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
 
     // pdfjs v5 requires `canvas` (typed as HTMLCanvasElement),
     // @napi-rs/canvas is API-compatible but differently typed
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     await page.render({ canvas: canvas as any, viewport }).promise
 
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
