@@ -157,9 +157,7 @@ function LoanKeysDetail({ loan }: { loan: KeyLoanWithDetails }) {
             <tbody>
               {cards.map((card) => (
                 <tr key={card.cardId} className="border-t border-border/50">
-                  <td className="py-1.5 pr-4">
-                    {card.name || card.cardId}
-                  </td>
+                  <td className="py-1.5 pr-4">{card.name || card.cardId}</td>
                   <td className="py-1.5">
                     <Badge variant={card.disabled ? 'destructive' : 'success'}>
                       {card.disabled ? 'Spärrat' : 'Aktivt'}
