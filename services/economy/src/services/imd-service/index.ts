@@ -2,7 +2,6 @@ import { logger } from '@onecore/utilities'
 import z from 'zod'
 
 import { getActiveLeasesByRentalObjectCodes } from '../common/adapters/xpand-db-adapter'
-import { updateLeaseInvoiceRows } from '../../common/adapters/tenfast/tenfast-adapter'
 
 /**
  * We assume:
@@ -123,105 +122,50 @@ async function enrichIMDRows(
   }
 }
 
-const BATCH_SIZE = 50
-const BATCH_DELAY_MS = 500
-
 function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = []
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size))
+const UNIT_CONFIG: Record<string, { articleCode: string; label: string }> = {
+  VV: { articleCode: 'IMDM', label: 'Vattenförbrukning' },
+  VMM: { articleCode: 'VÄRMEENERGIM', label: 'Värmeenergi' },
+}
+
+const CSV_HEADER = 'Kontraktsnummer;Hyresartikel;Avitext;Fr.o.m;T.o.m;Årshyra'
+
+function getUnitConfig(unit: string) {
+  const config = UNIT_CONFIG[unit]
+  if (!config) {
+    throw new Error(`Unknown unit "${unit}" — no mapping exists`)
   }
-  return chunks
+  return config
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
+  const lines = rows.map((row) => {
+    const { articleCode, label } = getUnitConfig(row.unit)
+    const yearlyRent = (row.cost * 12).toFixed(2).replace('.', ',')
+    return [
+      row.leaseId,
+      articleCode,
+      label,
+      formatDate(row.from),
+      formatDate(row.to),
+      yearlyRent,
+    ].join(';')
+  })
 
-type AddRentRowsResult = {
-  succeeded: Array<{ leaseId: string; rentalObjectCode: string }>
-  failed: Array<{ leaseId: string; rentalObjectCode: string; error: string }>
-}
-
-async function addRentRows(
-  rows: Array<EnrichedIMDRow>,
-  articleId: string,
-  label: string
-): Promise<AddRentRowsResult> {
-  const chunks = chunkArray(rows, BATCH_SIZE)
-  const succeeded: AddRentRowsResult['succeeded'] = []
-  const failed: AddRentRowsResult['failed'] = []
-
-  for (let i = 0; i < chunks.length; i++) {
-    await Promise.allSettled(
-      chunks[i].map(async (row) => {
-        try {
-          const res = await updateLeaseInvoiceRows({
-            leaseId: row.leaseId,
-            rowsToDelete: [],
-            rowsToAdd: [
-              {
-                amount: row.cost,
-                vat: 0,
-                from: formatDate(row.from),
-                to: formatDate(row.to),
-                article: articleId,
-                label,
-              },
-            ],
-          })
-
-          if (res.ok) {
-            succeeded.push({
-              leaseId: row.leaseId,
-              rentalObjectCode: row.rentalObjectCode,
-            })
-          } else {
-            failed.push({
-              leaseId: row.leaseId,
-              rentalObjectCode: row.rentalObjectCode,
-              error: res.err,
-            })
-          }
-        } catch (err) {
-          failed.push({
-            leaseId: row.leaseId,
-            rentalObjectCode: row.rentalObjectCode,
-            error: String(err),
-          })
-        }
-      })
-    )
-
-    logger.info(
-      `IMD batch ${i + 1}/${chunks.length}: ${succeeded.length} succeeded, ${failed.length} failed`
-    )
-
-    if (i < chunks.length - 1) {
-      await sleep(BATCH_DELAY_MS)
-    }
-  }
-
-  return { succeeded, failed }
+  return [CSV_HEADER, ...lines].join('\n')
 }
 
 type ProcessResult = {
   totalRows: number
   enriched: number
   unmatched: Array<UnmatchedIMDRow>
-  succeeded: AddRentRowsResult['succeeded']
-  failed: AddRentRowsResult['failed']
+  csv: string
 }
 
-async function processIMD(
-  csv: string,
-  articleId: string,
-  label: string
-): Promise<Result<ProcessResult>> {
+async function processIMD(csv: string): Promise<Result<ProcessResult>> {
   logger.info('IMD: Starting processing')
 
   const parseResult = parseCsv(csv)
@@ -264,38 +208,12 @@ async function processIMD(
     }
   }
 
-  if (enriched.length === 0) {
-    logger.warn('IMD: No rows to process, skipping Tenfast update')
-    return {
-      ok: true,
-      data: {
-        totalRows: rows.length,
-        enriched: 0,
-        unmatched,
-        succeeded: [],
-        failed: [],
-      },
-    }
-  }
-
-  logger.info(
-    `IMD: Adding rent rows in Tenfast for ${enriched.length} leases`
-  )
-  const { succeeded, failed } = await addRentRows(enriched, articleId, label)
-
-  if (failed.length > 0) {
-    logger.warn(
-      { failed },
-      `IMD: ${failed.length} rows failed to update in Tenfast`
-    )
-  }
+  const outputCsv = toTenfastCsv(enriched)
 
   logger.info(
     {
       totalRows: rows.length,
       enriched: enriched.length,
-      succeeded: succeeded.length,
-      failed: failed.length,
       unmatched: unmatched.length,
     },
     'IMD: Processing complete'
@@ -307,8 +225,7 @@ async function processIMD(
       totalRows: rows.length,
       enriched: enriched.length,
       unmatched,
-      succeeded,
-      failed,
+      csv: outputCsv,
     },
   }
 }
@@ -316,7 +233,7 @@ async function processIMD(
 export const imdService = {
   parseCsv,
   enrichIMDRows,
-  addRentRows,
+  toTenfastCsv,
   processIMD,
   IMDRowSchema,
 }

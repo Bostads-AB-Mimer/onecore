@@ -4,21 +4,13 @@ jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),
 }))
 
-jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
-  updateLeaseInvoiceRows: jest.fn(),
-}))
-
 import { getActiveLeasesByRentalObjectCodes } from '@src/services/common/adapters/xpand-db-adapter'
-import { updateLeaseInvoiceRows } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { imdService } from '.'
 
 const mockGetActiveLeases =
   getActiveLeasesByRentalObjectCodes as jest.MockedFunction<
     typeof getActiveLeasesByRentalObjectCodes
   >
-
-const mockUpdateLeaseInvoiceRows =
-  updateLeaseInvoiceRows as jest.MockedFunction<typeof updateLeaseInvoiceRows>
 
 const csv = `
 306-008-01-0201;2026-01-01;2026-01-31;VV;129,312;136,892;7,580;621,680;;82,016;m3;;;1
@@ -178,96 +170,68 @@ describe(imdService.enrichIMDRows, () => {
 const makeEnrichedRow = (
   rentalObjectCode: string,
   leaseId: string,
-  cost = 100
+  { cost = 100, unit = 'VV' } = {}
 ) => ({
   rentalObjectCode,
   leaseId,
   from: new Date('2026-01-01'),
   to: new Date('2026-01-31'),
-  unit: 'VV',
+  unit,
   volume: 7.58,
   cost,
 })
 
-describe(imdService.addRentRows, () => {
-  beforeEach(() => {
-    mockUpdateLeaseInvoiceRows.mockReset()
+describe(imdService.toTenfastCsv, () => {
+  it('maps VV to IMDM article and Vattenförbrukning label', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02', { cost: 621.68, unit: 'VV' }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines[0]).toBe(
+      'Kontraktsnummer;Hyresartikel;Avitext;Fr.o.m;T.o.m;Årshyra'
+    )
+    expect(lines[1]).toBe(
+      '306-008-01-0201/02;IMDM;Vattenförbrukning;2026-01-01;2026-01-31;7460,16'
+    )
   })
 
-  it('calls updateLeaseInvoiceRows for each row with correct params', async () => {
-    mockUpdateLeaseInvoiceRows.mockResolvedValue({ ok: true, data: null })
+  it('maps VMM to VÄRMEENERGIM article and Värmeenergi label', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500, unit: 'VMM' }),
+    ])
 
-    await imdService.addRentRows(
-      [makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02', 621.68)],
-      'article-123',
-      'IMD Varmvatten'
-    )
-
-    expect(mockUpdateLeaseInvoiceRows).toHaveBeenCalledWith({
-      leaseId: '306-008-01-0201/02',
-      rowsToDelete: [],
-      rowsToAdd: [
-        {
-          amount: 621.68,
-          vat: 0,
-          from: '2026-01-01',
-          to: '2026-01-31',
-          article: 'article-123',
-          label: 'IMD Varmvatten',
-        },
-      ],
-    })
+    const dataLine = csv.split('\n')[1]
+    const cols = dataLine.split(';')
+    expect(cols[1]).toBe('VÄRMEENERGIM')
+    expect(cols[2]).toBe('Värmeenergi')
   })
 
-  it('reports succeeded and failed rows separately', async () => {
-    mockUpdateLeaseInvoiceRows
-      .mockResolvedValueOnce({ ok: true, data: null })
-      .mockResolvedValueOnce({ ok: false, err: 'lease not found' })
-
-    const result = await imdService.addRentRows(
-      [
-        makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02'),
-        makeEnrichedRow('306-008-01-0202', '306-008-01-0202/01'),
-      ],
-      'article-123',
-      'IMD Varmvatten'
-    )
-
-    expect(result.succeeded).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          leaseId: '306-008-01-0201/02',
-          rentalObjectCode: '306-008-01-0201',
-        }),
+  it('throws for unknown unit', () => {
+    expect(() =>
+      imdService.toTenfastCsv([
+        makeEnrichedRow('306-008-01-0201', 'L1', { unit: 'UNKNOWN' }),
       ])
-    )
-    expect(result.failed).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          leaseId: '306-008-01-0202/01',
-          rentalObjectCode: '306-008-01-0202',
-          error: 'lease not found',
-        }),
-      ])
-    )
+    ).toThrow('Unknown unit "UNKNOWN"')
   })
 
-  it('handles rejected promises without crashing the batch', async () => {
-    mockUpdateLeaseInvoiceRows
-      .mockResolvedValueOnce({ ok: true, data: null })
-      .mockRejectedValueOnce(new Error('network timeout'))
+  it('multiplies monthly cost by 12 for yearly rent', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500 }),
+    ])
 
-    const result = await imdService.addRentRows(
-      [
-        makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02'),
-        makeEnrichedRow('306-008-01-0202', '306-008-01-0202/01'),
-      ],
-      'article-123',
-      'IMD Varmvatten'
-    )
+    const dataLine = csv.split('\n')[1]
+    const yearlyRent = dataLine.split(';')[5]
+    expect(yearlyRent).toBe('6000,00')
+  })
 
-    expect(result.succeeded).toHaveLength(1)
-    expect(result.failed).toHaveLength(1)
-    expect(result.failed[0].error).toContain('network timeout')
+  it('outputs multiple rows', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 100 }),
+      makeEnrichedRow('306-008-01-0202', 'L2', { cost: 200 }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines).toHaveLength(3)
   })
 })
