@@ -209,7 +209,50 @@ const createAggregateCsv = async (invoiceRows: ExportedInvoiceRow[]) => {
 }
 
 const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
-  let currentStartDate = dateString(invoiceRows[0].fromDate)
+  const rowChunks: Record<string, ExportedInvoiceRow[]> = {}
+
+  invoiceRows.forEach((invoiceRow) => {
+    const key =
+      invoiceRow.totalAccount +
+      ':' +
+      dateString(invoiceRow.fromDate) +
+      ':' +
+      dateString(invoiceRow.toDate)
+
+    if (!rowChunks[key]) {
+      rowChunks[key] = []
+    }
+
+    rowChunks[key].push(invoiceRow)
+  })
+
+  let aggregatedRows: AggregatedRow[] = []
+  let voucherIndex = 0
+
+  Object.values(rowChunks).forEach((chunkInvoiceRows) => {
+    const voucherNumber =
+      '2' +
+      Date.now().toString().substring(6, 12) +
+      voucherIndex.toString().padStart(3, '0')
+    voucherIndex++
+
+    const chunkAggregatedRows = groupAggregateRows(
+      chunkInvoiceRows,
+      voucherNumber
+    )
+    aggregatedRows.push(...chunkAggregatedRows)
+    const chunkTotalRow = createAggregatedTotalRow(
+      chunkAggregatedRows,
+      voucherNumber
+    )
+    aggregatedRows.push(chunkTotalRow)
+  })
+
+  console.table(aggregatedRows)
+
+  return aggregatedRows
+
+  /*  let currentStartDate = dateString(invoiceRows[0].fromDate)
   let currentEndDate = dateString(invoiceRows[0].toDate)
   let currentTotalAccount = invoiceRows[0].totalAccount
   let currentRows: ExportedInvoiceRow[] = []
@@ -264,7 +307,7 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
   })
 
   console.table(aggregatedRows)
-  return aggregatedRows
+  return aggregatedRows*/
 }
 
 const dateString = (date: Date | undefined) => {
