@@ -127,7 +127,7 @@ export function DashboardView() {
       description: 'Nyckelhantering',
       path: resolve('VITE_KEYS_URL', ''),
       isExternal: true,
-      isDisabled: true,
+      isDisabled: false,
     },
     // Disabled cards (not yet implemented)
     {
