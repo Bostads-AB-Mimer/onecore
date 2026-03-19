@@ -575,7 +575,7 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
   doc.setFontSize(FONT_SIZE.BODY)
 
   const confirmText =
-    'Jag bekräftar att jag har mottagit ovanstående nycklar och att jag är ansvarig för dem. Vid förlust eller skada debiteras kostnad för byte av lås.'
+    'Genom min signatur bekräftar jag att jag tagit emot ovanstående nycklar. Jag ansvarar för att de förvaras och används på ett säkert sätt. Om en nyckel försvinner eller skadas ska jag omedelbart kontakta Mimer. För externa leverantörer innebär förlust eller skada att kostnaden för låsbyte debiteras nyckellånaren eller dennes arbetsgivare.'
 
   const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
   lines.forEach((line: string) => {

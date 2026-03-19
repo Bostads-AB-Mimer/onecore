@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Tenant, Lease, TenantAddress as Address } from '@/services/types'
 import { useEffect, useMemo, useState } from 'react'
 import { ContractCard } from './ContractCard'
+import { RentalPropertyKeysCard } from './RentalPropertyKeysCard'
 import { KeyNoteDisplay } from './KeyNoteDisplay'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { getPriorityContractId } from '@/utils/contractPriority'
@@ -26,6 +27,7 @@ export function TenantInfo({
   onClearSearch,
   showTenantCard = true,
   searchType = null,
+  rentalPropertyId,
 }: {
   tenant?: Tenant | null
   contracts: Lease[]
@@ -33,6 +35,7 @@ export function TenantInfo({
   /* hiding the tenant card for hyresobjekt flow */
   showTenantCard?: boolean
   searchType?: 'pnr' | 'object' | 'contactCode' | null
+  rentalPropertyId?: string
 }) {
   // Get all tenants from the active lease for display
   const activeLease = useMemo(() => {
@@ -168,9 +171,7 @@ export function TenantInfo({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground">
-                    Inget aktivt hyresgäst
-                  </p>
+                  <p className="text-muted-foreground">Ingen aktiv hyresgäst</p>
                 </CardContent>
               </Card>
             )}
@@ -336,7 +337,13 @@ export function TenantInfo({
 
         {activeContracts.length === 0 &&
           upcomingContracts.length === 0 &&
-          totalEnded === 0 && (
+          totalEnded === 0 &&
+          (searchType === 'object' && rentalPropertyId ? (
+            <RentalPropertyKeysCard
+              rentalPropertyId={rentalPropertyId}
+              defaultTab="keys"
+            />
+          ) : (
             <Card>
               <CardContent className="pt-6">
                 <p className="text-muted-foreground text-center">
@@ -344,7 +351,7 @@ export function TenantInfo({
                 </p>
               </CardContent>
             </Card>
-          )}
+          ))}
       </div>
     </div>
   )

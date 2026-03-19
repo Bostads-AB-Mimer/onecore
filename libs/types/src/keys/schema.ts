@@ -59,7 +59,7 @@ export const KeySchema = z.object({
 export const KeyLoanSchema = z.object({
   id: z.string().uuid(),
   loanType: LoanTypeSchema,
-  contact: z.string().optional(),
+  contact: z.string().nullable().optional(),
   contact2: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
