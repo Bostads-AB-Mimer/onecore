@@ -5375,7 +5375,8 @@ export interface paths {
      * - Residences: Matches on rental ID or residence name
      * - Parking Spaces: Matches on rental ID or parking space name
      * - Maintenance Units: Matches on code
-     * Returns up to 10 results per entity type (max 50 total results).
+     * - Facilities: Matches on rental ID or facility name
+     * Returns up to 10 results per entity type (max 60 total results).
      */
     get: {
       parameters: {
@@ -9514,16 +9515,27 @@ export interface components {
       };
     };
     FacilitySearchResult: {
+      /** @description Unique identifier for the search result */
       id: string;
-      rentalId: string;
-      code: string;
+      /**
+       * @description Indicates this is a facility result
+       * @enum {string}
+       */
+      type: "facility";
+      /** @description Name of the facility */
       name: string | null;
+      /** @description Rental ID of the facility */
+      rentalId: string;
+      /** @description Code of the facility */
+      code: string;
       property: {
         code: string | null;
+        /** @description Name of property associated with the facility */
         name: string | null;
       };
       building: {
         code: string | null;
+        /** @description Name of building associated with the facility */
         name: string | null;
       };
     };
@@ -10855,7 +10867,7 @@ export interface components {
       /** @description Property name */
       estate: string | null;
     };
-    /** @description A search result that can be either a property, building, residence, parking space or maintenance unit */
+    /** @description A search result that can be either a property, building, residence, parking space, maintenance unit or facility */
     SearchResult: {
       /** @description Unique identifier for the search result */
       id: string;
@@ -10950,6 +10962,30 @@ export interface components {
       estateCode: string | null;
       /** @description Property name */
       estate: string | null;
+    }) | ({
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a facility result
+       * @enum {string}
+       */
+      type: "facility";
+      /** @description Name of the facility */
+      name: string | null;
+      /** @description Rental ID of the facility */
+      rentalId: string;
+      /** @description Code of the facility */
+      code: string;
+      property: {
+        code: string | null;
+        /** @description Name of property associated with the facility */
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        /** @description Name of building associated with the facility */
+        name: string | null;
+      };
     });
     Inspection: {
       id: string;
