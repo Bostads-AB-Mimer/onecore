@@ -10138,7 +10138,7 @@ export interface components {
       id: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
-      contact?: string;
+      contact?: string | null;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10197,7 +10197,7 @@ export interface components {
       id: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
-      contact?: string;
+      contact?: string | null;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10755,7 +10755,7 @@ export interface components {
           id: string;
           /** @enum {string} */
           loanType: "TENANT" | "MAINTENANCE";
-          contact?: string;
+          contact?: string | null;
           contact2?: string | null;
           contactPerson?: string | null;
           notes?: string | null;
