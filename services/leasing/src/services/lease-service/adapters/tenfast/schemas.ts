@@ -58,6 +58,13 @@ export const TenfastRentalObjectSchema = z.object({
   subType: z.string().optional(),
   kvm: z.number().nullish(),
   displayName: z.string().optional(),
+  fastighet: z
+    .object({
+      _id: z.string(),
+      fastighetsbeteckning: z.string(),
+      stadsdel: z.string().optional(),
+    })
+    .optional(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({

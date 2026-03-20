@@ -7,7 +7,7 @@ import {
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
 
-const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
+export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const { stage } = lease
 
   switch (stage) {
@@ -84,6 +84,10 @@ const mapToOnecoreRentalObject = (
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
 export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
+  const rentalObject = lease.hyresobjekt[0]
+
+  const stadsdel = rentalObject?.stadsdel ?? rentalObject?.fastighet?.stadsdel
+
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
@@ -98,14 +102,16 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
     contractDate: lease.signedAt ?? undefined,
     lastDebitDate: lease.endDate ?? undefined,
     approvalDate: lease.signedAt ?? undefined,
-    residentialArea: undefined,
+    residentialArea: stadsdel
+      ? { code: stadsdel, caption: stadsdel }
+      : undefined,
     tenantContactIds: lease.hyresgaster.map((tenant) => tenant.externalId),
     tenants: undefined,
     rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
-    rentalObject: lease.hyresobjekt[0]
-      ? mapToOnecoreRentalObject(lease.hyresobjekt[0])
+    rentalObject: rentalObject
+      ? mapToOnecoreRentalObject(rentalObject)
       : undefined,
-    type: lease.hyresobjekt[0]?.typ ?? 'missing', // TODO: Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
+    type: rentalObject?.typ ?? rentalObject?.subType ?? 'missing',
     rentRows: lease.hyror.map(mapToOnecoreRentRow),
   }
 }

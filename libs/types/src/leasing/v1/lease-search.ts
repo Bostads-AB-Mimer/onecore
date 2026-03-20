@@ -20,6 +20,10 @@ export const LeaseSearchQueryParamsSchema = z.object({
   // Text search
   q: z.string().optional(),
 
+  // Explicit search fields (used by search-tenfast / Tenfast)
+  name: z.string().optional(),
+  address: z.string().optional(),
+
   // Filters
   objectType: z
     .union([z.string(), z.array(z.string())])
@@ -67,11 +71,13 @@ export const LeaseSearchQueryParamsSchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1)),
+    .transform((val) => (val ? parseInt(val, 10) : 1))
+    .refine((val) => !isNaN(val), { message: 'page must be a valid number' }),
   limit: z
     .string()
     .optional()
-    .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20)),
+    .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20))
+    .refine((val) => !isNaN(val), { message: 'limit must be a valid number' }),
 
   // Sorting (tenantName removed since contacts are fetched separately)
   sortBy: z.enum(['leaseStartDate', 'lastDebitDate', 'leaseId']).optional(),
