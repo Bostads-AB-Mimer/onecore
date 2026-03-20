@@ -221,6 +221,8 @@ const leaseStatusFormatMap: Record<LeaseStatus, string> = {
   [LeaseStatus.AboutToEnd]: 'Uppsagt',
   [LeaseStatus.Ended]: 'Upphört',
   [LeaseStatus.PreliminaryTerminated]: 'Preliminärt uppsagt',
+  [LeaseStatus.PendingSignature]: 'Väntar på signering',
+  [LeaseStatus.NotSent]: 'Ej skickat',
 }
 
 const formatLeaseStatus = (v: LeaseStatus) => leaseStatusFormatMap[v]
