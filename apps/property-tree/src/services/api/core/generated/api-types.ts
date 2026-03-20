@@ -9655,7 +9655,7 @@ export interface components {
           spaceId: string | null;
           /** @enum {string} */
           spaceType: "OBJECT" | "PropertyObject";
-          installationDate: string;
+          installationDate: string | null;
           deinstallationDate: string | null;
           orderNumber?: string | null;
           cost: number;
@@ -9799,7 +9799,7 @@ export interface components {
       spaceId: string | null;
       /** @enum {string} */
       spaceType: "OBJECT" | "PropertyObject";
-      installationDate: string;
+      installationDate: string | null;
       deinstallationDate: string | null;
       orderNumber?: string | null;
       cost: number;
@@ -9884,7 +9884,7 @@ export interface components {
             componentId: string;
             spaceId: string | null;
             spaceType: components["schemas"]["ComponentInstallation"]["spaceType"];
-            installationDate: string;
+            installationDate: string | null;
             deinstallationDate: string | null;
             orderNumber?: string | null;
             cost: number;
@@ -10043,7 +10043,7 @@ export interface components {
       /** @enum {string} */
       spaceType: "OBJECT" | "PropertyObject";
       /** Format: date-time */
-      installationDate: string;
+      installationDate?: string | null;
       /** Format: date-time */
       deinstallationDate?: string;
       orderNumber?: string;
