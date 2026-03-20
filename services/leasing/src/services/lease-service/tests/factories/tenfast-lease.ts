@@ -22,7 +22,7 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     vatEnabled: false,
     method: 'digital',
     signed: true,
-    stage: 'signed',
+    stage: 'active',
     file: {
       key: `file-key-${sequence}`,
       location: 'https://files.example.com/file.pdf',
