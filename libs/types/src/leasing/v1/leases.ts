@@ -6,6 +6,8 @@ export const GetLeasesStatusSchema = z.enum([
   'about-to-end',
   'ended',
   'not-sent',
+  'preliminary-terminated',
+  'pending-signature',
 ])
 
 export const FilterLeasesQueryParamsSchema = z.object({
