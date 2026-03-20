@@ -3369,7 +3369,7 @@ export interface components {
           spaceId: string | null;
           /** @enum {string} */
           spaceType: "OBJECT" | "PropertyObject";
-          installationDate: string;
+          installationDate: string | null;
           deinstallationDate: string | null;
           orderNumber?: string | null;
           cost: number;
@@ -3488,7 +3488,7 @@ export interface components {
             spaceId: string | null;
             /** @enum {string} */
             spaceType: "OBJECT" | "PropertyObject";
-            installationDate: string;
+            installationDate: string | null;
             deinstallationDate: string | null;
             orderNumber?: string | null;
             cost: number;
