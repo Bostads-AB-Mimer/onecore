@@ -307,7 +307,17 @@ export const routes = (router: KoaRouter) => {
    *         name: q
    *         schema:
    *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *         description: Free-text search (contract ID, PNR, contact code)
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Search by tenant name
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Search by rental object address
    *       - in: query
    *         name: objectType
    *         schema:
@@ -592,7 +602,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/leases/search-v2', async (ctx) => {
+  router.get('(.*)/leases/search-tenfast', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
       'name',

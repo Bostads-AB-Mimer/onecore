@@ -69,6 +69,13 @@ export const TenfastRentalObjectSchema = z.object({
     )
     .optional(), // We omit tenants and rental objects to avoid circular reference, also we don't need them in the context of rental object
   displayName: z.string().optional(),
+  fastighet: z
+    .object({
+      _id: z.string(),
+      fastighetsbeteckning: z.string(),
+      stadsdel: z.string().optional(),
+    })
+    .optional(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
