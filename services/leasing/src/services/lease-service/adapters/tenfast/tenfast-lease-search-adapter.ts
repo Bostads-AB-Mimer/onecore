@@ -1,8 +1,8 @@
 import { Context } from 'koa'
-import { leasing, LeaseStatus } from '@onecore/types'
+import { Lease, leasing, LeaseStatus } from '@onecore/types'
 import {
-  buildPaginatedResponse,
   PaginatedResponse,
+  buildPaginationLinks,
   logger,
 } from '@onecore/utilities'
 
@@ -11,35 +11,19 @@ import * as tenfastApi from './tenfast-api'
 import { TenfastLeaseSchema } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../types'
-import { calculateLeaseStatus } from '../../helpers/tenfast'
+import { calculateLeaseStatus, mapToOnecoreLease } from '../../helpers/tenfast'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
 
 /**
- * Build Tenfast API query parameters from search params.
- * Pushes as many filters as possible to the API to avoid fetching all leases.
- *
- * Supported Tenfast API filters (filter works on all Avtal schema fields):
- * - filter[isArchivedAt]=false  — exclude archived leases
- * - filter[startDate]=FROM,TO — date range (comma-separated)
- * - filter[endDate]=FROM,TO — date range (comma-separated)
- * - filter[hyresobjekt.typ]=bostad — object type filter
- * - filter[hyresobjekt][stadsdel]=Vetterstorp — district filter
- * - filter[fastighet][displayName]=name — property filter
- * - filter[stage]=requestedCancellation — lease stage filter
- * - filter[externalId]=206-706-00-0005/04 — lease ID filter
- * - filter[hyresgast][displayName]=name — tenant name filter
- * - filter[hyresgast][idBeteckning]=19870328 — personnummer filter
- * - filter[hyresgast][externalId]=P056822 — contact code filter
- * - filter[hyresobjekt][displayName]=Drever — rental object name/address filter
- * - limit=N / offset=N — pagination
- * - populate=hyresgaster,hyresobjekt — include related data
+ * Supported Tenfast API filters:
+ * filter[isArchivedAt], filter[startDate], filter[endDate], filter[hyresobjekt][typ],
+ * filter[hyresobjekt][stadsdel], filter[fastighet][fastighetsbeteckning], filter[stage],
+ * filter[externalId], filter[hyresgast][displayName], filter[hyresgast][idBeteckning],
+ * filter[hyresgast][externalId], limit/offset, populate
  */
 
-/**
- * Maps our LeaseSearchQueryParams objectType values to Tenfast hyresobjekt.typ values.
- */
 const OBJECT_TYPE_TO_TENFAST_TYP: Record<string, string> = {
   bostad: 'bostad',
   parkering: 'parkering',
@@ -48,26 +32,21 @@ const OBJECT_TYPE_TO_TENFAST_TYP: Record<string, string> = {
   forrad: 'forrad',
 }
 
-/**
- * Maps our status filter values to Tenfast stage values where a direct mapping exists.
- * Some statuses (Current, Upcoming, Ended) require date comparison and cannot be
- * fully delegated to the API.
- */
 const STATUS_TO_TENFAST_STAGE: Record<string, string> = {
-  abouttoend: 'requestedCancellation',
-  '2': 'requestedCancellation',
+  current: 'active',
+  active: 'active',
+  upcoming: 'upcoming',
+  abouttoend: 'terminationScheduled',
+  ended: 'terminated',
+  pendingsignature: 'signingInProgress',
+  preliminaryterminated: 'preTermination',
+  notsent: 'draft',
 }
 
 /**
- * Analyze a free-text search query and determine which Tenfast API filters to use.
- * Always returns one or more filters to push to the API.
- *
- * Patterns:
- * - Contact code (P/F/I/K/L/Ö/S + digits): filter[hyresgast][externalId]
- * - Personnummer (digits with optional dashes/spaces, ≥6 chars): filter[hyresgast][idBeteckning]
- * - Lease ID pattern (contains /): filter[externalId]
- * - Short digits (<6 chars): filter[hyresgast][idBeteckning]
- * - Letters or mixed: filter[hyresgast][displayName] + filter[hyresobjekt][displayName]
+ * Analyze free-text `q` and return matching Tenfast API filters.
+ * Matches contact codes, personnummer and lease IDs.
+ * Returns empty for names/addresses — use explicit `name`/`address` params instead.
  */
 export function analyzeSearchTermForApi(q: string): Array<{
   filterKey: string
@@ -86,13 +65,14 @@ export function analyzeSearchTermForApi(q: string): Array<{
     ]
   }
 
-  // Personnummer or digit string: all digits (possibly with dashes/spaces)
-  const normalized = trimmed.replace(/[\s-]/g, '')
-  if (/^\d+$/.test(normalized)) {
+  // Personnummer or digit string
+  // NOTE: Tenfast idBeteckning filter may not support dash format — reported to Tenfast.
+  const digitsOnly = trimmed.replace(/[\s-]/g, '')
+  if (/^\d+$/.test(digitsOnly)) {
     return [
       {
         filterKey: 'filter[hyresgast][idBeteckning]',
-        filterValue: normalized,
+        filterValue: trimmed,
       },
     ]
   }
@@ -102,11 +82,7 @@ export function analyzeSearchTermForApi(q: string): Array<{
     return [{ filterKey: 'filter[externalId]', filterValue: trimmed }]
   }
 
-  // Letters or mixed alphanumeric (name or address)
-  return [
-    { filterKey: 'filter[hyresgast][displayName]', filterValue: trimmed },
-    { filterKey: 'filter[hyresobjekt][displayName]', filterValue: trimmed },
-  ]
+  return []
 }
 
 export function buildTenfastQueryParams(
@@ -117,7 +93,6 @@ export function buildTenfastQueryParams(
   query.set('populate', 'hyresgaster,hyresobjekt')
   query.set('filter[isArchivedAt]', 'false')
 
-  // Free-text search — always pushed to API
   if (params.q) {
     const apiFilters = analyzeSearchTermForApi(params.q)
     for (const filter of apiFilters) {
@@ -125,8 +100,15 @@ export function buildTenfastQueryParams(
     }
   }
 
-  // Date filters — pushed to API using comma-separated range format
-  // e.g. filter[startDate]=2026-02-01,2026-02-28
+  if (params.name) {
+    query.set('filter[hyresgast][displayName]', params.name)
+  }
+
+  // NOTE: Tenfast may tokenize spaces with OR logic — reported to Tenfast.
+  if (params.address) {
+    query.set('filter[hyresobjekt][postadress]', params.address.trim())
+  }
+
   if (params.startDateFrom || params.startDateTo) {
     const from = params.startDateFrom ?? ''
     const to = params.startDateTo ?? ''
@@ -138,16 +120,16 @@ export function buildTenfastQueryParams(
     query.set('filter[endDate]', `${from},${to}`)
   }
 
-  // Object type filter — pushed to API via filter on the hyresobjekt typ field
-  if (params.objectType && params.objectType.length === 1) {
-    const tenfastTyp =
-      OBJECT_TYPE_TO_TENFAST_TYP[params.objectType[0].toLowerCase()]
-    if (tenfastTyp) {
-      query.set('filter[hyresobjekt.typ]', tenfastTyp)
+  if (params.objectType && params.objectType.length > 0) {
+    const tenfastTypes = params.objectType
+      .map((t) => OBJECT_TYPE_TO_TENFAST_TYP[t.toLowerCase()])
+      .filter(Boolean)
+    if (tenfastTypes.length > 0) {
+      query.set('filter[hyresobjekt][typ]', tenfastTypes.join(','))
     }
   }
 
-  // Stage filter — pushed to API when the status maps directly to a Tenfast stage
+  // Stage filter — API does not support multiple comma-separated values
   if (params.status && params.status.length === 1) {
     const tenfastStage = STATUS_TO_TENFAST_STAGE[params.status[0].toLowerCase()]
     if (tenfastStage) {
@@ -155,17 +137,17 @@ export function buildTenfastQueryParams(
     }
   }
 
-  // Property filter — pushed to API via filter on fastighet displayName
-  if (params.property && params.property.length === 1) {
-    query.set('filter[fastighet][displayName]', params.property[0])
+  if (params.property && params.property.length > 0) {
+    query.set(
+      'filter[fastighet][fastighetsbeteckning]',
+      params.property.join(',')
+    )
   }
 
-  // District filter — pushed to API via filter on hyresobjekt stadsdel
-  if (params.districtNames && params.districtNames.length === 1) {
-    query.set('filter[hyresobjekt][stadsdel]', params.districtNames[0])
+  if (params.districtNames && params.districtNames.length > 0) {
+    query.set('filter[hyresobjekt][stadsdel]', params.districtNames.join(','))
   }
 
-  // When no client-side-only filters are active, let the API handle pagination
   const needsClientSideFiltering = needsClientSideProcessing(params)
 
   if (!needsClientSideFiltering) {
@@ -174,54 +156,43 @@ export function buildTenfastQueryParams(
     const offset = (page - 1) * limit
     query.set('limit', String(limit))
     query.set('offset', String(offset))
+  } else {
+    // Fetch all records for client-side filtering
+    query.set('limit', '10000')
+    query.set('offset', '0')
   }
 
   return query
 }
 
-/**
- * Determines if the search params require client-side filtering/pagination.
- * Client-side processing is needed when:
- * - Multiple objectTypes are specified — API only supports single value
- * - Multiple properties or districts — API only supports single value
- * - Status filter requires date-based computation (current/upcoming/ended)
- */
+/** Returns true when status doesn't map to a Tenfast stage and needs client-side filtering. */
 function needsClientSideProcessing(
   params: leasing.v1.LeaseSearchQueryParams
 ): boolean {
-  // Multiple object types require client-side filtering
-  if (params.objectType && params.objectType.length > 1) return true
-
-  // Multiple properties require client-side filtering
-  if (params.property && params.property.length > 1) return true
-
-  // Multiple districts require client-side filtering
-  if (params.districtNames && params.districtNames.length > 1) return true
-
-  // Status filter: only 'aboutToEnd' / '2' maps cleanly to a Tenfast stage.
-  // All others (current, upcoming, ended) require date-based computation.
-  if (params.status && params.status.length > 0) {
-    const allMappable = params.status.every(
-      (s) => STATUS_TO_TENFAST_STAGE[s.toLowerCase()] !== undefined
-    )
-    if (!allMappable) return true
+  if (params.status && params.status.length === 1) {
+    if (!STATUS_TO_TENFAST_STAGE[params.status[0].toLowerCase()]) return true
   }
 
   return false
 }
 
-/**
- * Fetch leases from Tenfast with API-level filtering.
- * Uses GET /v1/hyresvard/avtal with filter[] query parameters.
- */
 export async function fetchLeases(
   params: leasing.v1.LeaseSearchQueryParams
 ): Promise<
-  AdapterResult<TenfastLease[], 'unknown' | 'could-not-parse-leases'>
+  AdapterResult<
+    { leases: TenfastLease[]; totalCount: number },
+    'unknown' | 'could-not-parse-leases'
+  >
 > {
   try {
     const queryParams = buildTenfastQueryParams(params)
-    const url = `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}&${queryParams.toString()}`
+    // Tenfast API expects literal brackets and commas, not URL-encoded
+    const queryString = queryParams
+      .toString()
+      .replace(/%5B/gi, '[')
+      .replace(/%5D/gi, ']')
+      .replace(/%2C/gi, ',')
+    const url = `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}&${queryString}`
 
     const res = await tenfastApi.request({
       method: 'get',
@@ -236,7 +207,12 @@ export async function fetchLeases(
       return { ok: false, err: 'unknown' }
     }
 
-    const parsed = TenfastLeaseSchema.array().safeParse(res.data)
+    // Tenfast wraps results in { records: [...], prev, next, totalCount }
+    const isWrapped = !Array.isArray(res.data) && res.data?.records
+    const records = isWrapped ? res.data.records : res.data
+    const totalCount = isWrapped ? (res.data.totalCount ?? 0) : 0
+
+    const parsed = TenfastLeaseSchema.array().safeParse(records)
     if (!parsed.success) {
       logger.error(
         { error: JSON.stringify(parsed.error, null, 2) },
@@ -245,7 +221,13 @@ export async function fetchLeases(
       return { ok: false, err: 'could-not-parse-leases' }
     }
 
-    return { ok: true, data: parsed.data }
+    return {
+      ok: true,
+      data: {
+        leases: parsed.data,
+        totalCount: totalCount || parsed.data.length,
+      },
+    }
   } catch (err) {
     logger.error(
       { err },
@@ -255,135 +237,59 @@ export async function fetchLeases(
   }
 }
 
-/**
- * Determine object type label from TenfastLease rental object subType
- */
-const getObjectTypeLabel = (lease: TenfastLease): string => {
-  const rentalObject = lease.hyresobjekt[0]
-  if (!rentalObject?.subType) return 'Okänd'
-
-  const typeMap: Record<string, string> = {
-    bostad: 'Bostad',
-    parkering: 'Parkering',
-    lokal: 'Lokal',
-    ovrigt: 'Övrigt',
-    forrad: 'Förråd',
-  }
-
-  return typeMap[rentalObject.subType.toLowerCase()] ?? rentalObject.subType
-}
-
-/**
- * Transform a TenfastLease into a LeaseSearchResult
- */
-const transformToSearchResult = (
-  lease: TenfastLease
-): leasing.v1.LeaseSearchResult => {
-  const rentalObject = lease.hyresobjekt[0]
-
-  const contacts: leasing.v1.ContactInfo[] = lease.hyresgaster.map(
-    (tenant) => ({
-      name: tenant.displayName || `${tenant.name.first} ${tenant.name.last}`,
-      contactCode: tenant.externalId,
-      email: (tenant as any).email ?? (tenant as any).epost ?? null,
-      phone: tenant.phone || null,
-    })
-  )
-
-  return {
-    leaseId: lease.externalId,
-    objectTypeCode: getObjectTypeLabel(lease),
-    leaseType: lease.method || 'Okänd',
-    contacts,
-    address: rentalObject?.postadress || null,
-    startDate: lease.startDate,
-    lastDebitDate: lease.endDate ?? null,
-    status: calculateLeaseStatus(lease),
-  }
-}
-
-/**
- * Status filter mapping from query param values to LeaseStatus
- */
 const STATUS_MAP: Record<string, LeaseStatus> = {
   current: LeaseStatus.Current,
+  active: LeaseStatus.Current,
   upcoming: LeaseStatus.Upcoming,
   abouttoend: LeaseStatus.AboutToEnd,
   ended: LeaseStatus.Ended,
-  '0': LeaseStatus.Current,
-  '1': LeaseStatus.Upcoming,
-  '2': LeaseStatus.AboutToEnd,
-  '3': LeaseStatus.Ended,
+  // TODO: Add these when LeaseStatus enum is extended with the new values:
+  // pendingsignature: LeaseStatus.PendingSignature,
+  // preliminaryterminated: LeaseStatus.PreliminaryTerminated,
+  // notsent: LeaseStatus.NotSent,
 }
 
-/**
- * Apply client-side filters that cannot be (fully) pushed to the Tenfast API.
- * Filters are only applied client-side when the API couldn't handle them
- * (e.g. multiple values, unmappable patterns, etc.).
- */
+/** Apply client-side status filtering for values that don't map to a Tenfast stage. */
 const applyClientSideFilters = (
   leases: TenfastLease[],
   params: leasing.v1.LeaseSearchQueryParams
 ): TenfastLease[] => {
   let filtered = leases
 
-  // Object type filter — only apply client-side when multiple types or no API mapping
-  if (params.objectType && params.objectType.length > 0) {
-    const wasPushedToApi =
-      params.objectType.length === 1 &&
-      OBJECT_TYPE_TO_TENFAST_TYP[params.objectType[0].toLowerCase()] !==
-        undefined
+  if (params.status && params.status.length === 1) {
+    const statusKey = params.status[0].toLowerCase()
+    const wasPushedToApi = STATUS_TO_TENFAST_STAGE[statusKey] !== undefined
 
     if (!wasPushedToApi) {
-      const objectTypes = params.objectType.map((t) => t.toLowerCase())
-      filtered = filtered.filter((l) => {
-        const rentalObject = l.hyresobjekt[0]
-        if (!rentalObject?.subType) return false
-        return objectTypes.includes(rentalObject.subType.toLowerCase())
-      })
-    }
-  }
-
-  // Status filter — only apply client-side when it couldn't be fully pushed to API
-  if (params.status && params.status.length > 0) {
-    const allMappedToStage = params.status.every(
-      (s) => STATUS_TO_TENFAST_STAGE[s.toLowerCase()] !== undefined
-    )
-
-    if (!allMappedToStage) {
-      const targetStatuses = params.status
-        .map((s) => STATUS_MAP[s.toLowerCase()])
-        .filter((s) => s !== undefined)
-
-      filtered = filtered.filter((l) => {
-        const leaseStatus = calculateLeaseStatus(l)
-        return targetStatuses.includes(leaseStatus)
-      })
+      const targetStatus = STATUS_MAP[statusKey]
+      if (targetStatus !== undefined) {
+        filtered = filtered.filter((l) => {
+          const leaseStatus = calculateLeaseStatus(l)
+          return leaseStatus === targetStatus
+        })
+      }
     }
   }
 
   return filtered
 }
 
-/**
- * Apply sorting to search results
- */
 const applySorting = (
-  results: leasing.v1.LeaseSearchResult[],
+  results: Lease[],
   params: leasing.v1.LeaseSearchQueryParams
-): leasing.v1.LeaseSearchResult[] => {
+): Lease[] => {
   const sortBy = params.sortBy || 'leaseStartDate'
   const sortOrder = params.sortOrder || 'desc'
   const multiplier = sortOrder === 'asc' ? 1 : -1
 
   return [...results].sort((a, b) => {
-    let aVal: Date | string | null
-    let bVal: Date | string | null
+    let aVal: Date | string | undefined
+    let bVal: Date | string | undefined
 
     switch (sortBy) {
       case 'leaseStartDate':
-        aVal = a.startDate
-        bVal = b.startDate
+        aVal = a.leaseStartDate
+        bVal = b.leaseStartDate
         break
       case 'lastDebitDate':
         aVal = a.lastDebitDate
@@ -394,14 +300,14 @@ const applySorting = (
         bVal = b.leaseId
         break
       default:
-        aVal = a.startDate
-        bVal = b.startDate
+        aVal = a.leaseStartDate
+        bVal = b.leaseStartDate
     }
 
-    // Handle nulls: push nulls to end regardless of sort order
-    if (aVal === null && bVal === null) return 0
-    if (aVal === null) return 1
-    if (bVal === null) return -1
+    // Handle undefined: push to end regardless of sort order
+    if (aVal === undefined && bVal === undefined) return 0
+    if (aVal === undefined) return 1
+    if (bVal === undefined) return -1
 
     if (aVal instanceof Date && bVal instanceof Date) {
       return (aVal.getTime() - bVal.getTime()) * multiplier
@@ -411,51 +317,71 @@ const applySorting = (
   })
 }
 
-/**
- * Main search function for Tenfast leases.
- *
- * Strategy:
- * - Pushes date filters and pagination to the Tenfast API via filter[] query params
- * - When no client-side-only filters are active (q, objectType, status), the API
- *   handles pagination directly (limit/offset)
- * - When client-side-only filters ARE active, all matching leases are fetched from
- *   the API and then filtered, sorted, and paginated in-memory
- */
 export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+): Promise<PaginatedResponse<Lease>> => {
+  // Unrecognized q patterns return empty — use `name`/`address` params for text search
+  if (params.q) {
+    const filters = analyzeSearchTermForApi(params.q)
+    if (filters.length === 0) {
+      return {
+        content: [],
+        _meta: {
+          totalRecords: 0,
+          page: params.page ?? 1,
+          limit: params.limit ?? 20,
+          count: 0,
+        },
+        _links: [],
+      }
+    }
+  }
+
+  // Only a single status is supported by the API
+  if (params.status && params.status.length > 1) {
+    params = { ...params, status: [params.status[0]] }
+  }
+
   const leasesResult = await fetchLeases(params)
 
   if (!leasesResult.ok) {
     throw new Error(`Failed to fetch leases from Tenfast: ${leasesResult.err}`)
   }
 
-  // Apply client-side filters (q, objectType, status)
-  const filteredLeases = applyClientSideFilters(leasesResult.data, params)
+  const apiTotalCount = leasesResult.data.totalCount
 
-  // Transform to search results
-  const searchResults = filteredLeases.map(transformToSearchResult)
+  const filteredLeases = applyClientSideFilters(
+    leasesResult.data.leases,
+    params
+  )
 
-  // Apply sorting
-  const sortedResults = applySorting(searchResults, params)
+  const leases = filteredLeases.map(mapToOnecoreLease)
+  const sortedResults = applySorting(leases, params)
 
   const page = params.page ?? 1
   const limit = params.limit ?? 20
 
-  // If client-side filtering was needed, we must also paginate here
-  const needsClientSidePagination = needsClientSideProcessing(params)
+  const clientSideFiltering = needsClientSideProcessing(params)
+  const totalRecords = clientSideFiltering
+    ? sortedResults.length
+    : apiTotalCount
 
-  const paginatedContent = needsClientSidePagination
-    ? sortedResults.slice((page - 1) * limit, (page - 1) * limit + limit)
-    : sortedResults
+  const paginatedContent = sortedResults.slice(
+    (page - 1) * limit,
+    (page - 1) * limit + limit
+  )
 
-  return buildPaginatedResponse({
+  const totalPages = Math.ceil(totalRecords / limit)
+
+  return {
     content: paginatedContent,
-    totalRecords: needsClientSidePagination
-      ? sortedResults.length
-      : paginatedContent.length,
-    ctx,
-    defaultLimit: limit,
-  })
+    _meta: {
+      totalRecords,
+      page,
+      limit,
+      count: paginatedContent.length,
+    },
+    _links: buildPaginationLinks(ctx, page, limit, totalPages),
+  }
 }

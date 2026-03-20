@@ -40,6 +40,10 @@ export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
 export function mapToOnecoreLease(lease: TenfastLease): Lease {
+  const rentalObject = lease.hyresobjekt[0]
+
+  const stadsdel = rentalObject?.stadsdel ?? rentalObject?.fastighet?.stadsdel
+
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
@@ -54,11 +58,13 @@ export function mapToOnecoreLease(lease: TenfastLease): Lease {
     contractDate: lease.signedAt ?? undefined,
     lastDebitDate: lease.endDate ?? undefined,
     approvalDate: lease.signedAt ?? undefined,
-    residentialArea: undefined,
+    residentialArea: stadsdel
+      ? { code: stadsdel, caption: stadsdel }
+      : undefined,
     tenantContactIds: lease.hyresgaster.map((tenant) => tenant.externalId),
     tenants: undefined,
-    rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
-    type: 'missing',
+    rentalPropertyId: rentalObject?.externalId ?? 'missing',
+    type: rentalObject?.typ ?? rentalObject?.subType ?? 'missing',
   }
 }
 
