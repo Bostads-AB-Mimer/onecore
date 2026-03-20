@@ -27,7 +27,7 @@ export interface InstallationFormData {
   condition: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
   quantity: number
   ncsCode: string
-  installationDate: string
+  installationDate: string | null
   installationCost: number
   orderNumber: string
 }
@@ -608,12 +608,14 @@ export const ComponentInstallationForm = ({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="installationDate">Installationsdatum *</Label>
+            <Label htmlFor="installationDate">Installationsdatum</Label>
             <Input
               id="installationDate"
               type="date"
-              value={formData.installationDate}
-              onChange={(e) => handleChange('installationDate', e.target.value)}
+              value={formData.installationDate ?? ''}
+              onChange={(e) =>
+                handleChange('installationDate', e.target.value || null)
+              }
             />
             {errors.installationDate && (
               <p className="text-sm text-destructive mt-1">
