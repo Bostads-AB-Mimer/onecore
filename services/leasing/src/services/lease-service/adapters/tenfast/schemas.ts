@@ -57,6 +57,17 @@ export const TenfastRentalObjectSchema = z.object({
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
   kvm: z.number().nullish(),
+  avtal: z
+    .array(
+      z.lazy(
+        (): z.ZodTypeAny =>
+          TenfastLeaseSchema.partial().omit({
+            hyresgaster: true,
+            hyresobjekt: true,
+          })
+      )
+    )
+    .optional(), // We omit tenants and rental objects to avoid circular reference, also we don't need them in the context of rental object
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({

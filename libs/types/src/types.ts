@@ -340,7 +340,8 @@ interface ParkingSpace {
 interface RentalObject {
   rentalObjectCode: string
   address: string
-  rent?: RentalObjectRent
+  // rent?: RentalObjectRent
+  availabilityInfo?: RentalObjectAvailabilityInfo
   districtCaption?: string
   districtCode?: string
   propertyCaption?: string
@@ -349,7 +350,9 @@ interface RentalObject {
   residentialAreaCode: string
   objectTypeCaption: string
   objectTypeCode: string
-  vacantFrom?: Date
+  blockStartDate?: Date //will be moved to a separate type in the future when Blocks has been moved to OneCore
+  blockEndDate?: Date //will be moved to a separate type in the future when Blocks has been moved to OneCore
+  // vacantFrom?: Date
   braArea?: number
   btaArea?: number
   boaArea?: number
@@ -357,8 +360,15 @@ interface RentalObject {
   isSpecialProperty?: boolean
 }
 
-interface RentalObjectRent {
+// This type is used as the return type of the function that parses the availability info of a rental object.
+interface RentalObjectAvailabilityInfo {
   rentalObjectCode: string
+  vacantFrom?: Date
+  rent: RentalObjectRent
+}
+
+interface RentalObjectRent {
+  // rentalObjectCode: string
   amount: number
   vat: number
   rows: Array<RentalObjectRentRow>
@@ -423,6 +433,7 @@ export type {
   XledgerContact,
   XledgerProject,
   RentalObject,
+  RentalObjectAvailabilityInfo,
   RentalObjectRent,
   RentalObjectRentRow as RentRow,
   ParkingSpace,

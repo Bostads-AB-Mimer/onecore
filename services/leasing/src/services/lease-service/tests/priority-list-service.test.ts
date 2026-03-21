@@ -899,7 +899,9 @@ describe('sortApplicantsBasedOnRentalRules', () => {
         residentialAreaCode: 'VAL',
         objectTypeCaption: 'Parkeringsplats med el',
         objectTypeCode: 'PPLMEL',
-        vacantFrom: new Date('2022-04-30T22:00:00.000Z'),
+        availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+          vacantFrom: new Date('2022-04-30T22:00:00.000Z'),
+        }),
       }),
     })
 

@@ -178,10 +178,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rental-objects/by-code/{rentalObjectCode}/rent:
+   * /rental-objects/by-code/{rentalObjectCode}/availability:
    *   get:
-   *     summary: Get rent for a rental object
-   *     description: Fetches rent for a rental object by Rental Object Code.
+   *     summary: Get availability for a rental object
+   *     description: Fetches availability for a rental object by Rental Object Code.
    *     tags:
    *       - Lease service
    *     parameters:
@@ -190,7 +190,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: The rental object code of the rent to fetch.
+   *         description: The rental object code of the availability to fetch.
    *     responses:
    *       '200':
    *         description: Successfully retrieved the rental object.
@@ -199,7 +199,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 rent:
+   *                 availability:
    *                   type: number
    *       '500':
    *         description: Internal server error. Failed to fetch rental object.
@@ -212,7 +212,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   description: The error message.
    *       '404':
-   *         description: Not found. The rent of the specified rental object was not found.
+   *         description: Not found. The availability of the specified rental object was not found.
    *         content:
    *           application/json:
    *             schema:
@@ -224,35 +224,40 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/rental-objects/by-code/:rentalObjectCode/rent', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const rentalObjectCode = ctx.params.rentalObjectCode
-    const result =
-      await leasingAdapter.getRentalObjectRentByCode(rentalObjectCode)
+  router.get(
+    '/rental-objects/by-code/:rentalObjectCode/availability',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
+      const result =
+        await leasingAdapter.getRentalObjectAvailabilityByCode(rentalObjectCode)
 
-    if (!result.ok && result.err === 'rent-not-found') {
-      ctx.status = 404
-      ctx.body = { error: 'Rent not found', ...metadata }
-      return
-    } else if (!result.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: 'Unexpected error when getting rent for ' + rentalObjectCode,
-        ...metadata,
+      if (!result.ok && result.err === 'availability-not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Availability not found', ...metadata }
+        return
+      } else if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error:
+            'Unexpected error when getting availability for ' +
+            rentalObjectCode,
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
-  })
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   /**
    * @swagger
-   * /rental-objects/rent:
+   * /rental-objects/availabilities:
    *   post:
-   *     summary: Get rent for rental objects
-   *     description: Fetches rent for rental objects by Rental Object Codes.
+   *     summary: Get availabilities for rental objects
+   *     description: Fetches availabilities for rental objects by Rental Object Codes.
    *     tags:
    *       - Lease service
    *     requestBody:
@@ -276,7 +281,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 rent:
+   *                 availability:
    *                   type: number
    *       '500':
    *         description: Internal server error. Failed to fetch rental object.
@@ -289,7 +294,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   description: The error message.
    *       '404':
-   *         description: Not found. The rent of the specified rental object was not found.
+   *         description: Not found. The availability of the specified rental object was not found.
    *         content:
    *           application/json:
    *             schema:
@@ -305,7 +310,7 @@ export const routes = (router: KoaRouter) => {
     rentalObjectCodes: z.array(z.string()).optional(),
   })
   router.post(
-    '/rental-objects/rent',
+    '/rental-objects/availabilities',
     parseRequestBody(RentalObjectsRentRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
@@ -313,19 +318,19 @@ export const routes = (router: KoaRouter) => {
       const body = ctx.request
         .body as typeof RentalObjectsRentRequestSchema._type
 
-      const result = await leasingAdapter.getRentalObjectRents(
+      const result = await leasingAdapter.getRentalObjectAvailabilities(
         body.rentalObjectCodes ?? []
       )
 
-      if (!result.ok && result.err === 'rents-not-found') {
+      if (!result.ok && result.err === 'availabilities-not-found') {
         ctx.status = 404
-        ctx.body = { error: 'Rents not found', ...metadata }
+        ctx.body = { error: 'Availabilities not found', ...metadata }
         return
       } else if (!result.ok) {
         ctx.status = 500
         ctx.body = {
           error:
-            'Unexpected error when getting rent for ' +
+            'Unexpected error when getting availabilities for ' +
             (body.rentalObjectCodes?.join(', ') ?? ''),
           ...metadata,
         }
