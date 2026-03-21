@@ -654,7 +654,9 @@ describe('createOfferForInternalParkingSpace', () => {
       data: factory.vacantParkingSpace
         .params({
           rentalObjectCode: listing.rentalObjectCode,
-          vacantFrom: undefined,
+          availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+            vacantFrom: undefined,
+          }),
         })
         .build(),
     })

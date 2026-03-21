@@ -6,20 +6,20 @@ import * as leasingAdapter from '../../leasing-adapter'
 import * as factory from '../../../../test/factories'
 
 describe('rental-objects adapter', () => {
-  describe(leasingAdapter.getRentalObjectRentByCode, () => {
-    it('should return rent when rentalObjectCode exists', async () => {
+  describe(leasingAdapter.getRentalObjectAvailabilityByCode, () => {
+    it('should return availability info when rentalObjectCode exists', async () => {
       //Arrange
-      const rent = factory.rentalObjectRent.build({
+      const availabilityInfo = factory.rentalObjectAvailabilityInfo.build({
         rentalObjectCode: '123-456-789',
       })
 
       nock(config.tenantsLeasesService.url)
-        .get(/rental-objects\/by-code\/123-456-789\/rent/)
-        .reply(200, { content: rent })
+        .get(/rental-objects\/by-code\/123-456-789\/availability/)
+        .reply(200, { content: availabilityInfo })
 
       //Act
       const result =
-        await leasingAdapter.getRentalObjectRentByCode('123-456-789')
+        await leasingAdapter.getRentalObjectAvailabilityByCode('123-456-789')
       assert(result.ok)
 
       //Assert
@@ -28,29 +28,30 @@ describe('rental-objects adapter', () => {
       )
     })
 
-    it('should return rent-not-found when rentalObjectCode does not exist', async () => {
+    it('should return availability-not-found when rentalObjectCode does not exist', async () => {
       // Arrange
       nock(config.tenantsLeasesService.url)
-        .get(/rental-objects\/by-code\/not-found-code\/rent/)
+        .get(/rental-objects\/by-code\/not-found-code\/availability/)
         .reply(404)
 
       // Act
       const result =
-        await leasingAdapter.getRentalObjectRentByCode('not-found-code')
+        await leasingAdapter.getRentalObjectAvailabilityByCode('not-found-code')
 
       // Assert
       assert(!result.ok)
-      expect(result.err).toBe('rent-not-found')
+      expect(result.err).toBe('availability-not-found')
     })
 
     it('should return unknown on network error', async () => {
       // Arrange
       nock(config.tenantsLeasesService.url)
-        .get(/rental-objects\/by-code\/123\/rent/)
+        .get(/rental-objects\/by-code\/123\/availability/)
         .replyWithError('Network error')
 
       // Act
-      const result = await leasingAdapter.getRentalObjectRentByCode('123')
+      const result =
+        await leasingAdapter.getRentalObjectAvailabilityByCode('123')
 
       // Assert
       assert(!result.ok)
@@ -64,16 +65,16 @@ describe('rental-objects adapter', () => {
         'error'
       )
       nock(config.tenantsLeasesService.url)
-        .get(/rental-objects\/by-code\/not-found-code\/rent/)
+        .get(/rental-objects\/by-code\/not-found-code\/availability/)
         .reply(404)
 
       // Act
-      await leasingAdapter.getRentalObjectRentByCode('not-found-code')
+      await leasingAdapter.getRentalObjectAvailabilityByCode('not-found-code')
 
       // Assert
       expect(loggerSpy).toHaveBeenCalledWith(
         { rentalObjectCode: 'not-found-code' },
-        'Rental object rent not found for code:'
+        'Rental object availability not found for code:'
       )
       loggerSpy.mockRestore()
     })
@@ -85,74 +86,74 @@ describe('rental-objects adapter', () => {
         'error'
       )
       nock(config.tenantsLeasesService.url)
-        .get(/rental-objects\/by-code\/network-error\/rent/)
+        .get(/rental-objects\/by-code\/network-error\/availabilities/)
         .replyWithError('Network error')
 
       // Act
-      await leasingAdapter.getRentalObjectRentByCode('network-error')
+      await leasingAdapter.getRentalObjectAvailabilityByCode('network-error')
 
       // Assert
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.anything(),
         expect.stringContaining(
-          'Error retrieving rental object rent by code: network-error'
+          'Error retrieving rental object availability by code: network-error'
         )
       )
       loggerSpy.mockRestore()
     })
   })
 
-  describe(leasingAdapter.getRentalObjectRents, () => {
-    it('should return rents for all provided rentalObjectCodes', async () => {
+  describe(leasingAdapter.getRentalObjectAvailabilities, () => {
+    it('should return availabilities for all provided rentalObjectCodes', async () => {
       // Arrange
       const rentalObjectCodes = ['code-1', 'code-2']
-      const rents = [1000, 2000]
+      const availabilities = [1000, 2000]
       nock(config.tenantsLeasesService.url)
-        .post('/rental-objects/rent', { rentalObjectCodes })
-        .reply(200, { content: rents })
+        .post('/rental-objects/availabilities', { rentalObjectCodes })
+        .reply(200, { content: availabilities })
 
       // Act
       const result =
-        await leasingAdapter.getRentalObjectRents(rentalObjectCodes)
+        await leasingAdapter.getRentalObjectAvailabilities(rentalObjectCodes)
 
       // Assert
       assert(result.ok)
-      expect(result.data).toEqual(rents)
+      expect(result.data).toEqual(availabilities)
     })
 
-    it('should return rents-not-found when no rents are found', async () => {
+    it('should return availabilities-not-found when no availabilities are found', async () => {
       // Arrange
       const rentalObjectCodes = ['not-found-1', 'not-found-2']
       nock(config.tenantsLeasesService.url)
-        .post('/rental-objects/rent', { rentalObjectCodes })
+        .post('/rental-objects/availabilities', { rentalObjectCodes })
         .reply(404)
 
       // Act
       const result =
-        await leasingAdapter.getRentalObjectRents(rentalObjectCodes)
+        await leasingAdapter.getRentalObjectAvailabilities(rentalObjectCodes)
 
       // Assert
       assert(!result.ok)
-      expect(result.err).toBe('rents-not-found')
+      expect(result.err).toBe('availabilities-not-found')
     })
 
     it('should return unknown on network error', async () => {
       // Arrange
       const rentalObjectCodes = ['code-1', 'code-2']
       nock(config.tenantsLeasesService.url)
-        .post('/rental-objects/rent', { rentalObjectCodes })
+        .post('/rental-objects/availabilities', { rentalObjectCodes })
         .replyWithError('Network error')
 
       // Act
       const result =
-        await leasingAdapter.getRentalObjectRents(rentalObjectCodes)
+        await leasingAdapter.getRentalObjectAvailabilities(rentalObjectCodes)
 
       // Assert
       assert(!result.ok)
       expect(result.err).toBe('unknown')
     })
 
-    it('should log error when rents are not found', async () => {
+    it('should log error when availabilities are not found', async () => {
       // Arrange
       const rentalObjectCodes = ['not-found-1', 'not-found-2']
       const loggerSpy = jest.spyOn(
@@ -160,16 +161,16 @@ describe('rental-objects adapter', () => {
         'error'
       )
       nock(config.tenantsLeasesService.url)
-        .post('/rental-objects/rent', { rentalObjectCodes })
+        .post('/rental-objects/availabilities', { rentalObjectCodes })
         .reply(404)
 
       // Act
-      await leasingAdapter.getRentalObjectRents(rentalObjectCodes)
+      await leasingAdapter.getRentalObjectAvailabilities(rentalObjectCodes)
 
       // Assert
       expect(loggerSpy).toHaveBeenCalledWith(
         { rentalObjectCodes },
-        'Rental object rent not found for codes:'
+        'Rental object availabilities not found for codes:'
       )
       loggerSpy.mockRestore()
     })
@@ -182,16 +183,18 @@ describe('rental-objects adapter', () => {
         'error'
       )
       nock(config.tenantsLeasesService.url)
-        .post('/rental-objects/rent', { rentalObjectCodes })
+        .post('/rental-objects/availabilities', { rentalObjectCodes })
         .replyWithError('Network error')
 
       // Act
-      await leasingAdapter.getRentalObjectRents(rentalObjectCodes)
+      await leasingAdapter.getRentalObjectAvailabilities(rentalObjectCodes)
 
       // Assert
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.anything(),
-        expect.stringContaining('Error retrieving rental object rent by codes:')
+        expect.stringContaining(
+          'Error retrieving rental object availabilities by codes:'
+        )
       )
       loggerSpy.mockRestore()
     })

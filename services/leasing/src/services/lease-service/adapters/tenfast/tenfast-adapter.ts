@@ -1,5 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { Contact, RentalObjectRent } from '@onecore/types'
+import { Contact, RentalObjectAvailabilityInfo } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -196,12 +196,12 @@ export const getRentalObject = async (
   }
 }
 
-export const getRentForRentalObject = async (
+export const getAvailabilityForRentalObject = async (
   rentalObjectCode: string,
   includeVAT: boolean
 ): Promise<
   AdapterResult<
-    RentalObjectRent,
+    RentalObjectAvailabilityInfo,
     | 'could-not-find-rental-object'
     | 'could-not-parse-rental-object'
     | 'get-rental-object-bad-request'
@@ -223,46 +223,83 @@ export const getRentForRentalObject = async (
     }
   }
 
-  const rent: RentalObjectRent = parseRentalObjectRentFromTenfastRentalObject(
-    includeVAT,
-    rentalObjectResult.data
-  )
+  const availability: RentalObjectAvailabilityInfo =
+    parseRentalObjectAvailabilityInfoFromTenfastRentalObject(
+      includeVAT,
+      rentalObjectResult.data
+    )
 
   return {
     ok: true,
-    data: rent,
+    data: availability,
   }
 }
 
-const parseRentalObjectRentFromTenfastRentalObject = (
+const getLastEndDateOfActiveLeases = (leases: TenfastLease[]): Date | null => {
+  if (leases.length === 0) return null
+  const endDates = filterByStatus(leases, [
+    'current',
+    'about-to-end',
+    'upcoming',
+  ])
+    .map((lease) => lease.endDate)
+    .filter((date): date is Date => date !== undefined)
+    .sort((a, b) => b.getTime() - a.getTime()) // Sort descending to get the latest date first
+
+  if (endDates.length === 0) return null
+
+  return new Date(endDates[0]) // Return the latest end date
+}
+
+const parseRentalObjectAvailabilityInfoFromTenfastRentalObject = (
   includeVAT: boolean,
   tenfastRentalObject: TenfastRentalObject
-): RentalObjectRent => {
+): RentalObjectAvailabilityInfo => {
+  // // Determine vacantFrom date
+  const lastDebitDate = getLastEndDateOfActiveLeases(
+    tenfastRentalObject.avtal ?? []
+  )
+
+  let vacantFrom
+  if (lastDebitDate) {
+    //if there is a last debit date, vacantFrom should be the day after
+    vacantFrom = new Date(lastDebitDate)
+    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  } else {
+    //there is no last debit date, the parking space is vacant as of today
+    vacantFrom = new Date()
+    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  }
+
   return {
     rentalObjectCode: tenfastRentalObject.externalId,
-    amount: includeVAT
-      ? tenfastRentalObject.hyra
-      : tenfastRentalObject.hyraExcludingVat,
-    vat: includeVAT ? tenfastRentalObject.hyraVat : 0,
-    rows: tenfastRentalObject.hyror.map((hyra) => ({
-      description: hyra.label || '',
+    vacantFrom: vacantFrom,
+    rent: {
       amount: includeVAT
-        ? currency(hyra.amount).add(hyra.vat).value
-        : hyra.amount,
-      vatPercentage: includeVAT ? hyra.vat : 0,
-      fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
-      toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
-      code: hyra.article || '', //TODO:vad ska denna sättas till? Är article rätt fält?,
-    })),
+        ? tenfastRentalObject.hyra
+        : tenfastRentalObject.hyraExcludingVat,
+      vat: includeVAT ? tenfastRentalObject.hyraVat : 0,
+      rows: tenfastRentalObject.hyror.map((hyra) => ({
+        description: hyra.label || '',
+        amount: includeVAT
+          ? currency(hyra.amount).add(hyra.vat).value
+          : hyra.amount,
+        vatPercentage: includeVAT ? hyra.vat : 0,
+        fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
+        toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
+        code: hyra.article || '', //TODO:vad ska denna sättas till? Är article rätt fält?,
+      })),
+    },
   }
 }
 
-export const getRentalObjectRents = async (
+export const getRentalObjectAvailabilityInfo = async (
   rentalObjectCodes: Array<string>,
   includeVAT: boolean
 ): Promise<
   AdapterResult<
-    Array<RentalObjectRent>,
+    Array<RentalObjectAvailabilityInfo>,
     | 'could-not-find-rental-objects'
     | 'could-not-parse-rental-objects'
     | 'get-rental-objects-bad-request'
@@ -276,12 +313,12 @@ export const getRentalObjectRents = async (
       batches.push(rentalObjectCodes.slice(i, i + batchSize))
     }
 
-    let allParsedRentalObjects: RentalObjectRent[] = []
+    let allParsedRentalObjects: RentalObjectAvailabilityInfo[] = []
 
     for (const batch of batches) {
       const rentalObjectResponse = await tenfastApi.request({
         method: 'post',
-        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}`,
+        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
         data: {
           externalIds: batch,
         },
@@ -310,7 +347,7 @@ export const getRentalObjectRents = async (
             TenfastRentalObjectSchema.safeParse(rentalObjectData)
           if (!parsedRentalObject.success) throw parsedRentalObject.error
 
-          return parseRentalObjectRentFromTenfastRentalObject(
+          return parseRentalObjectAvailabilityInfoFromTenfastRentalObject(
             includeVAT,
             parsedRentalObject.data
           )

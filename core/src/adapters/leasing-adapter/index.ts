@@ -619,6 +619,6 @@ export {
   getAllVacantParkingSpaces,
   getParkingSpaceByCode,
   getParkingSpaces,
-  getRentalObjectRentByCode,
-  getRentalObjectRents,
+  getRentalObjectAvailabilities,
+  getRentalObjectAvailabilityByCode,
 } from './rental-objects'

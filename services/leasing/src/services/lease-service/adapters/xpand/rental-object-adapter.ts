@@ -111,6 +111,7 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     residentialAreaCaption: row.residentialareacaption,
     objectTypeCaption: row.vehiclespacetypecaption,
     objectTypeCode: row.vehiclespacetypecode,
+    blockStartDate: row.blockstartdate,
     blockEndDate: row.blockenddate,
     // vacantFrom: vacantFrom,
     districtCaption: district,

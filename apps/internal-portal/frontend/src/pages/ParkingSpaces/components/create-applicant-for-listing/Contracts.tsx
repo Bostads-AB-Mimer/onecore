@@ -48,9 +48,10 @@ const columns: GridColDef[] = [
     renderCell: () => 'N/A',
   },
   {
-    field: 'rent.amount',
+    field: 'availabilityInfo.rent.amount',
     headerName: 'Hyra',
     ...sharedProps,
+    valueGetter: (params) => params.row.availabilityInfo?.rent?.amount ?? 0,
     renderCell: () => 'N/A',
   },
 ]

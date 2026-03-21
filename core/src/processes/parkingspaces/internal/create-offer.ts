@@ -83,7 +83,7 @@ export const createOfferForInternalParkingSpace = async (
       )
     }
 
-    if (!listing.rentalObject.vacantFrom) {
+    if (!listing.rentalObject.availabilityInfo?.vacantFrom) {
       return endFailingProcess(
         log,
         CreateOfferErrorCodes.RentalObjectNotVacant,
@@ -211,7 +211,9 @@ export const createOfferForInternalParkingSpace = async (
             : '',
           availableFrom: calculateVacantFrom(listing).toISOString(),
           deadlineDate: new Date(offer.data.expiresAt).toISOString(),
-          rent: String(listing.rentalObject.rent?.amount ?? ''),
+          rent: String(
+            listing.rentalObject.availabilityInfo?.rent?.amount ?? ''
+          ),
           type: listing.rentalObject.objectTypeCaption ?? '',
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),

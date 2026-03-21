@@ -68,10 +68,14 @@ export const routes = (router: KoaRouter) => {
     const includeRentalObjectCodes =
       requestBody?.includeRentalObjectCodes?.filter(Boolean) ?? []
 
-    const [parkingSpaceResult, rentalObjectRentsResponse] = await Promise.all([
-      xpandAdapter.getParkingSpaces(includeRentalObjectCodes),
-      tenfastAdapter.getRentalObjectRents(includeRentalObjectCodes, false),
-    ])
+    const [parkingSpaceResult, rentalObjectAvailabilitiesResponse] =
+      await Promise.all([
+        xpandAdapter.getParkingSpaces(includeRentalObjectCodes),
+        tenfastAdapter.getRentalObjectAvailabilityInfo(
+          includeRentalObjectCodes,
+          false
+        ),
+      ])
 
     //TODO: Hämta ev sista debiteringsdatum på aktiva avtal från tenfast
     //TODO: Räkna ut VacantFrom baserat på avtalets slutdatum samt eventuella spärrar
@@ -99,9 +103,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    if (!rentalObjectRentsResponse.ok) {
+    if (!rentalObjectAvailabilitiesResponse.ok) {
       logger.error(
-        { err: rentalObjectRentsResponse.err },
+        { err: rentalObjectAvailabilitiesResponse.err },
         'Error fetching rents for parking spaces:'
       )
       ctx.status = 500
@@ -113,11 +117,11 @@ export const routes = (router: KoaRouter) => {
     }
 
     parkingSpaceResult.data.forEach((ps) => {
-      const rent = rentalObjectRentsResponse.data.find(
-        (rent) => rent.rentalObjectCode === ps.rentalObjectCode
+      const availability = rentalObjectAvailabilitiesResponse.data.find(
+        (availability) => availability.rentalObjectCode === ps.rentalObjectCode
       )
-      if (rent) {
-        ps.rent = rent
+      if (availability) {
+        ps.availabilityInfo = availability
       }
     })
 
@@ -167,23 +171,27 @@ export const routes = (router: KoaRouter) => {
     //TODO: Räkna ut VacantFrom baserat på avtalets slutdatum samt eventuella spärrar
 
     if (result.ok) {
-      //get rent
-      const rentResult = await tenfastAdapter.getRentForRentalObject(
-        rentalObjectCode,
-        false
-      )
+      //get rental object with rent and lastDebitDate from tenfast
+      const availabilityResult =
+        await tenfastAdapter.getAvailabilityForRentalObject(
+          rentalObjectCode,
+          false
+        )
 
-      if (rentResult.ok) {
+      if (availabilityResult.ok) {
         ctx.status = 200
         ctx.body = {
-          content: { ...result.data, rent: rentResult.data },
+          content: {
+            ...result.data,
+            availabilityInfo: availabilityResult.data,
+          },
           ...metadata,
         }
         return
       }
 
       logger.error(
-        { err: rentResult.err, rentalObjectCode: rentalObjectCode },
+        { err: availabilityResult.err, rentalObjectCode: rentalObjectCode },
         `Could not get rent from Tenfast`
       )
 
@@ -296,10 +304,7 @@ export const routes = (router: KoaRouter) => {
       parkingSpacesWithoutBlocks.data.length
     )
 
-    //TODO: Överväg att hämta vakanta parkeringsplatser (de utan aktiva kontrakt) från tenfast först och sedan rensa bort de med spärrar i xpand samt hämta detaljerna från xpand
-    //TODO: Alternativ: Hämta aktiva avtal för parkeringsplatserna från tenfast och filtrera bort de som har aktiva avtal
-
-    //TODO: Räkna ut VacantFrom baserat på avtalets slutdatum samt eventuella spärrar
+    //TODO:Skriv om den här funktionen efter att vi fått en endpoint från Tenfast som hämtar alla lediga hyresobjekt
 
     const vacantParkingSpaces = parkingSpacesWithoutBlocks.data.filter(
       (ps) => !activeRentalObjectCodes.has(ps.rentalObjectCode)
@@ -310,80 +315,51 @@ export const routes = (router: KoaRouter) => {
       vacantParkingSpaces.length
     )
 
-    const rentalObjectRentsResponse = await tenfastAdapter.getRentalObjectRents(
-      vacantParkingSpaces.map((ps) => ps.rentalObjectCode),
-      false
-    )
+    const rentalObjectAvailabilityResponse =
+      await tenfastAdapter.getRentalObjectAvailabilityInfo(
+        vacantParkingSpaces.map((ps) => ps.rentalObjectCode),
+        false
+      )
 
-    if (!rentalObjectRentsResponse.ok) {
+    if (!rentalObjectAvailabilityResponse.ok) {
       logger.error(
-        { err: rentalObjectRentsResponse.err },
-        'Error fetching rents for vacant parking spaces:'
+        { err: rentalObjectAvailabilityResponse.err },
+        'Error fetching availability for vacant parking spaces:'
       )
       ctx.status = 500
       ctx.body = {
         error:
-          'An error occurred while fetching rents for vacant parking spaces.',
+          'An error occurred while fetching availability for vacant parking spaces.',
         ...metadata,
       }
       return
     }
 
     vacantParkingSpaces.forEach((ps) => {
-      const rent = rentalObjectRentsResponse.data.find(
-        (rent) => rent.rentalObjectCode === ps.rentalObjectCode
+      const availability = rentalObjectAvailabilityResponse.data.find(
+        (availability) => availability.rentalObjectCode === ps.rentalObjectCode
       )
-      if (rent) {
-        ps.rent = rent
+
+      if (availability) {
+        ps.availabilityInfo = availability
+
+        const vacantFrom = determineVacantFrom(
+          availability?.vacantFrom,
+          ps.blockStartDate,
+          ps.blockEndDate
+        )
+
+        if (vacantFrom) {
+          ps.availabilityInfo.vacantFrom = vacantFrom
+        }
       }
-      const leaseEndDate = getLastLeaseEndDate(
-        leasesResult.data,
-        ps.rentalObjectCode
-      )
-      ps.vacantFrom = determineVacantFrom(
-        leaseEndDate,
-        ps.blockStartDate,
-        ps.blockEndDate
-      )
     })
     ctx.status = 200
     ctx.body = { content: vacantParkingSpaces, ...metadata }
   })
 
-  function getLastLeaseEndDate(
-    leases: Array<TenfastLease>,
-    rentalObjectCode: string
-  ): Date | null {
-    // Filtrera ut alla leases för rätt rentalObject
-    const relevantLeases = leases.filter((lease) =>
-      lease.hyresobjekt.some((obj) => obj.externalId === rentalObjectCode)
-    )
-
-    if (relevantLeases.length === 0) return null
-
-    // Sortera: först på endDate (om finns), annars på startDate
-    relevantLeases.sort((a, b) => {
-      const aDate = a.endDate
-        ? new Date(a.endDate)
-        : a.startDate
-          ? new Date(a.startDate)
-          : new Date(0)
-      const bDate = b.endDate
-        ? new Date(b.endDate)
-        : b.startDate
-          ? new Date(b.startDate)
-          : new Date(0)
-      return bDate.getTime() - aDate.getTime()
-    })
-
-    // Returnera endDate om finns
-    return relevantLeases[0].endDate
-      ? new Date(relevantLeases[0].endDate)
-      : null
-  }
-
   function determineVacantFrom(
-    lastDebitDate?: Date | null,
+    vacantFromDate?: Date | null,
     blockStartDate?: string | Date | null,
     blockEndDate?: string | Date | null
   ): Date | undefined {
@@ -392,7 +368,7 @@ export const routes = (router: KoaRouter) => {
 
     const lastBlockStartDate = toDate(blockStartDate)
     const lastBlockEndDate = toDate(blockEndDate)
-    const lastDebit = toDate(lastDebitDate)
+    const lastDebit = toDate(vacantFromDate)
     const today = new Date()
     today.setUTCHours(0, 0, 0, 0)
 
@@ -417,24 +393,24 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /rental-objects/by-code/{rentalObjectCode}/rent:
+   * /rental-objects/by-code/{rentalObjectCode}/availability:
    *   get:
-   *     summary: Get a rental object rent by code
-   *     description: Fetches a rental object rent by Rental Object Code.
+   *     summary: Get a rental object availability by code
+   *     description: Fetches a rental object availability by Rental Object Code.
    *     tags:
    *       - RentalObject
    *     responses:
    *       '200':
-   *         description: Successfully retrieved the rental object rent.
+   *         description: Successfully retrieved the rental object availability.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
-   *                 rent:
+   *                 availability:
    *                   type: number
    *       '500':
-   *         description: Internal server error. Failed to fetch rental object rent.
+   *         description: Internal server error. Failed to fetch rental object availability.
    *         content:
    *           application/json:
    *             schema:
@@ -444,7 +420,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   description: The error message.
    *       '404':
-   *         description: Not found. The rent of the specified rental object was not found.
+   *         description: Not found. The availability of the specified rental object was not found.
    *         content:
    *           application/json:
    *             schema:
@@ -454,43 +430,46 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   description: The error message.
    */
-  router.get('/rental-objects/by-code/:rentalObjectCode/rent', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const rentalObjectCode = ctx.params.rentalObjectCode
+  router.get(
+    '/rental-objects/by-code/:rentalObjectCode/availability',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
 
-    const result = await tenfastAdapter.getRentForRentalObject(
-      rentalObjectCode,
-      false
-    )
+      const result = await tenfastAdapter.getAvailabilityForRentalObject(
+        rentalObjectCode,
+        false
+      )
 
-    if (result.ok) {
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
-      return
-    }
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+        return
+      }
 
-    if (result.err == 'could-not-find-rental-object') {
-      ctx.status = 404
+      if (result.err == 'could-not-find-rental-object') {
+        ctx.status = 404
+        ctx.body = {
+          error: `Availability not found for rental object code: ${rentalObjectCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
       ctx.body = {
-        error: `Rent not found for rental object code: ${rentalObjectCode}`,
+        error: 'An error occurred while fetching rental object availability.',
         ...metadata,
       }
-      return
     }
-
-    ctx.status = 500
-    ctx.body = {
-      error: 'An error occurred while fetching rental object rent.',
-      ...metadata,
-    }
-  })
+  )
 
   /**
    * @swagger
-   * /rental-objects/rent:
+   * /rental-objects/availability:
    *   post:
-   *     summary: Get rent for rental objects
-   *     description: Fetches rent for rental objects by Rental Object Codes.
+   *     summary: Get availability for rental objects
+   *     description: Fetches availability for rental objects by Rental Object Codes.
    *     tags:
    *       - Lease service
    *     requestBody:
@@ -508,13 +487,13 @@ export const routes = (router: KoaRouter) => {
    *                 example: ["ABC123", "DEF456", "GHI789"]
    *     responses:
    *       '200':
-   *         description: Successfully retrieved the rental object.
+   *         description: Successfully retrieved the rental object availability.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
-   *                 rent:
+   *                 availability:
    *                   type: number
    *       '500':
    *         description: Internal server error. Failed to fetch rental object.
@@ -543,7 +522,7 @@ export const routes = (router: KoaRouter) => {
     rentalObjectCodes: z.array(z.string()).optional(),
   })
   router.post(
-    '/rental-objects/rent',
+    '/rental-objects/availability',
     parseRequestBody(RentalObjectsRentRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
@@ -551,20 +530,22 @@ export const routes = (router: KoaRouter) => {
       const body = ctx.request
         .body as typeof RentalObjectsRentRequestSchema._type
 
-      const result = await tenfastAdapter.getRentalObjectRents(
+      const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
         body.rentalObjectCodes ?? [],
         false
       )
 
+      //TODO: also get blocks from rental object to be able to calculate vacantFrom based on end date of last active lease or block end date if there is an active block
+
       if (!result.ok && result.err === 'could-not-find-rental-objects') {
         ctx.status = 404
-        ctx.body = { error: 'Rents not found', ...metadata }
+        ctx.body = { error: 'Rental objects not found', ...metadata }
         return
       } else if (!result.ok) {
         ctx.status = 500
         ctx.body = {
           error:
-            'Unexpected error when getting rent for ' +
+            'Unexpected error when getting availability for ' +
             (body.rentalObjectCodes ?? []).join(', '),
           ...metadata,
         }
