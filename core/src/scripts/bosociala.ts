@@ -22,17 +22,15 @@ export const handleBosociala = async () => {
       `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
     )
 
-    if (config.emailAddresses.bosociala) {
-      try {
-        await sendEmail({
-          to: config.emailAddresses.bosociala,
-          subject: 'Körning: rapport till bosociala',
-          body: notification.join('\n'),
-          attachments: resultFiles,
-        })
-      } catch (error: any) {
-        logger.error(error, 'Error sending notification email')
-      }
+    try {
+      await sendEmail({
+        to: config.emailAddresses.bosociala,
+        subject: 'Körning: rapport till bosociala',
+        body: notification.join('\n'),
+        attachments: resultFiles,
+      })
+    } catch (error: any) {
+      logger.error(error, 'Error sending notification email')
     }
   } catch (err) {
     logger.error(err)

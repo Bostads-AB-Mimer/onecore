@@ -25,17 +25,15 @@ export const handleUnpaidInvoicePaymentSummaries = async () => {
       `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
     )
 
-    if (config.emailAddresses.economy) {
-      try {
-        await sendEmail({
-          to: config.emailAddresses.economy,
-          subject: 'Körning: rapport av obetalda hyresavier',
-          body: notification.join('\n'),
-          attachments: resultFiles,
-        })
-      } catch (error: any) {
-        logger.error(error, 'Error sending notification email')
-      }
+    try {
+      await sendEmail({
+        to: config.emailAddresses.economy,
+        subject: 'Körning: rapport av obetalda hyresavier',
+        body: notification.join('\n'),
+        attachments: resultFiles,
+      })
+    } catch (error: any) {
+      logger.error(error, 'Error sending notification email')
     }
   } catch (err) {
     logger.error(err)
