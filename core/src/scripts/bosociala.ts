@@ -23,12 +23,16 @@ export const handleBosociala = async () => {
     )
 
     try {
-      await sendEmail({
+      const result = await sendEmail({
         to: config.emailAddresses.bosociala,
         subject: 'Körning: rapport till bosociala',
         body: notification.join('\n'),
         attachments: resultFiles,
       })
+
+      if (!result.ok) {
+        throw result.err
+      }
     } catch (error: any) {
       logger.error(error, 'Error sending notification email')
     }

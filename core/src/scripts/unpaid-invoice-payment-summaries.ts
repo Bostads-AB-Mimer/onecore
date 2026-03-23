@@ -26,12 +26,16 @@ export const handleUnpaidInvoicePaymentSummaries = async () => {
     )
 
     try {
-      await sendEmail({
+      const result = await sendEmail({
         to: config.emailAddresses.economy,
         subject: 'Körning: rapport av obetalda hyresavier',
         body: notification.join('\n'),
         attachments: resultFiles,
       })
+
+      if (!result.ok) {
+        throw result.err
+      }
     } catch (error: any) {
       logger.error(error, 'Error sending notification email')
     }
