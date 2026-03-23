@@ -15,6 +15,7 @@ export const createMockCounterPartCustomer = (
 
 // Mock functions
 export const getCounterPartCustomers = jest.fn()
+export const findCounterPartCustomer = jest.fn()
 export const saveInvoiceRows = jest.fn()
 export const addAccountInformation = jest.fn()
 export const getContacts = jest.fn()
@@ -23,10 +24,8 @@ export const getInvoicesByChunks = jest.fn()
 
 // Setup default mock implementations
 export const setupDefaultMocks = () => {
-  getCounterPartCustomers.mockResolvedValue({
-    customers: [createMockCounterPartCustomer()],
-    find: () => createMockCounterPartCustomer(),
-  })
+  getCounterPartCustomers.mockResolvedValue([createMockCounterPartCustomer()])
+  findCounterPartCustomer.mockReturnValue(createMockCounterPartCustomer())
   saveInvoiceRows.mockResolvedValue(null)
   addAccountInformation.mockImplementation((rows: InvoiceDataRow[]) => {
     const newRows = rows.map((row) => {
@@ -46,6 +45,7 @@ export const setupDefaultMocks = () => {
 // Reset all mocks
 export const resetMocks = () => {
   getCounterPartCustomers.mockReset()
+  findCounterPartCustomer.mockReset()
   saveInvoiceRows.mockReset()
   addAccountInformation.mockReset()
   getContacts.mockReset()
