@@ -1,8 +1,8 @@
 import { logger } from '@onecore/utilities'
-import config from '../../common/config'
-import { sendEmail } from '../../adapters/communication-adapter'
-import { getBosociala } from './service'
-import { convertBosocialaToXlsx } from './converters/excelConverter'
+import config from '../common/config'
+import { sendEmail } from '../adapters/communication-adapter'
+import { getBosociala } from '../processes/reports/service'
+import { convertBosocialaToXlsx } from '../processes/reports/converters/excelConverter'
 
 export const handleBosociala = async () => {
   const now = new Date()

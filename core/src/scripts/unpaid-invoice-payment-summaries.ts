@@ -1,8 +1,8 @@
 import { logger } from '@onecore/utilities'
-import config from '../../common/config'
-import { sendEmail } from '../../adapters/communication-adapter'
-import { getUnpaidInvoicePaymentSummaries } from './service'
-import { convertInvoicePaymentSummariesToXlsx } from './converters/excelConverter'
+import config from '../common/config'
+import { sendEmail } from '../adapters/communication-adapter'
+import { getUnpaidInvoicePaymentSummaries } from '../processes/reports/service'
+import { convertInvoicePaymentSummariesToXlsx } from '../processes/reports/converters/excelConverter'
 
 export const handleUnpaidInvoicePaymentSummaries = async () => {
   const now = new Date()
