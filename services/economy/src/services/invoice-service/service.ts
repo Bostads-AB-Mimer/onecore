@@ -121,8 +121,8 @@ export const processInvoiceRows = async (
     }
 
     if (invoiceDataRow.tenantName) {
-      const counterPartCustomer = counterPartCustomers.find(
-        counterPartCustomers.customers,
+      const counterPartCustomer = findCounterPartCustomer(
+        counterPartCustomers,
         invoiceDataRow.tenantName.toString()
       )
 

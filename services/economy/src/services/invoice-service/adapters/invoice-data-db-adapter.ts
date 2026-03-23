@@ -313,11 +313,13 @@ export const getCounterPartCustomers = async (): Promise<
 
 export const findCounterPartCustomer = (
   customers: CounterPartCustomer[],
-  customerName: string
+  customerName: string | undefined
 ): CounterPartCustomer | undefined =>
-  customers.find((cp) =>
-    customerName.toLowerCase().startsWith(cp.customerName.toLowerCase())
-  )
+  customerName
+    ? customers.find((cp) =>
+        customerName.toLowerCase().startsWith(cp.customerName.toLowerCase())
+      )
+    : undefined
 
 export const addAccountInformation = async (
   invoiceDataRows: InvoiceDataRow[]
