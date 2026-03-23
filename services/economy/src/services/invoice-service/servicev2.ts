@@ -1,25 +1,9 @@
 import {
-  addAccountInformation,
-  getAggregatedInvoiceRows,
   getCounterPartCustomers,
   findCounterPartCustomer,
-  getContacts as getInvoiceContacts,
-  markInvoicesAsImported,
-  closeDb as closeInvoiceDb,
-  getInvoicesByChunks,
-  getImportedInvoiceNumbers,
-  getAllInvoiceRows,
-  verifyImport,
-  getBatchAccountTotals,
 } from './adapters/invoice-data-db-adapter'
 import {
-  enrichInvoiceRows,
   getRoundOffInformation,
-  getContacts as getXpandContacts,
-  closeDb as closeXpandDb,
-  getRentalInvoices,
-  getInvoiceRows as getXpandInvoiceRows,
-  getBatchTotalAmount as getXpandBatchTotalAmount,
   enrichInvoiceWithAccounting,
 } from './adapters/xpand-db-adapter'
 import {
@@ -31,19 +15,9 @@ import {
   LedgerRow,
   xledgerDateString,
 } from '../../common/types/typesv2'
-import {
-  createCustomerLedgerRow,
-  getPeriodInformationFromDateStrings,
-  transformAggregatedInvoiceRow,
-  transformContact,
-  uploadFile as uploadFileToXledger,
-} from '../common/adapters/xledger-adapter'
-import { Contact } from '@onecore/types'
+import { getPeriodInformationFromDateStrings } from '../common/adapters/xledger-adapter'
 import { logger } from '@onecore/utilities'
-import {
-  convertToDate,
-  getInvoicesNotExported,
-} from '@src/common/adapters/tenfast/tenfast-adapter'
+import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
 
 /**
  *
@@ -51,7 +25,7 @@ import {
 export const exportRentalInvoicesAccounting = async (companyId: string) => {
   try {
     const errors: { invoiceNumber: string; error: string }[] = []
-    const CHUNK_SIZE = 500
+    const CHUNK_SIZE = 20 //500
 
     const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE)
     if (!invoicesResult.ok) {
@@ -309,6 +283,7 @@ const groupAggregateRows = (
           fromDate: dateString(o.fromDate) ?? '',
           toDate: dateString(o.toDate) ?? '',
           totalAccount: o.totalAccount,
+          counterPartCode: o.counterPartCode,
           voucherNumber,
           amount: 0,
           vat: 0,
@@ -335,6 +310,7 @@ export const createAggregatedTotalRow = (
     fromDate: aggregatedRows[0].fromDate,
     toDate: aggregatedRows[0].toDate,
     totalAccount: aggregatedRows[0].totalAccount,
+    counterPartCode: aggregatedRows[0].counterPartCode,
     voucherNumber,
     amount: 0,
     vat: 0,
@@ -366,7 +342,7 @@ const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
       row.toDate
     )
     csvRows.push(
-      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${periodInfo.periodStart};${periodInfo.periodStart};${''};${''};${''};${''};${''};${''};${''};${taxRule};${row.amount}`
+      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periodStart};${''};${''};${''};${''};${''};${''};${''};${taxRule};${row.amount}`
     )
   })
 
@@ -480,310 +456,3 @@ const convertToLedgerCsvRows = (ledgerRows: LedgerRow[]) => {
   return csvRows
 }
 //#endregion
-
-// export const createLedgerTotalRow = (
-//   ledgerRows: InvoiceDataRow[]
-// ): InvoiceDataRow => {
-//   const accumulator = {
-//     voucherType: 'AR',
-//     voucherNo: ledgerRows[0].voucherNo,
-//     voucherDate: ledgerRows[0].voucherDate,
-//     account: ledgerRows[0].totalAccount,
-//     posting1: '',
-//     posting2: '',
-//     posting3: '',
-//     posting4: '',
-//     posting5: '',
-//     periodStart: ledgerRows[0].periodStart,
-//     noOfPeriods: ledgerRows[0].noOfPeriods,
-//     subledgerNo: '',
-//     invoiceDate: '',
-//     invoiceNo: '',
-//     ocr: '',
-//     dueDate: '',
-//     text: '',
-//     taxRule: '',
-//     amount: 0,
-//   }
-
-//   const totalRow = ledgerRows.reduce((acc: InvoiceDataRow, row) => {
-//     acc.amount = (acc.amount as number) - (row.amount as number)
-//     return acc
-//   }, accumulator)
-
-//   totalRow.amount =
-//     Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
-
-//   return totalRow
-// }
-
-// export const getContactFromInvoiceRows = (
-//   contactCode: string,
-//   invoiceDataRows: InvoiceDataRow[]
-// ): Contact | null => {
-//   const invoiceRow = invoiceDataRows.find((row) => {
-//     return (row.contactCode as string) === contactCode
-//   })
-
-//   if (!invoiceRow) {
-//     logger.error({ contactCode }, 'Could not find contact in invoiceDataRows')
-//     return null
-//   }
-
-//   return {
-//     contactCode: invoiceRow.contactCode as string,
-//     address: {
-//       street: invoiceRow.rentalObjectName as string,
-//       city: 'Västerås',
-//       postalCode: '',
-//       number: '',
-//     },
-//     contactKey: '',
-//     firstName: '',
-//     lastName: '',
-//     fullName: invoiceRow.tenantName as string,
-//     nationalRegistrationNumber: '',
-//     isTenant: true,
-//     phoneNumbers: [],
-//     birthDate: new Date(),
-//   }
-// }
-
-// export const getBatchContactsCsv = async (batchId: string) => {
-//   const invoiceContacts = await getInvoiceContacts(batchId)
-//   const contacts = invoiceContacts.map(transformContact)
-
-//   const csvContent: string[] = []
-
-//   csvContent.push(
-//     'Code;Description;Company No;Email;Street Address;Zip Code;City;Invoice Delivery Method;GL Object Value 5;Group;Collection Code'
-//   )
-
-//   contacts.forEach((contact) => {
-//     csvContent.push(
-//       `${contact.code};${contact.description};${contact.companyNo};${contact.email};${contact.streetAddress};${contact.zipCode};${contact.city};${contact.invoiceDeliveryMethod};${contact.counterPart};${contact.group};${contact.counterPart ? contact.group : ''}`
-//     )
-//   })
-
-//   return csvContent.join('\n')
-// }
-
-// export const getBatchAggregatedRowsCsv = async (batchId: string) => {
-//   const transactionRows = await createAggregateRows(batchId)
-//   if (transactionRows) {
-//     const csvContent: string[] = []
-
-//     csvContent.push(
-//       'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
-//     )
-
-//     transactionRows.forEach((transactionRow) => {
-//       csvContent.push(
-//         `${transactionRow.voucherType};${transactionRow.voucherNo};${transformDate(transactionRow.voucherDate)};${transactionRow.account};${transactionRow.posting1 || ''};${transactionRow.posting2 || ''};${transactionRow.posting3 || ''};${transactionRow.posting4 || ''};${transactionRow.posting5 || ''};${transformDate(transactionRow.periodStart)};${transactionRow.noOfPeriods};${transactionRow.subledgerNo};${transformDate(transactionRow.invoiceDate)};${transactionRow.invoiceNo};${transactionRow.ocr};${transformDate(transactionRow.dueDate)};${transactionRow.text};${transactionRow.taxRule};${transactionRow.amount}`
-//       )
-//     })
-
-//     return csvContent.join('\n')
-//   }
-// }
-
-// export const getBatchLedgerRowsCsv = async (batchId: string) => {
-//   const transactionRows = await createLedgerRows(batchId)
-
-//   const csvContent: string[] = []
-
-//   csvContent.push(
-//     'Voucher Type;Voucher No;Voucher Date;Account;Posting 1;Posting 2;Posting 3;Posting 4;Posting 5;Period Start;No of Periods;Subledger No;Invoice Date;Invoice No;OCR;Due Date;Text;TaxRule;Amount'
-//   )
-
-//   transactionRows.forEach((transactionRow) => {
-//     csvContent.push(
-//       `${transactionRow.voucherType};${transactionRow.voucherNo};${transformDate(transactionRow.voucherDate)};${transactionRow.account};${transactionRow.posting1};${transactionRow.posting2};${transactionRow.posting3};${transactionRow.posting4};${transactionRow.posting5};${transformDate(transactionRow.periodStart)};${transactionRow.noOfPeriods};${transactionRow.subledgerNo};${transformDate(transactionRow.invoiceDate)};${transactionRow.invoiceNo};${transactionRow.ocr};${transformDate(transactionRow.dueDate)};${transactionRow.text};${transactionRow.taxRule};${transactionRow.amount}`
-//     )
-//   })
-
-//   return csvContent.join('\n')
-// }
-
-// export const transformDate = (value: string | number) => {
-//   if (value == undefined || typeof value === 'number' || value === '') {
-//     return ''
-//   }
-//   return (value as string).replaceAll('-', '')
-// }
-
-// export const uploadInvoiceFile = async (
-//   filename: string,
-//   csvContent: string
-// ) => {
-//   await uploadFileToXledger(filename, csvContent)
-// }
-
-// export const markBatchAsProcessed = async (batchId: number) => {
-//   await markInvoicesAsImported(batchId)
-// }
-
-// export const closeDatabases = () => {
-//   closeXpandDb()
-//   closeInvoiceDb()
-// }
-
-// const getContractCode = (invoiceRow: InvoiceDataRow) => {
-//   if ((invoiceRow.rowType as number) !== 3) {
-//     logger.error(
-//       { invoiceRow },
-//       'Wrong type of invoice row for getting contract code'
-//     )
-//     throw new Error('Wrong type of invoice row for getting contract code')
-//   }
-
-//   if ((invoiceRow.invoiceRowText as string).split(',').length > 1) {
-//     return (invoiceRow.invoiceRowText as string).split(',')[0]
-//   } else {
-//     return (invoiceRow.invoiceRowText as string).split(' ')[0]
-//   }
-// }
-
-// const convertToExportedInvoiceRows = async (
-//   invoices: TenfastInvoice[]
-// ): Promise<ExportedInvoiceRow[]> => {
-//   const exportedInvoiceRows: ExportedInvoiceRow[] = []
-//   const counterPartCustomers = await getCounterPartCustomers()
-
-//   for (const invoice of invoices) {
-//     const tenantName = 'Test' // TODO: await getTenant();
-//     let totalAccount = TOTAL_ACCOUNT
-//     let ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
-
-//     const counterPartCustomerInfo = counterPartCustomers.find(
-//       counterPartCustomers.customers,
-//       tenantName
-//     )
-//     if (counterPartCustomerInfo) {
-//       totalAccount = counterPartCustomerInfo.totalAccount
-//       ledgerAccount = counterPartCustomerInfo.ledgerAccount
-//     }
-
-//     for (const row of invoice.hyror) {
-//       // TODO: Get rent article for row
-//       const rentArticle = {
-//         name: 'HYRABS',
-//         account: '1122',
-//         costCode: '550',
-//       }
-
-//       exportedInvoiceRows.push({
-//         amount: row.amount,
-//         deduction: 0, // TODO
-//         vat: row.vat,
-//         rowTotalAmount: row.amount + /*row.deduction +*/ row.vat,
-//         invoiceTotalAmount: invoice.amount,
-//         invoiceDate: convertToDate(invoice.activatedAt ?? ''), // TODO: ta reda på vad som faktiskt är fakturadatum
-//         invoiceDueDate: convertToDate(invoice.due),
-//         invoiceNumber: invoice.ocrNumber,
-//         invoiceRowText: row.label,
-//         fromDate: convertToDate(invoice.interval.from),
-//         toDate: convertToDate(invoice.interval.to),
-//         //contractCode: TODO
-//         //contactCode: TODO
-//         rentArticle: rentArticle.name,
-//         account: rentArticle.account,
-//         costCode: rentArticle.costCode,
-//         //property: string TODO
-//         //freeCode: string TODO
-//         totalAccount,
-//         ledgerAccount,
-//         tenantName,
-//         //company: string - Needed?
-//       })
-//     }
-
-//     exportedInvoiceRows.push(createRoundOffRow(invoice))
-//   }
-
-//   return exportedInvoiceRows
-// }
-
-// const cleanInvoiceRows = (invoiceRows: InvoiceDataRow[]) => {
-//   const cleanedInvoiceRows: InvoiceDataRow[] = []
-//   let currentContractCode = ''
-
-//   invoiceRows.forEach((invoiceRow) => {
-//     if (
-//       (invoiceRow.rowType as number) === 3 &&
-//       /^\d/.test(invoiceRow.invoiceRowText as string)
-//     ) {
-//       currentContractCode = getContractCode(invoiceRow)
-//     } else {
-//       invoiceRow.contractCode = currentContractCode
-//       cleanedInvoiceRows.push(invoiceRow)
-//     }
-//   })
-
-//   return cleanedInvoiceRows
-// }
-
-// const calculateAccountTotals = (aggregateRows: InvoiceDataRow[]) => {
-//   const accountTotals: Record<string, number> = {}
-
-//   aggregateRows.forEach((aggregateRow) => {
-//     const accountTotal = accountTotals[aggregateRow.account] || 0
-//     accountTotals[aggregateRow.account] =
-//       accountTotal + (aggregateRow.amount as number)
-//   })
-
-//   const accounts = Object.keys(accountTotals)
-
-//   accounts.forEach((account) => {
-//     accountTotals[account] =
-//       Math.round((accountTotals[account] + Number.EPSILON) * 100) / 100
-//   })
-
-//   return accountTotals
-// }
-
-// const verifyAccountTotals = (
-//   accountTotals: Record<string, number>,
-//   batchAccountTotals: Record<string, number>
-// ) => {
-//   let debtAccountTotal = 0
-
-//   Object.keys(accountTotals).forEach((account) => {
-//     if (account.startsWith('29')) {
-//       debtAccountTotal += accountTotals[account]
-//     } else {
-//       if (
-//         Math.abs(accountTotals[account] + batchAccountTotals[account]) > 0.01
-//       ) {
-//         logger.error(
-//           {
-//             account,
-//             difference: accountTotals[account] + batchAccountTotals[account],
-//           },
-//           'Account amount not matching'
-//         )
-//         throw new Error('Account amount not matching: ' + account)
-//       }
-//     }
-//   })
-
-//   const batchTotal = Object.keys(batchAccountTotals).reduce((sum, account) => {
-//     return (sum += batchAccountTotals[account])
-//   }, 0)
-
-//   if (Math.abs(batchTotal - debtAccountTotal) > 1) {
-//     logger.error(
-//       {
-//         batchTotal,
-//         debtAccountTotal,
-//         difference: Math.abs(batchTotal - debtAccountTotal),
-//       },
-//       'Debt account total not matching batch account totals'
-//     )
-//     throw new Error(
-//       'Debt account total ${debAccountTotal} not matching batch account totals ${batchTotal}'
-//     )
-//   }
-
-//   return true
-// }

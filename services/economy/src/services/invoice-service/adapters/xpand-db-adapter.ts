@@ -63,11 +63,24 @@ export const enrichInvoiceWithAccounting = async (
 
   const rentalSpecificRule = rentalSpecificRules[rentalId]
 
+  if (!rentalSpecificRule || Object.keys(rentalSpecificRule).length === 0) {
+    logger.error(
+      {
+        invoiceNumber: invoice.invoiceId,
+        rentalSpecificRules,
+        rentalId,
+      },
+      'Could not get accounting rules for invoice from Xpand'
+    )
+    // TODO: Reintroduce throwing error
+    // throw new Error(`Could not get accounting rules for object ${rentalId} on invoice ${invoiceId}`)
+  }
+
   invoice.invoiceRows.forEach((row) => {
-    row.projectCode = rentalSpecificRule.projectCode
-    row.costCode = rentalSpecificRule.costCode
-    row.property = rentalSpecificRule.property
-    row.freeCode = rentalSpecificRule.freeCode
+    row.projectCode = rentalSpecificRule?.projectCode
+    row.costCode = rentalSpecificRule?.costCode
+    row.property = rentalSpecificRule?.property
+    row.freeCode = rentalSpecificRule?.freeCode
   })
 
   return invoice
