@@ -71,6 +71,7 @@ describe(adapter.getInvoicesByContactCode, () => {
                   invoiceRemaining: 100,
                   subledger: {
                     code: 'code',
+                    description: 'Test Tenant',
                   },
                   period: {
                     fromDate: '2025-01-01',

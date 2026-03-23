@@ -3,6 +3,7 @@ import {
   addAccountInformation,
   getAggregatedInvoiceRows,
   getCounterPartCustomers,
+  findCounterPartCustomer,
   saveInvoiceRows,
   saveContacts,
   getContacts as getInvoiceContacts,
@@ -24,7 +25,7 @@ import {
   getBatchTotalAmount as getXpandBatchTotalAmount,
 } from './adapters/xpand-db-adapter'
 import {
-  CounterPartCustomers,
+  CounterPartCustomer,
   LedgerInvoice,
   InvoiceContract,
   InvoiceDataRow,
@@ -47,7 +48,7 @@ import {
 
 const createRoundOffRow = async (
   invoice: InvoiceData,
-  counterPartCustomers: CounterPartCustomers
+  counterPartCustomers: CounterPartCustomer[]
 ): Promise<InvoiceDataRow> => {
   const fromDateString = invoice.fromdate as string
   const year = fromDateString.substring(0, 4)
@@ -56,8 +57,8 @@ const createRoundOffRow = async (
   let ledgerAccount = '1530'
   const tenantName = (invoice.cmctcben as string).trimEnd()
 
-  const counterPartCustomer = counterPartCustomers.find(
-    counterPartCustomers.customers,
+  const counterPartCustomer = findCounterPartCustomer(
+    counterPartCustomers,
     tenantName
   )
 
@@ -295,8 +296,8 @@ export const createLedgerRows = async (
     for (const invoice of currentInvoices) {
       const invoiceRows = rowsByInvoiceNumber[invoice.invoiceNumber]
 
-      const counterPart = counterPartCustomers.find(
-        counterPartCustomers.customers,
+      const counterPart = findCounterPartCustomer(
+        counterPartCustomers,
         invoiceRows[0].TenantName as string
       )
 

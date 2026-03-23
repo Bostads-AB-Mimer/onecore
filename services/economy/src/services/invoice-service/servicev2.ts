@@ -2,6 +2,7 @@ import {
   addAccountInformation,
   getAggregatedInvoiceRows,
   getCounterPartCustomers,
+  findCounterPartCustomer,
   getContacts as getInvoiceContacts,
   markInvoicesAsImported,
   closeDb as closeInvoiceDb,
@@ -22,7 +23,6 @@ import {
   enrichInvoiceWithAccounting,
 } from './adapters/xpand-db-adapter'
 import {
-  CounterPartCustomers,
   InvoiceWithAccounting,
   ExportedInvoiceRow,
   TOTAL_ACCOUNT,
@@ -73,8 +73,8 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
     for (const invoice of invoices) {
       await enrichInvoiceWithAccounting(invoice)
 
-      const counterPartCustomer = counterPartCustomers.find(
-        counterPartCustomers.customers,
+      const counterPartCustomer = findCounterPartCustomer(
+        counterPartCustomers,
         invoice.recipientName
       )
 
@@ -449,11 +449,11 @@ const createLedgerTotalRow = (
 
   const totalVat = invoices
     .map((invoice) => invoice.totalVat)
-    .reduce((accumulator: number | undefined, amount: number | undefined) => {
-      accumulator = accumulator ? accumulator + (amount ?? 0) : 0
-
-      return accumulator
-    }, 0)
+    .reduce(
+      (accumulator: number, amount: number | undefined) =>
+        accumulator + (amount ?? 0),
+      0
+    )
 
   return {
     account: invoices[0].totalAccount,
