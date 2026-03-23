@@ -230,6 +230,123 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/search-tenfast:
+   *   get:
+   *     summary: Search and filter leases (Tenfast)
+   *     tags:
+   *       - Lease service
+   *     description: Search leases from Tenfast with comprehensive filtering options. Mirrors /leases/search but fetches data from Tenfast instead of Xpand.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, PNR, contact code)
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Search by tenant name
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Search by rental object address
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object types (bostad, parkering, lokal, ovrigt)
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: ['0', '1', '2', '3']
+   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *           maximum: 100
+   *         description: Items per page
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *         description: Sort direction
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved lease search results with pagination
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/search-tenfast', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.searchTenfastLeases(ctx.query)
+
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error searching leases (Tenfast)')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred during lease search',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
    *     summary: Get leases with related entities for a specific rental object code.
