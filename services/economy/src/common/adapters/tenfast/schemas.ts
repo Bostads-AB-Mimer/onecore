@@ -142,6 +142,27 @@ export const TenfastInvoiceSnapshotSchema = z.object({
   ),
 })
 
+// Getting invoices by the export endpoint returns records with full Lease objects but no snapshot
+export const TenfastInvoicesByExportedResponseSchema = z.object({
+  records: z.array(
+    TenfastInvoiceSchema.extend({
+      avtal: z.array(
+        TenfastLeaseSchema.extend({ externalId: z.string().optional() })
+      ),
+      ocrNumber: z.string().optional(),
+      reference: z.number().optional(),
+    }).transform((data) => ({
+      ...data,
+      avtal: data.avtal.map((x) => x.id),
+      reference: data.reference ?? 0,
+      ocrNumber: data.ocrNumber ?? '',
+      contractCode: data.avtal[0]?.externalId,
+      recipientContactCode: data.avtal[0]?.hyresgaster[0]?.externalId,
+      recipientName: data.avtal[0]?.hyresgaster[0]?.displayName,
+    }))
+  ),
+})
+
 // Getting invoices by OCR from Tenfast returns a list of full Lease objects,
 export const TenfastInvoicesByOcrResponseSchema = z.object({
   records: z.array(
@@ -196,6 +217,9 @@ export const TenfastTenantByContactCodeResponseSchema = TenfastTenantSchema
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
+export type TenfastInvoicesByExportedResponse = z.infer<
+  typeof TenfastInvoicesByExportedResponseSchema
+>
 export type TenfastInvoicesByOcrResponse = z.infer<
   typeof TenfastInvoicesByOcrResponseSchema
 >

@@ -7,6 +7,7 @@ import {
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
   TenfastInvoicesByOcrResponseSchema,
+  TenfastInvoicesByExportedResponseSchema,
   TenfastInvoice,
   TenfastInvoiceRow,
   TenfastRentArticleSchema,
@@ -22,6 +23,16 @@ import {
   InvoiceRowWithAccounting,
   InvoiceWithAccounting,
 } from '@src/common/types/typesv2'
+
+const invoiceStates = [
+  'betald',
+  'ny',
+  'ej-avprickad',
+  'forsenad',
+  'delvis-betald',
+  'krediterad',
+  'anstand',
+]
 
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
@@ -139,15 +150,6 @@ export const getInvoiceByOcr = async (
   ocr: string
 ): Promise<AdapterResult<Invoice | null, string>> => {
   try {
-    const invoiceStates = [
-      'betald',
-      'ny',
-      'ej-avprickad',
-      'forsenad',
-      'delvis-betald',
-      'krediterad',
-      'anstand',
-    ]
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         'filter[ocrNumber]': ocr,
@@ -235,6 +237,7 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     remainingAmount,
     roundoff: tenfastInvoice.roundingAmount,
     invoiceId: tenfastInvoice.ocrNumber,
+    externalId: tenfastInvoice._id,
     leaseId: tenfastInvoice.contractCode!!,
     recipientContactCode: tenfastInvoice.recipientContactCode!!,
     recipientName: tenfastInvoice.recipientName!!,
@@ -282,6 +285,82 @@ export const convertToDate = (tenfastDate: string) => {
 export const getInvoicesNotExported = async (
   maxCount: number
 ): Promise<AdapterResult<InvoiceWithAccounting[], string>> => {
+  //tenfast-test-api.mimer.nu/v1/hyresvard/hyror?states=ny&filter[isManuallyExported]=false&limit=10
+
+  try {
+    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+      params: {
+        'filter[isManuallyExported]': 'false',
+        states: invoiceStates.join(','),
+        limit: maxCount,
+      },
+    })
+
+    if (result.status !== 200) {
+      logger.error(
+        { error: result.statusText },
+        'Error getting invoices from Tenfast'
+      )
+      return { ok: false, err: result.statusText }
+    }
+
+    const parsedResponse = TenfastInvoicesByExportedResponseSchema.safeParse(
+      result.data
+    )
+
+    if (!parsedResponse.success) {
+      logger.error(
+        { error: parsedResponse.error },
+        'Error parsing Tenfast invoices'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    const invoices: InvoiceWithAccounting[] = []
+
+    for (const invoiceResult of parsedResponse.data.records) {
+      const invoice = transformToInvoice(invoiceResult)
+
+      if (!invoice.invoiceId) {
+        console.error(`Invoice ${invoice.externalId} has no ocrNumber`)
+      }
+
+      const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
+      for (const invoiceRow of invoice.invoiceRows) {
+        const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
+          ...invoiceRow,
+        }
+        if (invoiceRow.rentArticle) {
+          const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
+
+          if (articleResult.ok) {
+            const article = articleResult.data
+            invoiceRowWithAccounting.account = article.accountNr ?? undefined
+            invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
+          }
+        }
+
+        invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
+      }
+
+      const invoiceWithAccounting = {
+        ...invoice,
+        invoiceRows: invoiceRowsWithAccounting,
+      }
+
+      invoices.push(invoiceWithAccounting)
+    }
+
+    return {
+      ok: true,
+      data: invoices,
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+
+  /*
   // Dummy implementation awaiting exported flag in Tenfast
   const invoices: InvoiceWithAccounting[] = []
   const ocrNumbers = ['552604000765181', '552603000765142', '552603000765100']
@@ -321,5 +400,5 @@ export const getInvoicesNotExported = async (
 
   //console.log(JSON.stringify(invoices, null, 2))
 
-  return { ok: true, data: invoices }
+  return { ok: true, data: invoices }*/
 }
