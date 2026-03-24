@@ -88,6 +88,11 @@ export type LeaseSearchQueryParams = z.infer<
   typeof LeaseSearchQueryParamsSchema
 >
 
+/** Raw input type (before Zod transforms) — matches Koa ctx.query shape */
+export type LeaseSearchQueryParamsInput = z.input<
+  typeof LeaseSearchQueryParamsSchema
+>
+
 /**
  * Lease search result item schema
  */

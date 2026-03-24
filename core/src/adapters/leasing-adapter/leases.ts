@@ -210,8 +210,8 @@ export const searchLeases = async (
 }
 
 export const searchTenfastLeases = async (
-  queryParams: Record<string, string | string[] | undefined>
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  queryParams: leasing.v1.LeaseSearchQueryParamsInput
+): Promise<PaginatedResponse<Lease>> => {
   const params = new URLSearchParams()
 
   Object.entries(queryParams).forEach(([key, value]) => {
