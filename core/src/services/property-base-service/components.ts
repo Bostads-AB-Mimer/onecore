@@ -2186,7 +2186,7 @@ export const routes = (router: KoaRouter) => {
 
       const result = await propertyBaseAdapter.createComponentInstallation({
         ...body.data,
-        installationDate: body.data.installationDate.toISOString(),
+        installationDate: body.data.installationDate?.toISOString(),
         deinstallationDate: body.data.deinstallationDate?.toISOString(),
       })
 

@@ -106,7 +106,7 @@ export const componentService = {
       condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
       quantity?: number
       ncsCode?: string
-      installationDate: string
+      installationDate: string | null
       installationCost: number
       orderNumber?: string
       spaceType?: 'OBJECT' | 'PropertyObject'
@@ -176,7 +176,7 @@ export const componentService = {
     instanceId: string,
     roomId: string,
     installationData: {
-      installationDate: string
+      installationDate: string | null
       installationCost: number
       orderNumber?: string
       spaceType?: 'OBJECT' | 'PropertyObject'
