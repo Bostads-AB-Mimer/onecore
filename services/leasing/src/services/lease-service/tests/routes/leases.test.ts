@@ -593,7 +593,7 @@ describe('POST /leases', () => {
 describe('GET /leases/search-v2', () => {
   it('should return 400 for invalid query parameters', async () => {
     const res = await request(app.callback()).get(
-      '/leases/search-tenfast?limit=invalid'
+      '/leases/search-v2?limit=invalid'
     )
 
     expect(res.status).toBe(400)
@@ -637,7 +637,7 @@ describe('GET /leases/search-v2', () => {
       .spyOn(tenfastLeaseSearchAdapter, 'searchLeases')
       .mockResolvedValueOnce(mockResult)
 
-    const res = await request(app.callback()).get('/leases/search-tenfast')
+    const res = await request(app.callback()).get('/leases/search-v2')
 
     expect(res.status).toBe(200)
     expect(res.body.content).toHaveLength(1)
@@ -655,7 +655,7 @@ describe('GET /leases/search-v2', () => {
       })
 
     await request(app.callback()).get(
-      '/leases/search-tenfast?q=test&status=current&page=2&limit=10'
+      '/leases/search-v2?q=test&status=current&page=2&limit=10'
     )
 
     expect(searchSpy).toHaveBeenCalledWith(
@@ -674,7 +674,7 @@ describe('GET /leases/search-v2', () => {
       .spyOn(tenfastLeaseSearchAdapter, 'searchLeases')
       .mockRejectedValueOnce(new Error('Failed to fetch leases from Tenfast'))
 
-    const res = await request(app.callback()).get('/leases/search-tenfast')
+    const res = await request(app.callback()).get('/leases/search-v2')
 
     expect(res.status).toBe(500)
     expect(res.body.error).toBe('Failed to fetch leases from Tenfast')

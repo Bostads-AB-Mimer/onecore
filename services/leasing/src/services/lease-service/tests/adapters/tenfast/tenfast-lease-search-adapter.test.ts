@@ -244,7 +244,9 @@ describe('tenfast-lease-search-adapter', () => {
         limit: 20,
       })
 
-      expect(params.get('filter[hyresgaster][idbeteckning]')).toBe('198501011234')
+      expect(params.get('filter[hyresgaster][idbeteckning]')).toBe(
+        '198501011234'
+      )
       expect(params.get('limit')).toBe('20')
     })
 
@@ -360,9 +362,7 @@ describe('tenfast-lease-search-adapter', () => {
       })
 
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
-      expect(calledUrl).toContain(
-        'filter[startDate]=2024-01-01,2024-12-31'
-      )
+      expect(calledUrl).toContain('filter[startDate]=2024-01-01,2024-12-31')
     })
 
     it('should return error on non-200 status', async () => {
@@ -402,7 +402,7 @@ describe('tenfast-lease-search-adapter', () => {
     const mockCtx = {
       query: { page: '1', limit: '20' },
       request: {
-        URL: new URL('http://localhost:5020/api/leases/search-tenfast'),
+        URL: new URL('http://localhost:5020/api/leases/search-v2'),
       },
     } as any
 
@@ -441,9 +441,7 @@ describe('tenfast-lease-search-adapter', () => {
 
       // Verify the API was called with idbeteckning filter
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
-      expect(calledUrl).toContain(
-        'filter[hyresgaster][idbeteckning]=0022'
-      )
+      expect(calledUrl).toContain('filter[hyresgaster][idbeteckning]=0022')
     })
 
     it('should return empty results when q is a name (use explicit name param)', async () => {
@@ -492,9 +490,7 @@ describe('tenfast-lease-search-adapter', () => {
 
       // Verify the API was called with contact code filter
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
-      expect(calledUrl).toContain(
-        'filter[hyresgaster][externalId]=P965339'
-      )
+      expect(calledUrl).toContain('filter[hyresgaster][externalId]=P965339')
 
       expect(result.content).toHaveLength(1)
       expect(result.content[0].leaseId).toBe('lease-1')
@@ -623,9 +619,7 @@ describe('tenfast-lease-search-adapter', () => {
 
       // Verify the API was called with comma-separated date range
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
-      expect(calledUrl).toContain(
-        'filter[startDate]=2024-01-01,2024-12-31'
-      )
+      expect(calledUrl).toContain('filter[startDate]=2024-01-01,2024-12-31')
 
       // The API returns pre-filtered results
       expect(result.content).toHaveLength(1)
@@ -824,9 +818,7 @@ describe('tenfast-lease-search-adapter', () => {
       )
 
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
-      expect(calledUrl).toContain(
-        'filter[hyresobjekt][stadsdel]=Vetterstorp'
-      )
+      expect(calledUrl).toContain('filter[hyresobjekt][stadsdel]=Vetterstorp')
     })
   })
 })

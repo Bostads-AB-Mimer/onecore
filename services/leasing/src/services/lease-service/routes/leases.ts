@@ -602,7 +602,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/leases/search-tenfast', async (ctx) => {
+  router.get('(.*)/leases/search-v2', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
       'name',
