@@ -18,19 +18,19 @@ async function main() {
     throw new Error('IMD: Processing failed')
   }
 
-  const unmatchedPath = outputPath.replace(/\.csv$/, '-unmatched.csv')
+  const unprocessedPath = outputPath.replace(/\.csv$/, '-unprocessed.csv')
 
   await fs.writeFile(path.resolve(outputPath), result.data.enrichedCsv, 'utf-8')
   await fs.writeFile(
-    path.resolve(unmatchedPath),
-    result.data.unmatchedCsv,
+    path.resolve(unprocessedPath),
+    result.data.unprocessedCsv,
     'utf-8'
   )
 
   logger.info(`Enriched CSV written to ${outputPath}`)
-  logger.info(`Unmatched CSV written to ${unmatchedPath}`)
+  logger.info(`Unprocessed CSV written to ${unprocessedPath}`)
   logger.info(
-    `  ${result.data.enriched} rows exported, ${result.data.unmatched.length} unmatched`
+    `  ${result.data.enriched} rows exported, ${result.data.unprocessed.length} unprocessed`
   )
 }
 

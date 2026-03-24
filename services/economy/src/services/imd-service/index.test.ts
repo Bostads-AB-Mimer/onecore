@@ -64,7 +64,7 @@ describe(imdService.enrichIMDRows, () => {
     ])
 
     assert(result.ok)
-    expect(result.data.unmatched).toHaveLength(0)
+    expect(result.data.unprocessed).toHaveLength(0)
     expect(result.data.enriched).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -79,7 +79,7 @@ describe(imdService.enrichIMDRows, () => {
     )
   })
 
-  it('tags unmatched row as no-active-lease when rental object exists but has no lease', async () => {
+  it('tags row as no-active-lease when rental object exists but has no lease', async () => {
     mockGetActiveLeases.mockResolvedValue(
       new Map<string, string | null>([
         ['306-008-01-0201', '306-008-01-0201/02'],
@@ -117,7 +117,7 @@ describe(imdService.enrichIMDRows, () => {
         }),
       ])
     )
-    expect(result.data.unmatched).toEqual(
+    expect(result.data.unprocessed).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           rentalObjectCode: '306-008-01-0299',
@@ -127,7 +127,7 @@ describe(imdService.enrichIMDRows, () => {
     )
   })
 
-  it('tags unmatched row as no-rental-object when code is absent from results', async () => {
+  it('tags row as no-rental-object when code is absent from results', async () => {
     mockGetActiveLeases.mockResolvedValue(new Map<string, string | null>())
 
     const result = await imdService.enrichIMDRows([
@@ -144,11 +144,51 @@ describe(imdService.enrichIMDRows, () => {
 
     assert(result.ok)
     expect(result.data.enriched).toHaveLength(0)
-    expect(result.data.unmatched).toEqual(
+    expect(result.data.unprocessed).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           rentalObjectCode: 'DOES-NOT-EXIST',
           reason: 'no-rental-object',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as amount-too-low when cost is under 15', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, string | null>([
+        ['306-008-01-0201', '306-008-01-0201/02'],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+      {
+        rentalObjectCode: '306-008-01-0202',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 0.1,
+        cost: 8.2,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(1)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0202',
+          reason: 'amount-too-low',
         }),
       ])
     )
@@ -246,9 +286,9 @@ describe(imdService.toTenfastCsv, () => {
   })
 })
 
-const makeUnmatchedRow = (
+const makeUnprocessedRow = (
   rentalObjectCode: string,
-  reason: 'no-rental-object' | 'no-active-lease',
+  reason: 'no-rental-object' | 'no-active-lease' | 'amount-too-low',
   { cost = 100, unit = 'VV', measurementUnit = 'm3' } = {}
 ) => ({
   rentalObjectCode,
@@ -261,10 +301,10 @@ const makeUnmatchedRow = (
   reason,
 })
 
-describe(imdService.toUnmatchedCsv, () => {
+describe(imdService.toUnprocessedCsv, () => {
   it('includes header and original data with Swedish reason', () => {
-    const csv = imdService.toUnmatchedCsv([
-      makeUnmatchedRow('306-008-01-0206', 'no-active-lease', { cost: 450.5 }),
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('306-008-01-0206', 'no-active-lease', { cost: 450.5 }),
     ])
 
     const lines = csv.split('\n')
@@ -277,21 +317,31 @@ describe(imdService.toUnmatchedCsv, () => {
   })
 
   it('uses correct reason for no-rental-object', () => {
-    const csv = imdService.toUnmatchedCsv([
-      makeUnmatchedRow('UNKNOWN-CODE', 'no-rental-object'),
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('UNKNOWN-CODE', 'no-rental-object'),
     ])
 
     const reason = csv.split('\n')[1].split(';')[7]
     expect(reason).toBe('Hyresobjekt saknas i Xpand')
   })
 
+  it('uses correct reason for amount-too-low', () => {
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('306-008-01-0201', 'amount-too-low', { cost: 8.2 }),
+    ])
+
+    const reason = csv.split('\n')[1].split(';')[7]
+    expect(reason).toBe('Belopp under 15 kr')
+  })
+
   it('outputs multiple rows', () => {
-    const csv = imdService.toUnmatchedCsv([
-      makeUnmatchedRow('A', 'no-rental-object'),
-      makeUnmatchedRow('B', 'no-active-lease'),
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('A', 'no-rental-object'),
+      makeUnprocessedRow('B', 'no-active-lease'),
+      makeUnprocessedRow('C', 'amount-too-low'),
     ])
 
     const lines = csv.split('\n')
-    expect(lines).toHaveLength(3)
+    expect(lines).toHaveLength(4)
   })
 })
