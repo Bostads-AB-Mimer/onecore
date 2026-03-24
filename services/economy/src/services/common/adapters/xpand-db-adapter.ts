@@ -316,6 +316,7 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
         this.on('hyobj.keyhyobj', '=', 'hykop.keyhyobj')
           .andOn('hyobj.deletemark', '=', db.raw('?', [0]))
           .andOnNull('hyobj.makuldatum')
+          .andOn(db.raw('hyobj.hyobjben NOT LIKE ?', ['%M%']))
           .andOn('hyobj.fdate', '<=', db.raw('?', [params.periodEnd]))
           .andOn(function () {
             this.onNull('hyobj.sistadeb').orOn(
