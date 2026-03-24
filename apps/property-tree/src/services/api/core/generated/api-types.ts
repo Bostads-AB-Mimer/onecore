@@ -275,6 +275,84 @@ export interface paths {
       };
     };
   };
+  "/getLinearTickets": {
+    /**
+     * Get Linear tickets with mimer-visible label
+     * @description Fetch Linear issues that have the mimer-visible label
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Number of tickets to fetch */
+          first?: number;
+          /** @description Cursor for pagination */
+          after?: string;
+        };
+      };
+      responses: {
+        /** @description Linear tickets fetched successfully */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/createLinearErrand": {
+    /**
+     * Create a new Linear errand
+     * @description Create a new issue in Linear with specified team, project, and labels
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Errand title */
+            title: string;
+            /** @description Errand description */
+            description: string;
+            /** @description Label ID for category (Bug, Improvement, etc.) */
+            categoryLabelId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Linear errand created successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/getLinearLabels": {
+    /**
+     * Get Linear category labels
+     * @description Fetch available category labels (Bug, Improvement, new feature)
+     */
+    get: {
+      responses: {
+        /** @description Linear labels fetched successfully */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
