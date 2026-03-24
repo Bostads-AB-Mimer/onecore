@@ -13,6 +13,9 @@ const LeaseStatusLabel: Record<LeaseStatus, string> = {
   [LeaseStatus.Upcoming]: 'Kommande',
   [LeaseStatus.AboutToEnd]: 'Uppsagt',
   [LeaseStatus.Ended]: 'Upphört',
+  [LeaseStatus.NotSent]: 'Ej skickat',
+  [LeaseStatus.PreliminaryTerminated]: 'Preliminärt uppsagt',
+  [LeaseStatus.PendingSignature]: 'Väntar på signering',
 }
 
 enum ParkingSpaceType {

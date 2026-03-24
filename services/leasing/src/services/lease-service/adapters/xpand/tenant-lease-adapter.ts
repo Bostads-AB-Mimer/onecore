@@ -5,6 +5,7 @@ import { Context } from 'koa'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
+import transformFromXPandDb from '../../helpers/transformFromXPandDb'
 
 interface GetLeasesOptions {
   includeUpcomingLeases: boolean

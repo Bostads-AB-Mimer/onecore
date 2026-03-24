@@ -250,7 +250,7 @@ export const createLeaseForExternalParkingSpace = async (
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           type: rentalObject.objectTypeCaption ?? 'Bilplats',
-          rent: String(rentalObject.monthlyRent ?? ''),
+          rent: String(rentalObject.rent?.amount ?? ''),
         })
       }
       await sendNotificationToRole(
@@ -284,7 +284,7 @@ export const createLeaseForExternalParkingSpace = async (
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           type: rentalObject.objectTypeCaption ?? 'Bilplats',
-          rent: String(rentalObject.monthlyRent ?? ''),
+          rent: String(rentalObject.rent?.amount ?? ''),
         })
       }
       await sendNotificationToRole(
