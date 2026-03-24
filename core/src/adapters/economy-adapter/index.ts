@@ -280,3 +280,31 @@ export async function getLeaseDetailsForInvoices(
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
+
+export type ProcessIMDResult = {
+  totalRows: number
+  enriched: number
+  enrichedCsv: string
+  unprocessedCsv: string
+}
+
+export async function processIMD(
+  csv: string
+): Promise<AdapterResult<ProcessIMDResult, 'unknown'>> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/imd/process`,
+      { csv }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.processIMD')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.processIMD')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
