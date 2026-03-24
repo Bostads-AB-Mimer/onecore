@@ -209,7 +209,7 @@ export const searchLeases = async (
   return response.data
 }
 
-export const searchTenfastLeases = async (
+export const searchLeasesV2 = async (
   queryParams: leasing.v1.LeaseSearchQueryParamsInput
 ): Promise<PaginatedResponse<Lease>> => {
   const params = new URLSearchParams()
@@ -224,7 +224,7 @@ export const searchTenfastLeases = async (
   })
 
   const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/search-tenfast?${params.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/search-v2?${params.toString()}`
   )
 
   return response.data

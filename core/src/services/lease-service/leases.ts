@@ -230,12 +230,12 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/search-tenfast:
+   * /leases/search-v2:
    *   get:
-   *     summary: Search and filter leases (Tenfast)
+   *     summary: Search and filter leases
    *     tags:
    *       - Lease service
-   *     description: Search leases from Tenfast with comprehensive filtering options. Mirrors /leases/search but fetches data from Tenfast instead of Xpand.
+   *     description: Search leases with comprehensive filtering options.
    *     parameters:
    *       - in: query
    *         name: q
@@ -324,7 +324,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leases/search-tenfast', async (ctx) => {
+  router.get('/leases/search-v2', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const parsed = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(ctx.query)
@@ -340,7 +340,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.searchTenfastLeases(ctx.query)
+      const result = await leasingAdapter.searchLeasesV2(ctx.query)
 
       ctx.status = 200
       ctx.body = result

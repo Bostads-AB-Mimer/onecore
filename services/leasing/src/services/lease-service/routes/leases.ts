@@ -288,10 +288,10 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/search-tenfast:
+   * /leases/search-v2:
    *   get:
-   *     summary: Search and filter leases (Tenfast)
-   *     description: Search leases from Tenfast with comprehensive filtering options including text search, object type, status, date ranges. This endpoint mirrors /leases/search but fetches data from Tenfast instead of Xpand.
+   *     summary: Search and filter leases
+   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges.
    *     tags: [Leases]
    *     parameters:
    *       - in: query
@@ -406,7 +406,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/leases/search-tenfast', async (ctx) => {
+  router.get('(.*)/leases/search-v2', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
       'name',
