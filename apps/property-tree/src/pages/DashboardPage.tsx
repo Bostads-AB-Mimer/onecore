@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+// import { motion } from 'framer-motion'
 
 import {
   type DashboardCard,
   DashboardCardItem,
   dashboardCards,
-  ReleaseNotesCard,
+  // ReleaseNotesCard,
 } from '@/widgets/dashboard'
 
 import { GlobalSearchBar } from '@/features/search'
@@ -13,7 +13,6 @@ import { GlobalSearchBar } from '@/features/search'
 import { useUser } from '@/entities/user'
 
 import onecoreLogo from '@/shared/assets/logos/stacked/onecore_logo_stacked_black.svg'
-import { Card, CardContent } from '@/shared/ui/Card'
 import { ViewLayout } from '@/shared/ui/layout'
 
 export function DashboardPage() {
@@ -40,12 +39,12 @@ export function DashboardPage() {
         <img src={onecoreLogo} alt="OneCore" className="h-20 md:h-24 mx-auto" />
       </header>
 
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl sm:hidden">
         <GlobalSearchBar placeholder="Sök..." />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col lg:flex-row justify-center gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-fit">
           {dashboardCards.map((config, index) => (
             <DashboardCardItem
               key={config.id}
@@ -55,32 +54,15 @@ export function DashboardPage() {
             />
           ))}
         </div>
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
           className="order-first lg:order-last lg:w-80 lg:flex-shrink-0"
         >
           <ReleaseNotesCard />
-        </motion.div>
+        </motion.div> */}
       </div>
-
-      <Card className="max-w-2xl mx-auto hover:shadow-xl transition-shadow duration-200">
-        <CardContent className="p-8 text-center space-y-4">
-          <p className="text-lg leading-relaxed text-muted-foreground">
-            Vi är glada att ha dig här! ONECore är din digitala arbetsplats där
-            allt du behöver för att göra ditt bästa arbete finns samlat på ett
-            ställe. Ta det i din egen takt och utforska systemet - allt finns
-            ännu inte på plats utan vi uppdaterar löpande.
-          </p>
-          <p className="text-base text-muted-foreground">
-            Har du frågor eller behöver hjälp? Tveka inte att höra av dig till{' '}
-            <span className="font-semibold text-primary">David</span> eller{' '}
-            <span className="font-semibold text-primary">Lina</span> - vi finns
-            här för att stötta dig!
-          </p>
-        </CardContent>
-      </Card>
     </ViewLayout>
   )
 }

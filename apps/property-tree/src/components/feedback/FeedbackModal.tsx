@@ -6,21 +6,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/v2/Dialog'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Textarea } from '@/components/ui/Textarea'
-import { Label } from '@/components/ui/Label'
+} from '@/shared/ui/Dialog'
+import { Button } from '@/shared/ui/Button'
+import { Input } from '@/shared/ui/Input'
+import { Textarea } from '@/shared/ui/Textarea'
+import { Label } from '@/shared/ui/Label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/Select'
-import { useFeedbackModal } from '@/components/hooks/useFeedbackModal'
-import { useCreateFeedback } from '@/hooks/useCreateFeedback'
-import { useToast } from '@/components/hooks/useToast'
+} from '@/shared/ui/Select'
+import { useFeedbackModal } from '@/shared/hooks/useFeedbackModal'
+import { useCreateFeedback } from '@/entities/tenant/hooks/useCreateFeedback'
+import { useToast } from '@/shared/hooks/useToast'
 
 const LABEL_IDS = {
   bug: '1e656430-7ee7-4104-9e6d-7b1e0c60c343',
@@ -34,21 +34,41 @@ interface FormData {
   title: string
   type: FeedbackType | ''
   importance: number
-  description: string
+  whoIsAffected: string
+  currentSituation: string
+  need: string
+  value: string
 }
 
-const DESCRIPTION_PLACEHOLDER = `Beskriv kort:
-Vad du vill kunna göra:
-Vad du saknar eller tycker är krångligt:
-Hur du skulle vilja att det fungerade:
-Vilka påverkas:`
-
-const fileToBase64 = (file: File): Promise<string> => {
+const resizeAndConvertToBase64 = (
+  file: File,
+  maxSize = 800,
+  quality = 0.7
+): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      let { width, height } = img
+
+      if (width > maxSize || height > maxSize) {
+        if (width > height) {
+          height = (height / width) * maxSize
+          width = maxSize
+        } else {
+          width = (width / height) * maxSize
+          height = maxSize
+        }
+      }
+
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      ctx?.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = reject
+    img.src = URL.createObjectURL(file)
   })
 }
 
@@ -61,13 +81,24 @@ export function FeedbackModal() {
     title: '',
     type: '',
     importance: 5,
-    description: '',
+    whoIsAffected: '',
+    currentSituation: '',
+    need: '',
+    value: '',
   })
   const [imageFile, setImageFile] = React.useState<File | null>(null)
   const [imagePreview, setImagePreview] = React.useState<string | null>(null)
 
   const resetForm = () => {
-    setFormData({ title: '', type: '', importance: 5, description: '' })
+    setFormData({
+      title: '',
+      type: '',
+      importance: 5,
+      whoIsAffected: '',
+      currentSituation: '',
+      need: '',
+      value: '',
+    })
     setImageFile(null)
     setImagePreview(null)
   }
@@ -81,7 +112,7 @@ export function FeedbackModal() {
     const file = e.target.files?.[0]
     if (file) {
       setImageFile(file)
-      const preview = await fileToBase64(file)
+      const preview = await resizeAndConvertToBase64(file)
       setImagePreview(preview)
     }
   }
@@ -94,17 +125,26 @@ export function FeedbackModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.title || !formData.type || !formData.description) {
+    if (!formData.title || !formData.type || !formData.need) {
       toast({
         title: 'Fyll i alla fält',
-        description: 'Titel, typ och beskrivning krävs',
+        description: 'Titel, typ och behov krävs',
         variant: 'destructive',
       })
       return
     }
 
     try {
-      let description = `Viktighet: ${formData.importance}/10\n\n${formData.description}`
+      const descriptionParts = [
+        `**Viktighet:** ${formData.importance}/10`,
+        formData.whoIsAffected && `**Vem påverkas:** ${formData.whoIsAffected}`,
+        formData.currentSituation &&
+          `**Nuvarande situation:** ${formData.currentSituation}`,
+        `**Behov:** ${formData.need}`,
+        formData.value && `**Värde:** ${formData.value}`,
+      ].filter(Boolean)
+
+      let description = descriptionParts.join('\n\n')
 
       if (imageFile && imagePreview) {
         description += `\n\n![screenshot](${imagePreview})`
@@ -136,7 +176,7 @@ export function FeedbackModal() {
       open={isOpen}
       onOpenChange={(open: boolean) => !open && handleClose()}
     >
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto top-[10%] translate-y-0">
         <DialogHeader>
           <DialogTitle>Feedback ONECore</DialogTitle>
           <DialogDescription>
@@ -144,14 +184,9 @@ export function FeedbackModal() {
             bättre? Hör gärna av dig till oss så hjälps vi åt att utveckla
             onecore till det bättre.
           </DialogDescription>
-          <p className="text-sm text-muted-foreground mt-2">
-            Det går också bra att rapportera in icke-akuta buggar här så
-            planerar vi in dem i vårt arbete. <strong>Akuta buggar</strong>{' '}
-            rapporteras direkt i <strong>topdesk</strong>.
-          </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-4">
             <h3 className="font-semibold">Skapa Ärende</h3>
 
@@ -184,11 +219,23 @@ export function FeedbackModal() {
                   <SelectItem value="improvement">Förbättring</SelectItem>
                 </SelectContent>
               </Select>
+              {formData.type === 'bug' && (
+                <p className="text-sm text-destructive">
+                  Kritiska buggar ska alltid rapporteras direkt i Topdesk.
+                  Ärenden som kommer in här behandlas och prioriteras i den
+                  löpande utvecklingen och förbättringsarbetet.
+                </p>
+              )}
             </div>
 
             {/* Importance */}
-            <div className="space-y-2">
-              <Label>Hur viktigt är det för dig i ditt dagliga arbete?</Label>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Hur viktigt är det för dig i ditt dagliga arbete?</Label>
+                <span className="inline-flex items-center justify-center min-w-8 h-8 rounded-full bg-primary text-primary-foreground font-semibold text-sm">
+                  {formData.importance}
+                </span>
+              </div>
               <input
                 type="range"
                 min="1"
@@ -200,32 +247,80 @@ export function FeedbackModal() {
                     importance: parseInt(e.target.value, 10),
                   }))
                 }
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary dark:bg-gray-700"
               />
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span className="text-orange-500">
-                  *1 inte alls viktigt men vore kul
-                </span>
-                <span className="font-medium">{formData.importance}</span>
-                <span className="text-orange-500">
-                  10 behöver detta för att kunna utföra mitt dagliga arbete
-                </span>
+                <span>Mindre viktigt</span>
+                <span>Behövs för dagligt arbete</span>
               </div>
             </div>
 
-            {/* Description */}
+            {/* Who is affected */}
             <div className="space-y-2">
-              <Textarea
-                placeholder={DESCRIPTION_PLACEHOLDER}
-                value={formData.description}
+              <Label htmlFor="whoIsAffected">Vem påverkas?</Label>
+              <Input
+                id="whoIsAffected"
+                placeholder="T.ex. kundtjänst, förvaltare, hyresgäster..."
+                value={formData.whoIsAffected}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    description: e.target.value,
+                    whoIsAffected: e.target.value,
                   }))
                 }
-                className="min-h-[150px]"
+              />
+            </div>
+
+            {/* Current situation */}
+            <div className="space-y-2">
+              <Label htmlFor="currentSituation">Nuvarande situation</Label>
+              <Textarea
+                id="currentSituation"
+                placeholder="Beskriv hur det fungerar idag och vad som är problematiskt..."
+                value={formData.currentSituation}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    currentSituation: e.target.value,
+                  }))
+                }
+                className="min-h-[80px]"
+              />
+            </div>
+
+            {/* Need */}
+            <div className="space-y-2">
+              <Label htmlFor="need">
+                Behov <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="need"
+                placeholder="Vad behöver du kunna göra? Beskriv målet, inte lösningen..."
+                value={formData.need}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    need: e.target.value,
+                  }))
+                }
+                className="min-h-[80px]"
                 required
+              />
+            </div>
+
+            {/* Value */}
+            <div className="space-y-2">
+              <Label htmlFor="value">Värde</Label>
+              <Input
+                id="value"
+                placeholder="Vad blir effekten om behovet uppfylls? T.ex. sparar tid, minskar fel..."
+                value={formData.value}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    value: e.target.value,
+                  }))
+                }
               />
             </div>
 

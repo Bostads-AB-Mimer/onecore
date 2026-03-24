@@ -22,16 +22,17 @@ export function DashboardCardItem({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 + index * 0.05 }}
+      className="h-24"
     >
       <Card
-        className={`h-full transition-all duration-200 ${
+        className={`h-24 transition-all duration-200 ${
           config.isDisabled
             ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
             : 'hover:scale-105 cursor-pointer'
         }`}
         onClick={() => onClick(config)}
       >
-        <CardHeader className="pb-3 relative">
+        <CardHeader className="p-2.5 pb-1 relative">
           <CardTitle
             className={`flex items-center gap-3 text-lg ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : ''}`}
           >
@@ -44,7 +45,7 @@ export function DashboardCardItem({
             <ExternalLink className="h-4 w-4 text-muted-foreground absolute top-4 right-4" />
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2.5 pb-2.5">
           <p
             className={`text-sm ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-muted-foreground'}`}
           >
