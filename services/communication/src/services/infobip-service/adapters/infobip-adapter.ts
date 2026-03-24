@@ -17,6 +17,10 @@ export const sendEmailInfobipSdk = async (
 ) => {
   logger.info({ to: to, subject: subject }, 'Sending email')
   const recipients = to.split(';')
+  const result: { sent: string[]; errors: string[] } = {
+    sent: [],
+    errors: [],
+  }
 
   for (const to of recipients) {
     const infobipOptions = {
@@ -28,12 +32,16 @@ export const sendEmailInfobipSdk = async (
     }
 
     const response = await infobip.channels.email.send(infobipOptions)
+
     if (response.status === 200) {
       logger.info({ to, subject: subject }, 'Sending email complete')
-      return response.data
+      result.sent.push(to)
     } else {
+      result.errors.push(to)
       logger.error(response, 'Error sending email')
       throw new Error(response.body)
     }
   }
+
+  return result
 }
