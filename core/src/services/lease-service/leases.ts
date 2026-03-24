@@ -327,6 +327,18 @@ export const routes = (router: KoaRouter) => {
   router.get('/leases/search-tenfast', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    const parsed = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(ctx.query)
+
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: parsed.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
     try {
       const result = await leasingAdapter.searchTenfastLeases(ctx.query)
 
