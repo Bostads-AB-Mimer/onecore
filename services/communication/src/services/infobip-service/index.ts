@@ -482,7 +482,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await sendEmailInfobipSdk(to, subject, body, attachments)
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = { content: result, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
