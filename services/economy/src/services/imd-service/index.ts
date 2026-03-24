@@ -242,16 +242,10 @@ async function processIMD(csv: string): Promise<Result<ProcessResult>> {
   )
 
   if (unprocessed.length > 0) {
-    const grouped = Object.groupBy(unprocessed, (r) => r.reason)
-
-    for (const [reason, rows] of Object.entries(grouped)) {
-      if (rows) {
-        logger.warn(
-          { codes: rows.map((r) => r.rentalObjectCode) },
-          `IMD: ${rows.length} rows unprocessed (${reason})`
-        )
-      }
-    }
+    logger.warn(
+      { rows: unprocessed.map((r) => ({ code: r.rentalObjectCode, reason: r.reason })) },
+      `IMD: ${unprocessed.length} rows unprocessed`
+    )
   }
 
   const enrichedCsv = toTenfastCsv(enriched)
