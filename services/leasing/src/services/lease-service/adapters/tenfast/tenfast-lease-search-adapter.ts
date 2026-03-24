@@ -138,6 +138,13 @@ export function buildTenfastQueryParams(
     }
   }
 
+  if (params.property && params.property.length > 0) {
+    query.set(
+      'filter[fastighet][fastighetsbeteckning]',
+      params.property.join(',')
+    )
+  }
+
   if (params.districtNames && params.districtNames.length > 0) {
     query.set('filter[hyresobjekt][stadsdel]', params.districtNames.join(','))
   }
@@ -233,10 +240,9 @@ const STATUS_MAP: Record<string, LeaseStatus> = {
   upcoming: LeaseStatus.Upcoming,
   abouttoend: LeaseStatus.AboutToEnd,
   ended: LeaseStatus.Ended,
-  // TODO: Add these when LeaseStatus enum is extended with the new values:
-  // pendingsignature: LeaseStatus.PendingSignature,
-  // preliminaryterminated: LeaseStatus.PreliminaryTerminated,
-  // notsent: LeaseStatus.NotSent,
+  pendingsignature: LeaseStatus.PendingSignature,
+  preliminaryterminated: LeaseStatus.PreliminaryTerminated,
+  notsent: LeaseStatus.NotSent,
 }
 
 /** Apply client-side status filtering for values that don't map to a Tenfast stage. */
