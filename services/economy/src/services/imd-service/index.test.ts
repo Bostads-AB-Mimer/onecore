@@ -191,7 +191,10 @@ const makeEnrichedRow = (
 describe(imdService.toTenfastCsv, () => {
   it('maps VV to IMDM article and builds Avitext with Varmvatten', () => {
     const csv = imdService.toTenfastCsv([
-      makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02', { cost: 621.68, unit: 'VV' }),
+      makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02', {
+        cost: 621.68,
+        unit: 'VV',
+      }),
     ])
 
     const lines = csv.split('\n')
@@ -236,6 +239,56 @@ describe(imdService.toTenfastCsv, () => {
     const csv = imdService.toTenfastCsv([
       makeEnrichedRow('306-008-01-0201', 'L1', { cost: 100 }),
       makeEnrichedRow('306-008-01-0202', 'L2', { cost: 200 }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines).toHaveLength(3)
+  })
+})
+
+const makeUnmatchedRow = (
+  rentalObjectCode: string,
+  reason: 'no-rental-object' | 'no-active-lease',
+  { cost = 100, unit = 'VV', measurementUnit = 'm3' } = {}
+) => ({
+  rentalObjectCode,
+  from: new Date('2026-01-01'),
+  to: new Date('2026-01-31'),
+  unit,
+  volume: 7.58,
+  cost,
+  measurementUnit,
+  reason,
+})
+
+describe(imdService.toUnmatchedCsv, () => {
+  it('includes header and original data with Swedish reason', () => {
+    const csv = imdService.toUnmatchedCsv([
+      makeUnmatchedRow('306-008-01-0206', 'no-active-lease', { cost: 450.5 }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines[0]).toBe(
+      'Hyresobjektskod;Fr.o.m;T.o.m;Enhet;Volym;Kostnad;Måttenhet;Orsak'
+    )
+    expect(lines[1]).toBe(
+      '306-008-01-0206;2026-01-01;2026-01-31;VV;7,58;450,5;m3;Inget aktivt kontrakt i perioden'
+    )
+  })
+
+  it('uses correct reason for no-rental-object', () => {
+    const csv = imdService.toUnmatchedCsv([
+      makeUnmatchedRow('UNKNOWN-CODE', 'no-rental-object'),
+    ])
+
+    const reason = csv.split('\n')[1].split(';')[7]
+    expect(reason).toBe('Hyresobjekt saknas i Xpand')
+  })
+
+  it('outputs multiple rows', () => {
+    const csv = imdService.toUnmatchedCsv([
+      makeUnmatchedRow('A', 'no-rental-object'),
+      makeUnmatchedRow('B', 'no-active-lease'),
     ])
 
     const lines = csv.split('\n')

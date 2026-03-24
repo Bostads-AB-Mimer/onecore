@@ -115,14 +115,27 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-const UNIT_CONFIG: Record<string, { articleCode: string; description: string }> = {
+const UNIT_CONFIG: Record<
+  string,
+  { articleCode: string; description: string }
+> = {
   VV: { articleCode: 'IMDM', description: 'Varmvatten' },
   VMM: { articleCode: 'VÄRMEENERGIM', description: 'Värmeenergi' },
 }
 
 const SWEDISH_MONTHS = [
-  'januari', 'februari', 'mars', 'april', 'maj', 'juni',
-  'juli', 'augusti', 'september', 'oktober', 'november', 'december',
+  'januari',
+  'februari',
+  'mars',
+  'april',
+  'maj',
+  'juni',
+  'juli',
+  'augusti',
+  'september',
+  'oktober',
+  'november',
+  'december',
 ]
 
 const CSV_HEADER = 'Kontraktsnummer;Hyresartikel;Avitext;Fr.o.m;T.o.m;Årshyra'
@@ -158,11 +171,39 @@ function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
   return [CSV_HEADER, ...lines].join('\n')
 }
 
+const UNMATCHED_CSV_HEADER =
+  'Hyresobjektskod;Fr.o.m;T.o.m;Enhet;Volym;Kostnad;Måttenhet;Orsak'
+
+const REASON_LABELS: Record<UnmatchedIMDRow['reason'], string> = {
+  'no-rental-object': 'Hyresobjekt saknas i Xpand',
+  'no-active-lease': 'Inget aktivt kontrakt i perioden',
+}
+
+function toUnmatchedCsv(rows: Array<UnmatchedIMDRow>): string {
+  const lines = rows.map((row) => {
+    const volume = row.volume.toString().replace('.', ',')
+    const cost = row.cost.toString().replace('.', ',')
+    return [
+      row.rentalObjectCode,
+      formatDate(row.from),
+      formatDate(row.to),
+      row.unit,
+      volume,
+      cost,
+      row.measurementUnit,
+      REASON_LABELS[row.reason],
+    ].join(';')
+  })
+
+  return [UNMATCHED_CSV_HEADER, ...lines].join('\n')
+}
+
 type ProcessResult = {
   totalRows: number
   enriched: number
   unmatched: Array<UnmatchedIMDRow>
-  csv: string
+  enrichedCsv: string
+  unmatchedCsv: string
 }
 
 // TODO: To small belopp should not be processed
@@ -209,7 +250,8 @@ async function processIMD(csv: string): Promise<Result<ProcessResult>> {
     }
   }
 
-  const outputCsv = toTenfastCsv(enriched)
+  const enrichedCsv = toTenfastCsv(enriched)
+  const unmatchedCsv = toUnmatchedCsv(unmatched)
 
   logger.info(
     {
@@ -226,7 +268,8 @@ async function processIMD(csv: string): Promise<Result<ProcessResult>> {
       totalRows: rows.length,
       enriched: enriched.length,
       unmatched,
-      csv: outputCsv,
+      enrichedCsv,
+      unmatchedCsv,
     },
   }
 }
@@ -235,6 +278,7 @@ export const imdService = {
   parseCsv,
   enrichIMDRows,
   toTenfastCsv,
+  toUnmatchedCsv,
   processIMD,
   IMDRowSchema,
 }
