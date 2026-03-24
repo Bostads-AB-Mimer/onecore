@@ -1,9 +1,5 @@
-import { Contact } from '@onecore/types'
-import {
-  RentInvoiceRow,
-  EnrichedXledgerRentCase,
-  Invoice,
-} from '../../common/types'
+import { Contact, RentInvoiceRow } from '@onecore/types'
+import { EnrichedXledgerRentCase, Invoice } from '../../common/types'
 import {
   formatNumber,
   getDateString,

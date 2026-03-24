@@ -123,6 +123,23 @@ const getLeasesForPropertyId = async (
   return leasesResponse.data.content
 }
 
+const getLeasesBatch = async (leaseIds: string[]): Promise<Lease[]> => {
+  const pageSize = 500
+  let allLeases: Lease[] = []
+
+  for (let i = 0; i < leaseIds.length; i += pageSize) {
+    const batch = leaseIds.slice(i, i + pageSize)
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/batch`,
+      { leaseIds: batch }
+    )
+
+    allLeases = allLeases.concat(response.data.content)
+  }
+
+  return allLeases
+}
+
 // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
 const getBuildingManagers = async (): Promise<
   { code: string; name: string; district: string }[]
@@ -217,6 +234,23 @@ const getContactsForIdentityCheck = async (
     logger.error({ err }, 'leasing-adapter.getContactsForIdentityCheck')
     return { ok: false, err: 'unknown' }
   }
+}
+
+const getContacts = async (contactCodes: string[]): Promise<Contact[]> => {
+  const pageSize = 500
+  let allContacts: Contact[] = []
+
+  for (let i = 0; i < contactCodes.length; i += pageSize) {
+    const batch = contactCodes.slice(i, i + pageSize)
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/contacts/batch`,
+      { contactCodes: batch }
+    )
+
+    allContacts = allContacts.concat(response.data.content)
+  }
+
+  return allContacts
 }
 
 const getContactByContactCode = async (
@@ -991,12 +1025,14 @@ export {
   getContactForPnr,
   getContactsDataBySearchQuery,
   getContactsForIdentityCheck,
+  getContacts,
   getCreditInformation,
   getLease,
   getLeases,
   getLeasesForPnr,
   getLeasesForContactCode,
   getLeasesForPropertyId,
+  getLeasesBatch,
   searchLeases,
   getBuildingManagers,
   getDetailedApplicantsByListingId,

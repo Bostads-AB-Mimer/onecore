@@ -59,6 +59,8 @@ export interface Config {
   emailAddresses: {
     leasing: string
     tenantDefault: string
+    economy: string
+    bosociala: string
     dev: string
   }
   scanner: {
@@ -156,6 +158,8 @@ const config = configPackage({
     emailAddresses: {
       leasing: '',
       tenantDefault: '',
+      economy: '',
+      bosociala: '',
     },
     scanner: {
       allowedIps: [],

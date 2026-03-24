@@ -1,15 +1,9 @@
 import knex from 'knex'
 import config from '../../../common/config'
-import { RentInvoiceRow, RentInvoice, RentalProperty } from '../types'
+import { RentInvoice, RentalProperty } from '../types'
 import { InvoiceDeliveryMethod, XpandContact } from '../../../common/types'
 import trimStrings from '../../../utils/trimStrings'
-import {
-  Address,
-  Invoice,
-  InvoiceTransactionType,
-  invoiceTransactionTypeTranslation,
-  paymentStatusTranslation,
-} from '@onecore/types'
+import { Address, RentInvoiceRow } from '@onecore/types'
 
 const db = knex({
   connection: {
@@ -52,6 +46,8 @@ type XpandInvoiceRow = {
   printGroup: string | null
   invoiceRowType: string
   rentType: string | null
+  fromDate: Date
+  toDate: Date
 }
 
 const buildRentalPropertyQuery = ({
@@ -245,6 +241,8 @@ export const getInvoiceRows = async (
       'krfkr.code',
       'krfkr.rowtype AS rowType',
       'krfkr.printgroup AS printGroup',
+      'krfkr.fromdate AS fromDate',
+      'krfkr.todate AS toDate',
       'cmarg.caption AS invoiceRowType',
       'hysum.hysumben AS rentType'
     )
@@ -256,6 +254,7 @@ export const getInvoiceRows = async (
     .whereRaw(
       `krfkh.invoice IN (${invoiceNumbers.map((n) => `'${n}'`).join(', ')})`
     )
+    .whereNotNull('krfkh.fromdate')
     .orderBy('krfkr.printsort', 'asc')
     .then(trimStrings<XpandInvoiceRow[]>)
 
@@ -271,6 +270,8 @@ export const getInvoiceRows = async (
       code: row.code,
       rowType: row.rowType,
       printGroup: row.printGroup,
+      fromDate: new Date(row.fromDate),
+      toDate: new Date(row.toDate),
     }
   })
 }
@@ -418,7 +419,8 @@ export const getContacts = async (
 }
 
 export const getPropertyCodeAndCostCentreForLease = async (
-  rentalId: string
+  rentalId: string,
+  year?: number
 ): Promise<{ costCentre: string; propertyCode: string } | null> => {
   const queries = [
     // First try: join via babyg when keyobjbyg exists
@@ -455,7 +457,12 @@ export const getPropertyCodeAndCostCentreForLease = async (
   ]
 
   for (const query of queries) {
+    if (year) {
+      query.where('repsk.year', year)
+    }
+
     const result = await query.then(trimStrings)
+
     if (result.length > 0) {
       return {
         costCentre: result[0].costCentre ?? '',

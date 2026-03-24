@@ -7,6 +7,7 @@ import {
 import { economy, Invoice } from '@onecore/types'
 
 import {
+  getAllInvoicesWithMatchIds,
   getInvoiceByInvoiceNumber,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
@@ -18,6 +19,11 @@ import {
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
+import {
+  fetchInvoiceRows,
+  fetchPaymentEvents,
+  getLeaseDetails,
+} from './service'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -158,6 +164,69 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('(.*)/invoices', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = economy.GetInvoicesQueryParams.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    const pageSize = queryParams.data?.pageSize ?? 500
+    const after = queryParams.data?.after
+
+    try {
+      const invoices = await getAllInvoicesWithMatchIds({
+        from: queryParams.data?.from,
+        to: queryParams.data?.to,
+        remainingAmountGreaterThan:
+          queryParams.data?.remainingAmountGreaterThan,
+        after,
+        pageSize,
+      })
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        {
+          content: invoices.content,
+          pageInfo: invoices.pageInfo,
+        },
+        metadata
+      )
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+  /* 
+    Gets property information required to create a miscellaneous invoice for a lease.
+    We could instead get the required information by making several queries to the leasing- and
+    property-services, but since it is only required in one place at the moment 
+    (creating miscellaneous invoices from the onecore web application) I decided to keep it
+    isolated here.
+  */
+  router.get('(.*)/invoices/miscellaneous/:rentalId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await getPropertyCodeAndCostCentreForLease(
+        ctx.params.rentalId
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result, metadata)
+    } catch (error: any) {
+      logger.error(error)
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
   router.post('(.*)/invoices/miscellaneous', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -178,25 +247,53 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  /* 
-    Gets property information required to create a miscellaneous invoice for a lease.
-    We could instead get the required information by making several queries to the leasing- and
-    property-services, but since it is only required in one place at the moment 
-    (creating miscellaneous invoices from the onecore web application) I decided to keep it
-    isolated here.
-  */
-  router.get('(.*)/invoices/miscellaneous/:rentalId', async (ctx) => {
+  router.post('(.*)/rent-invoice-rows/batch', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const invoiceIds = ctx.request.body.invoiceIds as string[] // TODO schema
 
     try {
-      const result = await getPropertyCodeAndCostCentreForLease(
-        ctx.params.rentalId
+      const invoices = await fetchInvoiceRows(invoiceIds)
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(invoices, metadata)
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/payment-events/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const matchIds = ctx.request.body.matchIds as string[] // TODO schema
+
+    try {
+      const paymentEvents = await fetchPaymentEvents(
+        matchIds.map((id) => parseInt(id))
       )
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(result, metadata)
+      ctx.body = makeSuccessResponseBody(paymentEvents, metadata)
     } catch (error: any) {
-      logger.error(error)
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/lease-details/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const invoiceIds = ctx.request.body.invoiceIds as string[] // TODO schema
+
+    try {
+      const leaseDetails = await getLeaseDetails(invoiceIds)
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(leaseDetails, metadata)
+    } catch (error: any) {
+      logger.error(error, 'Error getting lease details')
       ctx.status = 500
       ctx.body = {
         message: error.message,
