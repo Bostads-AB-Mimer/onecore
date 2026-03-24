@@ -14,14 +14,18 @@ import { AdapterResult } from '../types'
 import { calculateLeaseStatus, mapToOnecoreLease } from '../../helpers/tenfast'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
-const tenfastCompanyId = config.tenfast.companyId
 
 /**
- * Supported Tenfast API filters:
- * filter[isArchivedAt], filter[startDate], filter[endDate], filter[hyresobjekt][typ],
- * filter[hyresobjekt][stadsdel], filter[fastighet][fastighetsbeteckning], filter[stage],
- * filter[externalId], filter[hyresgast][displayName], filter[hyresgast][idBeteckning],
- * filter[hyresgast][externalId], limit/offset, populate
+ * Uses the new Tenfast search endpoint: GET /v1/hyresvard/avtal/search
+ *
+ * Supported filters (deepObject style):
+ * filter[isArchived], filter[startDate], filter[endDate], filter[hyresobjekt][typ],
+ * filter[hyresobjekt][stadsdel], filter[hyresobjekt][postadress], filter[stage],
+ * filter[externalId], filter[hyresgaster][displayName], filter[hyresgaster][idbeteckning],
+ * filter[hyresgaster][externalId]
+ *
+ * Pagination: cursor-based via `limit` + `paginate` (cursor token from prev response).
+ * No `hyresvard` or `populate` params needed — handled implicitly by the search endpoint.
  */
 
 const OBJECT_TYPE_TO_TENFAST_TYP: Record<string, string> = {
@@ -59,19 +63,18 @@ export function analyzeSearchTermForApi(q: string): Array<{
   if (/^[PFIKLÖS pfiklös]\d+$/.test(trimmed)) {
     return [
       {
-        filterKey: 'filter[hyresgast][externalId]',
+        filterKey: 'filter[hyresgaster][externalId]',
         filterValue: trimmed.toUpperCase(),
       },
     ]
   }
 
   // Personnummer or digit string
-  // NOTE: Tenfast idBeteckning filter may not support dash format — reported to Tenfast.
   const digitsOnly = trimmed.replace(/[\s-]/g, '')
   if (/^\d+$/.test(digitsOnly)) {
     return [
       {
-        filterKey: 'filter[hyresgast][idBeteckning]',
+        filterKey: 'filter[hyresgaster][idbeteckning]',
         filterValue: trimmed,
       },
     ]
@@ -90,8 +93,7 @@ export function buildTenfastQueryParams(
 ): URLSearchParams {
   const query = new URLSearchParams()
 
-  query.set('populate', 'hyresgaster,hyresobjekt')
-  query.set('filter[isArchivedAt]', 'false')
+  query.set('filter[isArchived]', 'false')
 
   if (params.q) {
     const apiFilters = analyzeSearchTermForApi(params.q)
@@ -101,10 +103,9 @@ export function buildTenfastQueryParams(
   }
 
   if (params.name) {
-    query.set('filter[hyresgast][displayName]', params.name)
+    query.set('filter[hyresgaster][displayName]', params.name)
   }
 
-  // NOTE: Tenfast may tokenize spaces with OR logic — reported to Tenfast.
   if (params.address) {
     query.set('filter[hyresobjekt][postadress]', params.address.trim())
   }
@@ -137,13 +138,6 @@ export function buildTenfastQueryParams(
     }
   }
 
-  if (params.property && params.property.length > 0) {
-    query.set(
-      'filter[fastighet][fastighetsbeteckning]',
-      params.property.join(',')
-    )
-  }
-
   if (params.districtNames && params.districtNames.length > 0) {
     query.set('filter[hyresobjekt][stadsdel]', params.districtNames.join(','))
   }
@@ -152,14 +146,10 @@ export function buildTenfastQueryParams(
 
   if (!needsClientSideFiltering) {
     const limit = params.limit ?? 20
-    const page = params.page ?? 1
-    const offset = (page - 1) * limit
     query.set('limit', String(limit))
-    query.set('offset', String(offset))
   } else {
     // Fetch all records for client-side filtering
     query.set('limit', '10000')
-    query.set('offset', '0')
   }
 
   return query
@@ -192,7 +182,7 @@ export async function fetchLeases(
       .replace(/%5B/gi, '[')
       .replace(/%5D/gi, ']')
       .replace(/%2C/gi, ',')
-    const url = `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}&${queryString}`
+    const url = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?${queryString}`
 
     const res = await tenfastApi.request({
       method: 'get',
