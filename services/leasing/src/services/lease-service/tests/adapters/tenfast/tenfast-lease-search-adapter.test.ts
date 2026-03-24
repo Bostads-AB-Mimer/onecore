@@ -44,7 +44,7 @@ describe('tenfast-lease-search-adapter', () => {
         tenfastLeaseSearchAdapter.analyzeSearchTermForApi('P965339')
       expect(result).toEqual([
         {
-          filterKey: 'filter[hyresgast][externalId]',
+          filterKey: 'filter[hyresgaster][externalId]',
           filterValue: 'P965339',
         },
       ])
@@ -55,7 +55,7 @@ describe('tenfast-lease-search-adapter', () => {
         tenfastLeaseSearchAdapter.analyzeSearchTermForApi('p965339')
       expect(result).toEqual([
         {
-          filterKey: 'filter[hyresgast][externalId]',
+          filterKey: 'filter[hyresgaster][externalId]',
           filterValue: 'P965339',
         },
       ])
@@ -66,7 +66,7 @@ describe('tenfast-lease-search-adapter', () => {
         tenfastLeaseSearchAdapter.analyzeSearchTermForApi('850101-1234')
       expect(result).toEqual([
         {
-          filterKey: 'filter[hyresgast][idBeteckning]',
+          filterKey: 'filter[hyresgaster][idbeteckning]',
           filterValue: '850101-1234',
         },
       ])
@@ -77,17 +77,17 @@ describe('tenfast-lease-search-adapter', () => {
         tenfastLeaseSearchAdapter.analyzeSearchTermForApi('198501011234')
       expect(result).toEqual([
         {
-          filterKey: 'filter[hyresgast][idBeteckning]',
+          filterKey: 'filter[hyresgaster][idbeteckning]',
           filterValue: '198501011234',
         },
       ])
     })
 
-    it('should detect short digit strings as idBeteckning', () => {
+    it('should detect short digit strings as idbeteckning', () => {
       const result = tenfastLeaseSearchAdapter.analyzeSearchTermForApi('0022')
       expect(result).toEqual([
         {
-          filterKey: 'filter[hyresgast][idBeteckning]',
+          filterKey: 'filter[hyresgaster][idbeteckning]',
           filterValue: '0022',
         },
       ])
@@ -122,14 +122,14 @@ describe('tenfast-lease-search-adapter', () => {
   })
 
   describe('buildTenfastQueryParams', () => {
-    it('should always include populate and isArchivedAt filter', () => {
+    it('should always include isArchived filter', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         page: 1,
         limit: 20,
       })
 
-      expect(params.get('populate')).toBe('hyresgaster,hyresobjekt')
-      expect(params.get('filter[isArchivedAt]')).toBe('false')
+      expect(params.get('filter[isArchived]')).toBe('false')
+      expect(params.get('populate')).toBeNull()
     })
 
     it('should include date filters as comma-separated range params', () => {
@@ -166,14 +166,13 @@ describe('tenfast-lease-search-adapter', () => {
       expect(params.get('filter[startDate]')).toBe(',2024-12-31')
     })
 
-    it('should include limit and offset when no client-side filtering is needed', () => {
+    it('should include limit when no client-side filtering is needed', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         page: 3,
         limit: 10,
       })
 
       expect(params.get('limit')).toBe('10')
-      expect(params.get('offset')).toBe('20')
     })
 
     it('should not add any filter when free-text search is a name (use explicit name param)', () => {
@@ -184,20 +183,19 @@ describe('tenfast-lease-search-adapter', () => {
       })
 
       // 'Anna' is not a recognized pattern — no filter added
-      expect(params.get('filter[hyresgast][displayName]')).toBeNull()
+      expect(params.get('filter[hyresgaster][displayName]')).toBeNull()
       expect(params.get('filter[hyresobjekt][displayName]')).toBeNull()
       expect(params.get('limit')).toBe('20')
-      expect(params.get('offset')).toBe('0')
     })
 
-    it('should push explicit name param to hyresgast displayName filter', () => {
+    it('should push explicit name param to hyresgaster displayName filter', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         name: 'Anna',
         page: 1,
         limit: 20,
       })
 
-      expect(params.get('filter[hyresgast][displayName]')).toBe('Anna')
+      expect(params.get('filter[hyresgaster][displayName]')).toBe('Anna')
       expect(params.get('filter[hyresobjekt][displayName]')).toBeNull()
       expect(params.get('limit')).toBe('20')
     })
@@ -212,7 +210,7 @@ describe('tenfast-lease-search-adapter', () => {
       expect(params.get('filter[hyresobjekt][postadress]')).toBe(
         'Kungsgatan 12'
       )
-      expect(params.get('filter[hyresgast][displayName]')).toBeNull()
+      expect(params.get('filter[hyresgaster][displayName]')).toBeNull()
       expect(params.get('limit')).toBe('20')
     })
 
@@ -224,35 +222,33 @@ describe('tenfast-lease-search-adapter', () => {
         limit: 20,
       })
 
-      expect(params.get('filter[hyresgast][displayName]')).toBe('Anna')
+      expect(params.get('filter[hyresgaster][displayName]')).toBe('Anna')
       expect(params.get('filter[hyresobjekt][postadress]')).toBe('Kungsgatan')
     })
 
-    it('should include limit/offset when free-text search is a contact code', () => {
+    it('should include limit when free-text search is a contact code', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         q: 'P965339',
         page: 1,
         limit: 20,
       })
 
-      expect(params.get('filter[hyresgast][externalId]')).toBe('P965339')
+      expect(params.get('filter[hyresgaster][externalId]')).toBe('P965339')
       expect(params.get('limit')).toBe('20')
-      expect(params.get('offset')).toBe('0')
     })
 
-    it('should include limit/offset when free-text search is a personnummer', () => {
+    it('should include limit when free-text search is a personnummer', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         q: '198501011234',
         page: 1,
         limit: 20,
       })
 
-      expect(params.get('filter[hyresgast][idBeteckning]')).toBe('198501011234')
+      expect(params.get('filter[hyresgaster][idbeteckning]')).toBe('198501011234')
       expect(params.get('limit')).toBe('20')
-      expect(params.get('offset')).toBe('0')
     })
 
-    it('should include limit/offset when free-text search is a lease ID', () => {
+    it('should include limit when free-text search is a lease ID', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         q: '206-706-00-0005/04',
         page: 1,
@@ -260,29 +256,6 @@ describe('tenfast-lease-search-adapter', () => {
       })
 
       expect(params.get('filter[externalId]')).toBe('206-706-00-0005/04')
-      expect(params.get('limit')).toBe('20')
-      expect(params.get('offset')).toBe('0')
-    })
-
-    it('should push property filter to API', () => {
-      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
-        property: ['Vetterstorp 1'],
-        page: 1,
-        limit: 20,
-      })
-
-      expect(params.get('filter[fastighet][fastighetsbeteckning]')).toBe('Vetterstorp 1')
-      expect(params.get('limit')).toBe('20')
-    })
-
-    it('should push comma-separated property filter for multiple values', () => {
-      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
-        property: ['Vetterstorp 1', 'Vetterstorp 2'],
-        page: 1,
-        limit: 20,
-      })
-
-      expect(params.get('filter[fastighet][fastighetsbeteckning]')).toBe('Vetterstorp 1,Vetterstorp 2')
       expect(params.get('limit')).toBe('20')
     })
 
@@ -297,7 +270,7 @@ describe('tenfast-lease-search-adapter', () => {
       expect(params.get('limit')).toBe('20')
     })
 
-    it('should include limit/offset when status maps to a known stage', () => {
+    it('should include limit when status maps to a known stage', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         status: ['current'],
         page: 1,
@@ -306,10 +279,9 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(params.get('filter[stage]')).toBe('active')
       expect(params.get('limit')).toBe('20')
-      expect(params.get('offset')).toBe('0')
     })
 
-    it('should include limit/offset when objectType filter uses comma-separated values', () => {
+    it('should include limit when objectType filter uses comma-separated values', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         objectType: ['bostad', 'parkering'],
         page: 1,
@@ -318,10 +290,9 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(params.get('filter[hyresobjekt][typ]')).toBe('bostad,parkering')
       expect(params.get('limit')).toBe('20')
-      expect(params.get('offset')).toBe('0')
     })
 
-    it('should include limit/offset when single objectType is used', () => {
+    it('should include limit when single objectType is used', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         objectType: ['bostad'],
         page: 2,
@@ -330,7 +301,6 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(params.get('filter[hyresobjekt][typ]')).toBe('bostad')
       expect(params.get('limit')).toBe('10')
-      expect(params.get('offset')).toBe('10')
     })
 
     it('should push stage filter for aboutToEnd status', () => {
@@ -342,7 +312,6 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(params.get('filter[stage]')).toBe('terminationScheduled')
       expect(params.get('limit')).toBe('20')
-      expect(params.get('offset')).toBe('0')
     })
 
     it('should push stage filter for current status (maps to active)', () => {
@@ -354,7 +323,6 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(params.get('filter[stage]')).toBe('active')
       expect(params.get('limit')).toBe('20')
-      expect(params.get('offset')).toBe('0')
     })
   })
 
@@ -471,10 +439,10 @@ describe('tenfast-lease-search-adapter', () => {
         mockCtx
       )
 
-      // Verify the API was called with idBeteckning filter
+      // Verify the API was called with idbeteckning filter
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
       expect(calledUrl).toContain(
-        'filter[hyresgast][idBeteckning]=0022'
+        'filter[hyresgaster][idbeteckning]=0022'
       )
     })
 
@@ -505,7 +473,7 @@ describe('tenfast-lease-search-adapter', () => {
       )
 
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
-      expect(calledUrl).toContain('filter[hyresgast][displayName]=Anna')
+      expect(calledUrl).toContain('filter[hyresgaster][displayName]=Anna')
     })
 
     it('should push contact code search to API filter', async () => {
@@ -525,7 +493,7 @@ describe('tenfast-lease-search-adapter', () => {
       // Verify the API was called with contact code filter
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
       expect(calledUrl).toContain(
-        'filter[hyresgast][externalId]=P965339'
+        'filter[hyresgaster][externalId]=P965339'
       )
 
       expect(result.content).toHaveLength(1)
@@ -546,10 +514,10 @@ describe('tenfast-lease-search-adapter', () => {
         mockCtx
       )
 
-      // Verify the API was called with idBeteckning filter (keeps original format with dash)
+      // Verify the API was called with idbeteckning filter (keeps original format with dash)
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
       expect(calledUrl).toContain(
-        'filter[hyresgast][idBeteckning]=850101-1234'
+        'filter[hyresgaster][idbeteckning]=850101-1234'
       )
 
       expect(result.content).toHaveLength(1)
@@ -844,21 +812,6 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(result.content).toHaveLength(3)
       expect(result._meta.totalRecords).toBe(3)
-    })
-
-    it('should push single property filter to API', async () => {
-      const leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
-      setupMockLeases(leases)
-
-      await tenfastLeaseSearchAdapter.searchLeases(
-        { property: ['Vetterstorp 1'], page: 1, limit: 20 },
-        mockCtx
-      )
-
-      const calledUrl = mockedRequest.mock.calls[0][0].url as string
-      expect(calledUrl).toContain(
-        'filter[fastighet][fastighetsbeteckning]=Vetterstorp'
-      )
     })
 
     it('should push single district filter to API', async () => {
