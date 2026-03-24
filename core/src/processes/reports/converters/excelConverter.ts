@@ -175,6 +175,9 @@ const transformBosociala = (bosocial: BosocialaObject): BosocialaRow => {
     [LeaseStatus.Upcoming]: 'Kommande',
     [LeaseStatus.AboutToEnd]: 'Uppsagt',
     [LeaseStatus.Ended]: 'Uppsagt',
+    [LeaseStatus.PreliminaryTerminated]: 'Preliminärt uppsagt',
+    [LeaseStatus.PendingSignature]: 'Väntar på signering',
+    [LeaseStatus.NotSent]: 'Ej skickat',
   }
 
   return {

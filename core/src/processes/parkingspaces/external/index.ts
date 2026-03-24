@@ -176,11 +176,13 @@ export const createLeaseForExternalParkingSpace = async (
 
     if (creditCheck) {
       // Step 4A. Create lease
+      const includeVAT = applicantHasNoLease
       const createLeaseResult = await createLease(
         listing.rentalObjectCode,
         applicantContact.contactCode,
         startDate != undefined ? startDate : new Date().toISOString(),
-        '001'
+        '001',
+        includeVAT
       )
 
       if (!createLeaseResult.ok) {
@@ -248,7 +250,7 @@ export const createLeaseForExternalParkingSpace = async (
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           type: rentalObject.objectTypeCaption ?? 'Bilplats',
-          rent: String(rentalObject.monthlyRent ?? ''),
+          rent: String(rentalObject.rent?.amount ?? ''),
         })
       }
       await sendNotificationToRole(
@@ -282,7 +284,7 @@ export const createLeaseForExternalParkingSpace = async (
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           type: rentalObject.objectTypeCaption ?? 'Bilplats',
-          rent: String(rentalObject.monthlyRent ?? ''),
+          rent: String(rentalObject.rent?.amount ?? ''),
         })
       }
       await sendNotificationToRole(

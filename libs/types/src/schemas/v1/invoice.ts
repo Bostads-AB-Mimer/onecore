@@ -6,25 +6,17 @@ const InvoiceTransactionTypeSchema = z.nativeEnum(InvoiceTransactionType)
 const PaymentStatusSchema = z.nativeEnum(PaymentStatus)
 
 export const InvoiceRowSchema = z.object({
-  account: z.string(),
   amount: z.number(),
-  company: z.string(),
-  contactCode: z.string(),
   deduction: z.number(),
-  freeCode: z.string().nullable(),
   fromDate: z.string(),
   invoiceDate: z.string(),
   invoiceDueDate: z.string(),
   invoiceNumber: z.string(),
   invoiceRowText: z.string().nullable(),
-  invoiceTotalAmount: z.number(),
   printGroup: z.string().nullable(),
-  printGroupLabel: z.string().nullable(),
-  projectCode: z.string().nullable(),
   rentArticle: z.string().nullable(),
   roundoff: z.number(),
-  rowType: z.number(),
-  tenantName: z.string(),
+  rowType: z.number(), // TODO We will hopefully not need this anymore when we are using Tenfast for invoice rows
   toDate: z.string(),
   totalAmount: z.number(),
   vat: z.number(),

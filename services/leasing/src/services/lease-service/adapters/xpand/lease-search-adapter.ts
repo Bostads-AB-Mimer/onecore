@@ -14,6 +14,9 @@ const STATUS_ENUM_MAP: Record<string, string> = {
   [LeaseStatus.Upcoming]: 'upcoming',
   [LeaseStatus.AboutToEnd]: 'abouttoend',
   [LeaseStatus.Ended]: 'ended',
+  [LeaseStatus.PreliminaryTerminated]: 'preliminary-terminated',
+  [LeaseStatus.PendingSignature]: 'pending-signature',
+  [LeaseStatus.NotSent]: 'not-sent',
 }
 
 /** Maps normalized status keys to SQL WHERE conditions */
@@ -566,13 +569,7 @@ export const searchLeases = async (
   const query = builder.getQuery()
 
   // Use pagination utility (pass totalCount to skip COUNT on pages 2+)
-  const paginatedResult = await paginateKnex<any>(
-    query,
-    ctx,
-    {},
-    params.limit,
-    options?.totalCount
-  )
+  const paginatedResult = await paginateKnex<any>(query, ctx, {}, params.limit)
 
   // Transform rows and parse contacts JSON
   const transformedContent = paginatedResult.content.map((row: any) => {
