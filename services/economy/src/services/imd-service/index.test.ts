@@ -276,6 +276,24 @@ describe(imdService.toTenfastCsv, () => {
     expect(yearlyRent).toBe('6000,00')
   })
 
+  it('handles mixed VV and VMM rows', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 100, unit: 'VV' }),
+      makeEnrichedRow('306-008-01-0202', 'L2', { cost: 200, unit: 'VMM' }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines).toHaveLength(3)
+
+    const vvCols = lines[1].split(';')
+    expect(vvCols[1]).toBe('IMDM')
+    expect(vvCols[2]).toContain('Varmvatten')
+
+    const vmmCols = lines[2].split(';')
+    expect(vmmCols[1]).toBe('VÄRMEENERGIM')
+    expect(vmmCols[2]).toContain('Värmeenergi')
+  })
+
   it('outputs multiple rows', () => {
     const csv = imdService.toTenfastCsv([
       makeEnrichedRow('306-008-01-0201', 'L1', { cost: 100 }),

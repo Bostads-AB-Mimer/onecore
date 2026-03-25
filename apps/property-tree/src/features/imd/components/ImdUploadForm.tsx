@@ -134,9 +134,21 @@ export function ImdUploadForm() {
         <div className="space-y-4">
           <h3 className="font-medium">Ladda upp CSV</h3>
           <p className="text-sm text-muted-foreground">
-            Välj en IMD-fil (semikolonseparerad CSV) för att berika med
-            kontraktsuppgifter och generera Tenfast-underlag.
+            Välj en IMD-fil för att berika med kontraktsuppgifter och generera
+            Tenfast-underlag.
           </p>
+          <div className="rounded-md bg-muted/50 px-4 py-3 text-sm text-muted-foreground space-y-2">
+            <p className="font-medium text-foreground">Krav på filen</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>Rå IMD-exportfil, semikolonseparerad CSV</li>
+              <li>Minst 11 kolumner per rad</li>
+              <li>Inga kolumnrubriker — enbart datarader</li>
+            </ul>
+            <p className="text-xs text-muted-foreground/70">
+              Exempelrad:
+              306-008-01-0201;2026-01-01;2026-01-31;VV;129,312;136,892;7,580;621,680;;82,016;m3;;;1
+            </p>
+          </div>
 
           {!selectedFile ? (
             <div
