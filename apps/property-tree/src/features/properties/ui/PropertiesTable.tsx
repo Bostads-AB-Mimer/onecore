@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import type { Property } from '@/services/types'
 
+import { numericCompare } from '@/shared/lib/sorting'
 import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -74,15 +75,9 @@ export const PropertiesTable = ({ properties }: PropertiesTableProps) => {
   const sortedProperties = useMemo(
     () =>
       properties.slice().sort((a, b) => {
-        const designationCompare = a.designation.localeCompare(
-          b.designation,
-          undefined,
-          {
-            numeric: true,
-          }
-        )
+        const designationCompare = numericCompare(a.designation, b.designation)
         if (designationCompare !== 0) return designationCompare
-        return a.code.localeCompare(b.code, undefined, { numeric: true })
+        return numericCompare(a.code, b.code)
       }),
     [properties]
   )

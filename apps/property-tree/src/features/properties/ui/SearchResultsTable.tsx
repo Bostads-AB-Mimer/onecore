@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
+import { numericCompare } from '@/shared/lib/sorting'
 import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -115,18 +116,12 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
   const sortedResults = useMemo(
     () =>
       results.slice().sort((a, b) => {
-        const nameA = getName(a) || ''
-        const nameB = getName(b) || ''
-        const nameCompare = nameA.localeCompare(nameB, undefined, {
-          numeric: true,
-        })
+        const nameCompare = numericCompare(getName(a) || '', getName(b) || '')
         if (nameCompare !== 0) return nameCompare
-
-        const secondaryA = getSecondaryInfo(a) || ''
-        const secondaryB = getSecondaryInfo(b) || ''
-        return secondaryA.localeCompare(secondaryB, undefined, {
-          numeric: true,
-        })
+        return numericCompare(
+          getSecondaryInfo(a) || '',
+          getSecondaryInfo(b) || ''
+        )
       }),
     [results]
   )

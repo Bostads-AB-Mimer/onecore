@@ -2,6 +2,7 @@ import { useResidences } from '@/features/residences'
 
 import { Building } from '@/services/types'
 
+import { numericCompare } from '@/shared/lib/sorting'
 import { NavigationError, NavigationSkeleton } from '@/shared/ui/layout'
 import { SidebarMenu } from '@/shared/ui/Sidebar'
 
@@ -29,15 +30,12 @@ export function ResidenceList({
         {residences
           ?.slice()
           .sort((a, b) => {
-            const staircaseCompare = a.staircaseCode.localeCompare(
-              b.staircaseCode,
-              undefined,
-              { numeric: true }
+            const staircaseCompare = numericCompare(
+              a.staircaseCode,
+              b.staircaseCode
             )
             if (staircaseCompare !== 0) return staircaseCompare
-            return a.rentalId.localeCompare(b.rentalId, undefined, {
-              numeric: true,
-            })
+            return numericCompare(a.rentalId, b.rentalId)
           })
           .map((residence) => (
             <ResidenceNavigation
