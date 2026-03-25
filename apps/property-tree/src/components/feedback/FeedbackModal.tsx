@@ -20,6 +20,7 @@ import {
 } from '@/shared/ui/Select'
 import { useFeedbackModal } from '@/shared/hooks/useFeedbackModal'
 import { useCreateFeedback } from '@/entities/tenant/hooks/useCreateFeedback'
+import { useUser } from '@/entities/user'
 import { useToast } from '@/shared/hooks/useToast'
 
 const LABEL_IDS = {
@@ -76,6 +77,7 @@ export function FeedbackModal() {
   const { isOpen, close } = useFeedbackModal()
   const { mutateAsync: createFeedback, isPending } = useCreateFeedback()
   const { toast } = useToast()
+  const userState = useUser()
 
   const [formData, setFormData] = React.useState<FormData>({
     title: '',
@@ -136,6 +138,8 @@ export function FeedbackModal() {
 
     try {
       const descriptionParts = [
+        userState.tag === 'success' &&
+          `**Inskickat av:** ${userState.user.name} (${userState.user.email})`,
         `**Viktighet:** ${formData.importance}/10`,
         formData.whoIsAffected && `**Vem påverkas:** ${formData.whoIsAffected}`,
         formData.currentSituation &&
