@@ -9,9 +9,7 @@ type IMDRow = z.infer<typeof economy.IMDRowSchema>
 
 type ProcessIMDError = 'invalid-csv' | 'processing-failed'
 
-type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; reason: ProcessIMDError }
+type Result<T> = { ok: true; data: T } | { ok: false; reason: ProcessIMDError }
 
 const MIN_COLUMNS = 11
 
@@ -102,7 +100,9 @@ async function enrichIMDRows(
       end: imdRows[0].to,
     }
 
-    const uniqueCodes = [...new Set(eligible.map((row) => row.rentalObjectCode))]
+    const uniqueCodes = [
+      ...new Set(eligible.map((row) => row.rentalObjectCode)),
+    ]
     const leaseMap = await getActiveLeasesByRentalObjectCodes({
       rentalObjectCodes: uniqueCodes,
       periodStart: period.start,
