@@ -7,12 +7,23 @@ import z from 'zod'
 
 type IMDRow = z.infer<typeof economy.IMDRowSchema>
 
-type Result<T> = { ok: true; data: T } | { ok: false; error: unknown }
+type ProcessIMDError = 'invalid-csv' | 'processing-failed'
+
+type Result<T> =
+  | { ok: true; data: T }
+  | { ok: false; reason: ProcessIMDError }
+
+const MIN_COLUMNS = 11
 
 // Assumes semicolon-delimited CSV with at least 11 columns:
 // 0: rentalObjectCode, 1: from, 2: to, 3: unit, 6: volume, 7: cost, 10: measurementUnit
-function extractNormalizedCols(line: string) {
+function extractNormalizedCols(line: string, lineIndex: number) {
   const cols = line.split(';')
+  if (cols.length < MIN_COLUMNS) {
+    throw new Error(
+      `CSV line ${lineIndex + 1} has ${cols.length} columns, expected at least ${MIN_COLUMNS}`
+    )
+  }
   return {
     rentalObjectCode: cols[0],
     from: cols[1],
@@ -27,18 +38,22 @@ function extractNormalizedCols(line: string) {
 function parseCsv(csv: string): Result<Array<IMDRow>> {
   try {
     if (csv.trim() === '') {
-      return { ok: false, error: new Error('Empty CSV') }
+      return { ok: false, reason: 'invalid-csv' }
     }
 
     const lines = csv
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
       .trim()
       .split('\n')
-      .map((line) => economy.IMDRowSchema.parse(extractNormalizedCols(line)))
+      .map((line, i) =>
+        economy.IMDRowSchema.parse(extractNormalizedCols(line, i))
+      )
 
     return { ok: true, data: lines }
   } catch (err) {
-    logger.error(err)
-    return { ok: false, error: err }
+    logger.error(err, 'IMD: Failed to parse CSV')
+    return { ok: false, reason: 'invalid-csv' }
   }
 }
 
@@ -67,7 +82,7 @@ async function enrichIMDRows(
 ): Promise<Result<EnrichResult>> {
   try {
     if (imdRows.length === 0) {
-      return { ok: false, error: new Error('No rows to enrich') }
+      return { ok: false, reason: 'invalid-csv' }
     }
 
     const enriched: Array<EnrichedIMDRow> = []
@@ -87,8 +102,9 @@ async function enrichIMDRows(
       end: imdRows[0].to,
     }
 
+    const uniqueCodes = [...new Set(eligible.map((row) => row.rentalObjectCode))]
     const leaseMap = await getActiveLeasesByRentalObjectCodes({
-      rentalObjectCodes: eligible.map((row) => row.rentalObjectCode),
+      rentalObjectCodes: uniqueCodes,
       periodStart: period.start,
       periodEnd: period.end,
     })
@@ -107,8 +123,8 @@ async function enrichIMDRows(
 
     return { ok: true, data: { enriched, unprocessed } }
   } catch (err) {
-    logger.error(err)
-    return { ok: false, error: err }
+    logger.error(err, 'IMD: Enrichment failed')
+    return { ok: false, reason: 'processing-failed' }
   }
 }
 

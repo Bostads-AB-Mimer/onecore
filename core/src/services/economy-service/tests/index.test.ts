@@ -35,6 +35,8 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('economy-service routes', () => {
+  afterEach(() => jest.restoreAllMocks())
+
   describe('POST /imd/process', () => {
     it('returns 200 with enriched data on success', async () => {
       const mockData = {

@@ -1,7 +1,6 @@
 import KoaRouter from '@koa/router'
 import {
   generateRouteMetadata,
-  logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy } from '@onecore/types'
@@ -19,34 +18,34 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    try {
-      const { csv } = parseResult.data
-      const result = await imdService.processIMD(csv)
+    const { csv } = parseResult.data
+    const result = await imdService.processIMD(csv)
 
-      if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Processing failed' }
-        return
+    if (!result.ok) {
+      ctx.status = result.reason === 'invalid-csv' ? 400 : 500
+      ctx.body = {
+        error:
+          result.reason === 'invalid-csv'
+            ? 'Invalid CSV format'
+            : 'Processing failed',
       }
-
-      const { totalRows, enriched, unprocessed, enrichedCsv, unprocessedCsv } =
-        result.data
-
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(
-        {
-          totalRows,
-          numEnriched: enriched,
-          numUnprocessed: unprocessed.length,
-          enrichedCsv,
-          unprocessedCsv,
-        },
-        metadata
-      )
-    } catch (err: unknown) {
-      logger.error(err, 'Error processing IMD CSV')
-      ctx.status = 500
+      return
     }
+
+    const { totalRows, enriched, unprocessed, enrichedCsv, unprocessedCsv } =
+      result.data
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(
+      {
+        totalRows,
+        numEnriched: enriched,
+        numUnprocessed: unprocessed.length,
+        enrichedCsv,
+        unprocessedCsv,
+      },
+      metadata
+    )
   })
 }
 

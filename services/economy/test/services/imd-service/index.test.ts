@@ -17,6 +17,8 @@ const validCsv =
   '306-008-01-0201;2026-01-01;2026-01-31;VV;129;136;7,58;621,68;;82;m3;;;1'
 
 describe('IMD Service routes', () => {
+  afterEach(() => jest.restoreAllMocks())
+
   describe('POST /imd/process', () => {
     it('returns 200 with mapped response on success', async () => {
       jest.spyOn(imdService, 'processIMD').mockResolvedValue({
@@ -105,10 +107,24 @@ describe('IMD Service routes', () => {
       expect(res.status).toBe(400)
     })
 
-    it('returns 500 when processIMD returns error', async () => {
+    it('returns 400 when processIMD returns invalid-csv', async () => {
       jest.spyOn(imdService, 'processIMD').mockResolvedValue({
         ok: false,
-        error: new Error('db failed'),
+        reason: 'invalid-csv',
+      })
+
+      const res = await request(app.callback())
+        .post('/imd/process')
+        .send({ csv: validCsv })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid CSV format')
+    })
+
+    it('returns 500 when processIMD returns processing-failed', async () => {
+      jest.spyOn(imdService, 'processIMD').mockResolvedValue({
+        ok: false,
+        reason: 'processing-failed',
       })
 
       const res = await request(app.callback())
@@ -117,18 +133,6 @@ describe('IMD Service routes', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Processing failed')
-    })
-
-    it('returns 500 when processIMD throws', async () => {
-      jest
-        .spyOn(imdService, 'processIMD')
-        .mockRejectedValue(new Error('unexpected'))
-
-      const res = await request(app.callback())
-        .post('/imd/process')
-        .send({ csv: validCsv })
-
-      expect(res.status).toBe(500)
     })
   })
 })
