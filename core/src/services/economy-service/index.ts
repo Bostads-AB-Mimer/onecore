@@ -4,7 +4,6 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy } from '@onecore/types'
-import { z } from 'zod'
 
 import * as economyAdapter from '../../adapters/economy-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
@@ -226,13 +225,23 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               required:
+   *                 - content
    *               properties:
    *                 content:
    *                   type: object
+   *                   required:
+   *                     - totalRows
+   *                     - numEnriched
+   *                     - numUnprocessed
+   *                     - enrichedCsv
+   *                     - unprocessedCsv
    *                   properties:
    *                     totalRows:
    *                       type: integer
-   *                     enriched:
+   *                     numEnriched:
+   *                       type: integer
+   *                     numUnprocessed:
    *                       type: integer
    *                     enrichedCsv:
    *                       type: string
@@ -257,13 +266,9 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    */
-  const ProcessIMDRequestSchema = z.object({
-    csv: z.string(),
-  })
-
   router.post(
     '/imd/process',
-    parseRequestBody(ProcessIMDRequestSchema),
+    parseRequestBody(economy.ProcessIMDRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { csv } = ctx.request.body

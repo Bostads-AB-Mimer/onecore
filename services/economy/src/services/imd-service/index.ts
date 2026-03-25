@@ -4,18 +4,14 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { z } from 'zod'
+import { economy } from '@onecore/types'
 import { imdService } from './service'
-
-const ProcessIMDRequestSchema = z.object({
-  csv: z.string(),
-})
 
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/imd/process', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const parseResult = ProcessIMDRequestSchema.safeParse(ctx.request.body)
+    const parseResult = economy.ProcessIMDRequestSchema.safeParse(ctx.request.body)
     if (!parseResult.success) {
       ctx.status = 400
       return
@@ -31,11 +27,18 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const { totalRows, enriched, enrichedCsv, unprocessedCsv } = result.data
+      const { totalRows, enriched, unprocessed, enrichedCsv, unprocessedCsv } =
+        result.data
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(
-        { totalRows, enriched, enrichedCsv, unprocessedCsv },
+        {
+          totalRows,
+          numEnriched: enriched,
+          numUnprocessed: unprocessed.length,
+          enrichedCsv,
+          unprocessedCsv,
+        },
         metadata
       )
     } catch (err: unknown) {

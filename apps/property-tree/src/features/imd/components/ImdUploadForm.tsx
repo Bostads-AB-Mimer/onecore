@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import {
-  Upload,
-  FileText,
-  X,
-  Download,
-  CheckCircle2,
   AlertTriangle,
+  CheckCircle2,
+  Download,
+  FileText,
+  Upload,
+  X,
 } from 'lucide-react'
 
 import { imdService } from '@/services/api/core'
@@ -46,13 +46,14 @@ export function ImdUploadForm() {
       setResult(data)
       toast({
         title: 'Bearbetning klar',
-        description: `${data.enriched} rader berikade, ${data.totalRows - data.enriched} ej bearbetade.`,
+        description: `${data.numEnriched} rader berikade, ${data.numUnprocessed} ej bearbetade.`,
       })
     },
     onError: () => {
       toast({
         title: 'Bearbetning misslyckades',
-        description: 'Kunde inte bearbeta filen. Kontrollera formatet och försök igen.',
+        description:
+          'Kunde inte bearbeta filen. Kontrollera formatet och försök igen.',
         variant: 'destructive',
       })
     },
@@ -124,7 +125,8 @@ export function ImdUploadForm() {
     downloadCsv(result.unprocessedCsv, `${baseName}-ej-bearbetade.csv`)
   }
 
-  const unprocessedCount = result ? result.totalRows - result.enriched : 0
+  const numEnriched = result?.numEnriched ?? 0
+  const numUnprocessed = result?.numUnprocessed ?? 0
 
   return (
     <div className="space-y-6">
@@ -143,16 +145,16 @@ export function ImdUploadForm() {
               onDragLeave={handleDragLeave}
               className={cn(
                 'border-2 border-dashed rounded-lg p-6 transition-colors',
-                isDragging
-                  ? 'border-primary bg-primary/5'
-                  : 'border-gray-200'
+                isDragging ? 'border-primary bg-primary/5' : 'border-gray-200'
               )}
             >
               <div className="text-center space-y-4">
-                <Upload className={cn(
-                  'h-8 w-8 mx-auto transition-colors',
-                  isDragging ? 'text-primary' : 'text-gray-400'
-                )} />
+                <Upload
+                  className={cn(
+                    'h-8 w-8 mx-auto transition-colors',
+                    isDragging ? 'text-primary' : 'text-gray-400'
+                  )}
+                />
                 <div>
                   <input
                     ref={fileInputRef}
@@ -193,14 +195,22 @@ export function ImdUploadForm() {
             </div>
           )}
 
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSubmit}
-              disabled={!selectedFile || mutation.isPending}
-            >
-              {mutation.isPending ? 'Bearbetar...' : 'Bearbeta'}
-            </Button>
-          </div>
+          {mutation.isPending ? (
+            <div className="space-y-3">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full w-1/3 animate-[indeterminate_1.5s_ease-in-out_infinite] rounded-full bg-primary" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Bearbetar... Stora filer kan ta upp till en minut.
+              </p>
+            </div>
+          ) : (
+            <div className="flex justify-end">
+              <Button onClick={handleSubmit} disabled={!selectedFile}>
+                Bearbeta
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -211,28 +221,28 @@ export function ImdUploadForm() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg border p-4 text-center">
-                <p className="text-2xl font-bold">{result.totalRows}</p>
+                <p className="text-2xl font-bold">{result?.totalRows}</p>
                 <p className="text-sm text-muted-foreground">Totalt rader</p>
               </div>
               <div
                 className={cn(
                   'rounded-lg border p-4 text-center',
-                  result.enriched > 0 && 'border-green-200 bg-green-50'
+                  numEnriched > 0 && 'border-green-200 bg-green-50'
                 )}
               >
                 <p className="text-2xl font-bold text-green-700">
-                  {result.enriched}
+                  {numEnriched}
                 </p>
                 <p className="text-sm text-muted-foreground">Berikade</p>
               </div>
               <div
                 className={cn(
                   'rounded-lg border p-4 text-center',
-                  unprocessedCount > 0 && 'border-amber-200 bg-amber-50'
+                  numUnprocessed > 0 && 'border-amber-200 bg-amber-50'
                 )}
               >
                 <p className="text-2xl font-bold text-amber-700">
-                  {unprocessedCount}
+                  {numUnprocessed}
                 </p>
                 <p className="text-sm text-muted-foreground">Ej bearbetade</p>
               </div>
@@ -240,12 +250,12 @@ export function ImdUploadForm() {
 
             <Separator />
 
-            {result.enriched > 0 && (
+            {numEnriched > 0 && (
               <Alert>
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertTitle>Tenfast-fil klar</AlertTitle>
                 <AlertDescription className="flex items-center justify-between">
-                  <span>{result.enriched} rader redo för import i Tenfast.</span>
+                  <span>{numEnriched} rader redo för import i Tenfast.</span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -258,13 +268,13 @@ export function ImdUploadForm() {
               </Alert>
             )}
 
-            {unprocessedCount > 0 && (
+            {numUnprocessed > 0 && (
               <Alert className="border-amber-300 bg-amber-50 text-amber-900 [&>svg]:text-amber-600">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Ej bearbetade rader</AlertTitle>
                 <AlertDescription className="flex items-center justify-between">
                   <span>
-                    {unprocessedCount} rader kunde inte bearbetas. Ladda ner för
+                    {numUnprocessed} rader kunde inte bearbetas. Ladda ner för
                     detaljer.
                   </span>
                   <Button

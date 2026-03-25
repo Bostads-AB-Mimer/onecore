@@ -1,31 +1,16 @@
 import { logger } from '@onecore/utilities'
-import z from 'zod'
+import { economy } from '@onecore/types'
 
 import { getActiveLeasesByRentalObjectCodes } from '../common/adapters/xpand-db-adapter'
 
-/**
- * We assume:
- * - There is no header row
- * - ; delimiter
- * - Field structure:
- *   <rentalObjectCode>, <from>, <to>, <unit>, <unknown>, <unknown>, <volume>, <cost>, <unknown>, <unknown>, <measurementUnit>, <unknown>, <unknown>, <unknown>
- */
-type IMDCsv = string
+import z from 'zod'
 
-const IMDRowSchema = z.object({
-  rentalObjectCode: z.string(), // <rentalObjectCode>
-  from: z.coerce.date(), // <from>
-  to: z.coerce.date(), // <to>
-  unit: z.string(), // <unit>
-  volume: z.coerce.number(), // <volume>
-  cost: z.coerce.number(), // <cost>
-  measurementUnit: z.string(), // <measurementUnit>
-})
-
-type IMDRow = z.infer<typeof IMDRowSchema>
+type IMDRow = z.infer<typeof economy.IMDRowSchema>
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: unknown }
 
+// Assumes semicolon-delimited CSV with at least 11 columns:
+// 0: rentalObjectCode, 1: from, 2: to, 3: unit, 6: volume, 7: cost, 10: measurementUnit
 function extractNormalizedCols(line: string) {
   const cols = line.split(';')
   return {
@@ -39,7 +24,7 @@ function extractNormalizedCols(line: string) {
   }
 }
 
-function parseCsv(csv: IMDCsv): Result<Array<IMDRow>> {
+function parseCsv(csv: string): Result<Array<IMDRow>> {
   try {
     if (csv.trim() === '') {
       return { ok: false, error: new Error('Empty CSV') }
@@ -48,7 +33,7 @@ function parseCsv(csv: IMDCsv): Result<Array<IMDRow>> {
     const lines = csv
       .trim()
       .split('\n')
-      .map((line) => IMDRowSchema.parse(extractNormalizedCols(line)))
+      .map((line) => economy.IMDRowSchema.parse(extractNormalizedCols(line)))
 
     return { ok: true, data: lines }
   } catch (err) {
@@ -61,7 +46,10 @@ type EnrichedIMDRow = IMDRow & {
   leaseId: string
 }
 
-type UnprocessedReason = 'no-rental-object' | 'no-active-lease' | 'amount-too-low'
+type UnprocessedReason =
+  | 'no-rental-object'
+  | 'no-active-lease'
+  | 'amount-too-low'
 
 type UnprocessedIMDRow = IMDRow & {
   reason: UnprocessedReason
@@ -243,7 +231,12 @@ async function processIMD(csv: string): Promise<Result<ProcessResult>> {
 
   if (unprocessed.length > 0) {
     logger.warn(
-      { rows: unprocessed.map((r) => ({ code: r.rentalObjectCode, reason: r.reason })) },
+      {
+        rows: unprocessed.map((r) => ({
+          code: r.rentalObjectCode,
+          reason: r.reason,
+        })),
+      },
       `IMD: ${unprocessed.length} rows unprocessed`
     )
   }
@@ -278,5 +271,4 @@ export const imdService = {
   toTenfastCsv,
   toUnprocessedCsv,
   processIMD,
-  IMDRowSchema,
 }

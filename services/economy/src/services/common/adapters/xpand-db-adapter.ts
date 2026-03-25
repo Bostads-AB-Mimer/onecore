@@ -299,37 +299,47 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
   const BATCH_SIZE = 2000
   const results = new Map<string, string | null>()
 
+  const batches: string[][] = []
   for (let i = 0; i < params.rentalObjectCodes.length; i += BATCH_SIZE) {
-    const batch = params.rentalObjectCodes.slice(i, i + BATCH_SIZE)
+    batches.push(params.rentalObjectCodes.slice(i, i + BATCH_SIZE))
+  }
 
-    const rows = await db
-      .select('babuf.hyresid AS rentalObjectCode', 'hyobj.hyobjben AS leaseId')
-      .from('babuf')
-      .leftJoin('hykop', function () {
-        this.on('hykop.keycmobj', '=', 'babuf.keycmobj').andOn(
-          'hykop.ordning',
-          '=',
-          db.raw('?', [1])
+  const batchResults = await Promise.all(
+    batches.map((batch) =>
+      db
+        .select(
+          'babuf.hyresid AS rentalObjectCode',
+          'hyobj.hyobjben AS leaseId'
         )
-      })
-      .leftJoin('hyobj', function () {
-        this.on('hyobj.keyhyobj', '=', 'hykop.keyhyobj')
-          .andOn('hyobj.deletemark', '=', db.raw('?', [0]))
-          .andOnNull('hyobj.makuldatum')
-          .andOn(db.raw('hyobj.hyobjben NOT LIKE ?', ['%M%']))
-          .andOn('hyobj.fdate', '<=', db.raw('?', [params.periodEnd]))
-          .andOn(function () {
-            this.onNull('hyobj.sistadeb').orOn(
-              'hyobj.sistadeb',
-              '>=',
-              db.raw('?', [params.periodStart])
-            )
-          })
-      })
-      .whereIn('babuf.hyresid', batch)
-      .orderBy('hyobj.fdate', 'desc')
-      .then(trimStrings)
+        .from('babuf')
+        .leftJoin('hykop', function () {
+          this.on('hykop.keycmobj', '=', 'babuf.keycmobj').andOn(
+            'hykop.ordning',
+            '=',
+            db.raw('?', [1])
+          )
+        })
+        .leftJoin('hyobj', function () {
+          this.on('hyobj.keyhyobj', '=', 'hykop.keyhyobj')
+            .andOn('hyobj.deletemark', '=', db.raw('?', [0]))
+            .andOnNull('hyobj.makuldatum')
+            .andOn(db.raw('hyobj.hyobjben NOT LIKE ?', ['%M%']))
+            .andOn('hyobj.fdate', '<=', db.raw('?', [params.periodEnd]))
+            .andOn(function () {
+              this.onNull('hyobj.sistadeb').orOn(
+                'hyobj.sistadeb',
+                '>=',
+                db.raw('?', [params.periodStart])
+              )
+            })
+        })
+        .whereIn('babuf.hyresid', batch)
+        .orderBy('hyobj.fdate', 'desc')
+        .then(trimStrings)
+    )
+  )
 
+  for (const rows of batchResults) {
     for (const row of rows) {
       if (!results.has(row.rentalObjectCode)) {
         results.set(row.rentalObjectCode, row.leaseId ?? null)

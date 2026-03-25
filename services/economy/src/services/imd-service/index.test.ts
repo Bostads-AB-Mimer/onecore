@@ -1,4 +1,5 @@
 import assert from 'node:assert'
+import { economy } from '@onecore/types'
 
 jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),
@@ -24,7 +25,7 @@ describe(imdService.parseCsv, () => {
     assert(result.ok)
 
     expect(() =>
-      imdService.IMDRowSchema.array().parse(result.data)
+      economy.IMDRowSchema.array().parse(result.data)
     ).not.toThrow()
   })
 })

@@ -6248,11 +6248,12 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content?: {
-                totalRows?: number;
-                enriched?: number;
-                enrichedCsv?: string;
-                unprocessedCsv?: string;
+              content: {
+                totalRows: number;
+                numEnriched: number;
+                numUnprocessed: number;
+                enrichedCsv: string;
+                unprocessedCsv: string;
               };
             };
           };

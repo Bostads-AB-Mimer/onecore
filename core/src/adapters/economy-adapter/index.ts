@@ -1,6 +1,8 @@
 import fs from 'node:fs'
+import z from 'zod'
 import { loggedAxios as axios, logger } from '@onecore/utilities'
 import {
+  economy,
   Invoice,
   InvoicePaymentEvent,
   RentInvoiceRow,
@@ -281,16 +283,9 @@ export async function getLeaseDetailsForInvoices(
   }
 }
 
-export type ProcessIMDResult = {
-  totalRows: number
-  enriched: number
-  enrichedCsv: string
-  unprocessedCsv: string
-}
-
 export async function processIMD(
   csv: string
-): Promise<AdapterResult<ProcessIMDResult, 'unknown'>> {
+): Promise<AdapterResult<z.infer<typeof economy.ProcessIMDResponseSchema>, 'unknown'>> {
   try {
     const response = await axios.post(
       `${config.economyService.url}/imd/process`,
