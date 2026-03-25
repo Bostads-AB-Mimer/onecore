@@ -300,7 +300,7 @@ export async function processIMD(
 
     logger.error(response.data, 'economy-adapter.processIMD')
     return { ok: false, err: 'unknown', statusCode: response.status }
-  } catch (err: any) {
+  } catch (err) {
     logger.error(err, 'economy-adapter.processIMD')
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
