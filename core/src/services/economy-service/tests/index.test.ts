@@ -49,7 +49,8 @@ describe('economy-service routes', () => {
         data: mockData,
       })
 
-      const csv = '306-008-01-0201;2026-01-01;2026-01-31;VV;129;136;7,58;621,68;;82;m3;;;1'
+      const csv =
+        '306-008-01-0201;2026-01-01;2026-01-31;VV;129;136;7,58;621,68;;82;m3;;;1'
 
       const res = await request(app.callback())
         .post('/imd/process')
@@ -60,9 +61,7 @@ describe('economy-service routes', () => {
     })
 
     it('returns 400 when csv is missing', async () => {
-      const res = await request(app.callback())
-        .post('/imd/process')
-        .send({})
+      const res = await request(app.callback()).post('/imd/process').send({})
 
       expect(res.status).toBe(400)
     })
@@ -90,7 +89,8 @@ describe('economy-service routes', () => {
         statusCode: 500,
       })
 
-      const csv = '306-008-01-0201;2026-01-01;2026-01-31;VV;129;136;7,58;621,68;;82;m3;;;1'
+      const csv =
+        '306-008-01-0201;2026-01-01;2026-01-31;VV;129;136;7,58;621,68;;82;m3;;;1'
 
       const res = await request(app.callback())
         .post('/imd/process')

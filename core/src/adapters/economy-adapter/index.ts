@@ -285,7 +285,9 @@ export async function getLeaseDetailsForInvoices(
 
 export async function processIMD(
   csv: string
-): Promise<AdapterResult<z.infer<typeof economy.ProcessIMDResponseSchema>, 'unknown'>> {
+): Promise<
+  AdapterResult<z.infer<typeof economy.ProcessIMDResponseSchema>, 'unknown'>
+> {
   try {
     const response = await axios.post(
       `${config.economyService.url}/imd/process`,
