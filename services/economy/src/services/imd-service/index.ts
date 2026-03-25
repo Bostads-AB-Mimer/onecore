@@ -11,7 +11,9 @@ export const routes = (router: KoaRouter) => {
   router.post('(.*)/imd/process', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const parseResult = economy.ProcessIMDRequestSchema.safeParse(ctx.request.body)
+    const parseResult = economy.ProcessIMDRequestSchema.safeParse(
+      ctx.request.body
+    )
     if (!parseResult.success) {
       ctx.status = 400
       return

@@ -24,9 +24,7 @@ describe(imdService.parseCsv, () => {
     const result = imdService.parseCsv(csv)
     assert(result.ok)
 
-    expect(() =>
-      economy.IMDRowSchema.array().parse(result.data)
-    ).not.toThrow()
+    expect(() => economy.IMDRowSchema.array().parse(result.data)).not.toThrow()
   })
 })
 

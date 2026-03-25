@@ -1,10 +1,11 @@
 import knex from 'knex'
 import { logger } from '@onecore/utilities'
+import { Address, RentInvoiceRow } from '@onecore/types'
+
 import config from '../../../common/config'
 import { RentInvoice, RentalProperty } from '../types'
 import { InvoiceDeliveryMethod, XpandContact } from '../../../common/types'
 import trimStrings from '../../../utils/trimStrings'
-import { Address, RentInvoiceRow } from '@onecore/types'
 
 const db = knex({
   connection: {
@@ -309,8 +310,9 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
     const placeholders = batch.map(() => '?').join(', ')
 
     const rows: Array<{ rentalObjectCode: string; leaseId: string | null }> =
-      await db.raw(
-        `SELECT rentalObjectCode, leaseId
+      await db
+        .raw(
+          `SELECT rentalObjectCode, leaseId
          FROM (
            SELECT
              babuf.hyresid AS rentalObjectCode,
@@ -332,8 +334,9 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
              AND (hyobj.sistadeb IS NULL OR hyobj.sistadeb >= ?)
          ) ranked
          WHERE rn = 1`,
-        [...batch, params.periodEnd, params.periodStart]
-      ).then((result: any) => result.map(trimStrings))
+          [...batch, params.periodEnd, params.periodStart]
+        )
+        .then((result: any) => result.map(trimStrings))
 
     logger.info(
       `IMD: Batch ${index + 1}/${batches.length} — ${batch.length} codes, ${rows.length} rows, ${Date.now() - start}ms`
