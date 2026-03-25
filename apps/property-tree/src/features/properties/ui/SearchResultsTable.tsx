@@ -95,7 +95,7 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
   const getSecondaryInfo = (result: SearchResult) => {
     switch (result.type) {
       case 'property':
-        return result.municipality
+        return result.code
       case 'building':
         return result.code
       case 'residence':
@@ -111,9 +111,24 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
     }
   }
 
+  const sortResults = (items: SearchResult[]) => {
+    return items.slice().sort((a, b) => {
+      const nameA = getName(a) || ''
+      const nameB = getName(b) || ''
+      const nameCompare = nameA.localeCompare(nameB, undefined, {
+        numeric: true,
+      })
+      if (nameCompare !== 0) return nameCompare
+
+      const secondaryA = getSecondaryInfo(a) || ''
+      const secondaryB = getSecondaryInfo(b) || ''
+      return secondaryA.localeCompare(secondaryB, undefined, { numeric: true })
+    })
+  }
+
   return (
     <ResponsiveTable
-      data={results}
+      data={sortResults(results)}
       columns={[
         {
           key: 'name',
@@ -123,6 +138,21 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
           ),
         },
         {
+          key: 'info',
+          label:
+            hasProperties &&
+            !hasResidences &&
+            !hasParkingSpaces &&
+            !hasFacilities &&
+            !hasMaintenanceUnits
+              ? 'Fastighetsnummer'
+              : !hasProperties
+                ? 'Objektsnummer'
+                : 'Information',
+          render: (result) => getSecondaryInfo(result),
+          hideOnMobile: true,
+        },
+        {
           key: 'type',
           label: 'Typ',
           render: (result) => (
@@ -130,19 +160,6 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
               {getTypeDisplay(result)}
             </Badge>
           ),
-        },
-        {
-          key: 'info',
-          label:
-            (hasResidences ||
-              hasParkingSpaces ||
-              hasFacilities ||
-              hasMaintenanceUnits) &&
-            !hasProperties
-              ? 'Objektsnummer'
-              : 'Information',
-          render: (result) => getSecondaryInfo(result),
-          hideOnMobile: true,
         },
         {
           key: 'status',

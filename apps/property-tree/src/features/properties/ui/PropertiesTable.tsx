@@ -70,9 +70,21 @@ export const PropertiesTable = ({ properties }: PropertiesTableProps) => {
     </div>
   )
 
+  const sortedProperties = properties.slice().sort((a, b) => {
+    const addressCompare = a.designation.localeCompare(
+      b.designation,
+      undefined,
+      {
+        numeric: true,
+      }
+    )
+    if (addressCompare !== 0) return addressCompare
+    return a.code.localeCompare(b.code, undefined, { numeric: true })
+  })
+
   return (
     <ResponsiveTable
-      data={properties}
+      data={sortedProperties}
       columns={columns}
       keyExtractor={(property) => property.id}
       emptyMessage="Inga fastigheter hittades med angivna sökkriterier"

@@ -21,7 +21,11 @@ export function PropertyList({ company }: PropertyListProps) {
       {properties &&
         properties
           .slice()
-          .sort((a, b) => a.designation.localeCompare(b.designation))
+          .sort((a, b) =>
+            a.designation.localeCompare(b.designation, undefined, {
+              numeric: true,
+            })
+          )
           .map((property) => (
             <PropertyNavigation
               key={property.id}

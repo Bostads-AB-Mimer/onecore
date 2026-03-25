@@ -26,16 +26,29 @@ export function ResidenceList({
   return (
     <div>
       <SidebarMenu>
-        {residences?.map((residence) => (
-          <ResidenceNavigation
-            key={residence.id}
-            residence={residence}
-            buildingCode={building.code}
-            staircaseCode={residence.code.split('-')[0]} // Assuming staircase code is first part of residence code
-            propertyCode={propertyCode}
-            organizationNumber={organizationNumber}
-          />
-        ))}
+        {residences
+          ?.slice()
+          .sort((a, b) => {
+            const staircaseCompare = a.staircaseCode.localeCompare(
+              b.staircaseCode,
+              undefined,
+              { numeric: true }
+            )
+            if (staircaseCompare !== 0) return staircaseCompare
+            return a.rentalId.localeCompare(b.rentalId, undefined, {
+              numeric: true,
+            })
+          })
+          .map((residence) => (
+            <ResidenceNavigation
+              key={residence.id}
+              residence={residence}
+              buildingCode={building.code}
+              staircaseCode={residence.code.split('-')[0]} // Assuming staircase code is first part of residence code
+              propertyCode={propertyCode}
+              organizationNumber={organizationNumber}
+            />
+          ))}
       </SidebarMenu>
     </div>
   )
