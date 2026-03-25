@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Contact,
   FileText,
+  Gauge,
   Home,
   LayoutGrid,
   Settings,
@@ -159,6 +160,7 @@ function SidebarNavigationContent() {
           icon={ClipboardList}
           label="Besiktningar"
         />
+        <SidebarNavLink to={routes.imd} icon={Gauge} label="IMD" />
         <SidebarNavLink
           to={routes.components}
           icon={Settings}
