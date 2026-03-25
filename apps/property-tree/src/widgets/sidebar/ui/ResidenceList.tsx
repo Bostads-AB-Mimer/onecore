@@ -44,7 +44,7 @@ export function ResidenceList({
               key={residence.id}
               residence={residence}
               buildingCode={building.code}
-              staircaseCode={residence.code.split('-')[0]} // Assuming staircase code is first part of residence code
+              staircaseCode={residence.staircaseCode}
               propertyCode={propertyCode}
               organizationNumber={organizationNumber}
             />

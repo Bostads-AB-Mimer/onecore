@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
 import type { Property } from '@/services/types'
@@ -70,17 +71,21 @@ export const PropertiesTable = ({ properties }: PropertiesTableProps) => {
     </div>
   )
 
-  const sortedProperties = properties.slice().sort((a, b) => {
-    const addressCompare = a.designation.localeCompare(
-      b.designation,
-      undefined,
-      {
-        numeric: true,
-      }
-    )
-    if (addressCompare !== 0) return addressCompare
-    return a.code.localeCompare(b.code, undefined, { numeric: true })
-  })
+  const sortedProperties = useMemo(
+    () =>
+      properties.slice().sort((a, b) => {
+        const designationCompare = a.designation.localeCompare(
+          b.designation,
+          undefined,
+          {
+            numeric: true,
+          }
+        )
+        if (designationCompare !== 0) return designationCompare
+        return a.code.localeCompare(b.code, undefined, { numeric: true })
+      }),
+    [properties]
+  )
 
   return (
     <ResponsiveTable

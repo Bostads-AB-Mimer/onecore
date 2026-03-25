@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
 import { paths } from '@/shared/routes'
@@ -111,24 +112,28 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
     }
   }
 
-  const sortResults = (items: SearchResult[]) => {
-    return items.slice().sort((a, b) => {
-      const nameA = getName(a) || ''
-      const nameB = getName(b) || ''
-      const nameCompare = nameA.localeCompare(nameB, undefined, {
-        numeric: true,
-      })
-      if (nameCompare !== 0) return nameCompare
+  const sortedResults = useMemo(
+    () =>
+      results.slice().sort((a, b) => {
+        const nameA = getName(a) || ''
+        const nameB = getName(b) || ''
+        const nameCompare = nameA.localeCompare(nameB, undefined, {
+          numeric: true,
+        })
+        if (nameCompare !== 0) return nameCompare
 
-      const secondaryA = getSecondaryInfo(a) || ''
-      const secondaryB = getSecondaryInfo(b) || ''
-      return secondaryA.localeCompare(secondaryB, undefined, { numeric: true })
-    })
-  }
+        const secondaryA = getSecondaryInfo(a) || ''
+        const secondaryB = getSecondaryInfo(b) || ''
+        return secondaryA.localeCompare(secondaryB, undefined, {
+          numeric: true,
+        })
+      }),
+    [results]
+  )
 
   return (
     <ResponsiveTable
-      data={sortResults(results)}
+      data={sortedResults}
       columns={[
         {
           key: 'name',
