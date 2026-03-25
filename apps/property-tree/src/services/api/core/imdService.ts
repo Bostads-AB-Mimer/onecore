@@ -6,7 +6,6 @@ async function processIMD(csv: string) {
   })
 
   if (error) throw error
-  if (!data?.content) throw new Error('Response ok but missing content')
 
   return data.content
 }
