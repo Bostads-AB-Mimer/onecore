@@ -23,6 +23,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import { economy } from '@onecore/types'
 
 import { routes } from '../index'
 import * as economyAdapter from '../../../adapters/economy-adapter'
@@ -58,6 +59,9 @@ describe('economy-service routes', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(mockData)
+      expect(() =>
+        economy.ProcessIMDResponseSchema.parse(res.body.content)
+      ).not.toThrow()
     })
 
     it('returns 400 when csv is missing', async () => {

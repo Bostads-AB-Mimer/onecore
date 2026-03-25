@@ -2,6 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import { economy } from '@onecore/types'
 
 import { routes, imdService } from '@src/services/imd-service'
 
@@ -52,6 +53,9 @@ describe('IMD Service routes', () => {
         enrichedCsv: 'header\nrow1',
         unprocessedCsv: 'header\nrow1',
       })
+      expect(() =>
+        economy.ProcessIMDResponseSchema.parse(res.body.content)
+      ).not.toThrow()
     })
 
     it('does not expose unprocessed array in response', async () => {
