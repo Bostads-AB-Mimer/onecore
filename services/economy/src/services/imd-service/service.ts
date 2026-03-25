@@ -229,18 +229,6 @@ async function processIMD(csv: string): Promise<Result<ProcessResult>> {
     `IMD: Enrichment complete — ${enriched.length} matched, ${unprocessed.length} unprocessed`
   )
 
-  if (unprocessed.length > 0) {
-    logger.warn(
-      {
-        rows: unprocessed.map((r) => ({
-          code: r.rentalObjectCode,
-          reason: r.reason,
-        })),
-      },
-      `IMD: ${unprocessed.length} rows unprocessed`
-    )
-  }
-
   const enrichedCsv = toTenfastCsv(enriched)
   const unprocessedCsv = toUnprocessedCsv(unprocessed)
 

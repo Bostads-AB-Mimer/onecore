@@ -1,4 +1,5 @@
 import knex from 'knex'
+import { logger } from '@onecore/utilities'
 import config from '../../../common/config'
 import { RentInvoice, RentalProperty } from '../types'
 import { InvoiceDeliveryMethod, XpandContact } from '../../../common/types'
@@ -12,7 +13,7 @@ const db = knex({
     password: config.xpandDatabase.password,
     port: config.xpandDatabase.port,
     database: config.xpandDatabase.database,
-    requestTimeout: 15000,
+    requestTimeout: 30000,
   },
   pool: {
     min: 0,
@@ -281,11 +282,10 @@ export const getInvoiceRows = async (
  * Returns rentalObjectCode + leaseId (null if no active lease).
  * Codes not found in babuf at all are absent from the results.
  *
- * Uses LEFT JOIN so rental objects without an active lease still appear
- * (with leaseId = null), letting callers distinguish "no rental object"
- * from "no active lease".
- *
- * Batches in chunks of 2000 to stay under SQL Server's 2100 parameter limit.
+ * Starts from hyobj (leases) and joins outward to babuf to avoid the ~20x
+ * fan-out that occurs when starting from babuf. A parallel existence check
+ * on babuf ensures codes without active leases still appear with null.
+ * Batches in chunks of 1000, run in parallel.
  */
 export const getActiveLeasesByRentalObjectCodes = async (params: {
   rentalObjectCodes: string[]
@@ -296,7 +296,7 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
     return new Map()
   }
 
-  const BATCH_SIZE = 2000
+  const BATCH_SIZE = 1000
   const results = new Map<string, string | null>()
 
   const batches: string[][] = []
@@ -304,46 +304,72 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
     batches.push(params.rentalObjectCodes.slice(i, i + BATCH_SIZE))
   }
 
-  const batchResults = await Promise.all(
-    batches.map((batch) =>
-      db
-        .select(
-          'babuf.hyresid AS rentalObjectCode',
-          'hyobj.hyobjben AS leaseId'
-        )
-        .from('babuf')
-        .leftJoin('hykop', function () {
-          this.on('hykop.keycmobj', '=', 'babuf.keycmobj').andOn(
-            'hykop.ordning',
-            '=',
-            db.raw('?', [1])
-          )
-        })
-        .leftJoin('hyobj', function () {
-          this.on('hyobj.keyhyobj', '=', 'hykop.keyhyobj')
-            .andOn('hyobj.deletemark', '=', db.raw('?', [0]))
-            .andOnNull('hyobj.makuldatum')
-            .andOn(db.raw('hyobj.hyobjben NOT LIKE ?', ['%M%']))
-            .andOn('hyobj.fdate', '<=', db.raw('?', [params.periodEnd]))
-            .andOn(function () {
-              this.onNull('hyobj.sistadeb').orOn(
-                'hyobj.sistadeb',
-                '>=',
-                db.raw('?', [params.periodStart])
-              )
-            })
-        })
-        .whereIn('babuf.hyresid', batch)
-        .orderBy('hyobj.fdate', 'desc')
-        .then(trimStrings)
+  const queryBatch = async (batch: string[], index: number) => {
+    const start = Date.now()
+    const placeholders = batch.map(() => '?').join(', ')
+
+    const rows: Array<{ rentalObjectCode: string; leaseId: string | null }> =
+      await db.raw(
+        `SELECT rentalObjectCode, leaseId
+         FROM (
+           SELECT
+             babuf.hyresid AS rentalObjectCode,
+             hyobj.hyobjben AS leaseId,
+             ROW_NUMBER() OVER (
+               PARTITION BY babuf.hyresid
+               ORDER BY hyobj.fdate DESC
+             ) AS rn
+           FROM hyobj
+           INNER JOIN hykop
+             ON hykop.keyhyobj = hyobj.keyhyobj AND hykop.ordning = 1
+           INNER JOIN babuf
+             ON babuf.keycmobj = hykop.keycmobj
+           WHERE babuf.hyresid IN (${placeholders})
+             AND hyobj.deletemark = 0
+             AND hyobj.makuldatum IS NULL
+             AND hyobj.hyobjben NOT LIKE '%M%'
+             AND hyobj.fdate <= ?
+             AND (hyobj.sistadeb IS NULL OR hyobj.sistadeb >= ?)
+         ) ranked
+         WHERE rn = 1`,
+        [...batch, params.periodEnd, params.periodStart]
+      ).then((result: any) => result.map(trimStrings))
+
+    logger.info(
+      `IMD: Batch ${index + 1}/${batches.length} — ${batch.length} codes, ${rows.length} rows, ${Date.now() - start}ms`
     )
+
+    return rows
+  }
+
+  const existingCodesQuery = Promise.all(
+    batches.map((batch) => {
+      const placeholders = batch.map(() => '?').join(', ')
+      return db
+        .raw(
+          `SELECT DISTINCT hyresid FROM babuf WHERE hyresid IN (${placeholders})`,
+          batch
+        )
+        .then((rows: any[]) => rows.map((r: any) => r.hyresid?.trim()))
+    })
   )
+
+  const [batchResults, existingCodesBatches] = await Promise.all([
+    Promise.all(batches.map((batch, i) => queryBatch(batch, i))),
+    existingCodesQuery,
+  ])
+
+  const existingCodes = new Set(existingCodesBatches.flat())
+
+  for (const code of params.rentalObjectCodes) {
+    if (existingCodes.has(code)) {
+      results.set(code, null)
+    }
+  }
 
   for (const rows of batchResults) {
     for (const row of rows) {
-      if (!results.has(row.rentalObjectCode)) {
-        results.set(row.rentalObjectCode, row.leaseId ?? null)
-      }
+      results.set(row.rentalObjectCode, row.leaseId ?? null)
     }
   }
 
