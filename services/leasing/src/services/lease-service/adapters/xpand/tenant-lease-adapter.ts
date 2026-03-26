@@ -716,10 +716,18 @@ const getContactQuery = () => {
       .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
       // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
       .where(function () {
-        this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
+        this.whereNull('cmadr.fdate').orWhere(
+          'cmadr.fdate',
+          '<=',
+          xpandDb.raw('CAST(GETDATE() AS DATE)')
+        )
       })
       .where(function () {
-        this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
+        this.whereNull('cmadr.tdate').orWhere(
+          'cmadr.tdate',
+          '>=',
+          xpandDb.raw('CAST(GETDATE() AS DATE)')
+        )
       })
       .where('cmctc.deletemark', '=', '0')
       // Sort addresses so that those with a non-null fdate come first (ordered by fdate ascending), and addresses with fdate = null come last.
