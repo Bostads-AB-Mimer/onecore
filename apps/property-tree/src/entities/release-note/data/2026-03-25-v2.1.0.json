@@ -1,0 +1,30 @@
+[
+  {
+    "id": "rn-2026-03-25-v210-1",
+    "date": "2026-03-25",
+    "title": "Uppdaterad sortering i fastighetsträdet",
+    "description": "Sorteringen i fastighetsträdet och söksidan har uppdaterats för att visa objekt i korrekt ordning.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-03-25-v210-2",
+    "date": "2026-03-25",
+    "title": "Ströfakturaunderlag",
+    "description": "Det går nu att skapa ströfakturor direkt i ONECore.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-25-v210-3",
+    "date": "2026-03-25",
+    "title": "Feedback",
+    "description": "Det går nu att skicka in feedback och utvecklingsförslag direkt i ONECore. Du hittar en feedbackknapp i menyn.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-25-v210-4",
+    "date": "2026-03-25",
+    "title": "Ströfakturor på Mina sidor",
+    "description": "Kunder kan nu visa ströfakturor på 'Mina sidor'.",
+    "category": "bugfix"
+  }
+]
