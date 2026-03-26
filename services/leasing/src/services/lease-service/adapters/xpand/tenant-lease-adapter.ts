@@ -100,12 +100,16 @@ const transformFromDbContact = (
       ? undefined
       : row.nationalRegistrationNumber,
     birthDate: protectedIdentity ? undefined : row.birthDate,
-    address: {
-      street: row.street,
-      number: '',
-      postalCode: row.postalCode,
-      city: row.city,
-    },
+    ...(row.street || row.postalCode || row.city
+      ? {
+          address: {
+            street: row.street,
+            number: '',
+            postalCode: row.postalCode,
+            city: row.city,
+          },
+        }
+      : {}),
     phoneNumbers: phoneNumbers,
     emailAddress:
       process.env.NODE_ENV === 'production'
