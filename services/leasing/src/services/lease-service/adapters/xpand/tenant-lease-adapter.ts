@@ -710,25 +710,26 @@ const getContactQuery = () => {
         'cmctc.lagsokt as protectedIdentity',
         'cmctc.utslag as specialAttention'
       )
-      .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
+      .leftJoin('cmadr', function () {
+        this.on('cmadr.keycode', '=', 'cmctc.keycmobj')
+          .andOn(function () {
+            this.onNull('cmadr.fdate').orOn(
+              'cmadr.fdate',
+              '<=',
+              xpandDb.raw('CAST(GETDATE() AS DATE)')
+            )
+          })
+          .andOn(function () {
+            this.onNull('cmadr.tdate').orOn(
+              'cmadr.tdate',
+              '>=',
+              xpandDb.raw('CAST(GETDATE() AS DATE)')
+            )
+          })
+      })
       .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
       .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
       .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
-      // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
-      .where(function () {
-        this.whereNull('cmadr.fdate').orWhere(
-          'cmadr.fdate',
-          '<=',
-          xpandDb.raw('CAST(GETDATE() AS DATE)')
-        )
-      })
-      .where(function () {
-        this.whereNull('cmadr.tdate').orWhere(
-          'cmadr.tdate',
-          '>=',
-          xpandDb.raw('CAST(GETDATE() AS DATE)')
-        )
-      })
       .where('cmctc.deletemark', '=', '0')
       // Sort addresses so that those with a non-null fdate come first (ordered by fdate ascending), and addresses with fdate = null come last.
       // This is to prioritize addresses with a defined start date.
