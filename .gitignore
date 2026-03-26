@@ -63,8 +63,9 @@ lib-cov
 !.claude/commands/
 .claude/commands/*
 !.claude/commands/prereview.md
-
-CLAUDE.md
+!.claude/skills/
+.claude/skills/*-workspace/
+!.claude/prompts/
 
 # --- Private Keys ---
 *.pem
