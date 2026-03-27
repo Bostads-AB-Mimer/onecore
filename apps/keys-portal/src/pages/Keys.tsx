@@ -237,6 +237,17 @@ const Index = () => {
     [pagination]
   )
 
+  const handleKeySequenceNumberChange = useCallback(
+    (value: string) => {
+      setKeySequenceNumberInput(value)
+      pagination.updateUrlParams({
+        keySequenceNumber: value.trim() || null,
+        page: '1',
+      })
+    },
+    [pagination]
+  )
+
   const handleTypeFilterChange = useCallback(
     (type: string | null) => {
       pagination.updateUrlParams({ keyType: type, page: '1' })
