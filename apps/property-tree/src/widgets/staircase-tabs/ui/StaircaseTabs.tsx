@@ -15,12 +15,16 @@ interface StaircaseTabsProps {
   staircase: Staircase
   building: Building
   residences: ResidenceSummary[]
+  propertyCode?: string
+  organizationNumber?: string
 }
 
 export const StaircaseTabs = ({
   staircase,
   building,
   residences,
+  propertyCode,
+  organizationNumber,
 }: StaircaseTabsProps) => {
   const navigate = useNavigate()
 
@@ -51,6 +55,8 @@ export const StaircaseTabs = ({
                       state: {
                         buildingCode: building.code,
                         staircaseCode: staircase.code,
+                        propertyCode,
+                        organizationNumber,
                       },
                     })
                   }

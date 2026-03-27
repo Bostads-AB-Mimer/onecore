@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 
 import { StaircaseTabs } from '@/widgets/staircase-tabs'
 
@@ -9,8 +9,12 @@ import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 export function StaircasePage() {
   const { staircaseCode, buildingCode } = useParams()
+  const { state } = useLocation()
   const { building, staircase, residences, isLoading, error } =
     useStaircaseDetails(buildingCode, staircaseCode)
+
+  const propertyCode = state?.propertyCode ?? staircase?.property?.propertyCode
+  const organizationNumber = state?.organizationNumber
 
   return (
     <ViewLayout>
@@ -37,6 +41,8 @@ export function StaircasePage() {
               staircase={staircase}
               building={building!}
               residences={residences ?? []}
+              propertyCode={propertyCode}
+              organizationNumber={organizationNumber}
             />
           </>
         )}

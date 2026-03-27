@@ -24,7 +24,7 @@ export function ResidenceList({
   const allResidencesQuery = useResidences(building.code)
   const staircaseResidencesQuery = useResidencesByStaircase(
     building.code,
-    staircaseCode ?? ''
+    staircaseCode
   )
 
   const {
