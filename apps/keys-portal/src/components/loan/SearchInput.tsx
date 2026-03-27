@@ -111,7 +111,11 @@ export function SearchInput({
             showSearchIcon
             className="flex-1"
           />
-          <Button onClick={onSearch} className="gap-2" disabled={loading}>
+          <Button
+            onClick={() => onSearch()}
+            className="gap-2"
+            disabled={loading}
+          >
             <Search className="h-4 w-4" />
             {loading ? 'Söker…' : 'Sök'}
           </Button>

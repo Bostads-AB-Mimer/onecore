@@ -7,6 +7,7 @@ import { keyService } from '@/services/api/keyService'
 import { keyEventService } from '@/services/api/keyEventService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 import { useToast } from '@/hooks/use-toast'
 
 type AddKeyButtonProps = {
@@ -61,6 +62,12 @@ export function AddKeyForm({
   const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
     null
   )
+  const [showFlexPropagationDialog, setShowFlexPropagationDialog] =
+    useState(false)
+  const [pendingFlexUpdates, setPendingFlexUpdates] = useState<{
+    flexNumber: number
+    keys: Key[]
+  } | null>(null)
 
   // Key system search function
   const searchKeySystems = useCallback(
@@ -90,22 +97,16 @@ export function AddKeyForm({
     }
   }, [])
 
-  // Calculate next sequence number for a given type/name/flex combination
+  // Calculate next sequence number for a given type/name combination
   // Uses the keys prop which contains all keys for this rental object
   // Also considers pending rows in the form to avoid duplicate sequence numbers
+  // Note: flexNumber is intentionally excluded — sequence numbers are continuous
+  // across all flex values for the same type/name (flex is a physical property,
+  // not a grouping dimension for sequencing)
   const calculateNextSequenceNumber = useCallback(
-    (
-      keyType: KeyType,
-      keyName: string,
-      flexNumber: number | null,
-      currentRows: KeyRow[] = []
-    ): number => {
+    (keyType: KeyType, keyName: string, currentRows: KeyRow[] = []): number => {
       const matchingKeys = keys.filter(
-        (k) =>
-          k.keyType === keyType &&
-          k.keyName === keyName &&
-          k.flexNumber === flexNumber &&
-          !k.disposed // Exclude disposed keys
+        (k) => k.keyType === keyType && k.keyName === keyName && !k.disposed // Exclude disposed keys
       )
 
       // Find the max sequence number from existing keys
@@ -118,10 +119,7 @@ export function AddKeyForm({
 
       // Also check pending rows in the form
       const matchingRows = currentRows.filter(
-        (r) =>
-          r.keyType === keyType &&
-          r.keyName === keyName &&
-          r.flexNumber === flexNumber
+        (r) => r.keyType === keyType && r.keyName === keyName
       )
 
       if (matchingRows.length > 0) {
@@ -179,8 +177,7 @@ export function AddKeyForm({
         quantity: 1, // Always start with quantity 1
         startingSequenceNumber: calculateNextSequenceNumber(
           firstKey.keyType as KeyType,
-          firstKey.keyName,
-          firstKey.flexNumber
+          firstKey.keyName
         ),
         keySystemId: selectedKeySystem?.id,
       }
@@ -204,8 +201,7 @@ export function AddKeyForm({
         ...row,
         startingSequenceNumber: calculateNextSequenceNumber(
           row.keyType,
-          row.keyName,
-          row.flexNumber
+          row.keyName
         ),
       }))
     )
@@ -256,18 +252,13 @@ export function AddKeyForm({
 
         const updated = { ...r, [field]: value }
 
-        // Recalculate sequence number when type, name, or flex changes
-        if (
-          field === 'keyType' ||
-          field === 'keyName' ||
-          field === 'flexNumber'
-        ) {
+        // Recalculate sequence number when type or name changes
+        if (field === 'keyType' || field === 'keyName') {
           // Filter out the current row to avoid self-comparison
           const otherRows = prevRows.filter((row) => row.id !== id)
           updated.startingSequenceNumber = calculateNextSequenceNumber(
             updated.keyType,
             updated.keyName,
-            updated.flexNumber,
             otherRows
           )
         }
@@ -277,7 +268,34 @@ export function AddKeyForm({
     )
   }
 
-  const handleSubmit = async () => {
+  // Find all keys with the same type/name that have null flex.
+  // Flex is a property of the whole series — if one key gets a flex value,
+  // all keys in the series should be offered the update.
+  // Note: returns the first matching group only. In practice the form
+  // groups selected keys by type/name, so there is typically one row.
+  const getKeysNeedingFlexUpdate = (): {
+    flexNumber: number
+    keys: Key[]
+  } | null => {
+    for (const row of rows) {
+      if (row.flexNumber == null) continue
+
+      const keysWithNullFlex = keys.filter(
+        (k) =>
+          k.keyType === row.keyType &&
+          k.keyName === row.keyName &&
+          k.flexNumber == null &&
+          !k.disposed
+      )
+
+      if (keysWithNullFlex.length > 0) {
+        return { flexNumber: row.flexNumber, keys: keysWithNullFlex }
+      }
+    }
+    return null
+  }
+
+  const handleSubmitClick = () => {
     if (rows.length === 0) return
 
     // Validate all rows have names
@@ -291,9 +309,33 @@ export function AddKeyForm({
       return
     }
 
+    // Check if flex propagation is needed
+    const flexUpdate = getKeysNeedingFlexUpdate()
+    if (flexUpdate) {
+      setPendingFlexUpdates(flexUpdate)
+      setShowFlexPropagationDialog(true)
+    } else {
+      handleSubmit(false)
+    }
+  }
+
+  const handleFlexPropagationConfirm = () => {
+    setShowFlexPropagationDialog(false)
+    handleSubmit(true)
+  }
+
+  const handleSubmit = async (propagateFlex: boolean) => {
     setIsSubmitting(true)
 
     try {
+      // Update flex on existing selected keys if confirmed
+      if (propagateFlex && pendingFlexUpdates) {
+        await keyService.bulkUpdateKeys(
+          pendingFlexUpdates.keys.map((k) => k.id),
+          { flexNumber: pendingFlexUpdates.flexNumber }
+        )
+      }
+
       const keysToCreate: Array<{
         keyName: string
         keyType: KeyType
@@ -343,14 +385,23 @@ export function AddKeyForm({
         }
       }
 
+      const totalUpdated = propagateFlex
+        ? (pendingFlexUpdates?.keys.length ?? 0)
+        : 0
+      const description =
+        totalUpdated > 0
+          ? `${createdKeyIds.length} ${createdKeyIds.length === 1 ? 'nyckel skapad' : 'nycklar skapade'}, flex uppdaterad på ${totalUpdated} befintliga nycklar`
+          : `${createdKeyIds.length} ${createdKeyIds.length === 1 ? 'nyckel skapad' : 'nycklar skapade'}`
+
       toast({
         title: 'Nycklar skapade',
-        description: `${createdKeyIds.length} ${createdKeyIds.length === 1 ? 'nyckel skapad' : 'nycklar skapade'}`,
+        description,
       })
 
       setRows([])
       setKeySystemSearch('')
       setSelectedKeySystem(null)
+      setPendingFlexUpdates(null)
       onComplete()
     } catch (e: any) {
       toast({
@@ -543,11 +594,38 @@ export function AddKeyForm({
         <Button
           size="sm"
           disabled={rows.length === 0 || isSubmitting}
-          onClick={handleSubmit}
+          onClick={handleSubmitClick}
         >
           Skapa ({totalKeysToCreate})
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={showFlexPropagationDialog}
+        onOpenChange={setShowFlexPropagationDialog}
+        title="Uppdatera flex på befintliga nycklar?"
+        description={
+          pendingFlexUpdates && (
+            <div>
+              <p className="mb-2">
+                Du håller på att lägga till flex {pendingFlexUpdates.flexNumber}
+                . Vill du även uppdatera flex på följande{' '}
+                {pendingFlexUpdates.keys.length} befintliga nycklar?
+              </p>
+              <ul className="list-disc pl-4 text-sm max-h-40 overflow-y-auto">
+                {pendingFlexUpdates.keys.map((key) => (
+                  <li key={key.id}>
+                    {key.keyName} Löpnr {key.keySequenceNumber}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+        confirmLabel="Ja, uppdatera"
+        onConfirm={handleFlexPropagationConfirm}
+        variant="default"
+      />
     </div>
   )
 }

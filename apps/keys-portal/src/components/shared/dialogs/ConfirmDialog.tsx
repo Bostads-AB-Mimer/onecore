@@ -17,6 +17,7 @@ interface ConfirmDialogProps {
   description: React.ReactNode
   confirmLabel: string
   onConfirm: () => void
+  variant?: 'default' | 'destructive'
 }
 
 export function ConfirmDialog({
@@ -26,6 +27,7 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   onConfirm,
+  variant = 'destructive',
 }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -40,7 +42,7 @@ export function ConfirmDialog({
           <AlertDialogCancel>Avbryt</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className={buttonVariants({ variant: 'destructive' })}
+            className={buttonVariants({ variant })}
           >
             {confirmLabel}
           </AlertDialogAction>
