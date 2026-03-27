@@ -257,11 +257,7 @@ export const routes = (router: KoaRouter) => {
    *         description: Unauthorized
    */
   router.get('(.*)/auth/profile', extractToken, requireAuth, async (ctx) => {
-    const { realm_access, ...rest } = ctx.state.user
-    ctx.body = {
-      ...rest,
-      roles: realm_access?.roles ?? [],
-    }
+    ctx.body = ctx.state.user
   })
 
   /**
