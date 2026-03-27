@@ -84,6 +84,28 @@ export const MaintenanceUnitSearchResultSchema = z.object({
   estate: z.string().nullable().describe('Property name'),
 })
 
+export const FacilitySearchResultSchema = z.object({
+  id: z.string().describe('Unique identifier for the search result'),
+  type: z.literal('facility').describe('Indicates this is a facility result'),
+  name: z.string().nullable().describe('Name of the facility'),
+  rentalId: z.string().describe('Rental ID of the facility'),
+  code: z.string().describe('Code of the facility'),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z
+      .string()
+      .nullable()
+      .describe('Name of property associated with the facility'),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z
+      .string()
+      .nullable()
+      .describe('Name of building associated with the facility'),
+  }),
+})
+
 export const SearchResultSchema = z
   .discriminatedUnion('type', [
     PropertySearchResultSchema,
@@ -91,9 +113,10 @@ export const SearchResultSchema = z
     ResidenceSearchResultSchema,
     ParkingSpaceSearchResultSchema,
     MaintenanceUnitSearchResultSchema,
+    FacilitySearchResultSchema,
   ])
   .describe(
-    'A search result that can be either a property, building, residence, parking space or maintenance unit'
+    'A search result that can be either a property, building, residence, parking space, maintenance unit or facility'
   )
 
 export const SearchQueryParamsSchema = z.object({
@@ -114,5 +137,6 @@ export type ParkingSpaceSearchResult = z.infer<
 export type MaintenanceUnitSearchResult = z.infer<
   typeof MaintenanceUnitSearchResultSchema
 >
+export type FacilitySearchResult = z.infer<typeof FacilitySearchResultSchema>
 export type SearchResult = z.infer<typeof SearchResultSchema>
 export type SearchQueryParams = z.infer<typeof SearchQueryParamsSchema>
