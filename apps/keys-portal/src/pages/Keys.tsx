@@ -491,12 +491,21 @@ const Index = () => {
         description: `${deletingKey.keyName} har tagits bort.`,
       })
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
-      toast({
-        title: 'Kunde inte ta bort nyckel',
-        description: msg,
-        variant: 'destructive',
-      })
+      if ((e as any)?.status === 403) {
+        toast({
+          title: 'Behörighet saknas',
+          description:
+            'Du saknar behörighet att ta bort nycklar. Kontakta administratör.',
+          variant: 'destructive',
+        })
+      } else {
+        const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
+        toast({
+          title: 'Kunde inte ta bort nyckel',
+          description: msg,
+          variant: 'destructive',
+        })
+      }
     } finally {
       setDeletingKey(null)
     }
@@ -560,12 +569,21 @@ const Index = () => {
         variant: 'destructive',
       })
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
-      toast({
-        title: 'Kunde inte ta bort nycklar',
-        description: msg,
-        variant: 'destructive',
-      })
+      if ((e as any)?.status === 403) {
+        toast({
+          title: 'Behörighet saknas',
+          description:
+            'Du saknar behörighet att ta bort nycklar. Kontakta administratör.',
+          variant: 'destructive',
+        })
+      } else {
+        const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
+        toast({
+          title: 'Kunde inte ta bort nycklar',
+          description: msg,
+          variant: 'destructive',
+        })
+      }
     }
   }
 
