@@ -1,4 +1,4 @@
-import { useResidences } from '@/features/residences'
+import { useResidences, useResidencesByStaircase } from '@/features/residences'
 
 import { Building } from '@/services/types'
 
@@ -10,43 +10,53 @@ import { ResidenceNavigation } from './Residence'
 
 interface ResidenceListProps {
   building: Building
+  staircaseCode?: string
   propertyCode?: string
   organizationNumber?: string
 }
 
 export function ResidenceList({
   building,
+  staircaseCode,
   propertyCode,
   organizationNumber,
 }: ResidenceListProps) {
-  const { data: residences, isLoading, error } = useResidences(building.code)
+  const allResidencesQuery = useResidences(building.code)
+  const staircaseResidencesQuery = useResidencesByStaircase(
+    building.code,
+    staircaseCode ?? ''
+  )
+
+  const {
+    data: residences,
+    isLoading,
+    error,
+  } = staircaseCode ? staircaseResidencesQuery : allResidencesQuery
 
   if (isLoading) return <NavigationSkeleton />
   if (error) return <NavigationError label="residences" />
 
+  const sortedResidences = residences?.slice().sort((a, b) => {
+    if (!staircaseCode) {
+      const staircaseCompare = numericCompare(a.staircaseCode, b.staircaseCode)
+      if (staircaseCompare !== 0) return staircaseCompare
+    }
+    return numericCompare(a.rentalId, b.rentalId)
+  })
+
   return (
     <div>
       <SidebarMenu>
-        {residences
-          ?.slice()
-          .sort((a, b) => {
-            const staircaseCompare = numericCompare(
-              a.staircaseCode,
-              b.staircaseCode
-            )
-            if (staircaseCompare !== 0) return staircaseCompare
-            return numericCompare(a.rentalId, b.rentalId)
-          })
-          .map((residence) => (
-            <ResidenceNavigation
-              key={residence.id}
-              residence={residence}
-              buildingCode={building.code}
-              staircaseCode={residence.staircaseCode}
-              propertyCode={propertyCode}
-              organizationNumber={organizationNumber}
-            />
-          ))}
+        {sortedResidences?.map((residence) => (
+          <ResidenceNavigation
+            key={residence.id}
+            residence={residence}
+            buildingCode={building.code}
+            staircaseCode={staircaseCode ?? residence.staircaseCode}
+            propertyCode={propertyCode}
+            organizationNumber={organizationNumber}
+          />
+        ))}
       </SidebarMenu>
     </div>
   )

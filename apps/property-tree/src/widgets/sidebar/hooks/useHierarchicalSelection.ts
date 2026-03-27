@@ -12,10 +12,12 @@ interface LocationState {
   organizationNumber?: string
   propertyCode?: string
   buildingCode?: string
+  staircaseCode?: string
 }
 
 interface SelectionState {
   selectedResidenceId: string | null
+  selectedStaircaseCode: string | null
   selectedBuildingCode: string | null
   selectedPropertyCode: string | null
   selectedOrganizationNumber: string | null
@@ -28,6 +30,7 @@ export function useHierarchicalSelection() {
 
   // Which route are we on?
   const onResidence = matchesRoute(routes.residence, pathname)
+  const onStaircase = matchesRoute(routes.staircase, pathname)
   const onBuilding = matchesRoute(routes.building, pathname)
   const onProperty = matchesRoute(routes.property, pathname)
   const onCompany = matchesRoute(routes.company, pathname)
@@ -44,9 +47,14 @@ export function useHierarchicalSelection() {
   // otherwise fall back to navigation state → fetched data
   const selectedResidenceId = onResidence ? (params.rentalId ?? null) : null
 
-  const selectedBuildingCode = onBuilding
-    ? (params.buildingCode ?? null)
-    : (state.buildingCode ?? residence?.building?.code ?? null)
+  const selectedStaircaseCode = onStaircase
+    ? (params.staircaseCode ?? null)
+    : (state.staircaseCode ?? residence?.staircase?.code ?? null)
+
+  const selectedBuildingCode =
+    onBuilding || onStaircase
+      ? (params.buildingCode ?? null)
+      : (state.buildingCode ?? residence?.building?.code ?? null)
 
   const selectedPropertyCode = onProperty
     ? (params.propertyCode ?? null)
@@ -72,12 +80,14 @@ export function useHierarchicalSelection() {
   const selectionState = useMemo(
     (): SelectionState => ({
       selectedResidenceId,
+      selectedStaircaseCode,
       selectedBuildingCode,
       selectedPropertyCode,
       selectedOrganizationNumber,
     }),
     [
       selectedResidenceId,
+      selectedStaircaseCode,
       selectedBuildingCode,
       selectedPropertyCode,
       selectedOrganizationNumber,
@@ -94,6 +104,11 @@ export function useHierarchicalSelection() {
     [selectedBuildingCode]
   )
 
+  const isStaircaseInHierarchy = useCallback(
+    (code: string) => selectedStaircaseCode === code,
+    [selectedStaircaseCode]
+  )
+
   const isResidenceSelected = useCallback(
     (id: string) => selectedResidenceId === id,
     [selectedResidenceId]
@@ -108,6 +123,7 @@ export function useHierarchicalSelection() {
     selectionState,
     isPropertyInHierarchy,
     isBuildingInHierarchy,
+    isStaircaseInHierarchy,
     isResidenceSelected,
     isCompanyInHierarchy,
   }

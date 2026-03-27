@@ -21,9 +21,13 @@ export function useStaircaseDetails(
   })
 
   const residencesQuery = useQuery({
-    queryKey: ['residences', buildingCode],
-    queryFn: () => residenceService.getByBuildingCode(buildingCode!),
-    enabled: !!buildingCode,
+    queryKey: ['residences', buildingCode, staircaseCode],
+    queryFn: () =>
+      residenceService.getByBuildingCodeAndStaircaseCode(
+        buildingCode!,
+        staircaseCode!
+      ),
+    enabled: !!buildingCode && !!staircaseCode,
   })
 
   return {
