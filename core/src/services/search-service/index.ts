@@ -92,28 +92,22 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const getProperties = await propertyBaseAdapter.searchProperties(
-      queryParams.data.q
-    )
-
-    const getBuildings = await propertyBaseAdapter.searchBuildings(
-      queryParams.data.q
-    )
-
-    const getResidences = await propertyBaseAdapter.searchResidences(
-      queryParams.data.q
-    )
-
-    const getParkingSpaces = await propertyBaseAdapter.searchParkingSpaces(
-      queryParams.data.q
-    )
-
-    const getMaintenanceUnits =
-      await propertyBaseAdapter.searchMaintenanceUnits(queryParams.data.q)
-
-    const getFacilities = await propertyBaseAdapter.searchFacilities(
-      queryParams.data.q
-    )
+    const q = queryParams.data.q
+    const [
+      getProperties,
+      getBuildings,
+      getResidences,
+      getParkingSpaces,
+      getMaintenanceUnits,
+      getFacilities,
+    ] = await Promise.all([
+      propertyBaseAdapter.searchProperties(q),
+      propertyBaseAdapter.searchBuildings(q),
+      propertyBaseAdapter.searchResidences(q),
+      propertyBaseAdapter.searchParkingSpaces(q),
+      propertyBaseAdapter.searchMaintenanceUnits(q),
+      propertyBaseAdapter.searchFacilities(q),
+    ])
 
     if (
       !getProperties.ok ||
