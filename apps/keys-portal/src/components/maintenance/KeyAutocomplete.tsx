@@ -112,11 +112,8 @@ export function KeyAutocomplete({
         </div>
       )}
 
-      {/* Key System Filter, Key Search, and Sequence Number Filter */}
-      <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: '2fr 3fr auto' }}
-      >
+      {/* Key System Filter and Key Search - Side by Side */}
+      <div className="grid grid-cols-2 gap-3">
         {/* Key System Filter */}
         <div>
           <label className="text-sm font-medium">Låssystem</label>
