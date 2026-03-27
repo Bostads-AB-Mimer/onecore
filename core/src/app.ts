@@ -67,13 +67,14 @@ app.use(async (ctx, next) => {
   return requireRole('api-access')(ctx, next)
 })
 
-// Additive role for destructive key operations
+// Requires 'keys-admin' in addition to 'api-access' for key deletion (single and bulk).
+// Kept as a separate middleware so api-access is always checked first.
 app.use(async (ctx, next) => {
   if (
     (ctx.method === 'DELETE' && /^\/keys\/[^/]+$/.test(ctx.path)) ||
     (ctx.method === 'POST' && ctx.path === '/keys/bulk-delete')
   ) {
-    return requireRole('admin')(ctx, next)
+    return requireRole('keys-admin')(ctx, next)
   }
   return next()
 })
