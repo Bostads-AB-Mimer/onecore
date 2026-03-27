@@ -76,7 +76,7 @@ const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
     errorCorrectionLevel: 'M',
   })
   const qrSize = 25
-  const x = PAGE_W - 5 - qrSize
+  const x = PAGE_W - 10 - qrSize
   const y = MARGIN_TOP - 5
   const totalPages = doc.getNumberOfPages()
   for (let page = 1; page <= totalPages; page++) {
