@@ -21,7 +21,7 @@ export function ResidenceList({
   propertyCode,
   organizationNumber,
 }: ResidenceListProps) {
-  const allResidencesQuery = useResidences(building.code)
+  const allResidencesQuery = useResidences(building.code, !staircaseCode)
   const staircaseResidencesQuery = useResidencesByStaircase(
     building.code,
     staircaseCode

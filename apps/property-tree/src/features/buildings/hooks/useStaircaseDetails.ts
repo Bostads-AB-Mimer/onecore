@@ -30,14 +30,19 @@ export function useStaircaseDetails(
     enabled: !!buildingCode && !!staircaseCode,
   })
 
+  const staircase = staircaseQuery.data?.[0]
+  const building = buildingQuery.data
+
+  const isLoading =
+    buildingQuery.isLoading ||
+    staircaseQuery.isLoading ||
+    residencesQuery.isLoading
+
   return {
-    building: buildingQuery.data,
-    staircase: staircaseQuery.data?.[0],
+    building,
+    staircase: staircase && building ? staircase : undefined,
     residences: residencesQuery.data,
-    isLoading:
-      buildingQuery.isLoading ||
-      staircaseQuery.isLoading ||
-      residencesQuery.isLoading,
+    isLoading,
     error: staircaseQuery.error || buildingQuery.error,
   }
 }
