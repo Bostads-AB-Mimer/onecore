@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
-import { X, Search } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { X } from 'lucide-react'
 import { keyService } from '@/services/api/keyService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { Badge } from '@/components/ui/badge'
 import type { Key, KeySystem } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
+import { SearchInput } from '@/components/shared/layout'
 import { sortKeys } from '@/utils/sortKeys'
+import { parseNumberFilter } from '@/utils/parseNumberFilter'
 
 interface KeyAutocompleteProps {
   selectedKeys: Key[]
@@ -29,20 +31,27 @@ export function KeyAutocomplete({
   existingKeyIds = new Set(),
 }: KeyAutocompleteProps) {
   const [searchValue, setSearchValue] = useState('')
+  const [keySequenceNumberInput, setKeySequenceNumberInput] = useState('')
+  const [seqFieldFocused, setSeqFieldFocused] = useState(false)
   const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
     null
   )
   const [keySystemSearch, setKeySystemSearch] = useState('')
 
-  // Search function that filters out disposed keys and optionally filters by key system
-  const searchKeys = async (query: string): Promise<Key[]> => {
-    const results = await keyService.searchKeys({
-      q: query,
-      disposed: 'false',
-      ...(selectedKeySystem?.id && { keySystemId: selectedKeySystem.id }),
-    })
-    return sortKeys(results.content)
-  }
+  // Search function that filters out disposed keys and optionally filters by key system and sequence number
+  const searchKeys = useCallback(
+    async (query: string): Promise<Key[]> => {
+      const seqFilter = parseNumberFilter(keySequenceNumberInput)
+      const results = await keyService.searchKeys({
+        q: query,
+        disposed: 'false',
+        ...(selectedKeySystem?.id && { keySystemId: selectedKeySystem.id }),
+        ...(seqFilter && { keySequenceNumber: seqFilter }),
+      })
+      return sortKeys(results.content)
+    },
+    [keySequenceNumberInput, selectedKeySystem?.id]
+  )
 
   // Search function for key systems
   const searchKeySystems = async (query: string): Promise<KeySystem[]> => {
@@ -103,8 +112,8 @@ export function KeyAutocomplete({
         </div>
       )}
 
-      {/* Key System Filter and Key Search - Side by Side */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Key System Filter, Key Search, and Sequence Number Filter */}
+      <div className="grid gap-3" style={{ gridTemplateColumns: '2fr 3fr auto' }}>
         {/* Key System Filter */}
         <div>
           <label className="text-sm font-medium">Låssystem</label>
@@ -162,12 +171,28 @@ export function KeyAutocomplete({
             multiSelect
             isItemDisabled={isKeyDisabled}
             isItemSelected={isKeySelected}
+            open={seqFieldFocused}
+          />
+        </div>
+
+        {/* Sequence Number Filter */}
+        <div className="w-28">
+          <label className="text-sm font-medium">Löpnr</label>
+          <SearchInput
+            value={keySequenceNumberInput}
+            onChange={setKeySequenceNumberInput}
+            placeholder="<50, 2-5"
+            className="w-full"
+            onFocus={() => setSeqFieldFocused(true)}
+            onBlur={() => setSeqFieldFocused(false)}
           />
         </div>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Sök på nyckelnamn (t.ex. "FS-001") eller hyresobjekt (t.ex. "705-011")
+        Sök på nyckelnamn (t.ex. "FS-001") eller hyresobjekt (t.ex. "705-011").
+        Filtrera på löpnr med exakt nummer, intervall (10-100) eller jämförelse
+        (&lt;50, &gt;100).
       </p>
     </div>
   )
