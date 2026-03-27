@@ -72,10 +72,11 @@ const Index = () => {
         // Build search parameters based on current filters
         const searchParams: Record<string, string | string[]> = {}
 
-        // Add search query if present
-        if (searchQuery.trim().length >= 2) {
+        // Add search query if present (no min length when keysystem filter is active)
+        const minQueryLength = keySystemIdFilter ? 0 : 2
+        if (searchQuery.trim().length >= minQueryLength) {
           searchParams.q = searchQuery.trim()
-          searchParams.fields = 'keyName,rentalObjectCode,keySystemId'
+          searchParams.fields = 'keyName,rentalObjectCode'
         }
 
         // Add column filters
@@ -216,12 +217,13 @@ const Index = () => {
   const handleSearchChange = useCallback(
     (query: string) => {
       setSearchInput(query)
-      // Only update URL if query is empty or has 3+ characters
-      if (query.trim().length === 0 || query.trim().length >= 2) {
+      // No min length when keysystem filter is active
+      const minLength = keySystemIdFilter ? 0 : 2
+      if (query.trim().length === 0 || query.trim().length >= minLength) {
         pagination.updateUrlParams({ q: query.trim() || null, page: '1' })
       }
     },
-    [pagination]
+    [pagination, keySystemIdFilter]
   )
 
   const handleKeySequenceNumberChange = useCallback(

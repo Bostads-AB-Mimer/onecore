@@ -145,7 +145,7 @@ export function KeyAutocomplete({
           <SearchDropdown
             preSuggestions={[]}
             searchFn={searchKeys}
-            minSearchLength={3}
+            minSearchLength={selectedKeySystem ? 0 : 2}
             debounceMs={300}
             formatItem={(key) => ({
               primaryText: key.keyName,
