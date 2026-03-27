@@ -73,7 +73,10 @@ export function buildSearchQuery(
   } = config
 
   // Handle OR search (q with fields)
-  if (typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= minQueryLength) {
+  if (
+    typeof ctx.query.q === 'string' &&
+    ctx.query.q.trim().length >= minQueryLength
+  ) {
     const searchTerm = ctx.query.q.trim()
 
     // Get fields to search across (OR condition)
@@ -122,7 +125,8 @@ export function buildSearchQuery(
 
   // Check if at least one search criteria was provided
   const hasQParam =
-    typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= minQueryLength
+    typeof ctx.query.q === 'string' &&
+    ctx.query.q.trim().length >= minQueryLength
   const hasFieldParams = Object.entries(ctx.query).some(([key, value]) => {
     if (reservedParams.includes(key)) return false
     if (typeof value === 'string' && value.trim().length > 0) {
