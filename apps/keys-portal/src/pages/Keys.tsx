@@ -82,9 +82,8 @@ const Index = () => {
         if (selectedTypeFilter) {
           searchParams.keyType = selectedTypeFilter
         }
-        if (selectedDisposedFilter) {
-          searchParams.disposed = selectedDisposedFilter
-        }
+        // Hide disposed keys by default; pass through explicit filter when set
+        searchParams.disposed = selectedDisposedFilter ?? 'false'
         if (rentalObjectCode) {
           searchParams.rentalObjectCode = rentalObjectCode
         }
