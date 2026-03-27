@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ListPageLayout } from '@/components/shared/layout'
+import { ListPageLayout, SearchInput } from '@/components/shared/layout'
 import { KeysTable } from '@/components/keys/KeysTable'
 import { AddKeyForm } from '@/components/keys/AddKeyForm'
 import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
@@ -17,6 +17,7 @@ import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
+import { parseNumberFilter } from '@/utils/parseNumberFilter'
 import { Pencil, Trash2, KeyRound } from 'lucide-react'
 
 const Index = () => {
@@ -41,9 +42,14 @@ const Index = () => {
     pagination.searchParams.get('rentalObjectCode') || null
   const editKeyId = pagination.searchParams.get('editKeyId') || null
   const keySystemIdFilter = pagination.searchParams.get('keySystemId') || null
+  const keySequenceNumberQuery =
+    pagination.searchParams.get('keySequenceNumber') || ''
 
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
+  const [keySequenceNumberInput, setKeySequenceNumberInput] = useState(
+    keySequenceNumberQuery
+  )
   const [keySystemSearch, setKeySystemSearch] = useState('')
   const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
     null
@@ -84,6 +90,12 @@ const Index = () => {
         }
         if (keySystemIdFilter) {
           searchParams.keySystemId = keySystemIdFilter
+        }
+
+        // Add key sequence number filter (supports <, >, <=, >=, and range like 50-100)
+        const seqFilter = parseNumberFilter(keySequenceNumberQuery)
+        if (seqFilter) {
+          searchParams.keySequenceNumber = seqFilter
         }
 
         // Add date filters
@@ -138,6 +150,7 @@ const Index = () => {
       selectedDisposedFilter,
       rentalObjectCode,
       keySystemIdFilter,
+      keySequenceNumberQuery,
       createdAtAfter,
       createdAtBefore,
       toast,
@@ -157,15 +170,20 @@ const Index = () => {
     selectedDisposedFilter,
     rentalObjectCode,
     keySystemIdFilter,
+    keySequenceNumberQuery,
     createdAtAfter,
     createdAtBefore,
     // fetchKeys intentionally omitted to prevent infinite loop
   ])
 
-  // Sync search input with URL when URL changes
+  // Sync search inputs with URL when URL changes
   useEffect(() => {
     setSearchInput(searchQuery)
   }, [searchQuery])
+
+  useEffect(() => {
+    setKeySequenceNumberInput(keySequenceNumberQuery)
+  }, [keySequenceNumberQuery])
 
   // Clear selection when page or filters change
   useEffect(() => {
@@ -177,6 +195,7 @@ const Index = () => {
     selectedDisposedFilter,
     rentalObjectCode,
     keySystemIdFilter,
+    keySequenceNumberQuery,
     createdAtAfter,
     createdAtBefore,
   ])
@@ -202,6 +221,17 @@ const Index = () => {
       if (query.trim().length === 0 || query.trim().length >= 2) {
         pagination.updateUrlParams({ q: query.trim() || null, page: '1' })
       }
+    },
+    [pagination]
+  )
+
+  const handleKeySequenceNumberChange = useCallback(
+    (value: string) => {
+      setKeySequenceNumberInput(value)
+      pagination.updateUrlParams({
+        keySequenceNumber: value.trim() || null,
+        page: '1',
+      })
     },
     [pagination]
   )
@@ -628,6 +658,14 @@ const Index = () => {
           selectedValue={selectedKeySystem}
           placeholder="Filtrera på låssystem"
           showSearchIcon
+        />
+      }
+      searchAfterExtra={
+        <SearchInput
+          value={keySequenceNumberInput}
+          onChange={handleKeySequenceNumberChange}
+          placeholder="Löpnr"
+          className="max-w-48"
         />
       }
       onAddNew={handleAddNew}
