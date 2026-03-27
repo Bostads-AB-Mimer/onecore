@@ -8930,6 +8930,7 @@ export interface components {
       lastDebitDate: string | null;
       /** @enum {number} */
       status: 0 | 1 | 2 | 3;
+      rentalObjectCode: string | null;
       property?: string | null;
       buildingCode?: string | null;
       area?: string | null;
@@ -10230,7 +10231,7 @@ export interface components {
       id: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
-      contact?: string | null;
+      contact?: string;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10289,7 +10290,7 @@ export interface components {
       id: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
-      contact?: string | null;
+      contact?: string;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10525,7 +10526,7 @@ export interface components {
       keyCards?: string[];
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
-      contact?: string | null;
+      contact?: string;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10542,7 +10543,7 @@ export interface components {
       keyCards?: string[];
       /** @enum {string} */
       loanType?: "TENANT" | "MAINTENANCE";
-      contact?: string | null;
+      contact?: string;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10847,7 +10848,7 @@ export interface components {
           id: string;
           /** @enum {string} */
           loanType: "TENANT" | "MAINTENANCE";
-          contact?: string | null;
+          contact?: string;
           contact2?: string | null;
           contactPerson?: string | null;
           notes?: string | null;

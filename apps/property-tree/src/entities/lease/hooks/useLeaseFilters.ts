@@ -74,9 +74,7 @@ export function useLeaseFilters() {
     rawSortBy && isValidSortKey(rawSortBy) ? rawSortBy : undefined
   const rawSortOrder = urlSearchParams.get('sortOrder')
   const sortOrder: 'asc' | 'desc' | undefined =
-    rawSortOrder === 'asc' || rawSortOrder === 'desc'
-      ? rawSortOrder
-      : undefined
+    rawSortOrder === 'asc' || rawSortOrder === 'desc' ? rawSortOrder : undefined
 
   const startDateFrom = urlSearchParams.get('startDateFrom') || ''
   const startDateTo = urlSearchParams.get('startDateTo') || ''
