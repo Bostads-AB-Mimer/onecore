@@ -67,6 +67,17 @@ app.use(async (ctx, next) => {
   return requireRole('api-access')(ctx, next)
 })
 
+// Additive role for destructive key operations
+app.use(async (ctx, next) => {
+  if (
+    (ctx.method === 'DELETE' && /^\/keys\/[^/]+$/.test(ctx.path)) ||
+    (ctx.method === 'POST' && ctx.path === '/keys/bulk-delete')
+  ) {
+    return requireRole('admin')(ctx, next)
+  }
+  return next()
+})
+
 app.use(api.routes())
 
 export default app
