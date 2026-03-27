@@ -8930,7 +8930,6 @@ export interface components {
       lastDebitDate: string | null;
       /** @enum {number} */
       status: 0 | 1 | 2 | 3;
-      rentalObjectCode: string | null;
       property?: string | null;
       buildingCode?: string | null;
       area?: string | null;
