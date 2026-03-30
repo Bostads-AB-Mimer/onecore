@@ -1,0 +1,16 @@
+[
+  {
+    "id": "rn-2026-03-30-v211-1",
+    "date": "2026-03-30",
+    "title": "Uppgångar som egna noder i fastighetsträdet",
+    "description": "Uppgångar visas nu som expanderbara noder i sidomenyn mellan byggnader och lägenheter. Varje uppgång har en egen detaljsida med grundläggande information och lista över tillhörande lägenheter.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-03-30-v211-2",
+    "date": "2026-03-30",
+    "title": "Uppdaterade ikoner i fastighetsträdet",
+    "description": "Ikonerna i navigeringsträdet har uppdaterats för att tydligare skilja mellan företag, fastigheter, byggnader, uppgångar och lägenheter.",
+    "category": "improvement"
+  }
+]
