@@ -1,7 +1,10 @@
 import { logger } from '@onecore/utilities'
 import { economy } from '@onecore/types'
 
-import { getActiveLeasesByRentalObjectCodes } from '../common/adapters/xpand-db-adapter'
+import {
+  getActiveLeasesByRentalObjectCodes,
+  type LeaseMatch,
+} from '../common/adapters/xpand-db-adapter'
 
 import z from 'zod'
 
@@ -63,12 +66,17 @@ type UnprocessedReason =
   | 'no-rental-object'
   | 'no-active-lease'
   | 'amount-too-low'
+  | 'tenant-moved'
 
 type UnprocessedIMDRow = IMDRow & {
   reason: UnprocessedReason
 }
 
 const MIN_COST = 15
+
+function hasTenantMoved(lease: LeaseMatch, asOf: Date): boolean {
+  return lease.leaseEndDate !== null && lease.leaseEndDate < asOf
+}
 
 type EnrichResult = {
   enriched: Array<EnrichedIMDRow>
@@ -109,6 +117,8 @@ async function enrichIMDRows(
       periodEnd: period.end,
     })
 
+    const today = new Date()
+
     for (const row of eligible) {
       const lookup = leaseMap.get(row.rentalObjectCode)
 
@@ -116,8 +126,10 @@ async function enrichIMDRows(
         unprocessed.push({ ...row, reason: 'no-rental-object' })
       } else if (lookup === null) {
         unprocessed.push({ ...row, reason: 'no-active-lease' })
+      } else if (hasTenantMoved(lookup, today)) {
+        unprocessed.push({ ...row, reason: 'tenant-moved' })
       } else {
-        enriched.push({ ...row, leaseId: lookup })
+        enriched.push({ ...row, leaseId: lookup.leaseId })
       }
     }
 
@@ -195,6 +207,7 @@ const REASON_LABELS: Record<UnprocessedReason, string> = {
   'no-rental-object': 'Hyresobjekt saknas i Xpand',
   'no-active-lease': 'Inget aktivt kontrakt i perioden',
   'amount-too-low': 'Belopp under 15 kr',
+  'tenant-moved': 'Hyresgästen har avslutat kontrakt efter perioden',
 }
 
 function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {

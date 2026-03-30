@@ -278,10 +278,18 @@ export const getInvoiceRows = async (
   })
 }
 
+export type LeaseMatch = {
+  leaseId: string
+  leaseEndDate: Date | null
+}
+
 /**
  * For each rental object code, finds the active lease during the given period.
- * Returns rentalObjectCode + leaseId (null if no active lease).
- * Codes not found in babuf at all are absent from the results.
+ *
+ * Map values:
+ *   - `LeaseMatch`  — lease found; `leaseEndDate` is set if the lease has since ended
+ *   - `null`        — rental object exists in Xpand but has no active lease for the period
+ *   - `undefined`   — rental object code not found in Xpand at all
  *
  * Starts from hyobj (leases) and joins outward to babuf to avoid the ~20x
  * fan-out that occurs when starting from babuf. A parallel existence check
@@ -292,13 +300,13 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
   rentalObjectCodes: string[]
   periodStart: Date
   periodEnd: Date
-}): Promise<Map<string, string | null>> => {
+}): Promise<Map<string, LeaseMatch | null>> => {
   if (params.rentalObjectCodes.length === 0) {
     return new Map()
   }
 
   const BATCH_SIZE = 1000
-  const results = new Map<string, string | null>()
+  const results = new Map<string, LeaseMatch | null>()
 
   const batches: string[][] = []
   for (let i = 0; i < params.rentalObjectCodes.length; i += BATCH_SIZE) {
@@ -309,14 +317,18 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
     const start = Date.now()
     const placeholders = batch.map(() => '?').join(', ')
 
-    const rows: Array<{ rentalObjectCode: string; leaseId: string | null }> =
-      await db
-        .raw(
-          `SELECT rentalObjectCode, leaseId
+    const rows: Array<{
+      rentalObjectCode: string
+      leaseId: string | null
+      leaseEndDate: Date | null
+    }> = await db
+      .raw(
+        `SELECT rentalObjectCode, leaseId, leaseEndDate
          FROM (
            SELECT
              babuf.hyresid AS rentalObjectCode,
              hyobj.hyobjben AS leaseId,
+             hyobj.sistadeb AS leaseEndDate,
              ROW_NUMBER() OVER (
                PARTITION BY babuf.hyresid
                ORDER BY hyobj.fdate DESC
@@ -334,9 +346,9 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
              AND (hyobj.sistadeb IS NULL OR hyobj.sistadeb >= ?)
          ) ranked
          WHERE rn = 1`,
-          [...batch, params.periodEnd, params.periodStart]
-        )
-        .then((result: any) => result.map(trimStrings))
+        [...batch, params.periodEnd, params.periodStart]
+      )
+      .then((result: any) => result.map(trimStrings))
 
     logger.info(
       `IMD: Batch ${index + 1}/${batches.length} — ${batch.length} codes, ${rows.length} rows, ${Date.now() - start}ms`
@@ -372,7 +384,12 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
 
   for (const rows of batchResults) {
     for (const row of rows) {
-      results.set(row.rentalObjectCode, row.leaseId ?? null)
+      if (row.leaseId) {
+        results.set(row.rentalObjectCode, {
+          leaseId: row.leaseId,
+          leaseEndDate: row.leaseEndDate ? new Date(row.leaseEndDate) : null,
+        })
+      }
     }
   }
 

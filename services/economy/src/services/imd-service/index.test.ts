@@ -1,5 +1,6 @@
 import assert from 'node:assert'
 import { economy } from '@onecore/types'
+import type { LeaseMatch } from '@src/services/common/adapters/xpand-db-adapter'
 
 jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),
@@ -35,9 +36,9 @@ describe(imdService.enrichIMDRows, () => {
 
   it('maps lease ids to rows by rental object code', async () => {
     mockGetActiveLeases.mockResolvedValue(
-      new Map<string, string | null>([
-        ['306-008-01-0201', '306-008-01-0201/02'],
-        ['306-008-01-0202', '306-008-01-0202/01'],
+      new Map<string, LeaseMatch | null>([
+        ['306-008-01-0201', { leaseId: '306-008-01-0201/02', leaseEndDate: null }],
+        ['306-008-01-0202', { leaseId: '306-008-01-0202/01', leaseEndDate: null }],
       ])
     )
 
@@ -80,8 +81,8 @@ describe(imdService.enrichIMDRows, () => {
 
   it('tags row as no-active-lease when rental object exists but has no lease', async () => {
     mockGetActiveLeases.mockResolvedValue(
-      new Map<string, string | null>([
-        ['306-008-01-0201', '306-008-01-0201/02'],
+      new Map<string, LeaseMatch | null>([
+        ['306-008-01-0201', { leaseId: '306-008-01-0201/02', leaseEndDate: null }],
         ['306-008-01-0299', null],
       ])
     )
@@ -127,7 +128,7 @@ describe(imdService.enrichIMDRows, () => {
   })
 
   it('tags row as no-rental-object when code is absent from results', async () => {
-    mockGetActiveLeases.mockResolvedValue(new Map<string, string | null>())
+    mockGetActiveLeases.mockResolvedValue(new Map<string, LeaseMatch | null>())
 
     const result = await imdService.enrichIMDRows([
       {
@@ -155,8 +156,8 @@ describe(imdService.enrichIMDRows, () => {
 
   it('tags row as amount-too-low when cost is under 15', async () => {
     mockGetActiveLeases.mockResolvedValue(
-      new Map<string, string | null>([
-        ['306-008-01-0201', '306-008-01-0201/02'],
+      new Map<string, LeaseMatch | null>([
+        ['306-008-01-0201', { leaseId: '306-008-01-0201/02', leaseEndDate: null }],
       ])
     )
 
@@ -188,6 +189,80 @@ describe(imdService.enrichIMDRows, () => {
         expect.objectContaining({
           rentalObjectCode: '306-008-01-0202',
           reason: 'amount-too-low',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as tenant-moved when lease ended before today', async () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: yesterday },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          reason: 'tenant-moved',
+        }),
+      ])
+    )
+  })
+
+  it('does not tag as tenant-moved when lease end date is in the future', async () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: tomorrow },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.unprocessed).toHaveLength(0)
+    expect(result.data.enriched).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          leaseId: '306-008-01-0201/02',
         }),
       ])
     )
