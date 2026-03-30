@@ -471,10 +471,10 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     invoiceId: row.invoiceId.trim(),
     leaseId: row.leaseId?.trim(),
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
-    fromDate: row.fromDate,
-    toDate: row.toDate,
-    invoiceDate: row.invoiceDate,
-    expirationDate: row.expirationDate,
+    fromDate: new Date(row.fromDate),
+    toDate: new Date(row.toDate),
+    invoiceDate: new Date(row.invoiceDate),
+    expirationDate: new Date(row.expirationDate),
     debitStatus: row.debitStatus,
     paymentStatus: getPaymentStatus(row.paymentStatus),
     transactionType: getTransactionType(row.transactionType),
@@ -488,7 +488,9 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
 
 export const getInvoicesByContactCode = async (
   contactKey: string,
-  filters?: { from?: Date }
+  filters?: { from?: Date; to?: Date },
+  limit?: number,
+  skip?: number
 ): Promise<Invoice[] | undefined> => {
   logger.info(
     { contactCode: contactKey },
@@ -521,6 +523,12 @@ export const getInvoicesByContactCode = async (
 
   if (filters?.from) {
     query = query.andWhere('krfkh.fromdate', '>=', filters.from)
+  }
+  if (limit) {
+    query.limit(limit)
+  }
+  if (skip) {
+    query.offset(skip)
   }
 
   const rows = await query

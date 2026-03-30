@@ -50,11 +50,22 @@ export async function getInvoicePaymentEvents(
 
 export async function getInvoicesByContactCode(
   contactCode: string,
-  filters?: { from?: Date }
+  filters?: { from?: Date; to?: Date },
+  size?: number,
+  skip?: number,
+  after?: string,
+  includePaymentEvents?: boolean
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
   const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
-  const params = filters ? { params: filters } : {}
-  const response = await axios.get(url, params)
+  const params = {
+    from: filters?.from,
+    to: filters?.to,
+    size,
+    skip,
+    after,
+    includePaymentEvents,
+  }
+  const response = await axios.get(url, { params })
 
   if (response.status === 404) {
     return { ok: false, err: 'not-found' }

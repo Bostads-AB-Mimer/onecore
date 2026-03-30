@@ -249,6 +249,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     credit: getInvoiceCredit(invoiceData.node),
     accountCode: invoiceData.node.account?.code,
     costCentre: invoiceData.node.glDimension?.glObject1?.code,
+    matchId: invoiceData.node.matchId,
   }
 
   // TODO? handle overpaid invoices (negative remainingAmount)?
@@ -737,8 +738,16 @@ function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
 
 export const getInvoicesByContactCode = async (
   contactCode: string,
-  filters?: { from?: Date }
-): Promise<Invoice[] | null> => {
+  filters?: {
+    from?: Date
+    to?: Date
+  },
+  size?: number,
+  after?: string
+): Promise<{
+  content: Invoice[]
+  pageInfo: { hasNextPage: boolean; endCursor?: string }
+} | null> => {
   const xledgerId = await getCustomerDbId(contactCode)
 
   if (!xledgerId) {
@@ -749,32 +758,72 @@ export const getInvoicesByContactCode = async (
     return null
   }
 
-  const fromDateFilter = filters?.from
-    ? `, invoiceDate_gte: "${dateToXledgerDateString(filters.from)}"`
-    : ''
-
   const query = {
-    query: `{
-      arTransactions(
-        first: 100,
-        filter: {
-          subledgerDbId: ${xledgerId},
-          headerTransactionSourceDbId_in: [600, 797, 3536]${fromDateFilter}
-        }
-      )
-      {
-        edges {
-          node {
-            ${invoiceNodeFragment}
+    query: gql`
+      query($first: Int, $after: String, $filter: ARTransaction_Filter, $orderBy: [ARTransaction_Order]) {
+        arTransactions(
+          first: $first,
+          after: $after,
+          filter: $filter,
+          orderBy: $orderBy
+        )
+        {
+          edges {
+            node {
+              ${invoiceNodeFragment}
+            }
+            cursor
+          }
+          pageInfo {
+            hasNextPage
           }
         }
       }
-    }`,
+    `,
+    variables: {
+      first: size ?? 10,
+      after: after,
+      filter: {
+        subledgerDbId: xledgerId,
+        headerTransactionSourceDbId_in: [
+          TransactionSourceDbId.AR,
+          TransactionSourceDbId.SO,
+          TransactionSourceDbId.OS,
+        ],
+        invoiceDate_gte: filters?.from
+          ? dateToXledgerDateString(filters.from)
+          : undefined,
+        invoiceDate_lte: filters?.to
+          ? dateToXledgerDateString(filters.to)
+          : undefined,
+      },
+      orderBy: [
+        {
+          direction: 'DESC',
+          field: 'HEADER_CREATED_AT',
+        },
+      ],
+    },
   }
 
   const result = await makeXledgerRequest(query)
 
-  return result.data?.arTransactions?.edges.map(transformToInvoice) ?? []
+  if (!result.data?.arTransactions) {
+    return { content: [], pageInfo: { hasNextPage: false } }
+  }
+
+  const lastEdge = result.data.arTransactions.edges?.at(-1)
+  const endCursor = lastEdge?.cursor
+  const pageInfo = {
+    hasNextPage: result.data.arTransactions.pageInfo.hasNextPage,
+    endCursor,
+  }
+  console.log(result.data)
+
+  return {
+    content: result.data?.arTransactions.edges?.map(transformToInvoice) ?? [],
+    pageInfo,
+  }
 }
 
 export const getInvoices = async (from?: Date, to?: Date) => {

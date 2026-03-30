@@ -15,7 +15,7 @@ interface DateRangeFilterDropdownProps {
   /** End date (YYYY-MM-DD string or null) */
   endDate: string | null
   /** Called when date range changes */
-  onDateChange: (startDate: string | null, endDate: string | null) => void
+  onDateChange: (startDate?: Date, endDate?: Date) => void
   /** Placeholder text when no dates selected */
   placeholder?: string
   className?: string
@@ -66,15 +66,15 @@ export function DateRangeFilterDropdown({
   }
 
   const handleSelect = (range: DateRange | undefined) => {
-    const newStartDate = range?.from ? format(range.from, 'yyyy-MM-dd') : null
-    const newEndDate = range?.to ? format(range.to, 'yyyy-MM-dd') : null
+    const newStartDate = range?.from
+    const newEndDate = range?.to
 
     onDateChange(newStartDate, newEndDate)
   }
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation()
-    onDateChange(null, null)
+    onDateChange()
     setOpen(false)
   }
 
