@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Hotel } from 'lucide-react'
+import { DoorOpen } from 'lucide-react'
 
 import { ResidenceSummary } from '@/services/types'
 
@@ -46,7 +46,7 @@ export function ResidenceNavigation({
             organizationNumber,
           }}
         >
-          <Hotel />
+          <DoorOpen />
           <span>LGH-{toTitleCase(residence.code)}</span>
         </Link>
       </SidebarMenuButton>

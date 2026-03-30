@@ -24,8 +24,10 @@ export function StaircaseList({
   if (isLoading) return <NavigationSkeleton />
   if (error) return <NavigationError label="staircases" />
 
+  const EMPTY_STAIRCASE_CODES = ['00', '99']
+
   const sortedStaircases = staircases
-    ?.slice()
+    ?.filter((s) => !EMPTY_STAIRCASE_CODES.includes(s.code))
     .sort((a, b) => numericCompare(a.code, b.code))
 
   return (

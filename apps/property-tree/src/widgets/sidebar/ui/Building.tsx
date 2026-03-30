@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Warehouse } from 'lucide-react'
+import { Hotel } from 'lucide-react'
 
 import { Building, Property } from '@/services/types'
 
@@ -62,7 +62,7 @@ export function BuildingNavigation({
           }}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Warehouse />
+          <Hotel />
           <span>{toTitleCase(building.name ?? building.code)}</span>
         </Link>
       </SidebarMenuButton>

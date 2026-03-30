@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { DoorOpen } from 'lucide-react'
+import { Home } from 'lucide-react'
 
 import { Building, Staircase } from '@/services/types'
 
@@ -65,7 +65,7 @@ export function StaircaseNavigation({
           }}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <DoorOpen />
+          <Home />
           <span>{toTitleCase(staircase.name ?? staircase.code)}</span>
         </Link>
       </SidebarMenuButton>
