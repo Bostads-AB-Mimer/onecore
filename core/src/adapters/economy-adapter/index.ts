@@ -1,6 +1,8 @@
 import fs from 'node:fs'
+import z from 'zod'
 import { loggedAxios as axios, logger } from '@onecore/utilities'
 import {
+  economy,
   Invoice,
   InvoicePaymentEvent,
   RentInvoiceRow,
@@ -277,6 +279,29 @@ export async function getLeaseDetailsForInvoices(
     return { ok: true, data: allLeaseDetails }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getLeaseDetailsForInvoice')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function processIMD(
+  csv: string
+): Promise<
+  AdapterResult<z.infer<typeof economy.ProcessIMDResponseSchema>, 'unknown'>
+> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/imd/process`,
+      { csv }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.processIMD')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err) {
+    logger.error(err, 'economy-adapter.processIMD')
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }

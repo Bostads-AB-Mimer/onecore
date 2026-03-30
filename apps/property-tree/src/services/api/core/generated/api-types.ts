@@ -6229,6 +6229,54 @@ export interface paths {
       };
     };
   };
+  "/imd/process": {
+    /**
+     * Process IMD CSV data
+     * @description Accepts raw IMD CSV data, enriches it with lease information from Xpand, and returns Tenfast-ready CSV output along with a CSV of unprocessed rows.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Raw semicolon-delimited IMD CSV content */
+            csv: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Successfully processed IMD data. */
+        200: {
+          content: {
+            "application/json": {
+              content: {
+                totalRows: number;
+                numEnriched: number;
+                numUnprocessed: number;
+                enrichedCsv: string;
+                unprocessedCsv: string;
+              };
+            };
+          };
+        };
+        /** @description Missing or invalid csv field. */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/files": {
     /** List files with optional prefix */
     get: {

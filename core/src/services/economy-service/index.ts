@@ -6,6 +6,7 @@ import {
 import { economy } from '@onecore/types'
 
 import * as economyAdapter from '../../adapters/economy-adapter'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -196,4 +197,92 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody(result.data, metadata)
     }
   })
+
+  /**
+   * @swagger
+   * /imd/process:
+   *   post:
+   *     tags:
+   *       - Economy service
+   *     summary: Process IMD CSV data
+   *     description: Accepts raw IMD CSV data, enriches it with lease information from Xpand, and returns Tenfast-ready CSV output along with a CSV of unprocessed rows.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - csv
+   *             properties:
+   *               csv:
+   *                 type: string
+   *                 description: Raw semicolon-delimited IMD CSV content
+   *     responses:
+   *       '200':
+   *         description: Successfully processed IMD data.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - content
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   required:
+   *                     - totalRows
+   *                     - numEnriched
+   *                     - numUnprocessed
+   *                     - enrichedCsv
+   *                     - unprocessedCsv
+   *                   properties:
+   *                     totalRows:
+   *                       type: integer
+   *                     numEnriched:
+   *                       type: integer
+   *                     numUnprocessed:
+   *                       type: integer
+   *                     enrichedCsv:
+   *                       type: string
+   *                     unprocessedCsv:
+   *                       type: string
+   *       '400':
+   *         description: Missing or invalid csv field.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   */
+  router.post(
+    '/imd/process',
+    parseRequestBody(economy.ProcessIMDRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { csv } = ctx.request.body
+
+      const result = await economyAdapter.processIMD(csv)
+
+      if (!result.ok) {
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: 'Processing failed' }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  )
 }

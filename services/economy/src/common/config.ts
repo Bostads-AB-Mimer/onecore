@@ -64,6 +64,7 @@ export interface Config {
   tenfast: {
     baseUrl: string
     apiKey: string
+    companyId: string
   }
   health: {
     xledger: {
@@ -153,6 +154,7 @@ const config = configPackage({
     tenfast: {
       baseUrl: '',
       apiKey: '',
+      companyId: '',
     },
     health: {
       xledger: {

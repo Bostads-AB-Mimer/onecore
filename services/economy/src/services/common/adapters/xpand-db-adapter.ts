@@ -1,9 +1,11 @@
 import knex from 'knex'
+import { logger } from '@onecore/utilities'
+import { Address, RentInvoiceRow } from '@onecore/types'
+
 import config from '../../../common/config'
 import { RentInvoice, RentalProperty } from '../types'
 import { InvoiceDeliveryMethod, XpandContact } from '../../../common/types'
 import trimStrings from '../../../utils/trimStrings'
-import { Address, RentInvoiceRow } from '@onecore/types'
 
 const db = knex({
   connection: {
@@ -12,7 +14,7 @@ const db = knex({
     password: config.xpandDatabase.password,
     port: config.xpandDatabase.port,
     database: config.xpandDatabase.database,
-    requestTimeout: 15000,
+    requestTimeout: 30000,
   },
   pool: {
     min: 0,
@@ -274,6 +276,107 @@ export const getInvoiceRows = async (
       toDate: new Date(row.toDate),
     }
   })
+}
+
+/**
+ * For each rental object code, finds the active lease during the given period.
+ * Returns rentalObjectCode + leaseId (null if no active lease).
+ * Codes not found in babuf at all are absent from the results.
+ *
+ * Starts from hyobj (leases) and joins outward to babuf to avoid the ~20x
+ * fan-out that occurs when starting from babuf. A parallel existence check
+ * on babuf ensures codes without active leases still appear with null.
+ * Batches in chunks of 1000, run in parallel.
+ */
+export const getActiveLeasesByRentalObjectCodes = async (params: {
+  rentalObjectCodes: string[]
+  periodStart: Date
+  periodEnd: Date
+}): Promise<Map<string, string | null>> => {
+  if (params.rentalObjectCodes.length === 0) {
+    return new Map()
+  }
+
+  const BATCH_SIZE = 1000
+  const results = new Map<string, string | null>()
+
+  const batches: string[][] = []
+  for (let i = 0; i < params.rentalObjectCodes.length; i += BATCH_SIZE) {
+    batches.push(params.rentalObjectCodes.slice(i, i + BATCH_SIZE))
+  }
+
+  const queryBatch = async (batch: string[], index: number) => {
+    const start = Date.now()
+    const placeholders = batch.map(() => '?').join(', ')
+
+    const rows: Array<{ rentalObjectCode: string; leaseId: string | null }> =
+      await db
+        .raw(
+          `SELECT rentalObjectCode, leaseId
+         FROM (
+           SELECT
+             babuf.hyresid AS rentalObjectCode,
+             hyobj.hyobjben AS leaseId,
+             ROW_NUMBER() OVER (
+               PARTITION BY babuf.hyresid
+               ORDER BY hyobj.fdate DESC
+             ) AS rn
+           FROM hyobj
+           INNER JOIN hykop
+             ON hykop.keyhyobj = hyobj.keyhyobj AND hykop.ordning = 1
+           INNER JOIN babuf
+             ON babuf.keycmobj = hykop.keycmobj
+           WHERE babuf.hyresid IN (${placeholders})
+             AND hyobj.deletemark = 0
+             AND hyobj.makuldatum IS NULL
+             AND hyobj.hyobjben NOT LIKE '%M%'
+             AND hyobj.fdate <= ?
+             AND (hyobj.sistadeb IS NULL OR hyobj.sistadeb >= ?)
+         ) ranked
+         WHERE rn = 1`,
+          [...batch, params.periodEnd, params.periodStart]
+        )
+        .then((result: any) => result.map(trimStrings))
+
+    logger.info(
+      `IMD: Batch ${index + 1}/${batches.length} — ${batch.length} codes, ${rows.length} rows, ${Date.now() - start}ms`
+    )
+
+    return rows
+  }
+
+  const existingCodesQuery = Promise.all(
+    batches.map((batch) => {
+      const placeholders = batch.map(() => '?').join(', ')
+      return db
+        .raw(
+          `SELECT DISTINCT hyresid FROM babuf WHERE hyresid IN (${placeholders})`,
+          batch
+        )
+        .then((rows: any[]) => rows.map((r: any) => r.hyresid?.trim()))
+    })
+  )
+
+  const [batchResults, existingCodesBatches] = await Promise.all([
+    Promise.all(batches.map((batch, i) => queryBatch(batch, i))),
+    existingCodesQuery,
+  ])
+
+  const existingCodes = new Set(existingCodesBatches.flat())
+
+  for (const code of params.rentalObjectCodes) {
+    if (existingCodes.has(code)) {
+      results.set(code, null)
+    }
+  }
+
+  for (const rows of batchResults) {
+    for (const row of rows) {
+      results.set(row.rentalObjectCode, row.leaseId ?? null)
+    }
+  }
+
+  return results
 }
 
 export const getContacts = async (
