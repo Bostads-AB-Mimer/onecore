@@ -147,12 +147,12 @@ export interface paths {
         }
         /** @description Invalid or expired refresh token */
         401: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/auth/roles/{roleName}/users": {
+          content: never
+        }
+      }
+    }
+  }
+  '/auth/roles/{roleName}/users': {
     /**
      * Get users by realm role (via group membership)
      * @description Returns all users that belong to groups assigned the given Keycloak realm role. Users are deduplicated across groups.
@@ -161,46 +161,44 @@ export interface paths {
       parameters: {
         path: {
           /** @description The name of the Keycloak realm role */
-          roleName: string;
-        };
-      };
+          roleName: string
+        }
+      }
       responses: {
         /** @description List of users with the given role */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["KeycloakUser"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['KeycloakUser'][]
+            }
+          }
+        }
         /** @description Unauthorized */
         401: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Forbidden — insufficient permissions to query role members */
         403: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Role not found */
         404: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Keycloak unreachable */
         502: {
-          content: never;
-        };
-      };
-    };
-  };
-  "openapi": {
-  };
-  "security": {
-  };
-  "/sendBulkSms": {
+          content: never
+        }
+      }
+    }
+  }
+  openapi: {}
+  security: {}
+  '/sendBulkSms': {
     /**
      * Send SMS to multiple contacts
      * @description Send SMS messages to multiple phone numbers
@@ -208,35 +206,35 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description Array of phone numbers */
-            phoneNumbers: string[];
+            phoneNumbers: string[]
             /** @description SMS message content */
-            text: string;
-          };
-        };
-      };
+            text: string
+          }
+        }
+      }
       responses: {
         /** @description SMS sent successfully */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["BulkSmsResult"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['BulkSmsResult']
+            }
+          }
+        }
         /** @description Invalid request */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/sendBulkEmail": {
+          content: never
+        }
+      }
+    }
+  }
+  '/sendBulkEmail': {
     /**
      * Send email to multiple contacts
      * @description Send email messages to multiple email addresses
@@ -244,37 +242,37 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description Array of email addresses */
-            emails: string[];
+            emails: string[]
             /** @description Email subject */
-            subject: string;
+            subject: string
             /** @description Email message content */
-            text: string;
-          };
-        };
-      };
+            text: string
+          }
+        }
+      }
       responses: {
         /** @description Email sent successfully */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["BulkEmailResult"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['BulkEmailResult']
+            }
+          }
+        }
         /** @description Invalid request */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/getLinearTickets": {
+          content: never
+        }
+      }
+    }
+  }
+  '/getLinearTickets': {
     /**
      * Get Linear tickets with mimer-visible label
      * @description Fetch Linear issues that have the mimer-visible label
@@ -283,24 +281,24 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Number of tickets to fetch */
-          first?: number;
+          first?: number
           /** @description Cursor for pagination */
-          after?: string;
-        };
-      };
+          after?: string
+        }
+      }
       responses: {
         /** @description Linear tickets fetched successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/createLinearErrand": {
+          content: never
+        }
+      }
+    }
+  }
+  '/createLinearErrand': {
     /**
      * Create a new Linear errand
      * @description Create a new issue in Linear with specified team, project, and labels
@@ -308,33 +306,33 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description Errand title */
-            title: string;
+            title: string
             /** @description Errand description */
-            description: string;
+            description: string
             /** @description Label ID for category (Bug, Improvement, etc.) */
-            categoryLabelId: string;
-          };
-        };
-      };
+            categoryLabelId: string
+          }
+        }
+      }
       responses: {
         /** @description Linear errand created successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Invalid request */
         400: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/getLinearLabels": {
+          content: never
+        }
+      }
+    }
+  }
+  '/getLinearLabels': {
     /**
      * Get Linear category labels
      * @description Fetch available category labels (Bug, Improvement, new feature)
@@ -343,16 +341,16 @@ export interface paths {
       responses: {
         /** @description Linear labels fetched successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/health": {
+          content: never
+        }
+      }
+    }
+  }
+  '/health': {
     /**
      * Check system health status
      * @description Retrieves the health status of the system and its subsystems.
@@ -372,25 +370,25 @@ export interface paths {
                * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
                * @example active
                */
-              status?: string;
-              subsystems?: ({
-                  /** @description Name of the subsystem. */
-                  name?: string;
-                  /**
-                   * @description Status of the subsystem.
-                   * @enum {string}
-                   */
-                  status?: "active" | "impaired" | "failure" | "unknown";
-                  /** @description Additional details about the subsystem status. */
-                  details?: string;
-                })[];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/leases/search": {
+              status?: string
+              subsystems?: {
+                /** @description Name of the subsystem. */
+                name?: string
+                /**
+                 * @description Status of the subsystem.
+                 * @enum {string}
+                 */
+                status?: 'active' | 'impaired' | 'failure' | 'unknown'
+                /** @description Additional details about the subsystem status. */
+                details?: string
+              }[]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/leases/search': {
     /**
      * Search and filter leases
      * @description Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
@@ -425,11 +423,17 @@ export interface paths {
           /** @description Page number */
           page?: number
           /** @description Items per page */
-          limit?: number;
+          limit?: number
           /** @description Include Upphört (ended) contracts. Excluded by default for performance. */
-          includeEnded?: boolean;
+          includeEnded?: boolean
           /** @description Sort field */
-          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
+          sortBy?:
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
@@ -477,12 +481,12 @@ export interface paths {
         }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/export": {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/export': {
     /**
      * Export leases to Excel
      * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
@@ -491,44 +495,44 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string;
+          q?: string
           /** @description Object types (e.g., residence, parking) */
-          objectType?: string[];
+          objectType?: string[]
           /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ("0" | "1" | "2" | "3")[];
+          status?: ('0' | '1' | '2' | '3')[]
           /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string;
+          startDateFrom?: string
           /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string;
+          startDateTo?: string
           /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string;
+          endDateFrom?: string
           /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string;
+          endDateTo?: string
           /** @description Property/estate names */
-          property?: string[];
+          property?: string[]
           /** @description Building codes */
-          buildingCodes?: string[];
+          buildingCodes?: string[]
           /** @description Area codes (Område) */
-          areaCodes?: string[];
+          areaCodes?: string[]
           /** @description District names */
-          districtNames?: string[];
+          districtNames?: string[]
           /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[];
-        };
-      };
+          buildingManager?: string[]
+        }
+      }
       responses: {
         /** @description Excel file download */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/contacts/from-lease-search": {
+          content: never
+        }
+      }
+    }
+  }
+  '/contacts/from-lease-search': {
     /**
      * Get contacts matching lease search filters
      * @description Retrieves contact information for tenants matching the given lease search filters.
@@ -537,48 +541,48 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string;
+          q?: string
           /** @description Object types (e.g., residence, parking) */
-          objectType?: string[];
+          objectType?: string[]
           /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ("0" | "1" | "2" | "3")[];
+          status?: ('0' | '1' | '2' | '3')[]
           /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string;
+          startDateFrom?: string
           /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string;
+          startDateTo?: string
           /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string;
+          endDateFrom?: string
           /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string;
+          endDateTo?: string
           /** @description Property/estate names */
-          property?: string[];
+          property?: string[]
           /** @description Building codes */
-          buildingCodes?: string[];
+          buildingCodes?: string[]
           /** @description Area codes (Område) */
-          areaCodes?: string[];
+          areaCodes?: string[]
           /** @description District names */
-          districtNames?: string[];
+          districtNames?: string[]
           /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[];
-        };
-      };
+          buildingManager?: string[]
+        }
+      }
       responses: {
         /** @description Successful response with contact information */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ContactInfo"][];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ContactInfo'][]
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/by-rental-property-id/{rentalPropertyId}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/by-rental-property-id/{rentalPropertyId}': {
     /**
      * Get leases with related entities for a specific rental property id
      * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
@@ -3137,10 +3141,10 @@ export interface paths {
             /** @description The subject of the email. */
             subject?: string
             /** @description The message to be sent in the email. */
-            text?: string;
-          };
-        };
-      };
+            text?: string
+          }
+        }
+      }
       responses: {
         /** @description Successfully sent the email. */
         200: {
@@ -4455,14 +4459,14 @@ export interface paths {
           content: {
             'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/companies/{organizationNumber}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/companies/{organizationNumber}': {
     /**
      * Get detailed information about a specific company
      * @description Retrieves comprehensive information about a company using its organization number.
@@ -4471,9 +4475,9 @@ export interface paths {
       parameters: {
         path: {
           /** @description The organization number of the company. */
-          organizationNumber: string;
-        };
-      };
+          organizationNumber: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved company information */
         200: {
@@ -4617,12 +4621,12 @@ export interface paths {
         }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/properties/{propertyCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/properties/{propertyCode}': {
     /**
      * Get property by property code
      * @description Retrieves property by property code
@@ -4631,9 +4635,9 @@ export interface paths {
       parameters: {
         path: {
           /** @description The code of the property */
-          propertyCode: string;
-        };
-      };
+          propertyCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved property */
         200: {
@@ -4680,11 +4684,11 @@ export interface paths {
         /** @description Successfully retrieved residence. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["ResidenceDetails"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['ResidenceDetails']
+            }
+          }
+        }
         /** @description Residence not found */
         404: {
           content: {
@@ -4947,12 +4951,12 @@ export interface paths {
         }
         /** @description Internal server error */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/residences/summary/by-building-code/{buildingCode}": {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/summary/by-building-code/{buildingCode}': {
     /**
      * Get residences by building code, optionally filtered by staircase code.
      * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
@@ -4997,11 +5001,11 @@ export interface paths {
       parameters: {
         query: {
           /** @description Code for the building to fetch staircases for */
-          buildingCode: string;
+          buildingCode: string
           /** @description The code of the staircase (optional). */
-          staircaseCode?: string;
-        };
-      };
+          staircaseCode?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved staircases. */
         200: {
@@ -5041,11 +5045,11 @@ export interface paths {
       parameters: {
         query: {
           /** @description The id of the residence. */
-          residenceId: string;
+          residenceId: string
           /** @description The code of the room (optional). */
-          roomCode?: string;
-        };
-      };
+          roomCode?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the rooms. */
         200: {
@@ -5490,12 +5494,12 @@ export interface paths {
         }
         /** @description Internal server error. */
         500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/inspections": {
+          content: never
+        }
+      }
+    }
+  }
+  '/inspections': {
     /**
      * Retrieve inspections from all sources
      * @description Retrieves inspections from both the local database and Xpand, merged with a source indicator per item.
@@ -5504,58 +5508,58 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number for pagination. */
-          page?: number;
+          page?: number
           /** @description Maximum number of records to return. */
-          limit?: number;
+          limit?: number
           /** @description Filter inspections by status (ongoing or completed). */
-          statusFilter?: "ongoing" | "completed";
+          statusFilter?: 'ongoing' | 'completed'
           /** @description Whether to sort the results in ascending order. */
-          sortAscending?: true | false;
+          sortAscending?: true | false
           /** @description Filter inspections by inspector name. */
-          inspector?: string;
+          inspector?: string
           /** @description Filter inspections by address. */
-          address?: string;
-        };
-      };
+          address?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved inspections from all sources. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["InspectionWithSource"][];
+            'application/json': {
+              content?: components['schemas']['InspectionWithSource'][]
               _meta?: {
-                totalRecords?: number;
-                page?: number;
-                limit?: number;
-                count?: number;
-              };
+                totalRecords?: number
+                page?: number
+                limit?: number
+                count?: number
+              }
               _links?: {
-                  href?: string;
-                  rel?: string;
-                }[];
-            };
-          };
-        };
+                href?: string
+                rel?: string
+              }[]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Invalid query parameters */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Create a new inspection
      * @description Creates a new inspection in the local inspection database
@@ -5563,40 +5567,40 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateInspectionRequest"];
-        };
-      };
+          'application/json': components['schemas']['CreateInspectionRequest']
+        }
+      }
       responses: {
         /** @description Inspection created successfully */
         201: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                inspection?: components["schemas"]["DetailedInspection"];
-              };
-            };
-          };
-        };
+                inspection?: components['schemas']['DetailedInspection']
+              }
+            }
+          }
+        }
         /** @description Invalid request body */
         400: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
+            'application/json': {
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/residence/{residenceId}": {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/residence/{residenceId}': {
     /**
      * Retrieve inspections by residence ID from all sources
      * @description Retrieves inspections associated with a specific residence ID from both the local database and Xpand.
@@ -5605,37 +5609,37 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Filter inspections by status (ongoing or completed). */
-          statusFilter?: "ongoing" | "completed";
-        };
+          statusFilter?: 'ongoing' | 'completed'
+        }
         path: {
           /** @description The ID of the residence to retrieve inspections for. */
-          residenceId: string;
-        };
-      };
+          residenceId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved inspections for the specified residence ID. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                inspections?: components["schemas"]["InspectionWithSource"][];
-              };
-            };
-          };
-        };
+                inspections?: components['schemas']['InspectionWithSource'][]
+              }
+            }
+          }
+        }
         /** @description Internal server error. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/xpand": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/xpand': {
     /**
      * Retrieve inspections from Xpand
      * @description Retrieves inspections from Xpand with pagination and status filtering support.
@@ -5644,60 +5648,60 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Page number for pagination. */
-          page?: number;
+          page?: number
           /** @description Maximum number of records to return. */
-          limit?: number;
+          limit?: number
           /** @description Filter inspections by status (ongoing or completed). */
-          statusFilter?: "ongoing" | "completed";
+          statusFilter?: 'ongoing' | 'completed'
           /** @description Whether to sort the results in ascending order. */
-          sortAscending?: true | false;
+          sortAscending?: true | false
           /** @description Filter inspections by inspector name. */
-          inspector?: string;
+          inspector?: string
           /** @description Filter inspections by address. */
-          address?: string;
-        };
-      };
+          address?: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved inspections. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["Inspection"][];
+            'application/json': {
+              content?: components['schemas']['Inspection'][]
               _meta?: {
-                totalRecords?: number;
-                page?: number;
-                limit?: number;
-                count?: number;
-              };
+                totalRecords?: number
+                page?: number
+                limit?: number
+                count?: number
+              }
               _links?: {
-                  href?: string;
-                  rel?: string;
-                }[];
-            };
-          };
-        };
+                href?: string
+                rel?: string
+              }[]
+            }
+          }
+        }
         /** @description Invalid query parameters. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Invalid query parameters */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve inspections. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/xpand/residence/{residenceId}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/xpand/residence/{residenceId}': {
     /**
      * Retrieve inspections by residence ID from Xpand
      * @description Retrieves inspections associated with a specific residence ID from Xpand.
@@ -5706,46 +5710,46 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Filter inspections by status (ongoing or completed). */
-          statusFilter?: "ongoing" | "completed";
-        };
+          statusFilter?: 'ongoing' | 'completed'
+        }
         path: {
           /** @description The ID of the residence to retrieve inspections for. */
-          residenceId: string;
-        };
-      };
+          residenceId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved inspections for the specified residence ID. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                inspections?: components["schemas"]["Inspection"][];
-              };
-            };
-          };
-        };
+                inspections?: components['schemas']['Inspection'][]
+              }
+            }
+          }
+        }
         /** @description No inspections found for the specified residence ID. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example not-found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve inspections. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/xpand/{inspectionId}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/xpand/{inspectionId}': {
     /**
      * Retrieve an inspection by ID from Xpand
      * @description Retrieves a specific inspection by its ID from Xpand.
@@ -5754,40 +5758,40 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the inspection to retrieve. */
-          inspectionId: string;
-        };
-      };
+          inspectionId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved the inspection. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["DetailedInspection"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['DetailedInspection']
+            }
+          }
+        }
         /** @description Inspection not found for the specified ID. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example not-found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve the inspection. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/xpand/{inspectionId}/pdf": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/xpand/{inspectionId}/pdf': {
     /**
      * Generate PDF protocol for an inspection
      * @description Generates and returns a PDF protocol for a specific inspection by its ID.
@@ -5796,47 +5800,47 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Whether to include cost information in the PDF. */
-          includeCosts?: boolean;
-        };
+          includeCosts?: boolean
+        }
         path: {
           /** @description The ID of the inspection to generate a PDF for. */
-          inspectionId: string;
-        };
-      };
+          inspectionId: string
+        }
+      }
       responses: {
         /** @description Successfully generated PDF protocol. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
                 /** @description Base64 encoded PDF document */
-                pdfBase64?: string;
-              };
-            };
-          };
-        };
+                pdfBase64?: string
+              }
+            }
+          }
+        }
         /** @description Inspection not found for the specified ID. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example not-found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to generate PDF. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/{inspectionId}/tenant-contacts": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/{inspectionId}/tenant-contacts': {
     /**
      * Get tenant contacts for inspection protocol modal
      * @description Retrieves contact information for new and previous tenants to display in confirmation modal before sending protocol
@@ -5845,40 +5849,40 @@ export interface paths {
       parameters: {
         path: {
           /** @description The inspection ID */
-          inspectionId: string;
-        };
-      };
+          inspectionId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved tenant contacts */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["TenantContactsResponse"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['TenantContactsResponse']
+            }
+          }
+        }
         /** @description Inspection or residence not found */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Inspection not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/{inspectionId}/send-protocol": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/{inspectionId}/send-protocol': {
     /**
      * Send inspection protocol to tenant
      * @description Sends the inspection protocol PDF via email to the specified tenant (new or previous)
@@ -5887,90 +5891,90 @@ export interface paths {
       parameters: {
         path: {
           /** @description The inspection ID */
-          inspectionId: string;
-        };
-      };
+          inspectionId: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["SendProtocolRequest"];
-        };
-      };
+          'application/json': components['schemas']['SendProtocolRequest']
+        }
+      }
       responses: {
         /** @description Protocol sent successfully */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["SendProtocolResponse"];
-            };
-          };
-        };
+            'application/json': {
+              content?: components['schemas']['SendProtocolResponse']
+            }
+          }
+        }
         /** @description Invalid request or no contract found */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Invalid request body */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Inspection not found */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Inspection not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/internal/{inspectionId}": {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/internal/{inspectionId}': {
     /** Get internal inspection by ID including draft room data */
     get: {
       parameters: {
         path: {
-          inspectionId: string;
-        };
-      };
+          inspectionId: string
+        }
+      }
       responses: {
         /** @description Internal inspection with draft room data */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                inspection?: components["schemas"]["InternalInspection"];
-              };
-            };
-          };
-        };
+                inspection?: components['schemas']['InternalInspection']
+              }
+            }
+          }
+        }
         /** @description Inspection not found */
         404: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
+            'application/json': {
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
-      };
-    };
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
     /**
      * Update internal inspection
      * @description Updates an internal inspection. Supports updating status (with valid transitions Registrerad → Påbörjad → Genomförd) and/or inspector. At least one field must be provided.
@@ -5979,98 +5983,98 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the inspection to update */
-          inspectionId: string;
-        };
-      };
+          inspectionId: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["UpdateInspectionStatusRequest"];
-        };
-      };
+          'application/json': components['schemas']['UpdateInspectionStatusRequest']
+        }
+      }
       responses: {
         /** @description Inspection updated successfully */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                inspection?: components["schemas"]["DetailedInspection"];
-              };
-            };
-          };
-        };
+                inspection?: components['schemas']['DetailedInspection']
+              }
+            }
+          }
+        }
         /** @description Invalid request body or invalid status transition */
         400: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
+            'application/json': {
+              error?: string
+            }
+          }
+        }
         /** @description Inspection not found */
         404: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
+            'application/json': {
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/inspections/internal/{inspectionId}/draft": {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/internal/{inspectionId}/draft': {
     /** Save inspection draft data (rooms and inspector name) */
     patch: {
       parameters: {
         path: {
-          inspectionId: string;
-        };
-      };
+          inspectionId: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": components["schemas"]["SaveInspectionDraftRequest"];
-        };
-      };
+          'application/json': components['schemas']['SaveInspectionDraftRequest']
+        }
+      }
       responses: {
         /** @description Draft saved successfully */
         200: {
-          content: never;
-        };
+          content: never
+        }
         /** @description Invalid request body */
         400: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
+            'application/json': {
+              error?: string
+            }
+          }
+        }
         /** @description Inspection not found */
         404: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
+            'application/json': {
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
-            "application/json": {
-              error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/files": {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/files': {
     /** List files with optional prefix */
     get: {
       parameters: {
@@ -9072,8 +9076,8 @@ export interface components {
       }
       noticeGivenBy?: string
       /** Format: date-time */
-      noticeDate?: string;
-      noticeTimeTenant?: string | number;
+      noticeDate?: string
+      noticeTimeTenant?: string | number
       /** Format: date-time */
       preferredMoveOutDate?: string
       /** Format: date-time */
@@ -9113,30 +9117,14 @@ export interface components {
         isTenant: boolean
         parkingSpaceWaitingList?: {
           /** Format: date-time */
-          birthDate: string;
-          address?: {
-            street?: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          phoneNumbers?: {
-              phoneNumber: string;
-              type: string;
-              isMainNumber: boolean;
-            }[];
-          emailAddress?: string;
-          isTenant: boolean;
-          parkingSpaceWaitingList?: {
-            /** Format: date-time */
-            queueTime: string;
-            queuePoints: number;
-            type: number;
-          };
-          specialAttention?: boolean;
-          leaseContactType?: string;
-        }[];
-    };
+          queueTime: string
+          queuePoints: number
+          type: number
+        }
+        specialAttention?: boolean
+        leaseContactType?: string
+      }[]
+    }
     IdentityCheckContact: {
       contactCode: string
       nationalRegistrationNumber: string
@@ -9157,14 +9145,14 @@ export interface components {
       /** Format: date-time */
       lastDebitDate: string | null
       /** @enum {number} */
-      status: 0 | 1 | 2 | 3;
-      rentalObjectCode: string | null;
-      property?: string | null;
-      buildingCode?: string | null;
-      area?: string | null;
-      buildingManager?: string | null;
-      districtName?: string | null;
-    };
+      status: 0 | 1 | 2 | 3
+      rentalObjectCode: string | null
+      property?: string | null
+      buildingCode?: string | null
+      area?: string | null
+      buildingManager?: string | null
+      districtName?: string | null
+    }
     ContactInfo: {
       name: string
       contactCode: string
@@ -9209,99 +9197,120 @@ export interface components {
     }
     ListingTextContent: {
       /** Format: uuid */
-      id: string;
-      rentalObjectCode: string;
-      contentBlocks: ({
-          /** @enum {string} */
-          type: "preamble";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "headline";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "subtitle";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "text";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "bullet_list";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "link";
-          name: string;
-          /** Format: uri */
-          url: string;
-        })[];
+      id: string
+      rentalObjectCode: string
+      contentBlocks: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
       updatedAt: string
     }
     CreateListingTextContentRequest: {
-      rentalObjectCode: string;
-      contentBlocks: ({
-          /** @enum {string} */
-          type: "preamble";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "headline";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "subtitle";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "text";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "bullet_list";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "link";
-          name: string;
-          /** Format: uri */
-          url: string;
-        })[];
-    };
+      rentalObjectCode: string
+      contentBlocks: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+    }
     UpdateListingTextContentRequest: {
-      contentBlocks?: ({
-          /** @enum {string} */
-          type: "preamble";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "headline";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "subtitle";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "text";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "bullet_list";
-          content: string;
-        } | {
-          /** @enum {string} */
-          type: "link";
-          name: string;
-          /** Format: uri */
-          url: string;
-        })[];
-    };
+      contentBlocks?: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+    }
     WorkOrder: {
       accessCaption: string
       caption: string
@@ -9476,140 +9485,140 @@ export interface components {
       code: string
       name: string | null
       /** @enum {string|null} */
-      status: "VACANT" | "LEASED" | null;
-      entrance: string | null;
-      location: string | null;
-      floor: string | null;
-      partNo: number | null;
-      part: string | null;
-      deleted: boolean;
+      status: 'VACANT' | 'LEASED' | null
+      entrance: string | null
+      location: string | null
+      floor: string | null
+      partNo: number | null
+      part: string | null
+      deleted: boolean
       validityPeriod: {
         /** Format: date-time */
-        fromDate: string;
+        fromDate: string
         /** Format: date-time */
-        toDate: string;
-      };
+        toDate: string
+      }
       accessibility: {
-        wheelchairAccessible: boolean;
-        elevator: boolean;
-        residenceAdapted: boolean;
-      };
+        wheelchairAccessible: boolean
+        elevator: boolean
+        residenceAdapted: boolean
+      }
       features: {
-        hygieneFacility: string | null;
+        hygieneFacility: string | null
         balcony1?: {
           location: string
           type: string
         }
         balcony2?: {
-          location: string;
-          type: string;
-        };
-        patioLocation: string | null;
-        sauna: boolean;
-        extraToilet: boolean;
-        sharedKitchen: boolean;
-        petAllergyFree: boolean;
+          location: string
+          type: string
+        }
+        patioLocation: string | null
+        sauna: boolean
+        extraToilet: boolean
+        sharedKitchen: boolean
+        petAllergyFree: boolean
         /** @description Is the apartment checked for electric allergy intolerance? */
-        electricAllergyIntolerance: boolean;
-        smokeFree: boolean;
-        asbestos: boolean;
-      };
+        electricAllergyIntolerance: boolean
+        smokeFree: boolean
+        asbestos: boolean
+      }
       type: {
-        code: string;
-        name: string | null;
-        roomCount: number | null;
-        kitchen: number;
-      };
+        code: string
+        name: string | null
+        roomCount: number | null
+        kitchen: number
+      }
       residenceType: {
-        residenceTypeId: string;
-        code: string;
-        name: string | null;
-        roomCount: number | null;
-        kitchen: number;
-        systemStandard: number;
-        checklistId: string | null;
-        componentTypeActionId: string | null;
-        statisticsGroupSCBId: string | null;
-        statisticsGroup2Id: string | null;
-        statisticsGroup3Id: string | null;
-        statisticsGroup4Id: string | null;
-        timestamp: string;
-      };
-      rentalInformation: ({
-        apartmentNumber: string | null;
-        rentalId: string | null;
+        residenceTypeId: string
+        code: string
+        name: string | null
+        roomCount: number | null
+        kitchen: number
+        systemStandard: number
+        checklistId: string | null
+        componentTypeActionId: string | null
+        statisticsGroupSCBId: string | null
+        statisticsGroup2Id: string | null
+        statisticsGroup3Id: string | null
+        statisticsGroup4Id: string | null
+        timestamp: string
+      }
+      rentalInformation: {
+        apartmentNumber: string | null
+        rentalId: string | null
         type: {
-          code: string;
-          name: string | null;
-        };
-      }) | null;
+          code: string
+          name: string | null
+        }
+      } | null
       propertyObject: {
         energy: {
           energyClass: number
           /** Format: date-time */
           energyRegistered?: string
           /** Format: date-time */
-          energyReceived?: string;
-          energyIndex?: number;
-        };
-        rentalId: string | null;
-        rentalInformation: ({
+          energyReceived?: string
+          energyIndex?: number
+        }
+        rentalId: string | null
+        rentalInformation: {
           type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
-        rentalBlocks: ({
-            id: string;
-            blockReasonId: string | null;
-            blockReason: string | null;
-            /** Format: date-time */
-            fromDate: string;
-            /** Format: date-time */
-            toDate: string | null;
-            amount: number | null;
-          })[];
-      };
+            code: string
+            name: string | null
+          }
+        } | null
+        rentalBlocks: {
+          id: string
+          blockReasonId: string | null
+          blockReason: string | null
+          /** Format: date-time */
+          fromDate: string
+          /** Format: date-time */
+          toDate: string | null
+          amount: number | null
+        }[]
+      }
       property: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
+        id: string | null
+        name: string | null
+        code: string | null
+      }
       building: {
-        id: string | null;
-        name: string | null;
-        code: string | null;
-      };
-      staircase: ({
-        id: string;
-        code: string;
-        name: string | null;
+        id: string | null
+        name: string | null
+        code: string | null
+      }
+      staircase: {
+        id: string
+        code: string
+        name: string | null
         features: {
-          floorPlan: string | null;
-          accessibleByElevator: boolean;
-        };
+          floorPlan: string | null
+          accessibleByElevator: boolean
+        }
         dates: {
           /** Format: date-time */
-          from: string;
+          from: string
           /** Format: date-time */
-          to: string;
-        };
+          to: string
+        }
         property?: {
-          propertyId: string | null;
-          propertyName: string | null;
-          propertyCode: string | null;
-        };
+          propertyId: string | null
+          propertyName: string | null
+          propertyCode: string | null
+        }
         building?: {
-          buildingId: string | null;
-          buildingName: string | null;
-          buildingCode: string | null;
-        };
-        deleted: boolean;
-        timestamp: string;
-      }) | null;
-      areaSize: number | null;
-      malarEnergiFacilityId: string | null;
-    };
+          buildingId: string | null
+          buildingName: string | null
+          buildingCode: string | null
+        }
+        deleted: boolean
+        timestamp: string
+      } | null
+      areaSize: number | null
+      malarEnergiFacilityId: string | null
+    }
     ResidenceSummary: {
       id: string
       code: string
@@ -9665,13 +9674,13 @@ export interface components {
         propertyCode: string | null
       }
       building?: {
-        buildingId: string | null;
-        buildingName: string | null;
-        buildingCode: string | null;
-      };
-      deleted: boolean;
-      timestamp: string;
-    };
+        buildingId: string | null
+        buildingName: string | null
+        buildingCode: string | null
+      }
+      deleted: boolean
+      timestamp: string
+    }
     Room: {
       id: string
       propertyObjectId: string
@@ -9698,23 +9707,23 @@ export interface components {
         /** Format: date-time */
         availableFrom: string | null
         /** Format: date-time */
-        availableTo: string | null;
-      };
-      sortingOrder: number;
-      deleted: boolean;
-      timestamp: string;
-      roomType: ({
-        id: string;
-        code: string;
-        name: string | null;
-        use: number;
-        optionAllowed: number;
-        isSystemStandard: number;
-        allowSmallRoomsInValuation: number;
-        timestamp: string;
-      }) | null;
-      area?: number;
-    };
+        availableTo: string | null
+      }
+      sortingOrder: number
+      deleted: boolean
+      timestamp: string
+      roomType: {
+        id: string
+        code: string
+        name: string | null
+        use: number
+        optionAllowed: number
+        isSystemStandard: number
+        allowSmallRoomsInValuation: number
+        timestamp: string
+      } | null
+      area?: number
+    }
     ParkingSpace: {
       rentalId: string
       companyCode: string
@@ -9743,15 +9752,15 @@ export interface components {
       }
     }
     MaintenanceUnit: {
-      id: string;
-      propertyObjectId: string;
-      rentalPropertyId?: string;
-      code: string;
-      caption: string | null;
-      type?: string | null;
-      estateCode: string | null;
-      estate: string | null;
-    };
+      id: string
+      propertyObjectId: string
+      rentalPropertyId?: string
+      code: string
+      caption: string | null
+      type?: string | null
+      estateCode: string | null
+      estate: string | null
+    }
     FacilityDetails: {
       id: string
       propertyObjectId: string
@@ -9824,16 +9833,27 @@ export interface components {
       }
     }
     FacilitySearchResult: {
+      /** @description Unique identifier for the search result */
       id: string
-      rentalId: string
-      code: string
+      /**
+       * @description Indicates this is a facility result
+       * @enum {string}
+       */
+      type: 'facility'
+      /** @description Name of the facility */
       name: string | null
+      /** @description Rental ID of the facility */
+      rentalId: string
+      /** @description Code of the facility */
+      code: string
       property: {
         code: string | null
+        /** @description Name of property associated with the facility */
         name: string | null
       }
       building: {
         code: string | null
+        /** @description Name of building associated with the facility */
         name: string | null
       }
     }
@@ -9965,7 +9985,7 @@ export interface components {
         spaceId: string | null
         /** @enum {string} */
         spaceType: 'OBJECT' | 'PropertyObject'
-        installationDate: string
+        installationDate: string | null
         deinstallationDate: string | null
         orderNumber?: string | null
         cost: number
@@ -10109,7 +10129,7 @@ export interface components {
       spaceId: string | null
       /** @enum {string} */
       spaceType: 'OBJECT' | 'PropertyObject'
-      installationDate: string
+      installationDate: string | null
       deinstallationDate: string | null
       orderNumber?: string | null
       cost: number
@@ -10194,7 +10214,7 @@ export interface components {
           componentId: string
           spaceId: string | null
           spaceType: components['schemas']['ComponentInstallation']['spaceType']
-          installationDate: string
+          installationDate: string | null
           deinstallationDate: string | null
           orderNumber?: string | null
           cost: number
@@ -10353,7 +10373,7 @@ export interface components {
       /** @enum {string} */
       spaceType: 'OBJECT' | 'PropertyObject'
       /** Format: date-time */
-      installationDate: string
+      installationDate?: string | null
       /** Format: date-time */
       deinstallationDate?: string
       orderNumber?: string
@@ -10459,7 +10479,7 @@ export interface components {
       id: string
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -10472,12 +10492,12 @@ export interface components {
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-      createdBy?: string | null;
-      updatedBy?: string | null;
-      keyCount?: number;
-      cardCount?: number;
-    };
+      updatedAt: string
+      createdBy?: string | null
+      updatedBy?: string | null
+      keyCount?: number
+      cardCount?: number
+    }
     KeyDetails: {
       /** Format: uuid */
       id: string
@@ -10530,7 +10550,7 @@ export interface components {
       id: string
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -10543,12 +10563,41 @@ export interface components {
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-      createdBy?: string | null;
-      updatedBy?: string | null;
-      keyCount?: number;
-      cardCount?: number;
-      keysArray: ({
+      updatedAt: string
+      createdBy?: string | null
+      updatedBy?: string | null
+      keyCount?: number
+      cardCount?: number
+      keysArray: {
+        /** Format: uuid */
+        id: string
+        keyName: string
+        keySequenceNumber?: number | null
+        flexNumber?: number | null
+        rentalObjectCode?: string | null
+        /** @enum {string} */
+        keyType:
+          | 'HN'
+          | 'FS'
+          | 'MV'
+          | 'LGH'
+          | 'PB'
+          | 'GAR'
+          | 'LOK'
+          | 'HL'
+          | 'FÖR'
+          | 'SOP'
+          | 'ÖVR'
+        /** Format: uuid */
+        keySystemId?: string | null
+        /** @default false */
+        disposed?: boolean
+        notes?: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+        keySystem?: {
           /** Format: uuid */
           id: string
           systemCode: string
@@ -10564,51 +10613,37 @@ export interface components {
           notes?: string | null
           schemaFileId?: string | null
           /** Format: date-time */
-          updatedAt: string;
-          keySystem?: ({
-            /** Format: uuid */
-            id: string;
-            systemCode: string;
-            name: string;
-            manufacturer: string;
-            managingSupplier?: string | null;
-            /** @enum {string} */
-            type: "MECHANICAL" | "ELECTRONIC" | "HYBRID";
-            propertyIds?: string;
-            /** Format: date-time */
-            installationDate?: string | null;
-            isActive?: boolean;
-            notes?: string | null;
-            schemaFileId?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-            createdBy?: string | null;
-            updatedBy?: string | null;
-          }) | null;
-          loans?: {
-              id: components["schemas"]["KeyLoanWithDetails"]["id"];
-              loanType: components["schemas"]["KeyLoanWithDetails"]["loanType"];
-              contact?: components["schemas"]["KeyLoanWithDetails"]["contact"];
-              contact2?: components["schemas"]["KeyLoanWithDetails"]["contact2"];
-              contactPerson?: components["schemas"]["KeyLoanWithDetails"]["contactPerson"];
-              notes?: components["schemas"]["KeyLoanWithDetails"]["notes"];
-              returnedAt?: components["schemas"]["KeyLoanWithDetails"]["returnedAt"];
-              availableToNextTenantFrom?: components["schemas"]["KeyLoanWithDetails"]["availableToNextTenantFrom"];
-              pickedUpAt?: components["schemas"]["KeyLoanWithDetails"]["pickedUpAt"];
-              createdAt: components["schemas"]["KeyLoanWithDetails"]["createdAt"];
-              updatedAt: components["schemas"]["KeyLoanWithDetails"]["updatedAt"];
-              createdBy?: components["schemas"]["KeyLoanWithDetails"]["createdBy"];
-              updatedBy?: components["schemas"]["KeyLoanWithDetails"]["updatedBy"];
-              keyCount?: components["schemas"]["KeyLoanWithDetails"]["keyCount"];
-              cardCount?: components["schemas"]["KeyLoanWithDetails"]["cardCount"];
-            }[] | null;
-          events?: (({
+          createdAt: string
+          /** Format: date-time */
+          updatedAt: string
+          createdBy?: string | null
+          updatedBy?: string | null
+        } | null
+        loans?:
+          | {
+              id: components['schemas']['KeyLoanWithDetails']['id']
+              loanType: components['schemas']['KeyLoanWithDetails']['loanType']
+              contact?: components['schemas']['KeyLoanWithDetails']['contact']
+              contact2?: components['schemas']['KeyLoanWithDetails']['contact2']
+              contactPerson?: components['schemas']['KeyLoanWithDetails']['contactPerson']
+              notes?: components['schemas']['KeyLoanWithDetails']['notes']
+              returnedAt?: components['schemas']['KeyLoanWithDetails']['returnedAt']
+              availableToNextTenantFrom?: components['schemas']['KeyLoanWithDetails']['availableToNextTenantFrom']
+              pickedUpAt?: components['schemas']['KeyLoanWithDetails']['pickedUpAt']
+              createdAt: components['schemas']['KeyLoanWithDetails']['createdAt']
+              updatedAt: components['schemas']['KeyLoanWithDetails']['updatedAt']
+              createdBy?: components['schemas']['KeyLoanWithDetails']['createdBy']
+              updatedBy?: components['schemas']['KeyLoanWithDetails']['updatedBy']
+              keyCount?: components['schemas']['KeyLoanWithDetails']['keyCount']
+              cardCount?: components['schemas']['KeyLoanWithDetails']['cardCount']
+            }[]
+          | null
+        events?:
+          | {
               /** Format: uuid */
               id: string
               /** @enum {string} */
-              type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
+              type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
               /** @enum {string} */
               status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
               /** Format: uuid */
@@ -10700,7 +10735,7 @@ export interface components {
       /** Format: uuid */
       id: string
       /** @enum {string} */
-      type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
+      type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
       /** @enum {string} */
       status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
       /** Format: uuid */
@@ -10796,7 +10831,7 @@ export interface components {
       keyCards?: string[]
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -10813,7 +10848,7 @@ export interface components {
       keyCards?: string[]
       /** @enum {string} */
       loanType?: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -10886,8 +10921,8 @@ export interface components {
       /** Format: uuid */
       id: string
       name: string
-      keys: string
       description?: string | null
+      keyCount?: number
     }
     BundleWithLoanedKeysInfo: {
       /** Format: uuid */
@@ -10899,12 +10934,12 @@ export interface components {
     }
     CreateKeyBundleRequest: {
       name: string
-      keys: string
+      keys: string[]
       description?: string | null
     }
     UpdateKeyBundleRequest: {
       name?: string
-      keys?: string
+      keys?: string[]
       description?: string | null
     }
     KeyBundleDetailsResponse: {
@@ -10912,8 +10947,8 @@ export interface components {
         /** Format: uuid */
         id: string
         name: string
-        keys: string
         description?: string | null
+        keyCount?: number
       }
       keys: {
         /** Format: uuid */
@@ -10972,7 +11007,7 @@ export interface components {
               /** Format: uuid */
               id: string
               /** @enum {string} */
-              type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
+              type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
               /** @enum {string} */
               status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
               /** Format: uuid */
@@ -10988,7 +11023,7 @@ export interface components {
     CreateKeyEventRequest: {
       keys: string[]
       /** @enum {string} */
-      type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
+      type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
       /** @enum {string} */
       status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
       /** Format: uuid */
@@ -10997,7 +11032,7 @@ export interface components {
     UpdateKeyEventRequest: {
       keys?: string[]
       /** @enum {string} */
-      type?: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
+      type?: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
       /** @enum {string} */
       status?: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
       /** Format: uuid */
@@ -11123,44 +11158,46 @@ export interface components {
       codes?: unknown[] | null
     }
     CardDetails: {
-      cardId: string;
-      name?: string | null;
-      owner?: unknown;
-      appearanceCode?: string | null;
-      classification?: string | null;
-      disabled?: boolean;
-      startTime?: string | null;
-      stopTime?: string | null;
-      createTime: string;
-      pinCode?: string | null;
-      state?: string | null;
-      archivedAt?: string | null;
-      codes?: unknown[] | null;
-      loans?: (({
-          /** Format: uuid */
-          id: string;
-          /** @enum {string} */
-          loanType: "TENANT" | "MAINTENANCE";
-          contact?: string | null;
-          contact2?: string | null;
-          contactPerson?: string | null;
-          notes?: string | null;
-          /** Format: date-time */
-          returnedAt?: string | null;
-          /** Format: date-time */
-          availableToNextTenantFrom?: string | null;
-          /** Format: date-time */
-          pickedUpAt?: string | null;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-          createdBy?: string | null;
-          updatedBy?: string | null;
-          keyCount?: number;
-          cardCount?: number;
-        })[]) | null;
-    };
+      cardId: string
+      name?: string | null
+      owner?: unknown
+      appearanceCode?: string | null
+      classification?: string | null
+      disabled?: boolean
+      startTime?: string | null
+      stopTime?: string | null
+      createTime: string
+      pinCode?: string | null
+      state?: string | null
+      archivedAt?: string | null
+      codes?: unknown[] | null
+      loans?:
+        | {
+            /** Format: uuid */
+            id: string
+            /** @enum {string} */
+            loanType: 'TENANT' | 'MAINTENANCE'
+            contact?: string | null
+            contact2?: string | null
+            contactPerson?: string | null
+            notes?: string | null
+            /** Format: date-time */
+            returnedAt?: string | null
+            /** Format: date-time */
+            availableToNextTenantFrom?: string | null
+            /** Format: date-time */
+            pickedUpAt?: string | null
+            /** Format: date-time */
+            createdAt: string
+            /** Format: date-time */
+            updatedAt: string
+            createdBy?: string | null
+            updatedBy?: string | null
+            keyCount?: number
+            cardCount?: number
+          }[]
+        | null
+    }
     QueryCardOwnersParams: {
       nameFilter?: string
       expand?: string
@@ -11197,9 +11234,9 @@ export interface components {
        * @description Indicates this is a property result
        * @enum {string}
        */
-      type: "property";
+      type: 'property'
       /** @description Property code */
-      code: string;
+      code: string
       /** @description Name or designation of the property */
       name: string
     }
@@ -11210,9 +11247,9 @@ export interface components {
        * @description Indicates this is a building result
        * @enum {string}
        */
-      type: "building";
+      type: 'building'
       /** @description Building code */
-      code: string;
+      code: string
       /** @description Name of the building */
       name: string | null
       property?: {
@@ -11241,1479 +11278,1489 @@ export interface components {
       /** @description Property name */
       estate: string | null
     }
-    /** @description A search result that can be either a property, building, residence, parking space or maintenance unit */
-    SearchResult: {
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a property result
-       * @enum {string}
-       */
-      type: "property";
-      /** @description Property code */
-      code: string;
-      /** @description Name or designation of the property */
-      name: string;
-    } | ({
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a building result
-       * @enum {string}
-       */
-      type: "building";
-      /** @description Building code */
-      code: string;
-      /** @description Name of the building */
-      name: string | null;
-      property?: ({
-        /** @description Property associated with the building */
-        name: string | null;
-        id: string;
-        code: string;
-      }) | null;
-    }) | ({
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a residence result
-       * @enum {string}
-       */
-      type: "residence";
-      /** @description Name of the residence */
-      name: string | null;
-      /** @description Rental object ID of the residence */
-      rentalId: string | null;
-      property: {
-        code: string | null;
-        /** @description Name of property associated with the residence */
-        name: string | null;
-      };
-      building: {
-        code: string | null;
-        /** @description Name of building associated with the residence */
-        name: string | null;
-      };
-    }) | ({
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a parking space result
-       * @enum {string}
-       */
-      type: "parking-space";
-      /** @description Name of the parking space */
-      name: string | null;
-      /** @description Rental ID of the parking space */
-      rentalId: string;
-      /** @description Code of the parking space */
-      code: string;
-      property: {
-        code: string | null;
-        /** @description Name of property associated with the parking space */
-        name: string | null;
-      };
-      building: {
-        code: string | null;
-        /** @description Name of building associated with the parking space */
-        name: string | null;
-      };
-    }) | ({
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a maintenance unit result
-       * @enum {string}
-       */
-      type: "maintenance-unit";
-      /** @description Code of the maintenance unit */
-      code: string;
-      /** @description Caption/name of the maintenance unit */
-      caption: string | null;
-      /** @description Type of maintenance unit */
-      maintenanceType: string | null;
-      /** @description Property code */
-      estateCode: string | null;
-      /** @description Property name */
-      estate: string | null;
-    }) | ({
-      /** @description Unique identifier for the search result */
-      id: string;
-      /**
-       * @description Indicates this is a facility result
-       * @enum {string}
-       */
-      type: "facility";
-      /** @description Name of the facility */
-      name: string | null;
-      /** @description Rental ID of the facility */
-      rentalId: string;
-      /** @description Code of the facility */
-      code: string;
-      property: {
-        code: string | null;
-        /** @description Name of property associated with the facility */
-        name: string | null;
-      };
-      building: {
-        code: string | null;
-        /** @description Name of building associated with the facility */
-        name: string | null;
-      };
-    });
+    /** @description A search result that can be either a property, building, residence, parking space, maintenance unit or facility */
+    SearchResult:
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a property result
+           * @enum {string}
+           */
+          type: 'property'
+          /** @description Property code */
+          code: string
+          /** @description Name or designation of the property */
+          name: string
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a building result
+           * @enum {string}
+           */
+          type: 'building'
+          /** @description Building code */
+          code: string
+          /** @description Name of the building */
+          name: string | null
+          property?: {
+            /** @description Property associated with the building */
+            name: string | null
+            id: string
+            code: string
+          } | null
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a residence result
+           * @enum {string}
+           */
+          type: 'residence'
+          /** @description Name of the residence */
+          name: string | null
+          /** @description Rental object ID of the residence */
+          rentalId: string | null
+          property: {
+            code: string | null
+            /** @description Name of property associated with the residence */
+            name: string | null
+          }
+          building: {
+            code: string | null
+            /** @description Name of building associated with the residence */
+            name: string | null
+          }
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a parking space result
+           * @enum {string}
+           */
+          type: 'parking-space'
+          /** @description Name of the parking space */
+          name: string | null
+          /** @description Rental ID of the parking space */
+          rentalId: string
+          /** @description Code of the parking space */
+          code: string
+          property: {
+            code: string | null
+            /** @description Name of property associated with the parking space */
+            name: string | null
+          }
+          building: {
+            code: string | null
+            /** @description Name of building associated with the parking space */
+            name: string | null
+          }
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a maintenance unit result
+           * @enum {string}
+           */
+          type: 'maintenance-unit'
+          /** @description Code of the maintenance unit */
+          code: string
+          /** @description Caption/name of the maintenance unit */
+          caption: string | null
+          /** @description Type of maintenance unit */
+          maintenanceType: string | null
+          /** @description Property code */
+          estateCode: string | null
+          /** @description Property name */
+          estate: string | null
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a facility result
+           * @enum {string}
+           */
+          type: 'facility'
+          /** @description Name of the facility */
+          name: string | null
+          /** @description Rental ID of the facility */
+          rentalId: string
+          /** @description Code of the facility */
+          code: string
+          property: {
+            code: string | null
+            /** @description Name of property associated with the facility */
+            name: string | null
+          }
+          building: {
+            code: string | null
+            /** @description Name of building associated with the facility */
+            name: string | null
+          }
+        }
     Inspection: {
-      id: string;
-      status: string;
+      id: string
+      status: string
       /** Format: date-time */
-      date: string;
-      inspector: string;
-      type: string;
-      address: string;
-      apartmentCode: string | null;
-      leaseId: string;
-      masterKeyAccess: string | null;
-      lease: ({
-        leaseId: string;
-        leaseNumber: string;
+      date: string
+      inspector: string
+      type: string
+      address: string
+      apartmentCode: string | null
+      leaseId: string
+      masterKeyAccess: string | null
+      lease: {
+        leaseId: string
+        leaseNumber: string
         /** Format: date-time */
-        leaseStartDate: string;
+        leaseStartDate: string
         /** Format: date-time */
-        leaseEndDate?: string;
+        leaseEndDate?: string
         /** @enum {string} */
-        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
-        tenantContactIds?: string[];
-        rentalPropertyId: string;
+        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+        tenantContactIds?: string[]
+        rentalPropertyId: string
         rentalProperty?: {
-          rentalPropertyId: string;
-          apartmentNumber: number;
-          size: number;
-          type: string;
+          rentalPropertyId: string
+          apartmentNumber: number
+          size: number
+          type: string
           address?: {
-            street?: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          rentalPropertyType: string;
-          additionsIncludedInRent: string;
-          otherInfo?: string;
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          rentalPropertyType: string
+          additionsIncludedInRent: string
+          otherInfo?: string
           roomTypes?: {
-              roomTypeId: string;
-              name: string;
-            }[];
+            roomTypeId: string
+            name: string
+          }[]
           /** Format: date-time */
-          lastUpdated?: string;
-        };
-        type: string;
+          lastUpdated?: string
+        }
+        type: string
         rentInfo?: {
           currentRent: {
-            rentId?: string;
-            leaseId?: string;
-            currentRent: number;
-            vat: number;
-            additionalChargeDescription?: string;
-            additionalChargeAmount?: number;
+            rentId?: string
+            leaseId?: string
+            currentRent: number
+            vat: number
+            additionalChargeDescription?: string
+            additionalChargeAmount?: number
             /** Format: date-time */
-            rentStartDate?: string;
+            rentStartDate?: string
             /** Format: date-time */
-            rentEndDate?: string;
-          };
-        };
+            rentEndDate?: string
+          }
+        }
         address?: {
-          street?: string;
-          number: string;
-          postalCode: string;
-          city: string;
-        };
-        noticeGivenBy?: string;
+          street?: string
+          number: string
+          postalCode: string
+          city: string
+        }
+        noticeGivenBy?: string
         /** Format: date-time */
-        noticeDate?: string;
-        noticeTimeTenant?: string | number;
+        noticeDate?: string
+        noticeTimeTenant?: string | number
         /** Format: date-time */
-        preferredMoveOutDate?: string;
+        preferredMoveOutDate?: string
         /** Format: date-time */
-        terminationDate?: string;
+        terminationDate?: string
         /** Format: date-time */
-        contractDate?: string;
+        contractDate?: string
         /** Format: date-time */
-        lastDebitDate?: string;
+        lastDebitDate?: string
         /** Format: date-time */
-        approvalDate?: string;
+        approvalDate?: string
         residentialArea?: {
-          code: string;
-          caption: string;
-        };
+          code: string
+          caption: string
+        }
         tenants?: {
-            contactCode: string;
-            contactKey: string;
-            leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
-            nationalRegistrationNumber: string;
+          contactCode: string
+          contactKey: string
+          leaseIds?: string[]
+          firstName: string
+          lastName: string
+          fullName: string
+          nationalRegistrationNumber: string
+          /** Format: date-time */
+          birthDate: string
+          address?: {
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          phoneNumbers?: {
+            phoneNumber: string
+            type: string
+            isMainNumber: boolean
+          }[]
+          emailAddress?: string
+          isTenant: boolean
+          parkingSpaceWaitingList?: {
             /** Format: date-time */
-            birthDate: string;
-            address?: {
-              street?: string;
-              number: string;
-              postalCode: string;
-              city: string;
-            };
-            phoneNumbers?: {
-                phoneNumber: string;
-                type: string;
-                isMainNumber: boolean;
-              }[];
-            emailAddress?: string;
-            isTenant: boolean;
-            parkingSpaceWaitingList?: {
-              /** Format: date-time */
-              queueTime: string;
-              queuePoints: number;
-              type: number;
-            };
-            specialAttention?: boolean;
-            leaseContactType?: string;
-          }[];
-      }) | null;
-      rooms: {
-          roomId: string;
-          conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
-            details: string;
-          };
-          actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
-            details: string[];
-          };
-          componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
-            details: string;
-          };
-          componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
-            details: string[];
-          };
-          photos: string[];
-          isApproved: boolean;
-          isHandled: boolean;
-        }[] | null;
-    };
+            queueTime: string
+            queuePoints: number
+            type: number
+          }
+          specialAttention?: boolean
+          leaseContactType?: string
+        }[]
+      } | null
+      rooms:
+        | {
+            roomId: string
+            conditions: {
+              wall1: string
+              wall2: string
+              wall3: string
+              wall4: string
+              floor: string
+              ceiling: string
+              details: string
+            }
+            actions: {
+              wall1: string[]
+              wall2: string[]
+              wall3: string[]
+              wall4: string[]
+              floor: string[]
+              ceiling: string[]
+              details: string[]
+            }
+            componentNotes: {
+              wall1: string
+              wall2: string
+              wall3: string
+              wall4: string
+              floor: string
+              ceiling: string
+              details: string
+            }
+            componentPhotos: {
+              wall1: string[]
+              wall2: string[]
+              wall3: string[]
+              wall4: string[]
+              floor: string[]
+              ceiling: string[]
+              details: string[]
+            }
+            photos: string[]
+            isApproved: boolean
+            isHandled: boolean
+          }[]
+        | null
+    }
     InspectionRoom: {
-      roomId: string;
+      roomId: string
       conditions: {
-        wall1: string;
-        wall2: string;
-        wall3: string;
-        wall4: string;
-        floor: string;
-        ceiling: string;
-        details: string;
-      };
+        wall1: string
+        wall2: string
+        wall3: string
+        wall4: string
+        floor: string
+        ceiling: string
+        details: string
+      }
       actions: {
-        wall1: string[];
-        wall2: string[];
-        wall3: string[];
-        wall4: string[];
-        floor: string[];
-        ceiling: string[];
-        details: string[];
-      };
+        wall1: string[]
+        wall2: string[]
+        wall3: string[]
+        wall4: string[]
+        floor: string[]
+        ceiling: string[]
+        details: string[]
+      }
       componentNotes: {
-        wall1: string;
-        wall2: string;
-        wall3: string;
-        wall4: string;
-        floor: string;
-        ceiling: string;
-        details: string;
-      };
+        wall1: string
+        wall2: string
+        wall3: string
+        wall4: string
+        floor: string
+        ceiling: string
+        details: string
+      }
       componentPhotos: {
-        wall1: string[];
-        wall2: string[];
-        wall3: string[];
-        wall4: string[];
-        floor: string[];
-        ceiling: string[];
-        details: string[];
-      };
-      photos: string[];
-      isApproved: boolean;
-      isHandled: boolean;
-    };
+        wall1: string[]
+        wall2: string[]
+        wall3: string[]
+        wall4: string[]
+        floor: string[]
+        ceiling: string[]
+        details: string[]
+      }
+      photos: string[]
+      isApproved: boolean
+      isHandled: boolean
+    }
     DetailedInspection: {
-      id: string;
-      status: string;
+      id: string
+      status: string
       /** Format: date-time */
-      date: string;
+      date: string
       /** Format: date-time */
-      startedAt: string | null;
+      startedAt: string | null
       /** Format: date-time */
-      endedAt: string | null;
-      inspector: string;
-      type: string;
-      residenceId: string;
-      address: string;
-      apartmentCode: string | null;
-      isFurnished: boolean;
-      leaseId: string;
-      isTenantPresent: boolean;
-      isNewTenantPresent: boolean;
-      masterKeyAccess: string | null;
-      hasRemarks: boolean;
-      notes: string | null;
-      totalCost: number | null;
-      remarkCount: number;
-      rooms: ({
-          room: string;
-          remarks: ({
-              remarkId: string;
-              location: string | null;
-              buildingComponent: string | null;
-              notes: string | null;
-              remarkGrade: number;
-              remarkStatus: string | null;
-              cost: number;
-              invoice: boolean;
-              quantity: number;
-              isMissing: boolean;
-              /** Format: date-time */
-              fixedDate: string | null;
-              workOrderCreated: boolean;
-              workOrderStatus: number | null;
-            })[];
-        })[];
-      lease: ({
-        leaseId: string;
-        leaseNumber: string;
-        /** Format: date-time */
-        leaseStartDate: string;
-        /** Format: date-time */
-        leaseEndDate?: string;
-        /** @enum {string} */
-        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
-        tenantContactIds?: string[];
-        rentalPropertyId: string;
-        rentalProperty?: {
-          rentalPropertyId: string;
-          apartmentNumber: number;
-          size: number;
-          type: string;
-          address?: {
-            street?: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          rentalPropertyType: string;
-          additionsIncludedInRent: string;
-          otherInfo?: string;
-          roomTypes?: {
-              roomTypeId: string;
-              name: string;
-            }[];
+      endedAt: string | null
+      inspector: string
+      type: string
+      residenceId: string
+      address: string
+      apartmentCode: string | null
+      isFurnished: boolean
+      leaseId: string
+      isTenantPresent: boolean
+      isNewTenantPresent: boolean
+      masterKeyAccess: string | null
+      hasRemarks: boolean
+      notes: string | null
+      totalCost: number | null
+      remarkCount: number
+      rooms: {
+        room: string
+        remarks: {
+          remarkId: string
+          location: string | null
+          buildingComponent: string | null
+          notes: string | null
+          remarkGrade: number
+          remarkStatus: string | null
+          cost: number
+          invoice: boolean
+          quantity: number
+          isMissing: boolean
           /** Format: date-time */
-          lastUpdated?: string;
-        };
-        type: string;
+          fixedDate: string | null
+          workOrderCreated: boolean
+          workOrderStatus: number | null
+        }[]
+      }[]
+      lease: {
+        leaseId: string
+        leaseNumber: string
+        /** Format: date-time */
+        leaseStartDate: string
+        /** Format: date-time */
+        leaseEndDate?: string
+        /** @enum {string} */
+        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+        tenantContactIds?: string[]
+        rentalPropertyId: string
+        rentalProperty?: {
+          rentalPropertyId: string
+          apartmentNumber: number
+          size: number
+          type: string
+          address?: {
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          rentalPropertyType: string
+          additionsIncludedInRent: string
+          otherInfo?: string
+          roomTypes?: {
+            roomTypeId: string
+            name: string
+          }[]
+          /** Format: date-time */
+          lastUpdated?: string
+        }
+        type: string
         rentInfo?: {
           currentRent: {
-            rentId?: string;
-            leaseId?: string;
-            currentRent: number;
-            vat: number;
-            additionalChargeDescription?: string;
-            additionalChargeAmount?: number;
+            rentId?: string
+            leaseId?: string
+            currentRent: number
+            vat: number
+            additionalChargeDescription?: string
+            additionalChargeAmount?: number
             /** Format: date-time */
-            rentStartDate?: string;
+            rentStartDate?: string
             /** Format: date-time */
-            rentEndDate?: string;
-          };
-        };
+            rentEndDate?: string
+          }
+        }
         address?: {
-          street?: string;
-          number: string;
-          postalCode: string;
-          city: string;
-        };
-        noticeGivenBy?: string;
+          street?: string
+          number: string
+          postalCode: string
+          city: string
+        }
+        noticeGivenBy?: string
         /** Format: date-time */
-        noticeDate?: string;
-        noticeTimeTenant?: string | number;
+        noticeDate?: string
+        noticeTimeTenant?: string | number
         /** Format: date-time */
-        preferredMoveOutDate?: string;
+        preferredMoveOutDate?: string
         /** Format: date-time */
-        terminationDate?: string;
+        terminationDate?: string
         /** Format: date-time */
-        contractDate?: string;
+        contractDate?: string
         /** Format: date-time */
-        lastDebitDate?: string;
+        lastDebitDate?: string
         /** Format: date-time */
-        approvalDate?: string;
+        approvalDate?: string
         residentialArea?: {
-          code: string;
-          caption: string;
-        };
+          code: string
+          caption: string
+        }
         tenants?: {
-            contactCode: string;
-            contactKey: string;
-            leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
-            nationalRegistrationNumber: string;
+          contactCode: string
+          contactKey: string
+          leaseIds?: string[]
+          firstName: string
+          lastName: string
+          fullName: string
+          nationalRegistrationNumber: string
+          /** Format: date-time */
+          birthDate: string
+          address?: {
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          phoneNumbers?: {
+            phoneNumber: string
+            type: string
+            isMainNumber: boolean
+          }[]
+          emailAddress?: string
+          isTenant: boolean
+          parkingSpaceWaitingList?: {
             /** Format: date-time */
-            birthDate: string;
-            address?: {
-              street?: string;
-              number: string;
-              postalCode: string;
-              city: string;
-            };
-            phoneNumbers?: {
-                phoneNumber: string;
-                type: string;
-                isMainNumber: boolean;
-              }[];
-            emailAddress?: string;
-            isTenant: boolean;
-            parkingSpaceWaitingList?: {
-              /** Format: date-time */
-              queueTime: string;
-              queuePoints: number;
-              type: number;
-            };
-            specialAttention?: boolean;
-            leaseContactType?: string;
-          }[];
-      }) | null;
-      residence: ({
-        id: string;
-        code: string;
-        name: string | null;
+            queueTime: string
+            queuePoints: number
+            type: number
+          }
+          specialAttention?: boolean
+          leaseContactType?: string
+        }[]
+      } | null
+      residence: {
+        id: string
+        code: string
+        name: string | null
         /** @enum {string|null} */
-        status: "VACANT" | "LEASED" | null;
-        entrance: string | null;
-        location: string | null;
-        floor: string | null;
-        partNo: number | null;
-        part: string | null;
-        deleted: boolean;
+        status: 'VACANT' | 'LEASED' | null
+        entrance: string | null
+        location: string | null
+        floor: string | null
+        partNo: number | null
+        part: string | null
+        deleted: boolean
         validityPeriod: {
           /** Format: date-time */
-          fromDate: string;
+          fromDate: string
           /** Format: date-time */
-          toDate: string;
-        };
+          toDate: string
+        }
         accessibility: {
-          wheelchairAccessible: boolean;
-          elevator: boolean;
-          residenceAdapted: boolean;
-        };
+          wheelchairAccessible: boolean
+          elevator: boolean
+          residenceAdapted: boolean
+        }
         features: {
-          hygieneFacility: string | null;
+          hygieneFacility: string | null
           balcony1?: {
-            location: string;
-            type: string;
-          };
+            location: string
+            type: string
+          }
           balcony2?: {
-            location: string;
-            type: string;
-          };
-          patioLocation: string | null;
-          sauna: boolean;
-          extraToilet: boolean;
-          sharedKitchen: boolean;
-          petAllergyFree: boolean;
+            location: string
+            type: string
+          }
+          patioLocation: string | null
+          sauna: boolean
+          extraToilet: boolean
+          sharedKitchen: boolean
+          petAllergyFree: boolean
           /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean;
-          smokeFree: boolean;
-          asbestos: boolean;
-        };
+          electricAllergyIntolerance: boolean
+          smokeFree: boolean
+          asbestos: boolean
+        }
         type: {
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-        };
+          code: string
+          name: string | null
+          roomCount: number | null
+          kitchen: number
+        }
         residenceType: {
-          residenceTypeId: string;
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-          systemStandard: number;
-          checklistId: string | null;
-          componentTypeActionId: string | null;
-          statisticsGroupSCBId: string | null;
-          statisticsGroup2Id: string | null;
-          statisticsGroup3Id: string | null;
-          statisticsGroup4Id: string | null;
-          timestamp: string;
-        };
-        rentalInformation: ({
-          apartmentNumber: string | null;
-          rentalId: string | null;
+          residenceTypeId: string
+          code: string
+          name: string | null
+          roomCount: number | null
+          kitchen: number
+          systemStandard: number
+          checklistId: string | null
+          componentTypeActionId: string | null
+          statisticsGroupSCBId: string | null
+          statisticsGroup2Id: string | null
+          statisticsGroup3Id: string | null
+          statisticsGroup4Id: string | null
+          timestamp: string
+        }
+        rentalInformation: {
+          apartmentNumber: string | null
+          rentalId: string | null
           type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
+            code: string
+            name: string | null
+          }
+        } | null
         propertyObject: {
           energy: {
-            energyClass: number;
+            energyClass: number
             /** Format: date-time */
-            energyRegistered?: string;
+            energyRegistered?: string
             /** Format: date-time */
-            energyReceived?: string;
-            energyIndex?: number;
-          };
-          rentalId: string | null;
-          rentalInformation: ({
+            energyReceived?: string
+            energyIndex?: number
+          }
+          rentalId: string | null
+          rentalInformation: {
             type: {
-              code: string;
-              name: string | null;
-            };
-          }) | null;
-          rentalBlocks: ({
-              id: string;
-              blockReasonId: string | null;
-              blockReason: string | null;
-              /** Format: date-time */
-              fromDate: string;
-              /** Format: date-time */
-              toDate: string | null;
-              amount: number | null;
-            })[];
-        };
+              code: string
+              name: string | null
+            }
+          } | null
+          rentalBlocks: {
+            id: string
+            blockReasonId: string | null
+            blockReason: string | null
+            /** Format: date-time */
+            fromDate: string
+            /** Format: date-time */
+            toDate: string | null
+            amount: number | null
+          }[]
+        }
         property: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
+          id: string | null
+          name: string | null
+          code: string | null
+        }
         building: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        staircase: ({
-          id: string;
-          code: string;
-          name: string | null;
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        staircase: {
+          id: string
+          code: string
+          name: string | null
           features: {
-            floorPlan: string | null;
-            accessibleByElevator: boolean;
-          };
+            floorPlan: string | null
+            accessibleByElevator: boolean
+          }
           dates: {
             /** Format: date-time */
-            from: string;
+            from: string
             /** Format: date-time */
-            to: string;
-          };
+            to: string
+          }
           property?: {
-            propertyId: string | null;
-            propertyName: string | null;
-            propertyCode: string | null;
-          };
+            propertyId: string | null
+            propertyName: string | null
+            propertyCode: string | null
+          }
           building?: {
-            buildingId: string | null;
-            buildingName: string | null;
-            buildingCode: string | null;
-          };
-          deleted: boolean;
-          timestamp: string;
-        }) | null;
-        areaSize: number | null;
-        malarEnergiFacilityId: string | null;
-      }) | null;
-    };
+            buildingId: string | null
+            buildingName: string | null
+            buildingCode: string | null
+          }
+          deleted: boolean
+          timestamp: string
+        } | null
+        areaSize: number | null
+        malarEnergiFacilityId: string | null
+      } | null
+    }
     DetailedInspectionRoom: {
-      id: string;
-      status: string;
+      id: string
+      status: string
       /** Format: date-time */
-      date: string;
+      date: string
       /** Format: date-time */
-      startedAt: string | null;
+      startedAt: string | null
       /** Format: date-time */
-      endedAt: string | null;
-      inspector: string;
-      type: string;
-      residenceId: string;
-      address: string;
-      apartmentCode: string | null;
-      isFurnished: boolean;
-      leaseId: string;
-      isTenantPresent: boolean;
-      isNewTenantPresent: boolean;
-      masterKeyAccess: string | null;
-      hasRemarks: boolean;
-      notes: string | null;
-      totalCost: number | null;
-      remarkCount: number;
-      rooms: ({
-          room: string;
-          remarks: ({
-              remarkId: string;
-              location: string | null;
-              buildingComponent: string | null;
-              notes: string | null;
-              remarkGrade: number;
-              remarkStatus: string | null;
-              cost: number;
-              invoice: boolean;
-              quantity: number;
-              isMissing: boolean;
-              /** Format: date-time */
-              fixedDate: string | null;
-              workOrderCreated: boolean;
-              workOrderStatus: number | null;
-            })[];
-        })[];
-      lease: ({
-        leaseId: string;
-        leaseNumber: string;
-        /** Format: date-time */
-        leaseStartDate: string;
-        /** Format: date-time */
-        leaseEndDate?: string;
-        /** @enum {string} */
-        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
-        tenantContactIds?: string[];
-        rentalPropertyId: string;
-        rentalProperty?: {
-          rentalPropertyId: string;
-          apartmentNumber: number;
-          size: number;
-          type: string;
-          address?: {
-            street?: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          rentalPropertyType: string;
-          additionsIncludedInRent: string;
-          otherInfo?: string;
-          roomTypes?: {
-              roomTypeId: string;
-              name: string;
-            }[];
+      endedAt: string | null
+      inspector: string
+      type: string
+      residenceId: string
+      address: string
+      apartmentCode: string | null
+      isFurnished: boolean
+      leaseId: string
+      isTenantPresent: boolean
+      isNewTenantPresent: boolean
+      masterKeyAccess: string | null
+      hasRemarks: boolean
+      notes: string | null
+      totalCost: number | null
+      remarkCount: number
+      rooms: {
+        room: string
+        remarks: {
+          remarkId: string
+          location: string | null
+          buildingComponent: string | null
+          notes: string | null
+          remarkGrade: number
+          remarkStatus: string | null
+          cost: number
+          invoice: boolean
+          quantity: number
+          isMissing: boolean
           /** Format: date-time */
-          lastUpdated?: string;
-        };
-        type: string;
+          fixedDate: string | null
+          workOrderCreated: boolean
+          workOrderStatus: number | null
+        }[]
+      }[]
+      lease: {
+        leaseId: string
+        leaseNumber: string
+        /** Format: date-time */
+        leaseStartDate: string
+        /** Format: date-time */
+        leaseEndDate?: string
+        /** @enum {string} */
+        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+        tenantContactIds?: string[]
+        rentalPropertyId: string
+        rentalProperty?: {
+          rentalPropertyId: string
+          apartmentNumber: number
+          size: number
+          type: string
+          address?: {
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          rentalPropertyType: string
+          additionsIncludedInRent: string
+          otherInfo?: string
+          roomTypes?: {
+            roomTypeId: string
+            name: string
+          }[]
+          /** Format: date-time */
+          lastUpdated?: string
+        }
+        type: string
         rentInfo?: {
           currentRent: {
-            rentId?: string;
-            leaseId?: string;
-            currentRent: number;
-            vat: number;
-            additionalChargeDescription?: string;
-            additionalChargeAmount?: number;
+            rentId?: string
+            leaseId?: string
+            currentRent: number
+            vat: number
+            additionalChargeDescription?: string
+            additionalChargeAmount?: number
             /** Format: date-time */
-            rentStartDate?: string;
+            rentStartDate?: string
             /** Format: date-time */
-            rentEndDate?: string;
-          };
-        };
+            rentEndDate?: string
+          }
+        }
         address?: {
-          street?: string;
-          number: string;
-          postalCode: string;
-          city: string;
-        };
-        noticeGivenBy?: string;
+          street?: string
+          number: string
+          postalCode: string
+          city: string
+        }
+        noticeGivenBy?: string
         /** Format: date-time */
-        noticeDate?: string;
-        noticeTimeTenant?: string | number;
+        noticeDate?: string
+        noticeTimeTenant?: string | number
         /** Format: date-time */
-        preferredMoveOutDate?: string;
+        preferredMoveOutDate?: string
         /** Format: date-time */
-        terminationDate?: string;
+        terminationDate?: string
         /** Format: date-time */
-        contractDate?: string;
+        contractDate?: string
         /** Format: date-time */
-        lastDebitDate?: string;
+        lastDebitDate?: string
         /** Format: date-time */
-        approvalDate?: string;
+        approvalDate?: string
         residentialArea?: {
-          code: string;
-          caption: string;
-        };
+          code: string
+          caption: string
+        }
         tenants?: {
-            contactCode: string;
-            contactKey: string;
-            leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
-            nationalRegistrationNumber: string;
+          contactCode: string
+          contactKey: string
+          leaseIds?: string[]
+          firstName: string
+          lastName: string
+          fullName: string
+          nationalRegistrationNumber: string
+          /** Format: date-time */
+          birthDate: string
+          address?: {
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          phoneNumbers?: {
+            phoneNumber: string
+            type: string
+            isMainNumber: boolean
+          }[]
+          emailAddress?: string
+          isTenant: boolean
+          parkingSpaceWaitingList?: {
             /** Format: date-time */
-            birthDate: string;
-            address?: {
-              street?: string;
-              number: string;
-              postalCode: string;
-              city: string;
-            };
-            phoneNumbers?: {
-                phoneNumber: string;
-                type: string;
-                isMainNumber: boolean;
-              }[];
-            emailAddress?: string;
-            isTenant: boolean;
-            parkingSpaceWaitingList?: {
-              /** Format: date-time */
-              queueTime: string;
-              queuePoints: number;
-              type: number;
-            };
-            specialAttention?: boolean;
-            leaseContactType?: string;
-          }[];
-      }) | null;
-      residence: ({
-        id: string;
-        code: string;
-        name: string | null;
+            queueTime: string
+            queuePoints: number
+            type: number
+          }
+          specialAttention?: boolean
+          leaseContactType?: string
+        }[]
+      } | null
+      residence: {
+        id: string
+        code: string
+        name: string | null
         /** @enum {string|null} */
-        status: "VACANT" | "LEASED" | null;
-        entrance: string | null;
-        location: string | null;
-        floor: string | null;
-        partNo: number | null;
-        part: string | null;
-        deleted: boolean;
+        status: 'VACANT' | 'LEASED' | null
+        entrance: string | null
+        location: string | null
+        floor: string | null
+        partNo: number | null
+        part: string | null
+        deleted: boolean
         validityPeriod: {
           /** Format: date-time */
-          fromDate: string;
+          fromDate: string
           /** Format: date-time */
-          toDate: string;
-        };
+          toDate: string
+        }
         accessibility: {
-          wheelchairAccessible: boolean;
-          elevator: boolean;
-          residenceAdapted: boolean;
-        };
+          wheelchairAccessible: boolean
+          elevator: boolean
+          residenceAdapted: boolean
+        }
         features: {
-          hygieneFacility: string | null;
+          hygieneFacility: string | null
           balcony1?: {
-            location: string;
-            type: string;
-          };
+            location: string
+            type: string
+          }
           balcony2?: {
-            location: string;
-            type: string;
-          };
-          patioLocation: string | null;
-          sauna: boolean;
-          extraToilet: boolean;
-          sharedKitchen: boolean;
-          petAllergyFree: boolean;
+            location: string
+            type: string
+          }
+          patioLocation: string | null
+          sauna: boolean
+          extraToilet: boolean
+          sharedKitchen: boolean
+          petAllergyFree: boolean
           /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean;
-          smokeFree: boolean;
-          asbestos: boolean;
-        };
+          electricAllergyIntolerance: boolean
+          smokeFree: boolean
+          asbestos: boolean
+        }
         type: {
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-        };
+          code: string
+          name: string | null
+          roomCount: number | null
+          kitchen: number
+        }
         residenceType: {
-          residenceTypeId: string;
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-          systemStandard: number;
-          checklistId: string | null;
-          componentTypeActionId: string | null;
-          statisticsGroupSCBId: string | null;
-          statisticsGroup2Id: string | null;
-          statisticsGroup3Id: string | null;
-          statisticsGroup4Id: string | null;
-          timestamp: string;
-        };
-        rentalInformation: ({
-          apartmentNumber: string | null;
-          rentalId: string | null;
+          residenceTypeId: string
+          code: string
+          name: string | null
+          roomCount: number | null
+          kitchen: number
+          systemStandard: number
+          checklistId: string | null
+          componentTypeActionId: string | null
+          statisticsGroupSCBId: string | null
+          statisticsGroup2Id: string | null
+          statisticsGroup3Id: string | null
+          statisticsGroup4Id: string | null
+          timestamp: string
+        }
+        rentalInformation: {
+          apartmentNumber: string | null
+          rentalId: string | null
           type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
+            code: string
+            name: string | null
+          }
+        } | null
         propertyObject: {
           energy: {
-            energyClass: number;
+            energyClass: number
             /** Format: date-time */
-            energyRegistered?: string;
+            energyRegistered?: string
             /** Format: date-time */
-            energyReceived?: string;
-            energyIndex?: number;
-          };
-          rentalId: string | null;
-          rentalInformation: ({
+            energyReceived?: string
+            energyIndex?: number
+          }
+          rentalId: string | null
+          rentalInformation: {
             type: {
-              code: string;
-              name: string | null;
-            };
-          }) | null;
-          rentalBlocks: ({
-              id: string;
-              blockReasonId: string | null;
-              blockReason: string | null;
-              /** Format: date-time */
-              fromDate: string;
-              /** Format: date-time */
-              toDate: string | null;
-              amount: number | null;
-            })[];
-        };
+              code: string
+              name: string | null
+            }
+          } | null
+          rentalBlocks: {
+            id: string
+            blockReasonId: string | null
+            blockReason: string | null
+            /** Format: date-time */
+            fromDate: string
+            /** Format: date-time */
+            toDate: string | null
+            amount: number | null
+          }[]
+        }
         property: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
+          id: string | null
+          name: string | null
+          code: string | null
+        }
         building: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        staircase: ({
-          id: string;
-          code: string;
-          name: string | null;
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        staircase: {
+          id: string
+          code: string
+          name: string | null
           features: {
-            floorPlan: string | null;
-            accessibleByElevator: boolean;
-          };
+            floorPlan: string | null
+            accessibleByElevator: boolean
+          }
           dates: {
             /** Format: date-time */
-            from: string;
+            from: string
             /** Format: date-time */
-            to: string;
-          };
+            to: string
+          }
           property?: {
-            propertyId: string | null;
-            propertyName: string | null;
-            propertyCode: string | null;
-          };
+            propertyId: string | null
+            propertyName: string | null
+            propertyCode: string | null
+          }
           building?: {
-            buildingId: string | null;
-            buildingName: string | null;
-            buildingCode: string | null;
-          };
-          deleted: boolean;
-          timestamp: string;
-        }) | null;
-        areaSize: number | null;
-        malarEnergiFacilityId: string | null;
-      }) | null;
-    };
+            buildingId: string | null
+            buildingName: string | null
+            buildingCode: string | null
+          }
+          deleted: boolean
+          timestamp: string
+        } | null
+        areaSize: number | null
+        malarEnergiFacilityId: string | null
+      } | null
+    }
     DetailedInspectionRemark: {
-      id: string;
-      status: string;
+      id: string
+      status: string
       /** Format: date-time */
-      date: string;
+      date: string
       /** Format: date-time */
-      startedAt: string | null;
+      startedAt: string | null
       /** Format: date-time */
-      endedAt: string | null;
-      inspector: string;
-      type: string;
-      residenceId: string;
-      address: string;
-      apartmentCode: string | null;
-      isFurnished: boolean;
-      leaseId: string;
-      isTenantPresent: boolean;
-      isNewTenantPresent: boolean;
-      masterKeyAccess: string | null;
-      hasRemarks: boolean;
-      notes: string | null;
-      totalCost: number | null;
-      remarkCount: number;
-      rooms: ({
-          room: string;
-          remarks: ({
-              remarkId: string;
-              location: string | null;
-              buildingComponent: string | null;
-              notes: string | null;
-              remarkGrade: number;
-              remarkStatus: string | null;
-              cost: number;
-              invoice: boolean;
-              quantity: number;
-              isMissing: boolean;
-              /** Format: date-time */
-              fixedDate: string | null;
-              workOrderCreated: boolean;
-              workOrderStatus: number | null;
-            })[];
-        })[];
-      lease: ({
-        leaseId: string;
-        leaseNumber: string;
-        /** Format: date-time */
-        leaseStartDate: string;
-        /** Format: date-time */
-        leaseEndDate?: string;
-        /** @enum {string} */
-        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
-        tenantContactIds?: string[];
-        rentalPropertyId: string;
-        rentalProperty?: {
-          rentalPropertyId: string;
-          apartmentNumber: number;
-          size: number;
-          type: string;
-          address?: {
-            street?: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          rentalPropertyType: string;
-          additionsIncludedInRent: string;
-          otherInfo?: string;
-          roomTypes?: {
-              roomTypeId: string;
-              name: string;
-            }[];
+      endedAt: string | null
+      inspector: string
+      type: string
+      residenceId: string
+      address: string
+      apartmentCode: string | null
+      isFurnished: boolean
+      leaseId: string
+      isTenantPresent: boolean
+      isNewTenantPresent: boolean
+      masterKeyAccess: string | null
+      hasRemarks: boolean
+      notes: string | null
+      totalCost: number | null
+      remarkCount: number
+      rooms: {
+        room: string
+        remarks: {
+          remarkId: string
+          location: string | null
+          buildingComponent: string | null
+          notes: string | null
+          remarkGrade: number
+          remarkStatus: string | null
+          cost: number
+          invoice: boolean
+          quantity: number
+          isMissing: boolean
           /** Format: date-time */
-          lastUpdated?: string;
-        };
-        type: string;
+          fixedDate: string | null
+          workOrderCreated: boolean
+          workOrderStatus: number | null
+        }[]
+      }[]
+      lease: {
+        leaseId: string
+        leaseNumber: string
+        /** Format: date-time */
+        leaseStartDate: string
+        /** Format: date-time */
+        leaseEndDate?: string
+        /** @enum {string} */
+        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+        tenantContactIds?: string[]
+        rentalPropertyId: string
+        rentalProperty?: {
+          rentalPropertyId: string
+          apartmentNumber: number
+          size: number
+          type: string
+          address?: {
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          rentalPropertyType: string
+          additionsIncludedInRent: string
+          otherInfo?: string
+          roomTypes?: {
+            roomTypeId: string
+            name: string
+          }[]
+          /** Format: date-time */
+          lastUpdated?: string
+        }
+        type: string
         rentInfo?: {
           currentRent: {
-            rentId?: string;
-            leaseId?: string;
-            currentRent: number;
-            vat: number;
-            additionalChargeDescription?: string;
-            additionalChargeAmount?: number;
+            rentId?: string
+            leaseId?: string
+            currentRent: number
+            vat: number
+            additionalChargeDescription?: string
+            additionalChargeAmount?: number
             /** Format: date-time */
-            rentStartDate?: string;
+            rentStartDate?: string
             /** Format: date-time */
-            rentEndDate?: string;
-          };
-        };
+            rentEndDate?: string
+          }
+        }
         address?: {
-          street?: string;
-          number: string;
-          postalCode: string;
-          city: string;
-        };
-        noticeGivenBy?: string;
+          street?: string
+          number: string
+          postalCode: string
+          city: string
+        }
+        noticeGivenBy?: string
         /** Format: date-time */
-        noticeDate?: string;
-        noticeTimeTenant?: string | number;
+        noticeDate?: string
+        noticeTimeTenant?: string | number
         /** Format: date-time */
-        preferredMoveOutDate?: string;
+        preferredMoveOutDate?: string
         /** Format: date-time */
-        terminationDate?: string;
+        terminationDate?: string
         /** Format: date-time */
-        contractDate?: string;
+        contractDate?: string
         /** Format: date-time */
-        lastDebitDate?: string;
+        lastDebitDate?: string
         /** Format: date-time */
-        approvalDate?: string;
+        approvalDate?: string
         residentialArea?: {
-          code: string;
-          caption: string;
-        };
+          code: string
+          caption: string
+        }
         tenants?: {
-            contactCode: string;
-            contactKey: string;
-            leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
-            nationalRegistrationNumber: string;
+          contactCode: string
+          contactKey: string
+          leaseIds?: string[]
+          firstName: string
+          lastName: string
+          fullName: string
+          nationalRegistrationNumber: string
+          /** Format: date-time */
+          birthDate: string
+          address?: {
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          phoneNumbers?: {
+            phoneNumber: string
+            type: string
+            isMainNumber: boolean
+          }[]
+          emailAddress?: string
+          isTenant: boolean
+          parkingSpaceWaitingList?: {
             /** Format: date-time */
-            birthDate: string;
-            address?: {
-              street?: string;
-              number: string;
-              postalCode: string;
-              city: string;
-            };
-            phoneNumbers?: {
-                phoneNumber: string;
-                type: string;
-                isMainNumber: boolean;
-              }[];
-            emailAddress?: string;
-            isTenant: boolean;
-            parkingSpaceWaitingList?: {
-              /** Format: date-time */
-              queueTime: string;
-              queuePoints: number;
-              type: number;
-            };
-            specialAttention?: boolean;
-            leaseContactType?: string;
-          }[];
-      }) | null;
-      residence: ({
-        id: string;
-        code: string;
-        name: string | null;
+            queueTime: string
+            queuePoints: number
+            type: number
+          }
+          specialAttention?: boolean
+          leaseContactType?: string
+        }[]
+      } | null
+      residence: {
+        id: string
+        code: string
+        name: string | null
         /** @enum {string|null} */
-        status: "VACANT" | "LEASED" | null;
-        entrance: string | null;
-        location: string | null;
-        floor: string | null;
-        partNo: number | null;
-        part: string | null;
-        deleted: boolean;
+        status: 'VACANT' | 'LEASED' | null
+        entrance: string | null
+        location: string | null
+        floor: string | null
+        partNo: number | null
+        part: string | null
+        deleted: boolean
         validityPeriod: {
           /** Format: date-time */
-          fromDate: string;
+          fromDate: string
           /** Format: date-time */
-          toDate: string;
-        };
+          toDate: string
+        }
         accessibility: {
-          wheelchairAccessible: boolean;
-          elevator: boolean;
-          residenceAdapted: boolean;
-        };
+          wheelchairAccessible: boolean
+          elevator: boolean
+          residenceAdapted: boolean
+        }
         features: {
-          hygieneFacility: string | null;
+          hygieneFacility: string | null
           balcony1?: {
-            location: string;
-            type: string;
-          };
+            location: string
+            type: string
+          }
           balcony2?: {
-            location: string;
-            type: string;
-          };
-          patioLocation: string | null;
-          sauna: boolean;
-          extraToilet: boolean;
-          sharedKitchen: boolean;
-          petAllergyFree: boolean;
+            location: string
+            type: string
+          }
+          patioLocation: string | null
+          sauna: boolean
+          extraToilet: boolean
+          sharedKitchen: boolean
+          petAllergyFree: boolean
           /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean;
-          smokeFree: boolean;
-          asbestos: boolean;
-        };
+          electricAllergyIntolerance: boolean
+          smokeFree: boolean
+          asbestos: boolean
+        }
         type: {
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-        };
+          code: string
+          name: string | null
+          roomCount: number | null
+          kitchen: number
+        }
         residenceType: {
-          residenceTypeId: string;
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-          systemStandard: number;
-          checklistId: string | null;
-          componentTypeActionId: string | null;
-          statisticsGroupSCBId: string | null;
-          statisticsGroup2Id: string | null;
-          statisticsGroup3Id: string | null;
-          statisticsGroup4Id: string | null;
-          timestamp: string;
-        };
-        rentalInformation: ({
-          apartmentNumber: string | null;
-          rentalId: string | null;
+          residenceTypeId: string
+          code: string
+          name: string | null
+          roomCount: number | null
+          kitchen: number
+          systemStandard: number
+          checklistId: string | null
+          componentTypeActionId: string | null
+          statisticsGroupSCBId: string | null
+          statisticsGroup2Id: string | null
+          statisticsGroup3Id: string | null
+          statisticsGroup4Id: string | null
+          timestamp: string
+        }
+        rentalInformation: {
+          apartmentNumber: string | null
+          rentalId: string | null
           type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
+            code: string
+            name: string | null
+          }
+        } | null
         propertyObject: {
           energy: {
-            energyClass: number;
+            energyClass: number
             /** Format: date-time */
-            energyRegistered?: string;
+            energyRegistered?: string
             /** Format: date-time */
-            energyReceived?: string;
-            energyIndex?: number;
-          };
-          rentalId: string | null;
-          rentalInformation: ({
+            energyReceived?: string
+            energyIndex?: number
+          }
+          rentalId: string | null
+          rentalInformation: {
             type: {
-              code: string;
-              name: string | null;
-            };
-          }) | null;
-          rentalBlocks: ({
-              id: string;
-              blockReasonId: string | null;
-              blockReason: string | null;
-              /** Format: date-time */
-              fromDate: string;
-              /** Format: date-time */
-              toDate: string | null;
-              amount: number | null;
-            })[];
-        };
+              code: string
+              name: string | null
+            }
+          } | null
+          rentalBlocks: {
+            id: string
+            blockReasonId: string | null
+            blockReason: string | null
+            /** Format: date-time */
+            fromDate: string
+            /** Format: date-time */
+            toDate: string | null
+            amount: number | null
+          }[]
+        }
         property: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
+          id: string | null
+          name: string | null
+          code: string | null
+        }
         building: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        staircase: ({
-          id: string;
-          code: string;
-          name: string | null;
+          id: string | null
+          name: string | null
+          code: string | null
+        }
+        staircase: {
+          id: string
+          code: string
+          name: string | null
           features: {
-            floorPlan: string | null;
-            accessibleByElevator: boolean;
-          };
+            floorPlan: string | null
+            accessibleByElevator: boolean
+          }
           dates: {
             /** Format: date-time */
-            from: string;
+            from: string
             /** Format: date-time */
-            to: string;
-          };
+            to: string
+          }
           property?: {
-            propertyId: string | null;
-            propertyName: string | null;
-            propertyCode: string | null;
-          };
+            propertyId: string | null
+            propertyName: string | null
+            propertyCode: string | null
+          }
           building?: {
-            buildingId: string | null;
-            buildingName: string | null;
-            buildingCode: string | null;
-          };
-          deleted: boolean;
-          timestamp: string;
-        }) | null;
-        areaSize: number | null;
-        malarEnergiFacilityId: string | null;
-      }) | null;
-    };
+            buildingId: string | null
+            buildingName: string | null
+            buildingCode: string | null
+          }
+          deleted: boolean
+          timestamp: string
+        } | null
+        areaSize: number | null
+        malarEnergiFacilityId: string | null
+      } | null
+    }
     TenantContactsResponse: {
       inspection: {
-        id: string;
-        address: string;
-        apartmentCode: string | null;
-      };
+        id: string
+        address: string
+        apartmentCode: string | null
+      }
       new_tenant?: {
         contacts: {
-            fullName: string;
-            emailAddress: string;
-            contactCode: string;
-          }[];
-        contractId: string;
-      };
-      tenant?: components["schemas"]["TenantContactsResponse"]["new_tenant"];
-    };
+          fullName: string
+          emailAddress: string
+          contactCode: string
+        }[]
+        contractId: string
+      }
+      tenant?: components['schemas']['TenantContactsResponse']['new_tenant']
+    }
     SendProtocolRequest: {
       /** @enum {string} */
-      recipient: "tenant" | "new-tenant";
-    };
+      recipient: 'tenant' | 'new-tenant'
+    }
     SendProtocolResponse: {
-      success: boolean;
+      success: boolean
       /** @enum {string} */
-      recipient: "tenant" | "new-tenant";
+      recipient: 'tenant' | 'new-tenant'
       sentTo: {
-        emails: string[];
-        contactNames: string[];
-        contractId: string;
-      };
-      error?: string;
-    };
+        emails: string[]
+        contactNames: string[]
+        contractId: string
+      }
+      error?: string
+    }
     CreateInspectionRequest: {
-      status: string;
+      status: string
       /** Format: date-time */
-      date: string;
+      date: string
       /** Format: date-time */
-      startedAt: string | null;
+      startedAt: string | null
       /** Format: date-time */
-      endedAt: string | null;
-      inspector: string;
-      type: string;
-      residenceId: string;
-      address: string;
-      apartmentCode: string | null;
-      isFurnished: boolean;
-      leaseId: string;
-      isTenantPresent: boolean;
-      isNewTenantPresent: boolean;
-      masterKeyAccess: string | null;
-      hasRemarks: boolean;
-      notes: string | null;
-      totalCost: number | null;
-      rooms: ({
-          room: string;
-          remarks: ({
-              remarkId: string;
-              location: string | null;
-              buildingComponent: string | null;
-              notes: string | null;
-              remarkGrade: number;
-              remarkStatus: string | null;
-              cost: number;
-              invoice: boolean;
-              quantity: number;
-              isMissing: boolean;
-              /** Format: date-time */
-              fixedDate: string | null;
-              workOrderCreated: boolean;
-              workOrderStatus: number | null;
-            })[];
-        })[];
-    };
+      endedAt: string | null
+      inspector: string
+      type: string
+      residenceId: string
+      address: string
+      apartmentCode: string | null
+      isFurnished: boolean
+      leaseId: string
+      isTenantPresent: boolean
+      isNewTenantPresent: boolean
+      masterKeyAccess: string | null
+      hasRemarks: boolean
+      notes: string | null
+      totalCost: number | null
+      rooms: {
+        room: string
+        remarks: {
+          remarkId: string
+          location: string | null
+          buildingComponent: string | null
+          notes: string | null
+          remarkGrade: number
+          remarkStatus: string | null
+          cost: number
+          invoice: boolean
+          quantity: number
+          isMissing: boolean
+          /** Format: date-time */
+          fixedDate: string | null
+          workOrderCreated: boolean
+          workOrderStatus: number | null
+        }[]
+      }[]
+    }
     UpdateInspectionStatusRequest: {
       /** @enum {string} */
-      status?: "Registrerad" | "Påbörjad" | "Genomförd";
-      inspector?: string;
-    };
+      status?: 'Registrerad' | 'Påbörjad' | 'Genomförd'
+      inspector?: string
+    }
     InspectionWithSource: {
-      id: string;
-      status: string;
+      id: string
+      status: string
       /** Format: date-time */
-      date: string;
-      inspector: string;
-      type: string;
-      address: string;
-      apartmentCode: string | null;
-      leaseId: string;
-      masterKeyAccess: string | null;
+      date: string
+      inspector: string
+      type: string
+      address: string
+      apartmentCode: string | null
+      leaseId: string
+      masterKeyAccess: string | null
       /** @enum {string} */
-      source: "xpand" | "internal";
-      lease: ({
-        leaseId: string;
-        leaseNumber: string;
+      source: 'xpand' | 'internal'
+      lease: {
+        leaseId: string
+        leaseNumber: string
         /** Format: date-time */
-        leaseStartDate: string;
+        leaseStartDate: string
         /** Format: date-time */
-        leaseEndDate?: string;
+        leaseEndDate?: string
         /** @enum {string} */
-        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
-        tenantContactIds?: string[];
-        rentalPropertyId: string;
+        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+        tenantContactIds?: string[]
+        rentalPropertyId: string
         rentalProperty?: {
-          rentalPropertyId: string;
-          apartmentNumber: number;
-          size: number;
-          type: string;
+          rentalPropertyId: string
+          apartmentNumber: number
+          size: number
+          type: string
           address?: {
-            street?: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          rentalPropertyType: string;
-          additionsIncludedInRent: string;
-          otherInfo?: string;
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          rentalPropertyType: string
+          additionsIncludedInRent: string
+          otherInfo?: string
           roomTypes?: {
-              roomTypeId: string;
-              name: string;
-            }[];
+            roomTypeId: string
+            name: string
+          }[]
           /** Format: date-time */
-          lastUpdated?: string;
-        };
-        type: string;
+          lastUpdated?: string
+        }
+        type: string
         rentInfo?: {
           currentRent: {
-            rentId?: string;
-            leaseId?: string;
-            currentRent: number;
-            vat: number;
-            additionalChargeDescription?: string;
-            additionalChargeAmount?: number;
+            rentId?: string
+            leaseId?: string
+            currentRent: number
+            vat: number
+            additionalChargeDescription?: string
+            additionalChargeAmount?: number
             /** Format: date-time */
-            rentStartDate?: string;
+            rentStartDate?: string
             /** Format: date-time */
-            rentEndDate?: string;
-          };
-        };
+            rentEndDate?: string
+          }
+        }
         address?: {
-          street?: string;
-          number: string;
-          postalCode: string;
-          city: string;
-        };
-        noticeGivenBy?: string;
+          street?: string
+          number: string
+          postalCode: string
+          city: string
+        }
+        noticeGivenBy?: string
         /** Format: date-time */
-        noticeDate?: string;
-        noticeTimeTenant?: string | number;
+        noticeDate?: string
+        noticeTimeTenant?: string | number
         /** Format: date-time */
-        preferredMoveOutDate?: string;
+        preferredMoveOutDate?: string
         /** Format: date-time */
-        terminationDate?: string;
+        terminationDate?: string
         /** Format: date-time */
-        contractDate?: string;
+        contractDate?: string
         /** Format: date-time */
-        lastDebitDate?: string;
+        lastDebitDate?: string
         /** Format: date-time */
-        approvalDate?: string;
+        approvalDate?: string
         residentialArea?: {
-          code: string;
-          caption: string;
-        };
+          code: string
+          caption: string
+        }
         tenants?: {
-            contactCode: string;
-            contactKey: string;
-            leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
-            nationalRegistrationNumber: string;
+          contactCode: string
+          contactKey: string
+          leaseIds?: string[]
+          firstName: string
+          lastName: string
+          fullName: string
+          nationalRegistrationNumber: string
+          /** Format: date-time */
+          birthDate: string
+          address?: {
+            street?: string
+            number: string
+            postalCode: string
+            city: string
+          }
+          phoneNumbers?: {
+            phoneNumber: string
+            type: string
+            isMainNumber: boolean
+          }[]
+          emailAddress?: string
+          isTenant: boolean
+          parkingSpaceWaitingList?: {
             /** Format: date-time */
-            birthDate: string;
-            address?: {
-              street?: string;
-              number: string;
-              postalCode: string;
-              city: string;
-            };
-            phoneNumbers?: {
-                phoneNumber: string;
-                type: string;
-                isMainNumber: boolean;
-              }[];
-            emailAddress?: string;
-            isTenant: boolean;
-            parkingSpaceWaitingList?: {
-              /** Format: date-time */
-              queueTime: string;
-              queuePoints: number;
-              type: number;
-            };
-            specialAttention?: boolean;
-            leaseContactType?: string;
-          }[];
-      }) | null;
-    };
+            queueTime: string
+            queuePoints: number
+            type: number
+          }
+          specialAttention?: boolean
+          leaseContactType?: string
+        }[]
+      } | null
+    }
     InternalInspection: {
-      id: string;
-      status: string;
+      id: string
+      status: string
       /** Format: date-time */
-      date: string;
-      inspector: string;
-      type: string;
-      address: string;
-      apartmentCode: string | null;
-      leaseId: string;
-      masterKeyAccess: string | null;
-      residenceId: string;
-      rooms: {
-          roomId: string;
-          conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
-            details: string;
-          };
-          actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
-            details: string[];
-          };
-          componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
-            details: string;
-          };
-          componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
-            details: string[];
-          };
-          photos: string[];
-          isApproved: boolean;
-          isHandled: boolean;
-        }[] | null;
-    };
+      date: string
+      inspector: string
+      type: string
+      address: string
+      apartmentCode: string | null
+      leaseId: string
+      masterKeyAccess: string | null
+      residenceId: string
+      rooms:
+        | {
+            roomId: string
+            conditions: {
+              wall1: string
+              wall2: string
+              wall3: string
+              wall4: string
+              floor: string
+              ceiling: string
+              details: string
+            }
+            actions: {
+              wall1: string[]
+              wall2: string[]
+              wall3: string[]
+              wall4: string[]
+              floor: string[]
+              ceiling: string[]
+              details: string[]
+            }
+            componentNotes: {
+              wall1: string
+              wall2: string
+              wall3: string
+              wall4: string
+              floor: string
+              ceiling: string
+              details: string
+            }
+            componentPhotos: {
+              wall1: string[]
+              wall2: string[]
+              wall3: string[]
+              wall4: string[]
+              floor: string[]
+              ceiling: string[]
+              details: string[]
+            }
+            photos: string[]
+            isApproved: boolean
+            isHandled: boolean
+          }[]
+        | null
+    }
     SaveInspectionDraftRequest: {
-      inspectorName: string;
+      inspectorName: string
       rooms: {
-          roomId: string;
-          conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
-            details: string;
-          };
-          actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
-            details: string[];
-          };
-          componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
-            details: string;
-          };
-          componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
-            details: string[];
-          };
-          photos: string[];
-          isApproved: boolean;
-          isHandled: boolean;
-        }[];
-    };
+        roomId: string
+        conditions: {
+          wall1: string
+          wall2: string
+          wall3: string
+          wall4: string
+          floor: string
+          ceiling: string
+          details: string
+        }
+        actions: {
+          wall1: string[]
+          wall2: string[]
+          wall3: string[]
+          wall4: string[]
+          floor: string[]
+          ceiling: string[]
+          details: string[]
+        }
+        componentNotes: {
+          wall1: string
+          wall2: string
+          wall3: string
+          wall4: string
+          floor: string
+          ceiling: string
+          details: string
+        }
+        componentPhotos: {
+          wall1: string[]
+          wall2: string[]
+          wall3: string[]
+          wall4: string[]
+          floor: string[]
+          ceiling: string[]
+          details: string[]
+        }
+        photos: string[]
+        isApproved: boolean
+        isHandled: boolean
+      }[]
+    }
     FileListItem: {
       /** @description Full file path/name */
       name: string
@@ -12796,31 +12843,31 @@ export interface components {
        * @description URL expiry time
        * @default 3600
        */
-      expirySeconds?: number;
-    };
+      expirySeconds?: number
+    }
     BulkSmsResult: {
       /** @description Phone numbers that received SMS */
-      successful: string[];
+      successful: string[]
       /** @description Invalid phone numbers */
-      invalid: string[];
-      totalSent: number;
-      totalInvalid: number;
-    };
+      invalid: string[]
+      totalSent: number
+      totalInvalid: number
+    }
     BulkEmailResult: {
       /** @description Email addresses that received email */
-      successful: string[];
+      successful: string[]
       /** @description Invalid email addresses */
-      invalid: string[];
-      totalSent: number;
-      totalInvalid: number;
-    };
+      invalid: string[]
+      totalSent: number
+      totalInvalid: number
+    }
     KeycloakUser: {
-      id?: string;
-      username?: string;
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-    };
+      id?: string
+      username?: string
+      firstName?: string
+      lastName?: string
+      email?: string
+    }
     RentalPropertyResponse: {
       content?: {
         id?: string

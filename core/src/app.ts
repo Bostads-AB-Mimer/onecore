@@ -5,7 +5,7 @@ import cors from '@koa/cors'
 import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
 import { makeOkapiRouter } from 'koa-okapi-router'
-import { config } from './common/config'
+import config from './common/config'
 
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
