@@ -129,7 +129,7 @@ describe('tenfast-lease-search-adapter', () => {
       })
 
       expect(params.get('filter[isArchived]')).toBe('false')
-      expect(params.get('populate')).toBeNull()
+      expect(params.get('populate')).toBe('hyresgaster,hyresobjekt')
     })
 
     it('should include date filters as comma-separated range params', () => {

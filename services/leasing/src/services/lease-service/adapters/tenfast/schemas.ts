@@ -145,6 +145,9 @@ export const NotificationTypeSchema = z.enum([
   'email',
   'post',
   'none',
+  'stralfors',
+  'svefaktura',
+  'external',
 ])
 
 // Helper to handle optional date fields that might be empty strings, null, undefined, or Date objects
@@ -168,7 +171,7 @@ export const TenfastLeaseSchema = z.object({
   externalId: z.string(), // This is Onecore canonical lease id
   reference: z.number(),
   version: z.number(),
-  originalData: z.unknown(),
+  originalData: z.unknown().optional(),
   hyror: z.array(TenfastInvoiceRowSchema),
   simpleHyra: z.boolean(),
   startDate: z.coerce.date(),
@@ -218,7 +221,13 @@ export const TenfastLeaseSchema = z.object({
   _id: z.string(),
   hyresvard: z.string(),
   hyresgaster: z.array(TenfastTenantSchema),
-  hyresobjekt: z.array(TenfastRentalObjectSchema),
+  // Filter out incomplete/invalid rental objects (e.g. test data with missing fields)
+  hyresobjekt: z.array(z.unknown()).transform((items) =>
+    items.flatMap((item) => {
+      const result = TenfastRentalObjectSchema.safeParse(item)
+      return result.success ? [result.data] : []
+    })
+  ),
   invitations: z.array(
     z.object({
       _id: z.string(),
@@ -237,7 +246,7 @@ export const TenfastLeaseSchema = z.object({
       originalName: z.string(),
     })
   ),
-  versions: z.unknown(),
+  versions: z.unknown().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   startInvoicingFrom: optionalDateField,

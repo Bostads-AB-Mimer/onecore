@@ -1,5 +1,5 @@
 import { Context } from 'koa'
-import { Lease, leasing, LeaseStatus } from '@onecore/types'
+import { Lease, leasing } from '@onecore/types'
 import {
   PaginatedResponse,
   buildPaginationLinks,
@@ -11,9 +11,10 @@ import * as tenfastApi from './tenfast-api'
 import { TenfastLeaseSchema } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../types'
-import { calculateLeaseStatus, mapToOnecoreLease } from '../../helpers/tenfast'
+import { mapToOnecoreLease } from '../../helpers/tenfast'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
+const tenfastCompanyId = config.tenfast.companyId
 
 /**
  * Uses the new Tenfast search endpoint: GET /v1/hyresvard/avtal/search
@@ -25,7 +26,6 @@ const tenfastBaseUrl = config.tenfast.baseUrl
  * filter[hyresgaster][externalId]
  *
  * Pagination: cursor-based via `limit` + `paginate` (cursor token from prev response).
- * No `hyresvard` or `populate` params needed — handled implicitly by the search endpoint.
  */
 
 const OBJECT_TYPE_TO_TENFAST_TYP: Record<string, string> = {
@@ -93,6 +93,7 @@ export function buildTenfastQueryParams(
 ): URLSearchParams {
   const query = new URLSearchParams()
 
+  query.set('populate', 'hyresgaster,hyresobjekt')
   query.set('filter[isArchived]', 'false')
 
   if (params.q) {
@@ -149,28 +150,10 @@ export function buildTenfastQueryParams(
     query.set('filter[hyresobjekt][stadsdel]', params.districtNames.join(','))
   }
 
-  const needsClientSideFiltering = needsClientSideProcessing(params)
-
-  if (!needsClientSideFiltering) {
-    const limit = params.limit ?? 20
-    query.set('limit', String(limit))
-  } else {
-    // Fetch all records for client-side filtering
-    query.set('limit', '10000')
-  }
+  const limit = params.limit ?? 20
+  query.set('limit', String(limit))
 
   return query
-}
-
-/** Returns true when status doesn't map to a Tenfast stage and needs client-side filtering. */
-function needsClientSideProcessing(
-  params: leasing.v1.LeaseSearchQueryParams
-): boolean {
-  if (params.status && params.status.length === 1) {
-    if (!STATUS_TO_TENFAST_STAGE[params.status[0].toLowerCase()]) return true
-  }
-
-  return false
 }
 
 export async function fetchLeases(
@@ -189,7 +172,7 @@ export async function fetchLeases(
       .replace(/%5B/gi, '[')
       .replace(/%5D/gi, ']')
       .replace(/%2C/gi, ',')
-    const url = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?${queryString}`
+    const url = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${queryString}`
 
     const res = await tenfastApi.request({
       method: 'get',
@@ -232,42 +215,6 @@ export async function fetchLeases(
     )
     return { ok: false, err: 'unknown' }
   }
-}
-
-const STATUS_MAP: Record<string, LeaseStatus> = {
-  current: LeaseStatus.Current,
-  active: LeaseStatus.Current,
-  upcoming: LeaseStatus.Upcoming,
-  abouttoend: LeaseStatus.AboutToEnd,
-  ended: LeaseStatus.Ended,
-  pendingsignature: LeaseStatus.PendingSignature,
-  preliminaryterminated: LeaseStatus.PreliminaryTerminated,
-  notsent: LeaseStatus.NotSent,
-}
-
-/** Apply client-side status filtering for values that don't map to a Tenfast stage. */
-const applyClientSideFilters = (
-  leases: TenfastLease[],
-  params: leasing.v1.LeaseSearchQueryParams
-): TenfastLease[] => {
-  let filtered = leases
-
-  if (params.status && params.status.length === 1) {
-    const statusKey = params.status[0].toLowerCase()
-    const wasPushedToApi = STATUS_TO_TENFAST_STAGE[statusKey] !== undefined
-
-    if (!wasPushedToApi) {
-      const targetStatus = STATUS_MAP[statusKey]
-      if (targetStatus !== undefined) {
-        filtered = filtered.filter((l) => {
-          const leaseStatus = calculateLeaseStatus(l)
-          return leaseStatus === targetStatus
-        })
-      }
-    }
-  }
-
-  return filtered
 }
 
 const applySorting = (
@@ -345,23 +292,15 @@ export const searchLeases = async (
     throw new Error(`Failed to fetch leases from Tenfast: ${leasesResult.err}`)
   }
 
-  const apiTotalCount = leasesResult.data.totalCount
+  const totalCount = leasesResult.data.totalCount
 
-  const filteredLeases = applyClientSideFilters(
-    leasesResult.data.leases,
-    params
-  )
-
-  const leases = filteredLeases.map(mapToOnecoreLease)
+  const leases = leasesResult.data.leases.map(mapToOnecoreLease)
   const sortedResults = applySorting(leases, params)
 
   const page = params.page ?? 1
   const limit = params.limit ?? 20
 
-  const clientSideFiltering = needsClientSideProcessing(params)
-  const totalRecords = clientSideFiltering
-    ? sortedResults.length
-    : apiTotalCount
+  const totalRecords = totalCount || sortedResults.length
 
   const paginatedContent = sortedResults.slice(
     (page - 1) * limit,
