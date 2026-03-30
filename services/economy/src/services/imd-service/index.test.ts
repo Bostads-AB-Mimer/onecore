@@ -37,8 +37,14 @@ describe(imdService.enrichIMDRows, () => {
   it('maps lease ids to rows by rental object code', async () => {
     mockGetActiveLeases.mockResolvedValue(
       new Map<string, LeaseMatch | null>([
-        ['306-008-01-0201', { leaseId: '306-008-01-0201/02', leaseEndDate: null }],
-        ['306-008-01-0202', { leaseId: '306-008-01-0202/01', leaseEndDate: null }],
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
+        [
+          '306-008-01-0202',
+          { leaseId: '306-008-01-0202/01', leaseEndDate: null },
+        ],
       ])
     )
 
@@ -82,7 +88,10 @@ describe(imdService.enrichIMDRows, () => {
   it('tags row as no-active-lease when rental object exists but has no lease', async () => {
     mockGetActiveLeases.mockResolvedValue(
       new Map<string, LeaseMatch | null>([
-        ['306-008-01-0201', { leaseId: '306-008-01-0201/02', leaseEndDate: null }],
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
         ['306-008-01-0299', null],
       ])
     )
@@ -157,7 +166,10 @@ describe(imdService.enrichIMDRows, () => {
   it('tags row as amount-too-low when cost is under 15', async () => {
     mockGetActiveLeases.mockResolvedValue(
       new Map<string, LeaseMatch | null>([
-        ['306-008-01-0201', { leaseId: '306-008-01-0201/02', leaseEndDate: null }],
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
       ])
     )
 
