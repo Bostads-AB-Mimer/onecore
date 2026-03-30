@@ -94,8 +94,25 @@ async function verifyLegacyJwt(ctx: Context, next: Next) {
 }
 
 /**
+ * Peek at the JWT header to determine token type without verifying.
+ * Legacy tokens (from /auth/generateToken) use HS256,
+ * Keycloak tokens use RS256/asymmetric algorithms.
+ */
+function isLegacyToken(token: string): boolean {
+  try {
+    const header = JSON.parse(
+      Buffer.from(token.split('.')[0], 'base64url').toString()
+    )
+    return header.alg === 'HS256'
+  } catch {
+    return false
+  }
+}
+
+/**
  * Middleware to protect routes. Must run after extractToken.
- * Tries Keycloak JWKS first, falls back to legacy JWT.
+ * Routes legacy (HS256) tokens directly to legacy verification,
+ * Keycloak tokens to JWKS verification.
  */
 export const requireAuth = async (ctx: Context, next: Next) => {
   if (!ctx.state.accessToken) {
@@ -109,9 +126,13 @@ export const requireAuth = async (ctx: Context, next: Next) => {
     return
   }
 
-  await verifyKeycloakToken(ctx, async () => {
+  if (isLegacyToken(ctx.state.accessToken)) {
     await verifyLegacyJwt(ctx, next)
-  })
+  } else {
+    await verifyKeycloakToken(ctx, async () => {
+      await verifyLegacyJwt(ctx, next)
+    })
+  }
 }
 
 // Middleware to check for specific Keycloak realm roles.
