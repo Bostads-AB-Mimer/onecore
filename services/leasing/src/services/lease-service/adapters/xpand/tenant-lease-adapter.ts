@@ -432,6 +432,7 @@ const getContactsDataBySearchQuery = async (
 > => {
   try {
     const isEmailSearch = q.includes('@')
+    const isPhoneNumberSearch = /^[0+][\d\-+]*$/.test(q)
 
     if (isEmailSearch) {
       // Email search only
@@ -446,6 +447,39 @@ const getContactsDataBySearchQuery = async (
             .from('cmeml')
             .where('cmemlben', 'like', `${q}%`)
         )
+        .modify((qb) => {
+          if (contactType === 'company')
+            qb.andWhere('cmctc.cmctckod', 'like', 'F%')
+          else if (contactType === 'person')
+            qb.andWhere('cmctc.cmctckod', 'like', 'P%')
+        })
+        .limit(10)
+
+      return {
+        ok: true,
+        data: rows,
+      }
+    }
+
+    if (isPhoneNumberSearch) {
+      // Phone number search - strip dashes for matching
+      const normalizedPhone = q.replace(/-/g, '')
+      const rows = await xpandDb
+        .from('cmctc')
+        .select(
+          'cmctc.cmctckod as contactCode',
+          'cmctc.cmctcben as fullName',
+          'cmctc.persorgnr as nationalRegistrationNumber'
+        )
+        .where(
+          'cmctc.keycmobj',
+          'in',
+          xpandDb
+            .select('keycmobj')
+            .from('cmtel')
+            .where('cmtelben', 'like', `${normalizedPhone}%`)
+        )
+        .where('cmctc.deletemark', '=', '0')
         .modify((qb) => {
           if (contactType === 'company')
             qb.andWhere('cmctc.cmctckod', 'like', 'F%')
@@ -511,6 +545,7 @@ const searchContactsPaginated = async (
   ctx: Context
 ): Promise<PaginatedResponse<{ contactCode: string; fullName: string }>> => {
   const isEmailSearch = q.includes('@')
+  const isPhoneNumberSearch = /^[0+][\d\-+]*$/.test(q)
 
   if (isEmailSearch) {
     const query = xpandDb
@@ -524,6 +559,25 @@ const searchContactsPaginated = async (
           .from('cmeml')
           .where('cmemlben', 'like', `${q}%`)
       )
+
+    return paginateKnex(query, ctx)
+  }
+
+  if (isPhoneNumberSearch) {
+    const normalizedPhone = q.replace(/-/g, '')
+    const query = xpandDb
+      .from('cmctc')
+      .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+      .where(
+        'cmctc.keycmobj',
+        'in',
+        xpandDb
+          .select('keycmobj')
+          .from('cmtel')
+          .where('cmtelben', 'like', `${normalizedPhone}%`)
+      )
+      .where('cmctc.deletemark', '=', '0')
+      .orderBy('cmctc.cmctcben', 'asc')
 
     return paginateKnex(query, ctx)
   }
