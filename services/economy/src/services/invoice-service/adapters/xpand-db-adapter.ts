@@ -340,7 +340,8 @@ export const getContacts = async (
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
-      'krknr.autogiro as autogiro'
+      'krknr.autogiro as autogiro',
+      'krknr.stopdate as autogiroCancelledAt'
     )
     .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
 
@@ -433,7 +434,10 @@ export const getContacts = async (
       address: getContactAddress(contactCode),
       phoneNumbers: undefined,
       emailAddress: emailAddress,
-      autogiro: contactRow.autogiro && contactRow.autogiro !== 0,
+      autogiro:
+        contactRow.autogiro &&
+        contactRow.autogiro !== 0 &&
+        contactRow.autogiroCancelledAt === null,
       invoiceDeliveryMethod:
         emailAddress !== ''
           ? InvoiceDeliveryMethod.Email
