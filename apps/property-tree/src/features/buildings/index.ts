@@ -2,6 +2,7 @@
 export { BuildingBasicInfo } from './ui/BuildingBasicInfo'
 export { BuildingEntranceHierarchy } from './ui/BuildingEntrancesHierarchy'
 export { BuildingEntrancesTabContent } from './ui/BuildingEntrancesTabContent'
+export { StaircaseBasicInfo } from './ui/StaircaseBasicInfo'
 
 // Hooks
 export { useBuilding } from './hooks/useBuilding'

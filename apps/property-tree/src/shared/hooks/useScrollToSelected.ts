@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 
 interface UseScrollToSelectedOptions {
   isSelected: boolean
-  itemType?: 'property' | 'building' | 'residence' | 'company'
+  itemType?: 'property' | 'building' | 'staircase' | 'residence' | 'company'
   delay?: number
   behavior?: ScrollBehavior
 }
@@ -20,7 +20,7 @@ export function useScrollToSelected<T extends HTMLElement = HTMLElement>({
       isSelected &&
       elementRef.current &&
       itemType &&
-      ['property', 'building', 'residence'].includes(itemType)
+      ['property', 'building', 'staircase', 'residence'].includes(itemType)
 
     if (shouldScroll) {
       const timeout = setTimeout(() => {

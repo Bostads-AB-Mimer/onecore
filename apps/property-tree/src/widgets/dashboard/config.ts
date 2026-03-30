@@ -161,7 +161,7 @@ export const dashboardCards: DashboardCard[] = [
     id: 'stray-invoice',
     title: 'Skapa ströfaktura',
     icon: Receipt,
-    description: 'Skapa och hantera ströfakturor',
+    description: 'Skapa ströfakturor',
     path: '/economy',
     isExternal: false,
     isDisabled: false,
