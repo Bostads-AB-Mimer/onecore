@@ -34,7 +34,7 @@ interface Contact {
   fullName: string
   nationalRegistrationNumber: string
   birthDate: Date
-  address: Address | undefined
+  address?: Address
   phoneNumbers: PhoneNumber[] | undefined
   emailAddress?: string
   isTenant: boolean

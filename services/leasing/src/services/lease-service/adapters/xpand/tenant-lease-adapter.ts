@@ -100,12 +100,16 @@ const transformFromDbContact = (
       ? undefined
       : row.nationalRegistrationNumber,
     birthDate: protectedIdentity ? undefined : row.birthDate,
-    address: {
-      street: row.street,
-      number: '',
-      postalCode: row.postalCode,
-      city: row.city,
-    },
+    ...(row.street || row.postalCode || row.city
+      ? {
+          address: {
+            street: row.street,
+            number: '',
+            postalCode: row.postalCode,
+            city: row.city,
+          },
+        }
+      : {}),
     phoneNumbers: phoneNumbers,
     emailAddress:
       process.env.NODE_ENV === 'production'
@@ -710,17 +714,26 @@ const getContactQuery = () => {
         'cmctc.lagsokt as protectedIdentity',
         'cmctc.utslag as specialAttention'
       )
-      .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
+      .leftJoin('cmadr', function () {
+        this.on('cmadr.keycode', '=', 'cmctc.keycmobj')
+          .andOn(function () {
+            this.onNull('cmadr.fdate').orOn(
+              'cmadr.fdate',
+              '<=',
+              xpandDb.raw('CAST(GETDATE() AS DATE)')
+            )
+          })
+          .andOn(function () {
+            this.onNull('cmadr.tdate').orOn(
+              'cmadr.tdate',
+              '>=',
+              xpandDb.raw('CAST(GETDATE() AS DATE)')
+            )
+          })
+      })
       .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
       .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
       .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
-      // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
-      .where(function () {
-        this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
-      })
-      .where(function () {
-        this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
-      })
       .where('cmctc.deletemark', '=', '0')
       // Sort addresses so that those with a non-null fdate come first (ordered by fdate ascending), and addresses with fdate = null come last.
       // This is to prioritize addresses with a defined start date.
