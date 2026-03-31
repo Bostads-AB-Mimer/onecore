@@ -4,6 +4,7 @@ import { components } from '@/services/api/core/generated/api-types'
 
 import { Badge } from '@/shared/ui/Badge'
 import { CollapsibleInfoCard } from '@/shared/ui/CollapsibleInfoCard'
+import { CopyableField } from '@/shared/ui/CopyableField'
 import {
   Tooltip,
   TooltipContent,
@@ -156,52 +157,40 @@ export const ResidenceBasicInfo = ({
             <p className="text-sm text-muted-foreground">Byggnad</p>
             <p className="font-medium">{residence.building?.code ?? '-'}</p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Objektsnummer/lägenhetskod
-            </p>
-            <p className="font-medium">{residence.propertyObject.rentalId}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Skatteverkets lägenhetsnummer
-            </p>
-            <p className="font-medium">
-              {residence.rentalInformation?.apartmentNumber ?? '-'}
-            </p>
-          </div>
+          <CopyableField
+            label="Objektsnummer/lägenhetskod"
+            value={residence.propertyObject.rentalId ?? undefined}
+          />
+          <CopyableField
+            label="Skatteverkets lägenhetsnummer"
+            value={residence.rentalInformation?.apartmentNumber ?? undefined}
+          />
           <div>
             <p className="text-sm text-muted-foreground">Hyresobjektstyp</p>
             <p className="font-medium">
-              {residence.propertyObject?.rentalInformation?.type.name}
+              {residence.propertyObject?.rentalInformation?.type.name ?? '-'}
             </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Typ</p>
             <p className="font-medium">{residence.residenceType.name}</p>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Yta</p>
-            <p className="font-medium">
-              {residence.areaSize ? `${residence.areaSize} m²` : '-'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Anläggnings ID Mälarenergi
-            </p>
-            <p className="font-medium">
-              {residence.malarEnergiFacilityId || '-'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Hyra</p>
-            <p className="font-medium">
-              {rent
+          <CopyableField
+            label="Yta"
+            value={residence.areaSize ? `${residence.areaSize} m²` : undefined}
+          />
+          <CopyableField
+            label="Anläggnings ID Mälarenergi"
+            value={residence.malarEnergiFacilityId || undefined}
+          />
+          <CopyableField
+            label="Hyra"
+            value={
+              rent
                 ? `${Math.round(rent).toLocaleString('sv-SE')} kr/mån`
-                : '-'}
-            </p>
-          </div>
+                : undefined
+            }
+          />
           {building?.construction.constructionYear && (
             <div>
               <p className="text-sm text-muted-foreground">Byggnadsår</p>
@@ -221,7 +210,6 @@ export const ResidenceBasicInfo = ({
           <div>
             <p className="text-sm text-muted-foreground">Status</p>
             <p className="font-medium">
-              {' '}
               {residence.status === 'LEASED'
                 ? 'Uthyrd'
                 : residence.status === 'VACANT'
