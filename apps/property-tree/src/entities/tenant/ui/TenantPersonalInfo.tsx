@@ -1,5 +1,9 @@
+import { MapPin } from 'lucide-react'
+
 import type { Lease } from '@/services/api/core/leaseService'
 import type { Tenant } from '@/services/types'
+import { CopyableField } from '@/shared/ui/CopyableField'
+import { TooltipProvider } from '@/shared/ui/Tooltip'
 
 import { getTenantRoles, isOrganization } from '../lib/classification'
 import { formatTenantAddress, formatTenantName } from '../lib/formatting'
@@ -17,36 +21,46 @@ export function TenantPersonalInfo({
 }: TenantPersonalInfoProps) {
   const displayName = formatTenantName(tenant)
 
+  const handleOpenInMaps = (address: NonNullable<Tenant['address']>) => {
+    const formattedAddress = formatTenantAddress(address)
+    window.open(
+      `https://maps.google.com/?q=${encodeURIComponent(formattedAddress)}`,
+      '_blank',
+      'noopener,noreferrer'
+    )
+  }
+
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-sm text-muted-foreground">Namn</p>
-        <p className="font-medium">{displayName}</p>
+    <TooltipProvider>
+      <div className="space-y-4">
+        <CopyableField label="Namn" value={displayName} />
+        <CopyableField
+          label={
+            isOrganization(tenant) ? 'Organisationsnummer' : 'Personnummer'
+          }
+          value={tenant.nationalRegistrationNumber}
+        />
+        {variant === 'full' && tenant.address && (
+          <CopyableField
+            label="Bostadsadress"
+            value={formatTenantAddress(tenant.address)}
+            actions={[
+              {
+                icon: <MapPin className="h-4 w-4" />,
+                onClick: () => handleOpenInMaps(tenant.address!),
+                tooltip: 'Öppna i Google Maps',
+                ariaLabel: 'Öppna adress i Google Maps',
+              },
+            ]}
+          />
+        )}
+        {variant === 'full' && (
+          <CopyableField label="Kundnummer" value={tenant.contactCode} />
+        )}
+        {variant === 'full' && (
+          <CopyableField label="Typ/roll" value={getTenantRoles(tenant)} />
+        )}
       </div>
-      <div>
-        <p className="text-sm text-muted-foreground">
-          {isOrganization(tenant) ? 'Organisationsnummer' : 'Personnummer'}
-        </p>
-        <p className="font-medium">{tenant.nationalRegistrationNumber}</p>
-      </div>
-      {variant === 'full' && tenant.address && (
-        <div>
-          <p className="text-sm text-muted-foreground">Bostadsadress</p>
-          <p className="font-medium">{formatTenantAddress(tenant.address)}</p>
-        </div>
-      )}
-      {variant === 'full' && (
-        <div>
-          <p className="text-sm text-muted-foreground">Kundnummer</p>
-          <p className="font-medium">{tenant.contactCode}</p>
-        </div>
-      )}
-      {variant === 'full' && (
-        <div>
-          <p className="text-sm text-muted-foreground">Typ/roll</p>
-          <p className="font-medium">{getTenantRoles(tenant)}</p>
-        </div>
-      )}
-    </div>
+    </TooltipProvider>
   )
 }

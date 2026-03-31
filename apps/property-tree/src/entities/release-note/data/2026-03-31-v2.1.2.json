@@ -1,0 +1,23 @@
+[
+  {
+    "id": "rn-2026-03-31-v212-1",
+    "date": "2026-03-31",
+    "title": "Kopieringsknappar och Google Maps för hyresgästinformation",
+    "description": "Kopieringsknappar har återställts för hyresgästinformation (namn, personnummer, adress, kundnummer). Adressen har även en knapp för att öppna i Google Maps.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-03-31-v212-2",
+    "date": "2026-03-31",
+    "title": "Kontaktuppgifter vid adressbyte",
+    "description": "Åtgärdat bugg där kontaktuppgifter inte kunde hämtas samma dag som hyresgästen byter adress.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-03-31-v212-3",
+    "date": "2026-03-31",
+    "title": "Parkeringar syns inte på mimer.nu",
+    "description": "Åtgärdat bugg där fel uppstod vid visning av nya parkeringar för parkeringshyresgäster som saknar lägenhetskontrakt.",
+    "category": "fix"
+  }
+]
