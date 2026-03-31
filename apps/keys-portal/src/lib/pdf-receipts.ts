@@ -554,7 +554,17 @@ const addMaintenanceInfo = (
  */
 const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
   const bottom = contentBottom(doc)
-  const spaceNeeded = 50
+
+  const confirmText =
+    'För Mimers personal: Lån av nycklar sker under förutsättning att nyckellånaren tar hela ansvaret för dess användande. Om nyckel förkommer skall nyckellånaren omgående informera aktuell Distriktschef för vidare hantering. Nycklar ska alltid fästas med kedja.\n\nFör övriga: Lån av huvudnyckel/fastighetsskötarnyckel sker under förutsättning att nyckellånaren tar hela ansvaret för dess användande enligt ansvarsförbindelsen. Denne förbinder sig att svara för samtliga kostnader som kan uppstå genom förlust av utkvitterad nyckel, såsom till exempel byte av låssystem inkl. nycklar och cylindrar och ev. nödvändig bevakning under tiden. Nycklar ska alltid fästas med kedja.'
+
+  // Pre-compute wrapped lines to calculate actual space needed
+  doc.setFont(FONT_GRAPHIK, 'normal')
+  doc.setFontSize(FONT_SIZE.BODY)
+  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
+  const textHeight = lines.length * 5.5
+  // header (10) + text + gap (10) + signature line (5) + label (10)
+  const spaceNeeded = 10 + textHeight + 10 + 5 + 10
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
@@ -574,10 +584,6 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
 
-  const confirmText =
-    'Genom min signatur bekräftar jag att jag tagit emot ovanstående nycklar. Jag ansvarar för att de förvaras och används på ett säkert sätt. Om en nyckel försvinner eller skadas ska jag omedelbart kontakta Mimer. För externa leverantörer innebär förlust eller skada att kostnaden för låsbyte debiteras nyckellånaren eller dennes arbetsgivare.'
-
-  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
   lines.forEach((line: string) => {
     doc.text(line, MARGIN_X, y)
     y += 5.5

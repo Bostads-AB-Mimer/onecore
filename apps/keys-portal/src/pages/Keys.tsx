@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ListPageLayout } from '@/components/shared/layout'
+import { ListPageLayout, SearchInput } from '@/components/shared/layout'
 import { KeysTable } from '@/components/keys/KeysTable'
 import { AddKeyForm } from '@/components/keys/AddKeyForm'
 import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
@@ -17,6 +17,7 @@ import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
+import { parseNumberFilter } from '@/utils/parseNumberFilter'
 import { Pencil, Trash2, KeyRound } from 'lucide-react'
 
 const Index = () => {
@@ -41,9 +42,14 @@ const Index = () => {
     pagination.searchParams.get('rentalObjectCode') || null
   const editKeyId = pagination.searchParams.get('editKeyId') || null
   const keySystemIdFilter = pagination.searchParams.get('keySystemId') || null
+  const keySequenceNumberQuery =
+    pagination.searchParams.get('keySequenceNumber') || ''
 
   // Local state for search input (to allow typing without triggering URL changes)
   const [searchInput, setSearchInput] = useState(searchQuery)
+  const [keySequenceNumberInput, setKeySequenceNumberInput] = useState(
+    keySequenceNumberQuery
+  )
   const [keySystemSearch, setKeySystemSearch] = useState('')
   const [selectedKeySystem, setSelectedKeySystem] = useState<KeySystem | null>(
     null
@@ -66,24 +72,30 @@ const Index = () => {
         // Build search parameters based on current filters
         const searchParams: Record<string, string | string[]> = {}
 
-        // Add search query if present
-        if (searchQuery.trim().length >= 2) {
+        // Add search query if present (no min length when keysystem filter is active)
+        const minQueryLength = keySystemIdFilter ? 0 : 2
+        if (searchQuery.trim().length >= minQueryLength) {
           searchParams.q = searchQuery.trim()
-          searchParams.fields = 'keyName,rentalObjectCode,keySystemId'
+          searchParams.fields = 'keyName,rentalObjectCode'
         }
 
         // Add column filters
         if (selectedTypeFilter) {
           searchParams.keyType = selectedTypeFilter
         }
-        if (selectedDisposedFilter) {
-          searchParams.disposed = selectedDisposedFilter
-        }
+        // Hide disposed keys by default; pass through explicit filter when set
+        searchParams.disposed = selectedDisposedFilter ?? 'false'
         if (rentalObjectCode) {
           searchParams.rentalObjectCode = rentalObjectCode
         }
         if (keySystemIdFilter) {
           searchParams.keySystemId = keySystemIdFilter
+        }
+
+        // Add key sequence number filter (supports <, >, <=, >=, and range like 50-100)
+        const seqFilter = parseNumberFilter(keySequenceNumberQuery)
+        if (seqFilter) {
+          searchParams.keySequenceNumber = seqFilter
         }
 
         // Add date filters
@@ -138,6 +150,7 @@ const Index = () => {
       selectedDisposedFilter,
       rentalObjectCode,
       keySystemIdFilter,
+      keySequenceNumberQuery,
       createdAtAfter,
       createdAtBefore,
       toast,
@@ -157,15 +170,20 @@ const Index = () => {
     selectedDisposedFilter,
     rentalObjectCode,
     keySystemIdFilter,
+    keySequenceNumberQuery,
     createdAtAfter,
     createdAtBefore,
     // fetchKeys intentionally omitted to prevent infinite loop
   ])
 
-  // Sync search input with URL when URL changes
+  // Sync search inputs with URL when URL changes
   useEffect(() => {
     setSearchInput(searchQuery)
   }, [searchQuery])
+
+  useEffect(() => {
+    setKeySequenceNumberInput(keySequenceNumberQuery)
+  }, [keySequenceNumberQuery])
 
   // Clear selection when page or filters change
   useEffect(() => {
@@ -177,6 +195,7 @@ const Index = () => {
     selectedDisposedFilter,
     rentalObjectCode,
     keySystemIdFilter,
+    keySequenceNumberQuery,
     createdAtAfter,
     createdAtBefore,
   ])
@@ -198,10 +217,22 @@ const Index = () => {
   const handleSearchChange = useCallback(
     (query: string) => {
       setSearchInput(query)
-      // Only update URL if query is empty or has 3+ characters
-      if (query.trim().length === 0 || query.trim().length >= 2) {
+      // No min length when keysystem filter is active
+      const minLength = keySystemIdFilter ? 0 : 2
+      if (query.trim().length === 0 || query.trim().length >= minLength) {
         pagination.updateUrlParams({ q: query.trim() || null, page: '1' })
       }
+    },
+    [pagination, keySystemIdFilter]
+  )
+
+  const handleKeySequenceNumberChange = useCallback(
+    (value: string) => {
+      setKeySequenceNumberInput(value)
+      pagination.updateUrlParams({
+        keySequenceNumber: value.trim() || null,
+        page: '1',
+      })
     },
     [pagination]
   )
@@ -491,12 +522,21 @@ const Index = () => {
         description: `${deletingKey.keyName} har tagits bort.`,
       })
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
-      toast({
-        title: 'Kunde inte ta bort nyckel',
-        description: msg,
-        variant: 'destructive',
-      })
+      if ((e as any)?.status === 403) {
+        toast({
+          title: 'Behörighet saknas',
+          description:
+            'Du saknar behörighet att ta bort nycklar. Kontakta administratör.',
+          variant: 'destructive',
+        })
+      } else {
+        const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
+        toast({
+          title: 'Kunde inte ta bort nyckel',
+          description: msg,
+          variant: 'destructive',
+        })
+      }
     } finally {
       setDeletingKey(null)
     }
@@ -560,12 +600,21 @@ const Index = () => {
         variant: 'destructive',
       })
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
-      toast({
-        title: 'Kunde inte ta bort nycklar',
-        description: msg,
-        variant: 'destructive',
-      })
+      if ((e as any)?.status === 403) {
+        toast({
+          title: 'Behörighet saknas',
+          description:
+            'Du saknar behörighet att ta bort nycklar. Kontakta administratör.',
+          variant: 'destructive',
+        })
+      } else {
+        const msg = e instanceof Error ? e.message : 'Okänt fel vid borttagning'
+        toast({
+          title: 'Kunde inte ta bort nycklar',
+          description: msg,
+          variant: 'destructive',
+        })
+      }
     }
   }
 
@@ -628,6 +677,14 @@ const Index = () => {
           selectedValue={selectedKeySystem}
           placeholder="Filtrera på låssystem"
           showSearchIcon
+        />
+      }
+      searchAfterExtra={
+        <SearchInput
+          value={keySequenceNumberInput}
+          onChange={handleKeySequenceNumberChange}
+          placeholder="Löpnr"
+          className="max-w-48"
         />
       }
       onAddNew={handleAddNew}

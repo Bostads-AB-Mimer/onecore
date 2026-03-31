@@ -49,6 +49,7 @@ interface SearchDropdownProps<T> {
   isItemDisabled?: (item: T) => boolean // Grey out and prevent selection
   isItemSelected?: (item: T) => boolean // Show checkmark on item
   showSearchIcon?: boolean // Show a magnifying glass icon in the input
+  open?: boolean // Externally control dropdown visibility (ORed with internal focus state)
 }
 
 /**
@@ -87,6 +88,7 @@ export function SearchDropdown<T>({
   isItemDisabled,
   isItemSelected,
   showSearchIcon = false,
+  open,
 }: SearchDropdownProps<T>) {
   // Internal state
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -149,7 +151,7 @@ export function SearchDropdown<T>({
     return () => {
       stale = true
     }
-  }, [debouncedQuery, selectedValue, minSearchLength])
+  }, [debouncedQuery, selectedValue, minSearchLength, searchFn])
 
   // Combine pre-suggestions with server results
   const { allItems, preSuggestionsCount } = useMemo(() => {
@@ -223,7 +225,7 @@ export function SearchDropdown<T>({
 
   // Determine if we should show the dropdown
   const shouldShowDropdown = useMemo(() => {
-    if (!showDropdown || selectedValue) return false
+    if ((!showDropdown && !open) || selectedValue) return false
 
     const trimmed = value.trim()
 
@@ -236,6 +238,7 @@ export function SearchDropdown<T>({
     return true
   }, [
     showDropdown,
+    open,
     selectedValue,
     value,
     minSearchLength,
@@ -252,6 +255,13 @@ export function SearchDropdown<T>({
     // Delay to allow click events on dropdown items to fire first
     setTimeout(() => setShowDropdown(false), 200)
     onBlur?.()
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Tab') {
+      setShowDropdown(false)
+    }
+    onKeyDown?.(e)
   }
 
   const handleSelectItem = (item: T) => {
@@ -350,7 +360,7 @@ export function SearchDropdown<T>({
           onChange={(e) => onChange(e.target.value)}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          onKeyDown={onKeyDown}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
           autoComplete="off"
