@@ -612,11 +612,11 @@ const getContactByNationalRegistrationNumber = async (
 
   if (rows && rows.length > 0) {
     const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-    const { leaseIds, isInnehavare } = await getLeaseIds(
+    const { leaseIds, isLeaseHolder } = await getLeaseIds(
       rows[0].contactKey,
       includeTerminatedLeases
     )
-    return transformFromDbContact(rows, phoneNumbers, leaseIds, isInnehavare)
+    return transformFromDbContact(rows, phoneNumbers, leaseIds, isLeaseHolder)
   }
 
   return null
@@ -633,7 +633,7 @@ const getContactByContactCode = async (
     }
 
     const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-    const { leaseIds, isInnehavare } = await getLeaseIds(
+    const { leaseIds, isLeaseHolder } = await getLeaseIds(
       rows[0].contactKey,
       includeTerminatedLeases
     )
@@ -642,7 +642,7 @@ const getContactByContactCode = async (
       rows,
       phoneNumbers,
       leaseIds,
-      isInnehavare
+      isLeaseHolder
     )
 
     return {
@@ -667,11 +667,11 @@ const getContactByPhoneNumber = async (
 
     if (rows && rows.length > 0) {
       const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-      const { leaseIds, isInnehavare } = await getLeaseIds(
+      const { leaseIds, isLeaseHolder } = await getLeaseIds(
         rows[0].contactKey,
         includeTerminatedLeases
       )
-      return transformFromDbContact(rows, phoneNumbers, leaseIds, isInnehavare)
+      return transformFromDbContact(rows, phoneNumbers, leaseIds, isLeaseHolder)
     }
   }
 }
@@ -801,7 +801,7 @@ const getLeaseIds = async (
   if (!includeTerminatedLeases) {
     return {
       leaseIds: rows.filter(isLeaseActive).map((x) => x.leaseId),
-      isInnehavare: rows.some(
+      isLeaseHolder: rows.some(
         (x) =>
           (x.leaseContactType as string)?.trim() === 'INNEHAVARE' &&
           isLeaseActive(x)
@@ -810,7 +810,7 @@ const getLeaseIds = async (
   }
   return {
     leaseIds: rows.map((x) => x.leaseId),
-    isInnehavare: rows.some(
+    isLeaseHolder: rows.some(
       (x) => (x.leaseContactType as string)?.trim() === 'INNEHAVARE'
     ),
   }
