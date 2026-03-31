@@ -107,6 +107,7 @@ jobs:
             echo "CI snapshot (main)"
             echo "build_type=snapshot" >> $GITHUB_OUTPUT
             echo "build_tag_base=${PKGVER}-ci" >> $GITHUB_OUTPUT
+            echo "build_tag_inc=true" >> $GITHUB_OUTPUT
             echo "version_bump_type=patch" >> $GITHUB_OUTPUT
 
           elif [[ "$HEAD_BRANCH" == epic/* ]]; then
