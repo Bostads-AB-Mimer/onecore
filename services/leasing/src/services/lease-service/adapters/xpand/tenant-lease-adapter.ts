@@ -136,7 +136,10 @@ const getLease = async (
   if (rows.length > 0) {
     logger.info({ leaseId }, 'Getting lease Xpand DB complete')
     if (includeContacts) {
-      const tenants = await getContactsByLeaseId(leaseId, includeNonTenantContacts)
+      const tenants = await getContactsByLeaseId(
+        leaseId,
+        includeNonTenantContacts
+      )
       return transformFromXPandDb.toLease(rows[0], [], tenants)
     } else {
       return transformFromXPandDb.toLease(rows[0], [], [])
