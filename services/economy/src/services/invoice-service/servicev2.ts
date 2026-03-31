@@ -22,10 +22,15 @@ import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-ada
 /**
  *
  */
-export const exportRentalInvoicesAccounting = async (companyId: string) => {
+export const exportRentalInvoicesAccounting = async (
+  companyId: string
+): Promise<{
+  invoices: InvoiceWithAccounting[]
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
   try {
     const errors: { invoiceNumber: string; error: string }[] = []
-    const CHUNK_SIZE = 20 //500
+    const CHUNK_SIZE = 200 //500
 
     const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE)
     if (!invoicesResult.ok) {
@@ -45,7 +50,18 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
     const counterPartCustomers = await getCounterPartCustomers()
 
     for (const invoice of invoices) {
-      await enrichInvoiceWithAccounting(invoice)
+      try {
+        await enrichInvoiceWithAccounting(invoice)
+      } catch (error) {
+        let message
+        if (error instanceof Error) {
+          message = error.message
+        } else {
+          message = String(error)
+        }
+        errors.push({ invoiceNumber: invoice.invoiceId, error: message })
+        continue
+      }
 
       const counterPartCustomer = findCounterPartCustomer(
         counterPartCustomers,
@@ -72,7 +88,10 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
       )
     })
 
-    return invoices
+    return {
+      invoices,
+      errors,
+    }
   } catch (error: any) {
     logger.error(error, 'Error importing invoices - batch could not be created')
 
@@ -80,9 +99,12 @@ export const exportRentalInvoicesAccounting = async (companyId: string) => {
   }
 }
 
-export const createAggregateAccounting = async (
+export const createAccounting = async (
   invoices: InvoiceWithAccounting[]
-) => {
+): Promise<{
+  invoiceRows: ExportedInvoiceRow[]
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
   const invoiceRowsForExport = await getExportInvoiceRows(invoices)
   const aggregateAccountingCsv = await createAggregateCsv(invoiceRowsForExport)
   const ledgerAccountingCsv = await createLedgerCsv(invoices)
@@ -100,7 +122,10 @@ export const createAggregateAccounting = async (
   console.log(contactsCsv.join('\n'))
   console.log('---------')*/
 
-  return invoiceRowsForExport
+  return {
+    invoiceRows: invoiceRowsForExport,
+    errors: [],
+  }
 }
 
 const getExportInvoiceRows = async (invoices: InvoiceWithAccounting[]) => {
