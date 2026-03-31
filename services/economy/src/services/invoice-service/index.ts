@@ -17,19 +17,38 @@ import {
 } from './adapters/xpand-db-adapter'
 import { getInvoiceDetails } from './service'
 import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
-import {
-  createAggregateAccounting,
-  exportRentalInvoicesAccounting,
-} from './servicev2'
+import { createAccounting, exportRentalInvoicesAccounting } from './servicev2'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/import', async (ctx) => {
     try {
-      const invoices = await exportRentalInvoicesAccounting('001')
-      const exportInvoiceRows = await createAggregateAccounting(invoices)
+      const invoicesResult = await exportRentalInvoicesAccounting('001')
+      const exportInvoiceRows = await createAccounting(invoicesResult.invoices)
 
       ctx.status = 200
-      ctx.body = exportInvoiceRows
+      ctx.body = {
+        errors: invoicesResult.errors,
+        successfulInvoices: invoicesResult.invoices.map(
+          (invoice) => invoice.invoiceId
+        ),
+      }
+    } catch (error) {
+      ctx.status = 500
+      ctx.body = 'Could not export invoices ' + (error as any).message
+    }
+  })
+
+  // TODO: Remove this route after feature completion
+  router.get('(.*)/invoices/invoices-for-import', async (ctx) => {
+    try {
+      const invoicesResult = await exportRentalInvoicesAccounting('001')
+
+      const invoiceIds = invoicesResult.invoices.map((invoice) => {
+        return invoice.invoiceId
+      })
+
+      ctx.status = 200
+      ctx.body = invoiceIds
     } catch (error) {
       ctx.status = 500
       ctx.body = 'Could not export invoices ' + (error as any).message

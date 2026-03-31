@@ -22,6 +22,7 @@ import {
 import {
   InvoiceRowWithAccounting,
   InvoiceWithAccounting,
+  TenfastRentalObject,
 } from '@src/common/types/typesv2'
 
 const invoiceStates = [
@@ -114,6 +115,27 @@ const getTenantById = async (
       ok: true,
       data: parsedResponse.data ?? null,
     }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}
+
+const getRentalObjectById = async (
+  id: string
+): Promise<AdapterResult<TenfastRentalObject, string>> => {
+  try {
+    const result = await makeTenfastRequest(`/v1/hyresvard/hyresobjekt/${id}`)
+    if (result.status !== 200) {
+      return { ok: false, err: result.statusText }
+    }
+
+    const rentalObject: TenfastRentalObject = {
+      _id: result.data._id,
+      externalId: result.data.externalId,
+    }
+
+    return { ok: true, data: rentalObject }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -267,6 +289,7 @@ const transformToInvoiceRow = (
     totalAmount: tenfastInvoiceRow.amount + tenfastInvoiceRow.vat,
     printGroup: tenfastInvoiceRow.consolidationLabel ?? null,
     invoiceRowText: null, // Set later from related article
+    rentalObject: tenfastInvoiceRow.hyresobjekt,
     // We do not have the fields below in tenfast at the moment
     deduction: 0,
     roundoff: 0,
@@ -282,17 +305,29 @@ export const convertToDate = (tenfastDate: string) => {
   return new Date(tenfastDate)
 }
 
+const replaceRentalObjectExternalIds = async (invoice: Invoice) => {
+  for (const invoiceRow of invoice.invoiceRows) {
+    if (invoiceRow.rentalObject) {
+      const rentalObjectResult = await getRentalObjectById(
+        invoiceRow.rentalObject
+      )
+      if (rentalObjectResult.ok) {
+        invoiceRow.rentalObject = rentalObjectResult.data.externalId
+      }
+    }
+  }
+}
+
 export const getInvoicesNotExported = async (
   maxCount: number
 ): Promise<AdapterResult<InvoiceWithAccounting[], string>> => {
-  //tenfast-test-api.mimer.nu/v1/hyresvard/hyror?states=ny&filter[isManuallyExported]=false&limit=10
-
   try {
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
-        'filter[isManuallyExported]': 'false',
-        states: invoiceStates.join(','),
+        isManuallyExported: 'false',
+        status: 'issued',
         limit: maxCount,
+        hyresvard: '6344b398b63ff59d5bde8257',
       },
     })
 
@@ -324,6 +359,8 @@ export const getInvoicesNotExported = async (
       if (!invoice.invoiceId) {
         console.error(`Invoice ${invoice.externalId} has no ocrNumber`)
       }
+
+      await replaceRentalObjectExternalIds(invoice)
 
       const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
       for (const invoiceRow of invoice.invoiceRows) {
@@ -359,46 +396,4 @@ export const getInvoicesNotExported = async (
     logger.error(err)
     return { ok: false, err: err.message }
   }
-
-  /*
-  // Dummy implementation awaiting exported flag in Tenfast
-  const invoices: InvoiceWithAccounting[] = []
-  const ocrNumbers = ['552604000765181', '552603000765142', '552603000765100']
-
-  for (const ocrNumber of ocrNumbers) {
-    const tenfastInvoicesResult = await getInvoiceByOcr(ocrNumber)
-    if (tenfastInvoicesResult.ok && tenfastInvoicesResult.data) {
-      const invoice = tenfastInvoicesResult.data
-      const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
-
-      for (const invoiceRow of invoice.invoiceRows) {
-        const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
-          ...invoiceRow,
-        }
-        if (invoiceRow.rentArticle) {
-          const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
-
-          if (articleResult.ok) {
-            const article = articleResult.data
-            invoiceRowWithAccounting.account = article.accountNr ?? undefined
-            invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
-          }
-        }
-
-        invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
-      }
-      const invoiceWithAccounting = {
-        ...invoice,
-        invoiceRows: invoiceRowsWithAccounting,
-      }
-
-      invoices.push(invoiceWithAccounting)
-    }
-  }
-
-  console.table(invoices)
-
-  //console.log(JSON.stringify(invoices, null, 2))
-
-  return { ok: true, data: invoices }*/
 }

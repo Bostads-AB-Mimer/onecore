@@ -20,6 +20,7 @@ export const InvoiceRowSchema = z.object({
   toDate: z.string(),
   totalAmount: z.number(),
   vat: z.number(),
+  rentalObject: z.string().optional(),
 })
 
 export const InvoicePaymentEventSchema = z.object({

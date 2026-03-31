@@ -18,7 +18,10 @@ import {
   XpandContact,
 } from '@src/common/types'
 import { match, P } from 'ts-pattern'
-import { InvoiceWithAccounting } from '@src/common/types/typesv2'
+import {
+  InvoiceRowWithAccounting,
+  InvoiceWithAccounting,
+} from '@src/common/types/typesv2'
 
 type RentalSpecificRule = {
   costCode: string
@@ -54,34 +57,36 @@ export const closeDb = () => {
 export const enrichInvoiceWithAccounting = async (
   invoice: InvoiceWithAccounting
 ): Promise<InvoiceWithAccounting> => {
-  const rentalId = invoice.leaseId.split('/')[0]
   const year = invoice.invoiceDate.getFullYear()
+  const rentalIds = invoice.invoiceRows.map(
+    (invoiceRow: InvoiceRowWithAccounting) => invoiceRow.rentalObject as string
+  )
   const rentalSpecificRules = await getRentalSpecificRules(
-    [rentalId],
+    rentalIds,
     year.toString()
   )
 
-  const rentalSpecificRule = rentalSpecificRules[rentalId]
-
-  if (!rentalSpecificRule || Object.keys(rentalSpecificRule).length === 0) {
-    logger.error(
-      {
-        invoiceNumber: invoice.invoiceId,
-        rentalSpecificRules,
-        rentalId,
-      },
-      'Could not get accounting rules for invoice from Xpand'
-    )
-    // TODO: Reintroduce throwing error
-    // throw new Error(`Could not get accounting rules for object ${rentalId} on invoice ${invoiceId}`)
+  for (const invoiceRow of invoice.invoiceRows) {
+    const rentalSpecificRule =
+      rentalSpecificRules[invoiceRow.rentalObject as string]
+    if (!rentalSpecificRule || Object.keys(rentalSpecificRule).length === 0) {
+      logger.error(
+        {
+          invoiceNumber: invoice.invoiceId,
+          rentalSpecificRules,
+          rentalObject: invoiceRow.rentalObject,
+        },
+        'Could not get accounting rules for invoice from Xpand'
+      )
+      throw new Error(
+        `Could not get accounting rules for object ${invoiceRow.rentalObject} on invoice ${invoice.invoiceId}`
+      )
+    }
+    invoiceRow.projectCode = rentalSpecificRule?.projectCode
+    invoiceRow.costCode = rentalSpecificRule?.costCode
+    invoiceRow.property = rentalSpecificRule?.property
+    invoiceRow.freeCode = rentalSpecificRule?.freeCode
   }
-
-  invoice.invoiceRows.forEach((row) => {
-    row.projectCode = rentalSpecificRule?.projectCode
-    row.costCode = rentalSpecificRule?.costCode
-    row.property = rentalSpecificRule?.property
-    row.freeCode = rentalSpecificRule?.freeCode
-  })
 
   return invoice
 }

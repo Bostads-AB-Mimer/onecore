@@ -123,3 +123,8 @@ export type LedgerRow = {
   voucherNumber: string
   counterPartCode?: string
 }
+
+export type TenfastRentalObject = {
+  _id: string
+  externalId: string
+}
