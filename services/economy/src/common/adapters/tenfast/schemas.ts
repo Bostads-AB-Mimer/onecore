@@ -144,17 +144,25 @@ export const TenfastRentArticleSchema = z.object({
   title: z.string(),
 })
 
-export const TenfastBatchGetRentalObjectsResponseSchema = z.object({
-  records: z.array(
-    z
-      .object({
-        _id: z.string(),
-        externalId: z.string(), // rental object code, e.g. "306-008-01-0201"
-        avtal: z.array(TenfastLeaseSchema),
-      })
-      .passthrough()
-  ),
+// Lean lease schema for the batch-get endpoint, where hyresgaster/hyresobjekt
+// are returned as string IDs (not populated objects) unless requested via extra
+// query params we don't need here.
+export const TenfastBatchGetLeaseSchema = TenfastLeaseSchema.extend({
+  hyresgaster: z.array(z.union([z.string(), z.object({ _id: z.string() }).passthrough()])),
+  hyresobjekt: z.array(z.union([z.string(), z.object({ _id: z.string() }).passthrough()])),
 })
+
+export const TenfastBatchGetRentalObjectSchema = z
+  .object({
+    _id: z.string(),
+    externalId: z.string(), // rental object code, e.g. "306-008-01-0201"
+    avtal: z.array(TenfastBatchGetLeaseSchema),
+  })
+  .passthrough()
+
+export const TenfastBatchGetRentalObjectsResponseSchema = z.array(
+  TenfastBatchGetRentalObjectSchema
+)
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
@@ -170,6 +178,10 @@ export type TenfastTenantByContactCodeResponse = z.infer<
 >
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
+export type TenfastBatchGetLease = z.infer<typeof TenfastBatchGetLeaseSchema>
+export type TenfastBatchGetRentalObject = z.infer<
+  typeof TenfastBatchGetRentalObjectSchema
+>
 export type TenfastBatchGetRentalObjectsResponse = z.infer<
   typeof TenfastBatchGetRentalObjectsResponseSchema
 >

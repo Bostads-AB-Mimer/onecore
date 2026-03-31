@@ -13,6 +13,7 @@ import {
   TenfastRentArticle,
   TenfastBatchGetRentalObjectsResponseSchema,
   type TenfastLease,
+  type TenfastBatchGetLease,
 } from './schemas'
 import {
   Invoice,
@@ -241,21 +242,24 @@ const BATCH_SIZE = 500
 const EXCLUDED_STAGES = new Set(['draft', 'signingInProgress'])
 
 function findActiveLease(
-  leases: TenfastLease[],
+  leases: TenfastBatchGetLease[],
   periodStart: Date,
   periodEnd: Date
-): TenfastLease | null {
+): TenfastBatchGetLease | null {
+  // Only consider leases that cover the entire period — started on or before
+  // periodStart and ends on or after periodEnd (or has no end date).
   const candidates = leases.filter((lease) => {
     if (lease.externalId.includes('M')) return false
     if (EXCLUDED_STAGES.has(lease.stage)) return false
-    if (lease.startDate > periodEnd) return false
-    if (lease.endDate !== null && lease.endDate < periodStart) return false
+    if (lease.startDate > periodStart) return false
+    if (lease.endDate !== null && lease.endDate < periodEnd) return false
     return true
   })
 
   if (candidates.length === 0) return null
 
-  // Pick the lease with the latest startDate — most relevant to the period
+  // Edge case: multiple leases fully covering the same period (data anomaly).
+  // Pick the most recently started one.
   return candidates.reduce((best, lease) =>
     lease.startDate > best.startDate ? lease : best
   )
@@ -304,7 +308,7 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
 
     const batchMap = new Map<string, LeaseMatch | null>()
 
-    for (const record of parsed.data.records) {
+    for (const record of parsed.data) {
       // Rental object exists — default to null (no active lease found)
       batchMap.set(record.externalId, null)
 
@@ -322,7 +326,7 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
     }
 
     logger.info(
-      `IMD: Batch ${index + 1}/${batches.length} — ${batch.length} codes, ${parsed.data.records.length} records, ${Date.now() - start}ms`
+      `IMD: Batch ${index + 1}/${batches.length} — ${batch.length} codes, ${parsed.data.length} records, ${Date.now() - start}ms`
     )
 
     return batchMap
