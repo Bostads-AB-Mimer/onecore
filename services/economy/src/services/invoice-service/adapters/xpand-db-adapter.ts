@@ -602,6 +602,7 @@ export const getInvoiceRows = async (
     return []
   }
 
+  // TODO: Get year from krfkh.fromdate instead of using startDate for whole batch.
   const keycodes =
     companyId === '001' ? ['FADBT_HYRA'] : [/*'FADBT_INTHYRA',*/ 'FADBT_HYRA']
   const invoiceRowsQuery = db.raw(
@@ -629,16 +630,16 @@ export const getInvoiceRows = async (
     LEFT JOIN repsr ON repsk.keyrepsr = repsr.keyrepsr
     WHERE
       (
-        (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = ?) OR
+        (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = datepart(year, krfkh.fromdate)) OR
         (krfkh.invoice like '5%' and (repsr.keycode is null and keyrektk is null and repsk.year is null)) or
-        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = ?) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
+        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = krfkh.fromdate) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
       )
       AND cmcmp.code = ?
       AND (krfkh.type = 1 OR krfkh.type = 2)
       AND invoice IN (${invoiceNumbers.map((_) => `'${_}'`).join(',')})
     ORDER BY invoice ASC, krfkr.printsort ASC
     `,
-    [year, year, companyId]
+    [companyId]
   )
 
   const invoiceRows = await invoiceRowsQuery
