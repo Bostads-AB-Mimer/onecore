@@ -276,12 +276,19 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
     .default({ includeTerminatedLeases: 'false' })
   router.get(
     '(.*)/contacts/by-national-registration-number/:pnr',
     async (ctx) => {
-      const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+      const metadata = generateRouteMetadata(ctx, [
+        'includeTerminatedLeases',
+        'includeNonTenantLeases',
+      ])
       const queryParams = getContactByPnrQueryParamSchema.safeParse(ctx.query)
 
       if (!queryParams.success) {
@@ -291,7 +298,8 @@ export const routes = (router: KoaRouter) => {
 
       const responseData = await getContactByNationalRegistrationNumber(
         ctx.params.pnr,
-        queryParams.data.includeTerminatedLeases
+        queryParams.data.includeTerminatedLeases,
+        queryParams.data.includeNonTenantLeases
       )
 
       ctx.status = 200
@@ -342,11 +350,18 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
     .default({ includeTerminatedLeases: 'false' })
 
   router.get('(.*)/contacts/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeNonTenantLeases',
+    ])
 
     const queryParams = getContactByContactCodeQueryParamSchema.safeParse(
       ctx.query
@@ -359,7 +374,8 @@ export const routes = (router: KoaRouter) => {
 
     const result = await getContactByContactCode(
       ctx.params.contactCode,
-      queryParams.data.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases,
+      queryParams.data.includeNonTenantLeases
     )
 
     if (!result.ok) {
@@ -503,11 +519,18 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
     .default({ includeTerminatedLeases: 'false' })
 
   router.get('(.*)/contacts/by-phone-number/:phoneNumber', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeNonTenantLeases',
+    ])
 
     const queryParams = getContactByPhoneNumberQueryParamSchema.safeParse(
       ctx.query
@@ -519,7 +542,8 @@ export const routes = (router: KoaRouter) => {
     }
     const responseData = await getContactByPhoneNumber(
       ctx.params.phoneNumber,
-      queryParams.data.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases,
+      queryParams.data.includeNonTenantLeases
     )
 
     ctx.status = 200

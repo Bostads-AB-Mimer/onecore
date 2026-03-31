@@ -35,6 +35,8 @@ interface GetLeasesOptions {
   includeTerminatedLeases: boolean
   includeContacts: boolean
   includeRentInfo?: boolean // defaults to true
+  includeNonTenantLeases?: boolean
+  includeNonTenantContacts?: boolean
 }
 
 type IdentityCheckContact = z.infer<
@@ -63,6 +65,12 @@ const getLeasesForPnr = async (
     includeUpcomingLeases: options.includeUpcomingLeases.toString(),
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
+    ...(options.includeNonTenantLeases && {
+      includeNonTenantLeases: options.includeNonTenantLeases.toString(),
+    }),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
 
   const leasesResponse = await axios.get(
@@ -80,6 +88,12 @@ const getLeasesForContactCode = async (
     includeUpcomingLeases: options.includeUpcomingLeases.toString(),
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
+    ...(options.includeNonTenantLeases && {
+      includeNonTenantLeases: options.includeNonTenantLeases.toString(),
+    }),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
 
   const leasesResponse = await axios.get(
@@ -98,6 +112,9 @@ const getLeasesForPropertyId = async (
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
     includeRentInfo: (options.includeRentInfo !== false).toString(),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
   const leasesResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
