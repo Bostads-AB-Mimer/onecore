@@ -1,12 +1,12 @@
 import assert from 'node:assert'
 import { economy } from '@onecore/types'
-import type { LeaseMatch } from '@src/services/common/adapters/xpand-db-adapter'
+import type { LeaseMatch } from '@src/common/adapters/tenfast/tenfast-adapter'
 
-jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({
+jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),
 }))
 
-import { getActiveLeasesByRentalObjectCodes } from '@src/services/common/adapters/xpand-db-adapter'
+import { getActiveLeasesByRentalObjectCodes } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { imdService } from '.'
 
 const mockGetActiveLeases =

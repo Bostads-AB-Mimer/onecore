@@ -1,7 +1,18 @@
 import { z } from 'zod'
 
+// Handles '', null, undefined, Date, or ISO string — normalises to Date | null
+export const optionalDateField = z
+  .union([z.string(), z.date(), z.null(), z.undefined()])
+  .transform((val) => (!val || val === '' ? null : val))
+  .pipe(z.coerce.date().nullable())
+
 export const TenfastLeaseSchema = z.object({
   _id: z.string(),
+  id: z.string(),
+  externalId: z.string(), // Onecore canonical lease id, e.g. "306-008-01-0201/02"
+  stage: z.string(),
+  startDate: z.coerce.date(),
+  endDate: optionalDateField,
   hyresgaster: z.array(
     z.object({
       name: z.object({
@@ -25,11 +36,9 @@ export const TenfastLeaseSchema = z.object({
     })
   ),
   reference: z.number(),
-  stage: z.string(),
   invitationsToRegister: z.array(z.any()),
   canDelete: z.boolean(),
   depositState: z.array(z.any()),
-  id: z.string(),
 })
 
 export const TenfastInvoiceRowSchema = z.object({
@@ -103,7 +112,7 @@ export const TenfastTenantSchema = z.object({
   moms: z.number(),
   alternatePhones: z.array(z.any()),
   comments: z.array(z.any()),
-  onlineInboxes: z.record(z.any()),
+  onlineInboxes: z.record(z.any()).optional(),
   signeringsMetod: z.string(),
   _id: z.string(),
   hyresvard: z.string(),
@@ -123,21 +132,6 @@ export const TenfastTenantByContactCodeResponseSchema = z.object({
   records: z.array(TenfastTenantSchema),
 })
 
-export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
-export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
-export type TenfastInvoicesByOcrResponse = z.infer<
-  typeof TenfastInvoicesByOcrResponseSchema
->
-export type TenfastInvoicesByTenantIdResponse = z.infer<
-  typeof TenfastInvoicesByTenantIdResponseSchema
->
-export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
-export type TenfastTenantByContactCodeResponse = z.infer<
-  typeof TenfastTenantByContactCodeResponseSchema
->
-
-export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
-
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
@@ -150,4 +144,32 @@ export const TenfastRentArticleSchema = z.object({
   title: z.string(),
 })
 
+export const TenfastBatchGetRentalObjectsResponseSchema = z.object({
+  records: z.array(
+    z
+      .object({
+        _id: z.string(),
+        externalId: z.string(), // rental object code, e.g. "306-008-01-0201"
+        avtal: z.array(TenfastLeaseSchema),
+      })
+      .passthrough()
+  ),
+})
+
+export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
+export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
+export type TenfastInvoicesByOcrResponse = z.infer<
+  typeof TenfastInvoicesByOcrResponseSchema
+>
+export type TenfastInvoicesByTenantIdResponse = z.infer<
+  typeof TenfastInvoicesByTenantIdResponseSchema
+>
+export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
+export type TenfastTenantByContactCodeResponse = z.infer<
+  typeof TenfastTenantByContactCodeResponseSchema
+>
+export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
+export type TenfastBatchGetRentalObjectsResponse = z.infer<
+  typeof TenfastBatchGetRentalObjectsResponseSchema
+>

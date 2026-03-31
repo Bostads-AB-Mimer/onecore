@@ -4,7 +4,7 @@ import { economy } from '@onecore/types'
 import {
   getActiveLeasesByRentalObjectCodes,
   type LeaseMatch,
-} from '../common/adapters/xpand-db-adapter'
+} from '../../common/adapters/tenfast/tenfast-adapter'
 
 import z from 'zod'
 
