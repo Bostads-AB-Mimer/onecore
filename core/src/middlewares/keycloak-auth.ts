@@ -129,9 +129,7 @@ export const requireAuth = async (ctx: Context, next: Next) => {
   if (isLegacyToken(ctx.state.accessToken)) {
     await verifyLegacyJwt(ctx, next)
   } else {
-    await verifyKeycloakToken(ctx, async () => {
-      await verifyLegacyJwt(ctx, next)
-    })
+    await verifyKeycloakToken(ctx, next)
   }
 }
 
