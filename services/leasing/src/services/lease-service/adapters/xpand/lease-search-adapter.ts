@@ -433,15 +433,24 @@ export class LeaseSearchQueryBuilder {
 
     if (sortBy === 'address') {
       // Natural sort: split street name from street number so "2" comes before "10"
-      const dir = sortOrder === 'desc' ? 'DESC' : 'ASC'
-      this.query.orderByRaw(`
-        LEFT(cmadr.adress1, CASE WHEN PATINDEX('%[0-9]%', cmadr.adress1) > 0 THEN PATINDEX('%[0-9]%', cmadr.adress1) - 1 ELSE LEN(cmadr.adress1) END) ${dir},
-        CASE WHEN PATINDEX('%[0-9]%', cmadr.adress1) > 0
-          THEN CAST(SUBSTRING(cmadr.adress1, PATINDEX('%[0-9]%', cmadr.adress1), PATINDEX('%[^0-9]%', SUBSTRING(cmadr.adress1, PATINDEX('%[0-9]%', cmadr.adress1), 100) + ' ') - 1) AS INT)
-          ELSE 0
-        END ${dir},
-        cmadr.adress1 ${dir}
-      `)
+      const dir = sortOrder === 'desc' ? 'desc' : 'asc'
+      this.query
+        .orderBy(
+          xpandDb.raw(
+            `LEFT(cmadr.adress1, CASE WHEN PATINDEX('%[0-9]%', cmadr.adress1) > 0 THEN PATINDEX('%[0-9]%', cmadr.adress1) - 1 ELSE LEN(cmadr.adress1) END)`
+          ) as unknown as string,
+          dir
+        )
+        .orderBy(
+          xpandDb.raw(
+            `CASE WHEN PATINDEX('%[0-9]%', cmadr.adress1) > 0
+              THEN CAST(SUBSTRING(cmadr.adress1, PATINDEX('%[0-9]%', cmadr.adress1), PATINDEX('%[^0-9]%', SUBSTRING(cmadr.adress1, PATINDEX('%[0-9]%', cmadr.adress1), 100) + ' ') - 1) AS INT)
+              ELSE 0
+            END`
+          ) as unknown as string,
+          dir
+        )
+        .orderBy('cmadr.adress1', dir)
     } else {
       const sortField = sortFieldMap[sortBy] || 'hyobj.fdate'
       this.query.orderBy(sortField, sortOrder)
