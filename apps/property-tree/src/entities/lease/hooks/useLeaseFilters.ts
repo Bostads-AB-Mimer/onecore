@@ -22,7 +22,6 @@ const FILTER_KEYS = [
   'startDateTo',
   'endDateFrom',
   'endDateTo',
-  'includeEnded',
   'sortBy',
   'sortOrder',
 ] as const
@@ -55,7 +54,6 @@ export function useLeaseFilters() {
     () => urlSearchParams.getAll('status') as ('0' | '1' | '2' | '3')[],
     [urlSearchParams]
   )
-  const includeEnded = urlSearchParams.get('includeEnded') === 'true'
   const selectedProperties = useMemo(
     () => urlSearchParams.getAll('property'),
     [urlSearchParams]
@@ -87,7 +85,6 @@ export function useLeaseFilters() {
       objectType:
         selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
       status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
-      includeEnded: includeEnded || undefined,
       property: selectedProperties.length > 0 ? selectedProperties : undefined,
       districtNames:
         selectedDistricts.length > 0 ? selectedDistricts : undefined,
@@ -106,7 +103,6 @@ export function useLeaseFilters() {
       filters.debouncedSearch,
       selectedObjectTypes,
       selectedStatuses,
-      includeEnded,
       selectedProperties,
       selectedDistricts,
       selectedBuildingManagers,
@@ -176,7 +172,6 @@ export function useLeaseFilters() {
     // Resolved filter values
     selectedObjectTypes,
     selectedStatuses,
-    includeEnded,
     selectedProperties,
     selectedDistricts,
     selectedBuildingManagers,
