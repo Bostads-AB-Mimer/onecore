@@ -12,7 +12,6 @@ import {
   TenfastRentArticleSchema,
   TenfastRentArticle,
   TenfastBatchGetRentalObjectsResponseSchema,
-  type TenfastLease,
   type TenfastBatchGetLease,
 } from './schemas'
 import {
