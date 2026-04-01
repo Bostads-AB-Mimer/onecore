@@ -1,3 +1,4 @@
+import { LeaseType } from '@onecore/types'
 import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
@@ -45,14 +46,14 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [],
     })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -112,7 +113,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [
         {
@@ -133,7 +134,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [],
     })
@@ -179,14 +180,14 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [],
     })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -261,7 +262,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [
         {
@@ -282,7 +283,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [],
     })
@@ -328,14 +329,14 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [],
     })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -409,7 +410,7 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [],
     })
@@ -449,14 +450,14 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [],
     })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -531,14 +532,14 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [],
     })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -596,14 +597,14 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [],
     })
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {

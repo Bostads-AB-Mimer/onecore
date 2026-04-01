@@ -1,4 +1,4 @@
-import { Lease, LeaseStatus, LeaseRentRow, RentalObject } from '@onecore/types'
+import { Lease, LeaseStatus, LeaseRentRow, LeaseType, RentalObject } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import {
@@ -6,6 +6,24 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
+
+/**
+ * Map TenFAST rental object type to LeaseType enum.
+ * TenFAST uses lowercase Swedish: 'bostad', 'parkering', 'lokal', etc.
+ */
+const TENFAST_TYP_TO_LEASE_TYPE: Record<string, LeaseType> = {
+  bostad: LeaseType.HousingContract,
+  parkering: LeaseType.ParkingSpaceContract,
+  lokal: LeaseType.CommercialTenantContract,
+  garage: LeaseType.GarageContract,
+  forrad: LeaseType.OtherContract,
+  ovrigt: LeaseType.OtherContract,
+}
+
+const mapTenfastTypToLeaseType = (typ: string | undefined): LeaseType => {
+  if (!typ) return LeaseType.OtherContract
+  return TENFAST_TYP_TO_LEASE_TYPE[typ.toLowerCase()] ?? LeaseType.OtherContract
+}
 
 const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const { stage } = lease
@@ -105,7 +123,7 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
     rentalObject: lease.hyresobjekt[0]
       ? mapToOnecoreRentalObject(lease.hyresobjekt[0])
       : undefined,
-    type: lease.hyresobjekt[0]?.typ ?? 'missing', // TODO: Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
+    type: mapTenfastTypToLeaseType(lease.hyresobjekt[0]?.typ),
     rentRows: lease.hyror.map(mapToOnecoreRentRow),
   }
 }

@@ -169,6 +169,7 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                       leaseType:
    *                         type: string
+   *                         enum: ['Bostadskontrakt', 'Campuskontrakt', 'Garagekontrakt', 'Kooperativ hyresrätt', 'Lokalkontrakt', 'Omförhandlingskontrakt', 'Övrigt', 'P-Platskontrakt']
    *                       contacts:
    *                         type: array
    *                         items:

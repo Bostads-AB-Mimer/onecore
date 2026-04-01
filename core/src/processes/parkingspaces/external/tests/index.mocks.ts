@@ -5,6 +5,7 @@ import {
   InvoiceTransactionType,
   Lease,
   LeaseStatus,
+  LeaseType,
   ParkingSpace,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
@@ -125,7 +126,7 @@ export const mockedLease: Lease = {
   tenantContactIds: ['P12345'],
   tenants: undefined,
   terminationDate: undefined,
-  type: '',
+  type: LeaseType.OtherContract,
   rentRows: [],
 }
 

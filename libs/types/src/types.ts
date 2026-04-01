@@ -2,6 +2,7 @@ import { z } from 'zod'
 import {
   ApplicantStatus,
   LeaseStatus,
+  LeaseType,
   ListingStatus,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
@@ -75,7 +76,7 @@ interface Lease {
   tenants: Contact[] | undefined
   rentalPropertyId: string
   rentalObject?: RentalObject
-  type: string
+  type: LeaseType
   noticeGivenBy: string | undefined
   noticeDate: Date | undefined
   noticeTimeTenant: string | undefined

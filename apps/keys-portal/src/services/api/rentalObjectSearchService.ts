@@ -1,4 +1,5 @@
 import { sortByRentalId } from '@/utils/sortByRentalId'
+import { LeaseType } from '@onecore/types'
 
 import { GET } from './core/base-api'
 
@@ -161,14 +162,14 @@ export class RentalObjectSearchService {
     | '/facilities/search'
     | null {
     switch (leaseType?.trim()) {
-      case 'Bostadskontrakt':
-      case 'Campuskontrakt':
-      case 'Kooperativ hyresrätt':
+      case LeaseType.HousingContract:
+      case LeaseType.CampusContract:
+      case LeaseType.CooperativeTenancyContract:
         return '/residences/search'
-      case 'P-Platskontrakt':
-      case 'Garagekontrakt':
+      case LeaseType.ParkingSpaceContract:
+      case LeaseType.GarageContract:
         return '/parking-spaces/search'
-      case 'Lokalkontrakt':
+      case LeaseType.CommercialTenantContract:
         return '/facilities/search'
       default:
         return null

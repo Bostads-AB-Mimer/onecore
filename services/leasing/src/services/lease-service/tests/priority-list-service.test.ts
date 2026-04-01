@@ -1,4 +1,4 @@
-import { Lease, LeaseStatus } from '@onecore/types'
+import { Lease, LeaseStatus, LeaseType } from '@onecore/types'
 import assert from 'node:assert'
 import {
   addPriorityToApplicantsBasedOnRentalRules,
@@ -913,7 +913,7 @@ describe('sortApplicantsBasedOnRentalRules', () => {
           leaseId: '705-008-04-0101/04',
           leaseNumber: '04',
           rentalPropertyId: '705-008-04-0101',
-          type: 'Bostadskontrakt               ',
+          type: LeaseType.HousingContract,
           leaseStartDate: new Date('2013-03-01T00:00:00.000Z'),
           status: 0,
           noticeTimeTenant: '3',

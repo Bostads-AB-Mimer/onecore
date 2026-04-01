@@ -6,6 +6,7 @@ import { logger } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 import { calculateStatus } from '../../helpers/transformFromXPandDb'
+import { parseLeaseType } from '../../helpers/lease-type-parser'
 import { analyzeSearchTerm } from '../../helpers/searchTermAnalyzer'
 
 /** Maps enum values to normalized status keys */
@@ -472,7 +473,7 @@ export const transformRow = (
   const result: Omit<leasing.v1.LeaseSearchResult, 'contacts'> = {
     leaseId: trimmedRow.leaseId,
     objectTypeCode: getObjectTypeLabel(trimmedRow.objectTypeCode),
-    leaseType: trimmedRow.leaseType,
+    leaseType: parseLeaseType(trimmedRow.leaseType),
     address: trimmedRow.address || null,
     startDate: trimmedRow.startDate || null,
     lastDebitDate: trimmedRow.lastDebitDate || null,

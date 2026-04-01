@@ -7,6 +7,7 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { LeaseType } from '@onecore/types'
 
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -835,7 +836,7 @@ export const routes = (router: KoaRouter) => {
       const promises = leases
         .filter(
           (lease) =>
-            lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
+            lease.type === LeaseType.HousingContract
         )
         .map((lease) =>
           propertyManagementAdapter.getMaintenanceUnitsForRentalProperty(

@@ -1,5 +1,5 @@
 // Import directly from types, only for generics like pagination, all specific response types come from generated api-types
-import { keys } from '@onecore/types'
+import { keys, LeaseType } from '@onecore/types'
 
 import type { paths, components } from './api/core/generated/api-types'
 
@@ -144,20 +144,19 @@ export function getKeyTypeFilterOptions() {
 
 // Custom types that aren't in the API (if needed)
 
-// Lease type constant values - matches services/leasing/src/constants/leaseTypes.ts
-// String values taken from Xpand
+// Lease type constant values - re-exported from @onecore/types enum
 export const leaseTypes = {
-  housingContract: 'Bostadskontrakt',
-  campusContract: 'Campuskontrakt',
-  garageContract: 'Garagekontrakt',
-  cooperativeTenancyContract: 'Kooperativ hyresrätt',
-  commercialTenantContract: 'Lokalkontrakt',
-  renegotiationContract: 'Omförhandlingskontrakt',
-  otherContract: 'Övrigt',
-  parkingspaceContract: 'P-Platskontrakt',
+  housingContract: LeaseType.HousingContract,
+  campusContract: LeaseType.CampusContract,
+  garageContract: LeaseType.GarageContract,
+  cooperativeTenancyContract: LeaseType.CooperativeTenancyContract,
+  commercialTenantContract: LeaseType.CommercialTenantContract,
+  renegotiationContract: LeaseType.RenegotiationContract,
+  otherContract: LeaseType.OtherContract,
+  parkingspaceContract: LeaseType.ParkingSpaceContract,
 } as const
 
-export type LeaseType = keyof typeof leaseTypes
+export { LeaseType }
 
 // ----- Key Loans (UI/domain) -----
 // Loan type labels in Swedish
