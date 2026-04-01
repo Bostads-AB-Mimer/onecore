@@ -10526,25 +10526,27 @@ export interface components {
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
-      updatedAt: string;
-      keySystem?: components["schemas"]["KeySystem"] | null;
-      loans?: components["schemas"]["KeyLoan"][] | null;
-      events?: (({
-          /** Format: uuid */
-          id: string;
-          /** @enum {string} */
-          type: "FLEX" | "ORDER" | "LOST" | "REPLACEMENT";
-          /** @enum {string} */
-          status: "ORDERED" | "RECEIVED" | "COMPLETED";
-          /** Format: uuid */
-          workOrderId?: string | null;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-        })[]) | null;
-      activeLoanContact?: string | null;
-    };
+      updatedAt: string
+      keySystem?: components['schemas']['KeySystem'] | null
+      loans?: components['schemas']['KeyLoan'][] | null
+      events?:
+        | {
+            /** Format: uuid */
+            id: string
+            /** @enum {string} */
+            type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
+            /** @enum {string} */
+            status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
+            /** Format: uuid */
+            workOrderId?: string | null
+            /** Format: date-time */
+            createdAt: string
+            /** Format: date-time */
+            updatedAt: string
+          }[]
+        | null
+      activeLoanContact?: string | null
+    }
     KeyLoanWithDetails: {
       /** Format: uuid */
       id: string
@@ -10651,41 +10653,42 @@ export interface components {
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
-              updatedAt: string;
-            })[]) | null;
-          activeLoanContact?: string | null;
-        })[];
-      keyCardsArray: ({
-          cardId: string;
-          name?: string | null;
-          owner?: unknown;
-          appearanceCode?: string | null;
-          classification?: string | null;
-          disabled?: boolean;
-          startTime?: string | null;
-          stopTime?: string | null;
-          createTime: string;
-          pinCode?: string | null;
-          state?: string | null;
-          archivedAt?: string | null;
-          codes?: unknown[] | null;
-        })[];
-      receipts: ({
-          /** Format: uuid */
-          id: string;
-          /** Format: uuid */
-          keyLoanId: string;
-          /** @enum {string} */
-          receiptType: "LOAN" | "RETURN";
-          /** @enum {string} */
-          type: "DIGITAL" | "PHYSICAL";
-          fileId?: string | null;
-          /** Format: date-time */
-          createdAt: string;
-          /** Format: date-time */
-          updatedAt: string;
-        })[];
-    };
+              updatedAt: string
+            }[]
+          | null
+        activeLoanContact?: string | null
+      }[]
+      keyCardsArray: {
+        cardId: string
+        name?: string | null
+        owner?: unknown
+        appearanceCode?: string | null
+        classification?: string | null
+        disabled?: boolean
+        startTime?: string | null
+        stopTime?: string | null
+        createTime: string
+        pinCode?: string | null
+        state?: string | null
+        archivedAt?: string | null
+        codes?: unknown[] | null
+      }[]
+      receipts: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        keyLoanId: string
+        /** @enum {string} */
+        receiptType: 'LOAN' | 'RETURN'
+        /** @enum {string} */
+        type: 'DIGITAL' | 'PHYSICAL'
+        fileId?: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+    }
     Log: {
       /** Format: uuid */
       id: string
@@ -11015,11 +11018,12 @@ export interface components {
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
-              updatedAt: string;
-            })[]) | null;
-          activeLoanContact?: string | null;
-        })[];
-    };
+              updatedAt: string
+            }[]
+          | null
+        activeLoanContact?: string | null
+      }[]
+    }
     CreateKeyEventRequest: {
       keys: string[]
       /** @enum {string} */
