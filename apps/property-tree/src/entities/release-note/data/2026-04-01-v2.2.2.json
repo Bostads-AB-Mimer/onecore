@@ -19,5 +19,12 @@
     "title": "Sortering efter kolumner på hyreskontrakt",
     "description": "Det går nu att sortera hyreskontrakt efter kolumner.",
     "category": "feature"
+  },
+  {
+    "id": "rn-2026-04-01-v222-4",
+    "date": "2026-04-01",
+    "title": "Uppsagda kontrakt visas nu under Hyresgäst-fliken",
+    "description": "Kontrakt med status 'Uppsagt' visas nu korrekt som nuvarande kontraktsinnehavare i Hyresgäst-fliken tills kontraktet har upphört.",
+    "category": "fix"
   }
 ]

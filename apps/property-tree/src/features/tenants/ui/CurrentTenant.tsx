@@ -49,7 +49,9 @@ export function CurrentTenant({
     )
   }
 
-  const lease = leases.find((lease) => lease.status === 'Current')
+  const lease =
+    leases.find((lease) => lease.status === 'Current') ??
+    leases.find((lease) => lease.status === 'AboutToEnd')
 
   if (!lease) {
     return (
