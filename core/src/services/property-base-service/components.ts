@@ -1853,6 +1853,10 @@ export const routes = (router: KoaRouter) => {
 
     const body = schemas.UpdateComponentSchema.safeParse(ctx.request.body)
     if (!body.success) {
+      logger.warn(
+        { errors: body.error.errors, requestBody: ctx.request.body },
+        'component.update.validationFailed'
+      )
       ctx.status = 400
       ctx.body = { error: body.error.errors, ...metadata }
       return
