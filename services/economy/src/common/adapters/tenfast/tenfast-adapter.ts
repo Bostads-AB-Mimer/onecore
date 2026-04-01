@@ -252,7 +252,6 @@ function findMatchingLeases(
   // Only consider leases that cover the entire period — started on or before
   // periodStart and ends on or after periodEnd (or has no end date).
   return leases.filter((lease) => {
-    if (lease.externalId.includes('M')) return false
     if (EXCLUDED_STAGES.has(lease.stage)) return false
     if (lease.startDate > periodStart) return false
     if (lease.endDate !== null && lease.endDate < periodEnd) return false

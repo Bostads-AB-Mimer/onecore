@@ -370,33 +370,6 @@ describe('Tenfast Adapter', () => {
       expect(result.get('306-008-01-0201')).toBeNull()
     })
 
-    it('excludes leases with M in externalId', async () => {
-      makeBatchResponse([
-        {
-          _id: 'obj-1',
-          externalId: '306-008-01-0201',
-          avtal: [
-            TenfastLeaseFactory.build({
-              externalId: '306-008-01-0201M/01',
-              startDate: new Date('2025-01-01'),
-              endDate: null,
-              stage: 'active',
-              hyresgaster: [],
-              hyresobjekt: [],
-            }),
-          ],
-        },
-      ])
-
-      const result = await getActiveLeasesByRentalObjectCodes({
-        rentalObjectCodes: ['306-008-01-0201'],
-        periodStart,
-        periodEnd,
-      })
-
-      expect(result.get('306-008-01-0201')).toBeNull()
-    })
-
     it('returns MultipleLeaseMatch when two leases both cover the full period', async () => {
       makeBatchResponse([
         {
