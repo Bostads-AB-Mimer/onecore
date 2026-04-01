@@ -154,6 +154,7 @@ export const Lease = z.object({
           })
           .optional(),
         specialAttention: z.boolean().optional(),
+        leaseContactType: z.string().optional(),
       })
     )
     .optional(),

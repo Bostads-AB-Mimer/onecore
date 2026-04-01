@@ -692,6 +692,14 @@ export const routes = (router: KoaRouter) => {
       .enum(['true', 'false'])
       .optional()
       .transform((value) => value === 'true'),
+    includeNonTenantLeases: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
+    includeNonTenantContacts: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
   })
 
   router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
@@ -699,6 +707,8 @@ export const routes = (router: KoaRouter) => {
       'includeUpcomingLeases',
       'includeTerminatedLeases',
       'includeContacts',
+      'includeNonTenantLeases',
+      'includeNonTenantContacts',
     ])
 
     const queryParams = getLeasesForPnrQueryParamSchema.safeParse(ctx.query)
@@ -713,6 +723,8 @@ export const routes = (router: KoaRouter) => {
         includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
         includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
         includeContacts: queryParams.data.includeContacts,
+        includeNonTenantLeases: queryParams.data.includeNonTenantLeases,
+        includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
       }
     )
 
@@ -776,6 +788,14 @@ export const routes = (router: KoaRouter) => {
       .enum(['true', 'false'])
       .optional()
       .transform((value) => value === 'true'),
+    includeNonTenantLeases: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
+    includeNonTenantContacts: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
   })
 
   router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
@@ -783,6 +803,8 @@ export const routes = (router: KoaRouter) => {
       'includeUpcomingLeases',
       'includeTerminatedLeases',
       'includeContacts',
+      'includeNonTenantLeases',
+      'includeNonTenantContacts',
     ])
 
     const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
@@ -797,6 +819,8 @@ export const routes = (router: KoaRouter) => {
       includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
       includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
       includeContacts: queryParams.data.includeContacts,
+      includeNonTenantLeases: queryParams.data.includeNonTenantLeases,
+      includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
     })
     if (!result.ok) {
       ctx.status = 500
@@ -878,6 +902,10 @@ export const routes = (router: KoaRouter) => {
       .enum(['true', 'false'])
       .optional()
       .transform((value) => value !== 'false'), // defaults to true
+    includeNonTenantContacts: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
   })
 
   router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
@@ -886,6 +914,7 @@ export const routes = (router: KoaRouter) => {
       'includeTerminatedLeases',
       'includeContacts',
       'includeRentInfo',
+      'includeNonTenantContacts',
     ])
 
     const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
@@ -901,6 +930,7 @@ export const routes = (router: KoaRouter) => {
       includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
       includeContacts: queryParams.data.includeContacts,
       includeRentInfo: queryParams.data.includeRentInfo,
+      includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
     })
 
     ctx.body = {
@@ -945,10 +975,14 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve lease details.
    */
   router.get('(.*)/leases/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeContacts'])
+    const metadata = generateRouteMetadata(ctx, [
+      'includeContacts',
+      'includeNonTenantContacts',
+    ])
     const responseData = await getLease(
       ctx.params.id,
-      ctx.query.includeContacts
+      ctx.query.includeContacts,
+      ctx.query.includeNonTenantContacts === 'true'
     )
 
     ctx.body = {
