@@ -1,0 +1,23 @@
+[
+  {
+    "id": "rn-2026-04-01-v222-1",
+    "date": "2026-04-01",
+    "title": "Annan fakturamottagare visas inte längre som kontraktsinnehavare",
+    "description": "Annan fakturamottagare visas inte längre felaktigt som kontraktsinnehavare.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-04-01-v222-2",
+    "date": "2026-04-01",
+    "title": "Sök kund på telefonnummer",
+    "description": "Det går nu att söka efter kunder via telefonnummer i ONECore.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-04-01-v222-3",
+    "date": "2026-04-01",
+    "title": "Sortering efter kolumner på hyreskontrakt",
+    "description": "Det går nu att sortera hyreskontrakt efter kolumner.",
+    "category": "feature"
+  }
+]
