@@ -834,10 +834,7 @@ export const routes = (router: KoaRouter) => {
         { status: ['current', 'upcoming'] }
       )
       const promises = leases
-        .filter(
-          (lease) =>
-            lease.type === LeaseType.HousingContract
-        )
+        .filter((lease) => lease.type === LeaseType.HousingContract)
         .map((lease) =>
           propertyManagementAdapter.getMaintenanceUnitsForRentalProperty(
             lease.rentalPropertyId

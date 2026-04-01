@@ -2205,10 +2205,7 @@ export const routes = (router: KoaRouter) => {
 
         // TODO: This (Promise.all) doesn't work as intended because getMaintenanceUnitsForRentalProperty is not going to throw an error bc of AdapterResult
         const promises = leases
-          .filter(
-            (lease) =>
-              lease.type === LeaseType.HousingContract
-          )
+          .filter((lease) => lease.type === LeaseType.HousingContract)
           .map((lease) =>
             propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(
               lease.rentalPropertyId
