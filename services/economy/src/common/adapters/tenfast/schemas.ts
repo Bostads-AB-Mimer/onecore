@@ -148,8 +148,12 @@ export const TenfastRentArticleSchema = z.object({
 // are returned as string IDs (not populated objects) unless requested via extra
 // query params we don't need here.
 export const TenfastBatchGetLeaseSchema = TenfastLeaseSchema.extend({
-  hyresgaster: z.array(z.union([z.string(), z.object({ _id: z.string() }).passthrough()])),
-  hyresobjekt: z.array(z.union([z.string(), z.object({ _id: z.string() }).passthrough()])),
+  hyresgaster: z.array(
+    z.union([z.string(), z.object({ _id: z.string() }).passthrough()])
+  ),
+  hyresobjekt: z.array(
+    z.union([z.string(), z.object({ _id: z.string() }).passthrough()])
+  ),
 })
 
 export const TenfastBatchGetRentalObjectSchema = z
