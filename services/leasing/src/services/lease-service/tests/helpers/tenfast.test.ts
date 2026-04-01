@@ -3,7 +3,6 @@ import { LeaseStatus, LeaseType } from '@onecore/types'
 
 import { mapToOnecoreLease } from '../../helpers/tenfast'
 import * as factory from '../factories'
-import { TenfastRentalObjectFactory } from '../factories/tenfast-rental-object'
 
 describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
   it('returns PendingSignature for signingInProgress stage', () => {
@@ -94,7 +93,7 @@ describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
     ['ovrigt', LeaseType.OtherContract],
   ])('maps "%s" to %s', (typ, expected) => {
     const lease = factory.tenfastLease.build({
-      hyresobjekt: [TenfastRentalObjectFactory.build({ typ })],
+      hyresobjekt: [factory.tenfastRentalObject.build({ typ })],
     })
 
     expect(mapToOnecoreLease(lease).type).toBe(expected)
@@ -102,7 +101,7 @@ describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
 
   it('handles uppercase casing', () => {
     const lease = factory.tenfastLease.build({
-      hyresobjekt: [TenfastRentalObjectFactory.build({ typ: 'Bostad' })],
+      hyresobjekt: [factory.tenfastRentalObject.build({ typ: 'Bostad' })],
     })
 
     expect(mapToOnecoreLease(lease).type).toBe(LeaseType.HousingContract)
@@ -110,7 +109,7 @@ describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
 
   it('falls back to OtherContract for unknown typ', () => {
     const lease = factory.tenfastLease.build({
-      hyresobjekt: [TenfastRentalObjectFactory.build({ typ: 'unknown' })],
+      hyresobjekt: [factory.tenfastRentalObject.build({ typ: 'unknown' })],
     })
 
     expect(mapToOnecoreLease(lease).type).toBe(LeaseType.OtherContract)
@@ -118,7 +117,7 @@ describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
 
   it('falls back to OtherContract when typ is undefined', () => {
     const lease = factory.tenfastLease.build({
-      hyresobjekt: [TenfastRentalObjectFactory.build({ typ: undefined })],
+      hyresobjekt: [factory.tenfastRentalObject.build({ typ: undefined })],
     })
 
     expect(mapToOnecoreLease(lease).type).toBe(LeaseType.OtherContract)

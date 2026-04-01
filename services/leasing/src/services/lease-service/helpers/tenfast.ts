@@ -17,7 +17,7 @@ import {
  * Map TenFAST rental object type to LeaseType enum.
  * TenFAST uses lowercase Swedish: 'bostad', 'parkering', 'lokal', etc.
  */
-const TENFAST_TYP_TO_LEASE_TYPE: Record<string, LeaseType> = {
+const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
   bostad: LeaseType.HousingContract,
   parkering: LeaseType.ParkingSpaceContract,
   lokal: LeaseType.CommercialTenantContract,
