@@ -1,6 +1,6 @@
 import assert from 'node:assert'
 import { economy } from '@onecore/types'
-import type { LeaseMatch } from '@src/common/adapters/tenfast/tenfast-adapter'
+import type { LeaseMatch, MultipleLeaseMatch } from '@src/common/adapters/tenfast/tenfast-adapter'
 
 jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),
@@ -238,6 +238,43 @@ describe(imdService.enrichIMDRows, () => {
         expect.objectContaining({
           rentalObjectCode: '306-008-01-0201',
           reason: 'tenant-moved',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as multiple-leases when two leases cover the period', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | MultipleLeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          {
+            leaseIds: ['306-008-01-0201/01', '306-008-01-0201/02'],
+          },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          reason: 'multiple-leases',
+          leaseIds: ['306-008-01-0201/01', '306-008-01-0201/02'],
         }),
       ])
     )

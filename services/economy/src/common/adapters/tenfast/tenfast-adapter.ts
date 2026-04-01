@@ -235,40 +235,36 @@ export type LeaseMatch = {
   leaseEndDate: Date | null
 }
 
+export type MultipleLeaseMatch = {
+  leaseIds: string[]
+}
+
 const BATCH_SIZE = 500
 
 // Stages that represent leases that were never fully activated
 const EXCLUDED_STAGES = new Set(['draft', 'signingInProgress'])
 
-function findActiveLease(
+function findMatchingLeases(
   leases: TenfastBatchGetLease[],
   periodStart: Date,
   periodEnd: Date
-): TenfastBatchGetLease | null {
+): TenfastBatchGetLease[] {
   // Only consider leases that cover the entire period — started on or before
   // periodStart and ends on or after periodEnd (or has no end date).
-  const candidates = leases.filter((lease) => {
+  return leases.filter((lease) => {
     if (lease.externalId.includes('M')) return false
     if (EXCLUDED_STAGES.has(lease.stage)) return false
     if (lease.startDate > periodStart) return false
     if (lease.endDate !== null && lease.endDate < periodEnd) return false
     return true
   })
-
-  if (candidates.length === 0) return null
-
-  // Edge case: multiple leases fully covering the same period (data anomaly).
-  // Pick the most recently started one.
-  return candidates.reduce((best, lease) =>
-    lease.startDate > best.startDate ? lease : best
-  )
 }
 
 export const getActiveLeasesByRentalObjectCodes = async (params: {
   rentalObjectCodes: string[]
   periodStart: Date
   periodEnd: Date
-}): Promise<Map<string, LeaseMatch | null>> => {
+}): Promise<Map<string, LeaseMatch | MultipleLeaseMatch | null>> => {
   if (params.rentalObjectCodes.length === 0) return new Map()
 
   const batches: string[][] = []
@@ -279,7 +275,7 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
   const queryBatch = async (
     batch: string[],
     index: number
-  ): Promise<Map<string, LeaseMatch | null>> => {
+  ): Promise<Map<string, LeaseMatch | MultipleLeaseMatch | null>> => {
     const start = Date.now()
     const res = await makeTenfastRequest(
       '/v1/hyresvard/extras/hyresobjekt/batch-get',
@@ -305,21 +301,26 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
       throw new Error('schema-error')
     }
 
-    const batchMap = new Map<string, LeaseMatch | null>()
+    const batchMap = new Map<string, LeaseMatch | MultipleLeaseMatch | null>()
 
     for (const record of parsed.data) {
       // Rental object exists — default to null (no active lease found)
       batchMap.set(record.externalId, null)
 
-      const activeLease = findActiveLease(
+      const matches = findMatchingLeases(
         record.avtal,
         params.periodStart,
         params.periodEnd
       )
-      if (activeLease) {
+
+      if (matches.length === 1) {
         batchMap.set(record.externalId, {
-          leaseId: activeLease.externalId,
-          leaseEndDate: activeLease.endDate ?? null,
+          leaseId: matches[0].externalId,
+          leaseEndDate: matches[0].endDate ?? null,
+        })
+      } else if (matches.length > 1) {
+        batchMap.set(record.externalId, {
+          leaseIds: matches.map((l) => l.externalId),
         })
       }
     }
@@ -335,7 +336,7 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
     batches.map((batch, i) => queryBatch(batch, i))
   )
 
-  const results = new Map<string, LeaseMatch | null>()
+  const results = new Map<string, LeaseMatch | MultipleLeaseMatch | null>()
   for (const batchMap of batchResults) {
     for (const [code, match] of batchMap) {
       results.set(code, match)

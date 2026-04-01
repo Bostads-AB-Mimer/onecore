@@ -4,6 +4,7 @@ import { economy } from '@onecore/types'
 import {
   getActiveLeasesByRentalObjectCodes,
   type LeaseMatch,
+  type MultipleLeaseMatch,
 } from '../../common/adapters/tenfast/tenfast-adapter'
 
 import z from 'zod'
@@ -67,12 +68,20 @@ type UnprocessedReason =
   | 'no-active-lease'
   | 'amount-too-low'
   | 'tenant-moved'
+  | 'multiple-leases'
 
 type UnprocessedIMDRow = IMDRow & {
   reason: UnprocessedReason
+  leaseIds?: string[] // populated when reason is 'multiple-leases'
 }
 
 const MIN_COST = 15
+
+function isMultipleLeaseMatch(
+  m: LeaseMatch | MultipleLeaseMatch
+): m is MultipleLeaseMatch {
+  return 'leaseIds' in m
+}
 
 function hasTenantMoved(lease: LeaseMatch, asOf: Date): boolean {
   return lease.leaseEndDate !== null && lease.leaseEndDate < asOf
@@ -126,6 +135,8 @@ async function enrichIMDRows(
         unprocessed.push({ ...row, reason: 'no-rental-object' })
       } else if (lookup === null) {
         unprocessed.push({ ...row, reason: 'no-active-lease' })
+      } else if (isMultipleLeaseMatch(lookup)) {
+        unprocessed.push({ ...row, reason: 'multiple-leases', leaseIds: lookup.leaseIds })
       } else if (hasTenantMoved(lookup, today)) {
         unprocessed.push({ ...row, reason: 'tenant-moved' })
       } else {
@@ -208,6 +219,14 @@ const REASON_LABELS: Record<UnprocessedReason, string> = {
   'no-active-lease': 'Inget aktivt kontrakt i perioden',
   'amount-too-low': 'Belopp under 15 kr',
   'tenant-moved': 'Hyresgästen har avslutat kontrakt efter perioden',
+  'multiple-leases': 'Flera kontrakt matchar perioden',
+}
+
+function getReasonLabel(row: UnprocessedIMDRow): string {
+  if (row.reason === 'multiple-leases' && row.leaseIds) {
+    return `Flera kontrakt matchar perioden: ${row.leaseIds.join(', ')}`
+  }
+  return REASON_LABELS[row.reason]
 }
 
 function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {
@@ -222,7 +241,7 @@ function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {
       volume,
       cost,
       row.measurementUnit,
-      REASON_LABELS[row.reason],
+      getReasonLabel(row),
     ].join(';')
   })
 
