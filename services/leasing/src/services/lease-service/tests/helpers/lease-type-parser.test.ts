@@ -3,9 +3,12 @@ import { LeaseType } from '@onecore/types'
 import { parseLeaseType } from '../../helpers/lease-type-parser'
 
 describe('parseLeaseType', () => {
-  it.each(Object.values(LeaseType))('maps exact value "%s" to itself', (value) => {
-    expect(parseLeaseType(value)).toBe(value)
-  })
+  it.each(Object.values(LeaseType))(
+    'maps exact value "%s" to itself',
+    (value) => {
+      expect(parseLeaseType(value)).toBe(value)
+    }
+  )
 
   it('trims trailing spaces (XPand padding)', () => {
     expect(parseLeaseType('Bostadskontrakt               ')).toBe(
