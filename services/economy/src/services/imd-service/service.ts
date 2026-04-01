@@ -204,7 +204,7 @@ const UNPROCESSED_CSV_HEADER =
   'Hyresobjektskod;Fr.o.m;T.o.m;Enhet;Volym;Kostnad;Måttenhet;Orsak'
 
 const REASON_LABELS: Record<UnprocessedReason, string> = {
-  'no-rental-object': 'Hyresobjekt saknas i Xpand',
+  'no-rental-object': 'Hyresobjekt saknas i Tenfast',
   'no-active-lease': 'Inget aktivt kontrakt i perioden',
   'amount-too-low': 'Belopp under 15 kr',
   'tenant-moved': 'Hyresgästen har avslutat kontrakt efter perioden',

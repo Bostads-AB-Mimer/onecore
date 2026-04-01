@@ -143,6 +143,10 @@ export function ImdUploadForm() {
               <li>Rå IMD-exportfil, semikolonseparerad CSV</li>
               <li>Minst 11 kolumner per rad</li>
               <li>Inga kolumnrubriker — enbart datarader</li>
+              <li>
+                Alla rader måste tillhöra samma period (Fr.o.m och T.o.m) —
+                blanda inte månader i samma fil
+              </li>
             </ul>
             <p className="text-xs text-muted-foreground/70">
               Exempelrad:
