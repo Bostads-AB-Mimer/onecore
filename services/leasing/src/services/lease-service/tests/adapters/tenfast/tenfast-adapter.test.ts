@@ -139,7 +139,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Arrange
     const mockResponse = {
       status: 200,
-      data: { records: [] },
+      data: { records: [], prev: null, next: null, totalCount: 0 },
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 

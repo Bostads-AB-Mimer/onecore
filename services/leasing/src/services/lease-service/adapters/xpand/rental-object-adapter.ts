@@ -331,6 +331,7 @@ const getParkingSpace = async (
       .where('ps.rentalObjectCode', '=', rentalObjectCode)
       .first()
 
+    console.log(mainQuery.toString())
     const result = await mainQuery
 
     if (!result) {
@@ -386,17 +387,25 @@ const getParkingSpaces = async (
           rentalBlockDatesQuery,
         }).whereIn('ps.rentalObjectCode', batch)
 
+        // console.log(query.toString())
         const results = await query
         if (results && results.length) {
           allResults = allResults.concat(results)
         }
       }
     } else {
-      allResults = await buildMainQuery({
+      const query = buildMainQuery({
         parkingSpacesQuery,
         latestContractPerParkingSpaceQuery,
         rentalBlockDatesQuery,
       })
+      // console.log(query.toString())
+      allResults = await query
+      // allResults = await buildMainQuery({
+      //   parkingSpacesQuery,
+      //   latestContractPerParkingSpaceQuery,
+      //   rentalBlockDatesQuery,
+      // })
     }
 
     if (!allResults || allResults.length === 0) {

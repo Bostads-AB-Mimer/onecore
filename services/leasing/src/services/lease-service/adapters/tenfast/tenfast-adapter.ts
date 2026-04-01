@@ -22,7 +22,7 @@ import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
-import currency from 'currency.js'
+import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -196,6 +196,89 @@ export const getRentalObject = async (
   }
 }
 
+export enum RentalObjectType {
+  ParkingSpace = 'parkering',
+  Apartment = 'lägenhet',
+  Storage = 'förråd',
+}
+
+export const getAvailabilityForVacantRentalObjects = async (
+  type: RentalObjectType
+): Promise<
+  AdapterResult<
+    RentalObjectAvailabilityInfo[] | null,
+    | 'could-not-find-rental-object'
+    | 'could-not-parse-rental-object'
+    | 'get-rental-object-bad-request'
+  >
+> => {
+  console.log(
+    `Getting availability for vacant rental objects of type ${type} from Tenfast`
+  )
+
+  try {
+    let page = ''
+    let allRecords: any[] = []
+    let totalCount = 0
+    let first = true
+
+    do {
+      const rentalObjectResponse = await tenfastApi.request({
+        method: 'get',
+        url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?hyresvard=${tenfastCompanyId}&states=vacant,soon-vacant&typ=${type}&includeAvtal=true&paginate=${page}`,
+      })
+      if (rentalObjectResponse.status === 400)
+        return handleTenfastError(
+          rentalObjectResponse.data.error,
+          'get-rental-object-bad-request'
+        )
+      else if (
+        rentalObjectResponse.status !== 200 &&
+        rentalObjectResponse.status !== 201
+      )
+        return handleTenfastError(
+          {
+            error: rentalObjectResponse.data.error,
+            status: rentalObjectResponse.status,
+          },
+          'could-not-find-rental-object'
+        )
+
+      const parsedRentalObjectResponse =
+        TenfastRentalObjectByRentalObjectCodeResponseSchema.safeParse(
+          rentalObjectResponse.data
+        )
+      if (!parsedRentalObjectResponse.success)
+        return handleTenfastError(
+          parsedRentalObjectResponse.error,
+          'could-not-parse-rental-object'
+        )
+
+      if (first) {
+        totalCount = parsedRentalObjectResponse.data.totalCount || 0
+        first = false
+        console.log('totalCount is:', totalCount)
+      }
+      allRecords = allRecords.concat(parsedRentalObjectResponse.data.records)
+      page = parsedRentalObjectResponse.data.next ?? ''
+    } while (allRecords.length < totalCount)
+
+    console.log('allRecords length is:', allRecords.length)
+    return {
+      ok: true,
+      data:
+        allRecords.map((record) =>
+          mapTenfastRentalObjectToAvailabilityInfo(
+            false,
+            record
+          )
+        ) ?? null,
+    }
+  } catch (err: any) {
+    return handleTenfastError(err, 'could-not-find-rental-object')
+  }
+}
+
 export const getAvailabilityForRentalObject = async (
   rentalObjectCode: string,
   includeVAT: boolean
@@ -224,7 +307,7 @@ export const getAvailabilityForRentalObject = async (
   }
 
   const availability: RentalObjectAvailabilityInfo =
-    parseRentalObjectAvailabilityInfoFromTenfastRentalObject(
+    mapTenfastRentalObjectToAvailabilityInfo(
       includeVAT,
       rentalObjectResult.data
     )
@@ -235,64 +318,6 @@ export const getAvailabilityForRentalObject = async (
   }
 }
 
-const getLastEndDateOfActiveLeases = (leases: TenfastLease[]): Date | null => {
-  if (leases.length === 0) return null
-  const endDates = filterByStatus(leases, [
-    'current',
-    'about-to-end',
-    'upcoming',
-  ])
-    .map((lease) => lease.endDate)
-    .filter((date): date is Date => date !== undefined)
-    .sort((a, b) => b.getTime() - a.getTime()) // Sort descending to get the latest date first
-
-  if (endDates.length === 0) return null
-
-  return new Date(endDates[0]) // Return the latest end date
-}
-
-const parseRentalObjectAvailabilityInfoFromTenfastRentalObject = (
-  includeVAT: boolean,
-  tenfastRentalObject: TenfastRentalObject
-): RentalObjectAvailabilityInfo => {
-  // // Determine vacantFrom date
-  const lastDebitDate = getLastEndDateOfActiveLeases(
-    tenfastRentalObject.avtal ?? []
-  )
-
-  let vacantFrom
-  if (lastDebitDate) {
-    //if there is a last debit date, vacantFrom should be the day after
-    vacantFrom = new Date(lastDebitDate)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  } else {
-    //there is no last debit date, the parking space is vacant as of today
-    vacantFrom = new Date()
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  }
-
-  return {
-    rentalObjectCode: tenfastRentalObject.externalId,
-    vacantFrom: vacantFrom,
-    rent: {
-      amount: includeVAT
-        ? tenfastRentalObject.hyra
-        : tenfastRentalObject.hyraExcludingVat,
-      vat: includeVAT ? tenfastRentalObject.hyraVat : 0,
-      rows: tenfastRentalObject.hyror.map((hyra) => ({
-        description: hyra.label || '',
-        amount: includeVAT
-          ? currency(hyra.amount).add(hyra.vat).value
-          : hyra.amount,
-        vatPercentage: includeVAT ? hyra.vat : 0,
-        fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
-        toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
-        code: hyra.article || '', //TODO:vad ska denna sättas till? Är article rätt fält?,
-      })),
-    },
-  }
-}
 
 export const getRentalObjectAvailabilityInfo = async (
   rentalObjectCodes: Array<string>,
@@ -347,7 +372,7 @@ export const getRentalObjectAvailabilityInfo = async (
             TenfastRentalObjectSchema.safeParse(rentalObjectData)
           if (!parsedRentalObject.success) throw parsedRentalObject.error
 
-          return parseRentalObjectAvailabilityInfoFromTenfastRentalObject(
+          return mapTenfastRentalObjectToAvailabilityInfo(
             includeVAT,
             parsedRentalObject.data
           )
