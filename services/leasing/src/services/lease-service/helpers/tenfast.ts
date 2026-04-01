@@ -1,4 +1,10 @@
-import { Lease, LeaseStatus, LeaseRentRow, LeaseType, RentalObject } from '@onecore/types'
+import {
+  Lease,
+  LeaseStatus,
+  LeaseRentRow,
+  LeaseType,
+  RentalObject,
+} from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import {
@@ -16,7 +22,7 @@ const TENFAST_TYP_TO_LEASE_TYPE: Record<string, LeaseType> = {
   parkering: LeaseType.ParkingSpaceContract,
   lokal: LeaseType.CommercialTenantContract,
   garage: LeaseType.GarageContract,
-  forrad: LeaseType.OtherContract,
+  forrad: LeaseType.StorageContract,
   ovrigt: LeaseType.OtherContract,
 }
 
