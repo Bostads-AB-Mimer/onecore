@@ -12,13 +12,14 @@ type ContactResult = ContactSearchResult & { type: 'contact'; id: string }
 export type CombinedSearchResult = SearchResult | ContactResult
 
 export function useSearch(query: string) {
+  const trimmedQuery = query.trim()
   return useQuery({
-    queryKey: ['search', query],
-    enabled: Boolean(query) && query.length > 2,
+    queryKey: ['search', trimmedQuery],
+    enabled: Boolean(trimmedQuery) && trimmedQuery.length > 2,
     queryFn: async () => {
       const [propertyResults, contactResults] = await Promise.all([
-        searchService.search(query),
-        tenantService.searchContacts(query),
+        searchService.search(trimmedQuery),
+        tenantService.searchContacts(trimmedQuery),
       ])
 
       return [

@@ -26,5 +26,12 @@
     "title": "Uppsagda kontrakt visas nu under Hyresgäst-fliken",
     "description": "Kontrakt med status 'Uppsagt' visas nu korrekt som nuvarande kontraktsinnehavare i Hyresgäst-fliken tills kontraktet har upphört.",
     "category": "fix"
+  },
+  {
+    "id": "rn-2026-04-01-v222-5",
+    "date": "2026-04-01",
+    "title": "Mellanslag trimmas i global sökning",
+    "description": "Ledande och avslutande mellanslag tas nu bort automatiskt vid sökning, vilket ger mer träffsäkra sökresultat.",
+    "category": "fix"
   }
 ]
