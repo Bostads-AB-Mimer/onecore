@@ -1,3 +1,4 @@
+import { LeaseType } from '@onecore/types'
 import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
@@ -34,7 +35,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const newTenantLease = LeaseFactory.build({
       leaseId: 'lease-new',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -55,7 +56,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const previousTenantLease = LeaseFactory.build({
       leaseId: 'lease-previous',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2023-01-01'),
       tenants: [
         {
@@ -117,7 +118,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const onlyLease = LeaseFactory.build({
       leaseId: 'lease-only',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -161,7 +162,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const parkingLease = LeaseFactory.build({
       leaseId: 'lease-parking',
-      type: 'Parkeringskontrakt',
+      type: LeaseType.ParkingSpaceContract,
       leaseStartDate: new Date('2024-01-01'),
     })
 
@@ -191,7 +192,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const lease = LeaseFactory.build({
       leaseId: 'lease-1',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -249,7 +250,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const lease = LeaseFactory.build({
       leaseId: 'lease-1',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {
@@ -320,7 +321,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const oldestLease = LeaseFactory.build({
       leaseId: 'lease-oldest',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2020-01-01'),
       tenants: [
         {
@@ -341,7 +342,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const middleLease = LeaseFactory.build({
       leaseId: 'lease-middle',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2022-01-01'),
       tenants: [
         {
@@ -362,7 +363,7 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
 
     const newestLease = LeaseFactory.build({
       leaseId: 'lease-newest',
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
       leaseStartDate: new Date('2024-01-01'),
       tenants: [
         {

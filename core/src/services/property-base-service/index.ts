@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { LeaseType } from '@onecore/types'
 import { z } from 'zod'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
@@ -2204,10 +2205,7 @@ export const routes = (router: KoaRouter) => {
 
         // TODO: This (Promise.all) doesn't work as intended because getMaintenanceUnitsForRentalProperty is not going to throw an error bc of AdapterResult
         const promises = leases
-          .filter(
-            (lease) =>
-              lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
-          )
+          .filter((lease) => lease.type === LeaseType.HousingContract)
           .map((lease) =>
             propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(
               lease.rentalPropertyId

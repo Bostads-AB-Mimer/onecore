@@ -92,6 +92,18 @@ enum OfferStatus {
   Expired = 4,
 }
 
+enum LeaseType {
+  HousingContract = 'Bostadskontrakt',
+  CampusContract = 'Campuskontrakt',
+  GarageContract = 'Garagekontrakt',
+  CooperativeTenancyContract = 'Kooperativ hyresrätt',
+  CommercialTenantContract = 'Lokalkontrakt',
+  RenegotiationContract = 'Omförhandlingskontrakt',
+  StorageContract = 'Förrådskontrakt',
+  OtherContract = 'Övrigt',
+  ParkingSpaceContract = 'P-Platskontrakt',
+}
+
 enum WaitingListType {
   ParkingSpace = 1,
   Housing = 2,
@@ -101,6 +113,7 @@ enum WaitingListType {
 export {
   LeaseStatus,
   LeaseStatusLabel,
+  LeaseType,
   ParkingSpaceType,
   ParkingSpaceApplicationCategory,
   PaymentStatus,

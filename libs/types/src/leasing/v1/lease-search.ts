@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LeaseStatus } from '../../enums'
+import { LeaseStatus, LeaseType } from '../../enums'
 
 /**
  * Contact info schema - reusable for lease contacts
@@ -89,7 +89,7 @@ export const LeaseSearchResultSchema = z.object({
   // Core lease fields (always returned)
   leaseId: z.string(),
   objectTypeCode: z.string(),
-  leaseType: z.string(),
+  leaseType: z.nativeEnum(LeaseType),
   contacts: z.array(ContactInfoSchema),
   address: z.string().nullable(),
   startDate: z.date().nullable(),
