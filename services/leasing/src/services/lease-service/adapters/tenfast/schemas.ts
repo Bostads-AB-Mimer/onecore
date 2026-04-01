@@ -51,7 +51,7 @@ export const TenfastRentalObjectSchema = z.object({
   hyraVat: z.number(), // total moms pa hyran
   hyraExcludingVat: z.number(), // hyran exklusive moms
   hyror: z.array(TenfastInvoiceRowSchema),
-  contractTemplate: z.string().optional(),
+  contractTemplate: z.string().optional().nullable(),
   postadress: z.string().nullish(),
   stadsdel: z.string().nullish(),
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
@@ -75,6 +75,9 @@ export const TenfastTenantByContactCodeResponseSchema = z.object({
 })
 export const TenfastRentalObjectByRentalObjectCodeResponseSchema = z.object({
   records: z.array(TenfastRentalObjectSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
 })
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
