@@ -250,7 +250,7 @@ export class LeaseSearchQueryBuilder {
           }
         }
       })
-    } else if (!this.params.includeEnded) {
+    } else if (!this.params.includeEnded && !this.params.endDateFrom && !this.params.endDateTo) {
       // Default: exclude Upphört (status 3) for performance
       const endedCondition = STATUS_CONDITIONS['ended']
       this.query.whereNot((qb) => endedCondition(qb, currentDate))
