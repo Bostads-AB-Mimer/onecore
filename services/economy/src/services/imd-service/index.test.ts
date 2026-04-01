@@ -426,7 +426,7 @@ describe(imdService.toUnprocessedCsv, () => {
     ])
 
     const reason = csv.split('\n')[1].split(';')[7]
-    expect(reason).toBe('Hyresobjekt saknas i Xpand')
+    expect(reason).toBe('Hyresobjekt saknas i Tenfast')
   })
 
   it('uses correct reason for amount-too-low', () => {
