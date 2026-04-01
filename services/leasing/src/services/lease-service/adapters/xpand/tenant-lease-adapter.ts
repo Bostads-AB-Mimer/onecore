@@ -462,8 +462,6 @@ const getContactsDataBySearchQuery = async (
     }
 
     if (isPhoneNumberSearch) {
-      // Phone number search - strip dashes for matching
-      const normalizedPhone = q.replace(/-/g, '')
       const rows = await xpandDb
         .from('cmctc')
         .select(
@@ -477,7 +475,7 @@ const getContactsDataBySearchQuery = async (
           xpandDb
             .select('keycmobj')
             .from('cmtel')
-            .where('cmtelben', 'like', `${normalizedPhone}%`)
+            .where('cmtelben', 'like', `${q}%`)
         )
         .where('cmctc.deletemark', '=', '0')
         .modify((qb) => {
@@ -564,7 +562,6 @@ const searchContactsPaginated = async (
   }
 
   if (isPhoneNumberSearch) {
-    const normalizedPhone = q.replace(/-/g, '')
     const query = xpandDb
       .from('cmctc')
       .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
@@ -574,7 +571,7 @@ const searchContactsPaginated = async (
         xpandDb
           .select('keycmobj')
           .from('cmtel')
-          .where('cmtelben', 'like', `${normalizedPhone}%`)
+          .where('cmtelben', 'like', `${q}%`)
       )
       .where('cmctc.deletemark', '=', '0')
       .orderBy('cmctc.cmctcben', 'asc')
