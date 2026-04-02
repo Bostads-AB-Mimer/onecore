@@ -20,7 +20,7 @@ import logoUrl from '../../assets/MimerLogo_RGB_blk-blue.png'
 const PAGE_W = 210
 const MARGIN_X = 20
 const MARGIN_TOP = 10
-const MARGIN_TOP_CONTINUATION = 25
+const MARGIN_TOP_CONTINUATION = 35
 const FOOTER_H = 25
 const BLUE = { r: 0, g: 123, b: 196 }
 const RED = { r: 200, g: 0, b: 0 }
@@ -75,9 +75,9 @@ const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
     margin: 1,
     errorCorrectionLevel: 'M',
   })
-  const qrSize = 25
-  const x = PAGE_W - 10 - qrSize
-  const y = MARGIN_TOP - 5
+  const qrSize = 35
+  const x = PAGE_W - MARGIN_X - qrSize
+  const y = 5
   const totalPages = doc.getNumberOfPages()
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page)
