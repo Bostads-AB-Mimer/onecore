@@ -405,21 +405,10 @@ export const routes = (router: KoaRouter) => {
       const parkingSpaceResult =
         await xpandAdapter.getParkingSpace(rentalObjectCode)
 
-      if (!parkingSpaceResult.ok) {
-        logger.error(
-          { err: parkingSpaceResult.err, rentalObjectCode: rentalObjectCode },
-          `Error fetching parking space by Rental Object Code: ${rentalObjectCode}`
-        )
-
-        if (parkingSpaceResult.err == 'parking-space-not-found') {
-          ctx.status = 404
-          ctx.body = {
-            error: `Parking space not found for rental object code: ${rentalObjectCode}`,
-            ...metadata,
-          }
-          return
-        }
-
+      if (
+        !parkingSpaceResult.ok &&
+        parkingSpaceResult.err != 'parking-space-not-found'
+      ) {
         ctx.status = 500
         ctx.body = {
           error: `An error occurred while fetching parking space by rental object code: ${rentalObjectCode}`,
@@ -427,6 +416,10 @@ export const routes = (router: KoaRouter) => {
         }
         return
       }
+
+      const parkingSpace = parkingSpaceResult.ok
+        ? parkingSpaceResult.data
+        : null
 
       // Get availability info for the parking space from tenfast
       const availabilityResult =
@@ -437,12 +430,15 @@ export const routes = (router: KoaRouter) => {
 
       if (availabilityResult.ok) {
         if (availabilityResult.data) {
-          // Enrich availability info with vacantFrom based on block end date and end date of last active lease
-          availabilityResult.data.vacantFrom = determineVacantFrom(
-            availabilityResult.data.vacantFrom,
-            parkingSpaceResult.data.blockStartDate,
-            parkingSpaceResult.data.blockEndDate
-          )
+          if (parkingSpace) {
+            // Enrich availability info with vacantFrom based on block end date and end date of last active lease
+            availabilityResult.data.vacantFrom = determineVacantFrom(
+              availabilityResult.data.vacantFrom,
+              parkingSpace?.blockStartDate,
+              parkingSpace?.blockEndDate
+            )
+          } //Set VacantFrom to undefined for rental objects that is not parking spaces sincewe don't have block info for those rental objects to be able to determine vacantFrom
+          else availabilityResult.data.vacantFrom = undefined
         }
 
         ctx.status = 200
@@ -548,21 +544,10 @@ export const routes = (router: KoaRouter) => {
           ),
         ])
 
-      if (!parkingSpaceResult.ok) {
-        logger.error(
-          { err: parkingSpaceResult.err },
-          'Error fetching parking spaces:'
-        )
-
-        if (parkingSpaceResult.err == 'parking-spaces-not-found') {
-          ctx.status = 404
-          ctx.body = {
-            error: `No parking spaces found for rental object codes: ${includeRentalObjectCodes}`,
-            ...metadata,
-          }
-          return
-        }
-
+      if (
+        !parkingSpaceResult.ok &&
+        parkingSpaceResult.err !== 'parking-spaces-not-found'
+      ) {
         ctx.status = 500
         ctx.body = {
           error: 'An error occurred while fetching parking spaces.',
@@ -574,21 +559,23 @@ export const routes = (router: KoaRouter) => {
       if (!rentalObjectAvailabilitiesResponse.ok) {
         logger.error(
           { err: rentalObjectAvailabilitiesResponse.err },
-          'Error fetching rents for parking spaces:'
+          'Error fetching availability for rental objects:'
         )
         ctx.status = 500
         ctx.body = {
           error:
-            'An error occurred while fetching availability for parking spaces.',
+            'An error occurred while fetching availability for rental objects.',
           ...metadata,
         }
         return
       }
 
       rentalObjectAvailabilitiesResponse.data.forEach((availabilityInfo) => {
-        const parkingSpace = parkingSpaceResult.data.find(
-          (ps) => ps.rentalObjectCode === availabilityInfo.rentalObjectCode
-        )
+        const parkingSpace =
+          parkingSpaceResult.ok &&
+          parkingSpaceResult.data.find(
+            (ps) => ps.rentalObjectCode === availabilityInfo.rentalObjectCode
+          )
 
         // Match availability info to rental object and enrich availability info with
         // vacantFrom based on block end date and end date of last active lease
@@ -598,7 +585,8 @@ export const routes = (router: KoaRouter) => {
             parkingSpace.blockStartDate,
             parkingSpace.blockEndDate
           )
-        }
+        } // Set VacantFrom to undefined for rental objects that is not parking spaces since we don't have block info for those rental objects to be able to determine vacantFrom
+        else availabilityInfo.vacantFrom = undefined
       })
 
       ctx.status = 200
