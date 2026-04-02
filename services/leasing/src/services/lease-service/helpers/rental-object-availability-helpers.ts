@@ -1,8 +1,10 @@
 import { RentalObject } from '@onecore/types'
 
 /**
- * Returns true if the rental object has no active or future block.
- * A block with no end date is considered active if its start date is today or earlier.
+ * Returns true if the rental object has no currently active block.
+ * A block is considered active if its start date is today or earlier and it has no end date,
+ * or if today falls within the block's start and end dates (inclusive).
+ * A block that starts in the future is not considered active.
  */
 export function hasNoActiveBlock(ps: RentalObject): boolean {
   if (!ps.blockStartDate) return true
@@ -41,9 +43,11 @@ export function determineVacantFrom(
   let vacantFrom: Date | undefined
 
   if (lastBlockEndDate && lastBlockEndDate >= today) {
-    vacantFrom = new Date(lastBlockEndDate)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0)
+    const dayAfterBlock = new Date(lastBlockEndDate)
+    dayAfterBlock.setUTCDate(dayAfterBlock.getUTCDate() + 1)
+    dayAfterBlock.setUTCHours(0, 0, 0, 0)
+    vacantFrom =
+      lastDebit && lastDebit > dayAfterBlock ? lastDebit : dayAfterBlock
   } else if (lastBlockStartDate && !lastBlockEndDate) {
     vacantFrom = undefined
   } else if (lastDebit) {

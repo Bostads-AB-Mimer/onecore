@@ -123,10 +123,12 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
     it('should respond with 200 and the availability when found', async () => {
       // Arrange
       const rentalObjectCode = 'R1003'
-      const rent = 1234
+      const availabilityInfo = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode,
+      })
       jest
         .spyOn(leasingAdapter, 'getRentalObjectAvailabilityByCode')
-        .mockResolvedValueOnce({ ok: true, data: rent })
+        .mockResolvedValueOnce({ ok: true, data: availabilityInfo })
 
       // Act
       const res = await request(app.callback()).get(
@@ -135,7 +137,7 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(res.body.content).toBe(rent)
+      expect(res.body.content).toMatchObject({ rentalObjectCode })
     })
 
     it('should respond with 404 if adapter returns availability-not-found', async () => {
@@ -179,7 +181,12 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
       const rentalObjectCode = 'R1003'
       const spy = jest
         .spyOn(leasingAdapter, 'getRentalObjectAvailabilityByCode')
-        .mockResolvedValueOnce({ ok: true, data: 1234 })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.rentalObjectAvailabilityInfo.build({
+            rentalObjectCode,
+          }),
+        })
 
       // Act
       await request(app.callback()).get(
@@ -195,10 +202,12 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
     it('should respond with 200 and the availabilities when found', async () => {
       // Arrange
       const rentalObjectCodes = ['R1001', 'R1002']
-      const rents = [1000, 2000]
+      const availabilities = rentalObjectCodes.map((code) =>
+        factory.rentalObjectAvailabilityInfo.build({ rentalObjectCode: code })
+      )
       jest
         .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
-        .mockResolvedValueOnce({ ok: true, data: rents })
+        .mockResolvedValueOnce({ ok: true, data: availabilities })
 
       // Act
       const res = await request(app.callback())
@@ -207,7 +216,9 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(res.body.content).toEqual(rents)
+      expect(res.body.content).toHaveLength(2)
+      expect(res.body.content[0]).toMatchObject({ rentalObjectCode: 'R1001' })
+      expect(res.body.content[1]).toMatchObject({ rentalObjectCode: 'R1002' })
     })
 
     it('should respond with 404 if adapter returns availabilities-not-found', async () => {
@@ -251,7 +262,14 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
       const rentalObjectCodes = ['R1001', 'R1002']
       const spy = jest
         .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
-        .mockResolvedValueOnce({ ok: true, data: [1000, 2000] })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: rentalObjectCodes.map((code) =>
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: code,
+            })
+          ),
+        })
 
       // Act
       await request(app.callback())

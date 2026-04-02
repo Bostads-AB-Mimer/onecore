@@ -86,7 +86,7 @@ describe('rental-objects adapter', () => {
         'error'
       )
       nock(config.tenantsLeasesService.url)
-        .get(/rental-objects\/by-code\/network-error\/availabilities/)
+        .get(/rental-objects\/by-code\/network-error\/availability/)
         .replyWithError('Network error')
 
       // Act

@@ -340,7 +340,6 @@ interface ParkingSpace {
 interface RentalObject {
   rentalObjectCode: string
   address: string
-  // rent?: RentalObjectRent
   availabilityInfo?: RentalObjectAvailabilityInfo
   districtCaption?: string
   districtCode?: string
@@ -352,7 +351,6 @@ interface RentalObject {
   objectTypeCode: string
   blockStartDate?: Date //will be moved to a separate type in the future when Blocks has been moved to OneCore
   blockEndDate?: Date //will be moved to a separate type in the future when Blocks has been moved to OneCore
-  // vacantFrom?: Date
   braArea?: number
   btaArea?: number
   boaArea?: number
@@ -368,7 +366,6 @@ interface RentalObjectAvailabilityInfo {
 }
 
 interface RentalObjectRent {
-  // rentalObjectCode: string
   amount: number
   vat: number
   rows: Array<RentalObjectRentRow>

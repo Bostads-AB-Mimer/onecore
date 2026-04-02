@@ -193,16 +193,34 @@ export const routes = (router: KoaRouter) => {
    *         description: The rental object code of the availability to fetch.
    *     responses:
    *       '200':
-   *         description: Successfully retrieved the rental object.
+   *         description: Successfully retrieved the rental object availability.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
-   *                 availability:
-   *                   type: number
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     vacantFrom:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
    *       '500':
-   *         description: Internal server error. Failed to fetch rental object.
+   *         description: Internal server error. Failed to fetch rental object availability.
    *         content:
    *           application/json:
    *             schema:
@@ -275,16 +293,36 @@ export const routes = (router: KoaRouter) => {
    *                 example: ["ABC123", "DEF456", "GHI789"]
    *     responses:
    *       '200':
-   *         description: Successfully retrieved the rental object.
+   *         description: Successfully retrieved the rental object availabilities.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
-   *                 availability:
-   *                   type: number
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       rentalObjectCode:
+   *                         type: string
+   *                       vacantFrom:
+   *                         type: string
+   *                         format: date-time
+   *                         nullable: true
+   *                       rent:
+   *                         type: object
+   *                         properties:
+   *                           amount:
+   *                             type: number
+   *                           vat:
+   *                             type: number
+   *                           rows:
+   *                             type: array
+   *                             items:
+   *                               type: object
    *       '500':
-   *         description: Internal server error. Failed to fetch rental object.
+   *         description: Internal server error. Failed to fetch rental object availabilities.
    *         content:
    *           application/json:
    *             schema:

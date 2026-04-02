@@ -1,5 +1,5 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { RentalObject } from '@onecore/types'
+import { RentalObject, RentalObjectAvailabilityInfo } from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from '../types'
@@ -71,7 +71,12 @@ const getAllVacantParkingSpaces = async (): Promise<
 
 const getRentalObjectAvailabilityByCode = async (
   rentalObjectCode: string
-): Promise<AdapterResult<number, 'availability-not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    RentalObjectAvailabilityInfo,
+    'availability-not-found' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/rental-objects/by-code/${rentalObjectCode}/availability`
@@ -95,7 +100,12 @@ const getRentalObjectAvailabilityByCode = async (
 
 const getRentalObjectAvailabilities = async (
   rentalObjectCodes?: string[]
-): Promise<AdapterResult<number[], 'availabilities-not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    RentalObjectAvailabilityInfo[],
+    'availabilities-not-found' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/rental-objects/availabilities`,

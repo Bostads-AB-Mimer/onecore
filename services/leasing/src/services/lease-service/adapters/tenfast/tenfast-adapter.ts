@@ -111,11 +111,6 @@ export const getLeases = async (): Promise<
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal?populate=hyresobjekt,hyresgaster&limit=100000`,
     })
 
-    console.log(
-      'Antal Leases response from Tenfast:',
-      rentalObjectResponse.data.records.length
-    )
-
     if (rentalObjectResponse.status === 400)
       return handleTenfastError(rentalObjectResponse.data.error, 'bad-request')
     else if (
@@ -212,10 +207,6 @@ export const getAvailabilityForVacantRentalObjects = async (
     | 'get-rental-object-bad-request'
   >
 > => {
-  console.log(
-    `Getting availability for vacant rental objects of type ${type} from Tenfast`
-  )
-
   try {
     let page = ''
     let allRecords: any[] = []
@@ -257,13 +248,10 @@ export const getAvailabilityForVacantRentalObjects = async (
       if (first) {
         totalCount = parsedRentalObjectResponse.data.totalCount || 0
         first = false
-        console.log('totalCount is:', totalCount)
       }
       allRecords = allRecords.concat(parsedRentalObjectResponse.data.records)
       page = parsedRentalObjectResponse.data.next ?? ''
     } while (allRecords.length < totalCount)
-
-    console.log('allRecords length is:', allRecords.length)
 
     const recordsWithoutUpcomingLeases = allRecords.filter(
       (record) => filterByStatus(record.avtal ?? [], ['upcoming']).length === 0

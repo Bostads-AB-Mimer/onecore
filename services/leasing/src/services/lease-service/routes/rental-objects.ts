@@ -295,11 +295,6 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    console.log(
-      'Antal lediga hyresobjekt från tenfast:',
-      availabilityResult.data?.length
-    )
-
     //Get parking spaces for the available rental objects from xpand
     const rentalObjectResult = await xpandAdapter.getParkingSpaces(
       availabilityResult.data.map(
@@ -320,11 +315,6 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    console.log(
-      'Antal parkeringsplatser från xpand:',
-      rentalObjectResult.data.length
-    )
-
     // Match availability info to rental objects
     rentalObjectResult.data.forEach((ps) => {
       ps.availabilityInfo = availabilityResult.data?.find(
@@ -335,10 +325,6 @@ export const routes = (router: KoaRouter) => {
 
     // Filter out parking spaces with an active or future block (including blocks with no end date)
     const vacantRentalObjects = rentalObjectResult.data.filter(hasNoActiveBlock)
-    console.log(
-      'after filtering on block end date, antal lediga parkeringsplatser:',
-      vacantRentalObjects.length
-    )
 
     // Berika availability info med vacantFrom baserat på block end date och end date
     vacantRentalObjects.forEach((ps) => {
@@ -371,8 +357,43 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 availability:
-   *                   type: number
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     vacantFrom:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               code:
+   *                                 type: string
+   *                               description:
+   *                                 type: string
+   *                               amount:
+   *                                 type: number
+   *                               vatPercentage:
+   *                                 type: number
+   *                               fromDate:
+   *                                 type: string
+   *                                 format: date-time
+   *                                 nullable: true
+   *                               toDate:
+   *                                 type: string
+   *                                 format: date-time
+   *                                 nullable: true
    *       '500':
    *         description: Internal server error. Failed to fetch rental object availability.
    *         content:

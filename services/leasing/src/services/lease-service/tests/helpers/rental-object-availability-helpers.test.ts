@@ -119,5 +119,27 @@ describe('rental-object-availability-helpers', () => {
       const result = determineVacantFrom(undefined, '2026-03-01', '2026-03-20')
       expect(result).toEqual(new Date('2026-03-31T00:00:00.000Z'))
     })
+
+    it('returns vacantFromDate when it is later than the day after blockEndDate', () => {
+      // Block ends April 30, lease ends July 31 (vacantFromDate = Aug 1)
+      // The space is still leased past the block, so Aug 1 should win
+      const result = determineVacantFrom(
+        new Date('2026-08-01T00:00:00.000Z'),
+        '2026-03-01',
+        '2026-04-30'
+      )
+      expect(result).toEqual(new Date('2026-08-01T00:00:00.000Z'))
+    })
+
+    it('returns day after blockEndDate when it is later than vacantFromDate', () => {
+      // Block ends October 31, lease ended July 31 (vacantFromDate = Aug 1)
+      // Block extends past the lease, so Nov 1 should win
+      const result = determineVacantFrom(
+        new Date('2026-08-01T00:00:00.000Z'),
+        '2026-03-01',
+        '2026-10-31'
+      )
+      expect(result).toEqual(new Date('2026-11-01T00:00:00.000Z'))
+    })
   })
 })
