@@ -9,7 +9,11 @@ export const getLatestActiveLeasesEndDate = (
   leases: TenfastLease[]
 ): Date | null => {
   if (leases.length === 0) return null
-  const endDates = filterByStatus(leases, ['current', 'about-to-end', 'upcoming'])
+  const endDates = filterByStatus(leases, [
+    'current',
+    'about-to-end',
+    'upcoming',
+  ])
     .map((lease) => lease.endDate)
     .filter((date): date is Date => date != null)
     .sort((a, b) => b.getTime() - a.getTime()) // Sort descending to get the latest date first

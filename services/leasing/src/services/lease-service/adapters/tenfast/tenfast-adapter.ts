@@ -266,8 +266,7 @@ export const getAvailabilityForVacantRentalObjects = async (
     console.log('allRecords length is:', allRecords.length)
 
     const recordsWithoutUpcomingLeases = allRecords.filter(
-      (record) =>
-        filterByStatus(record.avtal ?? [], ['upcoming']).length === 0
+      (record) => filterByStatus(record.avtal ?? [], ['upcoming']).length === 0
     )
 
     return {
@@ -319,7 +318,6 @@ export const getAvailabilityForRentalObject = async (
     data: availability,
   }
 }
-
 
 export const getRentalObjectAvailabilityInfo = async (
   rentalObjectCodes: Array<string>,

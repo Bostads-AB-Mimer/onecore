@@ -89,7 +89,10 @@ describe('tenfast-rental-object-helpers', () => {
   describe('mapTenfastRentalObjectToAvailabilityInfo', () => {
     it('sets vacantFrom to today when there are no active leases', () => {
       const rentalObject = factory.tenfastRentalObject.build({ avtal: [] })
-      const result = mapTenfastRentalObjectToAvailabilityInfo(false, rentalObject)
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
       expect(result.vacantFrom).toEqual(TODAY)
     })
 
@@ -99,7 +102,10 @@ describe('tenfast-rental-object-helpers', () => {
         endDate: new Date('2026-06-30'),
       })
       const rentalObject = factory.tenfastRentalObject.build({ avtal: [lease] })
-      const result = mapTenfastRentalObjectToAvailabilityInfo(false, rentalObject)
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
       expect(result.vacantFrom).toEqual(new Date('2026-07-01T00:00:00.000Z'))
     })
 
@@ -108,7 +114,10 @@ describe('tenfast-rental-object-helpers', () => {
         externalId: 'R1234',
         avtal: [],
       })
-      const result = mapTenfastRentalObjectToAvailabilityInfo(false, rentalObject)
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
       expect(result.rentalObjectCode).toBe('R1234')
     })
 
@@ -119,7 +128,10 @@ describe('tenfast-rental-object-helpers', () => {
         hyraVat: 250,
         avtal: [],
       })
-      const result = mapTenfastRentalObjectToAvailabilityInfo(false, rentalObject)
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
       expect(result.rent.amount).toBe(1000)
       expect(result.rent.vat).toBe(0)
     })
@@ -131,7 +143,10 @@ describe('tenfast-rental-object-helpers', () => {
         hyraVat: 250,
         avtal: [],
       })
-      const result = mapTenfastRentalObjectToAvailabilityInfo(true, rentalObject)
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        true,
+        rentalObject
+      )
       expect(result.rent.amount).toBe(1250)
       expect(result.rent.vat).toBe(250)
     })
