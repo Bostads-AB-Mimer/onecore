@@ -388,6 +388,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     const upcomingLease = factory.tenfastLease.build({
       startDate: new Date('2026-06-01'), // starts in the future
       endDate: new Date('2027-06-01'),
+      stage: 'upcoming',
     })
     const rentalObjectWithUpcoming = factory.tenfastRentalObject.build({
       externalId: 'R1002',

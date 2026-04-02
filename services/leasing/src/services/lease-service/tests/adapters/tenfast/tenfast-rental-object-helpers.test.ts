@@ -25,6 +25,7 @@ describe('tenfast-rental-object-helpers', () => {
       const endedLease = factory.tenfastLease.build({
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-03-01'), // ended before today
+        stage: 'archived',
       })
       expect(getLatestActiveLeasesEndDate([endedLease])).toBeNull()
     })
@@ -72,6 +73,7 @@ describe('tenfast-rental-object-helpers', () => {
         factory.tenfastLease.build({
           startDate: new Date('2025-01-01'),
           endDate: new Date('2025-12-31'), // ended
+          stage: 'archived',
         }),
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
