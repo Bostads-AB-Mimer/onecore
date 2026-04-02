@@ -509,7 +509,9 @@ describe('POST /leases', () => {
       .spyOn(tenfastAdapter, 'createLease')
       .mockResolvedValueOnce({ ok: true, data: undefined })
 
-    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+    const res = await request(app.callback())
+      .post('/leases')
+      .send(validRequestBody)
 
     expect(res.status).toBe(200)
   })
@@ -519,7 +521,9 @@ describe('POST /leases', () => {
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
       .mockResolvedValueOnce({ ok: true, data: null })
 
-    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+    const res = await request(app.callback())
+      .post('/leases')
+      .send(validRequestBody)
 
     expect(res.status).toBe(404)
   })
@@ -529,7 +533,9 @@ describe('POST /leases', () => {
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
-    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+    const res = await request(app.callback())
+      .post('/leases')
+      .send(validRequestBody)
 
     expect(res.status).toBe(404)
   })
@@ -543,7 +549,9 @@ describe('POST /leases', () => {
       .spyOn(tenfastAdapter, 'createLease')
       .mockResolvedValueOnce({ ok: false, err: 'lease-could-not-be-created' })
 
-    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+    const res = await request(app.callback())
+      .post('/leases')
+      .send(validRequestBody)
 
     expect(res.status).toBe(500)
     expect(res.body.error).toBe('lease-could-not-be-created')
@@ -573,7 +581,9 @@ describe('POST /leases', () => {
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
       .mockRejectedValueOnce(new Error('Unexpected error'))
 
-    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+    const res = await request(app.callback())
+      .post('/leases')
+      .send(validRequestBody)
 
     expect(res.status).toBe(500)
     expect(res.body.error).toBe('Unexpected error')
