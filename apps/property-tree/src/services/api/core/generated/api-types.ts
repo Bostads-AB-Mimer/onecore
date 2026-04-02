@@ -10285,6 +10285,7 @@ export interface components {
           /** Format: date-time */
           updatedAt: string;
         })[]) | null;
+      activeLoanContact?: string | null;
     };
     KeyLoanWithDetails: {
       /** Format: uuid */
@@ -10380,6 +10381,7 @@ export interface components {
               /** Format: date-time */
               updatedAt: string;
             })[]) | null;
+          activeLoanContact?: string | null;
         })[];
       keyCardsArray: ({
           cardId: string;
@@ -10693,6 +10695,7 @@ export interface components {
               /** Format: date-time */
               updatedAt: string;
             })[]) | null;
+          activeLoanContact?: string | null;
         })[];
     };
     CreateKeyEventRequest: {

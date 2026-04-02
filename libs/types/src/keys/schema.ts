@@ -152,6 +152,7 @@ export const KeyDetailsSchema = KeySchema.extend({
   keySystem: KeySystemSchema.optional().nullable(),
   loans: z.array(KeyLoanSchema).optional().nullable(),
   events: z.array(KeyEventSchema).optional().nullable(),
+  activeLoanContact: z.string().nullable().optional(),
 })
 
 // Response schema for key bundle with loan status endpoint

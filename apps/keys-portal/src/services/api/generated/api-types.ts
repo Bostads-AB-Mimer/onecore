@@ -2779,6 +2779,7 @@ export interface components {
           /** Format: date-time */
           updatedAt: string;
         })[]) | null;
+      activeLoanContact?: string | null;
     };
     PaginationMeta: {
       totalRecords: number;
