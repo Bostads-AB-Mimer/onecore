@@ -17,7 +17,6 @@ import {
   getKeyTypeFilterOptions,
 } from '@/services/types'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
-import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { UseItemSelectionReturn } from '@/hooks/useItemSelection'
 import { keyLoanService } from '@/services/api/keyLoanService'
@@ -58,9 +57,6 @@ interface KeysTableProps {
   onTypeFilterChange: (value: string | null) => void
   selectedDisposed: string | null
   onDisposedFilterChange: (value: string | null) => void
-  createdAtAfter: string | null
-  createdAtBefore: string | null
-  onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
   selection?: UseItemSelectionReturn
 }
 
@@ -73,9 +69,6 @@ export function KeysTable({
   onTypeFilterChange,
   selectedDisposed,
   onDisposedFilterChange,
-  createdAtAfter,
-  createdAtBefore,
-  onDatesChange,
   selection,
 }: KeysTableProps) {
   const expansion = useExpandableRows<ExpandedKeyData>({
@@ -121,10 +114,44 @@ export function KeysTable({
     },
   })
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('sv-SE')
-  }
+  const [contactData, setContactData] = React.useState<
+    Record<string, { fullName: string }>
+  >({})
+
+  React.useEffect(() => {
+    const fetchContactNames = async () => {
+      const uniqueContactCodes = new Set<string>()
+      keys.forEach((key) => {
+        if (key.activeLoanContact) uniqueContactCodes.add(key.activeLoanContact)
+      })
+
+      if (uniqueContactCodes.size === 0) {
+        setContactData({})
+        return
+      }
+
+      const data: Record<string, { fullName: string }> = {}
+      await Promise.all(
+        Array.from(uniqueContactCodes).map(async (contactCode) => {
+          try {
+            const contact = await fetchContactByContactCode(contactCode)
+            if (contact) {
+              data[contactCode] = {
+                fullName: contact.fullName ?? contactCode,
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to fetch contact ${contactCode}:`, error)
+            data[contactCode] = { fullName: contactCode }
+          }
+        })
+      )
+
+      setContactData(data)
+    }
+
+    fetchContactNames()
+  }, [keys])
 
   // Column count for expanded rows (base 11 + 1 if selection enabled)
   const columnCount = selection ? 12 : 11
@@ -170,13 +197,7 @@ export function KeysTable({
                 onSelectionChange={onDisposedFilterChange}
               />
             </FilterableTableHeader>
-            <FilterableTableHeader label="Skapad">
-              <DateRangeFilterDropdown
-                afterDate={createdAtAfter}
-                beforeDate={createdAtBefore}
-                onDatesChange={onDatesChange}
-              />
-            </FilterableTableHeader>
+            <TableHead>Låntagare</TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -255,7 +276,12 @@ export function KeysTable({
                         showActive
                       />
                     </TableCell>
-                    <TableCellMuted>{formatDate(key.createdAt)}</TableCellMuted>
+                    <TableCellMuted>
+                      {key.activeLoanContact
+                        ? (contactData[key.activeLoanContact]?.fullName ??
+                          key.activeLoanContact)
+                        : '-'}
+                    </TableCellMuted>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
                         <NotePopover text={key.notes} />

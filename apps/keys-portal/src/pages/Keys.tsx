@@ -726,9 +726,6 @@ const Index = () => {
         onTypeFilterChange={handleTypeFilterChange}
         selectedDisposed={selectedDisposedFilter}
         onDisposedFilterChange={handleDisposedFilterChange}
-        createdAtAfter={createdAtAfter}
-        createdAtBefore={createdAtBefore}
-        onDatesChange={handleDatesChange}
         selection={keySelection}
       />
 
