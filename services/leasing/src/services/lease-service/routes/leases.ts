@@ -16,7 +16,6 @@ import {
   getContacts,
   getLeases,
 } from '../adapters/xpand/tenant-lease-adapter'
-import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
   getBuildingManagers,
@@ -969,66 +968,54 @@ export const routes = (router: KoaRouter) => {
     try {
       const request = <CreateLeaseRequest>ctx.request.body
 
-      const createLeaseResult = await createLease(
-        new Date(request.fromDate),
-        request.parkingSpaceId,
+      const contactResult = await getContactByContactCode(
         request.contactCode,
-        request.companyCode
+        false
       )
 
-      if (createLeaseResult.ok) {
-        ctx.body = {
-          content: createLeaseResult.data,
-          ...metadata,
-        }
-
-        //Temporary: also create lease to tenfast
-        const contactResult = await getContactByContactCode(
-          request.contactCode,
-          false
+      if (!contactResult.ok || !contactResult.data) {
+        logger.error(
+          {
+            contactCode: request.contactCode,
+            error: contactResult.ok ? undefined : contactResult.err,
+          },
+          'Could not retrieve contact to create tenFAST lease'
         )
-
-        if (!contactResult.ok || !contactResult.data) {
-          logger.error(
-            {
-              contactCode: request.contactCode,
-              error: contactResult.ok ? undefined : contactResult.err,
-            },
-            'Could not retrieve contact to create tenFAST lease'
-          )
-          return
-        }
-
-        const createLeaseTenfastResult = await tenfastAdapter.createLease(
-          contactResult.data,
-          request.parkingSpaceId,
-          new Date(request.fromDate),
-          request.includeVAT
-        )
-
-        if (createLeaseTenfastResult.ok) {
-          logger.info(
-            { result: createLeaseTenfastResult.data },
-            'Lease created in tenFAST'
-          )
-        } else {
-          logger.error(
-            { error: createLeaseTenfastResult.err },
-            'Error creating lease in tenFAST'
-          )
-        }
-      } else if (createLeaseResult.err === 'create-lease-not-allowed') {
         ctx.status = 404
         ctx.body = {
-          error: 'Lease cannot be created on this rental object',
+          error: 'Contact not found',
           ...metadata,
         }
-      } else {
-        ctx.status = 500
+        return
+      }
+
+      const createLeaseTenfastResult = await tenfastAdapter.createLease(
+        contactResult.data,
+        request.parkingSpaceId,
+        new Date(request.fromDate),
+        request.includeVAT
+      )
+
+      if (createLeaseTenfastResult.ok) {
+        logger.info(
+          { result: createLeaseTenfastResult.data },
+          'Lease created in tenFAST'
+        )
         ctx.body = {
-          error: 'Unknown error when creating lease',
+          content: createLeaseTenfastResult.data,
           ...metadata,
         }
+        return
+      }
+
+      logger.error(
+        { error: createLeaseTenfastResult.err },
+        'Error creating lease in tenFAST'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: createLeaseTenfastResult.err,
+        ...metadata,
       }
     } catch (error: unknown) {
       ctx.status = 500

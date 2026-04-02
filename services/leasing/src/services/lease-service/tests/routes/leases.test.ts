@@ -6,6 +6,7 @@ import nock from 'nock'
 
 import { routes } from '../../index'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
+import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import { toYearMonthDayString } from '../../adapters/tenfast/schemas'
 import * as factory from '../factories'
 import config from '../../../../common/config'
@@ -487,5 +488,94 @@ describe('POST /leases/:leaseId/home-insurance/cancel', () => {
     expect(result.status).toBe(500)
 
     expect(replaceInvoiceRowSpy).toHaveBeenCalled()
+  })
+})
+
+describe('POST /leases', () => {
+  const validRequestBody = {
+    parkingSpaceId: 'P123',
+    contactCode: 'P965339',
+    fromDate: '2026-06-01T00:00:00.000Z',
+    companyCode: '001',
+    includeVAT: false,
+  }
+
+  it('returns 200 and lease content when lease is created successfully', async () => {
+    const contact = factory.contact.build()
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: contact })
+    jest
+      .spyOn(tenfastAdapter, 'createLease')
+      .mockResolvedValueOnce({ ok: true, data: undefined })
+
+    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+
+    expect(res.status).toBe(200)
+  })
+
+  it('returns 404 when contact is not found', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 when fetching contact fails', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 500 when creating lease fails', async () => {
+    const contact = factory.contact.build()
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: contact })
+    jest
+      .spyOn(tenfastAdapter, 'createLease')
+      .mockResolvedValueOnce({ ok: false, err: 'lease-could-not-be-created' })
+
+    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('lease-could-not-be-created')
+  })
+
+  it('calls createLease with correct arguments', async () => {
+    const contact = factory.contact.build({ contactCode: 'P965339' })
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: contact })
+    const createLeaseSpy = jest
+      .spyOn(tenfastAdapter, 'createLease')
+      .mockResolvedValueOnce({ ok: true, data: undefined })
+
+    await request(app.callback()).post('/leases').send(validRequestBody)
+
+    expect(createLeaseSpy).toHaveBeenCalledWith(
+      contact,
+      'P123',
+      new Date('2026-06-01T00:00:00.000Z'),
+      false
+    )
+  })
+
+  it('returns 500 when an unexpected exception is thrown', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockRejectedValueOnce(new Error('Unexpected error'))
+
+    const res = await request(app.callback()).post('/leases').send(validRequestBody)
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('Unexpected error')
   })
 })
