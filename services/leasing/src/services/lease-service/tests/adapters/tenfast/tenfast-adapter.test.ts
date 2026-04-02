@@ -352,6 +352,68 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
   })
 })
 
+describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
+  const mockPagedResponse = (records: object[]) => ({
+    status: 200,
+    data: {
+      records,
+      prev: null,
+      next: null,
+      totalCount: records.length,
+    },
+  })
+
+  it('should return availability info for rental objects without upcoming leases', async () => {
+    // Arrange
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R1001',
+      avtal: [],
+    })
+    ;(request as jest.Mock).mockResolvedValue(mockPagedResponse([rentalObject]))
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(1)
+    expect(result.data![0].rentalObjectCode).toBe('R1001')
+  })
+
+  it('should filter out rental objects with upcoming leases', async () => {
+    // Arrange
+    const upcomingLease = factory.tenfastLease.build({
+      startDate: new Date('2026-06-01'), // starts in the future
+      endDate: new Date('2027-06-01'),
+    })
+    const rentalObjectWithUpcoming = factory.tenfastRentalObject.build({
+      externalId: 'R1002',
+      avtal: [upcomingLease],
+    })
+    const rentalObjectWithoutUpcoming = factory.tenfastRentalObject.build({
+      externalId: 'R1003',
+      avtal: [],
+    })
+    ;(request as jest.Mock).mockResolvedValue(
+      mockPagedResponse([rentalObjectWithUpcoming, rentalObjectWithoutUpcoming])
+    )
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(1)
+    expect(result.data![0].rentalObjectCode).toBe('R1003')
+  })
+})
+
 describe(tenfastAdapter.createTenant, () => {
   it('should return tenant when response is valid and status is 200', async () => {
     // Arrange

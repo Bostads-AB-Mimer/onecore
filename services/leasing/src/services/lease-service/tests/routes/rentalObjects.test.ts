@@ -219,9 +219,9 @@ describe('parking spaces', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(
-        new Date(res.body.content.availabilityInfo.vacantFrom)
-      ).toEqual(expectedVacantFrom)
+      expect(new Date(res.body.content.availabilityInfo.vacantFrom)).toEqual(
+        expectedVacantFrom
+      )
     })
 
     it('should respond with 200 and not include availability if availability is not found', async () => {
@@ -365,9 +365,9 @@ describe('parking spaces', () => {
 
       // Assert
       expect(res.status).toBe(200)
-      expect(
-        new Date(res.body.content[0].availabilityInfo.vacantFrom)
-      ).toEqual(expectedVacantFrom)
+      expect(new Date(res.body.content[0].availabilityInfo.vacantFrom)).toEqual(
+        expectedVacantFrom
+      )
     })
 
     it('should return a list of vacant parking spaces without availability if availability is not found', async () => {
@@ -522,16 +522,14 @@ describe('parking spaces', () => {
       const expectedVacantFrom = new Date(nextWeek)
       expectedVacantFrom.setUTCDate(expectedVacantFrom.getUTCDate() + 1)
 
-      jest
-        .spyOn(rentalObjectAdapter, 'getParkingSpace')
-        .mockResolvedValueOnce({
-          ok: true,
-          data: factory.rentalObject.build({
-            rentalObjectCode,
-            blockStartDate: tomorrow,
-            blockEndDate: nextWeek,
-          }),
-        })
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValueOnce({
+        ok: true,
+        data: factory.rentalObject.build({
+          rentalObjectCode,
+          blockStartDate: tomorrow,
+          blockEndDate: nextWeek,
+        }),
+      })
       jest
         .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
         .mockResolvedValueOnce({
@@ -647,7 +645,7 @@ describe('parking spaces', () => {
       // Assert
       expect(res.status).toBe(404)
       expect(res.body.error).toBe(
-        `Parking space not found for rental object code: ${rentalObjectCode}`
+        `Availability not found for rental object code: ${rentalObjectCode}`
       )
     })
 

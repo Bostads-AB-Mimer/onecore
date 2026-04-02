@@ -264,15 +264,17 @@ export const getAvailabilityForVacantRentalObjects = async (
     } while (allRecords.length < totalCount)
 
     console.log('allRecords length is:', allRecords.length)
+
+    const recordsWithoutUpcomingLeases = allRecords.filter(
+      (record) =>
+        filterByStatus(record.avtal ?? [], ['upcoming']).length === 0
+    )
+
     return {
       ok: true,
-      data:
-        allRecords.map((record) =>
-          mapTenfastRentalObjectToAvailabilityInfo(
-            false,
-            record
-          )
-        ) ?? null,
+      data: recordsWithoutUpcomingLeases.map((record) =>
+        mapTenfastRentalObjectToAvailabilityInfo(false, record)
+      ),
     }
   } catch (err: any) {
     return handleTenfastError(err, 'could-not-find-rental-object')
