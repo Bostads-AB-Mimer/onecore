@@ -59,7 +59,6 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
         vatPercentage: includeVAT ? hyra.vat : 0,
         fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
         toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
-        code: hyra.article || '', //TODO:vad ska denna sättas till? Är article rätt fält?
       })),
     },
   }

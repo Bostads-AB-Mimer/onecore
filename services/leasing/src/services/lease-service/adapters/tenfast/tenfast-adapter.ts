@@ -106,27 +106,24 @@ export const getLeases = async (): Promise<
   >
 > => {
   try {
-    const rentalObjectResponse = await tenfastApi.request({
+    const leaseResponse = await tenfastApi.request({
       method: 'get',
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal?populate=hyresobjekt,hyresgaster&limit=100000`,
     })
 
-    if (rentalObjectResponse.status === 400)
-      return handleTenfastError(rentalObjectResponse.data.error, 'bad-request')
-    else if (
-      rentalObjectResponse.status !== 200 &&
-      rentalObjectResponse.status !== 201
-    )
+    if (leaseResponse.status === 400)
+      return handleTenfastError(leaseResponse.data.error, 'bad-request')
+    else if (leaseResponse.status !== 200 && leaseResponse.status !== 201)
       return handleTenfastError(
         {
-          error: rentalObjectResponse.data.error,
-          status: rentalObjectResponse.status,
+          error: leaseResponse.data.error,
+          status: leaseResponse.status,
         },
         'not-found'
       )
 
     const parsedLeaseResponse = TenfastLeaseTemplateResponseSchema.safeParse(
-      rentalObjectResponse.data
+      leaseResponse.data
     )
 
     if (!parsedLeaseResponse.success)

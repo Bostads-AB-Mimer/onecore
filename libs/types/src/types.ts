@@ -372,7 +372,6 @@ interface RentalObjectRent {
 }
 
 interface RentalObjectRentRow {
-  code: string
   description: string
   amount: number
   vatPercentage: number
