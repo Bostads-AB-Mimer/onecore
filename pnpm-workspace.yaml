@@ -13,6 +13,3 @@ onlyBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'
   - prisma
-
-minimumReleaseAgeExclude:
-  - koa-okapi-router

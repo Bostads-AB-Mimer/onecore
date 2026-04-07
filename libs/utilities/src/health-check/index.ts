@@ -1,7 +1,6 @@
 export {
   pollSystemHealth,
   probe,
-  probeResource,
   type HealthCheckTarget,
   type SystemHealth,
   type SystemStatus,
@@ -9,6 +8,6 @@ export {
 
 export {
   type DbConnection,
-  type DbResource,
+  type PoolOwner,
   collectDbPoolMetrics,
 } from './pool-metrics'

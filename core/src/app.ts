@@ -2,19 +2,16 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
 import cors from '@koa/cors'
-import { logger, loggerMiddlewares } from '@onecore/utilities'
-import { koaSwagger } from 'koa2-swagger-ui'
-import { makeOkapiRouter } from 'koa-okapi-router'
-import config from './common/config'
 
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
 import { routes as healthRoutes } from './services/health-service'
 
-import { requireAuth, requireRole } from './middlewares/keycloak-auth'
-import { routes as apiRoutes } from './api/index'
+import { logger, loggerMiddlewares } from '@onecore/utilities'
+import { koaSwagger } from 'koa2-swagger-ui'
 import { routes as swaggerRoutes } from './services/swagger'
 import { extractToken } from './middlewares/extract-token'
+import { requireAuth, requireRole } from './middlewares/keycloak-auth'
 
 const app = new Koa()
 
@@ -53,6 +50,7 @@ const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
+swaggerRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 // Token extraction (cookie -> Bearer -> Basic Auth)
@@ -82,17 +80,5 @@ app.use(async (ctx, next) => {
 })
 
 app.use(api.routes())
-
-const apiRouter = makeOkapiRouter(new KoaRouter(), {
-  openapi: {
-    info: { title: `ONECore API` },
-  },
-})
-
-apiRoutes(apiRouter, config)
-
-app.use(apiRouter.routes())
-
-swaggerRoutes(publicRouter, apiRouter)
 
 export default app

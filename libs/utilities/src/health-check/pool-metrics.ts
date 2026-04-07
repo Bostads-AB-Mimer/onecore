@@ -1,8 +1,25 @@
-import { Knex } from 'knex'
-import { Resource } from '@/resource'
+/**
+ * Interface, specifically designed to be compatible with `Knex`.
+ *
+ * Expressed in this fashion to avoid a dependency on the knex module
+ * in the @onecore/utilities.
+ *
+ * Could our should be replaced by a wrapper/adapter in case other database
+ * connection/pool abstractions come into play.
+ */
+export interface PoolOwner {
+  client: {
+    pool: {
+      numUsed(): number
+      numFree(): number
+      numPendingCreates(): number
+      numPendingAcquires(): number
+    }
+  }
+}
 
 /**
- * Wrapper for a knex instance, providing a name to go with
+ * Wrapper for a database connection, providing a name to go with
  * it, for presentation purposes.
  *
  * This is used to collect metrics from the connection pool
@@ -10,10 +27,8 @@ import { Resource } from '@/resource'
  */
 export interface DbConnection {
   name: string
-  connection: Knex
+  connection: PoolOwner
 }
-
-export type DbResource = Resource<Knex> | DbConnection
 
 /**
  * Payload type for Db Pool Metrics - the struct encoded into the body
@@ -26,14 +41,12 @@ export type PoolMetrics = {
   connectionPools: number
   metrics: {
     name: string
-    pool:
-      | {
-          used: number
-          free: number
-          pendingCreates: number
-          pendingAcquires: number
-        }
-      | 'unavailable'
+    pool: {
+      used: number
+      free: number
+      pendingCreates: number
+      pendingAcquires: number
+    }
   }[]
 }
 
@@ -69,32 +82,23 @@ export type PoolMetrics = {
  *   ctx.body = collectDbPoolMetrics(CONNECTIONS)
  * })
  * ```
+ *
  */
 export const collectDbPoolMetrics = (
-  connections: DbResource[]
+  connections: DbConnection[]
 ): PoolMetrics => ({
   connectionPools: connections.length,
   metrics: connections.map((conn) => {
-    try {
-      const pool =
-        'connection' in conn
-          ? conn.connection.client.pool
-          : conn.get().client.pool
+    const pool = conn.connection.client.pool
 
-      return {
-        name: conn.name,
-        pool: {
-          used: pool.numUsed(),
-          free: pool.numFree(),
-          pendingCreates: pool.numPendingCreates(),
-          pendingAcquires: pool.numPendingAcquires(),
-        },
-      }
-    } catch {
-      return {
-        name: conn.name,
-        pool: 'unavailable',
-      }
+    return {
+      name: conn.name,
+      pool: {
+        used: pool.numUsed(),
+        free: pool.numFree(),
+        pendingCreates: pool.numPendingCreates(),
+        pendingAcquires: pool.numPendingAcquires(),
+      },
     }
   }),
 })
