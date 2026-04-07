@@ -1,16 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "rootDirs": ["./src", "./test"],
-    "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "target": "es2016",
+    "declaration": true,
+    "outDir": "dist"
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
   "exclude": [
     "dist"
   ]

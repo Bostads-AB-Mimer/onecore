@@ -1,1 +1,0 @@
-export { xpandContactsRepository } from './repository'

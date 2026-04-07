@@ -3,7 +3,8 @@ import { koaBody } from 'koa-body'
 import cors from '@koa/cors'
 
 import api from './api'
-import { errorHandler, logger, loggerMiddlewares } from '@onecore/utilities'
+import errorHandler from './middlewares/error-handler'
+import { logger, loggerMiddlewares } from '@onecore/utilities'
 
 const app = new Koa()
 

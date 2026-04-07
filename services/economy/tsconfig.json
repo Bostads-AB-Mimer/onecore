@@ -6,7 +6,8 @@
     "types": ["koa-body", "jest"],
     "paths": {
       "@src/*": ["./src/*"],
-      "@test/*": ["./test/*"]
+      "@test/*": ["./test/*"],
     }
   }
+
 }

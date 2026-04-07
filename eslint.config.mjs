@@ -53,7 +53,6 @@ export default defineConfig([
         },
       ],
       'no-useless-catch': 'warn',
-      'n/hashbang': 'off',
       'n/no-missing-import': 'off',
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
