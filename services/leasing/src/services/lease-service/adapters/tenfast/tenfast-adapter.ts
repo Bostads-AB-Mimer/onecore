@@ -111,7 +111,7 @@ export const getRentalObject = async (
   try {
     const rentalObjectResponse = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?filter[externalId]=${rentalObjectCode}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/search?filter[externalId]=${rentalObjectCode}`,
     })
 
     if (rentalObjectResponse.status === 400)
@@ -345,7 +345,7 @@ export const getTenantByContactCode = async (
   try {
     const tenantResponse = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?filter[externalId]=${contactCode}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/search?filter[externalId]=${contactCode}`,
     })
 
     if (tenantResponse.status === 400)
