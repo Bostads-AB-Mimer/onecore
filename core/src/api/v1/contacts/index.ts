@@ -4,7 +4,6 @@ import { OkapiRouter } from 'koa-okapi-router'
 import {
   ContactSchema,
   GetContactResponseBodySchema,
-  GetContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
 } from './schema'
 import {
@@ -12,6 +11,7 @@ import {
   makeSuccessResponseBody,
   RouteMetadata,
 } from '@onecore/utilities'
+import { paginatedResponseSchema } from '@onecore/types'
 
 import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
 import { transformContact, transformContacts } from './transform'
@@ -90,28 +90,28 @@ export const routes = (router: OkapiRouter, config: Config) => {
           schema: z.optional(z.enum(['individual', 'organisation'])),
         },
         page: {
-          description: 'Page number for paginated results',
+          description: 'Page number for paginated results (1-based)',
           schema: z.optional(z.number()),
         },
-        pageSize: {
-          description: 'Page size number for paginated results',
+        limit: {
+          description: 'Number of records per page',
           schema: z.optional(z.number()),
         },
       },
       response: {
-        200: GetContactsResponseBodySchema,
+        200: paginatedResponseSchema(ContactSchema),
         404: ONECoreHateOASResponseBodySchema,
         500: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
-      const { q, type, page, pageSize } = ctx.query
+      const { q, type, page, limit } = ctx.query
 
       const response = await contactsAdapter.listContacts(
         q ?? [],
         type,
         page,
-        pageSize
+        limit
       )
 
       encodeListResponse(ctx, response)

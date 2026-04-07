@@ -29,25 +29,24 @@ describe('/contacts', () => {
   })
 
   describe('No parameters', () => {
-    it('should fetch a page(size=10) of contacts when no query parameters are provided', async () => {
+    it('should fetch a page(limit=20) of contacts when no query parameters are provided', async () => {
       // When
       const response = await httpClient.get('/contacts/')
 
       // Then
       expect(response.data).toEqual({
-        _links: {
-          self: expect.any(Object),
-          link: expect.any(Object),
-        },
-        content: {
-          contacts: expect.any(Array),
-        },
+        content: expect.any(Array),
+        _meta: expect.objectContaining({
+          totalRecords: expect.any(Number),
+          page: 1,
+          limit: 20,
+          count: expect.any(Number),
+        }),
+        _links: expect.any(Array),
       })
 
-      const { contacts } = response.data.content
-
-      expect(contacts.map((c: any) => c.contactCode)).toEqual(
-        DATA_SET.slice(0, 10)
+      expect(response.data.content.map((c: any) => c.contactCode)).toEqual(
+        DATA_SET.slice(0, 16)
       )
     })
   })
@@ -56,68 +55,60 @@ describe('/contacts', () => {
     describe('No filter', () => {
       it.each([
         {
-          page: 0,
-          pageSize: 5,
+          page: 1,
+          limit: 5,
           expectedContactCodes: DATA_SET.slice(0, 5),
         },
         {
-          page: 2,
-          pageSize: 5,
+          page: 3,
+          limit: 5,
           expectedContactCodes: DATA_SET.slice(10, 15),
         },
         {
-          page: 4,
-          pageSize: 5,
+          page: 5,
+          limit: 5,
           expectedContactCodes: DATA_SET.slice(20, 25),
         },
         {
-          page: 0,
-          pageSize: 10,
+          page: 1,
+          limit: 10,
           expectedContactCodes: DATA_SET.slice(0, 10),
         },
         {
-          page: 1,
-          pageSize: 10,
+          page: 2,
+          limit: 10,
           expectedContactCodes: DATA_SET.slice(10, 20),
         },
         {
-          page: 0,
-          pageSize: 20,
+          page: 1,
+          limit: 20,
           expectedContactCodes: DATA_SET.slice(0, 20),
         },
         {
-          page: 1,
-          pageSize: 20,
+          page: 2,
+          limit: 20,
           expectedContactCodes: DATA_SET.slice(20, 40),
         },
         {
-          page: 2,
-          pageSize: 20,
+          page: 3,
+          limit: 20,
           expectedContactCodes: DATA_SET.slice(40, 43),
         },
         {
-          page: 0,
-          pageSize: 100,
+          page: 1,
+          limit: 100,
           expectedContactCodes: DATA_SET,
         },
       ])(
-        'should fetch page $page of size $pageSize',
-        async ({ page, pageSize, expectedContactCodes }) => {
+        'should fetch page $page of limit $limit',
+        async ({ page, limit, expectedContactCodes }) => {
           // When
-          const queryString = [
-            typeof page === 'number' ? `page=${page}` : null,
-            typeof pageSize === 'number' ? `pageSize=${pageSize}` : null,
-          ]
-            .filter(Boolean)
-            .join('&')
-          const response = await httpClient.get(
-            '/contacts' + (queryString.length ? `?${queryString}` : '')
-          )
+          const response = await httpClient.get('/contacts', {
+            params: { page, limit },
+          })
 
           // Then
-          const { contacts } = response.data.content
-
-          expect(contacts.map((c: any) => c.contactCode)).toEqual(
+          expect(response.data.content.map((c: any) => c.contactCode)).toEqual(
             expectedContactCodes
           )
         }
@@ -127,82 +118,82 @@ describe('/contacts', () => {
     describe('with type=individual', () => {
       it.each([
         {
-          page: 0,
-          pageSize: 5,
+          page: 1,
+          limit: 5,
           expectedContactCodes: INDIVIDUAL_SET.slice(0, 5),
           resultSize: 5,
         },
         {
-          page: 1,
-          pageSize: 5,
+          page: 2,
+          limit: 5,
           expectedContactCodes: INDIVIDUAL_SET.slice(5, 10),
           resultSize: 5,
         },
         {
-          page: 2,
-          pageSize: 5,
+          page: 3,
+          limit: 5,
           expectedContactCodes: INDIVIDUAL_SET.slice(10, 15),
           resultSize: 1,
         },
         {
-          page: 4,
-          pageSize: 5,
+          page: 5,
+          limit: 5,
           expectedContactCodes: INDIVIDUAL_SET.slice(20, 25),
           resultSize: 0,
         },
         {
-          page: 0,
-          pageSize: 10,
+          page: 1,
+          limit: 10,
           expectedContactCodes: INDIVIDUAL_SET.slice(0, 10),
           resultSize: 10,
         },
         {
-          page: 1,
-          pageSize: 10,
+          page: 2,
+          limit: 10,
           expectedContactCodes: INDIVIDUAL_SET.slice(10, 20),
           resultSize: 1,
         },
         {
-          page: 0,
-          pageSize: 20,
+          page: 1,
+          limit: 20,
           expectedContactCodes: INDIVIDUAL_SET.slice(0, 20),
           resultSize: 11,
         },
         {
-          page: 1,
-          pageSize: 20,
+          page: 2,
+          limit: 20,
           expectedContactCodes: INDIVIDUAL_SET.slice(20, 40),
           resultSize: 0,
         },
         {
-          page: 2,
-          pageSize: 20,
+          page: 3,
+          limit: 20,
           expectedContactCodes: INDIVIDUAL_SET.slice(40, 43),
           resultSize: 0,
         },
         {
-          page: 0,
-          pageSize: 100,
+          page: 1,
+          limit: 100,
           expectedContactCodes: INDIVIDUAL_SET,
           resultSize: 11,
         },
       ])(
-        'should fetch page $page of size $pageSize containing individuals only',
-        async ({ page, pageSize, expectedContactCodes, resultSize }) => {
+        'should fetch page $page of limit $limit containing individuals only',
+        async ({ page, limit, expectedContactCodes, resultSize }) => {
           // When
           const response = await httpClient.get('/contacts', {
             params: {
               page,
-              pageSize,
+              limit,
               type: 'individual',
             },
           })
 
           // Then
-          const { contacts } = response.data.content
+          const { content } = response.data
 
           expect(
-            contacts.map((c: any) => ({
+            content.map((c: any) => ({
               contactCode: c.contactCode,
               type: c.type,
             }))
@@ -212,7 +203,7 @@ describe('/contacts', () => {
               type: 'individual',
             }))
           )
-          expect(contacts.length).toEqual(resultSize)
+          expect(content.length).toEqual(resultSize)
         }
       )
     })
@@ -220,76 +211,76 @@ describe('/contacts', () => {
     describe('with type=organisation', () => {
       it.each([
         {
-          page: 0,
-          pageSize: 5,
+          page: 1,
+          limit: 5,
           expectedContactCodes: ORGANISATION_SET.slice(0, 5),
           resultSize: 4,
         },
         {
-          page: 2,
-          pageSize: 5,
+          page: 3,
+          limit: 5,
           expectedContactCodes: ORGANISATION_SET.slice(10, 15),
           resultSize: 0,
         },
         {
-          page: 4,
-          pageSize: 5,
+          page: 5,
+          limit: 5,
           expectedContactCodes: ORGANISATION_SET.slice(20, 25),
           resultSize: 0,
         },
         {
-          page: 0,
-          pageSize: 10,
+          page: 1,
+          limit: 10,
           expectedContactCodes: ORGANISATION_SET.slice(0, 10),
           resultSize: 4,
         },
         {
-          page: 1,
-          pageSize: 10,
+          page: 2,
+          limit: 10,
           expectedContactCodes: ORGANISATION_SET.slice(10, 15),
           resultSize: 0,
         },
         {
-          page: 0,
-          pageSize: 20,
+          page: 1,
+          limit: 20,
           expectedContactCodes: ORGANISATION_SET.slice(0, 15),
           resultSize: 4,
         },
         {
-          page: 1,
-          pageSize: 20,
+          page: 2,
+          limit: 20,
           expectedContactCodes: ORGANISATION_SET.slice(20, 40),
           resultSize: 0,
         },
         {
-          page: 2,
-          pageSize: 20,
+          page: 3,
+          limit: 20,
           expectedContactCodes: ORGANISATION_SET.slice(40, 43),
           resultSize: 0,
         },
         {
-          page: 0,
-          pageSize: 100,
+          page: 1,
+          limit: 100,
           expectedContactCodes: ORGANISATION_SET,
           resultSize: 4,
         },
       ])(
-        'should fetch page $page of size $pageSize containing individuals only',
-        async ({ page, pageSize, expectedContactCodes, resultSize }) => {
+        'should fetch page $page of limit $limit containing organisations only',
+        async ({ page, limit, expectedContactCodes, resultSize }) => {
           // When
           const response = await httpClient.get('/contacts', {
             params: {
               page,
-              pageSize,
+              limit,
               type: 'organisation',
             },
           })
 
           // Then
-          const { contacts } = response.data.content
+          const { content } = response.data
 
           expect(
-            contacts.map((c: any) => ({
+            content.map((c: any) => ({
               contactCode: c.contactCode,
               type: c.type,
             }))
@@ -299,7 +290,7 @@ describe('/contacts', () => {
               type: 'organisation',
             }))
           )
-          expect(contacts.length).toEqual(resultSize)
+          expect(content.length).toEqual(resultSize)
         }
       )
     })

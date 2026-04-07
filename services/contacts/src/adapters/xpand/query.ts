@@ -209,6 +209,98 @@ export const contactsQuery = () => {
   let contactType: ContactTypeFilter = 'any'
   let objectKeyFilter: ContactCode[] = []
 
+  /**
+   * Applies the base cmctc-only criteria/filters to a knex
+   * query-builder selecting from `cmctc`.
+   */
+  const baseFilters = (qb: knex.Knex.QueryBuilder) => {
+    qb.whereNot('cmctc.cmctckod', null)
+
+    if (contactType === 'organisation') {
+      qb.andWhere((b) => {
+        b.orWhereLike('cmctc.cmctckod', '[FIKLOSÖ]%').orWhere((edge) =>
+          edge
+            .whereRaw("LEFT(cmctc.cmctckod, 1) LIKE '[0-9]'")
+            .andWhere('cmctc.fnamn', null)
+        )
+      })
+    } else if (contactType == 'individual') {
+      qb.andWhere((b) => {
+        b.orWhereLike('cmctc.cmctckod', 'P%').orWhere((edge) =>
+          edge
+            .whereRaw("LEFT(cmctckod, 1) LIKE '[0-9]'")
+            .andWhereNot('cmctc.fnamn', null)
+        )
+      })
+    }
+
+    if (objectKeyFilter.length) {
+      qb.andWhereRaw(...trimInCriteria('cmctc.keycmobj', objectKeyFilter))
+    }
+
+    Object.keys(wheres).forEach((key) => {
+      if (key === NATIONAL_ID_NUMBER) {
+        qb.andWhere((b) => {
+          b.where(key, wheres[key]).orWhereRaw(
+            `REPLACE(TRANSLATE(${NATIONAL_ID_NUMBER}, '0123456789', '##########'), '#', '') = ?`,
+            [wheres[key]]
+          )
+        })
+      } else {
+        qb.andWhere(key, wheres[key])
+      }
+    })
+  }
+
+  /**
+   * Constructs a union:ed sub-query for a single wildcard
+   * search string.
+   *
+   * Queries that use multiple wildcards will call this function
+   * once for each wildcard.
+   */
+  const wildcardUnion = (db: knex.Knex, wc: string) => {
+    const words = wc.split(/\s+/).filter(Boolean)
+
+    const cmctcPart = db
+      .select('keycmobj')
+      .from('cmctc')
+      .modify(baseFilters)
+      .modify((qb) => {
+        for (const word of words) {
+          qb.andWhere((b) =>
+            b
+              .whereRaw(...wildcard('cmctckod', word))
+              .orWhereRaw(...wildcard('fnamn', word))
+              .orWhereRaw(...wildcard('enamn', word))
+              .orWhereRaw(...wildcard('cmctcben', word))
+          )
+        }
+      })
+
+    const cmadrPart = db
+      .select({ keycmobj: 'cmadr.keycode' })
+      .from('cmadr')
+      .join('cmctc', 'cmadr.keycode', 'cmctc.keycmobj')
+      .modify(baseFilters)
+      .whereNull('cmadr.tdate')
+      .andWhere((b) =>
+        b
+          .whereRaw(...wildcard('cmadr.adress1', wc))
+          .orWhereRaw(...wildcard('cmadr.adress2', wc))
+          .orWhereRaw(...wildcard('cmadr.adress3', wc))
+          .orWhereRaw(...wildcard('cmadr.adress4', wc))
+          .orWhereRaw(...wildcard('cmadr.adress5', wc))
+          .orWhereRaw(...wildcard('cmadr.adress6', wc))
+          .orWhereRaw(...wildcard('cmadr.adress7', wc))
+          .orWhereRaw(...wildcard('cmadr.adress8', wc))
+          .orWhereRaw(...wildcard('cmadr.adress9', wc))
+          .orWhereRaw(...wildcard('cmadr.adress10', wc))
+      )
+
+    return cmctcPart.unionAll([cmadrPart])
+  }
+
   return {
     /**
      * Adds a WHERE-criteria for single contact code.
@@ -379,103 +471,6 @@ export const contactsQuery = () => {
       db: knex.Knex,
       queryPagination?: Pagination
     ): Promise<DbContactRow[]> {
-      /**
-       * Local utility function that applies the base cmctc-only
-       * criteria/filters to a knex query-builder selecting from
-       * `cmctc`.
-       *
-       * @param qb - The select-in-progress knex query-builder.
-       */
-      const baseFilters = (qb: knex.Knex.QueryBuilder) => {
-        qb.whereNot('cmctc.cmctckod', null)
-
-        if (contactType === 'organisation') {
-          qb.andWhere((b) => {
-            b.orWhereLike('cmctc.cmctckod', '[FIKLOSÖ]%').orWhere((edge) =>
-              edge
-                .whereRaw("LEFT(cmctc.cmctckod, 1) LIKE '[0-9]'")
-                .andWhere('cmctc.fnamn', null)
-            )
-          })
-        } else if (contactType == 'individual') {
-          qb.andWhere((b) => {
-            b.orWhereLike('cmctc.cmctckod', 'P%').orWhere((edge) =>
-              edge
-                .whereRaw("LEFT(cmctckod, 1) LIKE '[0-9]'")
-                .andWhereNot('cmctc.fnamn', null)
-            )
-          })
-        }
-
-        if (objectKeyFilter.length) {
-          qb.andWhereRaw(...trimInCriteria('cmctc.keycmobj', objectKeyFilter))
-        }
-
-        Object.keys(wheres).forEach((key) => {
-          if (key === NATIONAL_ID_NUMBER) {
-            qb.andWhere((b) => {
-              b.where(key, wheres[key]).orWhereRaw(
-                `REPLACE(TRANSLATE(${NATIONAL_ID_NUMBER}, '0123456789', '##########'), '#', '') = ?`,
-                [wheres[key]]
-              )
-            })
-          } else {
-            qb.andWhere(key, wheres[key])
-          }
-        })
-      }
-
-      /**
-       * Constructs a union:ed sub-query for a single wildcard
-       * search string.
-       *
-       * Queries that use multiple wildcards will call this function
-       * once for each wildcard.
-       *
-       * @param wc - The wildcard string to search for
-       */
-      const wildcardUnion = (wc: string) => {
-        const words = wc.split(/\s+/).filter(Boolean)
-
-        const cmctcPart = db
-          .select('keycmobj')
-          .from('cmctc')
-          .modify(baseFilters)
-          .modify((qb) => {
-            for (const word of words) {
-              qb.andWhere((b) =>
-                b
-                  .whereRaw(...wildcard('cmctckod', word))
-                  .orWhereRaw(...wildcard('fnamn', word))
-                  .orWhereRaw(...wildcard('enamn', word))
-                  .orWhereRaw(...wildcard('cmctcben', word))
-              )
-            }
-          })
-
-        const cmadrPart = db
-          .select({ keycmobj: 'cmadr.keycode' })
-          .from('cmadr')
-          .join('cmctc', 'cmadr.keycode', 'cmctc.keycmobj')
-          .modify(baseFilters)
-          .whereNull('cmadr.tdate')
-          .andWhere((b) =>
-            b
-              .whereRaw(...wildcard('cmadr.adress1', wc))
-              .orWhereRaw(...wildcard('cmadr.adress2', wc))
-              .orWhereRaw(...wildcard('cmadr.adress3', wc))
-              .orWhereRaw(...wildcard('cmadr.adress4', wc))
-              .orWhereRaw(...wildcard('cmadr.adress5', wc))
-              .orWhereRaw(...wildcard('cmadr.adress6', wc))
-              .orWhereRaw(...wildcard('cmadr.adress7', wc))
-              .orWhereRaw(...wildcard('cmadr.adress8', wc))
-              .orWhereRaw(...wildcard('cmadr.adress9', wc))
-              .orWhereRaw(...wildcard('cmadr.adress10', wc))
-          )
-
-        return cmctcPart.unionAll([cmadrPart])
-      }
-
       const query = db
         .with('page', (pg) => {
           if (wildcards.length === 0) {
@@ -483,9 +478,9 @@ export const contactsQuery = () => {
           } else {
             const [wc, ...rest] = wildcards
 
-            const unionBase = wildcardUnion(wc)
+            const unionBase = wildcardUnion(db, wc)
             rest.forEach((nextWc) => {
-              unionBase.intersect(wildcardUnion(nextWc))
+              unionBase.intersect(wildcardUnion(db, nextWc))
             })
 
             pg.distinct('keycmobj').from(unionBase.as('candidates'))
@@ -555,6 +550,46 @@ export const contactsQuery = () => {
         page: 0,
         pageSize: 1,
       })
+    },
+
+    /**
+     * Counts the total number of distinct contacts matching the current
+     * filter criteria, ignoring pagination.
+     *
+     * Without wildcards:
+     *   SELECT COUNT(*) FROM cmctc WHERE <baseFilters>
+     *
+     * With wildcards:
+     *   SELECT COUNT(*) FROM (
+     *     SELECT DISTINCT keycmobj FROM (
+     *       <same UNION/INTERSECT candidate logic as getPage>
+     *     ) AS candidates
+     *   ) AS counted
+     *
+     * @param db - The Knex database connection to use
+     * @returns The total number of matching contacts
+     */
+    async getCount(db: knex.Knex): Promise<number> {
+      if (wildcards.length === 0) {
+        const result = await db
+          .from('cmctc')
+          .modify(baseFilters)
+          .count('* as count')
+        return Number(result[0].count)
+      }
+
+      const [wc, ...rest] = wildcards
+      const unionBase = wildcardUnion(db, wc)
+      rest.forEach((nextWc) => {
+        unionBase.intersect(wildcardUnion(db, nextWc))
+      })
+
+      const result = await db
+        .from(
+          db.distinct('keycmobj').from(unionBase.as('candidates')).as('counted')
+        )
+        .count('* as count')
+      return Number(result[0].count)
     },
   }
 }

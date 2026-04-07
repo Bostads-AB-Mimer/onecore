@@ -1,4 +1,4 @@
-import { loggedAxios } from '@onecore/utilities'
+import { loggedAxios, PaginatedResponse } from '@onecore/utilities'
 import type {
   Contact,
   GetContactResponseBody,
@@ -38,13 +38,17 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       q: string[],
       type?: 'individual' | 'organisation',
       page?: number,
-      pageSize?: number
+      limit?: number
     ): Promise<AdapterResult<Contact[], 'unknown'>> {
-      const response = await axios<GetContactsResponseBody>(`/contacts`, {
-        params: { type, q, page, pageSize },
+      const response = await axios<PaginatedResponse<Contact>>(`/contacts`, {
+        params: { type, q, page, limit },
       })
 
-      return listResponse(response)
+      if (response.status === 200) {
+        return { ok: true, data: response.data.content }
+      }
+
+      return { ok: false, err: 'unknown', statusCode: response.status }
     },
 
     async getByContactCode(

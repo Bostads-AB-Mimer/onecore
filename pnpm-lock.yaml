@@ -1260,6 +1260,9 @@ importers:
       '@koa/router':
         specifier: ^12.0.1
         version: 12.0.2
+      '@onecore/types':
+        specifier: workspace:*
+        version: link:../../libs/types
       '@onecore/utilities':
         specifier: workspace:*
         version: file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))
@@ -4346,6 +4349,11 @@ packages:
   '@onecore/contacts@file:services/contacts':
     resolution: {directory: services/contacts, type: directory}
     engines: {node: '>=20'}
+
+  '@onecore/types@file:libs/types':
+    resolution: {directory: libs/types, type: directory}
+    peerDependencies:
+      zod: ^3.23.8
 
   '@onecore/utilities@file:libs/utilities':
     resolution: {directory: libs/utilities, type: directory}
@@ -14614,6 +14622,7 @@ snapshots:
       '@iteam/config': 12.1.2
       '@koa/cors': 5.0.0
       '@koa/router': 12.0.2
+      '@onecore/types': file:libs/types(zod@3.25.76)
       '@onecore/utilities': file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))
       '@types/swagger-ui': 3.52.4
       dotenv: 16.6.1
@@ -14642,6 +14651,14 @@ snapshots:
       - pg
       - pg-native
       - sqlite3
+      - supports-color
+
+  '@onecore/types@file:libs/types(zod@3.25.76)':
+    dependencies:
+      release-please: 16.18.0
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - encoding
       - supports-color
 
   '@onecore/utilities@file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))':

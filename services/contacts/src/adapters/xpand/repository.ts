@@ -46,13 +46,20 @@ export const xpandContactsRepository = (
         pageSize = 10
       }
 
-      const rows = await contactsQuery()
+      const query = contactsQuery()
         .isContactType(filter.type)
         .wildcard(filter.wildcard)
         .paginate({ page, pageSize })
-        .getPage(db.get())
 
-      return transformDbContactRows(rows)
+      const [rows, totalRecords] = await Promise.all([
+        query.getPage(db.get()),
+        query.getCount(db.get()),
+      ])
+
+      return {
+        content: transformDbContactRows(rows),
+        totalRecords,
+      }
     },
 
     /**

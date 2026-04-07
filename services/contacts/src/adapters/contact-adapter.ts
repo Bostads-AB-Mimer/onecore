@@ -47,9 +47,12 @@ export interface ContactsRepository {
    * @param params - Parameters for listing contacts, including
    *                 filter and pagination options.
    *
-   * @returns A promise that resolves to an array of Contact objects.
+   * @returns A promise that resolves to the page of contacts and the total record count.
    */
-  list: (params: ContactListParams) => Promise<Contact[]>
+  list: (params: ContactListParams) => Promise<{
+    content: Contact[]
+    totalRecords: number
+  }>
 
   /**
    * Retrieves a contact by its unique contact code.

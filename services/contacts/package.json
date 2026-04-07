@@ -29,8 +29,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "dev": "NODE_ENV=production node -r dotenv/config --import tsx --watch src/index",
-    "dev:local": "NODE_ENV=production DOTENV_CONFIG_PATH=.env.local node -r dotenv/config --import tsx --watch src/index",
+    "dev": "node -r dotenv/config --import tsx --watch src/index",
+    "dev:local": "node -r dotenv/config --import tsx --watch src/index",
     "dev:init": "pnpm prepare:dotenv",
     "dev:apply-seed": "pnpm test:create-db && ./scripts/apply-seed.sh",
     "lint": "eslint src/",
@@ -49,6 +49,7 @@
     "@iteam/config": "^12.1.2",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@onecore/types": "workspace:*",
     "@onecore/utilities": "workspace:*",
     "@types/swagger-ui": "^3.52.4",
     "dotenv": "^16.4.5",

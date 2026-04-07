@@ -1,12 +1,18 @@
 import z from 'zod'
 import { OkapiRouter } from 'koa-okapi-router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  buildPaginatedResponse,
+  parsePaginationParams,
+} from '@onecore/utilities'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
 import {
+  ContactSchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
 } from './schema'
+import { paginatedResponseSchema } from '@onecore/types'
 
 export const routes = (
   router: OkapiRouter,
@@ -28,42 +34,41 @@ export const routes = (
           schema: z.optional(z.enum(['individual', 'organisation'])),
         },
         page: {
-          description: 'Page number for paginated results',
+          description: 'Page number for paginated results (1-based)',
           schema: z.optional(z.number()),
         },
-        pageSize: {
-          description: 'Page size number for paginated results',
+        limit: {
+          description: 'Number of records per page',
           schema: z.optional(z.number()),
         },
       },
       response: {
-        200: GetContactsResponseBodySchema,
+        200: paginatedResponseSchema(ContactSchema),
         404: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
-      const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
-
-      const wildcard = ctx.query.q
-      const page = Number(ctx.query.page) || 0
-      const pageSize = Number(ctx.query.pageSize) || 10
+      const { limit, offset } = parsePaginationParams(ctx)
 
       const result = await contactsRepository.list({
         filter: {
           type: ctx.query.type ?? 'any',
-          wildcard: wildcard,
+          wildcard: ctx.query.q,
         },
-        page,
-        pageSize,
+        page: Math.floor(offset / limit),
+        pageSize: limit,
       })
 
       ctx.status = 200
-      ctx.body = {
-        ...metadata,
-        content: {
-          contacts: result,
+      ctx.body = buildPaginatedResponse({
+        content: result.content,
+        totalRecords: result.totalRecords,
+        ctx,
+        additionalParams: {
+          ...(ctx.query.q ? { q: String(ctx.query.q) } : {}),
+          ...(ctx.query.type ? { type: String(ctx.query.type) } : {}),
         },
-      }
+      })
     }
   )
 
