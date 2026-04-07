@@ -632,7 +632,7 @@ export const getInvoiceRows = async (
       (
         (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = datepart(year, krfkh.fromdate)) OR
         (krfkh.invoice like '5%' and (repsr.keycode is null and keyrektk is null and repsk.year is null)) or
-        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = krfkh.fromdate) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
+        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = datepart(year, krfkh.fromdate)) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
       )
       AND cmcmp.code = ?
       AND (krfkh.type = 1 OR krfkh.type = 2)
