@@ -39,13 +39,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       type?: 'individual' | 'organisation',
       page?: number,
       limit?: number
-    ): Promise<AdapterResult<Contact[], 'unknown'>> {
+    ): Promise<AdapterResult<PaginatedResponse<Contact>, 'unknown'>> {
       const response = await axios<PaginatedResponse<Contact>>(`/contacts`, {
         params: { type, q, page, limit },
       })
 
       if (response.status === 200) {
-        return { ok: true, data: response.data.content }
+        return { ok: true, data: response.data }
       }
 
       return { ok: false, err: 'unknown', statusCode: response.status }
