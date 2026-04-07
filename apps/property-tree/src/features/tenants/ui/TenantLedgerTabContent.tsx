@@ -7,12 +7,7 @@ import { Button } from '@/shared/ui/Button'
 import { CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
-import {
-  InvoiceDateField,
-  InvoiceFilters,
-  InvoiceStatusField,
-  InvoiceTypeField,
-} from './InvoiceFilters'
+import { InvoiceFilters } from './InvoiceFilters'
 import { InvoicesTable } from './InvoicesTable'
 
 const pageSize = 20
@@ -24,9 +19,6 @@ interface TenantLedgerTabContentProps {
 export const TenantLedgerTabContent = ({
   contactCode,
 }: TenantLedgerTabContentProps) => {
-  const [typeFilter, setTypeFilter] = useState<InvoiceTypeField>('all')
-  const [statusFilter, setStatusFilter] = useState<InvoiceStatusField>('all')
-  const [dateField, setDateField] = useState<InvoiceDateField>('none')
   const [fromDate, setFromDate] = useState<Date | undefined>(undefined)
   const [toDate, setToDate] = useState<Date | undefined>(undefined)
   const [lastXledgerInvoiceCursor, setLastXledgerInvoiceCursor] = useState<
@@ -38,18 +30,11 @@ export const TenantLedgerTabContent = ({
 
   // Create a key for resetting pagination when filters change
   const filterKey = useMemo(() => {
-    return [
-      contactCode,
-      fromDate,
-      toDate,
-      typeFilter,
-      statusFilter,
-      dateField,
-    ].join('|')
-  }, [contactCode, fromDate, toDate, typeFilter, statusFilter, dateField])
+    return [contactCode, fromDate, toDate].join('|')
+  }, [contactCode, fromDate, toDate])
 
   const {
-    data: invoicesWithPaymentEventsResult,
+    data: invoicesResult,
     isLoading,
     error,
   } = useTenantInvoices(
@@ -59,7 +44,7 @@ export const TenantLedgerTabContent = ({
     pageSize,
     xpandInvoicesFetched,
     lastXledgerInvoiceCursor,
-    true
+    undefined // paymentStatus not used in backend at the moment
   )
 
   useEffect(() => {
@@ -70,8 +55,8 @@ export const TenantLedgerTabContent = ({
   }, [filterKey])
 
   useEffect(() => {
-    if (invoicesWithPaymentEventsResult) {
-      const { invoices } = invoicesWithPaymentEventsResult
+    if (invoicesResult) {
+      const { invoices } = invoicesResult
 
       setAccumulatedInvoices((prev) => {
         if (prev.length === 0) {
@@ -83,25 +68,21 @@ export const TenantLedgerTabContent = ({
     }
 
     setIsLoadingMore(false)
-  }, [invoicesWithPaymentEventsResult])
+  }, [invoicesResult])
 
   const onClickFetchMore = useCallback(() => {
-    if (isLoadingMore || !invoicesWithPaymentEventsResult) {
+    if (isLoadingMore || !invoicesResult) {
       return
     }
 
     setIsLoadingMore(true)
 
-    if (invoicesWithPaymentEventsResult.pageInfo.endCursor) {
-      setLastXledgerInvoiceCursor(
-        invoicesWithPaymentEventsResult.pageInfo.endCursor
-      )
+    if (invoicesResult.pageInfo.endCursor) {
+      setLastXledgerInvoiceCursor(invoicesResult.pageInfo.endCursor)
     }
 
-    setXpandInvoicesFetched(
-      invoicesWithPaymentEventsResult.pageInfo.xpandInvoicesFetched
-    )
-  }, [invoicesWithPaymentEventsResult, isLoadingMore])
+    setXpandInvoicesFetched(invoicesResult.pageInfo.xpandInvoicesFetched)
+  }, [invoicesResult, isLoadingMore])
 
   const [expandedInvoiceId, setExpandedInvoiceId] = useQueryState(
     'open',
@@ -115,12 +96,6 @@ export const TenantLedgerTabContent = ({
       <CardHeader>
         <CardTitle className="text-lg">Fakturor</CardTitle>
         <InvoiceFilters
-          typeFilter={typeFilter}
-          onTypeFilterChange={setTypeFilter}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          dateField={dateField}
-          onDateFieldChange={setDateField}
           fromDate={fromDate}
           toDate={toDate}
           onFromDateChange={setFromDate}

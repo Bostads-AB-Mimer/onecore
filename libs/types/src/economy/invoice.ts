@@ -1,16 +1,14 @@
 import z from 'zod'
+import { PaymentStatus } from '../enums'
 
 export const GetInvoicesByContactCodeQueryParams = z
   .object({
     from: z.coerce.date(),
     to: z.coerce.date(),
-    remainingAmountGreaterThan: z.coerce.number(),
+    paymentStatus: z.coerce.number().pipe(z.nativeEnum(PaymentStatus)),
     skip: z.coerce.number(),
     size: z.coerce.number(),
     after: z.string(),
-    hasNextXledgerPage: z
-      .enum(['true', 'false'])
-      .transform((v) => v.toLowerCase() === 'true'),
   })
   .partial()
 

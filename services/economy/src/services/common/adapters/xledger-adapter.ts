@@ -741,6 +741,7 @@ export const getInvoicesByContactCode = async (
   filters?: {
     from?: Date
     to?: Date
+    paymentStatus?: PaymentStatus
   },
   size?: number,
   after?: string
@@ -756,6 +757,38 @@ export const getInvoicesByContactCode = async (
       'Could not find customer with contact code in Xledger'
     )
     return null
+  }
+
+  const xledgerFilter: {
+    subledgerDbId: string
+    headerTransactionSourceDbId_in: number[]
+    invoiceDate_gte?: string
+    invoiceDate_lte?: string
+    invoiceRemaining_gt?: number
+    invoiceRemaining?: number
+  } = {
+    subledgerDbId: xledgerId,
+    headerTransactionSourceDbId_in: [
+      TransactionSourceDbId.AR,
+      TransactionSourceDbId.SO,
+      TransactionSourceDbId.OS,
+    ],
+  }
+
+  if (filters?.from) {
+    xledgerFilter.invoiceDate_gte = dateToXledgerDateString(filters.from)
+  }
+
+  if (filters?.to) {
+    xledgerFilter.invoiceDate_lte = dateToXledgerDateString(filters.to)
+  }
+
+  if (filters?.paymentStatus !== undefined) {
+    if (filters.paymentStatus === PaymentStatus.Unpaid) {
+      xledgerFilter.invoiceRemaining_gt = 0
+    } else if (filters.paymentStatus === PaymentStatus.Paid) {
+      xledgerFilter.invoiceRemaining = 0
+    }
   }
 
   const query = {
@@ -782,21 +815,8 @@ export const getInvoicesByContactCode = async (
     `,
     variables: {
       first: size ?? 10,
-      after: after,
-      filter: {
-        subledgerDbId: xledgerId,
-        headerTransactionSourceDbId_in: [
-          TransactionSourceDbId.AR,
-          TransactionSourceDbId.SO,
-          TransactionSourceDbId.OS,
-        ],
-        invoiceDate_gte: filters?.from
-          ? dateToXledgerDateString(filters.from)
-          : undefined,
-        invoiceDate_lte: filters?.to
-          ? dateToXledgerDateString(filters.to)
-          : undefined,
-      },
+      after,
+      filter: xledgerFilter,
       orderBy: [
         {
           direction: 'DESC',

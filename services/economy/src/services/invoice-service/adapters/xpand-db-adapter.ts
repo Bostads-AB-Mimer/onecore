@@ -5,6 +5,7 @@ import {
   InvoiceRow,
   InvoiceTransactionType,
   invoiceTransactionTypeTranslation,
+  PaymentStatus,
   paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
@@ -493,6 +494,7 @@ export const getInvoicesByContactCode = async (
     to?: Date
     invoiceDateFrom?: Date
     invoiceDateTo?: Date
+    paymentStatus?: PaymentStatus
   },
   limit?: number,
   skip?: number
@@ -536,6 +538,14 @@ export const getInvoicesByContactCode = async (
 
   if (filters?.invoiceDateTo) {
     query = query.andWhere('krfkh.invdate', '<=', filters.invoiceDateTo)
+  }
+
+  if (filters?.paymentStatus !== undefined) {
+    if (filters.paymentStatus === PaymentStatus.Unpaid) {
+      query = query.andWhere('krfkh.paystatus', '<', 2) // 0 and 1 represent unpaid statuses
+    } else if (filters.paymentStatus === PaymentStatus.Paid) {
+      query = query.andWhere('krfkh.paystatus', '>', 1) // 2 and up represent paid statuses
+    }
   }
 
   if (limit) {

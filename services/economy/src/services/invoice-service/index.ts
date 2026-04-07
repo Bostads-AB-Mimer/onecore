@@ -38,12 +38,29 @@ export const routes = (router: KoaRouter) => {
     }
 
     const contactCode = ctx.params.contactCode
-    const { from, to, size, skip = 0, after } = queryParams.data
+    const {
+      from,
+      to,
+      size,
+      skip = 0,
+      after,
+      // paymentStatus
+      /* 
+        Can not filter by payment status at the moment since some invoices are paid in Xledger and unpaid in Xpand.
+        If invoice A is paid in Xledger and unpaid in Xpand and the query is for unpaid invoices, invoice A will be returned
+        and shown as unpaid, when it is actually paid.
+        We can revisit this when we know more about why there is sometimes a discrepancy between Xledger and Xpand.
+      */
+    } = queryParams.data
 
     try {
       const xledgerInvoicesResult = await getXledgerInvoicesByContactCode(
         contactCode,
-        { from: from, to: to },
+        {
+          from,
+          to,
+          // paymentStatus
+        },
         size,
         after
       )
@@ -53,6 +70,7 @@ export const routes = (router: KoaRouter) => {
           {
             invoiceDateFrom: from,
             invoiceDateTo: to,
+            // paymentStatus
           },
           size,
           skip

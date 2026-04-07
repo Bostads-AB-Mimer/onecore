@@ -78,7 +78,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { from, to, skip, size, after } = queryParams.data
+    const { from, to, paymentStatus, skip, size, after } = queryParams.data
 
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoicesByContactCode(
@@ -86,6 +86,7 @@ export const routes = (router: KoaRouter) => {
       {
         from,
         to,
+        paymentStatus,
       },
       size,
       skip,

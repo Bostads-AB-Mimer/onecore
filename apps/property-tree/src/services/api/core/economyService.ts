@@ -1,4 +1,9 @@
-import { Invoice, InvoicePaymentEvent, XledgerProject } from '@onecore/types'
+import {
+  Invoice,
+  InvoicePaymentEvent,
+  PaymentStatus,
+  XledgerProject,
+} from '@onecore/types'
 import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
 import { XledgerContact } from '@onecore/types/src/types'
 
@@ -13,7 +18,7 @@ async function getInvoicesByContactCode(
   size?: number,
   skip?: number,
   after?: string,
-  hasNextXledgerPage?: boolean
+  paymentStatus?: PaymentStatus
 ): Promise<{
   invoices: Invoice[]
   pageInfo: {
@@ -31,10 +36,10 @@ async function getInvoicesByContactCode(
         query: {
           from: filters?.from?.toISOString(),
           to: filters?.to?.toISOString(),
+          paymentStatus,
           size,
           skip,
           after,
-          hasNextXledgerPage,
         },
       },
     }

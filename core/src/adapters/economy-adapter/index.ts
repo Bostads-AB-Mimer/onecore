@@ -3,6 +3,7 @@ import { loggedAxios as axios, logger } from '@onecore/utilities'
 import {
   Invoice,
   InvoicePaymentEvent,
+  PaymentStatus,
   RentInvoiceRow,
   XledgerContact,
   XledgerProject,
@@ -50,11 +51,10 @@ export async function getInvoicePaymentEvents(
 
 export async function getInvoicesByContactCode(
   contactCode: string,
-  filters?: { from?: Date; to?: Date },
+  filters?: { from?: Date; to?: Date; paymentStatus?: PaymentStatus },
   size?: number,
   skip?: number,
-  after?: string,
-  includePaymentEvents?: boolean
+  after?: string
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
   const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
   const params = {
@@ -62,7 +62,6 @@ export async function getInvoicesByContactCode(
     size,
     skip,
     after,
-    includePaymentEvents,
   }
   const response = await axios.get(url, { params })
 

@@ -1,3 +1,4 @@
+import { PaymentStatus } from '@onecore/types'
 import { useQuery } from '@tanstack/react-query'
 
 import { economyService } from '@/services/api/core/economyService'
@@ -9,22 +10,12 @@ export function useTenantInvoices(
   size?: number,
   skip?: number,
   after?: string,
-  hasNextXledgerPage?: boolean,
-  includePaymentEvents?: boolean
+  paymentStatus?: PaymentStatus
 ) {
   const invoicesQuery = useQuery({
     queryKey: [
       'tenant-invoices',
-      [
-        contactCode,
-        from,
-        to,
-        size,
-        skip,
-        after,
-        hasNextXledgerPage,
-        includePaymentEvents,
-      ].join('|'),
+      [contactCode, from, to, size, skip, after, paymentStatus].join('|'),
     ],
     queryFn: () =>
       economyService.getInvoicesByContactCode(
@@ -36,8 +27,7 @@ export function useTenantInvoices(
         size,
         skip,
         after,
-        hasNextXledgerPage,
-        includePaymentEvents
+        paymentStatus
       ),
     enabled: !!contactCode,
   })
