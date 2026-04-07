@@ -114,7 +114,16 @@ export const routes = (router: OkapiRouter, config: Config) => {
         limit
       )
 
-      encodeListResponse(ctx, response)
+      if (response.ok) {
+        ctx.status = 200
+        ctx.body = {
+          ...response.data,
+          content: transformContacts(response.data.content),
+        }
+      } else {
+        const metadata = generateRouteMetadata(ctx)
+        encodeError(ctx, response, metadata)
+      }
     }
   )
 
