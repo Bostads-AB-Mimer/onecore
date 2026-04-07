@@ -1,0 +1,45 @@
+{
+  "type": "individual",
+  "contactCode": "P014202",
+  "contactKey": "_0J4158MZ0",
+  "personal": {
+    "firstName": "Klasse",
+    "lastName": "von Tratt",
+    "fullName": "von Tratt Klasse",
+    "nationalId": "7712185487",
+    "birthDate": "1971-08-11T00:00:00.000Z"
+  },
+  "trustee": {
+    "contactCode": "P004810",
+    "fullName": "Korvistoppitalo Maggan"
+  },
+  "communication": {
+    "phoneNumbers": [
+      {
+        "phoneNumber": "0766374053",
+        "type": "unspecified",
+        "isPrimary": false
+      }
+    ],
+    "emailAddresses": [],
+    "specialAttention": false
+  },
+  "addresses": [
+    {
+      "street": "Kängurutorp 18",
+      "zipCode": "724 72",
+      "city": "VÄSTERÅS",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Kängurutorp 18, 724 72, VÄSTERÅS, SVERIGE"
+    },
+    {
+      "street": "Ostkroksleden 1",
+      "zipCode": "722 14",
+      "city": "VÄSTERÅS",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Ostkroksleden 1, 722 14, VÄSTERÅS, SVERIGE"
+    }
+  ]
+}
