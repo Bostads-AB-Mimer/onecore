@@ -7,7 +7,6 @@ import {
 import { economy, Invoice } from '@onecore/types'
 
 import {
-  getAllInvoicePaymentEvents,
   getAllInvoicesWithMatchIds,
   getInvoiceByInvoiceNumber,
   getInvoiceMatchId,
@@ -39,33 +38,15 @@ export const routes = (router: KoaRouter) => {
     }
 
     const contactCode = ctx.params.contactCode
-    const {
-      from,
-      to,
-      size,
-      skip = 0,
-      after,
-      includePaymentEvents,
-    } = queryParams.data
+    const { from, to, size, skip = 0, after } = queryParams.data
 
     try {
-      /*
-        Hämta 100 från xledger, after = senaste xledgerfakturan
-        Hämta 100 från xpand, vanlig paginering, skip = antal xpandfakturor som visas för tillfället
-
-        if filtrera betaldatum:
-          hämta betalningar för alla
-          filtrera ut fakturor där betaldatum är utanför intervall
-
-      */
-
       const xledgerInvoicesResult = await getXledgerInvoicesByContactCode(
         contactCode,
         { from: from, to: to },
         size,
         after
       )
-      //  { content: [], pageInfo: { hasNextPage: false } }
       const xpandInvoices =
         (await getXpandInvoicesByContactCode(
           contactCode,
@@ -141,18 +122,6 @@ export const routes = (router: KoaRouter) => {
 
         return { ...invoice, invoiceRows: rows }
       })
-
-      if (includePaymentEvents && regularInvoices.length > 0) {
-        const allPaymentEvents = await getAllInvoicePaymentEvents(
-          regularInvoices.map((i) => i.matchId).filter((id) => id !== undefined)
-        )
-        invoicesWithRows.forEach((i) => {
-          // @ts-expect-error
-          i.paymentEvents = allPaymentEvents.filter(
-            (pe) => pe.matchId !== undefined && pe.matchId === i.matchId
-          )
-        })
-      }
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(
