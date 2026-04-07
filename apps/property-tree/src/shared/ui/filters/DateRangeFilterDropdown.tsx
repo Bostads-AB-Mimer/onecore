@@ -33,15 +33,17 @@ export function DateRangeFilterDropdown({
   className,
 }: DateRangeFilterDropdownProps) {
   const [open, setOpen] = useState(false)
+  const [internalRange, setInternalRange] = useState<DateRange | undefined>()
 
-  // Convert string dates to Date objects for the calendar
-  const selectedRange: DateRange | undefined =
+  const externalRange: DateRange | undefined =
     startDate || endDate
       ? {
           from: startDate ? new Date(startDate) : undefined,
           to: endDate ? new Date(endDate) : undefined,
         }
       : undefined
+
+  const selectedRange = internalRange || externalRange
 
   const hasDateFilter = startDate !== null || endDate !== null
 
@@ -66,20 +68,37 @@ export function DateRangeFilterDropdown({
   }
 
   const handleSelect = (range: DateRange | undefined) => {
+    setInternalRange(range)
+
     const newStartDate = range?.from
     const newEndDate = range?.to
 
-    onDateChange(newStartDate, newEndDate)
+    const isCompleteRange =
+      newStartDate &&
+      newEndDate &&
+      newStartDate.getTime() !== newEndDate.getTime()
+
+    if (isCompleteRange) {
+      onDateChange(newStartDate, newEndDate)
+    }
   }
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation()
     onDateChange()
+    setInternalRange(undefined)
     setOpen(false)
   }
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen)
+    if (newOpen) {
+      setInternalRange(undefined)
+    }
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
