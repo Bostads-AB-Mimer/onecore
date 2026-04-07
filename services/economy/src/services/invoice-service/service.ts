@@ -638,7 +638,7 @@ export const importInvoiceRows = async (
     const errors: { invoiceNumber: string; error: string }[] = []
     const CHUNK_SIZE = 500
 
-    /*const importedInvoiceNumbers = await getImportedInvoiceNumbers()
+    const importedInvoiceNumbers = await getImportedInvoiceNumbers()
     const rentalInvoiceNumbers = (
       await getRentalInvoices(fromDate, toDate, companyId)
     ).map((invoice: any) => {
@@ -653,14 +653,7 @@ export const importInvoiceRows = async (
     const invoicesToImport = rentalInvoiceNumbers.filter(
       (rentalInvoiceNumber: string) =>
         !importedInvoiceNumbers.includes(rentalInvoiceNumber)
-    )*/
-
-    const rentalInvoiceNumbers = []
-    const invoicesToImport = [
-      '552604363171159',
-      '552604362180359',
-      '552604362901952',
-    ]
+    )
 
     if (!invoicesToImport || invoicesToImport.length === 0) {
       return {
