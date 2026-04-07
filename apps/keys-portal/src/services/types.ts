@@ -224,6 +224,7 @@ export function getKeyEventDisplayLabel(event: {
   type: KeyEventType
   status: KeyEventStatus
 }): string {
+  if (event.type === 'LOST') return 'Bortappad'
   const typeLabel = KeyEventTypeLabels[event.type]
   const statusLabel = KeyEventStatusLabels[event.status]
   return `${typeLabel} ${statusLabel.toLowerCase()}`

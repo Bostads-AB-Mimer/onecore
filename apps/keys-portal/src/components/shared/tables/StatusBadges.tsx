@@ -138,6 +138,7 @@ interface KeyEvent {
  * Get display label for a key event (combines type + status)
  */
 export function getKeyEventDisplayLabel(event: KeyEvent): string {
+  if (event.type === 'LOST') return 'Bortappad'
   const typeLabel = KeyEventTypeLabels[event.type]
   const statusLabel = KeyEventStatusLabels[event.status]
   return `${typeLabel} ${statusLabel.toLowerCase()}`
@@ -167,7 +168,8 @@ export function KeyEventBadge({
   if (!event) return null
   if (onlyActive && !isActiveKeyEvent(event)) return null
 
-  return <Badge variant="outline">{getKeyEventDisplayLabel(event)}</Badge>
+  const variant = event.type === 'LOST' ? 'destructive' : 'outline'
+  return <Badge variant={variant}>{getKeyEventDisplayLabel(event)}</Badge>
 }
 
 // ============================================

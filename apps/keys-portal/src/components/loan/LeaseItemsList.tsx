@@ -14,6 +14,7 @@ import {
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { DefaultLoanHeader } from '@/components/shared/tables/DefaultLoanHeader'
 import { LoanActionMenu } from './LoanActionMenu'
+import { KeyEventMenu } from './dialogs/KeyEventMenu'
 import {
   KeyEventBadge,
   PickupAvailabilityBadge,
@@ -58,6 +59,8 @@ export function LeaseItemsList({
   onSelectAll,
   onDeselectAll,
 }: LeaseItemsListProps) {
+  const [eventMenuKey, setEventMenuKey] = useState<KeyDetails | null>(null)
+
   const getKeyUrl = (key: KeyDetails) => {
     const params = new URLSearchParams({
       disposed: key.disposed ? 'true' : 'false',
@@ -120,6 +123,7 @@ export function LeaseItemsList({
     : undefined
 
   return (
+    <>
     <CollapsibleGroupTable
       items={items}
       getItemId={(item) =>
@@ -197,11 +201,22 @@ export function LeaseItemsList({
               <ItemTypeBadge itemType={item.data.keyType} />
             </TableCell>
             <TableCell className="w-[12%]">
-              {getLatestActiveEvent(item.data) ? (
-                <KeyEventBadge event={getLatestActiveEvent(item.data)} />
-              ) : (
-                '-'
-              )}
+              <button
+                type="button"
+                className="cursor-pointer hover:opacity-70 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setEventMenuKey(item.data)
+                }}
+              >
+                {getLatestActiveEvent(item.data) ? (
+                  <KeyEventBadge event={getLatestActiveEvent(item.data)} />
+                ) : (
+                  <span className="text-muted-foreground hover:text-foreground text-xs">
+                    Lägg till
+                  </span>
+                )}
+              </button>
             </TableCell>
             <TableCell className="w-[18%]">
               <PickupAvailabilityBadge itemData={item.data} />
@@ -258,6 +273,21 @@ export function LeaseItemsList({
         )
       }
     />
+
+    {eventMenuKey && (
+      <KeyEventMenu
+        open={!!eventMenuKey}
+        onOpenChange={(open) => {
+          if (!open) setEventMenuKey(null)
+        }}
+        keyData={eventMenuKey}
+        onSuccess={() => {
+          setEventMenuKey(null)
+          onRefresh?.()
+        }}
+      />
+    )}
+    </>
   )
 }
 

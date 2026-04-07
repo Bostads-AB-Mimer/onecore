@@ -127,10 +127,15 @@ export function KeyBundleKeysTable({
     return activeLoan !== null && activeLoan.loanType === 'MAINTENANCE'
   })
 
-  // Determine which keys can be loaned (not currently loaned)
+  // Determine which keys can be loaned (not currently loaned, not lost)
   const loanableKeys = selectedKeysData.filter((k) => {
     const activeLoan = getActiveLoan(k)
-    return activeLoan === null
+    const latestEvent = k.events?.[0]
+    const isLost =
+      !!latestEvent &&
+      latestEvent.type === 'LOST' &&
+      latestEvent.status !== 'COMPLETED'
+    return activeLoan === null && !isLost
   })
 
   // Keys with active loans among selected keys

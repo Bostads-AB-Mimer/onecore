@@ -124,6 +124,21 @@ export const keyEventService = {
   },
 
   /**
+   * Helper to create a LOST event with ORDERED status for a single key
+   */
+  async createLostReport(
+    keyId: string,
+    workOrderId?: string
+  ): Promise<KeyEvent> {
+    return this.create({
+      keys: [keyId],
+      type: 'LOST',
+      status: 'ORDERED',
+      workOrderId: workOrderId ?? null,
+    })
+  },
+
+  /**
    * Helper to create a REPLACEMENT event with ORDERED status for a single key
    */
   async createReplacementOrder(

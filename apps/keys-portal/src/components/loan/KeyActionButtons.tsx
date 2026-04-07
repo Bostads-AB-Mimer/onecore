@@ -61,8 +61,18 @@ export function KeyActionButtons({
     .map((id) => keysWithStatus.find((k) => k.id === id))
     .filter((k): k is KeyDetails => k !== undefined)
 
+  // Helper to check if a key has an active LOST event
+  const hasActiveLostEvent = (k: KeyDetails): boolean => {
+    const latestEvent = k.events?.[0]
+    return (
+      !!latestEvent &&
+      latestEvent.type === 'LOST' &&
+      latestEvent.status !== 'COMPLETED'
+    )
+  }
+
   const rentableKeys = selectedKeysData.filter(
-    (k) => !getActiveLoan(k) && leaseIsNotPast
+    (k) => !getActiveLoan(k) && leaseIsNotPast && !hasActiveLostEvent(k)
   )
 
   const returnableKeys = selectedKeysData.filter((k) => {
@@ -120,9 +130,10 @@ export function KeyActionButtons({
     return !latestEvent || latestEvent.status === 'COMPLETED'
   })
 
-  // All available keys (excluding disposed keys)
+  // All available keys (excluding disposed and lost keys)
   const allAvailableKeys = keysWithStatus.filter(
-    (k) => !getActiveLoan(k) && leaseIsNotPast && !k.disposed
+    (k) =>
+      !getActiveLoan(k) && leaseIsNotPast && !k.disposed && !hasActiveLostEvent(k)
   )
 
   // All available cards
