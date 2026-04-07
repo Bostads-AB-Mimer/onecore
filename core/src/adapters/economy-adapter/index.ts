@@ -58,8 +58,7 @@ export async function getInvoicesByContactCode(
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
   const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
   const params = {
-    from: filters?.from,
-    to: filters?.to,
+    ...filters,
     size,
     skip,
     after,

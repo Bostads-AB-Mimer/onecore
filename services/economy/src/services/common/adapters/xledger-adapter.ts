@@ -818,7 +818,6 @@ export const getInvoicesByContactCode = async (
     hasNextPage: result.data.arTransactions.pageInfo.hasNextPage,
     endCursor,
   }
-  console.log(result.data)
 
   return {
     content: result.data?.arTransactions.edges?.map(transformToInvoice) ?? [],

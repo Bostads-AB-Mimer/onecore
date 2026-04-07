@@ -51,8 +51,8 @@ export const routes = (router: KoaRouter) => {
         (await getXpandInvoicesByContactCode(
           contactCode,
           {
-            from: from,
-            to: to,
+            invoiceDateFrom: from,
+            invoiceDateTo: to,
           },
           size,
           skip

@@ -13,8 +13,7 @@ async function getInvoicesByContactCode(
   size?: number,
   skip?: number,
   after?: string,
-  hasNextXledgerPage?: boolean,
-  includePaymentEvents?: boolean
+  hasNextXledgerPage?: boolean
 ): Promise<{
   invoices: Invoice[]
   pageInfo: {
@@ -30,12 +29,12 @@ async function getInvoicesByContactCode(
       params: {
         path: { contactCode },
         query: {
-          filters,
+          from: filters?.from?.toISOString(),
+          to: filters?.to?.toISOString(),
           size,
           skip,
           after,
           hasNextXledgerPage,
-          includePaymentEvents,
         },
       },
     }
