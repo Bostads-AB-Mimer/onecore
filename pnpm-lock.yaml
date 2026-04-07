@@ -1148,6 +1148,9 @@ importers:
       he:
         specifier: ^1.2.0
         version: 1.2.0
+      knex:
+        specifier: ^3.1.0
+        version: 3.1.0(tedious@18.6.1)
       koa:
         specifier: ^2.16.2
         version: 2.16.2
@@ -1432,6 +1435,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
+      knex:
+        specifier: ^3.1.0
+        version: 3.1.0(tedious@18.6.1)
       koa:
         specifier: ^2.16.2
         version: 2.16.2
@@ -2075,6 +2081,9 @@ importers:
       fishery:
         specifier: ^2.4.0
         version: 2.4.0
+      knex:
+        specifier: ^3.1.0
+        version: 3.1.0(tedious@18.6.1)
       koa:
         specifier: ^2.16.2
         version: 2.16.2
