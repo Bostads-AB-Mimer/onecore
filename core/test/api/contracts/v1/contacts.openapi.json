@@ -23,7 +23,337 @@
                     "content": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/ContactV1"
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "contactCode": {
+                                "type": "string"
+                              },
+                              "communication": {
+                                "type": "object",
+                                "properties": {
+                                  "phoneNumbers": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "phoneNumber": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "work",
+                                            "home",
+                                            "mobile",
+                                            "direct-line",
+                                            "fax",
+                                            "pager",
+                                            "unspecified"
+                                          ]
+                                        },
+                                        "comment": {
+                                          "type": "string"
+                                        },
+                                        "isPrimary": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "phoneNumber",
+                                        "type",
+                                        "isPrimary"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "emailAddresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "emailAddress": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string"
+                                        },
+                                        "isPrimary": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "emailAddress",
+                                        "type",
+                                        "isPrimary"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "specialAttention": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "phoneNumbers",
+                                  "emailAddresses",
+                                  "specialAttention"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "addresses": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "careOf": {
+                                      "type": "string"
+                                    },
+                                    "street": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "zipCode": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "city": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "region": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "country": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "street",
+                                    "zipCode",
+                                    "city",
+                                    "region",
+                                    "country"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "individual"
+                                ]
+                              },
+                              "personal": {
+                                "type": "object",
+                                "properties": {
+                                  "nationalRegistrationNumber": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "birthDate": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "firstName": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "lastName": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "nationalRegistrationNumber",
+                                  "birthDate",
+                                  "firstName",
+                                  "lastName",
+                                  "fullName"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "trustee": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "contactCode",
+                              "communication",
+                              "addresses",
+                              "type",
+                              "personal"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "contactCode": {
+                                "type": "string"
+                              },
+                              "communication": {
+                                "type": "object",
+                                "properties": {
+                                  "phoneNumbers": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "phoneNumber": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "work",
+                                            "home",
+                                            "mobile",
+                                            "direct-line",
+                                            "fax",
+                                            "pager",
+                                            "unspecified"
+                                          ]
+                                        },
+                                        "comment": {
+                                          "type": "string"
+                                        },
+                                        "isPrimary": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "phoneNumber",
+                                        "type",
+                                        "isPrimary"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "emailAddresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "emailAddress": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string"
+                                        },
+                                        "isPrimary": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "emailAddress",
+                                        "type",
+                                        "isPrimary"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "specialAttention": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "phoneNumbers",
+                                  "emailAddresses",
+                                  "specialAttention"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "addresses": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "careOf": {
+                                      "type": "string"
+                                    },
+                                    "street": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "zipCode": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "city": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "region": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "country": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "street",
+                                    "zipCode",
+                                    "city",
+                                    "region",
+                                    "country"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "organisation"
+                                ]
+                              },
+                              "organisation": {
+                                "type": "object",
+                                "properties": {
+                                  "organisationNumber": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "organisationNumber",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "contactCode",
+                              "communication",
+                              "addresses",
+                              "type",
+                              "organisation"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
                       }
                     },
                     "_meta": {
@@ -181,7 +511,337 @@
                   "properties": {
                     "_links": {},
                     "content": {
-                      "$ref": "#/components/schemas/ContactV1"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "individual"
+                              ]
+                            },
+                            "personal": {
+                              "type": "object",
+                              "properties": {
+                                "nationalRegistrationNumber": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "birthDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "firstName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "lastName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "nationalRegistrationNumber",
+                                "birthDate",
+                                "firstName",
+                                "lastName",
+                                "fullName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "trustee": {
+                              "type": "object",
+                              "properties": {
+                                "contactCode": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "contactCode"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "personal"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "organisation"
+                              ]
+                            },
+                            "organisation": {
+                              "type": "object",
+                              "properties": {
+                                "organisationNumber": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "organisationNumber",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "organisation"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -236,7 +896,337 @@
                   "properties": {
                     "_links": {},
                     "content": {
-                      "$ref": "#/components/schemas/ContactV1"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "individual"
+                              ]
+                            },
+                            "personal": {
+                              "type": "object",
+                              "properties": {
+                                "nationalRegistrationNumber": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "birthDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "firstName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "lastName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "nationalRegistrationNumber",
+                                "birthDate",
+                                "firstName",
+                                "lastName",
+                                "fullName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "trustee": {
+                              "type": "object",
+                              "properties": {
+                                "contactCode": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "contactCode"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "personal"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "organisation"
+                              ]
+                            },
+                            "organisation": {
+                              "type": "object",
+                              "properties": {
+                                "organisationNumber": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "organisationNumber",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "organisation"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -291,7 +1281,337 @@
                   "properties": {
                     "_links": {},
                     "content": {
-                      "$ref": "#/components/schemas/ContactV1"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "individual"
+                              ]
+                            },
+                            "personal": {
+                              "type": "object",
+                              "properties": {
+                                "nationalRegistrationNumber": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "birthDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "firstName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "lastName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "nationalRegistrationNumber",
+                                "birthDate",
+                                "firstName",
+                                "lastName",
+                                "fullName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "trustee": {
+                              "type": "object",
+                              "properties": {
+                                "contactCode": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "contactCode"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "personal"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "organisation"
+                              ]
+                            },
+                            "organisation": {
+                              "type": "object",
+                              "properties": {
+                                "organisationNumber": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "organisationNumber",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "organisation"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -346,7 +1666,337 @@
                   "properties": {
                     "_links": {},
                     "content": {
-                      "$ref": "#/components/schemas/ContactV1"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "individual"
+                              ]
+                            },
+                            "personal": {
+                              "type": "object",
+                              "properties": {
+                                "nationalRegistrationNumber": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "birthDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "firstName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "lastName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "nationalRegistrationNumber",
+                                "birthDate",
+                                "firstName",
+                                "lastName",
+                                "fullName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "trustee": {
+                              "type": "object",
+                              "properties": {
+                                "contactCode": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "contactCode"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "personal"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "organisation"
+                              ]
+                            },
+                            "organisation": {
+                              "type": "object",
+                              "properties": {
+                                "organisationNumber": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "organisationNumber",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "organisation"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -401,7 +2051,337 @@
                   "properties": {
                     "_links": {},
                     "content": {
-                      "$ref": "#/components/schemas/ContactV1"
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "individual"
+                              ]
+                            },
+                            "personal": {
+                              "type": "object",
+                              "properties": {
+                                "nationalRegistrationNumber": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "birthDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "firstName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "lastName": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "nationalRegistrationNumber",
+                                "birthDate",
+                                "firstName",
+                                "lastName",
+                                "fullName"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "trustee": {
+                              "type": "object",
+                              "properties": {
+                                "contactCode": {
+                                  "type": "string"
+                                },
+                                "fullName": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "contactCode"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "personal"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "contactCode": {
+                              "type": "string"
+                            },
+                            "communication": {
+                              "type": "object",
+                              "properties": {
+                                "phoneNumbers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "phoneNumber": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "work",
+                                          "home",
+                                          "mobile",
+                                          "direct-line",
+                                          "fax",
+                                          "pager",
+                                          "unspecified"
+                                        ]
+                                      },
+                                      "comment": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "phoneNumber",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "emailAddresses": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "emailAddress": {
+                                        "type": "string"
+                                      },
+                                      "type": {
+                                        "type": "string"
+                                      },
+                                      "isPrimary": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "emailAddress",
+                                      "type",
+                                      "isPrimary"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "specialAttention": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "phoneNumbers",
+                                "emailAddresses",
+                                "specialAttention"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "addresses": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "careOf": {
+                                    "type": "string"
+                                  },
+                                  "street": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "zipCode": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "city": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "region": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "country": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "street",
+                                  "zipCode",
+                                  "city",
+                                  "region",
+                                  "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "organisation"
+                              ]
+                            },
+                            "organisation": {
+                              "type": "object",
+                              "properties": {
+                                "organisationNumber": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "organisationNumber",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "contactCode",
+                            "communication",
+                            "addresses",
+                            "type",
+                            "organisation"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
                     }
                   },
                   "required": [
