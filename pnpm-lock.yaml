@@ -103,6 +103,9 @@ importers:
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.2
+      knex:
+        specifier: ^3.1.0
+        version: 3.1.0(tedious@18.6.1)
       koa:
         specifier: ^2.16.2
         version: 2.16.2
@@ -806,6 +809,9 @@ importers:
       '@koa/router':
         specifier: ^12.0.1
         version: 12.0.2
+      '@onecore/contacts':
+        specifier: workspace:*
+        version: file:services/contacts(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(@types/koa@2.15.0)(exceljs@4.4.0)
       '@onecore/types':
         specifier: workspace:*
         version: link:../libs/types
@@ -860,6 +866,9 @@ importers:
       koa-jwt:
         specifier: ^4.0.4
         version: 4.0.4
+      koa-okapi-router:
+        specifier: ^0.1.4
+        version: 0.1.4(@koa/router@12.0.2)(zod@3.25.76)
       koa-pino-logger:
         specifier: ^4.0.0
         version: 4.0.0
@@ -990,6 +999,12 @@ importers:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@20.19.11)(typescript@5.9.2)
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      tsx:
+        specifier: ^4.20.5
+        version: 4.20.5
       typescript:
         specifier: ^5.6.2
         version: 5.9.2
@@ -4330,6 +4345,15 @@ packages:
 
   '@octokit/types@9.3.2':
     resolution: {integrity: sha512-D4iHGTdAnEEVsB8fl95m1hiz7D5YiRdQ9b/OEb3BYRVwbLsGHcRVPz+u+BgRLNk0Q0/4iZCBqDN96j2XNxfXrA==}
+
+  '@onecore/contacts@file:services/contacts':
+    resolution: {directory: services/contacts, type: directory}
+    engines: {node: '>=20'}
+
+  '@onecore/types@file:libs/types':
+    resolution: {directory: libs/types, type: directory}
+    peerDependencies:
+      zod: ^3.23.8
 
   '@onecore/utilities@file:libs/utilities':
     resolution: {directory: libs/utilities, type: directory}
@@ -14592,6 +14616,50 @@ snapshots:
   '@octokit/types@9.3.2':
     dependencies:
       '@octokit/openapi-types': 18.1.1
+
+  '@onecore/contacts@file:services/contacts(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(@types/koa@2.15.0)(exceljs@4.4.0)':
+    dependencies:
+      '@iteam/config': 12.1.2
+      '@koa/cors': 5.0.0
+      '@koa/router': 12.0.2
+      '@onecore/types': file:libs/types(zod@3.25.76)
+      '@onecore/utilities': file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))
+      '@types/swagger-ui': 3.52.4
+      dotenv: 16.6.1
+      knex: 3.1.0(tedious@18.6.1)
+      koa: 2.16.2
+      koa-body: 6.0.1
+      koa-bodyparser: 4.4.1
+      koa-okapi-router: 0.1.4(@koa/router@12.0.2)(zod@3.25.76)
+      koa-pino-logger: 4.0.0
+      koa2-swagger-ui: 5.11.0(@types/koa@2.15.0)
+      mssql: 11.0.1
+      prettier: 3.6.2
+      tedious: 18.6.1
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - '@75lb/nature'
+      - '@elastic/elasticsearch'
+      - '@elastic/transport'
+      - '@types/koa'
+      - better-sqlite3
+      - debug
+      - encoding
+      - exceljs
+      - mysql
+      - mysql2
+      - pg
+      - pg-native
+      - sqlite3
+      - supports-color
+
+  '@onecore/types@file:libs/types(zod@3.25.76)':
+    dependencies:
+      release-please: 16.18.0
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - encoding
+      - supports-color
 
   '@onecore/utilities@file:libs/utilities(@elastic/elasticsearch@8.19.1)(@elastic/transport@8.10.0)(exceljs@4.4.0)(knex@3.1.0(tedious@18.6.1))':
     dependencies:
