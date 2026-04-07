@@ -83,7 +83,7 @@ async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
 
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
-    const viewport = page.getViewport({ scale: 2.0 })
+    const viewport = page.getViewport({ scale: 3.0 })
     const canvas = createCanvas(viewport.width, viewport.height)
     const context = canvas.getContext('2d')
 
