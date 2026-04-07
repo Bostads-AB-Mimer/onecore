@@ -7,91 +7,6 @@ import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
 import { WaitingListType } from '@onecore/types'
 
-const createLease = async (
-  fromDate: Date,
-  rentalPropertyId: string,
-  tenantCode: string,
-  companyCode: string
-): Promise<AdapterResult<string, 'create-lease-not-allowed' | 'unknown'>> => {
-  const headers = getHeaders()
-
-  const xml = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:ser="http://incit.xpand.eu/service/" xmlns:inc="http://incit.xpand.eu/" xmlns:data="http://incit.xpand.eu/data/">
-    <soap:Header xmlns:wsa="http://www.w3.org/2005/08/addressing"><wsa:Action>http://incit.xpand.eu/service/CreateRentContract/CreateRentContract</wsa:Action><wsa:To>${Config.xpandSoap.url}</wsa:To></soap:Header>
-    <soap:Body>
-       <ser:CreateRentContractRequest>
-          <!--Optional:-->
-          <inc:CompanyCode>${companyCode}</inc:CompanyCode>
-          <!--Optional:-->
-          <inc:ContractFromDate>${fromDate.toLocaleDateString('sv-SE', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-          })}</inc:ContractFromDate>
-          <!--Optional:<inc:ContractToDate></inc:ContractToDate> Måste ta bort den helt-->
-          <!--Optional:-->
-          <inc:MessageCulture>${
-            Config.xpandSoap.messageCulture
-          }</inc:MessageCulture>
-          <!--Optional:-->
-          <inc:MovingFromId/>
-          <!--Optional:-->
-          <inc:PreviousResidenceId/>
-          <!--Optional:-->
-          <inc:ReasonId/>
-          <!--Optional:-->
-          <inc:RentalObjectCode>${rentalPropertyId}</inc:RentalObjectCode>
-          <!--Optional:-->
-          <inc:RentalObjectId/>
-          <!--Optional:-->
-          <inc:Tenants>
-             <!--Zero or more repetitions:-->
-             <data:TenantCode>
-                <!--Optional: <data:TenantCode>P174965</data:TenantCode> -->
-                <data:TenantCode>${tenantCode}</data:TenantCode>
-                <!--Optional:-->
-                <data:TenantId/>
-             </data:TenantCode>
-          </inc:Tenants>
-       </ser:CreateRentContractRequest>
-    </soap:Body>
-  </soap:Envelope>`
-
-  try {
-    const { response } = await soapRequest({
-      url: Config.xpandSoap.url,
-      headers: headers,
-      xml: xml,
-    })
-    const { body } = response
-
-    const parser: XMLParser = new XMLParser()
-    const parsedResponse =
-      parser.parse(body)['s:Envelope']['s:Body'].CreateNewEntityResult
-
-    if (parsedResponse.Success === true) {
-      return { data: parsedResponse.ObjectDescription, ok: true }
-    } else if (parsedResponse.Message == 'Hyresobjekt saknas.') {
-      logger.info(
-        { objectId: rentalPropertyId, contactId: tenantCode, fromDate },
-        'XPand could not create lease for rental object'
-      )
-      return { ok: false, err: 'create-lease-not-allowed' }
-    } else {
-      logger.error(
-        { message: parsedResponse.Message },
-        'Create lease response from XPand cannot be interpreted'
-      )
-      return { ok: false, err: 'unknown' }
-    }
-    //TODO: handle more errors...
-  } catch (error: unknown) {
-    let errorMsg = 'Error creating lease Xpand SOAP API: '
-    if (error instanceof Error) errorMsg += error.message
-    logger.error(error, errorMsg)
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 const addApplicantToToWaitingList = async (
   contactCode: string,
   waitingListType: WaitingListType
@@ -382,7 +297,6 @@ function getHeaders() {
 }
 
 export {
-  createLease,
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
   healthCheck,

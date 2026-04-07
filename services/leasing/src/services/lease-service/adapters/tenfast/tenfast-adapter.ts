@@ -1,5 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { Contact, RentalObjectRent } from '@onecore/types'
+import { Contact, RentalObjectAvailabilityInfo } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -16,12 +16,13 @@ import {
   TenfastLeaseSchema,
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
+  TenfastLeaseTemplateResponseSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
-import currency from 'currency.js'
+import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -98,6 +99,44 @@ export const createLease = async (
   }
 }
 
+export const getLeases = async (): Promise<
+  AdapterResult<
+    Array<TenfastLease>,
+    'unknown' | 'bad-request' | 'not-found' | 'parsing-error'
+  >
+> => {
+  try {
+    const leaseResponse = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?populate=hyresobjekt,hyresgaster&limit=100000`,
+    })
+
+    if (leaseResponse.status === 400)
+      return handleTenfastError(leaseResponse.data.error, 'bad-request')
+    else if (leaseResponse.status !== 200 && leaseResponse.status !== 201)
+      return handleTenfastError(
+        {
+          error: leaseResponse.data.error,
+          status: leaseResponse.status,
+        },
+        'not-found'
+      )
+
+    const parsedLeaseResponse = TenfastLeaseTemplateResponseSchema.safeParse(
+      leaseResponse.data
+    )
+
+    if (!parsedLeaseResponse.success)
+      return handleTenfastError(parsedLeaseResponse.error, 'parsing-error')
+    return {
+      ok: true,
+      data: parsedLeaseResponse.data.records,
+    }
+  } catch (err: any) {
+    return handleTenfastError(err, 'unknown')
+  }
+}
+
 export const getRentalObject = async (
   rentalObjectCode: string
 ): Promise<
@@ -149,12 +188,89 @@ export const getRentalObject = async (
   }
 }
 
-export const getRentForRentalObject = async (
+export enum RentalObjectType {
+  ParkingSpace = 'parkering',
+  Apartment = 'lägenhet',
+  Storage = 'förråd',
+}
+
+export const getAvailabilityForVacantRentalObjects = async (
+  type: RentalObjectType
+): Promise<
+  AdapterResult<
+    RentalObjectAvailabilityInfo[] | null,
+    | 'could-not-find-rental-object'
+    | 'could-not-parse-rental-object'
+    | 'get-rental-object-bad-request'
+  >
+> => {
+  try {
+    let page = ''
+    let allRecords: any[] = []
+    let totalCount = 0
+    let first = true
+
+    do {
+      const rentalObjectResponse = await tenfastApi.request({
+        method: 'get',
+        url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?hyresvard=${tenfastCompanyId}&states=vacant,soon-vacant&typ=${type}&includeAvtal=true&paginate=${page}`,
+      })
+      if (rentalObjectResponse.status === 400)
+        return handleTenfastError(
+          rentalObjectResponse.data.error,
+          'get-rental-object-bad-request'
+        )
+      else if (
+        rentalObjectResponse.status !== 200 &&
+        rentalObjectResponse.status !== 201
+      )
+        return handleTenfastError(
+          {
+            error: rentalObjectResponse.data.error,
+            status: rentalObjectResponse.status,
+          },
+          'could-not-find-rental-object'
+        )
+
+      const parsedRentalObjectResponse =
+        TenfastRentalObjectByRentalObjectCodeResponseSchema.safeParse(
+          rentalObjectResponse.data
+        )
+      if (!parsedRentalObjectResponse.success)
+        return handleTenfastError(
+          parsedRentalObjectResponse.error,
+          'could-not-parse-rental-object'
+        )
+
+      if (first) {
+        totalCount = parsedRentalObjectResponse.data.totalCount || 0
+        first = false
+      }
+      allRecords = allRecords.concat(parsedRentalObjectResponse.data.records)
+      page = parsedRentalObjectResponse.data.next ?? ''
+    } while (allRecords.length < totalCount)
+
+    const recordsWithoutUpcomingLeases = allRecords.filter(
+      (record) => filterByStatus(record.avtal ?? [], ['upcoming']).length === 0
+    )
+
+    return {
+      ok: true,
+      data: recordsWithoutUpcomingLeases.map((record) =>
+        mapTenfastRentalObjectToAvailabilityInfo(false, record)
+      ),
+    }
+  } catch (err: any) {
+    return handleTenfastError(err, 'could-not-find-rental-object')
+  }
+}
+
+export const getAvailabilityForRentalObject = async (
   rentalObjectCode: string,
   includeVAT: boolean
 ): Promise<
   AdapterResult<
-    RentalObjectRent,
+    RentalObjectAvailabilityInfo,
     | 'could-not-find-rental-object'
     | 'could-not-parse-rental-object'
     | 'get-rental-object-bad-request'
@@ -176,46 +292,24 @@ export const getRentForRentalObject = async (
     }
   }
 
-  const rent: RentalObjectRent = parseRentalObjectRentFromTenfastRentalObject(
-    includeVAT,
-    rentalObjectResult.data
-  )
+  const availability: RentalObjectAvailabilityInfo =
+    mapTenfastRentalObjectToAvailabilityInfo(
+      includeVAT,
+      rentalObjectResult.data
+    )
 
   return {
     ok: true,
-    data: rent,
+    data: availability,
   }
 }
 
-const parseRentalObjectRentFromTenfastRentalObject = (
-  includeVAT: boolean,
-  tenfastRentalObject: TenfastRentalObject
-): RentalObjectRent => {
-  return {
-    rentalObjectCode: tenfastRentalObject.externalId,
-    amount: includeVAT
-      ? tenfastRentalObject.hyra
-      : tenfastRentalObject.hyraExcludingVat,
-    vat: includeVAT ? tenfastRentalObject.hyraVat : 0,
-    rows: tenfastRentalObject.hyror.map((hyra) => ({
-      description: hyra.label || '',
-      amount: includeVAT
-        ? currency(hyra.amount).add(hyra.vat).value
-        : hyra.amount,
-      vatPercentage: includeVAT ? hyra.vat : 0,
-      fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
-      toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
-      code: hyra.article || '', //TODO:vad ska denna sättas till? Är article rätt fält?,
-    })),
-  }
-}
-
-export const getRentalObjectRents = async (
+export const getRentalObjectAvailabilityInfo = async (
   rentalObjectCodes: Array<string>,
   includeVAT: boolean
 ): Promise<
   AdapterResult<
-    Array<RentalObjectRent>,
+    Array<RentalObjectAvailabilityInfo>,
     | 'could-not-find-rental-objects'
     | 'could-not-parse-rental-objects'
     | 'get-rental-objects-bad-request'
@@ -229,12 +323,12 @@ export const getRentalObjectRents = async (
       batches.push(rentalObjectCodes.slice(i, i + batchSize))
     }
 
-    let allParsedRentalObjects: RentalObjectRent[] = []
+    let allParsedRentalObjects: RentalObjectAvailabilityInfo[] = []
 
     for (const batch of batches) {
       const rentalObjectResponse = await tenfastApi.request({
         method: 'post',
-        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}`,
+        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
         data: {
           externalIds: batch,
         },
@@ -263,7 +357,7 @@ export const getRentalObjectRents = async (
             TenfastRentalObjectSchema.safeParse(rentalObjectData)
           if (!parsedRentalObject.success) throw parsedRentalObject.error
 
-          return parseRentalObjectRentFromTenfastRentalObject(
+          return mapTenfastRentalObjectToAvailabilityInfo(
             includeVAT,
             parsedRentalObject.data
           )

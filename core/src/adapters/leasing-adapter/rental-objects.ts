@@ -1,5 +1,5 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { RentalObject } from '@onecore/types'
+import { RentalObject, RentalObjectAvailabilityInfo } from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from '../types'
@@ -69,50 +69,60 @@ const getAllVacantParkingSpaces = async (): Promise<
   }
 }
 
-const getRentalObjectRentByCode = async (
+const getRentalObjectAvailabilityByCode = async (
   rentalObjectCode: string
-): Promise<AdapterResult<number, 'rent-not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    RentalObjectAvailabilityInfo,
+    'availability-not-found' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/rental-objects/by-code/${rentalObjectCode}/rent`
+      `${tenantsLeasesServiceUrl}/rental-objects/by-code/${rentalObjectCode}/availability`
     )
     if (response.status === 404) {
       logger.error(
         { rentalObjectCode },
-        'Rental object rent not found for code:'
+        'Rental object availability not found for code:'
       )
-      return { ok: false, err: 'rent-not-found' }
+      return { ok: false, err: 'availability-not-found' }
     }
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
       error,
-      `Error retrieving rental object rent by code: ${rentalObjectCode}`
+      `Error retrieving rental object availability by code: ${rentalObjectCode}`
     )
     return { ok: false, err: 'unknown' }
   }
 }
 
-const getRentalObjectRents = async (
+const getRentalObjectAvailabilities = async (
   rentalObjectCodes?: string[]
-): Promise<AdapterResult<number[], 'rents-not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    RentalObjectAvailabilityInfo[],
+    'availabilities-not-found' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.post(
-      `${tenantsLeasesServiceUrl}/rental-objects/rent`,
+      `${tenantsLeasesServiceUrl}/rental-objects/availabilities`,
       { rentalObjectCodes }
     )
     if (response.status === 404) {
       logger.error(
         { rentalObjectCodes },
-        'Rental object rent not found for codes:'
+        'Rental object availabilities not found for codes:'
       )
-      return { ok: false, err: 'rents-not-found' }
+      return { ok: false, err: 'availabilities-not-found' }
     }
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
       error,
-      `Error retrieving rental object rent by codes: ${rentalObjectCodes?.join(', ')}`
+      `Error retrieving rental object availabilities by codes: ${rentalObjectCodes?.join(', ')}`
     )
     return { ok: false, err: 'unknown' }
   }
@@ -122,6 +132,6 @@ export {
   getAllVacantParkingSpaces,
   getParkingSpaceByCode,
   getParkingSpaces,
-  getRentalObjectRentByCode,
-  getRentalObjectRents,
+  getRentalObjectAvailabilityByCode,
+  getRentalObjectAvailabilities,
 }

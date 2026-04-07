@@ -96,11 +96,13 @@ describe('parkingspaces', () => {
           data: {
             rentalObjectCode: '705-808-00-0006',
             address: 'Testgatan 1',
-            rent: {
+            availabilityInfo: {
+              rent: {
+                amount: 500,
+                vat: 0.25,
+                rows: [],
+              },
               rentalObjectCode: '705-808-00-0006',
-              amount: 500,
-              vat: 0.25,
-              rows: [],
             },
             objectTypeCaption: 'Bilplats',
             objectTypeCode: 'BP',

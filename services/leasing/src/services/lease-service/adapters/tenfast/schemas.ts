@@ -51,12 +51,23 @@ export const TenfastRentalObjectSchema = z.object({
   hyraVat: z.number(), // total moms pa hyran
   hyraExcludingVat: z.number(), // hyran exklusive moms
   hyror: z.array(TenfastInvoiceRowSchema),
-  contractTemplate: z.string().optional(),
+  contractTemplate: z.string().optional().nullable(),
   postadress: z.string().nullish(),
   stadsdel: z.string().nullish(),
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
   kvm: z.number().nullish(),
+  avtal: z
+    .array(
+      z.lazy(
+        (): z.ZodTypeAny =>
+          TenfastLeaseSchema.partial().omit({
+            hyresgaster: true,
+            hyresobjekt: true,
+          })
+      )
+    )
+    .optional(), // We omit tenants and rental objects to avoid circular reference, also we don't need them in the context of rental object
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
@@ -64,6 +75,9 @@ export const TenfastTenantByContactCodeResponseSchema = z.object({
 })
 export const TenfastRentalObjectByRentalObjectCodeResponseSchema = z.object({
   records: z.array(TenfastRentalObjectSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
 })
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
@@ -241,3 +255,7 @@ export const TenfastLeaseSchema = z.object({
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 
 // TODO: I'd like to scope all these under "tenfast" instead, i.e tenfast.Lease, tenfast.Tenant etc
+
+export const TenfastLeaseTemplateResponseSchema = z.object({
+  records: z.array(TenfastLeaseSchema),
+})

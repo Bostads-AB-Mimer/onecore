@@ -139,7 +139,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Arrange
     const mockResponse = {
       status: 200,
-      data: { records: [] },
+      data: { records: [], prev: null, next: null, totalCount: 0 },
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
@@ -349,6 +349,69 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
       ok: false,
       err: 'unknown',
     })
+  })
+})
+
+describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
+  const mockPagedResponse = (records: object[]) => ({
+    status: 200,
+    data: {
+      records,
+      prev: null,
+      next: null,
+      totalCount: records.length,
+    },
+  })
+
+  it('should return availability info for rental objects without upcoming leases', async () => {
+    // Arrange
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R1001',
+      avtal: [],
+    })
+    ;(request as jest.Mock).mockResolvedValue(mockPagedResponse([rentalObject]))
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(1)
+    expect(result.data![0].rentalObjectCode).toBe('R1001')
+  })
+
+  it('should filter out rental objects with upcoming leases', async () => {
+    // Arrange
+    const upcomingLease = factory.tenfastLease.build({
+      startDate: new Date('2026-06-01'), // starts in the future
+      endDate: new Date('2027-06-01'),
+      stage: 'upcoming',
+    })
+    const rentalObjectWithUpcoming = factory.tenfastRentalObject.build({
+      externalId: 'R1002',
+      avtal: [upcomingLease],
+    })
+    const rentalObjectWithoutUpcoming = factory.tenfastRentalObject.build({
+      externalId: 'R1003',
+      avtal: [],
+    })
+    ;(request as jest.Mock).mockResolvedValue(
+      mockPagedResponse([rentalObjectWithUpcoming, rentalObjectWithoutUpcoming])
+    )
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(1)
+    expect(result.data![0].rentalObjectCode).toBe('R1003')
   })
 })
 
@@ -1192,7 +1255,7 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
   })
 })
 
-describe(tenfastAdapter.getRentForRentalObject, () => {
+describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
   it('should return rent when rental object is found and parsed', async () => {
     // Arrange
     const mockRentalObject = factory.tenfastRentalObject.build({
@@ -1205,14 +1268,14 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
       .mockResolvedValueOnce({ ok: true, data: mockRentalObject })
 
     // Act
-    const result = await tenfastAdapter.getRentForRentalObject(
+    const result = await tenfastAdapter.getAvailabilityForRentalObject(
       mockRentalObject.externalId,
       true
     )
 
     // Assert
     assert(result.ok)
-    expect(result.data).toEqual(
+    expect(result.data.rent).toEqual(
       expect.objectContaining({
         amount: 287.17,
       })
@@ -1226,7 +1289,10 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
       .mockResolvedValueOnce({ ok: false, err: 'could-not-find-rental-object' })
 
     // Act
-    const result = await tenfastAdapter.getRentForRentalObject('NOTFOUND', true)
+    const result = await tenfastAdapter.getAvailabilityForRentalObject(
+      'NOTFOUND',
+      true
+    )
 
     // Assert
     assert(!result.ok)
@@ -1240,7 +1306,10 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
       .mockResolvedValueOnce({ ok: true, data: null })
 
     // Act
-    const result = await tenfastAdapter.getRentForRentalObject('NOTFOUND', true)
+    const result = await tenfastAdapter.getAvailabilityForRentalObject(
+      'NOTFOUND',
+      true
+    )
 
     // Assert
     assert(!result.ok)
@@ -1272,17 +1341,17 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
       .mockResolvedValueOnce({ ok: true, data: mockRentalObject })
 
     // Act
-    const result = await tenfastAdapter.getRentForRentalObject(
+    const result = await tenfastAdapter.getAvailabilityForRentalObject(
       mockRentalObject.externalId,
       true
     )
 
     // Assert
     assert(result.ok)
-    expect(result.data.amount).toBe(1000)
-    expect(result.data.vat).toBe(200)
-    expect(result.data.rows[0].amount).toBe(1000) // 800 + 200
-    expect(result.data.rows[0].vatPercentage).toBe(200)
+    expect(result.data.rent.amount).toBe(1000)
+    expect(result.data.rent.vat).toBe(200)
+    expect(result.data.rent.rows[0].amount).toBe(1000) // 800 + 200
+    expect(result.data.rent.rows[0].vatPercentage).toBe(200)
   })
 
   it('should return rent with correct VAT values when includeVAT is false', async () => {
@@ -1309,21 +1378,21 @@ describe(tenfastAdapter.getRentForRentalObject, () => {
       .spyOn(tenfastAdapter, 'getRentalObject')
       .mockResolvedValueOnce({ ok: true, data: mockRentalObject })
     // Act
-    const result = await tenfastAdapter.getRentForRentalObject(
+    const result = await tenfastAdapter.getAvailabilityForRentalObject(
       mockRentalObject.externalId,
       false
     )
 
     // Assert
     assert(result.ok)
-    expect(result.data.amount).toBe(800)
-    expect(result.data.vat).toBe(0)
-    expect(result.data.rows[0].amount).toBe(800)
-    expect(result.data.rows[0].vatPercentage).toBe(0)
+    expect(result.data.rent.amount).toBe(800)
+    expect(result.data.rent.vat).toBe(0)
+    expect(result.data.rent.rows[0].amount).toBe(800)
+    expect(result.data.rent.rows[0].vatPercentage).toBe(0)
   })
 })
 
-describe(tenfastAdapter.getRentalObjectRents, () => {
+describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
   it('should return rents for all provided rentalObjectCodes', async () => {
     // Arrange
     const rentalObjectCodes = ['R1001', 'R1002']
@@ -1342,7 +1411,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
-    const result = await tenfastAdapter.getRentalObjectRents(
+    const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
       rentalObjectCodes,
       true
     )
@@ -1364,7 +1433,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
-    const result = await tenfastAdapter.getRentalObjectRents(
+    const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
       rentalObjectCodes,
       true
     )
@@ -1384,7 +1453,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
-    const result = await tenfastAdapter.getRentalObjectRents(
+    const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
       rentalObjectCodes,
       true
     )
@@ -1405,7 +1474,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
     // Act
-    const result = await tenfastAdapter.getRentalObjectRents(
+    const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
       rentalObjectCodes,
       true
     )
@@ -1442,7 +1511,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
       .mockResolvedValueOnce({ status: 200, data: batch3 })
 
     // Act
-    const result = await tenfastAdapter.getRentalObjectRents(
+    const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
       rentalObjectCodes,
       true
     )
@@ -1460,7 +1529,7 @@ describe(tenfastAdapter.getRentalObjectRents, () => {
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
     // Act
-    const result = await tenfastAdapter.getRentalObjectRents(
+    const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
       rentalObjectCodes,
       true
     )
