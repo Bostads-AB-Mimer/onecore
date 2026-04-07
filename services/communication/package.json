@@ -41,7 +41,8 @@
     "telefonnummer": "^2.1.0",
     "tslib": "^2.7.0",
     "validator": "^13.11.0",
-    "zod": "^3.25.67"
+    "zod": "^3.25.67",
+    "knex": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "9.32.0",
