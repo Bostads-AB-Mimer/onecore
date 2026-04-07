@@ -1,22 +1,27 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
+    "noEmit": true,
+
+    "module": "preserve",
+    "moduleResolution": "bundler",
+
     "rootDirs": [
       "./src",
       "./test"
-    ],
-    "outDir": "./build",
-    "noErrorTruncation": true,
-    "types": [
-      "koa-body",
-      "jest"
     ],
     "baseUrl": ".",
     "paths": {
       "@/*": [
         "./src/*"
       ]
-    }
+    },
+
+    "types": [
+      "koa-body",
+      "jest"
+    ]
+
   },
   "exclude": [
     "./build"
