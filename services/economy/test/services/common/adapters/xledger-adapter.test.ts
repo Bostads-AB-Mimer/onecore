@@ -37,12 +37,13 @@ describe(adapter.getInvoicesByContactCode, () => {
         data: {
           arTransactions: {
             edges: [],
+            pageInfo: { hasNextPage: false },
           },
         },
       })
 
     const result = await adapter.getInvoicesByContactCode('P12345')
-    expect(result).toEqual([])
+    expect(result?.content).toEqual([])
   })
 
   it('returns invoices when customer exists and has invoices', async () => {
@@ -83,13 +84,16 @@ describe(adapter.getInvoicesByContactCode, () => {
                 },
               },
             ],
+            pageInfo: { hasNextPage: false },
           },
         },
       })
 
     const result = await adapter.getInvoicesByContactCode('P12345')
-    expect(result).toHaveLength(1)
-    expect(() => schemas.v1.InvoiceSchema.array().parse(result)).not.toThrow()
+    expect(result?.content).toHaveLength(1)
+    expect(() =>
+      schemas.v1.InvoiceSchema.array().parse(result?.content)
+    ).not.toThrow()
   })
 
   it('marks invoice as credit when payment reference is set', async () => {
@@ -129,12 +133,13 @@ describe(adapter.getInvoicesByContactCode, () => {
                 },
               },
             ],
+            pageInfo: { hasNextPage: false },
           },
         },
       })
 
     const result = await adapter.getInvoicesByContactCode('P12345')
-    expect(result).toEqual([
+    expect(result?.content).toEqual([
       expect.objectContaining({ credit: { originalInvoiceId: '123456' } }),
     ])
   })
@@ -175,12 +180,13 @@ describe(adapter.getInvoicesByContactCode, () => {
                 },
               },
             ],
+            pageInfo: { hasNextPage: false },
           },
         },
       })
 
     const result = await adapter.getInvoicesByContactCode('P12345')
-    expect(result).toEqual([
+    expect(result?.content).toEqual([
       expect.objectContaining({ credit: { originalInvoiceId: '12345' } }),
     ])
   })
