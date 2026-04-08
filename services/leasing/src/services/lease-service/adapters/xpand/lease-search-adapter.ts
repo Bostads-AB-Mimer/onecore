@@ -233,6 +233,17 @@ export class LeaseSearchQueryBuilder {
   }
 
   /**
+   * Apply lease type filter (e.g., Garagekontrakt, P-Platskontrakt)
+   */
+  applyLeaseTypeFilter(): this {
+    if (this.params.leaseType && this.params.leaseType.length > 0) {
+      this.query.whereIn('hyhav.hyhavben', this.params.leaseType)
+    }
+
+    return this
+  }
+
+  /**
    * Apply status filter
    * Uses STATUS_CONDITIONS lookup for cleaner code
    */
@@ -342,6 +353,7 @@ export class LeaseSearchQueryBuilder {
 
     return this
   }
+
 
   /**
    * Build SELECT fields
@@ -590,6 +602,7 @@ export const searchLeases = async (
   builder
     .applySearch()
     .applyObjectTypeFilter()
+    .applyLeaseTypeFilter()
     .applyStatusFilter()
     .applyDateFilters()
     .applyPropertyFilter()
