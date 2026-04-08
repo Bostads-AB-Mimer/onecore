@@ -22,6 +22,7 @@ import {
   MultiSelectFilterDropdown,
   MultiSelectSearchFilterDropdown,
 } from '@/shared/ui/filters'
+import { ObjectTypeFilter } from '@/shared/ui/filters/ObjectTypeFilter'
 import { ViewLayout } from '@/shared/ui/layout'
 import { Pagination } from '@/shared/ui/Pagination'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
@@ -188,14 +189,20 @@ const LeasesPage = () => {
               hasActiveFilters={filters.hasActiveFilters}
               onClearFilters={filters.clearFilters}
             >
-              <MultiSelectFilterDropdown
-                options={objectTypeOptions.map((o) => ({
+              <ObjectTypeFilter
+                objectTypeOptions={objectTypeOptions.map((o) => ({
                   label: o.label,
                   value: o.value,
                 }))}
-                selectedValues={filters.selectedObjectTypes}
-                onSelectionChange={(vals) =>
+                selectedObjectTypes={filters.selectedObjectTypes}
+                onObjectTypeChange={(vals) =>
                   filters.setFilterValues('objectType', vals)
+                }
+                parkingOptionValue="parkering"
+                loadParkingSpaceTypes={filters.loadParkingSpaceTypes}
+                selectedParkingSpaceTypes={filters.selectedParkingSpaceTypes}
+                onParkingSpaceTypeChange={(vals) =>
+                  filters.setFilterValues('parkingSpaceType', vals)
                 }
                 placeholder="Objekttyp"
               />
