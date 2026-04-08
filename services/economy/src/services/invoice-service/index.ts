@@ -41,7 +41,7 @@ export const routes = (router: KoaRouter) => {
     const {
       from,
       to,
-      size,
+      size = 1000,
       skip = 0,
       after,
       // paymentStatus
