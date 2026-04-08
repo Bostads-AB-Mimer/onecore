@@ -248,14 +248,11 @@ export const routes = (router: KoaRouter) => {
    *                     unprocessedCsv:
    *                       type: string
    *       '400':
-   *         description: Missing or invalid csv field.
+   *         description: Invalid request body or invalid CSV content.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
-   *               required:
-   *                 - error
-   *                 - reason
    *               properties:
    *                 error:
    *                   type: string
@@ -263,6 +260,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   enum:
    *                     - invalid-csv
+   *                   description: Present when the request body is valid but the CSV content is invalid.
    *       '500':
    *         description: Internal server error.
    *         content:

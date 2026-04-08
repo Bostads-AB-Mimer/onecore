@@ -56,11 +56,10 @@ function parseCsv(csv: string): Result<Array<IMDRow>> {
     const firstTo = lines[0].to.toISOString()
     const mixedPeriod = lines.some(
       (row) =>
-        row.from.toISOString() !== firstFrom ||
-        row.to.toISOString() !== firstTo
+        row.from.toISOString() !== firstFrom || row.to.toISOString() !== firstTo
     )
     if (mixedPeriod) {
-      logger.error('IMD: CSV contains rows with different periods')
+      logger.warn('IMD: CSV contains rows with different periods')
       return { ok: false, reason: 'invalid-csv' }
     }
 
@@ -148,7 +147,11 @@ async function enrichIMDRows(
       } else if (lookup === null) {
         unprocessed.push({ ...row, reason: 'no-active-lease' })
       } else if (isMultipleLeaseMatch(lookup)) {
-        unprocessed.push({ ...row, reason: 'multiple-leases', leaseIds: lookup.leaseIds })
+        unprocessed.push({
+          ...row,
+          reason: 'multiple-leases',
+          leaseIds: lookup.leaseIds,
+        })
       } else if (hasTenantMoved(lookup, today)) {
         unprocessed.push({ ...row, reason: 'tenant-moved' })
       } else {
@@ -226,17 +229,21 @@ function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
 const UNPROCESSED_CSV_HEADER =
   'Hyresobjektskod;Fr.o.m;T.o.m;Enhet;Volym;Kostnad;Måttenhet;Orsak'
 
-const REASON_LABELS: Record<UnprocessedReason, string> = {
+// 'multiple-leases' is handled dynamically in getReasonLabel (includes lease IDs)
+const REASON_LABELS: Record<
+  Exclude<UnprocessedReason, 'multiple-leases'>,
+  string
+> = {
   'no-rental-object': 'Hyresobjekt saknas i Tenfast',
   'no-active-lease': 'Inget aktivt kontrakt i perioden',
   'amount-too-low': 'Belopp under 15 kr',
   'tenant-moved': 'Hyresgästen har avslutat kontrakt efter perioden',
-  'multiple-leases': 'Flera kontrakt matchar perioden',
 }
 
 function getReasonLabel(row: UnprocessedIMDRow): string {
-  if (row.reason === 'multiple-leases' && row.leaseIds) {
-    return `Flera kontrakt matchar perioden: ${row.leaseIds.join(', ')}`
+  if (row.reason === 'multiple-leases') {
+    const ids = row.leaseIds?.join(', ') ?? ''
+    return `Flera kontrakt matchar perioden: ${ids}`
   }
   return REASON_LABELS[row.reason]
 }

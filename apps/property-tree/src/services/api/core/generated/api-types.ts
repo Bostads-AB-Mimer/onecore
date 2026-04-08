@@ -6258,12 +6258,16 @@ export interface paths {
             };
           };
         };
-        /** @description Missing or invalid csv field. */
+        /** @description Invalid request body or invalid CSV content. */
         400: {
           content: {
             "application/json": {
-              error: string;
-              reason: "invalid-csv";
+              error?: string;
+              /**
+               * @description Present when the request body is valid but the CSV content is invalid.
+               * @enum {string}
+               */
+              reason?: "invalid-csv";
             };
           };
         };

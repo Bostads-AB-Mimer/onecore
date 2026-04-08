@@ -1,6 +1,9 @@
 import assert from 'node:assert'
 import { economy } from '@onecore/types'
-import type { LeaseMatch, MultipleLeaseMatch } from '@src/common/adapters/tenfast/tenfast-adapter'
+import type {
+  LeaseMatch,
+  MultipleLeaseMatch,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
 
 jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),

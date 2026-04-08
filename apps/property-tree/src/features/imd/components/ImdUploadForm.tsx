@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react'
 
-import { type IMDProcessError,imdService } from '@/services/api/core'
+import { type IMDProcessError, imdService } from '@/services/api/core'
 
 import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
@@ -58,7 +58,7 @@ export function ImdUploadForm() {
         toast({
           title: 'Ogiltig CSV',
           description:
-            'Filen innehåller rader från olika perioder. Varje fil får bara innehålla en period.',
+            'Filen verkar ha fel format eller innehåller rader från olika perioder. Kontrollera att filen matchar förväntat format och att alla rader tillhör samma period.',
           variant: 'destructive',
         })
       } else {
