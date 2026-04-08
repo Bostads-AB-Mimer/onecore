@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef } from 'react'
 import {
   type BuildingManager,
   leaseSearchService,
+  type ParkingSpaceType,
 } from '@/services/api/core/leaseSearchService'
 
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
@@ -19,6 +20,7 @@ const FILTER_KEYS = [
   'property',
   'district',
   'buildingManager',
+  'parkingSpaceType',
   'startDateFrom',
   'startDateTo',
   'endDateFrom',
@@ -71,6 +73,10 @@ export function useLeaseFilters() {
     () => urlSearchParams.getAll('buildingManager'),
     [urlSearchParams]
   )
+  const selectedParkingSpaceTypes = useMemo(
+    () => urlSearchParams.getAll('parkingSpaceType'),
+    [urlSearchParams]
+  )
 
   const rawSortBy = urlSearchParams.get('sortBy')
   const sortBy: ValidSortKey | undefined =
@@ -98,6 +104,10 @@ export function useLeaseFilters() {
         selectedBuildingManagers.length > 0
           ? selectedBuildingManagers
           : undefined,
+      parkingSpaceType:
+        selectedParkingSpaceTypes.length > 0
+          ? selectedParkingSpaceTypes
+          : undefined,
       startDateFrom: startDateFrom || undefined,
       startDateTo: startDateTo || undefined,
       endDateFrom: endDateFrom || undefined,
@@ -113,6 +123,7 @@ export function useLeaseFilters() {
       selectedProperties,
       selectedDistricts,
       selectedBuildingManagers,
+      selectedParkingSpaceTypes,
       startDateFrom,
       startDateTo,
       endDateFrom,
@@ -172,6 +183,18 @@ export function useLeaseFilters() {
     []
   )
 
+  // Parking space types: fetch once on first request, cache result
+  const parkingSpaceTypesRef = useRef<ParkingSpaceType[] | null>(null)
+  const loadParkingSpaceTypes = useCallback(async (): Promise<
+    ParkingSpaceType[]
+  > => {
+    if (!parkingSpaceTypesRef.current) {
+      parkingSpaceTypesRef.current =
+        await leaseSearchService.getParkingSpaceTypes()
+    }
+    return parkingSpaceTypesRef.current
+  }, [])
+
   return {
     ...filters,
     pageSize: PAGE_SIZE,
@@ -183,6 +206,7 @@ export function useLeaseFilters() {
     selectedProperties,
     selectedDistricts,
     selectedBuildingManagers,
+    selectedParkingSpaceTypes,
     startDateFrom,
     startDateTo,
     endDateFrom,
@@ -195,6 +219,9 @@ export function useLeaseFilters() {
 
     // Search function for async filter dropdown
     searchBuildingManagers,
+
+    // Parking space type loader for hierarchical objekttyp filter
+    loadParkingSpaceTypes,
 
     // Query results
     leases: leases || [],
