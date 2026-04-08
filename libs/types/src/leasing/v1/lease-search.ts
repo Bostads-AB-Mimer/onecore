@@ -36,6 +36,11 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
 
+  parkingSpaceType: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .optional(),
+
   // Date filters
   startDateFrom: z.string().optional(),
   startDateTo: z.string().optional(),
@@ -126,6 +131,7 @@ export const LeaseSearchResultSchema = z.object({
   area: z.string().nullable().optional(),
   buildingManager: z.string().nullable().optional(),
   districtName: z.string().nullable().optional(),
+  parkingSpaceType: z.string().nullable().optional(),
 })
 
 export type LeaseSearchResult = z.infer<typeof LeaseSearchResultSchema>
