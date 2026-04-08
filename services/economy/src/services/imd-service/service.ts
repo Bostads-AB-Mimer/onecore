@@ -52,6 +52,18 @@ function parseCsv(csv: string): Result<Array<IMDRow>> {
         economy.IMDRowSchema.parse(extractNormalizedCols(line, i))
       )
 
+    const firstFrom = lines[0].from.toISOString()
+    const firstTo = lines[0].to.toISOString()
+    const mixedPeriod = lines.some(
+      (row) =>
+        row.from.toISOString() !== firstFrom ||
+        row.to.toISOString() !== firstTo
+    )
+    if (mixedPeriod) {
+      logger.error('IMD: CSV contains rows with different periods')
+      return { ok: false, reason: 'invalid-csv' }
+    }
+
     return { ok: true, data: lines }
   } catch (err) {
     logger.error(err, 'IMD: Failed to parse CSV')

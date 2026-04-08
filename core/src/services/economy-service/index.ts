@@ -253,9 +253,16 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               required:
+   *                 - error
+   *                 - reason
    *               properties:
    *                 error:
    *                   type: string
+   *                 reason:
+   *                   type: string
+   *                   enum:
+   *                     - invalid-csv
    *       '500':
    *         description: Internal server error.
    *         content:
@@ -277,7 +284,10 @@ export const routes = (router: KoaRouter) => {
 
       if (!result.ok) {
         ctx.status = result.statusCode ?? 500
-        ctx.body = { error: 'Processing failed' }
+        ctx.body =
+          result.err === 'invalid-csv'
+            ? { error: 'Invalid CSV format', reason: 'invalid-csv' }
+            : { error: 'Processing failed' }
         return
       }
 

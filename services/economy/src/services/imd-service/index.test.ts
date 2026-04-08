@@ -27,6 +27,15 @@ describe(imdService.parseCsv, () => {
 
     expect(() => economy.IMDRowSchema.array().parse(result.data)).not.toThrow()
   })
+
+  it('returns invalid-csv when rows have different periods', () => {
+    const mixedPeriodCsv = `
+306-008-01-0201;2026-01-01;2026-01-31;VV;129,312;136,892;7,580;621,680;;82,016;m3;;;1
+306-008-01-0202;2026-02-01;2026-02-28;VV;50,608;52,702;2,094;171,740;;82,016;m3;;;1
+`
+    const result = imdService.parseCsv(mixedPeriodCsv)
+    expect(result.ok).toBe(false)
+  })
 })
 
 describe(imdService.enrichIMDRows, () => {

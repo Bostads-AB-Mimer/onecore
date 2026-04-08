@@ -286,7 +286,10 @@ export async function getLeaseDetailsForInvoices(
 export async function processIMD(
   csv: string
 ): Promise<
-  AdapterResult<z.infer<typeof economy.ProcessIMDResponseSchema>, 'unknown'>
+  AdapterResult<
+    z.infer<typeof economy.ProcessIMDResponseSchema>,
+    'invalid-csv' | 'unknown'
+  >
 > {
   try {
     const response = await axios.post(
@@ -296,6 +299,10 @@ export async function processIMD(
 
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 400) {
+      return { ok: false, err: 'invalid-csv', statusCode: 400 }
     }
 
     logger.error(response.data, 'economy-adapter.processIMD')

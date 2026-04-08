@@ -23,12 +23,10 @@ export const routes = (router: KoaRouter) => {
 
     if (!result.ok) {
       ctx.status = result.reason === 'invalid-csv' ? 400 : 500
-      ctx.body = {
-        error:
-          result.reason === 'invalid-csv'
-            ? 'Invalid CSV format'
-            : 'Processing failed',
-      }
+      ctx.body =
+        result.reason === 'invalid-csv'
+          ? { error: 'Invalid CSV format', reason: 'invalid-csv' as const }
+          : { error: 'Processing failed' }
       return
     }
 

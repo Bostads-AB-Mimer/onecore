@@ -6262,7 +6262,8 @@ export interface paths {
         400: {
           content: {
             "application/json": {
-              error?: string;
+              error: string;
+              reason: "invalid-csv";
             };
           };
         };
