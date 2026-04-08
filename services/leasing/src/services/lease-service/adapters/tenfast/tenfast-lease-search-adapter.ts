@@ -17,14 +17,15 @@ const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
 
 /**
- * Uses the new Tenfast search endpoint: GET /v1/hyresvard/avtal/search
+ * Uses the Tenfast search endpoint: GET /v1/hyresvard/avtal/search
  *
- * Supported filters (deepObject style):
- * filter[isArchived], filter[startDate], filter[endDate], filter[hyresobjekt][typ],
- * filter[hyresobjekt][stadsdel], filter[hyresobjekt][postadress], filter[stage],
+ * Supported filters (deepObject style, must use actual field paths):
+ * filter[isArchived], filter[startDate], filter[endDate], filter[stage],
  * filter[externalId], filter[hyresgaster][displayName], filter[hyresgaster][idbeteckning],
- * filter[hyresgaster][externalId]
+ * filter[hyresgaster][externalId], filter[hyresobjekt][typ], filter[hyresobjekt][stadsdel],
+ * filter[hyresobjekt][postadress], filter[hyresobjekt][fastighet][fastighetsbeteckning]
  *
+ * Invalid filter parameters will cause an error (fail-early).
  * Pagination: cursor-based via `limit` + `paginate` (cursor token from prev response).
  */
 
@@ -141,7 +142,7 @@ export function buildTenfastQueryParams(
 
   if (params.property && params.property.length > 0) {
     query.set(
-      'filter[fastighet][fastighetsbeteckning]',
+      'filter[hyresobjekt][fastighet][fastighetsbeteckning]',
       params.property.join(',')
     )
   }
