@@ -1,3 +1,4 @@
+import { format } from 'date-fns'
 import { Download } from 'lucide-react'
 
 import { usePropertySearch } from '@/features/properties'
@@ -167,7 +168,12 @@ export function RentalBlocksPage() {
                 startDate={filters.getFilterValue('fromDate') || null}
                 endDate={filters.getFilterValue('toDate') || null}
                 onDateChange={(start, end) =>
-                  filters.setDateRange('fromDate', 'toDate', start, end)
+                  filters.setDateRange(
+                    'fromDate',
+                    'toDate',
+                    start ? format(start, 'yyyy-MM-dd') : null,
+                    end ? format(end, 'yyyy-MM-dd') : null
+                  )
                 }
                 placeholder="Datum..."
               />
