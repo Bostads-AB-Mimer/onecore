@@ -15,6 +15,7 @@ const PAGE_SIZE = 50
 const FILTER_KEYS = [
   'objectType',
   'status',
+  'leaseType',
   'property',
   'district',
   'buildingManager',
@@ -54,6 +55,10 @@ export function useLeaseFilters() {
     () => urlSearchParams.getAll('status') as ('0' | '1' | '2' | '3')[],
     [urlSearchParams]
   )
+  const selectedLeaseTypes = useMemo(
+    () => urlSearchParams.getAll('leaseType'),
+    [urlSearchParams]
+  )
   const selectedProperties = useMemo(
     () => urlSearchParams.getAll('property'),
     [urlSearchParams]
@@ -85,6 +90,7 @@ export function useLeaseFilters() {
       objectType:
         selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
       status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
+      leaseType: selectedLeaseTypes.length > 0 ? selectedLeaseTypes : undefined,
       property: selectedProperties.length > 0 ? selectedProperties : undefined,
       districtNames:
         selectedDistricts.length > 0 ? selectedDistricts : undefined,
@@ -103,6 +109,7 @@ export function useLeaseFilters() {
       filters.debouncedSearch,
       selectedObjectTypes,
       selectedStatuses,
+      selectedLeaseTypes,
       selectedProperties,
       selectedDistricts,
       selectedBuildingManagers,
@@ -172,6 +179,7 @@ export function useLeaseFilters() {
     // Resolved filter values
     selectedObjectTypes,
     selectedStatuses,
+    selectedLeaseTypes,
     selectedProperties,
     selectedDistricts,
     selectedBuildingManagers,

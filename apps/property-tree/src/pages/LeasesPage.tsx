@@ -34,6 +34,16 @@ const objectTypeOptions = [
   { label: 'Övrigt', value: 'ovrigt' },
 ] as const
 
+const leaseTypeOptions = [
+  { label: 'Bostadskontrakt', value: 'Bostadskontrakt' },
+  { label: 'Garagekontrakt', value: 'Garagekontrakt' },
+  { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
+  { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
+  { label: 'Campuskontrakt', value: 'Campuskontrakt' },
+  { label: 'Kooperativ hyresrätt', value: 'Kooperativ hyresrätt' },
+  { label: 'Övrigt', value: 'Övrigt' },
+] as const
+
 const statusOptions = [
   { label: 'Gällande', value: '0' },
   { label: 'Kommande', value: '1' },
@@ -200,6 +210,18 @@ const LeasesPage = () => {
                   filters.setFilterValues('status', vals)
                 }
                 placeholder="Status"
+              />
+
+              <MultiSelectFilterDropdown
+                options={leaseTypeOptions.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                }))}
+                selectedValues={filters.selectedLeaseTypes}
+                onSelectionChange={(vals) =>
+                  filters.setFilterValues('leaseType', vals)
+                }
+                placeholder="Kontraktstyp"
               />
 
               <MultiSelectSearchFilterDropdown
