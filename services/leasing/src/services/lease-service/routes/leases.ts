@@ -444,6 +444,8 @@ export const routes = (router: KoaRouter) => {
       'districtNames',
       'buildingManager',
       'parkingSpaceType',
+      'sortBy',
+      'sortOrder',
     ])
 
     const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
