@@ -55,7 +55,19 @@ export async function getInvoicesByContactCode(
   size?: number,
   skip?: number,
   after?: string
-): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+): Promise<
+  AdapterResult<
+    {
+      invoices: Invoice[]
+      pageInfo: {
+        hasNextPage?: boolean
+        endCursor?: string
+        xpandInvoicesFetched: number
+      }
+    },
+    'not-found' | 'unknown'
+  >
+> {
   const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
   const params = {
     ...filters,
@@ -86,9 +98,11 @@ export async function getInvoicesSentToDebtCollection(
     return { ok: false, err: invoicesResult.err }
   }
 
-  const hasDebtCollection = invoicesResult.data.filter((invoice: Invoice) => {
-    return invoice.sentToDebtCollection !== undefined
-  })
+  const hasDebtCollection = invoicesResult.data.invoices.filter(
+    (invoice: Invoice) => {
+      return invoice.sentToDebtCollection !== undefined
+    }
+  )
 
   return { ok: true, data: hasDebtCollection }
 }

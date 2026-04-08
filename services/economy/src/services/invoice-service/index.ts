@@ -152,7 +152,7 @@ export const routes = (router: KoaRouter) => {
           },
         },
         metadata
-      ) // TODO uppdatera konsumenter av endpoint
+      )
     } catch (error: any) {
       logger.error(
         { error, contactCode: contactCode },

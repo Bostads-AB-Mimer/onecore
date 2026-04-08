@@ -102,7 +102,7 @@ export const routes = (router: KoaRouter) => {
     } else {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(
-        { data: result.data, totalCount: result.data.length },
+        { data: result.data, totalCount: result.data.invoices.length },
         metadata
       )
     }
