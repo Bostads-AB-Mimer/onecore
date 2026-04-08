@@ -1,7 +1,11 @@
 import { logger } from '@onecore/utilities'
 import { economy } from '@onecore/types'
 
-import { getActiveLeasesByRentalObjectCodes } from '../common/adapters/xpand-db-adapter'
+import {
+  getActiveLeasesByRentalObjectCodes,
+  type LeaseMatch,
+  type MultipleLeaseMatch,
+} from '../../common/adapters/tenfast/tenfast-adapter'
 
 import z from 'zod'
 
@@ -48,6 +52,17 @@ function parseCsv(csv: string): Result<Array<IMDRow>> {
         economy.IMDRowSchema.parse(extractNormalizedCols(line, i))
       )
 
+    const firstFrom = lines[0].from.toISOString()
+    const firstTo = lines[0].to.toISOString()
+    const mixedPeriod = lines.some(
+      (row) =>
+        row.from.toISOString() !== firstFrom || row.to.toISOString() !== firstTo
+    )
+    if (mixedPeriod) {
+      logger.warn('IMD: CSV contains rows with different periods')
+      return { ok: false, reason: 'invalid-csv' }
+    }
+
     return { ok: true, data: lines }
   } catch (err) {
     logger.error(err, 'IMD: Failed to parse CSV')
@@ -63,12 +78,25 @@ type UnprocessedReason =
   | 'no-rental-object'
   | 'no-active-lease'
   | 'amount-too-low'
+  | 'tenant-moved'
+  | 'multiple-leases'
 
 type UnprocessedIMDRow = IMDRow & {
   reason: UnprocessedReason
+  leaseIds?: string[] // populated when reason is 'multiple-leases'
 }
 
 const MIN_COST = 15
+
+function isMultipleLeaseMatch(
+  m: LeaseMatch | MultipleLeaseMatch
+): m is MultipleLeaseMatch {
+  return 'leaseIds' in m
+}
+
+function hasTenantMoved(lease: LeaseMatch, asOf: Date): boolean {
+  return lease.leaseEndDate !== null && lease.leaseEndDate < asOf
+}
 
 type EnrichResult = {
   enriched: Array<EnrichedIMDRow>
@@ -109,6 +137,8 @@ async function enrichIMDRows(
       periodEnd: period.end,
     })
 
+    const today = new Date()
+
     for (const row of eligible) {
       const lookup = leaseMap.get(row.rentalObjectCode)
 
@@ -116,8 +146,16 @@ async function enrichIMDRows(
         unprocessed.push({ ...row, reason: 'no-rental-object' })
       } else if (lookup === null) {
         unprocessed.push({ ...row, reason: 'no-active-lease' })
+      } else if (isMultipleLeaseMatch(lookup)) {
+        unprocessed.push({
+          ...row,
+          reason: 'multiple-leases',
+          leaseIds: lookup.leaseIds,
+        })
+      } else if (hasTenantMoved(lookup, today)) {
+        unprocessed.push({ ...row, reason: 'tenant-moved' })
       } else {
-        enriched.push({ ...row, leaseId: lookup })
+        enriched.push({ ...row, leaseId: lookup.leaseId })
       }
     }
 
@@ -191,10 +229,23 @@ function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
 const UNPROCESSED_CSV_HEADER =
   'Hyresobjektskod;Fr.o.m;T.o.m;Enhet;Volym;Kostnad;Måttenhet;Orsak'
 
-const REASON_LABELS: Record<UnprocessedReason, string> = {
-  'no-rental-object': 'Hyresobjekt saknas i Xpand',
+// 'multiple-leases' is handled dynamically in getReasonLabel (includes lease IDs)
+const REASON_LABELS: Record<
+  Exclude<UnprocessedReason, 'multiple-leases'>,
+  string
+> = {
+  'no-rental-object': 'Hyresobjekt saknas i Tenfast',
   'no-active-lease': 'Inget aktivt kontrakt i perioden',
   'amount-too-low': 'Belopp under 15 kr',
+  'tenant-moved': 'Hyresgästen har avslutat kontrakt efter perioden',
+}
+
+function getReasonLabel(row: UnprocessedIMDRow): string {
+  if (row.reason === 'multiple-leases') {
+    const ids = row.leaseIds?.join(', ') ?? ''
+    return `Flera kontrakt matchar perioden: ${ids}`
+  }
+  return REASON_LABELS[row.reason]
 }
 
 function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {
@@ -209,7 +260,7 @@ function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {
       volume,
       cost,
       row.measurementUnit,
-      REASON_LABELS[row.reason],
+      getReasonLabel(row),
     ].join(';')
   })
 

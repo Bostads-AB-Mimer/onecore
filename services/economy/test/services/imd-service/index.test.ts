@@ -92,9 +92,7 @@ describe('IMD Service routes', () => {
     })
 
     it('returns 400 when csv is missing', async () => {
-      const res = await request(app.callback())
-        .post('/imd/process')
-        .send({})
+      const res = await request(app.callback()).post('/imd/process').send({})
 
       expect(res.status).toBe(400)
     })
@@ -119,6 +117,7 @@ describe('IMD Service routes', () => {
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Invalid CSV format')
+      expect(res.body.reason).toBe('invalid-csv')
     })
 
     it('returns 500 when processIMD returns processing-failed', async () => {

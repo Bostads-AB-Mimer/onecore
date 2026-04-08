@@ -1,11 +1,15 @@
 import assert from 'node:assert'
 import { economy } from '@onecore/types'
+import type {
+  LeaseMatch,
+  MultipleLeaseMatch,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
 
-jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({
+jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),
 }))
 
-import { getActiveLeasesByRentalObjectCodes } from '@src/services/common/adapters/xpand-db-adapter'
+import { getActiveLeasesByRentalObjectCodes } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { imdService } from '.'
 
 const mockGetActiveLeases =
@@ -26,6 +30,15 @@ describe(imdService.parseCsv, () => {
 
     expect(() => economy.IMDRowSchema.array().parse(result.data)).not.toThrow()
   })
+
+  it('returns invalid-csv when rows have different periods', () => {
+    const mixedPeriodCsv = `
+306-008-01-0201;2026-01-01;2026-01-31;VV;129,312;136,892;7,580;621,680;;82,016;m3;;;1
+306-008-01-0202;2026-02-01;2026-02-28;VV;50,608;52,702;2,094;171,740;;82,016;m3;;;1
+`
+    const result = imdService.parseCsv(mixedPeriodCsv)
+    expect(result.ok).toBe(false)
+  })
 })
 
 describe(imdService.enrichIMDRows, () => {
@@ -35,9 +48,15 @@ describe(imdService.enrichIMDRows, () => {
 
   it('maps lease ids to rows by rental object code', async () => {
     mockGetActiveLeases.mockResolvedValue(
-      new Map<string, string | null>([
-        ['306-008-01-0201', '306-008-01-0201/02'],
-        ['306-008-01-0202', '306-008-01-0202/01'],
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
+        [
+          '306-008-01-0202',
+          { leaseId: '306-008-01-0202/01', leaseEndDate: null },
+        ],
       ])
     )
 
@@ -80,8 +99,11 @@ describe(imdService.enrichIMDRows, () => {
 
   it('tags row as no-active-lease when rental object exists but has no lease', async () => {
     mockGetActiveLeases.mockResolvedValue(
-      new Map<string, string | null>([
-        ['306-008-01-0201', '306-008-01-0201/02'],
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
         ['306-008-01-0299', null],
       ])
     )
@@ -127,7 +149,7 @@ describe(imdService.enrichIMDRows, () => {
   })
 
   it('tags row as no-rental-object when code is absent from results', async () => {
-    mockGetActiveLeases.mockResolvedValue(new Map<string, string | null>())
+    mockGetActiveLeases.mockResolvedValue(new Map<string, LeaseMatch | null>())
 
     const result = await imdService.enrichIMDRows([
       {
@@ -155,8 +177,11 @@ describe(imdService.enrichIMDRows, () => {
 
   it('tags row as amount-too-low when cost is under 15', async () => {
     mockGetActiveLeases.mockResolvedValue(
-      new Map<string, string | null>([
-        ['306-008-01-0201', '306-008-01-0201/02'],
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
       ])
     )
 
@@ -188,6 +213,117 @@ describe(imdService.enrichIMDRows, () => {
         expect.objectContaining({
           rentalObjectCode: '306-008-01-0202',
           reason: 'amount-too-low',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as tenant-moved when lease ended before today', async () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: yesterday },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          reason: 'tenant-moved',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as multiple-leases when two leases cover the period', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | MultipleLeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          {
+            leaseIds: ['306-008-01-0201/01', '306-008-01-0201/02'],
+          },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          reason: 'multiple-leases',
+          leaseIds: ['306-008-01-0201/01', '306-008-01-0201/02'],
+        }),
+      ])
+    )
+  })
+
+  it('does not tag as tenant-moved when lease end date is in the future', async () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: tomorrow },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.unprocessed).toHaveLength(0)
+    expect(result.data.enriched).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          leaseId: '306-008-01-0201/02',
         }),
       ])
     )
@@ -339,7 +475,7 @@ describe(imdService.toUnprocessedCsv, () => {
     ])
 
     const reason = csv.split('\n')[1].split(';')[7]
-    expect(reason).toBe('Hyresobjekt saknas i Xpand')
+    expect(reason).toBe('Hyresobjekt saknas i Tenfast')
   })
 
   it('uses correct reason for amount-too-low', () => {

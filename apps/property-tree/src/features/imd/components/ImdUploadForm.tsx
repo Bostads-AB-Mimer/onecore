@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react'
 
-import { imdService } from '@/services/api/core'
+import { type IMDProcessError, imdService } from '@/services/api/core'
 
 import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
@@ -40,8 +40,12 @@ export function ImdUploadForm() {
     ReturnType<typeof imdService.processIMD>
   > | null>(null)
 
-  const mutation = useMutation({
-    mutationFn: async (csv: string) => imdService.processIMD(csv),
+  const mutation = useMutation<
+    Awaited<ReturnType<typeof imdService.processIMD>>,
+    IMDProcessError,
+    string
+  >({
+    mutationFn: (csv: string) => imdService.processIMD(csv),
     onSuccess: (data) => {
       setResult(data)
       toast({
@@ -49,13 +53,22 @@ export function ImdUploadForm() {
         description: `${data.numEnriched} rader berikade, ${data.numUnprocessed} ej bearbetade.`,
       })
     },
-    onError: () => {
-      toast({
-        title: 'Bearbetning misslyckades',
-        description:
-          'Kunde inte bearbeta filen. Kontrollera formatet och försök igen.',
-        variant: 'destructive',
-      })
+    onError: (error) => {
+      if (error.reason === 'invalid-csv') {
+        toast({
+          title: 'Ogiltig CSV',
+          description:
+            'Filen verkar ha fel format eller innehåller rader från olika perioder. Kontrollera att filen matchar förväntat format och att alla rader tillhör samma period.',
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Bearbetning misslyckades',
+          description:
+            'Kunde inte bearbeta filen. Kontrollera formatet och försök igen.',
+          variant: 'destructive',
+        })
+      }
     },
   })
 
@@ -143,6 +156,10 @@ export function ImdUploadForm() {
               <li>Rå IMD-exportfil, semikolonseparerad CSV</li>
               <li>Minst 11 kolumner per rad</li>
               <li>Inga kolumnrubriker — enbart datarader</li>
+              <li>
+                Alla rader måste tillhöra samma period (Fr.o.m och T.o.m) —
+                blanda inte månader i samma fil
+              </li>
             </ul>
             <p className="text-xs text-muted-foreground/70">
               Exempelrad:

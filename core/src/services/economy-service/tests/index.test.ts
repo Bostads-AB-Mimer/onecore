@@ -88,6 +88,25 @@ describe('economy-service routes', () => {
       expect(res.status).toBe(400)
     })
 
+    it('returns 400 with reason when adapter returns invalid-csv', async () => {
+      jest.spyOn(economyAdapter, 'processIMD').mockResolvedValue({
+        ok: false,
+        err: 'invalid-csv',
+        statusCode: 400,
+      })
+
+      const csv =
+        '306-008-01-0201;2026-01-01;2026-01-31;VV;129;136;7,58;621,68;;82;m3;;;1'
+
+      const res = await request(app.callback())
+        .post('/imd/process')
+        .send({ csv })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid CSV format')
+      expect(res.body.reason).toBe('invalid-csv')
+    })
+
     it('returns 500 when adapter returns error', async () => {
       jest.spyOn(economyAdapter, 'processIMD').mockResolvedValue({
         ok: false,

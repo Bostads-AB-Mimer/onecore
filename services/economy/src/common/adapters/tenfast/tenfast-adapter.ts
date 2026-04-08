@@ -11,6 +11,8 @@ import {
   TenfastInvoiceRow,
   TenfastRentArticleSchema,
   TenfastRentArticle,
+  TenfastBatchGetRentalObjectsResponseSchema,
+  type TenfastBatchGetLease,
 } from './schemas'
 import {
   Invoice,
@@ -226,6 +228,121 @@ export const updateLeaseInvoiceRows = async (params: {
     logger.error(err, 'tenfast-adapter.updateLeaseInvoiceRows')
     return { ok: false, err: err.message }
   }
+}
+
+export type LeaseMatch = {
+  leaseId: string
+  leaseEndDate: Date | null
+}
+
+export type MultipleLeaseMatch = {
+  leaseIds: string[]
+}
+
+const BATCH_SIZE = 500
+
+// Stages that represent leases that were never fully activated
+const EXCLUDED_STAGES = new Set(['draft', 'signingInProgress'])
+
+function findMatchingLeases(
+  leases: TenfastBatchGetLease[],
+  periodStart: Date,
+  periodEnd: Date
+): TenfastBatchGetLease[] {
+  // Only consider leases that cover the entire period — started on or before
+  // periodStart and ends on or after periodEnd (or has no end date).
+  return leases.filter((lease) => {
+    if (EXCLUDED_STAGES.has(lease.stage)) return false
+    if (lease.startDate > periodStart) return false
+    if (lease.endDate !== null && lease.endDate < periodEnd) return false
+    return true
+  })
+}
+
+export const getActiveLeasesByRentalObjectCodes = async (params: {
+  rentalObjectCodes: string[]
+  periodStart: Date
+  periodEnd: Date
+}): Promise<Map<string, LeaseMatch | MultipleLeaseMatch | null>> => {
+  if (params.rentalObjectCodes.length === 0) return new Map()
+
+  const batches: string[][] = []
+  for (let i = 0; i < params.rentalObjectCodes.length; i += BATCH_SIZE) {
+    batches.push(params.rentalObjectCodes.slice(i, i + BATCH_SIZE))
+  }
+
+  const queryBatch = async (
+    batch: string[],
+    index: number
+  ): Promise<Map<string, LeaseMatch | MultipleLeaseMatch | null>> => {
+    const start = Date.now()
+    const res = await makeTenfastRequest(
+      '/v1/hyresvard/extras/hyresobjekt/batch-get',
+      {
+        method: 'POST',
+        params: { hyresvard: companyId, includeAvtal: 'all' },
+        data: { externalIds: batch },
+      }
+    )
+
+    if (res.status !== 200) {
+      throw new Error(`Tenfast batch-get returned status ${res.status}`)
+    }
+
+    const parsed = TenfastBatchGetRentalObjectsResponseSchema.safeParse(
+      res.data
+    )
+    if (!parsed.success) {
+      logger.error(
+        parsed.error,
+        'IMD: Failed to parse Tenfast batch-get response'
+      )
+      throw new Error('schema-error')
+    }
+
+    const batchMap = new Map<string, LeaseMatch | MultipleLeaseMatch | null>()
+
+    for (const record of parsed.data) {
+      // Rental object exists — default to null (no active lease found)
+      batchMap.set(record.externalId, null)
+
+      const matches = findMatchingLeases(
+        record.avtal,
+        params.periodStart,
+        params.periodEnd
+      )
+
+      if (matches.length === 1) {
+        batchMap.set(record.externalId, {
+          leaseId: matches[0].externalId,
+          leaseEndDate: matches[0].endDate ?? null,
+        })
+      } else if (matches.length > 1) {
+        batchMap.set(record.externalId, {
+          leaseIds: matches.map((l) => l.externalId),
+        })
+      }
+    }
+
+    logger.info(
+      `IMD: Batch ${index + 1}/${batches.length} — ${batch.length} codes, ${parsed.data.length} records, ${Date.now() - start}ms`
+    )
+
+    return batchMap
+  }
+
+  const batchResults = await Promise.all(
+    batches.map((batch, i) => queryBatch(batch, i))
+  )
+
+  const results = new Map<string, LeaseMatch | MultipleLeaseMatch | null>()
+  for (const batchMap of batchResults) {
+    for (const [code, match] of batchMap) {
+      results.set(code, match)
+    }
+  }
+
+  return results
 }
 
 const transformToInvoiceRow = (

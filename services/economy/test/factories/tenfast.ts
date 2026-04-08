@@ -92,6 +92,10 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
   ({ sequence }) => ({
     _id: `lease-${sequence}`,
     id: `lease-${sequence}`,
+    externalId: `306-008-01-0${sequence.toString().padStart(3, '0')}/01`,
+    startDate: new Date('2020-01-01'),
+    endDate: null,
+    stage: 'active',
     hyresgaster: [
       {
         _id: `tenant-${sequence}`,
@@ -115,7 +119,6 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
       },
     ],
     reference: 123456,
-    stage: 'active',
     invitationsToRegister: [],
     canDelete: false,
     depositState: [],
