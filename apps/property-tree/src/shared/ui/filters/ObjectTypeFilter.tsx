@@ -15,6 +15,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
+import { Input } from '@/shared/ui/Input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/Sheet'
 
 export interface ObjectTypeOption {
@@ -57,6 +58,15 @@ export function ObjectTypeFilter({
     ParkingSpaceTypeOption[]
   >([])
   const [drillLevel, setDrillLevel] = useState<'root' | 'parking'>('root')
+  const [subSearchQuery, setSubSearchQuery] = useState('')
+
+  const filteredParkingSpaceTypes = useMemo(() => {
+    if (!subSearchQuery) return parkingSpaceTypes
+    const q = subSearchQuery.toLowerCase()
+    return parkingSpaceTypes.filter((pt) =>
+      pt.caption.toLowerCase().includes(q)
+    )
+  }, [parkingSpaceTypes, subSearchQuery])
 
   const totalActive =
     selectedObjectTypes.length + selectedParkingSpaceTypes.length
@@ -74,9 +84,12 @@ export function ObjectTypeFilter({
     }
   }, [open, parkingSpaceTypes.length, loadParkingSpaceTypes])
 
-  // Reset drill level when sheet closes so next open starts at root
+  // Reset drill level and sub-search when menu/sheet closes
   useEffect(() => {
-    if (!open) setDrillLevel('root')
+    if (!open) {
+      setDrillLevel('root')
+      setSubSearchQuery('')
+    }
   }, [open])
 
   const buttonText = useMemo(() => {
@@ -248,13 +261,25 @@ export function ObjectTypeFilter({
                     <SheetTitle>Bilplatstyper</SheetTitle>
                   </div>
                 </SheetHeader>
+                <div className="mb-3">
+                  <Input
+                    value={subSearchQuery}
+                    onChange={(e) => setSubSearchQuery(e.target.value)}
+                    placeholder="Sök bilplatstyp"
+                    className="h-10"
+                  />
+                </div>
                 <div className="flex flex-col">
                   {parkingSpaceTypes.length === 0 ? (
                     <div className="py-4 text-center text-sm text-muted-foreground">
                       Laddar...
                     </div>
+                  ) : filteredParkingSpaceTypes.length === 0 ? (
+                    <div className="py-4 text-center text-sm text-muted-foreground">
+                      Inga resultat
+                    </div>
                   ) : (
-                    parkingSpaceTypes.map((pt) => {
+                    filteredParkingSpaceTypes.map((pt) => {
                       const checked = selectedParkingSpaceTypes.includes(
                         pt.code
                       )
@@ -331,13 +356,26 @@ export function ObjectTypeFilter({
                   </span>
                 )}
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="max-h-[60vh] overflow-y-auto">
+              <DropdownMenuSubContent className="max-h-[60vh] w-64 overflow-y-auto">
+                <div className="p-2 pb-1">
+                  <Input
+                    value={subSearchQuery}
+                    onChange={(e) => setSubSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    placeholder="Sök bilplatstyp"
+                    className="h-8 text-sm"
+                  />
+                </div>
                 {parkingSpaceTypes.length === 0 ? (
                   <div className="py-2 px-3 text-xs text-muted-foreground">
                     Laddar...
                   </div>
+                ) : filteredParkingSpaceTypes.length === 0 ? (
+                  <div className="py-2 px-3 text-xs text-muted-foreground">
+                    Inga resultat
+                  </div>
                 ) : (
-                  parkingSpaceTypes.map((pt) => (
+                  filteredParkingSpaceTypes.map((pt) => (
                     <DropdownMenuCheckboxItem
                       key={pt.code}
                       checked={selectedParkingSpaceTypes.includes(pt.code)}
