@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
@@ -21,6 +21,7 @@ import {
   FilterBar,
   MultiSelectFilterDropdown,
   MultiSelectSearchFilterDropdown,
+  type SearchFilterOption,
 } from '@/shared/ui/filters'
 import { ObjectTypeFilter } from '@/shared/ui/filters/ObjectTypeFilter'
 import { ViewLayout } from '@/shared/ui/layout'
@@ -65,6 +66,18 @@ const LeasesPage = () => {
   const [isExporting, setIsExporting] = useState(false)
   const filters = useLeaseFilters()
   const searchProperties = usePropertySearch()
+
+  // Client-side search over the static leaseTypeOptions list for the
+  // MultiSelectSearchFilterDropdown pattern (no backend call needed)
+  const searchLeaseTypes = useCallback(
+    async (query: string): Promise<SearchFilterOption[]> => {
+      const q = query.toLowerCase()
+      return leaseTypeOptions
+        .filter((opt) => opt.label.toLowerCase().includes(q))
+        .map((opt) => ({ label: opt.label, value: opt.value }))
+    },
+    []
+  )
 
   const handlePageChange = (newPage: number) => {
     filters.setPage(newPage)
@@ -219,16 +232,15 @@ const LeasesPage = () => {
                 placeholder="Status"
               />
 
-              <MultiSelectFilterDropdown
-                options={leaseTypeOptions.map((o) => ({
-                  label: o.label,
-                  value: o.value,
-                }))}
+              <MultiSelectSearchFilterDropdown
+                searchFn={searchLeaseTypes}
+                minSearchLength={0}
                 selectedValues={filters.selectedLeaseTypes}
                 onSelectionChange={(vals) =>
                   filters.setFilterValues('leaseType', vals)
                 }
                 placeholder="Kontraktstyp"
+                searchPlaceholder="Sök kontraktstyp"
               />
 
               <MultiSelectSearchFilterDropdown
