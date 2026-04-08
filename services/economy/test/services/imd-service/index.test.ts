@@ -117,6 +117,7 @@ describe('IMD Service routes', () => {
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Invalid CSV format')
+      expect(res.body.reason).toBe('invalid-csv')
     })
 
     it('returns 500 when processIMD returns processing-failed', async () => {
