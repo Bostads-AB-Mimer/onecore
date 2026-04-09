@@ -232,7 +232,11 @@ export async function processScannedReceipts(
   }
 
   if (groups.size === 0) {
-    return { results, errors }
+    return {
+      results,
+      errors,
+      unprocessedPdf: inputIsPdf ? imageBuffer.toString('base64') : undefined,
+    }
   }
 
   // 3. Process each UUID group
