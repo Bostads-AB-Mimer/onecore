@@ -14,8 +14,9 @@ import type { Tenant } from '@/services/types'
 
 import { tenantService } from '@/services/api/core/tenantService'
 
-import { useSingleSms } from '@/shared/hooks'
+import { useSingleEmail, useSingleSms } from '@/shared/hooks'
 import { Card, CardContent } from '@/shared/ui/Card'
+import { EmailModal } from '@/shared/ui/EmailModal'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import { SmsModal } from '@/shared/ui/SmsModal'
 import {
@@ -102,6 +103,7 @@ function TenantTabsSection({
 export function TenantPage() {
   const { contactCode } = useParams<{ contactCode: string }>()
   const sms = useSingleSms({ sendSms: tenantService.sendBulkSms })
+  const email = useSingleEmail({ sendEmail: tenantService.sendBulkEmail })
 
   // Fetch tenant data
   const {
@@ -147,6 +149,12 @@ export function TenantPage() {
                     phone
                   )
                 }
+                onSendEmail={(addr) =>
+                  email.openEmailModal(
+                    `${tenant.firstName} ${tenant.lastName}`,
+                    addr
+                  )
+                }
               />
             </div>
             <TenantTabsSection
@@ -163,6 +171,13 @@ export function TenantPage() {
               recipientName={sms.smsRecipientName}
               phoneNumber={sms.smsPhoneNumber}
               onSend={sms.handleSendSms}
+            />
+            <EmailModal
+              open={email.emailModalOpen}
+              onOpenChange={email.onOpenChange}
+              recipientName={email.emailRecipientName}
+              emailAddress={email.emailAddress}
+              onSend={email.handleSendEmail}
             />
           </>
         )}

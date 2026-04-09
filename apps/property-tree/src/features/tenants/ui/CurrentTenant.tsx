@@ -7,7 +7,8 @@ import { leaseService } from '@/services/api/core'
 import type { Lease } from '@/services/api/core/leaseService'
 import { tenantService } from '@/services/api/core/tenantService'
 
-import { useSingleSms } from '@/shared/hooks'
+import { useSingleEmail, useSingleSms } from '@/shared/hooks'
+import { EmailModal } from '@/shared/ui/EmailModal'
 import { Grid } from '@/shared/ui/Grid'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Separator } from '@/shared/ui/Separator'
@@ -25,6 +26,7 @@ export function CurrentTenant({
   isLoading: externalIsLoading,
 }: CurrentTenantProps) {
   const sms = useSingleSms({ sendSms: tenantService.sendBulkSms })
+  const email = useSingleEmail({ sendEmail: tenantService.sendBulkEmail })
 
   // Only fetch if leases not provided from parent
   const leasesQuery = useQuery({
@@ -81,6 +83,9 @@ export function CurrentTenant({
                 onSendSms={(phone) =>
                   sms.openSmsModal(formatTenantName(tenant), phone)
                 }
+                onSendEmail={(addr) =>
+                  email.openEmailModal(formatTenantName(tenant), addr)
+                }
               />
             </div>
           ))}
@@ -91,6 +96,13 @@ export function CurrentTenant({
           recipientName={sms.smsRecipientName}
           phoneNumber={sms.smsPhoneNumber}
           onSend={sms.handleSendSms}
+        />
+        <EmailModal
+          open={email.emailModalOpen}
+          onOpenChange={email.onOpenChange}
+          recipientName={email.emailRecipientName}
+          emailAddress={email.emailAddress}
+          onSend={email.handleSendEmail}
         />
       </div>
     </TabLayout>
