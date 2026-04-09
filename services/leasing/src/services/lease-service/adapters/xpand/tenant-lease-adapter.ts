@@ -852,7 +852,13 @@ const getContactQuery = () => {
             )
           })
       })
-      .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
+      .leftJoin('cmeml', function () {
+        this.on('cmeml.keycmobj', '=', 'cmctc.keycmobj').andOn(
+          'cmeml.main',
+          '=',
+          xpandDb.raw('1')
+        )
+      })
       .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
       .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
       .where('cmctc.deletemark', '=', '0')
@@ -1032,7 +1038,13 @@ const getContacts = async (contactCodes: string[]) => {
       'cmctc.utslag as specialAttention'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
-    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
+    .leftJoin('cmeml', function () {
+      this.on('cmeml.keycmobj', '=', 'cmctc.keycmobj').andOn(
+        'cmeml.main',
+        '=',
+        xpandDb.raw('1')
+      )
+    })
     // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
     .where(function () {
       this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())

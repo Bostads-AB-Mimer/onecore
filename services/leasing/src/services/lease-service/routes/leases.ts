@@ -11,6 +11,7 @@ import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
   getBuildingManagers,
+  getParkingSpaceTypes,
   getStatusLabel,
 } from '../adapters/xpand/lease-search-adapter'
 import {
@@ -242,11 +243,59 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /leases/parking-space-types:
+   *   get:
+   *     summary: Get all parking space types
+   *     tags: [Leases]
+   *     description: Returns a list of all parking space types (P-platstyper) from the babpt table.
+   *     responses:
+   *       '200':
+   *         description: List of parking space types
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                       caption:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error
+   */
+  router.get('(.*)/leases/parking-space-types', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await getParkingSpaceTypes()
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (error) {
+      logger.error({ err: error }, 'getParkingSpaceTypes')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching parking space types',
+        ...metadata,
+      }
+    }
+  })
+
   router.get('(.*)/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
       'objectType',
       'status',
+      'leaseType',
       'startDateFrom',
       'startDateTo',
       'endDateFrom',
@@ -256,6 +305,7 @@ export const routes = (router: KoaRouter) => {
       'areaCodes',
       'districtNames',
       'buildingManager',
+      'parkingSpaceType',
       'page',
       'limit',
       'sortBy',
@@ -383,6 +433,7 @@ export const routes = (router: KoaRouter) => {
       'q',
       'objectType',
       'status',
+      'leaseType',
       'startDateFrom',
       'startDateTo',
       'endDateFrom',
@@ -392,6 +443,9 @@ export const routes = (router: KoaRouter) => {
       'areaCodes',
       'districtNames',
       'buildingManager',
+      'parkingSpaceType',
+      'sortBy',
+      'sortOrder',
     ])
 
     const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
@@ -451,7 +505,7 @@ export const routes = (router: KoaRouter) => {
               contactCode: joinField(lease.contacts, (c) => c.contactCode),
               email: joinField(lease.contacts, (c) => c.email),
               phone: joinField(lease.contacts, (c) => c.phone),
-              objectType: lease.objectTypeCode,
+              objectType: lease.parkingSpaceType || lease.objectTypeCode,
               leaseType: lease.leaseType,
               address: lease.address || '',
               property: lease.property || '',

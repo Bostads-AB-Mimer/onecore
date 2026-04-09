@@ -69,6 +69,22 @@ async function getBuildingManagers(): Promise<BuildingManager[]> {
   return response.content ?? []
 }
 
+export type ParkingSpaceType = {
+  code: string
+  caption: string
+}
+
+async function getParkingSpaceTypes(): Promise<ParkingSpaceType[]> {
+  const { data, error } = await GET('/leases/parking-space-types', {})
+
+  if (error) throw error
+
+  return (data.content ?? []).map((pt) => ({
+    code: pt.code ?? '',
+    caption: pt.caption ?? '',
+  }))
+}
+
 async function getContactsByFilters(
   params: LeaseSearchQueryParams
 ): Promise<ContactInfo[]> {
@@ -98,6 +114,7 @@ async function exportLeasesToExcel(
 export const leaseSearchService = {
   search,
   getBuildingManagers,
+  getParkingSpaceTypes,
   getContactsByFilters,
   exportLeasesToExcel,
 }

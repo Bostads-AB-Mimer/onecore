@@ -4,6 +4,7 @@ import {
   logger,
   loggedAxios as axios,
 } from '@onecore/utilities'
+import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import { ReceiptsApi, KeyLoansApi } from '../../adapters/keys-adapter'
 import config from '../../common/config'
@@ -19,16 +20,29 @@ const WEBDAV_MULTISTATUS_XML = `<?xml version="1.0" encoding="utf-8"?>
   </D:response>
 </D:multistatus>`
 
-async function sendErrorNotification(subject: string, message: string) {
+async function sendErrorNotification(
+  subject: string,
+  message: string,
+  attachments?: { data: Buffer; name: string }[]
+) {
   const email = config.scanner.errorNotificationEmail
   if (!email) return
 
   try {
-    await axios.post(`${config.communicationService.url}/sendMessage`, {
-      to: email,
-      subject,
-      text: message,
-    })
+    if (attachments && attachments.length > 0) {
+      await communicationAdapter.sendEmail({
+        to: email,
+        subject,
+        body: message,
+        attachments,
+      })
+    } else {
+      await axios.post(`${config.communicationService.url}/sendMessage`, {
+        to: email,
+        subject,
+        text: message,
+      })
+    }
   } catch (err) {
     logger.error(err, 'Failed to send scan error notification')
   }
@@ -101,13 +115,17 @@ export const routes = (router: KoaRouter) => {
         imageData: string
       }>
       errors: Array<{ error: string; details?: string; pageIndices: number[] }>
+      unprocessedPdf?: string
     }
 
     try {
       const response = await axios.post(
         `${config.keysService.url}/scan-receipt`,
         { imageData: imageBuffer.toString('base64') },
-        { headers: { 'Content-Type': 'application/json' } }
+        {
+          headers: { 'Content-Type': 'application/json' },
+          validateStatus: (s: number) => (s >= 200 && s < 300) || s === 422,
+        }
       )
       batch = response.data.content
     } catch (err: unknown) {
@@ -126,7 +144,7 @@ export const routes = (router: KoaRouter) => {
         `Failed to process scanned receipt "${filename}": ${errorMsg}`
       )
 
-      if (status === 422 || status === 404 || status === 400) {
+      if (status === 404 || status === 400) {
         ctx.status = status
         ctx.body = { error: errorMsg, ...metadata }
         return
@@ -137,11 +155,27 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    // Send error notifications for any batch errors
-    for (const error of batch.errors) {
+    // Send error notifications for any batch errors, attaching the unprocessed pages PDF
+    if (batch.errors.length > 0) {
+      const errorSummary = batch.errors
+        .map(
+          (e) =>
+            `${e.error}${e.details ? ` (${e.details})` : ''} — pages: ${e.pageIndices.join(', ')}`
+        )
+        .join('\n')
+
+      const attachments: { data: Buffer; name: string }[] = []
+      if (batch.unprocessedPdf) {
+        attachments.push({
+          data: Buffer.from(batch.unprocessedPdf, 'base64'),
+          name: `unprocessed-pages-${filename}`,
+        })
+      }
+
       await sendErrorNotification(
         'Scan receipt failed',
-        `Error processing "${filename}": ${error.error}${error.details ? ` (${error.details})` : ''} — pages: ${error.pageIndices.join(', ')}`
+        `Error processing "${filename}":\n${errorSummary}`,
+        attachments.length > 0 ? attachments : undefined
       )
     }
 

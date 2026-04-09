@@ -167,6 +167,15 @@ const getBuildingManagers = async (): Promise<
   return response.data.content
 }
 
+const getParkingSpaceTypes = async (): Promise<
+  { code: string; caption: string }[]
+> => {
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/parking-space-types`
+  )
+  return response.data.content
+}
+
 const searchLeases = async (
   queryParams: Record<string, string | string[] | undefined>
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
@@ -1052,6 +1061,7 @@ export {
   getLeasesBatch,
   searchLeases,
   getBuildingManagers,
+  getParkingSpaceTypes,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
   resetWaitingList,

@@ -164,6 +164,19 @@ export class LeaseSearchQueryBuilder {
   }
 
   /**
+   * Ensure parking space type (babpt) table is joined via babps
+   * Uses LEFT JOIN so non-parking leases are not filtered out
+   */
+  private ensureBabptJoin(): void {
+    if (!this.joinedTables.has('babpt')) {
+      this.query
+        .leftJoin('babps', 'babps.keycmobj', 'hykop.keycmobj')
+        .leftJoin('babpt', 'babpt.keybabpt', 'babps.keybabpt')
+      this.joinedTables.add('babpt')
+    }
+  }
+
+  /**
    * Apply text search filter
    * Uses smart analysis to only search relevant columns based on input pattern
    * Uses EXISTS subquery for contact search to avoid row duplication
@@ -220,13 +233,62 @@ export class LeaseSearchQueryBuilder {
   }
 
   /**
-   * Apply object type filter
-   * Accepts friendly names (bostad, parkering, lokal, ovrigt) or DB codes (balgh, babps, balok, bahyr)
+   * Apply object type filter combined with parking space type filter.
+   *
+   * Semantics:
+   * - Only objectType: WHERE cmobj.keycmobt IN (...)
+   * - Only parkingSpaceType: WHERE babpt.code IN (...)
+   * - Both set, with non-parking objectTypes: WHERE (cmobj.keycmobt IN (...non-parking...) OR babpt.code IN (...))
+   *
+   * When parkingSpaceType is set, the 'parkering' (babps) entry is stripped from objectType
+   * so the specific subtypes dominate. "All parking" (babps) and specific subtypes are
+   * mutually exclusive — picking a subtype means "just this one", not "all parking PLUS this".
+   *
+   * Accepts friendly objectType names (bostad, parkering, lokal, ovrigt) or DB codes.
    */
-  applyObjectTypeFilter(): this {
-    if (this.params.objectType && this.params.objectType.length > 0) {
-      const dbCodes = this.params.objectType.map(normalizeObjectType)
-      this.query.whereIn('cmobj.keycmobt', dbCodes)
+  applyObjectAndParkingFilters(): this {
+    const hasObjectType =
+      this.params.objectType && this.params.objectType.length > 0
+    const hasParkingSpaceType =
+      this.params.parkingSpaceType && this.params.parkingSpaceType.length > 0
+
+    if (!hasObjectType && !hasParkingSpaceType) {
+      return this
+    }
+
+    if (hasParkingSpaceType) {
+      this.ensureBabptJoin()
+    }
+
+    const rawObjectTypeCodes = hasObjectType
+      ? this.params.objectType!.map(normalizeObjectType)
+      : []
+    // When parkingSpaceType is set, subtypes dominate — drop the broad 'babps' entry
+    const objectTypeCodes = hasParkingSpaceType
+      ? rawObjectTypeCodes.filter((code) => code !== 'babps')
+      : rawObjectTypeCodes
+    const parkingCodes = hasParkingSpaceType
+      ? this.params.parkingSpaceType!
+      : null
+
+    this.query.where(function () {
+      if (objectTypeCodes.length > 0) {
+        this.whereIn('cmobj.keycmobt', objectTypeCodes)
+      }
+      if (parkingCodes) {
+        this.orWhereIn('babpt.code', parkingCodes)
+      }
+    })
+
+    return this
+  }
+
+  /**
+   * Apply lease type filter (e.g., Garagekontrakt, P-Platskontrakt)
+   */
+  applyLeaseTypeFilter(): this {
+    if (this.params.leaseType && this.params.leaseType.length > 0) {
+      this.query.whereIn('hyhav.hyhavben', this.params.leaseType)
     }
 
     return this
@@ -358,6 +420,7 @@ export class LeaseSearchQueryBuilder {
     // Force joins for export to ensure all fields are populated
     if (this.options.forExport) {
       this.ensureDistrictJoin()
+      this.ensureBabptJoin()
     }
 
     // Always selected (core display fields)
@@ -409,6 +472,10 @@ export class LeaseSearchQueryBuilder {
         'bafen.omrade as buildingManager',
         'bafen.distrikt as districtName'
       )
+    }
+
+    if (this.joinedTables.has('babpt')) {
+      this.query.select('babpt.caption as parkingSpaceType')
     }
 
     return this
@@ -529,6 +596,10 @@ export const transformRow = (
     result.districtName = trimmedRow.districtName || null
   }
 
+  if (trimmedRow.parkingSpaceType !== undefined) {
+    result.parkingSpaceType = trimmedRow.parkingSpaceType || null
+  }
+
   return result
 }
 
@@ -578,6 +649,25 @@ export const getBuildingManagers = async (): Promise<
   }))
 }
 
+export const getParkingSpaceTypes = async (): Promise<
+  { code: string; caption: string }[]
+> => {
+  try {
+    const rows = await xpandDb
+      .from('babpt')
+      .select('babpt.code as code', 'babpt.caption as caption')
+      .orderBy('babpt.caption')
+
+    return rows.map((row: { code: string; caption: string }) => ({
+      code: row.code.trim(),
+      caption: row.caption.trim(),
+    }))
+  } catch (err) {
+    logger.error({ err }, 'getParkingSpaceTypes')
+    throw err
+  }
+}
+
 /**
  * Main search function with pagination
  */
@@ -589,7 +679,8 @@ export const searchLeases = async (
   const builder = new LeaseSearchQueryBuilder(params, options)
   builder
     .applySearch()
-    .applyObjectTypeFilter()
+    .applyObjectAndParkingFilters()
+    .applyLeaseTypeFilter()
     .applyStatusFilter()
     .applyDateFilters()
     .applyPropertyFilter()

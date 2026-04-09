@@ -483,6 +483,31 @@ export interface paths {
       };
     };
   };
+  "/leases/parking-space-types": {
+    /**
+     * Get all parking space types
+     * @description Returns a list of all parking space types (P-platstyper).
+     */
+    get: {
+      responses: {
+        /** @description List of parking space types */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  code?: string;
+                  caption?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/export": {
     /**
      * Export leases to Excel
@@ -9144,6 +9169,7 @@ export interface components {
       area?: string | null;
       buildingManager?: string | null;
       districtName?: string | null;
+      parkingSpaceType?: string | null;
     };
     ContactInfo: {
       name: string;
