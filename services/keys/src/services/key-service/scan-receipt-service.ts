@@ -55,6 +55,7 @@ interface BatchError {
 export interface BatchResponse {
   results: BatchResult[]
   errors: BatchError[]
+  unprocessedPdf?: string
 }
 
 /**
@@ -283,5 +284,22 @@ export async function processScannedReceipts(
     }
   }
 
-  return { results, errors }
+  // Build a PDF of all unprocessed pages so they can be attached to error notifications
+  let unprocessedPdf: string | undefined
+  if (inputIsPdf && errors.length > 0) {
+    const unprocessedIndices = [
+      ...new Set(errors.flatMap((e) => e.pageIndices)),
+    ].sort((a, b) => a - b)
+
+    if (unprocessedIndices.length > 0) {
+      try {
+        const pdfBuffer = await extractPdfPages(imageBuffer, unprocessedIndices)
+        unprocessedPdf = pdfBuffer.toString('base64')
+      } catch (err) {
+        logger.error({ err }, 'Failed to build unprocessed pages PDF')
+      }
+    }
+  }
+
+  return { results, errors, unprocessedPdf }
 }
