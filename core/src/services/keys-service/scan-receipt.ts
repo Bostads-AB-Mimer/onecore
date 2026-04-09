@@ -122,7 +122,10 @@ export const routes = (router: KoaRouter) => {
       const response = await axios.post(
         `${config.keysService.url}/scan-receipt`,
         { imageData: imageBuffer.toString('base64') },
-        { headers: { 'Content-Type': 'application/json' } }
+        {
+          headers: { 'Content-Type': 'application/json' },
+          validateStatus: (s: number) => (s >= 200 && s < 300) || s === 422,
+        }
       )
       batch = response.data.content
     } catch (err: unknown) {
@@ -141,7 +144,7 @@ export const routes = (router: KoaRouter) => {
         `Failed to process scanned receipt "${filename}": ${errorMsg}`
       )
 
-      if (status === 422 || status === 404 || status === 400) {
+      if (status === 404 || status === 400) {
         ctx.status = status
         ctx.body = { error: errorMsg, ...metadata }
         return
