@@ -10,9 +10,12 @@ import { Button } from '@/shared/ui/Button'
 
 type LeaseTenant = NonNullable<Lease['tenants']>[number]
 
-type TenantLeaseCardProps = { tenant: LeaseTenant }
+type TenantLeaseCardProps = {
+  tenant: LeaseTenant
+  onSendSms?: (phoneNumber: string) => void
+}
 
-export function TenantLeaseCard({ tenant }: TenantLeaseCardProps) {
+export function TenantLeaseCard({ tenant, onSendSms }: TenantLeaseCardProps) {
   const phone = tenant.phoneNumbers?.find(
     (v: { isMainNumber: boolean }) => v.isMainNumber
   )
@@ -37,6 +40,7 @@ export function TenantLeaseCard({ tenant }: TenantLeaseCardProps) {
         <TenantContactActions
           phoneNumbers={phone ? [phone] : undefined}
           email={tenant.emailAddress || undefined}
+          onSendSms={onSendSms}
         />
       </div>
     </div>

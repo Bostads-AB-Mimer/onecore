@@ -6,7 +6,7 @@ import { makeAppContext } from './context'
 const appContext = makeAppContext(config)
 const app = makeApp(appContext)
 
-const PORT = config.port || 5090
+const PORT = config.port || 5093
 app.listen(PORT, () => {
   logger.info(`listening on http://localhost:${PORT}`)
 })

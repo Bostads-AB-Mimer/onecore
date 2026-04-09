@@ -1,14 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { LeaseInfo } from '@/entities/lease'
-import { TenantLeaseCard } from '@/entities/tenant'
+import { TenantLeaseCard, formatTenantName } from '@/entities/tenant'
 
 import { leaseService } from '@/services/api/core'
 import type { Lease } from '@/services/api/core/leaseService'
 
+import { useSingleSms } from '@/shared/hooks'
 import { Grid } from '@/shared/ui/Grid'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Separator } from '@/shared/ui/Separator'
+import { SmsModal } from '@/shared/ui/SmsModal'
 
 interface CurrentTenantProps {
   rentalPropertyId: string
@@ -21,6 +23,8 @@ export function CurrentTenant({
   leases: externalLeases,
   isLoading: externalIsLoading,
 }: CurrentTenantProps) {
+  const sms = useSingleSms()
+
   // Only fetch if leases not provided from parent
   const leasesQuery = useQuery({
     queryKey: ['leases', rentalPropertyId],
@@ -71,10 +75,22 @@ export function CurrentTenant({
           {lease.tenants?.map((tenant, i) => (
             <div key={tenant.contactCode}>
               {i > 0 && <Separator />}
-              <TenantLeaseCard tenant={tenant} />
+              <TenantLeaseCard
+                tenant={tenant}
+                onSendSms={(phone) =>
+                  sms.openSmsModal(formatTenantName(tenant), phone)
+                }
+              />
             </div>
           ))}
         </div>
+        <SmsModal
+          open={sms.smsModalOpen}
+          onOpenChange={sms.onOpenChange}
+          recipientName={sms.smsRecipientName}
+          phoneNumber={sms.smsPhoneNumber}
+          onSend={sms.handleSendSms}
+        />
       </div>
     </TabLayout>
   )

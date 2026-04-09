@@ -7,9 +7,10 @@ import { TenantPersonalInfo } from './TenantPersonalInfo'
 
 interface TenantCardProps {
   tenant: Tenant
+  onSendSms?: (phoneNumber: string) => void
 }
 
-export function TenantCard({ tenant }: TenantCardProps) {
+export function TenantCard({ tenant, onSendSms }: TenantCardProps) {
   return (
     <Card>
       <CardContent className="p-6">
@@ -20,6 +21,7 @@ export function TenantCard({ tenant }: TenantCardProps) {
           <TenantContactActions
             phoneNumbers={tenant.phoneNumbers}
             email={tenant.emailAddress || undefined}
+            onSendSms={onSendSms}
           />
         </div>
       </CardContent>
