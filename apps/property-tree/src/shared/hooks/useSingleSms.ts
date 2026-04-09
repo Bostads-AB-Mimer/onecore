@@ -1,7 +1,5 @@
 import { useCallback, useState } from 'react'
 
-import { tenantService } from '@/services/api/core/tenantService'
-
 import { useToast } from './useToast'
 
 interface SingleSmsState {
@@ -10,7 +8,14 @@ interface SingleSmsState {
   phoneNumber: string
 }
 
-export function useSingleSms() {
+interface UseSingleSmsOptions {
+  sendSms: (
+    phoneNumbers: string[],
+    message: string
+  ) => Promise<{ totalSent: number; totalInvalid: number }>
+}
+
+export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const { toast } = useToast()
   const [state, setState] = useState<SingleSmsState>({
     open: false,
@@ -34,10 +39,7 @@ export function useSingleSms() {
   const handleSendSms = useCallback(
     async (message: string) => {
       try {
-        const result = await tenantService.sendBulkSms(
-          [state.phoneNumber],
-          message
-        )
+        const result = await sendSms([state.phoneNumber], message)
 
         toast({
           title: 'SMS skickat',
@@ -58,7 +60,7 @@ export function useSingleSms() {
         })
       }
     },
-    [state.phoneNumber, toast]
+    [state.phoneNumber, sendSms, toast]
   )
 
   return {

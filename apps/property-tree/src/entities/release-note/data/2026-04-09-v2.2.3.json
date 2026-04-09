@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-04-09-v223-1",
+    "date": "2026-04-09",
+    "title": "SMS-dialog återställd på kundkort och bostadssida",
+    "description": "SMS-knappen på kundkortet och hyresgästfliken på bostadssidan öppnar nu åter SMS-dialogen istället för telefonens meddelandeapp.",
+    "category": "fix"
+  }
+]

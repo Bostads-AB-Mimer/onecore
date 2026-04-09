@@ -5,6 +5,7 @@ import { TenantLeaseCard, formatTenantName } from '@/entities/tenant'
 
 import { leaseService } from '@/services/api/core'
 import type { Lease } from '@/services/api/core/leaseService'
+import { tenantService } from '@/services/api/core/tenantService'
 
 import { useSingleSms } from '@/shared/hooks'
 import { Grid } from '@/shared/ui/Grid'
@@ -23,7 +24,7 @@ export function CurrentTenant({
   leases: externalLeases,
   isLoading: externalIsLoading,
 }: CurrentTenantProps) {
-  const sms = useSingleSms()
+  const sms = useSingleSms({ sendSms: tenantService.sendBulkSms })
 
   // Only fetch if leases not provided from parent
   const leasesQuery = useQuery({

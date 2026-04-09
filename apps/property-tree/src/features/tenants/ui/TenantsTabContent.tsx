@@ -2,6 +2,7 @@ import { LeaseInfo } from '@/entities/lease'
 import { TenantLeaseCard, formatTenantName } from '@/entities/tenant'
 
 import { Lease } from '@/services/api/core/leaseService'
+import { tenantService } from '@/services/api/core/tenantService'
 
 import { useSingleSms } from '@/shared/hooks'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
@@ -19,7 +20,7 @@ export function TenantsTabContent({
   error,
   lease,
 }: TenantsTabContentProps) {
-  const sms = useSingleSms()
+  const sms = useSingleSms({ sendSms: tenantService.sendBulkSms })
 
   // Empty state when no lease
   if (!isLoading && !error && !lease) {
