@@ -101,7 +101,10 @@ export const getInvoices = async (rows: InvoiceDataRow[]) => {
   return invoices
 }
 
-const getRentalSpecificRules = async (rentalIds: string[], year: string) => {
+export const getRentalSpecificRules = async (
+  rentalIds: string[],
+  year: string
+) => {
   const specificRules: RentalSpecificRules = {}
   const specificRulesBuildingsQuery = db('repsk')
     .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
@@ -177,7 +180,7 @@ const getRentalRowSpecificRule = async (
       )
 
       throw new Error(
-        `Accounting for rent article ${row.rentArticle} on invoice ${row.invoiceNumber} could not be determined (multiple accounting rules found)`
+        `Konteringsregler för hyresartikeln ${row.rentArticle} på faktura ${row.invoiceNumber} kunde inte hämtas (det finns flera uppsättningar konteringsregler för artikeln)`
       )
     }
   }
@@ -205,12 +208,14 @@ const getRentalRowSpecificRule = async (
 const getAdditionalColumns = async (
   row: InvoiceDataRow,
   rentalSpecificRules: Record<string, RentalSpecificRules>
-): Promise<InvoiceDataRow | null> => {
+): Promise<{ row: InvoiceDataRow | undefined; error?: string | undefined }> => {
   const contractCode = row.contractCode as string
   const additionalColumns: InvoiceDataRow = {}
 
   if ('Öresutjämning' == row.invoiceRowText) {
-    return {}
+    return {
+      row: undefined,
+    }
   }
 
   let specificRule: RentalSpecificRule | null = null
@@ -225,7 +230,10 @@ const getAdditionalColumns = async (
         row,
         'Could not find cost code and property for normal rent row'
       )
-      return {}
+      return {
+        row: undefined,
+        error: `Kunde inte hitta kostnadsställe och fastighet för hyresobjekt ${contractCode.split('/')[0]} på faktura ${row.invoiceNumber} med fråndatum ${row.fromDate}`,
+      }
     }
   } else if (row.company === '006') {
     specificRule = await getRentalRowSpecificRule(row)
@@ -244,7 +252,7 @@ const getAdditionalColumns = async (
     }
   }
 
-  return additionalColumns
+  return { row: additionalColumns }
 }
 
 export const enrichInvoiceRows = async (
@@ -302,20 +310,24 @@ export const enrichInvoiceRows = async (
           rentalSpecificRules
         )
 
-        if (!additionalColumns) {
+        if (!additionalColumns.row && additionalColumns.error) {
           logger.error(
-            { invoiceNumber: row.invoiceNumber },
+            {
+              invoiceNumber: row.invoiceNumber,
+              error: additionalColumns.error,
+            },
             'No additional columns'
           )
           errors.push({
             invoiceNumber: row.invoiceNumber as string,
             error:
+              additionalColumns.error ??
               'Kunde inte hitta fastighet eller kostnadsställe för fakturan',
           })
           return null
+        } else {
+          return { ...row, ...additionalColumns.row }
         }
-
-        return { ...row, ...additionalColumns }
       }
     )
   )
@@ -598,7 +610,6 @@ export const getBatchTotalAmount = async (invoiceNumbers: string[]) => {
 }
 
 export const getInvoiceRows = async (
-  year: number,
   companyId: string,
   invoiceNumbers: string[]
 ): Promise<InvoiceRow[]> => {
@@ -606,8 +617,7 @@ export const getInvoiceRows = async (
     return []
   }
 
-  const keycodes =
-    companyId === '001' ? ['FADBT_HYRA'] : [/*'FADBT_INTHYRA',*/ 'FADBT_HYRA']
+  const keycodes = companyId === '001' ? ['FADBT_HYRA'] : ['FADBT_HYRA']
   const invoiceRowsQuery = db.raw(
     `
     SELECT
@@ -633,16 +643,16 @@ export const getInvoiceRows = async (
     LEFT JOIN repsr ON repsk.keyrepsr = repsr.keyrepsr
     WHERE
       (
-        (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = ?) OR
+        (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = datepart(year, krfkh.fromdate)) OR
         (krfkh.invoice like '5%' and (repsr.keycode is null and keyrektk is null and repsk.year is null)) or
-        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = ?) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
+        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = datepart(year, krfkh.fromdate)) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
       )
       AND cmcmp.code = ?
       AND (krfkh.type = 1 OR krfkh.type = 2)
       AND invoice IN (${invoiceNumbers.map((_) => `'${_}'`).join(',')})
     ORDER BY invoice ASC, krfkr.printsort ASC
     `,
-    [year, year, companyId]
+    [companyId]
   )
 
   const invoiceRows = await invoiceRowsQuery

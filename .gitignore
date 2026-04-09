@@ -74,3 +74,6 @@ CLAUDE.md
 # --- Documentation ---
 docs/
 
+examples/
+.envrc
+

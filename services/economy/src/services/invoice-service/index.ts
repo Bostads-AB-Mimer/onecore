@@ -95,7 +95,6 @@ export const routes = (router: KoaRouter) => {
         )
 
       const invoiceRows = await getInvoiceRows(
-        new Date().getFullYear(),
         '001', // Mimer company id.
         invoices.map((v) => v.invoiceId)
       )
