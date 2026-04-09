@@ -16,6 +16,7 @@ import {
 } from '../common/adapters/xledger-adapter'
 import {
   getInvoiceRows,
+  getRentalSpecificRules,
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
@@ -95,7 +96,6 @@ export const routes = (router: KoaRouter) => {
         )
 
       const invoiceRows = await getInvoiceRows(
-        new Date().getFullYear(),
         '001', // Mimer company id.
         invoices.map((v) => v.invoiceId)
       )

@@ -42,10 +42,19 @@ const importRentalInvoicesScript = async (
       if (result.errors?.length && result.errors?.length > 0) {
         hasErrors = true
       }
-      notification.push(`
-Importerade avier: ${result.processedInvoices}
-Avier med fel: ${result.errors?.length === 0 ? 'Inga' : result.errors}
-        `)
+      notification.push(`Importerade avier: ${result.processedInvoices}`)
+
+      if (hasErrors) {
+        notification.push('\nAvier med fel:\n')
+        notification.push(
+          result.errors
+            ?.map((error) => {
+              return `Faktura: ${error.invoiceNumber}\nFel: ${error.error}\n`
+            })
+            .join('\n') ?? ''
+        )
+      }
+
       logger.info({ batchId }, 'Creating contact file for batch')
       const contactsFilename = `${batchId}-${companyId}-contacts.ar.csv`
       const contactsCsv = await getBatchContactsCsv(batchId)

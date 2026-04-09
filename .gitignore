@@ -75,3 +75,5 @@ CLAUDE.md
 docs/
 
 examples/
+.envrc
+
