@@ -38,12 +38,14 @@ const objectTypeOptions = [
 
 const leaseTypeOptions = [
   { label: 'Bostadskontrakt', value: 'Bostadskontrakt' },
-  { label: 'Garagekontrakt', value: 'Garagekontrakt' },
-  { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
-  { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
   { label: 'Campuskontrakt', value: 'Campuskontrakt' },
+  { label: 'Garagekontrakt', value: 'Garagekontrakt' },
   { label: 'Kooperativ hyresrätt', value: 'Kooperativ hyresrätt' },
+  { label: 'Korttidsuthyrning', value: 'Korttidsuthyrning' },
+  { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
+  { label: 'Omförhandlingskontrakt', value: 'Omförhandlingskontrakt' },
   { label: 'Övrigt', value: 'Övrigt' },
+  { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
 ] as const
 
 const statusOptions = [

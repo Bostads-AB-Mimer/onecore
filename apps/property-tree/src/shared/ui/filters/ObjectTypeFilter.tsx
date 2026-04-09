@@ -356,7 +356,7 @@ export function ObjectTypeFilter({
                   </span>
                 )}
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="max-h-[60vh] w-64 overflow-y-auto">
+              <DropdownMenuSubContent className="w-72">
                 <div className="p-2 pb-1">
                   <Input
                     value={subSearchQuery}
@@ -366,28 +366,30 @@ export function ObjectTypeFilter({
                     className="h-8 text-sm"
                   />
                 </div>
-                {parkingSpaceTypes.length === 0 ? (
-                  <div className="py-2 px-3 text-xs text-muted-foreground">
-                    Laddar...
-                  </div>
-                ) : filteredParkingSpaceTypes.length === 0 ? (
-                  <div className="py-2 px-3 text-xs text-muted-foreground">
-                    Inga resultat
-                  </div>
-                ) : (
-                  filteredParkingSpaceTypes.map((pt) => (
-                    <DropdownMenuCheckboxItem
-                      key={pt.code}
-                      checked={selectedParkingSpaceTypes.includes(pt.code)}
-                      onCheckedChange={(c) =>
-                        toggleParkingSpaceType(pt.code, c === true)
-                      }
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      {pt.caption}
-                    </DropdownMenuCheckboxItem>
-                  ))
-                )}
+                <div className="max-h-48 overflow-y-auto">
+                  {parkingSpaceTypes.length === 0 ? (
+                    <div className="py-2 px-3 text-xs text-muted-foreground">
+                      Laddar...
+                    </div>
+                  ) : filteredParkingSpaceTypes.length === 0 ? (
+                    <div className="py-2 px-3 text-xs text-muted-foreground">
+                      Inga resultat
+                    </div>
+                  ) : (
+                    filteredParkingSpaceTypes.map((pt) => (
+                      <DropdownMenuCheckboxItem
+                        key={pt.code}
+                        checked={selectedParkingSpaceTypes.includes(pt.code)}
+                        onCheckedChange={(c) =>
+                          toggleParkingSpaceType(pt.code, c === true)
+                        }
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        {pt.caption}
+                      </DropdownMenuCheckboxItem>
+                    ))
+                  )}
+                </div>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           )
