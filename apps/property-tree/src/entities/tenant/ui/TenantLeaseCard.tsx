@@ -13,9 +13,14 @@ type LeaseTenant = NonNullable<Lease['tenants']>[number]
 type TenantLeaseCardProps = {
   tenant: LeaseTenant
   onSendSms?: (phoneNumber: string) => void
+  onSendEmail?: (emailAddress: string) => void
 }
 
-export function TenantLeaseCard({ tenant, onSendSms }: TenantLeaseCardProps) {
+export function TenantLeaseCard({
+  tenant,
+  onSendSms,
+  onSendEmail,
+}: TenantLeaseCardProps) {
   const phone = tenant.phoneNumbers?.find(
     (v: { isMainNumber: boolean }) => v.isMainNumber
   )
@@ -41,6 +46,7 @@ export function TenantLeaseCard({ tenant, onSendSms }: TenantLeaseCardProps) {
           phoneNumbers={phone ? [phone] : undefined}
           email={tenant.emailAddress || undefined}
           onSendSms={onSendSms}
+          onSendEmail={onSendEmail}
         />
       </div>
     </div>

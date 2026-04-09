@@ -6,12 +6,14 @@ interface TenantContactActionsProps {
   phoneNumbers?: Array<{ phoneNumber: string }>
   email?: string
   onSendSms?: (phoneNumber: string) => void
+  onSendEmail?: (emailAddress: string) => void
 }
 
 export function TenantContactActions({
   phoneNumbers,
   email,
   onSendSms,
+  onSendEmail,
 }: TenantContactActionsProps) {
   const handleCall = (phoneNumber: string) => {
     window.location.href = `tel:${phoneNumber.replace(/[\s-]/g, '')}`
@@ -27,7 +29,11 @@ export function TenantContactActions({
   }
 
   const handleEmail = (emailAddress: string) => {
-    window.location.href = `mailto:${emailAddress}`
+    if (onSendEmail) {
+      onSendEmail(emailAddress)
+    } else {
+      window.location.href = `mailto:${emailAddress}`
+    }
   }
 
   return (
