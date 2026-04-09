@@ -12,8 +12,12 @@ import { TenantCard, useTenant } from '@/entities/tenant'
 import type { Lease } from '@/services/api/core/leaseService'
 import type { Tenant } from '@/services/types'
 
+import { tenantService } from '@/services/api/core/tenantService'
+
+import { useSingleSms } from '@/shared/hooks'
 import { Card, CardContent } from '@/shared/ui/Card'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
+import { SmsModal } from '@/shared/ui/SmsModal'
 import {
   Tooltip,
   TooltipContent,
@@ -97,6 +101,7 @@ function TenantTabsSection({
 
 export function TenantPage() {
   const { contactCode } = useParams<{ contactCode: string }>()
+  const sms = useSingleSms({ sendSms: tenantService.sendBulkSms })
 
   // Fetch tenant data
   const {
@@ -134,7 +139,15 @@ export function TenantPage() {
           <>
             <TenantHeader tenant={tenant} />
             <div className="grid grid-cols-1 gap-6 mb-6">
-              <TenantCard tenant={tenant} />
+              <TenantCard
+                tenant={tenant}
+                onSendSms={(phone) =>
+                  sms.openSmsModal(
+                    `${tenant.firstName} ${tenant.lastName}`,
+                    phone
+                  )
+                }
+              />
             </div>
             <TenantTabsSection
               tenant={tenant}
@@ -143,6 +156,13 @@ export function TenantPage() {
               leasesLoading={leasesLoading}
               leasesError={leasesError}
               rentalPropertiesLoading={rentalPropertiesLoading}
+            />
+            <SmsModal
+              open={sms.smsModalOpen}
+              onOpenChange={sms.onOpenChange}
+              recipientName={sms.smsRecipientName}
+              phoneNumber={sms.smsPhoneNumber}
+              onSend={sms.handleSendSms}
             />
           </>
         )}

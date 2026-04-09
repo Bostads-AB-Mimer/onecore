@@ -7,5 +7,6 @@ export type {
 export { useDialogState, useSimpleDialogState } from './useDialogState'
 export { useIsMobile, useIsSmallMobile } from './useMobile'
 export { useScrollToSelected } from './useScrollToSelected'
+export { useSingleSms } from './useSingleSms'
 export { useToast } from './useToast'
 export { useUrlPagination } from './useUrlPagination'

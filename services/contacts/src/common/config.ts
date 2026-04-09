@@ -17,7 +17,7 @@ export interface Config {
 const config = configPackage({
   file: `${projectRoot()}/config.json`,
   defaults: {
-    port: 5090,
+    port: 5093,
     applicationName: 'contacts',
     xpandDatabase: {
       healthCheckInterval: 1,

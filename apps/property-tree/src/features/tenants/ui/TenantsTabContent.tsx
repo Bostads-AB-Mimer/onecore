@@ -1,10 +1,13 @@
 import { LeaseInfo } from '@/entities/lease'
-import { TenantLeaseCard } from '@/entities/tenant'
+import { TenantLeaseCard, formatTenantName } from '@/entities/tenant'
 
 import { Lease } from '@/services/api/core/leaseService'
+import { tenantService } from '@/services/api/core/tenantService'
 
+import { useSingleSms } from '@/shared/hooks'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Separator } from '@/shared/ui/Separator'
+import { SmsModal } from '@/shared/ui/SmsModal'
 
 interface TenantsTabContentProps {
   isLoading: boolean
@@ -17,6 +20,8 @@ export function TenantsTabContent({
   error,
   lease,
 }: TenantsTabContentProps) {
+  const sms = useSingleSms({ sendSms: tenantService.sendBulkSms })
+
   // Empty state when no lease
   if (!isLoading && !error && !lease) {
     return (
@@ -45,10 +50,23 @@ export function TenantsTabContent({
             {lease.tenants?.map((tenant, i) => (
               <>
                 {i > 0 && <Separator />}
-                <TenantLeaseCard tenant={tenant} key={i} />
+                <TenantLeaseCard
+                  tenant={tenant}
+                  key={i}
+                  onSendSms={(phone) =>
+                    sms.openSmsModal(formatTenantName(tenant), phone)
+                  }
+                />
               </>
             ))}
           </div>
+          <SmsModal
+            open={sms.smsModalOpen}
+            onOpenChange={sms.onOpenChange}
+            recipientName={sms.smsRecipientName}
+            phoneNumber={sms.smsPhoneNumber}
+            onSend={sms.handleSendSms}
+          />
         </>
       )}
     </TabLayout>

@@ -100,7 +100,7 @@ const config = configPackage({
       url: 'http://localhost:5030',
     },
     contactsService: {
-      url: 'http://localhost:5090',
+      url: 'http://localhost:5093',
     },
     documentsService: {
       url: 'https://mim-shared-apim-apim01-t.azure-api.net/document',
