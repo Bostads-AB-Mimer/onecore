@@ -132,11 +132,12 @@ export function buildTenfastQueryParams(
     }
   }
 
-  // Stage filter — API does not support multiple comma-separated values
-  if (params.status && params.status.length === 1) {
-    const tenfastStage = STATUS_TO_TENFAST_STAGE[params.status[0].toLowerCase()]
-    if (tenfastStage) {
-      query.set('filter[stage]', tenfastStage)
+  if (params.status && params.status.length > 0) {
+    const tenfastStages = params.status
+      .map((s) => STATUS_TO_TENFAST_STAGE[s.toLowerCase()])
+      .filter(Boolean)
+    if (tenfastStages.length > 0) {
+      query.set('filter[stage]', tenfastStages.join(','))
     }
   }
 
@@ -280,11 +281,6 @@ export const searchLeases = async (
         _links: [],
       }
     }
-  }
-
-  // Only a single status is supported by the API
-  if (params.status && params.status.length > 1) {
-    params = { ...params, status: [params.status[0]] }
   }
 
   const leasesResult = await fetchLeases(params)

@@ -413,6 +413,7 @@ export const routes = (router: KoaRouter) => {
       'address',
       'objectType',
       'status',
+      'property',
       'startDateFrom',
       'startDateTo',
       'endDateFrom',
