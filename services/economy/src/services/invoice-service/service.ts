@@ -737,7 +737,6 @@ export const importInvoiceRows = async (
       await saveContacts(contacts, batchId)
     }
 
-    console.log('errors', errors)
     if (errors && errors.length > 0) {
       errors.forEach((error) => {
         const index = invoicesToImport.indexOf(error.invoiceNumber, 0)
