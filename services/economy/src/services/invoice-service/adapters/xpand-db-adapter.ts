@@ -5,6 +5,7 @@ import {
   InvoiceRow,
   InvoiceTransactionType,
   invoiceTransactionTypeTranslation,
+  PaymentStatus,
   paymentStatusTranslation,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
@@ -483,10 +484,10 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     invoiceId: row.invoiceId.trim(),
     leaseId: row.leaseId?.trim(),
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
-    fromDate: row.fromDate,
-    toDate: row.toDate,
-    invoiceDate: row.invoiceDate,
-    expirationDate: row.expirationDate,
+    fromDate: new Date(row.fromDate),
+    toDate: new Date(row.toDate),
+    invoiceDate: new Date(row.invoiceDate),
+    expirationDate: new Date(row.expirationDate),
     debitStatus: row.debitStatus,
     paymentStatus: getPaymentStatus(row.paymentStatus),
     transactionType: getTransactionType(row.transactionType),
@@ -500,7 +501,15 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
 
 export const getInvoicesByContactCode = async (
   contactKey: string,
-  filters?: { from?: Date }
+  filters?: {
+    from?: Date
+    to?: Date
+    invoiceDateFrom?: Date
+    invoiceDateTo?: Date
+    paymentStatus?: PaymentStatus
+  },
+  limit?: number,
+  skip?: number
 ): Promise<Invoice[] | undefined> => {
   logger.info(
     { contactCode: contactKey },
@@ -533,6 +542,30 @@ export const getInvoicesByContactCode = async (
 
   if (filters?.from) {
     query = query.andWhere('krfkh.fromdate', '>=', filters.from)
+  }
+
+  if (filters?.invoiceDateFrom) {
+    query = query.andWhere('krfkh.invdate', '>=', filters.invoiceDateFrom)
+  }
+
+  if (filters?.invoiceDateTo) {
+    query = query.andWhere('krfkh.invdate', '<=', filters.invoiceDateTo)
+  }
+
+  if (filters?.paymentStatus !== undefined) {
+    if (filters.paymentStatus === PaymentStatus.Unpaid) {
+      query = query.andWhere('krfkh.paystatus', '<', 2) // 0 and 1 represent unpaid statuses
+    } else if (filters.paymentStatus === PaymentStatus.Paid) {
+      query = query.andWhere('krfkh.paystatus', '>', 1) // 2 and up represent paid statuses
+    }
+  }
+
+  if (limit) {
+    query.limit(limit)
+  }
+
+  if (skip) {
+    query.offset(skip)
   }
 
   const rows = await query

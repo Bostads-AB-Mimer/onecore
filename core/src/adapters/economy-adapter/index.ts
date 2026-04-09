@@ -3,6 +3,7 @@ import { loggedAxios as axios, logger } from '@onecore/utilities'
 import {
   Invoice,
   InvoicePaymentEvent,
+  PaymentStatus,
   RentInvoiceRow,
   XledgerContact,
   XledgerProject,
@@ -50,11 +51,31 @@ export async function getInvoicePaymentEvents(
 
 export async function getInvoicesByContactCode(
   contactCode: string,
-  filters?: { from?: Date }
-): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+  filters?: { from?: Date; to?: Date; paymentStatus?: PaymentStatus },
+  size?: number,
+  skip?: number,
+  after?: string
+): Promise<
+  AdapterResult<
+    {
+      invoices: Invoice[]
+      pageInfo: {
+        hasNextPage?: boolean
+        endCursor?: string
+        xpandInvoicesFetched: number
+      }
+    },
+    'not-found' | 'unknown'
+  >
+> {
   const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
-  const params = filters ? { params: filters } : {}
-  const response = await axios.get(url, params)
+  const params = {
+    ...filters,
+    size,
+    skip,
+    after,
+  }
+  const response = await axios.get(url, { params })
 
   if (response.status === 404) {
     return { ok: false, err: 'not-found' }
@@ -77,9 +98,11 @@ export async function getInvoicesSentToDebtCollection(
     return { ok: false, err: invoicesResult.err }
   }
 
-  const hasDebtCollection = invoicesResult.data.filter((invoice: Invoice) => {
-    return invoice.sentToDebtCollection !== undefined
-  })
+  const hasDebtCollection = invoicesResult.data.invoices.filter(
+    (invoice: Invoice) => {
+      return invoice.sentToDebtCollection !== undefined
+    }
+  )
 
   return { ok: true, data: hasDebtCollection }
 }

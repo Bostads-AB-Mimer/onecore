@@ -37,18 +37,50 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const from = queryParams.data?.from
     const contactCode = ctx.params.contactCode
-    try {
-      const xledgerInvoices =
-        (await getXledgerInvoicesByContactCode(contactCode, { from: from })) ??
-        []
-      const xpandInvoices =
-        (await getXpandInvoicesByContactCode(contactCode, { from: from })) ?? []
+    const {
+      from,
+      to,
+      size = 1000,
+      skip = 0,
+      after,
+      // paymentStatus
+      /* 
+        Can not filter by payment status at the moment since some invoices are paid in Xledger and unpaid in Xpand.
+        If invoice A is paid in Xledger and unpaid in Xpand and the query is for unpaid invoices, invoice A will be returned
+        and shown as unpaid, when it is actually paid.
+        We can revisit this when we know more about why there is sometimes a discrepancy between Xledger and Xpand.
+      */
+    } = queryParams.data
 
-      const xledgerInvoiceIds = xledgerInvoices.map(
-        (invoice) => invoice.invoiceId
+    try {
+      const xledgerInvoicesResult = await getXledgerInvoicesByContactCode(
+        contactCode,
+        {
+          from,
+          to,
+          // paymentStatus
+        },
+        size,
+        after
       )
+      const xpandInvoices =
+        (await getXpandInvoicesByContactCode(
+          contactCode,
+          {
+            invoiceDateFrom: from,
+            invoiceDateTo: to,
+            // paymentStatus
+          },
+          size,
+          skip
+        )) ?? []
+
+      const xledgerInvoices = xledgerInvoicesResult?.content ?? []
+      const xledgerInvoicesPageInfo = xledgerInvoicesResult?.pageInfo
+
+      const xledgerInvoiceIds =
+        xledgerInvoices.map((invoice) => invoice.invoiceId) ?? []
 
       const regularInvoices: Invoice[] = []
       const losses: Invoice[] = []
@@ -93,6 +125,7 @@ export const routes = (router: KoaRouter) => {
             (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
           )
         )
+        .sort((a, b) => b.invoiceDate.getTime() - a.invoiceDate.getTime())
 
       const invoiceRows = await getInvoiceRows(
         '001', // Mimer company id.
@@ -108,7 +141,17 @@ export const routes = (router: KoaRouter) => {
       })
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(invoicesWithRows, metadata)
+      ctx.body = makeSuccessResponseBody(
+        {
+          invoices: invoicesWithRows,
+          pageInfo: {
+            hasNextPage: xledgerInvoicesPageInfo?.hasNextPage,
+            endCursor: xledgerInvoicesPageInfo?.endCursor,
+            xpandInvoicesFetched: skip + xpandInvoices.length,
+          },
+        },
+        metadata
+      )
     } catch (error: any) {
       logger.error(
         { error, contactCode: contactCode },

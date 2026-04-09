@@ -15,7 +15,7 @@ interface DateRangeFilterDropdownProps {
   /** End date (YYYY-MM-DD string or null) */
   endDate: string | null
   /** Called when date range changes */
-  onDateChange: (startDate: string | null, endDate: string | null) => void
+  onDateChange: (startDate?: Date, endDate?: Date) => void
   /** Placeholder text when no dates selected */
   placeholder?: string
   className?: string
@@ -33,15 +33,17 @@ export function DateRangeFilterDropdown({
   className,
 }: DateRangeFilterDropdownProps) {
   const [open, setOpen] = useState(false)
+  const [internalRange, setInternalRange] = useState<DateRange | undefined>()
 
-  // Convert string dates to Date objects for the calendar
-  const selectedRange: DateRange | undefined =
+  const externalRange: DateRange | undefined =
     startDate || endDate
       ? {
           from: startDate ? new Date(startDate) : undefined,
           to: endDate ? new Date(endDate) : undefined,
         }
       : undefined
+
+  const selectedRange = internalRange || externalRange
 
   const hasDateFilter = startDate !== null || endDate !== null
 
@@ -66,20 +68,37 @@ export function DateRangeFilterDropdown({
   }
 
   const handleSelect = (range: DateRange | undefined) => {
-    const newStartDate = range?.from ? format(range.from, 'yyyy-MM-dd') : null
-    const newEndDate = range?.to ? format(range.to, 'yyyy-MM-dd') : null
+    setInternalRange(range)
 
-    onDateChange(newStartDate, newEndDate)
+    const newStartDate = range?.from
+    const newEndDate = range?.to
+
+    const isCompleteRange =
+      newStartDate &&
+      newEndDate &&
+      newStartDate.getTime() !== newEndDate.getTime()
+
+    if (isCompleteRange) {
+      onDateChange(newStartDate, newEndDate)
+    }
   }
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation()
-    onDateChange(null, null)
+    onDateChange()
+    setInternalRange(undefined)
     setOpen(false)
   }
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen)
+    if (newOpen) {
+      setInternalRange(undefined)
+    }
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"

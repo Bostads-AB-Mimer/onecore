@@ -9,7 +9,7 @@ describe('economy-adapter', () => {
   it('returns empty list if no problematic invoices', async () => {
     nock(config.economyService.url)
       .get(/invoices\/bycontactcode/)
-      .reply(200, { content: mockedInvoices })
+      .reply(200, { content: { invoices: mockedInvoices } })
 
     const result =
       await economyAdapter.getInvoicesSentToDebtCollection('P123456')
@@ -24,7 +24,7 @@ describe('economy-adapter', () => {
     }))
     nock(config.economyService.url)
       .get(/invoices\/bycontactcode/)
-      .reply(200, { content: mockedProblematicInvoices })
+      .reply(200, { content: { invoices: mockedProblematicInvoices } })
 
     const result =
       await economyAdapter.getInvoicesSentToDebtCollection('P123456')

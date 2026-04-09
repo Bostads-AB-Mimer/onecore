@@ -1,4 +1,9 @@
-import { Invoice, InvoicePaymentEvent, XledgerProject } from '@onecore/types'
+import {
+  Invoice,
+  InvoicePaymentEvent,
+  PaymentStatus,
+  XledgerProject,
+} from '@onecore/types'
 import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
 import { XledgerContact } from '@onecore/types/src/types'
 
@@ -8,13 +13,35 @@ import { GET, POST } from './baseApi'
 // Economy service is not properly set up for swagger generation :(
 
 async function getInvoicesByContactCode(
-  contactCode: string
-): Promise<Invoice[]> {
+  contactCode: string,
+  filters?: { from?: Date; to?: Date },
+  size?: number,
+  skip?: number,
+  after?: string,
+  paymentStatus?: PaymentStatus
+): Promise<{
+  invoices: Invoice[]
+  pageInfo: {
+    hasNextPage: boolean
+    endCursor?: string
+    xpandInvoicesFetched: number
+  }
+}> {
   const { data, error } = await GET(
     // @ts-expect-error
     `/invoices/by-contact-code/${contactCode}`,
     {
-      params: { path: { contactCode } },
+      params: {
+        path: { contactCode },
+        query: {
+          from: filters?.from?.toISOString(),
+          to: filters?.to?.toISOString(),
+          paymentStatus,
+          size,
+          skip,
+          after,
+        },
+      },
     }
   )
 
@@ -24,7 +51,7 @@ async function getInvoicesByContactCode(
   const response = data as any
   if (!response?.content) throw new Error('Response ok but missing content')
 
-  return response.content.data as Invoice[]
+  return response.content.data as { invoices: Invoice[]; pageInfo: any }
 }
 
 async function getInvoicePaymentEvents(

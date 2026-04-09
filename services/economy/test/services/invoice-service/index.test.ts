@@ -30,7 +30,10 @@ describe('Invoice Service', () => {
     it('responds with invoices', async () => {
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce(factory.invoice.buildList(3))
+        .mockResolvedValueOnce({
+          content: factory.invoice.buildList(3),
+          pageInfo: { hasNextPage: false },
+        })
 
       jest
         .spyOn(xpandAdapter, 'getInvoicesByContactCode')
@@ -43,9 +46,9 @@ describe('Invoice Service', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(res.body.content).toHaveLength(3)
+      expect(res.body.content.invoices).toHaveLength(3)
       expect(() =>
-        schemas.v1.InvoiceSchema.array().parse(res.body.content)
+        schemas.v1.InvoiceSchema.array().parse(res.body.content.invoices)
       ).not.toThrow()
     })
 
@@ -62,7 +65,10 @@ describe('Invoice Service', () => {
 
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([invoice_1])
+        .mockResolvedValueOnce({
+          content: [invoice_1],
+          pageInfo: { hasNextPage: false },
+        })
 
       jest
         .spyOn(xpandAdapter, 'getInvoicesByContactCode')
@@ -78,11 +84,11 @@ describe('Invoice Service', () => {
 
       expect(res.status).toBe(200)
 
-      const invoice_1_response = res.body.content.find(
+      const invoice_1_response = res.body.content.invoices.find(
         (invoice: any) => invoice.invoiceId === invoice_1.invoiceId
       )
 
-      const invoice_2_response = res.body.content.find(
+      const invoice_2_response = res.body.content.invoices.find(
         (invoice: any) => invoice.invoiceId === invoice_2.invoiceId
       )
 
@@ -99,7 +105,7 @@ describe('Invoice Service', () => {
       )
 
       expect(() =>
-        schemas.v1.InvoiceSchema.array().parse(res.body.content)
+        schemas.v1.InvoiceSchema.array().parse(res.body.content.invoices)
       ).not.toThrow()
     })
 
@@ -123,7 +129,10 @@ describe('Invoice Service', () => {
 
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([xledgerInvoice])
+        .mockResolvedValueOnce({
+          content: [xledgerInvoice],
+          pageInfo: { hasNextPage: false },
+        })
 
       jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
 
@@ -131,7 +140,7 @@ describe('Invoice Service', () => {
         `/invoices/bycontactcode/P123456`
       )
 
-      expect(res.body.content).toEqual(
+      expect(res.body.content.invoices).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             fromDate: xpandInvoice.fromDate.toISOString(),
@@ -155,7 +164,10 @@ describe('Invoice Service', () => {
 
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([xledgerInvoice])
+        .mockResolvedValueOnce({
+          content: [xledgerInvoice],
+          pageInfo: { hasNextPage: false },
+        })
 
       jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
 
@@ -163,7 +175,7 @@ describe('Invoice Service', () => {
         `/invoices/bycontactcode/P123456`
       )
 
-      expect(res.body.content).toEqual(
+      expect(res.body.content.invoices).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             fromDate: xledgerInvoice.fromDate.toISOString(),

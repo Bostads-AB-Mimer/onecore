@@ -78,10 +78,19 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const { from, to, paymentStatus, skip, size, after } = queryParams.data
+
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoicesByContactCode(
       ctx.params.contactCode,
-      queryParams.data
+      {
+        from,
+        to,
+        paymentStatus,
+      },
+      size,
+      skip,
+      after
     )
 
     if (!result.ok) {
@@ -93,7 +102,7 @@ export const routes = (router: KoaRouter) => {
     } else {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(
-        { data: result.data, totalCount: result.data.length },
+        { data: result.data, totalCount: result.data.invoices.length },
         metadata
       )
     }

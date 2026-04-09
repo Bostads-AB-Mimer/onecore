@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { format } from 'date-fns'
 import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
@@ -239,8 +240,8 @@ const LeasesPage = () => {
                   filters.setDateRange(
                     'startDateFrom',
                     'startDateTo',
-                    start,
-                    end
+                    start ? format(start, 'yyyy-MM-dd') : null,
+                    end ? format(end, 'yyyy-MM-dd') : null
                   )
                 }
                 placeholder="Startdatum"
@@ -250,7 +251,12 @@ const LeasesPage = () => {
                 startDate={filters.endDateFrom || null}
                 endDate={filters.endDateTo || null}
                 onDateChange={(start, end) =>
-                  filters.setDateRange('endDateFrom', 'endDateTo', start, end)
+                  filters.setDateRange(
+                    'endDateFrom',
+                    'endDateTo',
+                    start ? format(start, 'yyyy-MM-dd') : null,
+                    end ? format(end, 'yyyy-MM-dd') : null
+                  )
                 }
                 placeholder="Slutdatum"
               />
