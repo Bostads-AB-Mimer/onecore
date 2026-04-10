@@ -67,4 +67,23 @@ export const InvoiceSchema = z.object({
   credit: z.object({ originalInvoiceId: z.string() }).nullable(),
   accountCode: z.string().optional(),
   expectedLoss: z.boolean().optional(),
+  matchId: z.number().optional(), // TODO ska denna finnas i Invoice?
+  costCentre: z.string().optional(), // TODO ska denna finnas i Invoice?
+})
+
+// TODO can we consolidate this and InvoiceRowSchema?
+export const RentInvoiceRowSchema = z.object({
+  type: z.enum(['Rent', 'Other']),
+  invoiceNumber: z.string(),
+  text: z.string(),
+  rentType: z.string().nullable(),
+  code: z.string().nullable(),
+  rowType: z.number(),
+  amount: z.number(),
+  reduction: z.number(),
+  vat: z.number(),
+  fromDate: z.coerce.date(),
+  toDate: z.coerce.date(),
+  printGroup: z.string().nullable(),
+  comment: z.string().optional(),
 })

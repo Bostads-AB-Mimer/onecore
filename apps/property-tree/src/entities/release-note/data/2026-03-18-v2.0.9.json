@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-03-18-v209-1",
+    "date": "2026-03-18",
+    "title": "Nyckelhantering i ONECore",
+    "description": "All nyckelhantering sker nu i ONECore istället för i Xpand. Knappen \"Nycklar\" finns direkt på startsidan och det är därifrån all nyckelhantering görs. Vid sökning på en kund finns fliken \"Nycklar\" som visar alla nycklar utlånade till kunden. Det går inte längre att hantera nycklar i Xpand.",
+    "category": "feature"
+  }
+]

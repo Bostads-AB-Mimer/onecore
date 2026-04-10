@@ -179,7 +179,7 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *           minLength: 2
-   *         description: Search query for OR search across fields specified in 'fields' parameter
+   *         description: Search query for OR search across fields specified in 'fields' parameter. Minimum length requirement is waived when keySystemId filter is provided.
    *       - in: query
    *         name: fields
    *         required: false
@@ -255,9 +255,14 @@ export const routes = (router: KoaRouter) => {
       const includeKeySystem = ctx.query.includeKeySystem === 'true'
       const query = keysAdapter.getKeysSearchQuery(db)
 
+      const hasKeySystemFilter =
+        typeof ctx.query.keySystemId === 'string' &&
+        ctx.query.keySystemId.trim().length > 0
+
       const searchResult = buildSearchQuery(query, ctx, {
         defaultSearchFields: ['keyName', 'rentalObjectCode'],
         reservedParams: ['q', 'fields', 'page', 'limit', 'includeKeySystem'],
+        minQueryLength: hasKeySystemFilter ? 0 : 2,
       })
 
       if (!searchResult.hasSearchParams) {

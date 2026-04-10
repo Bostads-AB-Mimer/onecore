@@ -10,6 +10,7 @@ const leaseTypes = {
   renegotiationContract: 'Omförhandlingskontrakt',
   otherContract: 'Övrigt',
   parkingspaceContract: 'P-Platskontrakt',
+  shortTermRental: 'Korttidsuthyrning',
 }
 
 export { leaseTypes }

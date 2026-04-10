@@ -4,6 +4,7 @@ import { leasing, WaitingListType, RouteErrorResponse } from '@onecore/types'
 import { z } from 'zod'
 
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
+import { valid as isValidPersonnummer } from '../../../helpers/personnummer'
 import * as applicationProfileAdapter from '../adapters/application-profile-adapter'
 import * as contactCommentsAdapter from '../adapters/xpand/contact-comments-adapter'
 import {
@@ -160,7 +161,7 @@ export const routes = (router: KoaRouter) => {
    * /contacts/for-identity-check:
    *   get:
    *     summary: Get contacts for deceased/protected identity check
-   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Filters out organizations, deceased contacts, and those with invalid registration numbers.
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Filters out organizations, deceased contacts, and those with invalid registration numbers. Note - Results are validated using the personnummer package, so the actual count may be fewer than the requested limit if invalid personnummer are filtered out.
    *     tags: [Contacts]
    *     parameters:
    *       - in: query
@@ -225,8 +226,21 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await tenantLeaseAdapter.getContactsForIdentityCheck(ctx)
 
+      // Filter out contacts with invalid personnummer
+      const validContacts = result.content.filter((contact) =>
+        isValidPersonnummer(contact.nationalRegistrationNumber)
+      )
+
       ctx.status = 200
-      ctx.body = { ...metadata, ...result }
+      ctx.body = {
+        ...metadata,
+        ...result,
+        content: validContacts,
+        _meta: {
+          ...result._meta,
+          count: validContacts.length,
+        },
+      }
     } catch (err) {
       logger.error({ err }, 'contacts.for-identity-check')
       ctx.status = 500
@@ -276,12 +290,22 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({
+      includeTerminatedLeases: 'false',
+      includeNonTenantLeases: 'false',
+    })
   router.get(
     '(.*)/contacts/by-national-registration-number/:pnr',
     async (ctx) => {
-      const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+      const metadata = generateRouteMetadata(ctx, [
+        'includeTerminatedLeases',
+        'includeNonTenantLeases',
+      ])
       const queryParams = getContactByPnrQueryParamSchema.safeParse(ctx.query)
 
       if (!queryParams.success) {
@@ -291,7 +315,8 @@ export const routes = (router: KoaRouter) => {
 
       const responseData = await getContactByNationalRegistrationNumber(
         ctx.params.pnr,
-        queryParams.data.includeTerminatedLeases
+        queryParams.data.includeTerminatedLeases,
+        queryParams.data.includeNonTenantLeases
       )
 
       ctx.status = 200
@@ -342,11 +367,21 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({
+      includeTerminatedLeases: 'false',
+      includeNonTenantLeases: 'false',
+    })
 
   router.get('(.*)/contacts/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeNonTenantLeases',
+    ])
 
     const queryParams = getContactByContactCodeQueryParamSchema.safeParse(
       ctx.query
@@ -359,7 +394,8 @@ export const routes = (router: KoaRouter) => {
 
     const result = await getContactByContactCode(
       ctx.params.contactCode,
-      queryParams.data.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases,
+      queryParams.data.includeNonTenantLeases
     )
 
     if (!result.ok) {
@@ -503,11 +539,21 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({
+      includeTerminatedLeases: 'false',
+      includeNonTenantLeases: 'false',
+    })
 
   router.get('(.*)/contacts/by-phone-number/:phoneNumber', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeNonTenantLeases',
+    ])
 
     const queryParams = getContactByPhoneNumberQueryParamSchema.safeParse(
       ctx.query
@@ -519,7 +565,8 @@ export const routes = (router: KoaRouter) => {
     }
     const responseData = await getContactByPhoneNumber(
       ctx.params.phoneNumber,
-      queryParams.data.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases,
+      queryParams.data.includeNonTenantLeases
     )
 
     ctx.status = 200

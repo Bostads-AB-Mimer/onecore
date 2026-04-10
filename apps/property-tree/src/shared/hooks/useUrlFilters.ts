@@ -137,8 +137,9 @@ export function useUrlFilters({
     // Date ranges
     setDateRange,
 
-    // URL params (for reading date params, etc.)
+    // URL params (for reading and batch-updating params)
     searchParams,
+    updateUrlParams,
 
     // Active state
     hasActiveFilters,

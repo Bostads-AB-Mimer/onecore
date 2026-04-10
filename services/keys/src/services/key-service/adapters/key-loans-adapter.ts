@@ -76,9 +76,12 @@ export async function getKeyLoanByIdWithDetails(
         .select('cardId')
     ).map((row) => row.cardId)
 
-    if (cardIds.length > 0 && keysArray.length > 0) {
-      const rentalObjectCode = keysArray[0].rentalObjectCode
+    if (cardIds.length > 0) {
+      const rentalObjectCode =
+        keysArray.length > 0 ? keysArray[0].rentalObjectCode : null
+
       if (rentalObjectCode) {
+        // Batch lookup via rental object code (efficient when keys exist)
         try {
           const cardOwners = await daxAdapter.searchCardOwners({
             nameFilter: rentalObjectCode,
@@ -89,6 +92,18 @@ export async function getKeyLoanByIdWithDetails(
           keyCardsArray = cardIds
             .map((cid) => cardMap.get(cid))
             .filter((c): c is Card => c !== undefined)
+        } catch (error) {
+          console.error('Failed to fetch cards from DAX:', error)
+        }
+      } else {
+        // No keys to derive rentalObjectCode from — fetch each card individually
+        try {
+          const cards = await Promise.all(
+            cardIds.map((cid) =>
+              daxAdapter.getCardById(cid, 'codes').catch(() => null)
+            )
+          )
+          keyCardsArray = cards.filter((c): c is Card => c !== null)
         } catch (error) {
           console.error('Failed to fetch cards from DAX:', error)
         }

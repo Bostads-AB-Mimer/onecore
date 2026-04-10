@@ -3,7 +3,7 @@ model ComponentInstallations {
   componentId        String    @db.UniqueIdentifier
   spaceId            String?   @db.Char(15)
   spaceType          String    @db.NVarChar(20)
-  installationDate   DateTime  @db.Date
+  installationDate   DateTime? @db.Date
   deinstallationDate DateTime? @db.Date
   orderNumber        String?   @db.NVarChar(100)
   cost               Float     @db.Money

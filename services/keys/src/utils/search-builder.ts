@@ -13,6 +13,12 @@ export interface SearchConfig {
    * Defaults to: 'q', 'fields', 'page', 'limit'
    */
   reservedParams?: string[]
+
+  /**
+   * Minimum length for the q parameter to be used as an OR search.
+   * Defaults to 2.
+   */
+  minQueryLength?: number
 }
 
 export interface SearchResult {
@@ -63,10 +69,14 @@ export function buildSearchQuery(
   const {
     defaultSearchFields,
     reservedParams = ['q', 'fields', 'page', 'limit'],
+    minQueryLength = 2,
   } = config
 
   // Handle OR search (q with fields)
-  if (typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 2) {
+  if (
+    typeof ctx.query.q === 'string' &&
+    ctx.query.q.trim().length >= minQueryLength
+  ) {
     const searchTerm = ctx.query.q.trim()
 
     // Get fields to search across (OR condition)
@@ -115,7 +125,8 @@ export function buildSearchQuery(
 
   // Check if at least one search criteria was provided
   const hasQParam =
-    typeof ctx.query.q === 'string' && ctx.query.q.trim().length >= 2
+    typeof ctx.query.q === 'string' &&
+    ctx.query.q.trim().length >= minQueryLength
   const hasFieldParams = Object.entries(ctx.query).some(([key, value]) => {
     if (reservedParams.includes(key)) return false
     if (typeof value === 'string' && value.trim().length > 0) {

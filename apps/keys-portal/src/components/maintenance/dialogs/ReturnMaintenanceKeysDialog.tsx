@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
-import type { Key, CardDetails, KeyLoanWithDetails } from '@/services/types'
+import type {
+  KeyDetails,
+  CardDetails,
+  KeyLoanWithDetails,
+} from '@/services/types'
 
 // Store loan details for PDF generation
 type LoanDetails = {
@@ -25,7 +29,7 @@ type Props = {
   onOpenChange: (open: boolean) => void
   keyIds: string[] // Key IDs selected for return
   cardIds?: string[] // Card IDs selected for return
-  allKeys: Key[] // All keys to look up key details
+  allKeys: KeyDetails[] // All keys to look up key details
   allCards?: CardDetails[] // All cards to look up card details
   onSuccess: () => void
 }
@@ -86,8 +90,6 @@ export function ReturnMaintenanceKeysDialog({
                 loanId: activeLoan.id,
                 loanLabel: activeLoan.contact || '',
                 keys: loanKeys,
-                disposedKeys: loanKeys.filter((k) => k.disposed),
-                nonDisposedKeys: loanKeys.filter((k) => !k.disposed),
               })
 
               // Fetch contact info for company name
@@ -114,11 +116,13 @@ export function ReturnMaintenanceKeysDialog({
         // Initialize selected keys - check all keys that were originally selected
         const initialSelectedKeys = new Set<string>()
         loansMap.forEach((loanInfo) => {
-          loanInfo.nonDisposedKeys.forEach((key) => {
-            if (keyIds.includes(key.id)) {
-              initialSelectedKeys.add(key.id)
-            }
-          })
+          loanInfo.keys
+            .filter((k) => !k.disposed)
+            .forEach((key) => {
+              if (keyIds.includes(key.id)) {
+                initialSelectedKeys.add(key.id)
+              }
+            })
         })
         setSelectedKeyIds(initialSelectedKeys)
       } finally {

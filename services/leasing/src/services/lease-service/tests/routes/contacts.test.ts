@@ -12,6 +12,7 @@ import * as applicationProfileService from '../../create-or-update-application-p
 import * as factories from '../../tests/factories'
 import * as tenants from '../../get-tenant'
 import * as factory from '../factories'
+import * as personnummerHelper from '../../../../helpers/personnummer'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -182,17 +183,18 @@ describe('GET /contacts/search', () => {
 
 describe('GET /contacts/for-identity-check', () => {
   it('returns paginated contacts for identity check', async () => {
+    jest.spyOn(personnummerHelper, 'valid').mockReturnValue(true)
     jest
       .spyOn(tenantLeaseAdapter, 'getContactsForIdentityCheck')
       .mockResolvedValueOnce({
         content: [
           {
             contactCode: 'P12345',
-            nationalRegistrationNumber: '198501011234',
+            nationalRegistrationNumber: 'FAKE-PNR-001',
           },
           {
             contactCode: 'P67890',
-            nationalRegistrationNumber: '197012315678',
+            nationalRegistrationNumber: 'FAKE-PNR-002',
           },
         ],
         _meta: {
@@ -217,7 +219,7 @@ describe('GET /contacts/for-identity-check', () => {
     expect(res.body.content).toHaveLength(2)
     expect(res.body.content[0]).toEqual({
       contactCode: 'P12345',
-      nationalRegistrationNumber: '198501011234',
+      nationalRegistrationNumber: 'FAKE-PNR-001',
     })
     expect(res.body._meta.totalRecords).toBe(2)
   })
@@ -236,13 +238,14 @@ describe('GET /contacts/for-identity-check', () => {
   })
 
   it('supports pagination parameters', async () => {
+    jest.spyOn(personnummerHelper, 'valid').mockReturnValue(true)
     jest
       .spyOn(tenantLeaseAdapter, 'getContactsForIdentityCheck')
       .mockResolvedValueOnce({
         content: [
           {
             contactCode: 'P12345',
-            nationalRegistrationNumber: '198501011234',
+            nationalRegistrationNumber: 'FAKE-PNR-001',
           },
         ],
         _meta: {

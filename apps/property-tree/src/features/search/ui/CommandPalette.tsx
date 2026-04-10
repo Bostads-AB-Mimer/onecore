@@ -8,6 +8,7 @@ import {
   Command,
   Loader2,
   SquareUser,
+  Store,
   User2,
   Wrench,
 } from 'lucide-react'
@@ -26,6 +27,7 @@ const iconMap = {
   contact: User2,
   'parking-space': CarFront,
   'maintenance-unit': Wrench,
+  facility: Store,
 } as const
 
 function getResultProps(item: CombinedSearchResult) {
@@ -87,6 +89,18 @@ function getResultProps(item: CombinedSearchResult) {
         subtitle: item.estate,
         path: paths.maintenanceUnit(item.code),
         state: {},
+      }
+    case 'facility':
+      return {
+        icon,
+        label: item.rentalId,
+        prefix: '[LOK]',
+        subtitle: item.property?.name,
+        path: paths.facility(item.rentalId),
+        state: {
+          buildingCode: item.building?.code || null,
+          propertyCode: item.property?.code || null,
+        },
       }
     default:
       return null
@@ -170,8 +184,8 @@ export function CommandPalette() {
                 type="text"
                 onChange={(e) => onSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Sök efter fastigheter, byggnader, lägenheter, bilplatser eller kunder..."
-                className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400"
+                placeholder="Sök fastigheter, lägenheter, kunder..."
+                className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400 text-sm md:text-base"
               />
             </div>
             <div className="max-h-[60vh] overflow-y-auto">

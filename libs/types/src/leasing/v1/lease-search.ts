@@ -31,6 +31,16 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
 
+  leaseType: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .optional(),
+
+  parkingSpaceType: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .optional(),
+
   // Date filters
   startDateFrom: z.string().optional(),
   startDateTo: z.string().optional(),
@@ -73,8 +83,23 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .optional()
     .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20)),
 
+  // When false (default), Upphört (status 3) is excluded. When true, all statuses are returned.
+  includeEnded: z
+    .union([z.string(), z.boolean()])
+    .transform((val) => val === true || val === 'true')
+    .optional(),
+
   // Sorting (tenantName removed since contacts are fetched separately)
-  sortBy: z.enum(['leaseStartDate', 'lastDebitDate', 'leaseId']).optional(),
+  sortBy: z
+    .enum([
+      'leaseStartDate',
+      'lastDebitDate',
+      'leaseId',
+      'address',
+      'objectType',
+      'rentalObjectCode',
+    ])
+    .optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
 })
 
@@ -96,6 +121,9 @@ export const LeaseSearchResultSchema = z.object({
   lastDebitDate: z.date().nullable(),
   status: z.nativeEnum(LeaseStatus),
 
+  // Rental object code (objektnummer) - always included
+  rentalObjectCode: z.string().nullable(),
+
   // Property/Building/Area fields - optional (only included when filter used)
   // nullable().optional() = omit when not queried, null when queried but empty in DB
   property: z.string().nullable().optional(),
@@ -103,6 +131,7 @@ export const LeaseSearchResultSchema = z.object({
   area: z.string().nullable().optional(),
   buildingManager: z.string().nullable().optional(),
   districtName: z.string().nullable().optional(),
+  parkingSpaceType: z.string().nullable().optional(),
 })
 
 export type LeaseSearchResult = z.infer<typeof LeaseSearchResultSchema>

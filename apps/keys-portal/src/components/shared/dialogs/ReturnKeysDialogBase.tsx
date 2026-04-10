@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 import { AlertCircle } from 'lucide-react'
-import type { Key } from '@/services/types'
+import type { KeyDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { BeforeAfterDialogBase } from '@/components/loan/dialogs/BeforeAfterDialogBase'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -9,9 +9,7 @@ import { cn } from '@/lib/utils'
 export type LoanGroup = {
   loanId: string
   loanLabel: string // "Lån 1 • F12345" or "Company AB"
-  keys: Key[]
-  disposedKeys: Key[]
-  nonDisposedKeys: Key[]
+  keys: KeyDetails[]
 }
 
 type Props = {
@@ -60,6 +58,8 @@ export function ReturnKeysDialogBase({
     <div className="space-y-3 max-h-[400px] overflow-y-auto">
       {loanGroups.map((loanInfo) => {
         const showLoanGrouping = loanGroups.length > 1 && loanInfo.loanLabel
+        const nonDisposedKeys = loanInfo.keys.filter((k) => !k.disposed)
+        const disposedKeys = loanInfo.keys.filter((k) => k.disposed)
 
         return (
           <div
@@ -75,9 +75,9 @@ export function ReturnKeysDialogBase({
             )}
 
             {/* Non-disposed keys with checkboxes */}
-            {loanInfo.nonDisposedKeys.length > 0 && (
+            {nonDisposedKeys.length > 0 && (
               <div className="space-y-1">
-                {loanInfo.nonDisposedKeys.map((key) => (
+                {nonDisposedKeys.map((key) => (
                   <div
                     key={key.id}
                     className="p-2 border rounded bg-card text-xs flex items-start gap-2"
@@ -93,6 +93,8 @@ export function ReturnKeysDialogBase({
                       <div className="font-medium">{key.keyName}</div>
                       <div className="text-muted-foreground">
                         {KeyTypeLabels[key.keyType]}
+                        {key.keySystem?.systemCode &&
+                          ` • ${key.keySystem.systemCode}`}
                         {key.flexNumber !== undefined &&
                           ` • Flex: ${key.flexNumber}`}
                         {key.keySequenceNumber !== undefined &&
@@ -105,13 +107,13 @@ export function ReturnKeysDialogBase({
             )}
 
             {/* Disposed keys (no checkboxes) */}
-            {loanInfo.disposedKeys.length > 0 && (
+            {disposedKeys.length > 0 && (
               <div className="space-y-1">
                 <div className="text-xs text-destructive flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   Kasserade:
                 </div>
-                {loanInfo.disposedKeys.map((key) => (
+                {disposedKeys.map((key) => (
                   <div
                     key={key.id}
                     className="p-2 border rounded bg-destructive/5 border-destructive/20 text-xs"
@@ -121,6 +123,8 @@ export function ReturnKeysDialogBase({
                     </div>
                     <div className="text-muted-foreground">
                       {KeyTypeLabels[key.keyType]}
+                      {key.keySystem?.systemCode &&
+                        ` • ${key.keySystem.systemCode}`}
                       {key.flexNumber !== undefined &&
                         ` • Flex: ${key.flexNumber}`}
                       {key.keySequenceNumber !== undefined &&

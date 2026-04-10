@@ -1,6 +1,7 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
 import ms from 'ms'
+
 dotenv.config()
 
 interface Account {
@@ -9,12 +10,20 @@ interface Account {
   hash: string
 }
 
+export interface HealthCheck {
+  systemName: string
+  minimumMinutesBetweenRequests: number
+}
+
 export interface Config {
   port: number
   tenantsLeasesService: {
     url: string
   }
   propertyInfoService: {
+    url: string
+  }
+  contactsService: {
     url: string
   }
   documentsService: {
@@ -59,6 +68,8 @@ export interface Config {
   emailAddresses: {
     leasing: string
     tenantDefault: string
+    economy: string
+    bosociala: string
     dev: string
   }
   scanner: {
@@ -66,42 +77,15 @@ export interface Config {
     errorNotificationEmail: string
   }
   health: {
-    leasing: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    propertyBase: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    propertyManagement: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    communication: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    workOrder: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    economy: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    inspection: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    fileStorage: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    keys: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
+    contacts: HealthCheck
+    leasing: HealthCheck
+    propertyBase: HealthCheck
+    propertyManagement: HealthCheck
+    communication: HealthCheck
+    workOrder: HealthCheck
+    keys: HealthCheck
+    fileStorage: HealthCheck
+    inspection: HealthCheck
   }
 }
 
@@ -114,6 +98,9 @@ const config = configPackage({
     },
     propertyInfoService: {
       url: 'http://localhost:5030',
+    },
+    contactsService: {
+      url: 'http://localhost:5093',
     },
     documentsService: {
       url: 'https://mim-shared-apim-apim01-t.azure-api.net/document',
@@ -156,12 +143,18 @@ const config = configPackage({
     emailAddresses: {
       leasing: '',
       tenantDefault: '',
+      economy: '',
+      bosociala: '',
     },
     scanner: {
       allowedIps: [],
       errorNotificationEmail: '',
     },
     health: {
+      contacts: {
+        systemName: 'contacts',
+        minimumMinutesBetweenRequests: 1,
+      },
       leasing: {
         systemName: 'leasing',
         minimumMinutesBetweenRequests: 1,
@@ -204,6 +197,7 @@ const config = configPackage({
 
 export default {
   port: config.get('port'),
+  contactsService: config.get('contactsService'),
   tenantsLeasesService: config.get('tenantsLeasesService'),
   propertyInfoService: config.get('propertyInfoService'),
   documentsService: config.get('documentsService'),

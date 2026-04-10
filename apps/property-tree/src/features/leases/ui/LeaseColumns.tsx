@@ -12,9 +12,20 @@ export const leaseColumns = [
     key: 'leaseId',
     label: 'Kontraktsnummer',
     className: 'px-2',
+    sortKey: 'leaseId',
     render: (lease: LeaseSearchResult) => (
       <span className="font-medium">{lease.leaseId}</span>
     ),
+  },
+  {
+    key: 'rentalObjectCode',
+    label: 'Objektnummer',
+    className: 'px-2',
+    sortKey: 'rentalObjectCode',
+    render: (lease: LeaseSearchResult) => (
+      <span className="font-medium">{lease.rentalObjectCode || '-'}</span>
+    ),
+    hideOnMobile: true,
   },
   {
     key: 'contacts',
@@ -75,6 +86,7 @@ export const leaseColumns = [
     key: 'objectType',
     label: 'Objekttyp',
     className: 'px-2',
+    sortKey: 'objectType',
     render: (lease: LeaseSearchResult) => (
       <ObjectTypeBadge type={lease.objectTypeCode} />
     ),
@@ -84,6 +96,7 @@ export const leaseColumns = [
     key: 'address',
     label: 'Adress',
     className: 'px-2',
+    sortKey: 'address',
     render: (lease: LeaseSearchResult) => lease.address || '-',
     hideOnMobile: true,
   },
@@ -91,6 +104,7 @@ export const leaseColumns = [
     key: 'startDate',
     label: 'Startdatum',
     className: 'px-2',
+    sortKey: 'leaseStartDate',
     render: (lease: LeaseSearchResult) => formatDate(lease.startDate),
     hideOnMobile: true,
   },
@@ -98,6 +112,7 @@ export const leaseColumns = [
     key: 'lastDebitDate',
     label: 'Slutdatum',
     className: 'px-2',
+    sortKey: 'lastDebitDate',
     render: (lease: LeaseSearchResult) => formatDate(lease.lastDebitDate),
   },
   {

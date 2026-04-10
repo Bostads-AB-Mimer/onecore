@@ -85,7 +85,7 @@ export interface AddComponentResponse {
   installation: {
     id: string
     spaceId: string
-    installationDate: string
+    installationDate: string | null
   }
 }
 

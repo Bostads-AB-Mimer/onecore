@@ -1,0 +1,32 @@
+{
+  "type": "individual",
+  "contactCode": "P002505",
+  "personal": {
+    "firstName": "",
+    "lastName": "",
+    "fullName": "Älgfärsson Stig-Britt Wulfie",
+    "nationalRegistrationNumber": null,
+    "birthDate": null
+  },
+  "communication": {
+    "phoneNumbers": [
+      {
+        "phoneNumber": "073-8419906",
+        "type": "unspecified",
+        "isPrimary": false,
+        "comment": "Gitarr-Jesper Grus"
+      }
+    ],
+    "emailAddresses": [],
+    "specialAttention": false
+  },
+  "addresses": [
+    {
+      "street": "Korvstopperistigen 1A",
+      "zipCode": "722 22",
+      "city": "VÄSTERÅS",
+      "region": "SE",
+      "country": "SVERIGE"
+    }
+  ]
+}

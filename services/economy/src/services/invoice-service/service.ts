@@ -32,12 +32,21 @@ import {
 } from '../../common/types'
 import {
   createCustomerLedgerRow,
+  getAllInvoicePaymentEvents,
   transformAggregatedInvoiceRow,
   transformContact,
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
 import { Contact } from '@onecore/types'
 import { logger } from '@onecore/utilities'
+import {
+  getInvoiceRows,
+  getPropertyCodeAndCostCentreForLease,
+} from '../common/adapters/xpand-db-adapter'
+import {
+  extractLeaseIdsFromInvoiceRows,
+  getRentalIdFromLeaseId,
+} from '../common/helpers'
 
 const createRoundOffRow = async (
   invoice: Invoice,
@@ -646,9 +655,6 @@ export const importInvoiceRows = async (
         !importedInvoiceNumbers.includes(rentalInvoiceNumber)
     )
 
-    /*const rentalInvoiceNumbers = []
-    const invoicesToImport = ['552511356128155K']*/
-
     if (!invoicesToImport || invoicesToImport.length === 0) {
       return {
         batchId: null,
@@ -667,11 +673,7 @@ export const importInvoiceRows = async (
       'Importing invoices'
     )
 
-    const invoiceRows = await getXpandInvoiceRows(
-      fromDate.getFullYear(),
-      companyId,
-      invoicesToImport
-    )
+    const invoiceRows = await getXpandInvoiceRows(companyId, invoicesToImport)
     const invoiceDataRows = cleanInvoiceRows(invoiceRows as any)
 
     logger.info(
@@ -727,8 +729,21 @@ export const importInvoiceRows = async (
         chunkInvoiceDataRows,
         batchId
       )
+
+      if (contactCodes.errors) {
+        errors.push(...contactCodes.errors)
+      }
       const contacts = await getXpandContacts(contactCodes.contacts)
       await saveContacts(contacts, batchId)
+    }
+
+    if (errors && errors.length > 0) {
+      errors.forEach((error) => {
+        const index = invoicesToImport.indexOf(error.invoiceNumber, 0)
+        if (index > -1) {
+          invoicesToImport.splice(index, 1)
+        }
+      })
     }
 
     await verifyImport(invoicesToImport, batchId, batchTotal)
@@ -808,4 +823,45 @@ const verifyAccountTotals = (
   }
 
   return true
+}
+
+export const fetchInvoiceRows = async (invoiceIds: string[]) => {
+  return getInvoiceRows(invoiceIds)
+}
+
+export const fetchPaymentEvents = async (matchIds: number[]) => {
+  return getAllInvoicePaymentEvents(matchIds)
+}
+
+export const getLeaseDetails = async (invoiceIds: string[]) => {
+  const invoiceRows = await getInvoiceRows(invoiceIds)
+
+  return Promise.all(
+    invoiceIds.map(async (id) => {
+      const invoiceRowsForInvoice = invoiceRows.filter(
+        (r) => r.invoiceNumber === id
+      )
+      const year = invoiceRowsForInvoice[0]?.fromDate.getFullYear()
+      const leaseIds = extractLeaseIdsFromInvoiceRows(invoiceRowsForInvoice)
+      const details = await Promise.all(
+        leaseIds.map(async (leaseId) => {
+          const rentalId = getRentalIdFromLeaseId(leaseId)
+          const details = await getPropertyCodeAndCostCentreForLease(
+            rentalId,
+            year
+          )
+
+          return {
+            leaseId,
+            costCentre: details?.costCentre ?? null,
+          }
+        })
+      )
+
+      return {
+        invoiceId: id,
+        details,
+      }
+    })
+  )
 }

@@ -1,15 +1,9 @@
 import knex from 'knex'
 import config from '../../../common/config'
-import { RentInvoiceRow, RentInvoice, RentalProperty } from '../types'
+import { RentInvoice, RentalProperty } from '../types'
 import { InvoiceDeliveryMethod, XpandContact } from '../../../common/types'
 import trimStrings from '../../../utils/trimStrings'
-import {
-  Address,
-  Invoice,
-  InvoiceTransactionType,
-  invoiceTransactionTypeTranslation,
-  paymentStatusTranslation,
-} from '@onecore/types'
+import { Address, RentInvoiceRow } from '@onecore/types'
 
 const db = knex({
   connection: {
@@ -52,6 +46,8 @@ type XpandInvoiceRow = {
   printGroup: string | null
   invoiceRowType: string
   rentType: string | null
+  fromDate: Date
+  toDate: Date
 }
 
 const buildRentalPropertyQuery = ({
@@ -245,6 +241,8 @@ export const getInvoiceRows = async (
       'krfkr.code',
       'krfkr.rowtype AS rowType',
       'krfkr.printgroup AS printGroup',
+      'krfkr.fromdate AS fromDate',
+      'krfkr.todate AS toDate',
       'cmarg.caption AS invoiceRowType',
       'hysum.hysumben AS rentType'
     )
@@ -256,6 +254,7 @@ export const getInvoiceRows = async (
     .whereRaw(
       `krfkh.invoice IN (${invoiceNumbers.map((n) => `'${n}'`).join(', ')})`
     )
+    .whereNotNull('krfkh.fromdate')
     .orderBy('krfkr.printsort', 'asc')
     .then(trimStrings<XpandInvoiceRow[]>)
 
@@ -271,6 +270,8 @@ export const getInvoiceRows = async (
       code: row.code,
       rowType: row.rowType,
       printGroup: row.printGroup,
+      fromDate: new Date(row.fromDate),
+      toDate: new Date(row.toDate),
     }
   })
 }
@@ -415,4 +416,60 @@ export const getContacts = async (
   })
 
   return contacts
+}
+
+export const getPropertyCodeAndCostCentreForLease = async (
+  rentalId: string,
+  year?: number
+): Promise<{ costCentre: string; propertyCode: string } | null> => {
+  const queries = [
+    // First try: join via babyg when keyobjbyg exists
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.p3 AS propertyCode')
+      .from('babuf')
+      .innerJoin('babyg', 'babyg.keycmobj', 'babuf.keyobjbyg')
+      .innerJoin('repsk', 'repsk.keycode', 'babyg.keybabyg')
+      .where('babuf.hyresid', rentalId)
+      .whereNotNull('babuf.keyobjbyg')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
+
+    // Second try: join via keyobjyta when keyobjbyg is null
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.p3 AS propertyCode')
+      .from('babuf')
+      .innerJoin('repsk', 'repsk.keycode', 'babuf.keyobjyta')
+      .where('babuf.hyresid', rentalId)
+      .whereNull('babuf.keyobjbyg')
+      .whereNotNull('babuf.keyobjyta')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
+
+    // Third try: join via fstcode as fallback
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.p3 AS propertyCode')
+      .from('babuf')
+      .innerJoin('repsk', 'repsk.p3', 'babuf.fstcode')
+      .where('babuf.hyresid', rentalId)
+      .whereNotNull('babuf.fstcode')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
+  ]
+
+  for (const query of queries) {
+    if (year) {
+      query.where('repsk.year', year)
+    }
+
+    const result = await query.then(trimStrings)
+
+    if (result.length > 0) {
+      return {
+        costCentre: result[0].costCentre ?? '',
+        propertyCode: result[0].propertyCode ?? '',
+      }
+    }
+  }
+
+  return null
 }

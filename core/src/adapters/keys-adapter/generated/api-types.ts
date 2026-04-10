@@ -1610,7 +1610,7 @@ export interface paths {
           page?: number
           /** @description Number of records per page */
           limit?: number
-          /** @description Search query for OR search across fields specified in 'fields' parameter */
+          /** @description Search query for OR search across fields specified in 'fields' parameter. Minimum length requirement is waived when keySystemId filter is provided. */
           q?: string
           /** @description Comma-separated list of fields for OR search (e.g., "keyName,keyType"). Defaults to keyName. */
           fields?: string
@@ -2573,7 +2573,7 @@ export interface components {
             id: string
             /** @enum {string} */
             loanType: 'TENANT' | 'MAINTENANCE'
-            contact?: string
+            contact?: string | null
             contact2?: string | null
             contactPerson?: string | null
             notes?: string | null
@@ -2716,7 +2716,7 @@ export interface components {
       id: string
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -2792,7 +2792,7 @@ export interface components {
             id: string
             /** @enum {string} */
             loanType: 'TENANT' | 'MAINTENANCE'
-            contact?: string
+            contact?: string | null
             contact2?: string | null
             contactPerson?: string | null
             notes?: string | null
@@ -2884,7 +2884,7 @@ export interface components {
       keyCards?: string[]
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -2901,7 +2901,7 @@ export interface components {
       keyCards?: string[]
       /** @enum {string} */
       loanType?: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null

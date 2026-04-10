@@ -6,8 +6,8 @@ import {
   getInvoiceRows,
 } from '../common/adapters/xpand-db-adapter'
 import {
-  getContacts as getXledgerContacts,
-  XledgerContact,
+  getCustomers as getXledgerCustomers,
+  XledgerCustomer,
 } from '../common/adapters/xledger-adapter'
 import generateBalanceCorrectionFile from './converters/generateBalanceCorrectionFile'
 import generateInkassoSergelFile from './converters/generateInkassoSergelFile'
@@ -16,7 +16,6 @@ import {
   Invoice,
   EnrichedXledgerRentCase,
   OtherInvoice,
-  RentInvoiceRow,
   XledgerBalanceCorrection,
   XledgerBalanceCorrectionColumnIndexes,
   XledgerRentCase,
@@ -26,6 +25,11 @@ import {
   EnrichedXledgerBalanceCorrection,
 } from '../common/types'
 import { InvoiceDeliveryMethod, XpandContact } from '@src/common/types'
+import { RentInvoiceRow } from '@onecore/types'
+import {
+  extractLeaseIdsFromInvoiceRows,
+  getRentalIdFromLeaseId,
+} from '../common/helpers'
 
 export const importInvoicesFromCsv = (
   csv: string,
@@ -87,22 +91,22 @@ export const importBalanceCorrectionsFromCsv = (
   })
 }
 
-const transformXledgerContactToXpandContact = (
-  xledgerContact: XledgerContact
+const transformXledgerCustomerToXpandContact = (
+  xledgerCustomer: XledgerCustomer
 ): XpandContact => {
   return {
-    contactCode: xledgerContact.contactCode,
+    contactCode: xledgerCustomer.contactCode,
     address: {
-      street: xledgerContact.address.street,
-      city: xledgerContact.address.city,
-      postalCode: xledgerContact.address.postalCode,
+      street: xledgerCustomer.address.street,
+      city: xledgerCustomer.address.city,
+      postalCode: xledgerCustomer.address.postalCode,
       number: '',
     },
-    fullName: xledgerContact.fullName,
-    nationalRegistrationNumber: xledgerContact.nationalRegistrationNumber,
+    fullName: xledgerCustomer.fullName,
+    nationalRegistrationNumber: xledgerCustomer.nationalRegistrationNumber,
     phoneNumbers: [
       {
-        phoneNumber: xledgerContact.phoneNumber ?? '',
+        phoneNumber: xledgerCustomer.phoneNumber ?? '',
         type: '',
         isMainNumber: true,
       },
@@ -228,12 +232,12 @@ export const enrichOtherInvoices = async (
     const rows = importInvoicesFromCsv(csv, ';')
     const contactCodes = rows.map((row) => row.contactCode)
 
-    const [xpandContacts, xledgerContacts] = await Promise.all([
+    const [xpandContacts, xledgerCustomers] = await Promise.all([
       getXpandContacts(contactCodes),
-      getXledgerContacts(contactCodes),
+      getXledgerCustomers(contactCodes),
     ])
     const allContacts = xpandContacts.concat(
-      xledgerContacts.map(transformXledgerContactToXpandContact)
+      xledgerCustomers.map(transformXledgerCustomerToXpandContact)
     )
 
     const enrichedInvoices = rows.map((row): EnrichedXledgerRentCase => {
@@ -425,26 +429,6 @@ export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
     })
 
     return acc
-  }, [])
-}
-
-const getRentalIdFromLeaseId = (leaseId: string) => {
-  return leaseId.split('/')[0]
-}
-
-const extractLeaseIdsFromInvoiceRows = (rows: RentInvoiceRow[]) => {
-  const leaseIdRegex = /^[A-Z\d]{3}-[A-Z\d]{3}-[A-Z\d]{2}-[A-Z\d]{4}\/\d{2}/i
-
-  return rows.reduce<string[]>((leaseIds, row) => {
-    if (row.rowType === 3) {
-      const match = row.text.match(leaseIdRegex)
-
-      if (match) {
-        leaseIds.push(match[0])
-      }
-    }
-
-    return leaseIds
   }, [])
 }
 

@@ -1,4 +1,4 @@
-import { Lease, Contact, LeaseStatus } from '@onecore/types'
+import { Lease, LeaseStatus } from '@onecore/types'
 import { calculateRentInfoFromTotal } from './rent-calculation'
 
 const calculateStatus = (
@@ -26,7 +26,7 @@ const calculateStatus = (
 const toLease = (
   row: any,
   tenantContactIds: string[] | undefined,
-  tenants: Contact[] | undefined
+  tenants: Lease['tenants']
 ): Lease => {
   const parsedLeaseId = row.leaseId.split('/')
   const rentalPropertyId = parsedLeaseId[0]

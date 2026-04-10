@@ -4,6 +4,8 @@ import { SidebarNavigation } from '@/widgets/sidebar'
 
 import { CommandPalette } from '@/features/search'
 
+import { FeedbackModalProvider } from '@/shared/hooks/useFeedbackModal'
+import { FeedbackModal } from '@/components/feedback/FeedbackModal'
 import { SidebarToggleButton } from '@/shared/ui/layout'
 import { SidebarInset, SidebarProvider, useSidebar } from '@/shared/ui/Sidebar'
 import { Toaster } from '@/shared/ui/Toaster'
@@ -17,9 +19,11 @@ import { RouteDocumentTitle } from './RouteDocumentTitle'
  */
 export function AppLayout() {
   return (
-    <SidebarProvider>
-      <AppLayoutContent />
-    </SidebarProvider>
+    <FeedbackModalProvider>
+      <SidebarProvider>
+        <AppLayoutContent />
+      </SidebarProvider>
+    </FeedbackModalProvider>
   )
 }
 
@@ -41,6 +45,7 @@ function AppLayoutContent() {
         </SidebarInset>
       </div>
       <Toaster />
+      <FeedbackModal />
     </div>
   )
 }

@@ -4,7 +4,7 @@
   "description": "",
   "license": "ISC",
   "author": "",
-  "packageManager": "pnpm@10.28.0",
+  "packageManager": "pnpm@10.28.1",
   "engines": {
     "node": ">=20"
   },
@@ -28,19 +28,21 @@
     "@iteam/config": "^12.1.2",
     "@koa/cors": "^5.0.0",
     "@koa/router": "^12.0.1",
+    "@onecore/types": "workspace:*",
+    "@onecore/utilities": "workspace:*",
     "@sendgrid/mail": "^8.1.1",
     "dotenv": "^16.4.5",
     "he": "^1.2.0",
     "koa": "^2.16.2",
+    "koa-body": "^6.0.1",
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "striptags": "^3.2.0",
     "telefonnummer": "^2.1.0",
     "tslib": "^2.7.0",
     "validator": "^13.11.0",
-    "@onecore/types": "workspace:*",
-    "@onecore/utilities": "workspace:*",
-    "zod": "^3.25.67"
+    "zod": "^3.25.67",
+    "knex": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "9.32.0",

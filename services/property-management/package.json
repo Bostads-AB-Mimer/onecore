@@ -5,6 +5,7 @@
   "description": "",
   "license": "MIT",
   "author": "",
+  "packageManager": "pnpm@10.28.1",
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",

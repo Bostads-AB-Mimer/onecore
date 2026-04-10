@@ -263,8 +263,8 @@ const getMaintenanceUnits = async (
       'mu_babuf.code as code',
       'mu_babuf.caption as caption',
       'bauht.caption as type',
-      'mu_babuf.fstcode as estate_code',
-      'mu_babuf.fstcaption as estate'
+      db.raw('COALESCE(mu_babuf.fstcode, prop_babuf.fstcode) as estate_code'),
+      db.raw('COALESCE(mu_babuf.fstcaption, prop_babuf.fstcaption) as estate')
     )
     .innerJoin('babuf as mu_babuf', 'baxyk.keycmobj', 'mu_babuf.keycmobj')
     .innerJoin('babuf as prop_babuf', 'baxyk.keycmobj2', 'prop_babuf.keycmobj')

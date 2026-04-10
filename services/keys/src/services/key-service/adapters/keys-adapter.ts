@@ -391,7 +391,18 @@ export async function getKeyDetailsById(
 export function getAllKeysQuery(
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
-  return dbConnection(TABLE).select('*').orderBy('createdAt', 'desc')
+  return dbConnection(TABLE)
+    .select(
+      'keys.*',
+      dbConnection('key_loan_keys')
+        .select('key_loans.contact')
+        .join('key_loans', 'key_loans.id', 'key_loan_keys.keyLoanId')
+        .whereRaw('?? = ??', ['key_loan_keys.keyId', 'keys.id'])
+        .whereNull('key_loans.returnedAt')
+        .limit(1)
+        .as('activeLoanContact')
+    )
+    .orderBy('keys.createdAt', 'desc')
 }
 
 /**
@@ -403,5 +414,14 @@ export function getAllKeysQuery(
 export function getKeysSearchQuery(
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
-  return dbConnection(TABLE).select('*')
+  return dbConnection(TABLE).select(
+    'keys.*',
+    dbConnection('key_loan_keys')
+      .select('key_loans.contact')
+      .join('key_loans', 'key_loans.id', 'key_loan_keys.keyLoanId')
+      .whereRaw('?? = ??', ['key_loan_keys.keyId', 'keys.id'])
+      .whereNull('key_loans.returnedAt')
+      .limit(1)
+      .as('activeLoanContact')
+  )
 }

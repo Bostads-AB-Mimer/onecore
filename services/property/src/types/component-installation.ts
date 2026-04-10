@@ -21,6 +21,7 @@ export const ComponentInstallationSchema = z.object({
   spaceType: SpaceTypeEnum,
   installationDate: z
     .union([z.string(), z.date()])
+    .nullable()
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   deinstallationDate: z
     .union([z.string(), z.date()])
@@ -44,6 +45,8 @@ export const CreateComponentInstallationSchema = z.object({
   spaceType: SpaceTypeEnum,
   installationDate: z
     .union([z.string(), z.date()])
+    .nullable()
+    .optional()
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   deinstallationDate: z
     .union([z.string(), z.date()])
@@ -60,6 +63,7 @@ export const UpdateComponentInstallationSchema = z.object({
   spaceType: SpaceTypeEnum.optional(),
   installationDate: z
     .union([z.string(), z.date()])
+    .nullable()
     .optional()
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   deinstallationDate: z

@@ -353,6 +353,7 @@ export function LoanMaintenanceKeysDialog({
               </div>
               <div className="text-muted-foreground">
                 {KeyTypeLabels[key.keyType]}
+                {key.keySystem?.systemCode && ` • ${key.keySystem.systemCode}`}
                 {key.flexNumber !== undefined && ` • Flex: ${key.flexNumber}`}
                 {key.keySequenceNumber !== undefined &&
                   ` • Löpnr: ${key.keySequenceNumber}`}

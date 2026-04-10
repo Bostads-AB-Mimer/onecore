@@ -2,6 +2,7 @@ import { useProperties } from '@/features/properties'
 
 import { Company } from '@/services/types'
 
+import { numericCompare } from '@/shared/lib/sorting'
 import { NavigationError, NavigationSkeleton } from '@/shared/ui/layout'
 
 import { PropertyNavigation } from './Property'
@@ -21,7 +22,7 @@ export function PropertyList({ company }: PropertyListProps) {
       {properties &&
         properties
           .slice()
-          .sort((a, b) => a.designation.localeCompare(b.designation))
+          .sort((a, b) => numericCompare(a.designation, b.designation))
           .map((property) => (
             <PropertyNavigation
               key={property.id}

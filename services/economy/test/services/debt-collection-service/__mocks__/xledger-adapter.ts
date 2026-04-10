@@ -1,9 +1,9 @@
-import { XledgerContact } from '@src/services/common/adapters/xledger-adapter'
+import { XledgerCustomer } from '@src/services/common/adapters/xledger-adapter'
 
 // Mock data factory
-export const createMockXledgerContact = (
-  overrides: Partial<XledgerContact> = {}
-): XledgerContact => ({
+export const createMockXledgerCustomer = (
+  overrides: Partial<XledgerCustomer> = {}
+): XledgerCustomer => ({
   contactCode: 'CONTACT001',
   fullName: 'John Doe',
   nationalRegistrationNumber: '19900101-1234',
@@ -17,13 +17,13 @@ export const createMockXledgerContact = (
 })
 
 // Mock functions
-export const getContacts = jest.fn()
+export const getCustomers = jest.fn()
 
 // Setup default mock implementations
 export const setupDefaultMocks = () => {
-  getContacts.mockResolvedValue([])
+  getCustomers.mockResolvedValue([])
 }
 
 export const resetMocks = () => {
-  getContacts.mockReset()
+  getCustomers.mockReset()
 }

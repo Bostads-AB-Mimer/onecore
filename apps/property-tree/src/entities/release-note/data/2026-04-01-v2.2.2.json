@@ -1,0 +1,37 @@
+[
+  {
+    "id": "rn-2026-04-01-v222-1",
+    "date": "2026-04-01",
+    "title": "Annan fakturamottagare visas inte längre som kontraktsinnehavare",
+    "description": "Annan fakturamottagare visas inte längre felaktigt som kontraktsinnehavare.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-04-01-v222-2",
+    "date": "2026-04-01",
+    "title": "Sök kund på telefonnummer",
+    "description": "Det går nu att söka efter kunder via telefonnummer i ONECore.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-04-01-v222-3",
+    "date": "2026-04-01",
+    "title": "Sortering efter kolumner på hyreskontrakt",
+    "description": "Det går nu att sortera hyreskontrakt efter kolumner.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-04-01-v222-4",
+    "date": "2026-04-01",
+    "title": "Uppsagda kontrakt visas nu under Hyresgäst-fliken",
+    "description": "Kontrakt med status 'Uppsagt' visas nu korrekt som nuvarande kontraktsinnehavare i Hyresgäst-fliken tills kontraktet har upphört.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-04-01-v222-5",
+    "date": "2026-04-01",
+    "title": "Mellanslag trimmas i global sökning",
+    "description": "Ledande och avslutande mellanslag tas nu bort automatiskt vid sökning, vilket ger mer träffsäkra sökresultat.",
+    "category": "fix"
+  }
+]

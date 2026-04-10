@@ -18,7 +18,11 @@ import {
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
   InvoiceSchema,
+  XledgerContactSchema,
+  RentInvoiceRowSchema,
 } from './schemas/v1'
+import { MiscellaneousInvoicePayload, MiscellaneousInvoiceRow } from './economy'
+import { XledgerProjectSchema } from './schemas/v1/project'
 
 interface Contact {
   contactCode: string //cmctc.cmctckod
@@ -30,7 +34,7 @@ interface Contact {
   fullName: string
   nationalRegistrationNumber: string
   birthDate: Date
-  address: Address | undefined
+  address?: Address
   phoneNumbers: PhoneNumber[] | undefined
   emailAddress?: string
   isTenant: boolean
@@ -66,7 +70,7 @@ interface Lease {
   leaseEndDate: Date | undefined
   status: LeaseStatus
   tenantContactIds: string[] | undefined
-  tenants: Contact[] | undefined
+  tenants: (Contact & { leaseContactType?: string })[] | undefined //SHould really be renamed contacts if it should sitll include second hand tenants and incvopice recipients
   rentalPropertyId: string
   rentalProperty: RentalProperty | undefined
   type: string
@@ -373,6 +377,9 @@ type CommentThread = z.infer<typeof CommentThreadSchema>
 type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
+type RentInvoiceRow = z.infer<typeof RentInvoiceRowSchema>
+type XledgerContact = z.infer<typeof XledgerContactSchema>
+type XledgerProject = z.infer<typeof XledgerProjectSchema>
 
 export type {
   Contact,
@@ -391,6 +398,9 @@ export type {
   Invoice,
   InvoiceRow,
   InvoicePaymentEvent,
+  RentInvoiceRow,
+  XledgerContact,
+  XledgerProject,
   RentalObject,
   ParkingSpace,
   Email,
@@ -415,4 +425,6 @@ export type {
   CommentThread,
   CommentType,
   Comment,
+  MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceRow,
 }

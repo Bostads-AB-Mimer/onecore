@@ -3,4 +3,7 @@ export { CommandPalette } from './ui/CommandPalette'
 export { GlobalSearchBar } from './ui/GlobalSearchBar'
 
 // Hooks
-export { CommandPaletteProvider } from './hooks/useCommandPalette'
+export {
+  CommandPaletteProvider,
+  useCommandPalette,
+} from './hooks/useCommandPalette'

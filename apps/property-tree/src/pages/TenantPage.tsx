@@ -5,16 +5,20 @@ import { AlertTriangle } from 'lucide-react'
 
 import { TenantTabs } from '@/widgets/tenant-tabs'
 
-import { useLeasesByContactCode, useRentalProperties } from '@/features/leases'
-import { useTenant } from '@/features/tenants'
-
-import { TenantCard } from '@/entities/tenant'
+import { useLeasesByContactCode } from '@/entities/lease'
+import { useRentalProperties } from '@/entities/rental-property'
+import { TenantCard, useTenant } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 import type { Tenant } from '@/services/types'
 
+import { tenantService } from '@/services/api/core/tenantService'
+
+import { useSingleEmail, useSingleSms } from '@/shared/hooks'
 import { Card, CardContent } from '@/shared/ui/Card'
+import { EmailModal } from '@/shared/ui/EmailModal'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
+import { SmsModal } from '@/shared/ui/SmsModal'
 import {
   Tooltip,
   TooltipContent,
@@ -98,6 +102,8 @@ function TenantTabsSection({
 
 export function TenantPage() {
   const { contactCode } = useParams<{ contactCode: string }>()
+  const sms = useSingleSms({ sendSms: tenantService.sendBulkSms })
+  const email = useSingleEmail({ sendEmail: tenantService.sendBulkEmail })
 
   // Fetch tenant data
   const {
@@ -135,7 +141,21 @@ export function TenantPage() {
           <>
             <TenantHeader tenant={tenant} />
             <div className="grid grid-cols-1 gap-6 mb-6">
-              <TenantCard tenant={tenant} />
+              <TenantCard
+                tenant={tenant}
+                onSendSms={(phone) =>
+                  sms.openSmsModal(
+                    `${tenant.firstName} ${tenant.lastName}`,
+                    phone
+                  )
+                }
+                onSendEmail={(addr) =>
+                  email.openEmailModal(
+                    `${tenant.firstName} ${tenant.lastName}`,
+                    addr
+                  )
+                }
+              />
             </div>
             <TenantTabsSection
               tenant={tenant}
@@ -144,6 +164,20 @@ export function TenantPage() {
               leasesLoading={leasesLoading}
               leasesError={leasesError}
               rentalPropertiesLoading={rentalPropertiesLoading}
+            />
+            <SmsModal
+              open={sms.smsModalOpen}
+              onOpenChange={sms.onOpenChange}
+              recipientName={sms.smsRecipientName}
+              phoneNumber={sms.smsPhoneNumber}
+              onSend={sms.handleSendSms}
+            />
+            <EmailModal
+              open={email.emailModalOpen}
+              onOpenChange={email.onOpenChange}
+              recipientName={email.emailRecipientName}
+              emailAddress={email.emailAddress}
+              onSend={email.handleSendEmail}
             />
           </>
         )}

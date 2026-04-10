@@ -1,14 +1,17 @@
 import KoaRouter from '@koa/router'
 import {
   getLease,
+  getLeases,
   getLeasesForContactCode,
   getLeasesForNationalRegistrationNumber,
   getLeasesForPropertyId,
+  getContacts,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
   getBuildingManagers,
+  getParkingSpaceTypes,
   getStatusLabel,
 } from '../adapters/xpand/lease-search-adapter'
 import {
@@ -130,10 +133,16 @@ export const routes = (router: KoaRouter) => {
    *           maximum: 100
    *         description: Items per page
    *       - in: query
+   *         name: includeEnded
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include Upphört (ended) contracts. Excluded by default for performance.
+   *       - in: query
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -176,6 +185,9 @@ export const routes = (router: KoaRouter) => {
    *                             phone:
    *                               type: string
    *                               nullable: true
+   *                       rentalObjectCode:
+   *                         type: string
+   *                         nullable: true
    *                       address:
    *                         type: string
    *                         nullable: true
@@ -231,11 +243,59 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /leases/parking-space-types:
+   *   get:
+   *     summary: Get all parking space types
+   *     tags: [Leases]
+   *     description: Returns a list of all parking space types (P-platstyper) from the babpt table.
+   *     responses:
+   *       '200':
+   *         description: List of parking space types
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                       caption:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error
+   */
+  router.get('(.*)/leases/parking-space-types', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await getParkingSpaceTypes()
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (error) {
+      logger.error({ err: error }, 'getParkingSpaceTypes')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching parking space types',
+        ...metadata,
+      }
+    }
+  })
+
   router.get('(.*)/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
       'objectType',
       'status',
+      'leaseType',
       'startDateFrom',
       'startDateTo',
       'endDateFrom',
@@ -245,6 +305,7 @@ export const routes = (router: KoaRouter) => {
       'areaCodes',
       'districtNames',
       'buildingManager',
+      'parkingSpaceType',
       'page',
       'limit',
       'sortBy',
@@ -372,6 +433,7 @@ export const routes = (router: KoaRouter) => {
       'q',
       'objectType',
       'status',
+      'leaseType',
       'startDateFrom',
       'startDateTo',
       'endDateFrom',
@@ -381,6 +443,9 @@ export const routes = (router: KoaRouter) => {
       'areaCodes',
       'districtNames',
       'buildingManager',
+      'parkingSpaceType',
+      'sortBy',
+      'sortOrder',
     ])
 
     const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
@@ -419,6 +484,7 @@ export const routes = (router: KoaRouter) => {
             sheetName: 'Hyreskontrakt',
             columns: [
               { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+              { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
               { header: 'Hyresgäst', key: 'tenantName', width: 30 },
               { header: 'Kundnummer', key: 'contactCode', width: 18 },
               { header: 'E-post', key: 'email', width: 30 },
@@ -434,11 +500,12 @@ export const routes = (router: KoaRouter) => {
             ],
             rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
               leaseId: lease.leaseId,
+              rentalObjectCode: lease.rentalObjectCode || '',
               tenantName: joinField(lease.contacts, (c) => c.name),
               contactCode: joinField(lease.contacts, (c) => c.contactCode),
               email: joinField(lease.contacts, (c) => c.email),
               phone: joinField(lease.contacts, (c) => c.phone),
-              objectType: lease.objectTypeCode,
+              objectType: lease.parkingSpaceType || lease.objectTypeCode,
               leaseType: lease.leaseType,
               address: lease.address || '',
               property: lease.property || '',
@@ -679,6 +746,14 @@ export const routes = (router: KoaRouter) => {
       .enum(['true', 'false'])
       .optional()
       .transform((value) => value === 'true'),
+    includeNonTenantLeases: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
+    includeNonTenantContacts: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
   })
 
   router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
@@ -686,6 +761,8 @@ export const routes = (router: KoaRouter) => {
       'includeUpcomingLeases',
       'includeTerminatedLeases',
       'includeContacts',
+      'includeNonTenantLeases',
+      'includeNonTenantContacts',
     ])
 
     const queryParams = getLeasesForPnrQueryParamSchema.safeParse(ctx.query)
@@ -700,6 +777,8 @@ export const routes = (router: KoaRouter) => {
         includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
         includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
         includeContacts: queryParams.data.includeContacts,
+        includeNonTenantLeases: queryParams.data.includeNonTenantLeases,
+        includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
       }
     )
 
@@ -763,6 +842,14 @@ export const routes = (router: KoaRouter) => {
       .enum(['true', 'false'])
       .optional()
       .transform((value) => value === 'true'),
+    includeNonTenantLeases: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
+    includeNonTenantContacts: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
   })
 
   router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
@@ -770,6 +857,8 @@ export const routes = (router: KoaRouter) => {
       'includeUpcomingLeases',
       'includeTerminatedLeases',
       'includeContacts',
+      'includeNonTenantLeases',
+      'includeNonTenantContacts',
     ])
 
     const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
@@ -784,6 +873,8 @@ export const routes = (router: KoaRouter) => {
       includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
       includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
       includeContacts: queryParams.data.includeContacts,
+      includeNonTenantLeases: queryParams.data.includeNonTenantLeases,
+      includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
     })
     if (!result.ok) {
       ctx.status = 500
@@ -865,6 +956,10 @@ export const routes = (router: KoaRouter) => {
       .enum(['true', 'false'])
       .optional()
       .transform((value) => value !== 'false'), // defaults to true
+    includeNonTenantContacts: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true'),
   })
 
   router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
@@ -873,6 +968,7 @@ export const routes = (router: KoaRouter) => {
       'includeTerminatedLeases',
       'includeContacts',
       'includeRentInfo',
+      'includeNonTenantContacts',
     ])
 
     const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
@@ -888,6 +984,7 @@ export const routes = (router: KoaRouter) => {
       includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
       includeContacts: queryParams.data.includeContacts,
       includeRentInfo: queryParams.data.includeRentInfo,
+      includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
     })
 
     ctx.body = {
@@ -932,10 +1029,14 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve lease details.
    */
   router.get('(.*)/leases/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeContacts'])
+    const metadata = generateRouteMetadata(ctx, [
+      'includeContacts',
+      'includeNonTenantContacts',
+    ])
     const responseData = await getLease(
       ctx.params.id,
-      ctx.query.includeContacts
+      ctx.query.includeContacts,
+      ctx.query.includeNonTenantContacts === 'true'
     )
 
     ctx.body = {
@@ -1034,6 +1135,47 @@ export const routes = (router: KoaRouter) => {
           error: error.message,
           ...metadata,
         }
+      }
+    }
+  })
+
+  router.post('(.*)/leases/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const leaseIds = (ctx.request.body as any).leaseIds as string[] // TODO schema
+
+    try {
+      const leases = await getLeases(leaseIds)
+
+      ctx.status = 200
+      ctx.body = {
+        content: leases,
+        ...metadata,
+      }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  // TODO This should be replaced with the contacts microservice that is currently under construction
+  router.post('(.*)/contacts/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const contactCodes = (ctx.request.body as any).contactCodes as string[] // TODO schema
+
+    try {
+      const contacts = await getContacts(contactCodes)
+
+      ctx.status = 200
+      ctx.body = {
+        content: contacts,
+        ...metadata,
+      }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
       }
     }
   })

@@ -90,8 +90,8 @@ export const MaintenanceUnitSchema = z.object({
   code: z.string(),
   caption: z.string(),
   type: z.string(),
-  estateCode: z.string(),
-  estate: z.string(),
+  estateCode: z.string().nullable(),
+  estate: z.string().nullable(),
 })
 
 export const RentalPropertySchema = z.object({
@@ -106,8 +106,8 @@ export const RentalPropertySchema = z.object({
     // This is not nullable in onecore-types, but it is actually nullable
     washSpace: z.string().nullable(),
     area: z.number(),
-    estateCode: z.string(),
-    estate: z.string(),
+    estateCode: z.string().nullable(),
+    estate: z.string().nullable(),
     buildingCode: z.string(),
     building: z.string(),
   }),

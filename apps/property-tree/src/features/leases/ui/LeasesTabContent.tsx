@@ -3,14 +3,13 @@ import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 
 import { formatDate, LeaseMobileCard, LeaseStatusBadge } from '@/entities/lease'
+import { useLeasesByRentalProperty } from '@/entities/lease/hooks/useLeasesByRentalProperty'
 
 import type { Lease } from '@/services/api/core/leaseService'
 
 import { paths } from '@/shared/routes'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
-
-import { useLeasesByRentalProperty } from '../hooks/useLeasesByRentalProperty'
 
 interface LeasesTabContentProps {
   rentalPropertyId: string

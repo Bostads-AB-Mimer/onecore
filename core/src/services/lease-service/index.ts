@@ -181,10 +181,16 @@ export const routes = (router: KoaRouter) => {
    *           maximum: 100
    *         description: Items per page
    *       - in: query
+   *         name: includeEnded
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include Upphört (ended) contracts. Excluded by default for performance.
+   *       - in: query
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -262,6 +268,54 @@ export const routes = (router: KoaRouter) => {
           error instanceof Error
             ? error.message
             : 'Unknown error occurred fetching building managers',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/parking-space-types:
+   *   get:
+   *     summary: Get all parking space types
+   *     tags:
+   *       - Lease service
+   *     description: Returns a list of all parking space types (P-platstyper).
+   *     responses:
+   *       '200':
+   *         description: List of parking space types
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                       caption:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error
+   */
+  router.get('/leases/parking-space-types', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.getParkingSpaceTypes()
+      ctx.status = 200
+      ctx.body = { content: result, ...metadata }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching parking space types')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching parking space types',
         ...metadata,
       }
     }
@@ -1299,7 +1353,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get contacts for deceased/protected identity check
    *     tags:
    *       - Lease service
-   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification.
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Note - Results are validated using the personnummer package, so the actual count may be fewer than the requested limit if invalid personnummer are filtered out.
    *     parameters:
    *       - in: query
    *         name: page

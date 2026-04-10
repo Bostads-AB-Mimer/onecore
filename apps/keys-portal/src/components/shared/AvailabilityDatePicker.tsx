@@ -1,4 +1,5 @@
 import { format } from 'date-fns'
+import { sv } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -40,7 +41,7 @@ export function AvailabilityDatePicker({
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {availableDate ? (
-              format(availableDate, 'PPP')
+              format(availableDate, 'PPP', { locale: sv })
             ) : (
               <span>Välj datum</span>
             )}

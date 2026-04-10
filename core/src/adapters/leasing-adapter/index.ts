@@ -35,6 +35,8 @@ interface GetLeasesOptions {
   includeTerminatedLeases: boolean
   includeContacts: boolean
   includeRentInfo?: boolean // defaults to true
+  includeNonTenantLeases?: boolean
+  includeNonTenantContacts?: boolean
 }
 
 type IdentityCheckContact = z.infer<
@@ -81,6 +83,12 @@ const getLeasesForPnr = async (
     includeUpcomingLeases: options.includeUpcomingLeases.toString(),
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
+    ...(options.includeNonTenantLeases && {
+      includeNonTenantLeases: options.includeNonTenantLeases.toString(),
+    }),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
 
   const leasesResponse = await axios.get(
@@ -98,6 +106,12 @@ const getLeasesForContactCode = async (
     includeUpcomingLeases: options.includeUpcomingLeases.toString(),
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
+    ...(options.includeNonTenantLeases && {
+      includeNonTenantLeases: options.includeNonTenantLeases.toString(),
+    }),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
 
   const leasesResponse = await axios.get(
@@ -116,11 +130,31 @@ const getLeasesForPropertyId = async (
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
     includeRentInfo: (options.includeRentInfo !== false).toString(),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
   const leasesResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
   )
   return leasesResponse.data.content
+}
+
+const getLeasesBatch = async (leaseIds: string[]): Promise<Lease[]> => {
+  const pageSize = 500
+  let allLeases: Lease[] = []
+
+  for (let i = 0; i < leaseIds.length; i += pageSize) {
+    const batch = leaseIds.slice(i, i + pageSize)
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/batch`,
+      { leaseIds: batch }
+    )
+
+    allLeases = allLeases.concat(response.data.content)
+  }
+
+  return allLeases
 }
 
 // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
@@ -129,6 +163,15 @@ const getBuildingManagers = async (): Promise<
 > => {
   const response = await axios.get(
     `${tenantsLeasesServiceUrl}/leases/building-managers`
+  )
+  return response.data.content
+}
+
+const getParkingSpaceTypes = async (): Promise<
+  { code: string; caption: string }[]
+> => {
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/parking-space-types`
   )
   return response.data.content
 }
@@ -217,6 +260,23 @@ const getContactsForIdentityCheck = async (
     logger.error({ err }, 'leasing-adapter.getContactsForIdentityCheck')
     return { ok: false, err: 'unknown' }
   }
+}
+
+const getContacts = async (contactCodes: string[]): Promise<Contact[]> => {
+  const pageSize = 500
+  let allContacts: Contact[] = []
+
+  for (let i = 0; i < contactCodes.length; i += pageSize) {
+    const batch = contactCodes.slice(i, i + pageSize)
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/contacts/batch`,
+      { contactCodes: batch }
+    )
+
+    allContacts = allContacts.concat(response.data.content)
+  }
+
+  return allContacts
 }
 
 const getContactByContactCode = async (
@@ -991,14 +1051,17 @@ export {
   getContactForPnr,
   getContactsDataBySearchQuery,
   getContactsForIdentityCheck,
+  getContacts,
   getCreditInformation,
   getLease,
   getLeases,
   getLeasesForPnr,
   getLeasesForContactCode,
   getLeasesForPropertyId,
+  getLeasesBatch,
   searchLeases,
   getBuildingManagers,
+  getParkingSpaceTypes,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
   resetWaitingList,

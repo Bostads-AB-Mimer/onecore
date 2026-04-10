@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus, Save } from 'lucide-react'
 
+import { useTenantComments } from '@/entities/tenant/hooks/useTenantComments'
 import { useUser } from '@/entities/user'
 
 import { generateAuthorAbbreviation } from '@/shared/lib/formatters'
@@ -12,7 +13,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 import { Textarea } from '@/shared/ui/Textarea'
 
 import { useCreateTenantComment } from '../hooks/useCreateTenantComment'
-import { useTenantComments } from '../hooks/useTenantComments'
 
 interface TenantNotesTabContentProps {
   contactCode: string | undefined
