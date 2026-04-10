@@ -27,6 +27,7 @@ interface Frame {
   rgba: Uint8Array
   width: number
   height: number
+  qrData: string | null
 }
 
 export type ScanReceiptError =
@@ -75,6 +76,31 @@ function isPdf(buffer: Buffer): boolean {
  * Extract frames from a PDF buffer using pdfjs-dist.
  * Each page is rendered to a @napi-rs/canvas, then we read RGBA pixel data.
  */
+async function renderPdfPage(
+  page: { getViewport: Function; render: Function; cleanup: Function },
+  scale: number,
+  createCanvas: Function
+): Promise<Frame> {
+  const viewport = page.getViewport({ scale })
+  const canvas = createCanvas(viewport.width, viewport.height)
+  const context = canvas.getContext('2d')
+
+  await page.render({ canvas: canvas as any, viewport }).promise
+
+  // Only extract top-right quarter for QR detection
+  const cropW = Math.ceil(canvas.width / 2)
+  const cropH = Math.ceil(canvas.height / 2)
+  const cropX = canvas.width - cropW
+  const imageData = context.getImageData(cropX, 0, cropW, cropH)
+
+  return {
+    rgba: new Uint8Array(imageData.data),
+    width: cropW,
+    height: cropH,
+    qrData: null,
+  }
+}
+
 async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
   const { createCanvas } = await import('@napi-rs/canvas')
   const data = new Uint8Array(buffer)
@@ -84,22 +110,18 @@ async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
 
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
-    const viewport = page.getViewport({ scale: 3.0 })
-    const canvas = createCanvas(viewport.width, viewport.height)
-    const context = canvas.getContext('2d')
 
-    // pdfjs v5 requires `canvas` (typed as HTMLCanvasElement),
-    // @napi-rs/canvas is API-compatible but differently typed
+    // Try scale 3.0 first, fall back to 5.0 if no QR found
+    let frame = await renderPdfPage(page, 3.0, createCanvas)
+    frame.qrData = scanFrameForQr(frame)
 
-    await page.render({ canvas: canvas as any, viewport }).promise
+    if (!frame.qrData) {
+      logger.info({ pageIndex: i - 1 }, 'No QR at scale 3.0, retrying at 5.0')
+      frame = await renderPdfPage(page, 5.0, createCanvas)
+      frame.qrData = scanFrameForQr(frame)
+    }
 
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    frames.push({
-      rgba: new Uint8Array(imageData.data),
-      width: canvas.width,
-      height: canvas.height,
-    })
-
+    frames.push(frame)
     page.cleanup()
   }
 
@@ -118,7 +140,14 @@ async function extractFrames(buffer: Buffer): Promise<Frame[]> {
 
   const image = await Jimp.read(buffer)
   const { width, height, data } = image.bitmap
-  return [{ rgba: new Uint8Array(data), width, height }]
+  const frame: Frame = {
+    rgba: new Uint8Array(data),
+    width,
+    height,
+    qrData: null,
+  }
+  frame.qrData = scanFrameForQr(frame)
+  return [frame]
 }
 
 /**
@@ -193,7 +222,7 @@ export async function processScannedReceipts(
   const noQrPages: number[] = []
 
   for (let i = 0; i < frames.length; i++) {
-    const qrData = scanFrameForQr(frames[i])
+    const qrData = frames[i].qrData
 
     if (!qrData) {
       logger.warn({ pageIndex: i }, 'No QR code found on page')
