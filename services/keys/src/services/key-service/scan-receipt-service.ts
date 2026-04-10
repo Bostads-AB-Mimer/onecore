@@ -111,13 +111,13 @@ async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
 
-    // Try scale 3.0 first, fall back to 5.0 if no QR found
+    // Try scale 3.0 first, fall back to 6.0 if no QR found
     let frame = await renderPdfPage(page, 3.0, createCanvas)
     frame.qrData = scanFrameForQr(frame)
 
     if (!frame.qrData) {
-      logger.info({ pageIndex: i - 1 }, 'No QR at scale 3.0, retrying at 5.0')
-      frame = await renderPdfPage(page, 5.0, createCanvas)
+      logger.info({ pageIndex: i - 1 }, 'No QR at scale 3.0, retrying at 6.0')
+      frame = await renderPdfPage(page, 6.0, createCanvas)
       frame.qrData = scanFrameForQr(frame)
     }
 
