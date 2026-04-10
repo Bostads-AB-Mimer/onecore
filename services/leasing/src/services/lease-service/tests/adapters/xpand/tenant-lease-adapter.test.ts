@@ -34,6 +34,7 @@ jest.mock('knex', () => () => ({
           queueName: 'Bilplats (intern)',
           queueTime: sub(new Date(), { days: 366 }),
           protectedIdentity: null,
+          deceased: null,
         },
       ])
     )
@@ -71,6 +72,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         birthDate: '1212-12-12',
         address: {
           street: 'Gatvägen 12',
+          street2: undefined,
           number: '',
           postalCode: '12345',
           city: null,
@@ -92,6 +94,8 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         },
         housingWaitingList: undefined,
         storageWaitingList: undefined,
+        protectedIdentity: false,
+        deceased: false,
       },
     })
   })

@@ -15,4 +15,6 @@ export const ContactFactory = Factory.define<Contact>(() => ({
   queuePoints: 0,
   phoneNumbers: undefined,
   leaseIds: undefined,
+  protectedIdentity: false,
+  deceased: false,
 }))

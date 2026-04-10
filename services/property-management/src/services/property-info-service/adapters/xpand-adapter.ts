@@ -103,6 +103,19 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
     id: row.rental_property_id,
     type: rentalPropertyType,
     property: property,
+    districtCode: row.districtCode,
+    district: row.district,
+    marketAreaCode: row.marketAreaCode,
+    marketArea: row.marketArea,
+    building: {
+      buildingCode: row.building_code,
+      building: row.building,
+      constructionYear: row.building_construction_year,
+      renovationYear: row.building_renovation_year,
+      assessmentYear: row.building_assessment_year,
+      buildingTypeCode: row.building_type_code,
+      buildingTypeCaption: row.building_type_caption,
+    },
   }
 }
 
@@ -146,12 +159,26 @@ const getRentalPropertyInfo = async (
       'balgh.uppgang as floor',
       'balgh.hiss as has_elevator',
       'balgh.hygienutr as wash_space',
-      'cmvalboa.value as apartment_area'
+      'cmvalboa.value as apartment_area',
+      'babuf.fencode as districtCode',
+      'bafen.distrikt as district',
+      'babya.code as marketAreaCode',
+      'babya.caption as marketArea',
+      'babyg.byggnadsar as building_construction_year',
+      'babyg.ombyggar as building_renovation_year',
+      'babyg.assyear as building_assessment_year',
+      'babyt.code as building_type_code',
+      'babyt.caption as building_type_caption'
     )
     .innerJoin('cmobt', 'cmobj.keycmobt', 'cmobt.keycmobt')
     .innerJoin('hyinf', 'cmobj.keycmobj', 'hyinf.keycmobj')
     .innerJoin('hyint', 'hyinf.keyhyint', 'hyint.keyhyint')
     .innerJoin('babuf', 'cmobj.keycmobj', 'babuf.keycmobj')
+    .innerJoin('bafen', 'babuf.fencode', 'bafen.code')
+    .innerJoin('babyg', 'babuf.bygcode', 'babyg.code')
+    .innerJoin('babyt', 'babyg.keybabyt', 'babyt.keybabyt')
+    .innerJoin('bafst', 'babuf.keyobjfst', 'bafst.keycmobj')
+    .innerJoin('babya', 'bafst.keybabya', 'babya.keybabya')
     .leftJoin('balgh', 'cmobj.keycmobj', 'balgh.keycmobj')
     .leftJoin('balgt', 'balgh.keybalgt', 'balgt.keybalgt')
     .leftJoin('cmval as cmvalboa', function () {

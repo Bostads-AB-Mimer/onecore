@@ -23,6 +23,8 @@ export const createMockContact = (
   ],
   emailAddress: 'john.doe@example.com',
   isTenant: true,
+  protectedIdentity: false,
+  deceased: false,
   ...overrides,
 })
 

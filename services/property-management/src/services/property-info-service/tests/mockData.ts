@@ -3,6 +3,8 @@ import { RentalPropertyInfo } from '@onecore/types'
 export const rentalPropertyInfoMockData: RentalPropertyInfo = {
   id: '705-022-04-0201',
   type: 'Apartment',
+  districtCode: '61132',
+  district: 'Distrikt Öst',
   property: {
     rentalTypeCode: 'KORTTID',
     rentalType: 'Korttidskontrakt',
@@ -17,8 +19,6 @@ export const rentalPropertyInfoMockData: RentalPropertyInfo = {
     area: 73,
     estateCode: '02301',
     estate: 'KOLAREN 1',
-    buildingCode: '705-022',
-    building: 'STENTORPSGATAN 7-9',
   },
   maintenanceUnits: [
     {
@@ -49,4 +49,13 @@ export const rentalPropertyInfoMockData: RentalPropertyInfo = {
       estate: 'KOLAREN 1',
     },
   ],
+  building: {
+    buildingCode: '705-022',
+    building: 'STENTORPSGATAN 7-9',
+    constructionYear: 1956,
+    renovationYear: 2015,
+    assessmentYear: 2020,
+  },
+  marketAreaCode: '011',
+  marketArea: 'Göteborg',
 }

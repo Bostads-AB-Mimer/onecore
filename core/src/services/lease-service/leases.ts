@@ -4,7 +4,14 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { Contact, Lease, leasing, schemas } from '@onecore/types'
+import {
+  Contact,
+  Lease,
+  LeaseWithAdditionalCustomerScoreCardInfoSchema,
+  leasing,
+  schemas,
+  LeaseStatus,
+} from '@onecore/types'
 import z from 'zod'
 
 import {
@@ -14,6 +21,7 @@ import {
 } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
@@ -223,6 +231,242 @@ export const routes = (router: KoaRouter) => {
           error instanceof Error
             ? error.message
             : 'Unknown error occurred fetching building managers',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/for-CSC:
+   *   get:
+   *     summary: Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
+   *     tags:
+   *       - Lease service
+   *     description: Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved upcoming move-ins
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/LeaseWithAdditionalCustomerScoreCardInfoSchema'
+   *                 _meta:
+   *                   type: object
+   *       '400':
+   *         description: Invalid query parameters
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/for-CSC', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const start = Date.now()
+
+    try {
+      // Filter leases on object type 'Bostad' and current leases but allow additional filtering by query params, ie for paging
+      const leaseSearchParams = {
+        limit: '500',
+        ...ctx.query,
+        objectType: 'bostad',
+        status: LeaseStatus[LeaseStatus.Current],
+      }
+
+      // Set limit to max 500
+      if (Number(leaseSearchParams.limit) > 500) leaseSearchParams.limit = '500'
+
+      const leaseSearchResult =
+        await leasingAdapter.searchLeases(leaseSearchParams)
+
+      let log = `Avtals-sök tid: ${Date.now() - start}ms`
+
+      if (
+        !leaseSearchResult.content ||
+        leaseSearchResult.content.length === 0
+      ) {
+        ctx.status = 200
+        ctx.body = {
+          content: [],
+          ...metadata,
+        }
+        return
+      }
+
+      // console.log('Lease search result:', leaseSearchResult)
+      //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
+      const parsedContent = await Promise.all(
+        leaseSearchResult.content.map(
+          async (lease: leasing.v1.LeaseSearchResult) => {
+            const rentalObjectCode =
+              lease.leaseId.split('/')[0] != ''
+                ? lease.leaseId.split('/')[0]
+                : lease.leaseId.substring(0, lease.leaseId.lastIndexOf('-'))
+
+            const [contactResult, rentalPropertyResult] = await Promise.all([
+              leasingAdapter.getContactByContactCode(
+                lease.contacts[0].contactCode
+              ),
+              propertyManagementAdapter.getRentalPropertyInfoFromXpand(
+                rentalObjectCode
+              ),
+            ])
+
+            if (!contactResult.ok) {
+              logger.error(
+                {
+                  status: contactResult.statusCode,
+                  error: contactResult.err,
+                  contactCode: lease.contacts[0]?.contactCode,
+                },
+                'Failed to fetch contact data'
+              )
+              return null
+            }
+            if (!contactResult.data) {
+              logger.warn(
+                {
+                  contactCode: lease.contacts[0]?.contactCode,
+                },
+                'No contact data found'
+              )
+              return null
+            }
+
+            const tenant = contactResult.data
+
+            if (rentalPropertyResult.status != 200) {
+              logger.error(
+                {
+                  status: rentalPropertyResult.status,
+                  data: rentalPropertyResult.data,
+                  rentalObjectCode,
+                },
+                'Failed to fetch rental property data'
+              )
+              return null
+            }
+            if (!rentalPropertyResult.data) {
+              logger.warn(
+                {
+                  rentalObjectCode,
+                },
+                'No rental property data found'
+              )
+              return null
+            }
+
+            const rentalObjectData = rentalPropertyResult.data
+
+            // console.log('rentalObjectData', rentalObjectData)
+
+            //Filter out leases for contacts with protected identity.
+            if (tenant.protectedIdentity) return null
+
+            //Filter out leases for deceased contacts.
+            if (tenant.deceased) return null
+
+            //Filter out leases for customers that are companies (contact code does not start with P).
+            if (!tenant.contactCode.startsWith('P')) return null
+
+            //Filter out rental objects that are created for testing purposes in XPand (rental object codes starting with 000-000)
+            if (rentalObjectData.id.startsWith('000-000')) return null
+
+            const mappedLease = {
+              //lease info
+              division_1038: lease.leaseId,
+              //division_1037: lease.contractDate How to get contractDate?
+              //  ? new Date(lease.contractDate)
+              //  : undefined,
+              contract_start_date: lease.startDate
+                ? new Date(lease.startDate)
+                : undefined,
+              // contract_end_date: lease.endDate How to get endDate?
+              //   ? new Date(lease.endDate)
+              //   : undefined,
+              object_street_1: lease.address,
+              object_zip: lease.postalCode,
+              object_city: lease.city,
+              //contact ifo
+              division_1501: tenant.contactCode,
+              respondent_name_first: tenant.firstName,
+              respondent_name_last: tenant.lastName,
+              respondent_email: tenant.emailAddress,
+              respondent_phone:
+                tenant.phoneNumbers?.find((number: any) => number.isMainNumber)
+                  ?.phoneNumber ?? '',
+              postal_street_1: tenant.address?.street,
+              postal_street_2: tenant.address?.street2 ?? undefined,
+              postal_zip: tenant.address?.postalCode,
+              postal_city: tenant.address?.city,
+              //rental object info
+              object_ref_nr: rentalObjectData.id,
+              division_1011: rentalObjectData.districtCode,
+              object_real_estate: rentalObjectData.property.estate,
+              object_real_estate_year_construction:
+                rentalObjectData.building.constructionYear ?? undefined,
+              object_real_estate_year_reconstruction:
+                rentalObjectData.building.renovationYear ?? undefined,
+              real_estate_type: rentalObjectData.building.buildingTypeCaption,
+              division_1048: rentalObjectData.district,
+              division_1242: rentalObjectData.marketArea,
+              rentalTypeCode: rentalObjectData.property.rentalTypeCode,
+            }
+
+            // console.log('mappedLease', mappedLease)
+
+            const parseResult =
+              LeaseWithAdditionalCustomerScoreCardInfoSchema.safeParse(
+                mappedLease
+              )
+            if (parseResult.success) {
+              // console.log(
+              //   'Parsed lease with contact and rental object info:',
+              //   parseResult.data
+              // )
+              return parseResult.data
+            } else {
+              logger.warn(
+                { issues: parseResult.error.issues, lease },
+                'Lease validation failed'
+              )
+              return null
+            }
+          }
+        )
+      )
+
+      console.log(log)
+      console.log(`Contacts och property info tid: ${Date.now() - start}ms`)
+
+      // console.log('Lease search result:', leaseSearchResult.content.length)
+      // console.log('Parsed content:', parsedContent.length)
+
+      const filteredLeases = parsedContent.filter(Boolean)
+
+      ctx.status = 200
+      ctx.body = {
+        content: filteredLeases,
+        _meta: {
+          ...leaseSearchResult._meta,
+          count: filteredLeases.length,
+        },
+
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error getting leases for CSC report')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred while fetching leases for CSC report',
         ...metadata,
       }
     }

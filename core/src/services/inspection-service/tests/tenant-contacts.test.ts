@@ -50,6 +50,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'new@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -71,6 +73,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'previous@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -133,6 +137,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'only@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -207,6 +213,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'with@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
         {
           contactCode: 'contact-2',
@@ -220,6 +228,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: undefined,
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -265,6 +275,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'first@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
         {
           contactCode: 'contact-2',
@@ -278,6 +290,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'second@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -336,6 +350,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'old@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -357,6 +373,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'middle@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -378,6 +396,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           phoneNumbers: undefined,
           emailAddress: 'newest@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
