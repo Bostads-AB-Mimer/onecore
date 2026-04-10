@@ -27,6 +27,7 @@ interface Frame {
   rgba: Uint8Array
   width: number
   height: number
+  qrData: string | null
 }
 
 export type ScanReceiptError =
@@ -96,6 +97,7 @@ async function renderPdfPage(
     rgba: new Uint8Array(imageData.data),
     width: cropW,
     height: cropH,
+    qrData: null,
   }
 }
 
@@ -111,9 +113,12 @@ async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
 
     // Try scale 3.0 first, fall back to 5.0 if no QR found
     let frame = await renderPdfPage(page, 3.0, createCanvas)
-    if (!scanFrameForQr(frame)) {
+    frame.qrData = scanFrameForQr(frame)
+
+    if (!frame.qrData) {
       logger.info({ pageIndex: i - 1 }, 'No QR at scale 3.0, retrying at 5.0')
       frame = await renderPdfPage(page, 5.0, createCanvas)
+      frame.qrData = scanFrameForQr(frame)
     }
 
     frames.push(frame)
@@ -135,7 +140,14 @@ async function extractFrames(buffer: Buffer): Promise<Frame[]> {
 
   const image = await Jimp.read(buffer)
   const { width, height, data } = image.bitmap
-  return [{ rgba: new Uint8Array(data), width, height }]
+  const frame: Frame = {
+    rgba: new Uint8Array(data),
+    width,
+    height,
+    qrData: null,
+  }
+  frame.qrData = scanFrameForQr(frame)
+  return [frame]
 }
 
 /**
@@ -210,7 +222,7 @@ export async function processScannedReceipts(
   const noQrPages: number[] = []
 
   for (let i = 0; i < frames.length; i++) {
-    const qrData = scanFrameForQr(frames[i])
+    const qrData = frames[i].qrData
 
     if (!qrData) {
       logger.warn({ pageIndex: i }, 'No QR code found on page')
