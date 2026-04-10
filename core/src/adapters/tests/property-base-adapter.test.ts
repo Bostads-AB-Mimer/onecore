@@ -463,7 +463,7 @@ describe('@onecore/property-adapter', () => {
         )
       )
 
-      const result = await propertyBaseAdapter.getRooms('residence-123')
+      const result = await propertyBaseAdapter.getRooms('rental-123')
 
       expect(result.ok).toBe(false)
       if (!result.ok) expect(result.err).toBe('unknown')
@@ -482,7 +482,7 @@ describe('@onecore/property-adapter', () => {
         )
       )
 
-      const result = await propertyBaseAdapter.getRooms('residence-123')
+      const result = await propertyBaseAdapter.getRooms('rental-123')
 
       expect(result).toMatchObject({
         ok: true,

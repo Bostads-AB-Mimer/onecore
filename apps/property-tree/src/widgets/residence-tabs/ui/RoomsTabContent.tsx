@@ -16,11 +16,11 @@ import {
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 interface RoomsTabContentProps {
-  residenceId: string
+  rentalId: string
 }
 
-export const RoomsTabContent = ({ residenceId }: RoomsTabContentProps) => {
-  const roomsQuery = useRooms({ residenceId })
+export const RoomsTabContent = ({ rentalId }: RoomsTabContentProps) => {
+  const roomsQuery = useRooms({ rentalId })
   const rooms = roomsQuery.data || []
   const { openRoomId, setOpenRoomId, roomRefs } = useRoomDeepLink(rooms)
 
