@@ -31,6 +31,8 @@ describe('identifyTenantContracts', () => {
             phoneNumbers: undefined,
             emailAddress: 'new@example.com',
             isTenant: true,
+            protectedIdentity: false,
+            deceased: false,
           },
         ],
         rentRows: [],
@@ -65,6 +67,8 @@ describe('identifyTenantContracts', () => {
             phoneNumbers: undefined,
             emailAddress: 'previous@example.com',
             isTenant: true,
+            protectedIdentity: false,
+            deceased: false,
           },
         ],
         rentRows: [],
@@ -498,6 +502,8 @@ describe('sendProtocolToTenants', () => {
     phoneNumbers: undefined,
     emailAddress: 'test@example.com',
     isTenant: true,
+    protectedIdentity: false,
+    deceased: false,
   }
 
   const mockLease: Lease = {

@@ -103,10 +103,11 @@ const transformFromDbContact = (
       ? undefined
       : row.nationalRegistrationNumber,
     birthDate: protectedIdentity ? undefined : row.birthDate,
-    ...(row.street || row.postalCode || row.city
+    ...(row.street || row.street2 || row.postalCode || row.city
       ? {
           address: {
             street: row.street,
+            street2: row.street2,
             number: '',
             postalCode: row.postalCode,
             city: row.city,
@@ -528,6 +529,7 @@ const getContactQuery = () => {
         'cmctc.persorgnr as nationalRegistrationNumber',
         'cmctc.birthdate as birthDate',
         'cmadr.adress1 as street',
+        'cmadr.adress2 as street2',
         'cmadr.adress3 as postalCode',
         'cmadr.adress4 as city',
         'cmeml.cmemlben as emailAddress',
@@ -676,6 +678,7 @@ const getContacts = async (contactCodes: string[]) => {
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
+      'cmctc.avliden as deceased',
       'cmctc.utslag as specialAttention'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
@@ -726,6 +729,8 @@ const getContacts = async (contactCodes: string[]) => {
           : 'redacted',
       isTenant: false,
       specialAttention: !!row.specialAttention,
+      protectedIdentity: !!row.protectedIdentity,
+      deceased: !!row.deceased,
     }
   })
 }

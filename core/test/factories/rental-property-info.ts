@@ -22,8 +22,6 @@ export const RentalPropertyInfoFactory = Factory.define<RentalPropertyInfo>(
       area: 73,
       estateCode: '02301',
       estate: 'KOLAREN 1',
-      buildingCode: '705-022',
-      building: 'STENTORPSGATAN 7-9',
     },
     maintenanceUnits: [
       {
@@ -54,6 +52,17 @@ export const RentalPropertyInfoFactory = Factory.define<RentalPropertyInfo>(
         estate: 'KOLAREN 1',
       },
     ],
+    building: {
+      buildingCode: '705-022',
+      building: 'STENTORPSGATAN 7-9',
+      constructionYear: 1956,
+      renovationYear: 2015,
+      assessmentYear: 2020,
+      buildingTypeCode: 'FLER',
+      buildingTypeCaption: 'Flerbostadshus',
+    },
+    marketAreaCode: '011',
+    marketArea: 'Göteborg',
   })
 )
 

@@ -72,6 +72,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         birthDate: '1212-12-12',
         address: {
           street: 'Gatvägen 12',
+          street2: undefined,
           number: '',
           postalCode: '12345',
           city: null,
