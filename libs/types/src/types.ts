@@ -111,6 +111,7 @@ interface RentalProperty {
 
 interface Address {
   street?: string
+  street2?: string
   number: string
   postalCode: string
   city: string
@@ -293,6 +294,7 @@ interface RentalPropertyInfo {
   district: string
   marketAreaCode: string
   marketArea: string
+  building: BuildingInfo
 }
 
 interface ApartmentInfo {
@@ -332,6 +334,16 @@ interface ParkingSpaceInfo {
   rentalType: string
   address: string
   code: string
+}
+
+interface BuildingInfo {
+  buildingCode: string
+  building: string
+  constructionYear?: number
+  renovationYear?: number
+  assessmentYear?: number
+  buildingTypeCode: string
+  buildingTypeCaption: string
 }
 
 interface ParkingSpace {

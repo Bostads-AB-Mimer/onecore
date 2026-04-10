@@ -68,6 +68,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: 'new@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -128,6 +130,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: 'previous@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -202,6 +206,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: 'new@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -277,6 +283,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: 'previous@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -351,6 +359,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: 'first@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
         {
           contactCode: 'contact-2',
@@ -364,6 +374,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: 'second@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -472,6 +484,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: undefined,
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -554,6 +568,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: 'new@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })
@@ -619,6 +635,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           phoneNumbers: undefined,
           emailAddress: 'new@example.com',
           isTenant: true,
+          protectedIdentity: false,
+          deceased: false,
         },
       ],
     })

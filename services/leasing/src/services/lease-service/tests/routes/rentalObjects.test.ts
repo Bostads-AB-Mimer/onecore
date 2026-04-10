@@ -23,6 +23,9 @@ describe('parking spaces', () => {
         ok: false,
         err: 'parking-spaces-not-found',
       })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({ ok: true, data: [] })
 
       // Act
       const res = await request(app.callback())

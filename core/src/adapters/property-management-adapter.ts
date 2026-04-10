@@ -1,11 +1,9 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
 import {
   ApartmentInfo,
-  Listing,
   MaintenanceUnitInfo,
   MaterialChoice,
   MaterialOption,
-  ParkingSpace,
   RentalProperty,
   RentalPropertyInfo,
 } from '@onecore/types'
