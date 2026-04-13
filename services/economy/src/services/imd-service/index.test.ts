@@ -363,6 +363,31 @@ const makeEnrichedRow = (
   measurementUnit,
 })
 
+// Parse a single RFC 4180 CSV line into fields
+function parseRow(line: string): string[] {
+  const fields: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(current)
+      current = ''
+    } else {
+      current += ch
+    }
+  }
+  fields.push(current)
+  return fields
+}
+
 describe(imdService.toTenfastCsv, () => {
   it('maps VV to IMDM article and builds Avitext with Varmvatten', () => {
     const csv = imdService.toTenfastCsv([
@@ -374,11 +399,16 @@ describe(imdService.toTenfastCsv, () => {
 
     const lines = csv.split('\n')
     expect(lines[0]).toBe(
-      'Kontraktsnummer;Hyresartikel;Avitext;Fr.o.m;T.o.m;Årshyra'
+      'Kontraktsnummer,Hyresartikel,Avitext,Fr.o.m,T.o.m,Årshyra,Summarad'
     )
-    expect(lines[1]).toBe(
-      '306-008-01-0201/02;IMDM;Varmvatten januari,7,58,m3(25% moms tillkommer);2026-01-01;2026-01-31;7460,16'
-    )
+    const cols = parseRow(lines[1])
+    expect(cols[0]).toBe('306-008-01-0201/02')
+    expect(cols[1]).toBe('IMDM')
+    expect(cols[2]).toBe('Varmvatten januari,7,58,m3(25% moms tillkommer)')
+    expect(cols[3]).toBe('2026-01-01')
+    expect(cols[4]).toBe('2026-01-31')
+    expect(cols[5]).toBe('7460,16')
+    expect(cols[6]).toBe('')
   })
 
   it('maps VMM to VÄRMEENERGIM article and builds Avitext with Värmeenergi', () => {
@@ -386,8 +416,7 @@ describe(imdService.toTenfastCsv, () => {
       makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500, unit: 'VMM' }),
     ])
 
-    const dataLine = csv.split('\n')[1]
-    const cols = dataLine.split(';')
+    const cols = parseRow(csv.split('\n')[1])
     expect(cols[1]).toBe('VÄRMEENERGIM')
     expect(cols[2]).toBe('Värmeenergi januari,7,58,m3(25% moms tillkommer)')
   })
@@ -405,9 +434,8 @@ describe(imdService.toTenfastCsv, () => {
       makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500 }),
     ])
 
-    const dataLine = csv.split('\n')[1]
-    const yearlyRent = dataLine.split(';')[5]
-    expect(yearlyRent).toBe('6000,00')
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[5]).toBe('6000,00')
   })
 
   it('handles mixed VV and VMM rows', () => {
@@ -419,11 +447,11 @@ describe(imdService.toTenfastCsv, () => {
     const lines = csv.split('\n')
     expect(lines).toHaveLength(3)
 
-    const vvCols = lines[1].split(';')
+    const vvCols = parseRow(lines[1])
     expect(vvCols[1]).toBe('IMDM')
     expect(vvCols[2]).toContain('Varmvatten')
 
-    const vmmCols = lines[2].split(';')
+    const vmmCols = parseRow(lines[2])
     expect(vmmCols[1]).toBe('VÄRMEENERGIM')
     expect(vmmCols[2]).toContain('Värmeenergi')
   })
@@ -462,11 +490,17 @@ describe(imdService.toUnprocessedCsv, () => {
 
     const lines = csv.split('\n')
     expect(lines[0]).toBe(
-      'Hyresobjektskod;Fr.o.m;T.o.m;Enhet;Volym;Kostnad;Måttenhet;Orsak'
+      'Hyresobjektskod,Fr.o.m,T.o.m,Enhet,Volym,Kostnad,Måttenhet,Orsak'
     )
-    expect(lines[1]).toBe(
-      '306-008-01-0206;2026-01-01;2026-01-31;VV;7,58;450,5;m3;Inget aktivt kontrakt i perioden'
-    )
+    const cols = parseRow(lines[1])
+    expect(cols[0]).toBe('306-008-01-0206')
+    expect(cols[1]).toBe('2026-01-01')
+    expect(cols[2]).toBe('2026-01-31')
+    expect(cols[3]).toBe('VV')
+    expect(cols[4]).toBe('7,58')
+    expect(cols[5]).toBe('450,5')
+    expect(cols[6]).toBe('m3')
+    expect(cols[7]).toBe('Inget aktivt kontrakt i perioden')
   })
 
   it('uses correct reason for no-rental-object', () => {
@@ -474,8 +508,8 @@ describe(imdService.toUnprocessedCsv, () => {
       makeUnprocessedRow('UNKNOWN-CODE', 'no-rental-object'),
     ])
 
-    const reason = csv.split('\n')[1].split(';')[7]
-    expect(reason).toBe('Hyresobjekt saknas i Tenfast')
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[7]).toBe('Hyresobjekt saknas i Tenfast')
   })
 
   it('uses correct reason for amount-too-low', () => {
@@ -483,8 +517,8 @@ describe(imdService.toUnprocessedCsv, () => {
       makeUnprocessedRow('306-008-01-0201', 'amount-too-low', { cost: 8.2 }),
     ])
 
-    const reason = csv.split('\n')[1].split(';')[7]
-    expect(reason).toBe('Belopp under 15 kr')
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[7]).toBe('Belopp under 15 kr')
   })
 
   it('outputs multiple rows', () => {

@@ -193,7 +193,27 @@ const SWEDISH_MONTHS = [
   'december',
 ]
 
-const CSV_HEADER = 'Kontraktsnummer;Hyresartikel;Avitext;Fr.o.m;T.o.m;Årshyra'
+// RFC 4180: quote fields that contain the delimiter, double-quotes, or newlines
+function csvField(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`
+  }
+  return value
+}
+
+function csvRow(fields: string[]): string {
+  return fields.map(csvField).join(',')
+}
+
+const CSV_HEADER = csvRow([
+  'Kontraktsnummer',
+  'Hyresartikel',
+  'Avitext',
+  'Fr.o.m',
+  'T.o.m',
+  'Årshyra',
+  'Summarad',
+])
 
 function getUnitConfig(unit: string) {
   const config = UNIT_CONFIG[unit]
@@ -213,21 +233,30 @@ function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
   const lines = rows.map((row) => {
     const { articleCode, description } = getUnitConfig(row.unit)
     const yearlyRent = (row.cost * 12).toFixed(2).replace('.', ',')
-    return [
+    return csvRow([
       row.leaseId,
       articleCode,
       buildInvoiceText(row, description),
       formatDate(row.from),
       formatDate(row.to),
       yearlyRent,
-    ].join(';')
+      '',
+    ])
   })
 
   return [CSV_HEADER, ...lines].join('\n')
 }
 
-const UNPROCESSED_CSV_HEADER =
-  'Hyresobjektskod;Fr.o.m;T.o.m;Enhet;Volym;Kostnad;Måttenhet;Orsak'
+const UNPROCESSED_CSV_HEADER = csvRow([
+  'Hyresobjektskod',
+  'Fr.o.m',
+  'T.o.m',
+  'Enhet',
+  'Volym',
+  'Kostnad',
+  'Måttenhet',
+  'Orsak',
+])
 
 // 'multiple-leases' is handled dynamically in getReasonLabel (includes lease IDs)
 const REASON_LABELS: Record<
@@ -252,7 +281,7 @@ function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {
   const lines = rows.map((row) => {
     const volume = row.volume.toString().replace('.', ',')
     const cost = row.cost.toString().replace('.', ',')
-    return [
+    return csvRow([
       row.rentalObjectCode,
       formatDate(row.from),
       formatDate(row.to),
@@ -261,7 +290,7 @@ function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {
       cost,
       row.measurementUnit,
       getReasonLabel(row),
-    ].join(';')
+    ])
   })
 
   return [UNPROCESSED_CSV_HEADER, ...lines].join('\n')
