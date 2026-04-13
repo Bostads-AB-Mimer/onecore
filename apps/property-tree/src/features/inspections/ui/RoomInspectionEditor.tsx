@@ -121,19 +121,27 @@ export function RoomInspectionEditor({
           })}
 
           {equipmentRows.map((row) => (
-            <ComponentInspectionCard
+            <div
               key={row.key}
-              componentKey={row.key}
-              label={row.label}
-              condition=""
-              note=""
-              photoCount={0}
-              actions={[]}
-              onConditionChange={noop}
-              onNoteChange={noop}
-              onPhotoCapture={noop}
-              onOpenDetail={noop}
-            />
+              className="opacity-60 pointer-events-none"
+              aria-disabled
+            >
+              <ComponentInspectionCard
+                componentKey={row.key}
+                label={row.label}
+                condition=""
+                note=""
+                photoCount={0}
+                actions={[]}
+                onConditionChange={noop}
+                onNoteChange={noop}
+                onPhotoCapture={noop}
+                onOpenDetail={noop}
+              />
+              <p className="text-xs text-muted-foreground -mt-2 mb-3 px-1">
+                Sparas inte än
+              </p>
+            </div>
           ))}
         </div>
 
