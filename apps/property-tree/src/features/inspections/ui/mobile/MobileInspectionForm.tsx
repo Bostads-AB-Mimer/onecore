@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, User } from 'lucide-react'
+import { ChevronLeft, User } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
@@ -15,8 +15,9 @@ import { Card, CardContent } from '@/shared/ui/Card'
 import { ScrollArea } from '@/shared/ui/ScrollArea'
 
 import { useInspectionForm } from '../../hooks/useInspectionForm'
-import { InspectorSelectionCard } from '../InspectorSelectionCard'
+import { InspectionInfoSection } from '../InspectionInfoSection'
 import { RoomInspectionEditor } from '../RoomInspectionEditor'
+import type { TenantInfoCardData } from '../TenantInfoCard'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
@@ -30,7 +31,9 @@ interface MobileInspectionFormProps {
     additionalData: InspectionSubmitData
   ) => void
   onCancel: () => void
-  tenant?: any
+  tenant?: TenantInfoCardData
+  address?: string
+  apartmentCode?: string | null
   existingInspection?: Inspection
 }
 
@@ -39,20 +42,22 @@ export function MobileInspectionForm({
   onSave,
   onCancel,
   tenant,
+  address,
+  apartmentCode,
   existingInspection,
 }: MobileInspectionFormProps) {
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0)
-  // If we have existing inspection data, skip inspector selection
-  const [showInspectorSelection, setShowInspectorSelection] =
-    useState(!existingInspection)
+  // Show the inspector-selection landing screen for brand-new inspections
+  // and for "start over" restarts. Continuing a draft has persisted room
+  // data and skips straight into the form.
+  const isContinuingExistingInspection = !!existingInspection?.rooms?.length
+  const [showInspectorSelection, setShowInspectorSelection] = useState(
+    !isContinuingExistingInspection
+  )
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const {
     inspectorName,
     setInspectorName,
-    inspectionTime,
-    setInspectionTime,
-    needsMasterKey,
-    setNeedsMasterKey,
     inspectionData,
     handleConditionUpdate,
     handleActionUpdate,
@@ -70,19 +75,8 @@ export function MobileInspectionForm({
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
     if (!tenant) return undefined
     return {
-      name:
-        `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() ||
-        tenant.name ||
-        '',
-      personalNumber: tenant.personalNumber || '',
-      phone: tenant.phone,
-      email: tenant.email,
-    }
-  }
-
-  const handleNext = () => {
-    if (currentRoomIndex < rooms.length - 1) {
-      setCurrentRoomIndex(currentRoomIndex + 1)
+      name: tenant.fullName ?? '',
+      personalNumber: '',
     }
   }
 
@@ -110,8 +104,7 @@ export function MobileInspectionForm({
   //   }
   // }
 
-  const canComplete =
-    inspectorName && inspectionTime && completedRooms === rooms.length
+  const canComplete = inspectorName && completedRooms === rooms.length
 
   // Reset scroll position when room changes
   useEffect(() => {
@@ -140,15 +133,13 @@ export function MobileInspectionForm({
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
-            {/* <InspectorSelectionCard
+            <InspectionInfoSection
               inspectorName={inspectorName}
               setInspectorName={setInspectorName}
-              inspectionTime={inspectionTime}
-              setInspectionTime={setInspectionTime}
-              needsMasterKey={needsMasterKey}
-              setNeedsMasterKey={setNeedsMasterKey}
               tenant={tenant}
-            /> */}
+              address={address}
+              apartmentCode={apartmentCode}
+            />
 
             <div className="pt-4 pb-20">
               <Button

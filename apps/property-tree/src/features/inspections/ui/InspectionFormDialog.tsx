@@ -15,6 +15,7 @@ import {
 
 import { InspectionForm } from './InspectionForm'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
+import type { TenantInfoCardData } from './TenantInfoCard'
 type InspectionRoom = components['schemas']['InspectionRoom']
 type Inspection = components['schemas']['InternalInspection']
 
@@ -33,7 +34,9 @@ interface InspectionFormDialogProps {
   ) => void
   rooms: Room[]
   buttonSize?: string
-  tenant?: any
+  tenant?: TenantInfoCardData
+  address?: string
+  apartmentCode?: string | null
   existingInspection?: Inspection
 }
 
@@ -53,8 +56,9 @@ export function InspectionFormDialog({
   onClose,
   onSubmit,
   rooms,
-  buttonSize,
   tenant,
+  address,
+  apartmentCode,
   existingInspection,
 }: InspectionFormDialogProps) {
   const isMobile = useIsMobile()
@@ -136,6 +140,8 @@ export function InspectionFormDialog({
         onSubmit={onSubmit}
         rooms={rooms}
         tenant={tenant}
+        address={address}
+        apartmentCode={apartmentCode}
         existingInspection={inspectionToUse}
       />
     )
@@ -156,6 +162,8 @@ export function InspectionFormDialog({
           onSave={onSubmit}
           onCancel={onClose}
           tenant={tenant}
+          address={address}
+          apartmentCode={apartmentCode}
           existingInspection={inspectionToUse}
         />
       </DialogContent>

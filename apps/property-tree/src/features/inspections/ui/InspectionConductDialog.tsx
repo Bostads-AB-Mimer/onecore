@@ -3,13 +3,36 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { roomService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
+import { type Lease, leaseService } from '@/services/api/core/leaseService'
 import type { Room } from '@/services/types'
 
 import { useToast } from '@/shared/hooks/useToast'
 
 import { InspectionFormDialog } from './InspectionFormDialog'
+import type { TenantInfoCardData } from './TenantInfoCard'
 
 type InternalInspection = components['schemas']['InternalInspection']
+
+/**
+ * Build a TenantInfoCardData view-model from the lease that matches the
+ * inspection. The lease carries everything the card needs (tenant identity,
+ * move-in/out dates, notice status), so no extra tenant lookup is required.
+ */
+const buildTenantInfo = (
+  lease: Lease | undefined
+): TenantInfoCardData | undefined => {
+  const tenant = lease?.tenants?.[0]
+  if (!tenant) return undefined
+
+  return {
+    contactCode: tenant.contactCode,
+    fullName: tenant.fullName,
+    moveInDate: lease.leaseStartDate,
+    moveOutDate:
+      lease.terminationDate ?? lease.preferredMoveOutDate ?? lease.leaseEndDate,
+    isAboutToLeave: lease.status === 'AboutToEnd',
+  }
+}
 
 interface InspectionConductDialogProps {
   inspectionId: string
@@ -58,6 +81,24 @@ export function InspectionConductDialog({
     queryFn: () => roomService.getByRentalId(rentalIdForRooms!),
     enabled: !!rentalIdForRooms,
   })
+
+  const residenceId = internalInspection?.residenceId
+
+  const { data: leases } = useQuery<Lease[]>({
+    queryKey: ['leases-by-rental-property', residenceId],
+    queryFn: () =>
+      leaseService.getByRentalPropertyId(residenceId!, {
+        includeContacts: true,
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: true,
+      }),
+    enabled: !!residenceId,
+  })
+
+  const matchingLease = leases?.find(
+    (l) => l.leaseId === internalInspection?.leaseId
+  )
+  const tenantInfo = buildTenantInfo(matchingLease)
 
   const resolvedRooms = rooms && rooms.length > 0 ? rooms : (fetchedRooms ?? [])
 
@@ -109,6 +150,9 @@ export function InspectionConductDialog({
         }
       }}
       rooms={resolvedRooms}
+      tenant={tenantInfo}
+      address={internalInspection?.address}
+      apartmentCode={internalInspection?.apartmentCode}
       existingInspection={internalInspection}
     />
   )
