@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { residenceService, roomService } from '@/services/api/core'
+import { roomService } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import type { Room } from '@/services/types'
@@ -99,21 +99,16 @@ export function InspectionsTable({
       enabled: !!selectedInspectionId && isResumeDialogOpen,
     })
 
-  // internalInspection.residenceId stores the Xpand rentalId, not the property service UUID.
-  // We first resolve the residence UUID via the rentalId, then fetch rooms by UUID.
+  // internalInspection.residenceId stores the Xpand rentalId — use it directly to fetch rooms.
   const rentalIdForRooms =
     rooms.length === 0 ? internalInspection?.residenceId : undefined
 
-  const { data: residenceForRooms, isLoading: isLoadingResidence } = useQuery({
-    queryKey: ['residence', rentalIdForRooms],
-    queryFn: () => residenceService.getByRentalId(rentalIdForRooms!),
-    enabled: !!rentalIdForRooms,
-  })
+  const isLoadingResidence = false
 
   const { data: fetchedRooms, isLoading: isLoadingRooms } = useQuery({
-    queryKey: ['rooms', residenceForRooms?.id],
-    queryFn: () => roomService.getByResidenceId(residenceForRooms!.id),
-    enabled: !!residenceForRooms?.id,
+    queryKey: ['rooms', rentalIdForRooms],
+    queryFn: () => roomService.getByRentalId(rentalIdForRooms!),
+    enabled: !!rentalIdForRooms,
   })
 
   const resolvedRooms = rooms.length > 0 ? rooms : (fetchedRooms ?? [])
