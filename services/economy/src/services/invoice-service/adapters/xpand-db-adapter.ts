@@ -79,7 +79,7 @@ export const enrichInvoiceWithAccounting = async (
         'Could not get accounting rules for invoice from Xpand'
       )
       throw new Error(
-        `Could not get accounting rules for object ${invoiceRow.rentalObject} on invoice ${invoice.invoiceId}`
+        `Kunde inte hitta konteringsregler för hyresobjektet ${invoiceRow.rentalObject} på faktura ${invoice.invoiceId}`
       )
     }
     invoiceRow.projectCode = rentalSpecificRule?.projectCode

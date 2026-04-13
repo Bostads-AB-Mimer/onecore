@@ -125,14 +125,22 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
 export const TenfastRentArticleFactory = Factory.define<TenfastRentArticle>(
   ({ sequence }) => ({
     _id: `${sequence}`,
-    label: 'Hyra bostad',
-    type: 'rent',
     accountNr: '3012',
     createdAt: '2024-01-01T10:00:00Z',
     hyresvard: 'test-hyresvard',
     code: 'HYRAB',
     title: 'Hyra bostad',
     includeInContract: true,
+    accountConfigurations: [
+      {
+        accountNr: 3012,
+        categoryCode: 'Intäkter',
+        debitType: 'HYRA',
+        costCenter: '',
+        property: '',
+        freeText: '',
+      },
+    ],
   })
 )
 

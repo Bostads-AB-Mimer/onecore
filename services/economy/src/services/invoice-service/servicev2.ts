@@ -15,7 +15,10 @@ import {
   LedgerRow,
   xledgerDateString,
 } from '../../common/types/typesv2'
-import { getPeriodInformationFromDateStrings } from '../common/adapters/xledger-adapter'
+import {
+  getPeriodInformationFromDateStrings,
+  setInvoiceRowsTaxRule,
+} from '../common/adapters/xledger-adapter'
 import { logger } from '@onecore/utilities'
 import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
 
@@ -41,17 +44,18 @@ export const exportRentalInvoicesAccounting = async (
       throw new Error(invoicesResult.err)
     } else {
       logger.info(
-        { invoicesToImport: invoicesResult.data.length },
+        { invoicesToImport: invoicesResult.data.invoices.length },
         'Importing invoices'
       )
     }
 
-    const invoices = invoicesResult.data
+    let invoices = invoicesResult.data.invoices
     const counterPartCustomers = await getCounterPartCustomers()
 
     for (const invoice of invoices) {
       try {
         await enrichInvoiceWithAccounting(invoice)
+        await setInvoiceRowsTaxRule(invoice)
       } catch (error) {
         let message
         if (error instanceof Error) {
@@ -76,6 +80,14 @@ export const exportRentalInvoicesAccounting = async (
         invoice.totalAccount = TOTAL_ACCOUNT
         invoice.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
       }
+    }
+
+    // Remove invoices with errors
+    if (errors && errors.length) {
+      const errorInvoiceNumbers = new Set(errors.map((e) => e.invoiceNumber))
+      invoices = invoices.filter(
+        (invoice) => !errorInvoiceNumbers.has(invoice.invoiceId)
+      )
     }
 
     invoices.sort((a: InvoiceWithAccounting, b: InvoiceWithAccounting) => {
@@ -108,7 +120,7 @@ export const createAccounting = async (
   const invoiceRowsForExport = await getExportInvoiceRows(invoices)
   const aggregateAccountingCsv = await createAggregateCsv(invoiceRowsForExport)
   const ledgerAccountingCsv = await createLedgerCsv(invoices)
-  //onst contactsCsv = await getContacts(invoices)
+  //c§onst contactsCsv = await getContacts(invoices)
 
   console.log('--- AGGREGATE CSV ---')
   console.log(aggregateAccountingCsv.join('\n'))
@@ -165,6 +177,7 @@ const getExportInvoiceRows = async (invoices: InvoiceWithAccounting[]) => {
         counterPartCode: invoice.counterPartCode,
         contactCode: invoice.recipientContactCode,
         tenantName: invoice.recipientName,
+        taxRule: invoiceRow.taxRule,
       })
     }
   }
@@ -213,6 +226,8 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
   invoiceRows.forEach((invoiceRow) => {
     const key =
       invoiceRow.totalAccount +
+      ':' +
+      invoiceRow.taxRule +
       ':' +
       dateString(invoiceRow.fromDate) +
       ':' +
@@ -282,6 +297,8 @@ const groupAggregateRows = (
         const key =
           o.account +
           '||' +
+          o.taxRule +
+          '||' +
           o.costCode +
           '||' +
           o.property +
@@ -312,6 +329,7 @@ const groupAggregateRows = (
           voucherNumber,
           amount: 0,
           vat: 0,
+          taxRule: o.taxRule,
         }
 
         aggregatedRow.amount = safeAdd(aggregatedRow.amount, o.amount)
@@ -360,14 +378,13 @@ const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
   )
 
   aggregateRows.forEach((row) => {
-    const taxRule = '2'
     const periodInfo = getPeriodInformationFromDateStrings(
       row.voucherDate,
       row.fromDate,
       row.toDate
     )
     csvRows.push(
-      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periodStart};${''};${''};${''};${''};${''};${''};${''};${taxRule};${row.amount}`
+      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periodStart};${''};${''};${''};${''};${''};${''};${''};${''};${row.amount}`
     )
   })
 

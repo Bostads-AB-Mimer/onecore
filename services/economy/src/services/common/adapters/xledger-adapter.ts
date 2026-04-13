@@ -14,6 +14,7 @@ import { match, P } from 'ts-pattern'
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
 import { InvoiceWithMatchId } from '@src/services/report-service/types'
+import { InvoiceWithAccounting } from '@src/common/types/typesv2'
 
 const TENANT_COMPANY_DB_ID = 44668660
 
@@ -966,6 +967,14 @@ const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
     default:
       return ''
   }
+}
+
+export const setInvoiceRowsTaxRule = (invoice: InvoiceWithAccounting) => {
+  invoice.invoiceRows.forEach((row) => {
+    if (row.vat && row.vat !== 0) {
+      row.taxRule = getTaxRule(row.totalAmount, row.vat, row.account ?? '')
+    }
+  })
 }
 
 export const getPeriodInformationFromDateStrings = (

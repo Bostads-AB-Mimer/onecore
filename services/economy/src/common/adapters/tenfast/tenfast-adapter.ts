@@ -318,11 +318,76 @@ const replaceRentalObjectExternalIds = async (invoice: Invoice) => {
   }
 }
 
+const enrichInvoiceRowsWithAccounting = async (
+  invoice: Invoice,
+  errors: { invoiceNumber: string; error: string }[]
+): Promise<InvoiceRowWithAccounting[]> => {
+  const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
+  for (const invoiceRow of invoice.invoiceRows) {
+    const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
+      ...invoiceRow,
+    }
+    if (invoiceRow.rentArticle) {
+      const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
+
+      if (articleResult.ok) {
+        const article = articleResult.data
+        invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
+        if (article.accountConfigurations?.length) {
+          const accountConfiguration = article.accountConfigurations.find(
+            (accountConfiguration) => {
+              return accountConfiguration.categoryCode === 'Intäkter'
+            }
+          )
+
+          if (accountConfiguration) {
+            invoiceRowWithAccounting.account =
+              accountConfiguration.accountNr.toString()
+          } else {
+            logger.error(
+              { article },
+              'Rent article has no account configuration for Intäkter'
+            )
+            errors.push({
+              invoiceNumber: invoice.invoiceId,
+              error: `Hyresartikeln ${article.code} har inget konto för kategorin Intäkter`,
+            })
+            continue
+          }
+        } else {
+          logger.error(
+            { article },
+            'Rent article has no account configurations'
+          )
+          errors.push({
+            invoiceNumber: invoice.invoiceId,
+            error: `Hyresartikeln ${article.code} har inga konton`,
+          })
+          continue
+        }
+      }
+    }
+
+    invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
+  }
+  return invoiceRowsWithAccounting
+}
+
 export const getInvoicesNotExported = async (
   maxCount: number
-): Promise<AdapterResult<InvoiceWithAccounting[], string>> => {
+): Promise<
+  AdapterResult<
+    {
+      invoices: InvoiceWithAccounting[]
+      errors: { invoiceNumber: string; error: string }[] | undefined
+    },
+    string
+  >
+> => {
+  const errors: { invoiceNumber: string; error: string }[] = []
+
   try {
-    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+    const result = await makeTenfastRequest('/v1/hyresvard/hyror/search', {
       params: {
         isManuallyExported: 'false',
         status: 'issued',
@@ -362,23 +427,10 @@ export const getInvoicesNotExported = async (
 
       await replaceRentalObjectExternalIds(invoice)
 
-      const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
-      for (const invoiceRow of invoice.invoiceRows) {
-        const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
-          ...invoiceRow,
-        }
-        if (invoiceRow.rentArticle) {
-          const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
-
-          if (articleResult.ok) {
-            const article = articleResult.data
-            invoiceRowWithAccounting.account = article.accountNr ?? undefined
-            invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
-          }
-        }
-
-        invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
-      }
+      const invoiceRowsWithAccounting = await enrichInvoiceRowsWithAccounting(
+        invoice,
+        errors
+      )
 
       const invoiceWithAccounting = {
         ...invoice,
@@ -390,7 +442,10 @@ export const getInvoicesNotExported = async (
 
     return {
       ok: true,
-      data: invoices,
+      data: {
+        invoices: invoices,
+        errors,
+      },
     }
   } catch (err: any) {
     logger.error(err)
