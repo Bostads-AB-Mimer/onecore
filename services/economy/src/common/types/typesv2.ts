@@ -20,6 +20,14 @@ export type XpandContact = Contact & {
   careOf?: string
 }
 
+export type ArticleAccountConfiguration = {
+  accountNr: number
+  debitType: string
+  costCenter: string
+  property: string
+  freeText: string
+}
+
 export type InvoiceRowWithAccounting = InvoiceRow & {
   rentArticleName?: string
   projectCode?: string
@@ -27,6 +35,7 @@ export type InvoiceRowWithAccounting = InvoiceRow & {
   freeCode?: string
   costCode?: string
   account?: string
+  taxRule?: string
 }
 
 export type InvoiceWithAccounting = Omit<Invoice, 'invoiceRows'> & {
@@ -89,6 +98,7 @@ export type ExportedInvoiceRow = {
   tenantName?: string
   company?: string
   counterPartCode?: string | undefined
+  taxRule?: string
 
   // remove?
   roundoff?: number
@@ -108,6 +118,7 @@ export type AggregatedRow = {
   freeCode?: string
   totalAccount: string
   counterPartCode?: string
+  taxRule?: string
 }
 
 export type LedgerRow = {

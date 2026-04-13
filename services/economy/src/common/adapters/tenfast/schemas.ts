@@ -233,6 +233,19 @@ export type TenfastTenantByContactCodeResponse = z.infer<
 
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 
+export const TenfastAccountConfigurationSchema = z.object({
+  accountNr: z.number(),
+  categoryCode: z.string(),
+  debitType: z.string(),
+  costCenter: z.string(),
+  property: z.string(),
+  freeText: z.string(),
+})
+
+export type TenfastAccountConfiguration = z.infer<
+  typeof TenfastAccountConfigurationSchema
+>
+
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
@@ -241,6 +254,7 @@ export const TenfastRentArticleSchema = z.object({
   hyresvard: z.string(),
   code: z.string(),
   title: z.string(),
+  accountConfigurations: z.array(TenfastAccountConfigurationSchema).optional(),
 })
 
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
