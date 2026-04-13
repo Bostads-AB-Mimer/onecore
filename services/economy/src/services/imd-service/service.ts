@@ -212,6 +212,7 @@ const CSV_HEADER = csvRow([
   'Fr.o.m',
   'T.o.m',
   'Årshyra',
+  'Summarad',
 ])
 
 function getUnitConfig(unit: string) {
@@ -239,6 +240,7 @@ function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
       formatDate(row.from),
       formatDate(row.to),
       yearlyRent,
+      '',
     ])
   })
 

@@ -399,17 +399,16 @@ describe(imdService.toTenfastCsv, () => {
 
     const lines = csv.split('\n')
     expect(lines[0]).toBe(
-      'Kontraktsnummer,Hyresartikel,Avitext,Fr.o.m,T.o.m,Årshyra'
+      'Kontraktsnummer,Hyresartikel,Avitext,Fr.o.m,T.o.m,Årshyra,Summarad'
     )
     const cols = parseRow(lines[1])
     expect(cols[0]).toBe('306-008-01-0201/02')
     expect(cols[1]).toBe('IMDM')
-    expect(cols[2]).toBe(
-      'Varmvatten januari,7,58,m3(25% moms tillkommer)'
-    )
+    expect(cols[2]).toBe('Varmvatten januari,7,58,m3(25% moms tillkommer)')
     expect(cols[3]).toBe('2026-01-01')
     expect(cols[4]).toBe('2026-01-31')
     expect(cols[5]).toBe('7460,16')
+    expect(cols[6]).toBe('')
   })
 
   it('maps VMM to VÄRMEENERGIM article and builds Avitext with Värmeenergi', () => {
