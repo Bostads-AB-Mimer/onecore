@@ -52,12 +52,6 @@ export function TenantsTabContent({
             {lease.tenants?.map((tenant, i) => (
               <>
                 {i > 0 && <Separator />}
-<<<<<<< HEAD
-                <TenantLeaseCard tenant={tenant} key={i} />
-              </>
-            ))}
-          </div>
-=======
                 <TenantLeaseCard
                   tenant={tenant}
                   key={i}
@@ -85,7 +79,6 @@ export function TenantsTabContent({
             emailAddress={email.emailAddress}
             onSend={email.handleSendEmail}
           />
->>>>>>> main
         </>
       )}
     </TabLayout>

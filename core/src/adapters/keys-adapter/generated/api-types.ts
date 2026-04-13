@@ -2828,6 +2828,7 @@ export interface components {
             updatedAt: string
           }[]
         | null
+      activeLoanContact?: string | null
     }
     PaginationMeta: {
       totalRecords: number
