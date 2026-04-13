@@ -3,6 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import nock from 'nock'
+import { LeaseType } from '@onecore/types'
 
 import { routes } from '../../index'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
@@ -612,7 +613,7 @@ describe('GET /leases/search-v2', () => {
           tenantContactIds: ['P123456'],
           tenants: undefined,
           rentalPropertyId: '123-456-00-0001',
-          type: 'bostad',
+          type: LeaseType.HousingContract,
           noticeGivenBy: undefined,
           noticeDate: undefined,
           noticeTimeTenant: '3m',
