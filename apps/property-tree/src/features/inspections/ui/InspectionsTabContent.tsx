@@ -12,7 +12,9 @@ import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import { isCompleted } from '../constants/statuses'
+import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
 import { CreateInspectionDialog } from './CreateInspectionDialog'
+import { InspectionConductDialog } from './InspectionConductDialog'
 import { InspectionsTable } from './InspectionsTable'
 
 type InspectionWithSource = components['schemas']['InspectionWithSource']
@@ -32,7 +34,12 @@ export function InspectionsTabContent({
 }: InspectionsTabContentProps) {
   const [showAll, setShowAll] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [newlyCreatedInspectionId, setNewlyCreatedInspectionId] = useState<
+    string | null
+  >(null)
   const { toast } = useToast()
+
+  const { startInspection } = useUpdateInspectionStatus({ rentalId })
 
   const inspectionsQuery = useQuery({
     queryKey: ['inspections', rentalId],
@@ -144,12 +151,17 @@ export function InspectionsTabContent({
         <CreateInspectionDialog
           isOpen={isCreateDialogOpen}
           onClose={() => setIsCreateDialogOpen(false)}
-          onSuccess={({ inspector }) => {
+          onSuccess={(inspection) => {
             toast({
               title: 'Besiktning skapad',
-              description: `Besiktning skapad av ${inspector}.`,
+              description: `Besiktning skapad av ${inspection.inspector}.`,
             })
             setIsCreateDialogOpen(false)
+            // Mirror the "Starta besiktning" table action: transition to
+            // Påbörjad and open the conduct form directly on the new
+            // inspection (MIM-1672).
+            startInspection(inspection.id)
+            setNewlyCreatedInspectionId(inspection.id)
           }}
           onError={() => {
             toast({
@@ -163,6 +175,16 @@ export function InspectionsTabContent({
           apartmentCode={apartmentCode}
           leaseId={leaseId}
           roomNames={(roomsQuery.data ?? []).map((r) => r.name ?? r.code)}
+        />
+      )}
+
+      {newlyCreatedInspectionId && (
+        <InspectionConductDialog
+          inspectionId={newlyCreatedInspectionId}
+          rentalId={rentalId}
+          rooms={roomsQuery.data ?? []}
+          isOpen={true}
+          onClose={() => setNewlyCreatedInspectionId(null)}
         />
       )}
     </TabLayout>

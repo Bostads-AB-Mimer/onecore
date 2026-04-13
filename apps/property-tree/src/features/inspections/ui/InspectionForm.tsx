@@ -29,6 +29,7 @@ import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
 import { useInspectionForm } from '../hooks/useInspectionForm'
+import { InspectorSelectionCard } from './InspectorSelectionCard'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 
 type Inspection = components['schemas']['InternalInspection']
@@ -117,17 +118,19 @@ export function InspectionForm({
 
   return (
     <div className="space-y-6 min-w-0">
-      {/* Reuse the same card component with horizontal layout for desktop */}
-      {/* <InspectorSelectionCard
+      {/* Info om besiktning — MIM-1672.
+          Tenant card is rendered via the same component when `tenant` is
+          provided; for now we leave it out (that card is handled in a
+          separate ticket). */}
+      <InspectorSelectionCard
         inspectorName={inspectorName}
         setInspectorName={setInspectorName}
         inspectionTime={inspectionTime}
         setInspectionTime={setInspectionTime}
         needsMasterKey={needsMasterKey}
         setNeedsMasterKey={setNeedsMasterKey}
-        tenant={tenant}
         layout="horizontal"
-      /> */}
+      />
 
       {/* Progress counter */}
       <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
