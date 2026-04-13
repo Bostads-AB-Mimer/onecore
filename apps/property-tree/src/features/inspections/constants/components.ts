@@ -115,6 +115,8 @@ export interface InspectionRow {
 
 // Swedish category names that supersede a default surface row when present in
 // the fetched components. Matches the existing DB convention (e.g. 'Vitvaror').
+// Variants like 'Innertak' won't match and would render alongside the default —
+// add them here when those categories get imported.
 const SURFACE_CATEGORY: Record<string, ComponentType> = {
   Väggar: 'walls',
   Golv: 'floor',

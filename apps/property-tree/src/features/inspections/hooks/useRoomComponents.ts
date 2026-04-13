@@ -7,8 +7,8 @@ import { componentService } from '@/services/api/core/componentService'
 // stairwells, etc.), so callers must pass `room.propertyObjectId`.
 export function useRoomComponents(propertyObjectId: string | undefined) {
   return useQuery({
-    queryKey: ['room-components', propertyObjectId],
-    queryFn: () => componentService.getByRoomId(propertyObjectId as string),
+    queryKey: ['components', 'by-room', propertyObjectId],
+    queryFn: () => componentService.getByRoomId(propertyObjectId!),
     enabled: Boolean(propertyObjectId),
   })
 }
