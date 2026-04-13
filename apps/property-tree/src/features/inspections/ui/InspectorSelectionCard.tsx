@@ -168,6 +168,8 @@ export function InspectorSelectionCard({
             </Select>
           </div>
 
+          {/* TODO: Does this dropdown makes sense considering inspections are not planned for a specific time as I understand? */}
+          {/*
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
@@ -194,6 +196,7 @@ export function InspectorSelectionCard({
               </SelectContent>
             </Select>
           </div>
+          */}
         </CardContent>
       </Card>
     </div>

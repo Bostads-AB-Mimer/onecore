@@ -28,6 +28,7 @@ import { useCreateInspection } from '../hooks/useCreateInspection'
 import { useInspectors } from '../hooks/useInspectors'
 
 type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
+type DetailedInspection = components['schemas']['DetailedInspection']
 
 const INSPECTION_TYPES = Object.entries(INSPECTION_TYPE_LABELS).map(
   ([value, label]) => ({ value, label })
@@ -36,7 +37,7 @@ const INSPECTION_TYPES = Object.entries(INSPECTION_TYPE_LABELS).map(
 interface CreateInspectionDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: (data: { inspector: string }) => void
+  onSuccess: (inspection: DetailedInspection) => void
   onError: () => void
   rentalId: string
   address: string
@@ -94,9 +95,9 @@ export function CreateInspectionDialog({
     }
 
     createInspection.mutate(body, {
-      onSuccess: () => {
+      onSuccess: (inspection) => {
         resetForm()
-        onSuccess({ inspector: body.inspector })
+        onSuccess(inspection)
       },
       onError,
     })
