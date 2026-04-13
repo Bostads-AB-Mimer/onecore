@@ -91,6 +91,9 @@ const transformFromDbContact = (
   const row = trimRow(rows[0])
   const protectedIdentity = row.protectedIdentity !== null
   const deceased = row.deceased !== null
+  const emigrated = row.emigrated !== null
+  const noAdvertising =
+    row.noAdvertising == null ? false : row.noAdvertising !== 0
 
   const contact = {
     contactCode: row.contactCode,
@@ -128,6 +131,8 @@ const transformFromDbContact = (
     specialAttention: !!row.specialAttention,
     protectedIdentity: protectedIdentity,
     deceased: deceased,
+    emigrated: emigrated,
+    noAdvertising: noAdvertising,
   }
 
   return contact
@@ -539,7 +544,9 @@ const getContactQuery = () => {
         'bkqte.quetime as queueTime',
         'cmctc.lagsokt as protectedIdentity',
         'cmctc.utslag as specialAttention',
-        'cmctc.avliden as deceased'
+        'cmctc.avliden as deceased',
+        'cmctc.konkurs as emigrated',
+        'cmctc.blockinfo as noAdvertising'
       )
       .leftJoin('cmadr', function () {
         this.on('cmadr.keycode', '=', 'cmctc.keycmobj')
@@ -679,7 +686,9 @@ const getContacts = async (contactCodes: string[]) => {
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
       'cmctc.avliden as deceased',
-      'cmctc.utslag as specialAttention'
+      'cmctc.utslag as specialAttention',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
     .leftJoin('cmeml', function () {
@@ -703,7 +712,10 @@ const getContacts = async (contactCodes: string[]) => {
 
   return rows.map((row: any): Contact => {
     const protectedIdentity = row.protectedIdentity !== null
-
+    const deceased = row.deceased !== null
+    const emigrated = row.emigrated !== null
+    const noAdvertising =
+      row.noAdvertising == null ? false : row.noAdvertising !== 0
     return {
       contactCode: row.contactCode,
       contactKey: row.contactKey,
@@ -730,7 +742,9 @@ const getContacts = async (contactCodes: string[]) => {
       isTenant: false,
       specialAttention: !!row.specialAttention,
       protectedIdentity: !!row.protectedIdentity,
-      deceased: !!row.deceased,
+      deceased: deceased,
+      emigrated: emigrated,
+      noAdvertising: noAdvertising,
     }
   })
 }

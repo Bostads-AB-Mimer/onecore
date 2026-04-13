@@ -12,7 +12,7 @@ import {
   schemas,
   LeaseStatus,
 } from '@onecore/types'
-import z from 'zod'
+import z, { object } from 'zod'
 
 import {
   GetLeaseOptionsSchema,
@@ -284,8 +284,6 @@ export const routes = (router: KoaRouter) => {
       const leaseSearchResult =
         await leasingAdapter.searchLeases(leaseSearchParams)
 
-      let log = `Avtals-sök tid: ${Date.now() - start}ms`
-
       if (
         !leaseSearchResult.content ||
         leaseSearchResult.content.length === 0
@@ -299,6 +297,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       // console.log('Lease search result:', leaseSearchResult)
+
       //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
       const parsedContent = await Promise.all(
         leaseSearchResult.content.map(
@@ -363,13 +362,17 @@ export const routes = (router: KoaRouter) => {
 
             const rentalObjectData = rentalPropertyResult.data
 
-            // console.log('rentalObjectData', rentalObjectData)
-
             //Filter out leases for contacts with protected identity.
             if (tenant.protectedIdentity) return null
 
             //Filter out leases for deceased contacts.
             if (tenant.deceased) return null
+
+            //Filter out leases for emigrated contacts.
+            if (tenant.emigrated) return null
+
+            //Filter out leases for contacts that should not be advertised.
+            if (tenant.noAdvertising) return null
 
             //Filter out leases for customers that are companies (contact code does not start with P).
             if (!tenant.contactCode.startsWith('P')) return null
@@ -416,6 +419,8 @@ export const routes = (router: KoaRouter) => {
               division_1048: rentalObjectData.district,
               division_1242: rentalObjectData.marketArea,
               rentalTypeCode: rentalObjectData.property.rentalTypeCode,
+              division_1140: rentalObjectData.property.roomTypeCode,
+              object_type: rentalObjectData.type,
             }
 
             // console.log('mappedLease', mappedLease)
@@ -440,9 +445,6 @@ export const routes = (router: KoaRouter) => {
           }
         )
       )
-
-      console.log(log)
-      console.log(`Contacts och property info tid: ${Date.now() - start}ms`)
 
       // console.log('Lease search result:', leaseSearchResult.content.length)
       // console.log('Parsed content:', parsedContent.length)

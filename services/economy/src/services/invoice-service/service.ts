@@ -521,6 +521,8 @@ export const getContactFromInvoiceRows = (
     birthDate: new Date(),
     protectedIdentity: false,
     deceased: false,
+    emigrated: false,
+    noAdvertising: false,
   }
 }
 

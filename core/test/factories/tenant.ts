@@ -92,6 +92,8 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
   isAboutToLeave: false,
   protectedIdentity: false,
   deceased: false,
+  emigrated: false,
+  noAdvertising: false,
 }))
 
 export const WorkOrderTenantFactory = Factory.define<

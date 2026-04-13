@@ -35,6 +35,8 @@ jest.mock('knex', () => () => ({
           queueTime: sub(new Date(), { days: 366 }),
           protectedIdentity: null,
           deceased: null,
+          emigrated: null,
+          noAdvertising: null,
         },
       ])
     )
@@ -96,6 +98,8 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         storageWaitingList: undefined,
         protectedIdentity: false,
         deceased: false,
+        emigrated: false,
+        noAdvertising: false,
       },
     })
   })

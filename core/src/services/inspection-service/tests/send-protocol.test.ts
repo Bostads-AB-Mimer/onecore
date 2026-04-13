@@ -70,6 +70,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -132,6 +134,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -208,6 +212,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -285,6 +291,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -361,6 +369,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
         {
           contactCode: 'contact-2',
@@ -376,6 +386,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -486,6 +498,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -570,6 +584,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -637,6 +653,8 @@ describe('POST /inspections/:inspectionId/send-protocol', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })

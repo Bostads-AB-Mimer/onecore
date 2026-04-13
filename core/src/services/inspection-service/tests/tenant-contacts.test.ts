@@ -52,6 +52,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -75,6 +77,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -139,6 +143,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -215,6 +221,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
         {
           contactCode: 'contact-2',
@@ -230,6 +238,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -277,6 +287,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
         {
           contactCode: 'contact-2',
@@ -292,6 +304,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -352,6 +366,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -375,6 +391,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })
@@ -398,6 +416,8 @@ describe('GET /inspections/:inspectionId/tenant-contacts', () => {
           isTenant: true,
           protectedIdentity: false,
           deceased: false,
+          emigrated: false,
+          noAdvertising: false,
         },
       ],
     })

@@ -24,4 +24,6 @@ export const TenantFactory = Factory.define<Tenant>(() => ({
   isAboutToLeave: false,
   protectedIdentity: false,
   deceased: false,
+  emigrated: false,
+  noAdvertising: false,
 }))

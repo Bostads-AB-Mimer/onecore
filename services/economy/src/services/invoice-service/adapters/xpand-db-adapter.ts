@@ -354,7 +354,9 @@ export const getContacts = async (
       'cmctc.lagsokt as protectedIdentity',
       'krknr.autogiro as autogiro',
       'krknr.stopdate as autogiroCancelledAt',
-      'cmctc.avliden as deceased'
+      'cmctc.avliden as deceased',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising'
     )
     .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
 
@@ -437,6 +439,9 @@ export const getContacts = async (
 
     const protectedIdentity = contactRow.protectedIdentity !== null
     const deceased = contactRow.deceased !== null
+    const emigrated = contactRow.emigrated !== null
+    const noAdvertising =
+      contactRow.noAdvertising == null ? false : contactRow.noAdvertising !== 0
 
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
@@ -460,6 +465,8 @@ export const getContacts = async (
           : InvoiceDeliveryMethod.Other,
       protectedIdentity,
       deceased,
+      emigrated,
+      noAdvertising,
     }
   })
 

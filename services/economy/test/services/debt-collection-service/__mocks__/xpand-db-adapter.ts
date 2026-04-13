@@ -25,6 +25,8 @@ export const createMockContact = (
   isTenant: true,
   protectedIdentity: false,
   deceased: false,
+  emigrated: false,
+  noAdvertising: false,
   ...overrides,
 })
 

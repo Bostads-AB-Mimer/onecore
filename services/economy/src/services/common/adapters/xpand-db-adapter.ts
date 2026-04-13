@@ -395,6 +395,8 @@ export const getContacts = async (
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
       'cmctc.avliden as deceased',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising',
       'cmctcCareOf.cmctcben as careOf',
       'krknr.autogiro as autogiro'
     )
@@ -500,6 +502,9 @@ export const getContacts = async (
 
     const protectedIdentity = contactRow.protectedIdentity !== null
     const deceased = contactRow.deceased !== null
+    const emigrated = contactRow.emigrated !== null
+    const noAdvertising =
+      contactRow.noAdvertising == null ? false : contactRow.noAdvertising !== 0
 
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
@@ -521,6 +526,8 @@ export const getContacts = async (
           : InvoiceDeliveryMethod.Other,
       protectedIdentity: protectedIdentity,
       deceased: deceased,
+      emigrated: emigrated,
+      noAdvertising: noAdvertising,
     }
   })
 

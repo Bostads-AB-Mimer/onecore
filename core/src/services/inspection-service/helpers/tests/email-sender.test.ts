@@ -33,6 +33,8 @@ describe('identifyTenantContracts', () => {
             isTenant: true,
             protectedIdentity: false,
             deceased: false,
+            emigrated: false,
+            noAdvertising: false,
           },
         ],
         rentRows: [],
@@ -69,6 +71,8 @@ describe('identifyTenantContracts', () => {
             isTenant: true,
             protectedIdentity: false,
             deceased: false,
+            emigrated: false,
+            noAdvertising: false,
           },
         ],
         rentRows: [],
@@ -504,6 +508,8 @@ describe('sendProtocolToTenants', () => {
     isTenant: true,
     protectedIdentity: false,
     deceased: false,
+    emigrated: false,
+    noAdvertising: false,
   }
 
   const mockLease: Lease = {
