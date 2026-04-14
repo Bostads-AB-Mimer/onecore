@@ -124,6 +124,13 @@ const InspectionRoomActionsSchema = z.object({
   details: z.array(z.string()),
 })
 
+const DetailComponentSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  label: z.string(),
+  note: z.string(),
+})
+
 export const InspectionRoomSchema = z.object({
   roomId: z.string(),
   conditions: InspectionRoomConditionsSchema,
@@ -133,6 +140,7 @@ export const InspectionRoomSchema = z.object({
   photos: z.array(z.string()),
   isApproved: z.boolean(),
   isHandled: z.boolean(),
+  detailComponents: z.array(DetailComponentSchema).optional().default([]),
 })
 
 export const InternalInspectionSchema = XpandInspectionSchema.extend({

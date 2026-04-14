@@ -256,6 +256,7 @@ export const InspectionRoomFactory = Factory.define<InspectionRoom>(() => ({
   photos: [],
   isApproved: false,
   isHandled: false,
+  detailComponents: [],
 }))
 
 export const SaveInspectionDraftParamsFactory =
