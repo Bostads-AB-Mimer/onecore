@@ -307,17 +307,7 @@ export const routes = (router: KoaRouter) => {
    *         name: q
    *         schema:
    *           type: string
-   *         description: Free-text search (contract ID, PNR, contact code)
-   *       - in: query
-   *         name: name
-   *         schema:
-   *           type: string
-   *         description: Search by tenant name
-   *       - in: query
-   *         name: address
-   *         schema:
-   *           type: string
-   *         description: Search by rental object address
+   *         description: Free-text search (contract ID, PNR, contact code, tenant name, rental object address)
    *       - in: query
    *         name: objectType
    *         schema:
@@ -518,8 +508,8 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *             enum: [current, upcoming, aboutToEnd, ended, "0", "1", "2", "3"]
-   *         description: "Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)"
+   *             enum: [current, active, upcoming, abouttoend, ended, pendingsignature, preliminaryterminated, notsent]
+   *         description: Contract status filter
    *       - in: query
    *         name: startDateFrom
    *         schema:
@@ -544,6 +534,20 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           format: date
    *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property designations (fastighetsbeteckning)
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names (stadsdel)
    *       - in: query
    *         name: page
    *         schema:

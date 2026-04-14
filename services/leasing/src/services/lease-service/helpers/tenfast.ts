@@ -137,7 +137,7 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
     rentalObject: rentalObject
       ? mapToOnecoreRentalObject(rentalObject)
       : undefined,
-    type: mapTenfastTypToLeaseType(lease.hyresobjekt[0]?.typ),
+    type: mapTenfastTypToLeaseType(rentalObject?.typ),
     rentRows: lease.hyror.map(mapToOnecoreRentRow),
   }
 }

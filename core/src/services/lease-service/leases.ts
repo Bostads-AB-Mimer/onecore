@@ -265,8 +265,8 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *             enum: ['0', '1', '2', '3']
-   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
+   *             enum: [current, active, upcoming, abouttoend, ended, pendingsignature, preliminaryterminated, notsent]
+   *         description: Contract status filter
    *       - in: query
    *         name: startDateFrom
    *         schema:
@@ -319,6 +319,8 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '200':
    *         description: Successfully retrieved lease search results with pagination
+   *       '400':
+   *         description: Invalid query parameters
    *       '500':
    *         description: Internal server error
    *     security:
