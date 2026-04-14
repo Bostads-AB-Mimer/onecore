@@ -43,6 +43,7 @@ export const initialRoomData: InspectionRoom = {
   photos: [],
   isApproved: false,
   isHandled: false,
+  detailComponents: [],
 }
 
 export const initializeInspectionData = (rooms: { id: string }[]) => {
