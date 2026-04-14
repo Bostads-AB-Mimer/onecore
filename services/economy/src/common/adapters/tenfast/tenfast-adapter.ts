@@ -286,7 +286,7 @@ const transformToInvoiceRow = (
     fromDate: tenfastInvoiceRow.from ?? '',
     toDate: tenfastInvoiceRow.to ?? '',
     vat: tenfastInvoiceRow.vat,
-    totalAmount: tenfastInvoiceRow.amount + tenfastInvoiceRow.vat,
+    totalAmount: tenfastInvoiceRow.amount * (1 + (tenfastInvoiceRow.vat ?? 0)),
     printGroup: tenfastInvoiceRow.consolidationLabel ?? null,
     invoiceRowText: null, // Set later from related article
     rentalObject: tenfastInvoiceRow.hyresobjekt,
