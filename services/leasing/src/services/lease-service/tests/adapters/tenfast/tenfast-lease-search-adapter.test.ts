@@ -166,7 +166,7 @@ describe('tenfast-lease-search-adapter', () => {
       expect(params.get('filter[startDate]')).toBe(',2024-12-31')
     })
 
-    it('should include limit when no client-side filtering is needed', () => {
+    it('should pass consumer limit to Tenfast', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         page: 3,
         limit: 10,
@@ -334,7 +334,11 @@ describe('tenfast-lease-search-adapter', () => {
 
       mockedRequest.mockResolvedValueOnce({
         status: 200,
-        data: leases,
+        data: {
+          records: leases,
+          next: null,
+          totalCount: 1,
+        },
       } as any)
 
       const result = await tenfastLeaseSearchAdapter.fetchLeases({
@@ -351,7 +355,11 @@ describe('tenfast-lease-search-adapter', () => {
     it('should pass date filters as comma-separated range to the API URL', async () => {
       mockedRequest.mockResolvedValueOnce({
         status: 200,
-        data: [],
+        data: {
+          records: [],
+          next: null,
+          totalCount: 0,
+        },
       } as any)
 
       await tenfastLeaseSearchAdapter.fetchLeases({
@@ -384,7 +392,11 @@ describe('tenfast-lease-search-adapter', () => {
     it('should return parse error for invalid data', async () => {
       mockedRequest.mockResolvedValueOnce({
         status: 200,
-        data: [{ invalid: 'data' }],
+        data: {
+          records: [{ invalid: 'data' }],
+          next: null,
+          totalCount: 1,
+        },
       } as any)
 
       const result = await tenfastLeaseSearchAdapter.fetchLeases({
@@ -396,6 +408,123 @@ describe('tenfast-lease-search-adapter', () => {
         expect(result.err).toBe('could-not-parse-leases')
       }
     })
+
+    it('should skip forward through cursors to reach requested page', async () => {
+      const page1Leases = [
+        buildLeaseWithTenants({ externalId: 'lease-1' }),
+        buildLeaseWithTenants({ externalId: 'lease-2' }),
+      ]
+      const page2Leases = [buildLeaseWithTenants({ externalId: 'lease-3' })]
+
+      mockedRequest
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page1Leases,
+            next: 'cursor-abc',
+            totalCount: 3,
+          },
+        } as any)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page2Leases,
+            next: null,
+            totalCount: 3,
+          },
+        } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 2,
+        limit: 2,
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        // Should only return the target page's records, not all pages
+        expect(result.data.leases).toHaveLength(1)
+        expect(result.data.leases[0].externalId).toBe('lease-3')
+        expect(result.data.totalCount).toBe(3)
+      }
+
+      // Two API calls: page 1 (skip), page 2 (target)
+      expect(mockedRequest).toHaveBeenCalledTimes(2)
+      const secondCallUrl = mockedRequest.mock.calls[1][0].url as string
+      expect(secondCallUrl).toContain('paginate=cursor-abc')
+    })
+
+    it('should stop looping when there is no next cursor', async () => {
+      const leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: leases,
+          next: null,
+          totalCount: 1,
+        },
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 1,
+        limit: 20,
+      })
+
+      expect(result.ok).toBe(true)
+      expect(mockedRequest).toHaveBeenCalledTimes(1)
+    })
+
+    it('should return error if a mid-pagination request fails', async () => {
+      const page1Leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
+
+      mockedRequest
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page1Leases,
+            next: 'cursor-abc',
+            totalCount: 3,
+          },
+        } as any)
+        .mockResolvedValueOnce({
+          status: 500,
+          data: { error: 'Server error' },
+        } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 2,
+        limit: 1,
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+
+    it('should return empty when requested page is beyond available data', async () => {
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: [buildLeaseWithTenants({ externalId: 'lease-1' })],
+          next: null,
+          totalCount: 1,
+        },
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 5,
+        limit: 20,
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.leases).toHaveLength(0)
+        expect(result.data.totalCount).toBe(1)
+      }
+      // Only one call — cursor ran out before reaching page 5
+      expect(mockedRequest).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('searchLeases', () => {
@@ -406,10 +535,17 @@ describe('tenfast-lease-search-adapter', () => {
       },
     } as any
 
-    const setupMockLeases = (leases: TenfastLease[]) => {
+    const setupMockLeases = (
+      leases: TenfastLease[],
+      options?: { next?: string; totalCount?: number }
+    ) => {
       mockedRequest.mockResolvedValueOnce({
         status: 200,
-        data: leases,
+        data: {
+          records: leases,
+          next: options?.next ?? null,
+          totalCount: options?.totalCount ?? leases.length,
+        },
       } as any)
     }
 
@@ -671,13 +807,37 @@ describe('tenfast-lease-search-adapter', () => {
     })
 
     it('should paginate results correctly', async () => {
-      const leases = Array.from({ length: 5 }, (_, i) =>
+      const page1Leases = Array.from({ length: 2 }, (_, i) =>
         buildLeaseWithTenants({
           externalId: `lease-${i}`,
           startDate: new Date(`202${i}-01-01`),
         })
       )
-      setupMockLeases(leases)
+      const page2Leases = Array.from({ length: 2 }, (_, i) =>
+        buildLeaseWithTenants({
+          externalId: `lease-${i + 2}`,
+          startDate: new Date(`202${i + 2}-01-01`),
+        })
+      )
+
+      // Page 1 (skipped), then page 2 (target)
+      mockedRequest
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page1Leases,
+            next: 'cursor-page2',
+            totalCount: 5,
+          },
+        } as any)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page2Leases,
+            next: 'cursor-page3',
+            totalCount: 5,
+          },
+        } as any)
 
       const result = await tenfastLeaseSearchAdapter.searchLeases(
         { page: 2, limit: 2 },
@@ -688,6 +848,7 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result._meta.totalRecords).toBe(5)
       expect(result._meta.page).toBe(2)
       expect(result._meta.limit).toBe(2)
+      expect(mockedRequest).toHaveBeenCalledTimes(2)
     })
 
     it('should transform tenants to contacts in results', async () => {

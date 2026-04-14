@@ -152,8 +152,7 @@ export function buildTenfastQueryParams(
     query.set('filter[hyresobjekt][stadsdel]', params.districtNames.join(','))
   }
 
-  const limit = params.limit ?? 20
-  query.set('limit', String(limit))
+  query.set('limit', String(params.limit ?? 20))
 
   return query
 }
@@ -167,6 +166,7 @@ export async function fetchLeases(
   >
 > {
   try {
+    const page = params.page ?? 1
     const queryParams = buildTenfastQueryParams(params)
     // Tenfast API expects literal brackets and commas, not URL-encoded
     const queryString = queryParams
@@ -174,26 +174,45 @@ export async function fetchLeases(
       .replace(/%5B/gi, '[')
       .replace(/%5D/gi, ']')
       .replace(/%2C/gi, ',')
-    const url = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${queryString}`
+    const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${queryString}`
 
-    const res = await tenfastApi.request({
-      method: 'get',
-      url,
-    })
+    let cursor = ''
+    let totalCount = 0
+    let records: unknown[] = []
 
-    if (res.status !== 200) {
-      logger.error(
-        { status: res.status, data: res.data },
-        'tenfast-lease-search-adapter.fetchLeases: Failed to fetch leases'
-      )
-      return { ok: false, err: 'unknown' }
+    // Navigate through Tenfast cursor pages to reach the requested page.
+    // Each iteration fetches one page; we only parse the final (target) page.
+    for (let currentPage = 1; currentPage <= page; currentPage++) {
+      const url = cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl
+
+      const res = await tenfastApi.request({ method: 'get', url })
+
+      if (res.status !== 200) {
+        logger.error(
+          { status: res.status, data: res.data },
+          'tenfast-lease-search-adapter.fetchLeases: Failed to fetch leases'
+        )
+        return { ok: false, err: 'unknown' }
+      }
+
+      // Tenfast wraps results in { records: [...], prev, next, totalCount }
+      const isWrapped = !Array.isArray(res.data) && res.data?.records
+      records = isWrapped ? res.data.records : res.data
+
+      if (currentPage === 1) {
+        totalCount = isWrapped ? (res.data.totalCount ?? 0) : 0
+      }
+
+      cursor = isWrapped ? (res.data.next ?? '') : ''
+
+      // If there are no more pages and we haven't reached the target yet,
+      // the requested page is beyond the available data.
+      if (!cursor && currentPage < page) {
+        return { ok: true, data: { leases: [], totalCount } }
+      }
     }
 
-    // Tenfast wraps results in { records: [...], prev, next, totalCount }
-    const isWrapped = !Array.isArray(res.data) && res.data?.records
-    const records = isWrapped ? res.data.records : res.data
-    const totalCount = isWrapped ? (res.data.totalCount ?? 0) : 0
-
+    // Parse only the target page's records
     const parsed = TenfastLeaseSchema.array().safeParse(records)
     if (!parsed.success) {
       logger.error(
@@ -289,30 +308,23 @@ export const searchLeases = async (
     throw new Error(`Failed to fetch leases from Tenfast: ${leasesResult.err}`)
   }
 
-  const totalCount = leasesResult.data.totalCount
+  const { leases: tenfastLeases, totalCount } = leasesResult.data
 
-  const leases = leasesResult.data.leases.map(mapToOnecoreLease)
+  // Map and sort within the current page
+  const leases = tenfastLeases.map(mapToOnecoreLease)
   const sortedResults = applySorting(leases, params)
 
   const page = params.page ?? 1
   const limit = params.limit ?? 20
-
-  const totalRecords = totalCount || sortedResults.length
-
-  const paginatedContent = sortedResults.slice(
-    (page - 1) * limit,
-    (page - 1) * limit + limit
-  )
-
-  const totalPages = Math.ceil(totalRecords / limit)
+  const totalPages = Math.ceil(totalCount / limit)
 
   return {
-    content: paginatedContent,
+    content: sortedResults,
     _meta: {
-      totalRecords,
+      totalRecords: totalCount,
       page,
       limit,
-      count: paginatedContent.length,
+      count: sortedResults.length,
     },
     _links: buildPaginationLinks(ctx, page, limit, totalPages),
   }
