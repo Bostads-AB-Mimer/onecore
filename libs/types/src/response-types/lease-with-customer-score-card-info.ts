@@ -4,15 +4,17 @@ export const LeaseWithAdditionalCustomerScoreCardInfoSchema = z.object({
   //rental object info
   object_ref_nr: z.string(), //rentalObjectCode
   division_1011: z.string(), //districtCode
-  object_real_estate: z.string(), //estate
+  object_real_estate: z.string().optional(), //estate
   object_real_estate_year_construction: z.number().optional(), //buildingConstructionYear
   object_real_estate_year_reconstruction: z.number().optional(), //buildingRenovationYear
   real_estate_type: z.string(), //realEstateType
   division_1048: z.string(), //district
   division_1242: z.string(), //residentialArea/marketArea
-  rentalTypeCode: z.string(),
-  division_1140: z.string(), //roomTypeCode
+  division_1140: z.string(), //rentalObjectTypeCode
   object_type: z.string(), //objectType
+  object_street_1: z.string(), //objectStreet
+  // object_zip: z.string(),
+  // object_city: z.string(),
   //contact info
   division_1501: z.string(), //contactCode
   respondent_name_first: z.string(), //contactFirstName
@@ -25,10 +27,8 @@ export const LeaseWithAdditionalCustomerScoreCardInfoSchema = z.object({
   postal_city: z.string(), //city
   //lease info
   division_1038: z.string(), //leaseId
-  division_1037: z.date().optional(), //contractDate
-  contract_start_date: z.date(), //startDate
-  contract_end_date: z.date().optional(), //endDate
-  object_street_1: z.string(),
-  object_zip: z.string(),
-  object_city: z.string(),
+  division_1037: z.string().optional(), //contractDate
+  contract_start_date: z.string(), //startDate
+  contract_end_date: z.string().optional(), //endDate
+  contract_type: z.string(), //leaseType
 })
