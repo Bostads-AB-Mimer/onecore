@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 
+import type { components } from '@/services/api/core/generated/api-types'
+
 import { Button } from '@/shared/ui/Button'
 import {
   Command,
@@ -15,12 +17,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 
 import { DETAIL_COMPONENT_OPTIONS } from '../constants'
 
-interface DetailComponent {
-  id: string
-  type: string
-  label: string
-  note: string
-}
+type DetailComponent = NonNullable<
+  components['schemas']['InspectionRoom']['detailComponents']
+>[number]
 
 interface DetailComponentsSectionProps {
   detailComponents: DetailComponent[]
@@ -79,12 +78,9 @@ export function DetailComponentsSection({
             variant="outline"
             size="sm"
             className="w-full justify-start font-normal hover:bg-primary hover:text-primary-foreground hover:border-primary"
-            disabled={availableOptions.length === 0}
           >
             <Plus className="h-4 w-4 mr-2" />
-            {availableOptions.length === 0
-              ? 'Alla detaljer tillagda'
-              : 'Lägg till detalj...'}
+            Lägg till detalj...
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[280px] p-0" align="start">
@@ -114,7 +110,7 @@ export function DetailComponentsSection({
                     key={option.type}
                     value={option.label}
                     onSelect={() => handleSelect(option)}
-                    className="data-[selected='true']:bg-primary data-[selected=true]:text-primary-foreground"
+                    className="data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground"
                   >
                     {option.label}
                   </CommandItem>
@@ -123,7 +119,7 @@ export function DetailComponentsSection({
                   <CommandItem
                     value={`custom-${trimmedSearch}`}
                     onSelect={handleAddCustom}
-                    className="data-[selected='true']:bg-primary data-[selected=true]:text-primary-foreground"
+                    className="data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground"
                   >
                     Lägg till &quot;{trimmedSearch}&quot;
                   </CommandItem>
