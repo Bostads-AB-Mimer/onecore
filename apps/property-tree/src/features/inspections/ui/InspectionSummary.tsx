@@ -2,6 +2,7 @@ import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
 import { Badge } from '@/shared/ui/Badge'
+import { Input } from '@/shared/ui/Input'
 import {
   Table,
   TableBody,
@@ -38,8 +39,6 @@ function getRoomRemarks(
   })
 }
 
-const EMPTY_CELL = '—'
-
 export function InspectionSummary({
   inspectionData,
   rooms,
@@ -57,12 +56,14 @@ export function InspectionSummary({
     0
   )
 
+  const remarksLabel = totalRemarks === 1 ? 'anmärkning' : 'anmärkningar'
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <header className="border rounded-lg p-4 space-y-1 bg-card">
         <h2 className="text-xl font-semibold">Sammanställning</h2>
         <p className="text-sm text-muted-foreground">
-          {totalRemarks} anmärkningar i {roomSections.length} rum
+          {totalRemarks} {remarksLabel} i {roomSections.length} rum
         </p>
       </header>
 
@@ -78,55 +79,47 @@ export function InspectionSummary({
           className="border rounded-lg p-4 space-y-3 bg-card"
         >
           <h3 className="text-base font-semibold">{room.name}</h3>
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Komponent</TableHead>
-                  <TableHead>Åtgärd</TableHead>
-                  <TableHead>Noteringar</TableHead>
-                  <TableHead>Foton</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {remarks.map((component) => {
-                  const condition = roomData?.conditions[component.key]
-                  const conditionConfig = getConditionConfig(condition)
-                  const actions = roomData?.actions[component.key] ?? []
-                  const note = roomData?.componentNotes[component.key] ?? ''
-                  const photoCount =
-                    roomData?.componentPhotos[component.key]?.length ?? 0
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Komponent</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-40">Kostnad (kr)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {remarks.map((component) => {
+                const condition = roomData?.conditions[component.key]
+                const conditionConfig = getConditionConfig(condition)
 
-                  return (
-                    <TableRow key={component.key}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {getComponentLabel(component.key)}
-                          </span>
-                          {conditionConfig && (
-                            <Badge
-                              variant={conditionConfig.badgeVariant}
-                              className={conditionConfig.badgeClassName}
-                            >
-                              {conditionConfig.label}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {actions.length > 0 ? actions.join(', ') : EMPTY_CELL}
-                      </TableCell>
-                      <TableCell>{note || EMPTY_CELL}</TableCell>
-                      <TableCell>
-                        {photoCount > 0 ? `${photoCount} foton` : EMPTY_CELL}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                return (
+                  <TableRow key={component.key}>
+                    <TableCell className="font-medium">
+                      {getComponentLabel(component.key)}
+                    </TableCell>
+                    <TableCell>
+                      {conditionConfig && (
+                        <Badge
+                          variant={conditionConfig.badgeVariant}
+                          className={conditionConfig.badgeClassName}
+                        >
+                          {conditionConfig.label}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        defaultValue={0}
+                        aria-label={`Kostnad för ${getComponentLabel(component.key)}`}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         </section>
       ))}
     </div>
