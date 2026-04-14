@@ -157,6 +157,7 @@ const getExportInvoiceRows = async (invoices: InvoiceWithAccounting[]) => {
     for (const invoiceRow of invoice.invoiceRows) {
       exportInvoiceRows.push({
         amount: invoiceRow.amount,
+        totalAmount: invoiceRow.totalAmount,
         deduction: invoiceRow.deduction,
         vat: invoiceRow.vat,
         invoiceDate: invoice.invoiceDate,
@@ -197,6 +198,7 @@ const createRoundOffRow = async (
     account: roundOffInformation.account,
     costCode: roundOffInformation.costCode,
     amount: invoice.roundoff as number,
+    totalAmount: invoice.roundoff as number,
     rowTotalAmount: invoice.roundoff as number,
     invoiceDate: invoice.invoiceDate,
     invoiceNumber: invoice.invoiceId,
@@ -245,7 +247,6 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
 
   Object.values(rowChunks).forEach((chunkInvoiceRows) => {
     const voucherNumber =
-      '2' +
       Date.now().toString().substring(6, 12) +
       voucherIndex.toString().padStart(3, '0')
     voucherIndex++
@@ -328,12 +329,16 @@ const groupAggregateRows = (
           counterPartCode: o.counterPartCode,
           voucherNumber,
           amount: 0,
+          totalAmount: 0,
           vat: 0,
           taxRule: o.taxRule,
         }
 
         aggregatedRow.amount = safeAdd(aggregatedRow.amount, o.amount)
-        aggregatedRow.vat = safeAdd(aggregatedRow.vat, o.vat)
+        aggregatedRow.totalAmount = safeAdd(
+          aggregatedRow.totalAmount,
+          o.totalAmount
+        )
 
         return r.set(key, aggregatedRow)
       }, new Map())
@@ -356,11 +361,15 @@ export const createAggregatedTotalRow = (
     counterPartCode: aggregatedRows[0].counterPartCode,
     voucherNumber,
     amount: 0,
+    totalAmount: 0,
     vat: 0,
   }
 
+  console.log('AGGREGATED TOTAL')
+  console.table(aggregatedRows)
+
   const totalRow = aggregatedRows.reduce((acc: AggregatedRow, row) => {
-    acc.amount = (acc.amount as number) - (row.amount as number)
+    acc.amount = (acc.amount as number) - (row.totalAmount as number)
     return acc
   }, accumulator)
 
@@ -384,7 +393,7 @@ const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
       row.toDate
     )
     csvRows.push(
-      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periodStart};${''};${''};${''};${''};${''};${''};${''};${''};${row.amount}`
+      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periodStart};${''};${''};${''};${''};${''};${''};${row.taxRule ?? ''};${row.amount}`
     )
   })
 
@@ -418,7 +427,6 @@ export const createLedgerRows = async (
   let ledgerRows: LedgerRow[] = []
   Object.values(invoiceChunks).forEach((chunkInvoices) => {
     const voucherNumber =
-      '2' +
       Date.now().toString().substring(6, 12) +
       voucherIndex.toString().padStart(3, '0')
     voucherIndex++

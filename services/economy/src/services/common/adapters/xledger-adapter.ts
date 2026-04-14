@@ -969,10 +969,25 @@ const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
   }
 }
 
+const getTaxRuleFromPercentage = (vatPercentage: number, account: string) => {
+  const accounts208 = ['3012', '3014', '3016']
+
+  switch (vatPercentage) {
+    case 0.25:
+      return accounts208.includes(account) ? '208N' : '2N'
+    case 0.12:
+      return '21N'
+    case 0.06:
+      return '22N'
+    default:
+      return ''
+  }
+}
+
 export const setInvoiceRowsTaxRule = (invoice: InvoiceWithAccounting) => {
   invoice.invoiceRows.forEach((row) => {
     if (row.vat && row.vat !== 0) {
-      row.taxRule = getTaxRule(row.totalAmount, row.vat, row.account ?? '')
+      row.taxRule = getTaxRuleFromPercentage(row.vat, row.account ?? '')
     }
   })
 }

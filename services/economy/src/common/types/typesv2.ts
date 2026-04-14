@@ -74,6 +74,7 @@ export const xledgerDateString = (date: string | null | undefined) => {
 
 export type ExportedInvoiceRow = {
   amount?: number
+  totalAmount?: number
   deduction?: number
   vat?: number
   rowTotalAmount?: number
@@ -106,6 +107,7 @@ export type ExportedInvoiceRow = {
 
 export type AggregatedRow = {
   amount: number
+  totalAmount: number
   vat: number
   account: string
   voucherDate: string
