@@ -808,6 +808,7 @@ export {
   cancelLeaseHomeInsurance,
   getBuildingManagers,
   searchLeases,
+  searchLeasesV2,
 } from './leases'
 
 export {

@@ -208,3 +208,24 @@ export const searchLeases = async (
 
   return response.data
 }
+
+export const searchLeasesV2 = async (
+  queryParams: leasing.v1.LeaseSearchQueryParamsInput
+): Promise<PaginatedResponse<Lease>> => {
+  const params = new URLSearchParams()
+
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value === undefined) return
+    if (Array.isArray(value)) {
+      value.forEach((v) => params.append(key, v))
+    } else {
+      params.append(key, value)
+    }
+  })
+
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/search-v2?${params.toString()}`
+  )
+
+  return response.data
+}
