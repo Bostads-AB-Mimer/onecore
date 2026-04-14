@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
+  TenantInfoCardData,
   TenantSnapshot,
 } from '@/features/inspections/types/index'
 
@@ -29,9 +30,8 @@ import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
 import { useInspectionForm } from '../hooks/useInspectionForm'
-import { InspectorSelectionCard } from './InspectorSelectionCard'
+import { InspectionInfoSection } from './InspectionInfoSection'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
-
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
@@ -44,7 +44,9 @@ interface InspectionFormProps {
     additionalData: InspectionSubmitData
   ) => void
   onCancel: () => void
-  tenant?: any
+  tenant?: TenantInfoCardData
+  address?: string
+  apartmentCode?: string | null
   existingInspection?: Inspection
 }
 
@@ -55,15 +57,14 @@ export function InspectionForm({
   onSave,
   onCancel,
   tenant,
+  address,
+  apartmentCode,
   existingInspection,
 }: InspectionFormProps) {
   const {
     inspectorName,
     setInspectorName,
-    inspectionTime,
-    setInspectionTime,
     needsMasterKey,
-    setNeedsMasterKey,
     inspectionData,
     handleConditionUpdate,
     handleActionUpdate,
@@ -89,13 +90,8 @@ export function InspectionForm({
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
     if (!tenant) return undefined
     return {
-      name:
-        `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() ||
-        tenant.name ||
-        '',
-      personalNumber: tenant.personalNumber || '',
-      phone: tenant.phone,
-      email: tenant.email,
+      name: tenant.fullName ?? '',
+      personalNumber: '',
     }
   }
 
@@ -118,17 +114,12 @@ export function InspectionForm({
 
   return (
     <div className="space-y-6 min-w-0">
-      {/* Info om besiktning — MIM-1672.
-          Tenant card is rendered via the same component when `tenant` is
-          provided; for now we leave it out (that card is handled in a
-          separate ticket). */}
-      <InspectorSelectionCard
+      <InspectionInfoSection
         inspectorName={inspectorName}
         setInspectorName={setInspectorName}
-        inspectionTime={inspectionTime}
-        setInspectionTime={setInspectionTime}
-        needsMasterKey={needsMasterKey}
-        setNeedsMasterKey={setNeedsMasterKey}
+        tenant={tenant}
+        address={address}
+        apartmentCode={apartmentCode}
         layout="horizontal"
       />
 

@@ -7,6 +7,7 @@ import type { Room } from '@/services/types'
 
 import { useToast } from '@/shared/hooks/useToast'
 
+import { useTenantInfo } from '../hooks/useTenantInfo'
 import { InspectionFormDialog } from './InspectionFormDialog'
 
 type InternalInspection = components['schemas']['InternalInspection']
@@ -59,6 +60,11 @@ export function InspectionConductDialog({
     enabled: !!rentalIdForRooms,
   })
 
+  const tenantInfo = useTenantInfo(
+    internalInspection?.residenceId,
+    internalInspection?.leaseId
+  )
+
   const resolvedRooms = rooms && rooms.length > 0 ? rooms : (fetchedRooms ?? [])
 
   if (!isOpen || isLoadingInternal || isLoadingRooms) {
@@ -109,6 +115,9 @@ export function InspectionConductDialog({
         }
       }}
       rooms={resolvedRooms}
+      tenant={tenantInfo}
+      address={internalInspection?.address}
+      apartmentCode={internalInspection?.apartmentCode}
       existingInspection={internalInspection}
     />
   )

@@ -65,6 +65,19 @@ export interface InspectionSubmitData {
 }
 
 /**
+ * Minimal view-model for the tenant info card.
+ * Kept separate from the full `Tenant` type so callers can render the card
+ * from different data sources.
+ */
+export interface TenantInfoCardData {
+  contactCode: string
+  fullName: string
+  moveInDate?: string | null
+  moveOutDate?: string | null
+  isAboutToLeave?: boolean
+}
+
+/**
  * Form props types (shared between mobile/desktop)
  * Common props for inspection form components
  */

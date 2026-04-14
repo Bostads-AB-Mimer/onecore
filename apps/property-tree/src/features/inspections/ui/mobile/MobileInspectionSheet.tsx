@@ -1,4 +1,7 @@
-import type { InspectionSubmitData } from '@/features/inspections/types/index'
+import type {
+  InspectionSubmitData,
+  TenantInfoCardData,
+} from '@/features/inspections/types/index'
 
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
@@ -19,7 +22,9 @@ interface MobileInspectionSheetProps {
     additionalData: InspectionSubmitData
   ) => void
   rooms: Room[]
-  tenant?: any
+  tenant?: TenantInfoCardData
+  address?: string
+  apartmentCode?: string | null
   existingInspection?: Inspection
 }
 
@@ -29,6 +34,8 @@ export function MobileInspectionSheet({
   onSubmit,
   rooms,
   tenant,
+  address,
+  apartmentCode,
   existingInspection,
 }: MobileInspectionSheetProps) {
   return (
@@ -39,6 +46,8 @@ export function MobileInspectionSheet({
           onSave={onSubmit}
           onCancel={onClose}
           tenant={tenant}
+          address={address}
+          apartmentCode={apartmentCode}
           existingInspection={existingInspection}
         />
       </SheetContent>

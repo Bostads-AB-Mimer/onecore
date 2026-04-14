@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { PlayCircle, RotateCcw } from 'lucide-react'
 
+import type {
+  InspectionSubmitData,
+  TenantInfoCardData,
+} from '@/features/inspections/types/index'
+
 import { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
@@ -18,8 +23,6 @@ import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
 type InspectionRoom = components['schemas']['InspectionRoom']
 type Inspection = components['schemas']['InternalInspection']
 
-import type { InspectionSubmitData } from '@/features/inspections/types/index'
-
 import type { Room } from '@/services/types'
 
 interface InspectionFormDialogProps {
@@ -33,7 +36,9 @@ interface InspectionFormDialogProps {
   ) => void
   rooms: Room[]
   buttonSize?: string
-  tenant?: any
+  tenant?: TenantInfoCardData
+  address?: string
+  apartmentCode?: string | null
   existingInspection?: Inspection
 }
 
@@ -53,8 +58,9 @@ export function InspectionFormDialog({
   onClose,
   onSubmit,
   rooms,
-  buttonSize,
   tenant,
+  address,
+  apartmentCode,
   existingInspection,
 }: InspectionFormDialogProps) {
   const isMobile = useIsMobile()
@@ -136,6 +142,8 @@ export function InspectionFormDialog({
         onSubmit={onSubmit}
         rooms={rooms}
         tenant={tenant}
+        address={address}
+        apartmentCode={apartmentCode}
         existingInspection={inspectionToUse}
       />
     )
@@ -156,6 +164,8 @@ export function InspectionFormDialog({
           onSave={onSubmit}
           onCancel={onClose}
           tenant={tenant}
+          address={address}
+          apartmentCode={apartmentCode}
           existingInspection={inspectionToUse}
         />
       </DialogContent>
