@@ -39,7 +39,6 @@ export const ROOM_COMPONENTS: readonly ComponentDefinition[] = [
   { key: 'wall4', label: 'Vägg 4', type: 'walls', order: 4 },
   { key: 'floor', label: 'Golv', type: 'floor', order: 5 },
   { key: 'ceiling', label: 'Tak', type: 'ceiling', order: 6 },
-  { key: 'details', label: 'Detaljer', type: 'details', order: 7 },
 ] as const
 
 /**
