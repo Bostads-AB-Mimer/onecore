@@ -66,6 +66,11 @@ export function useInspectionForm(
     handleComponentPhotoAdd: componentOps.addPhoto,
     handleComponentPhotoRemove: componentOps.removePhoto,
 
+    // Detail component operations
+    handleDetailComponentAdd: componentOps.addDetailComponent,
+    handleDetailComponentRemove: componentOps.removeDetailComponent,
+    handleDetailComponentNoteUpdate: componentOps.updateDetailComponentNote,
+
     // Legacy handlers
     handleCancel,
 

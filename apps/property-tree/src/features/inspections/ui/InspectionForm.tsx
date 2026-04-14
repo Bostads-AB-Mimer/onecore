@@ -71,6 +71,9 @@ export function InspectionForm({
     handleComponentNoteUpdate,
     handleComponentPhotoAdd,
     handleComponentPhotoRemove,
+    handleDetailComponentAdd,
+    handleDetailComponentRemove,
+    handleDetailComponentNoteUpdate,
   } = useInspectionForm(rooms, existingInspection)
 
   useEffect(() => {
@@ -176,6 +179,19 @@ export function InspectionForm({
                       }
                       onComponentPhotoRemove={(field, index) =>
                         handleComponentPhotoRemove(room.id, field, index)
+                      }
+                      onDetailComponentAdd={(component) =>
+                        handleDetailComponentAdd(room.id, component)
+                      }
+                      onDetailComponentRemove={(componentId) =>
+                        handleDetailComponentRemove(room.id, componentId)
+                      }
+                      onDetailComponentNoteUpdate={(componentId, note) =>
+                        handleDetailComponentNoteUpdate(
+                          room.id,
+                          componentId,
+                          note
+                        )
                       }
                     />
                   </AccordionContent>

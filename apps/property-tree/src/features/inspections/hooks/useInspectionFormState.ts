@@ -27,9 +27,13 @@ export function useInspectionFormState(
   >(() => {
     if (existingInspection?.rooms && existingInspection.rooms.length > 0) {
       // Convert array of rooms to Record keyed by roomId
+      // Ensure detailComponents defaults for rooms saved before the field existed
       return existingInspection.rooms.reduce(
         (acc, room) => {
-          acc[room.roomId] = room
+          acc[room.roomId] = {
+            ...room,
+            detailComponents: room.detailComponents ?? [],
+          }
           return acc
         },
         {} as Record<string, InspectionRoom>

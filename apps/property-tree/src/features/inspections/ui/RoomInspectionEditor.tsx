@@ -4,10 +4,12 @@ import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
 import { Card, CardContent } from '@/shared/ui/Card'
+import { Separator } from '@/shared/ui/Separator'
 
 import { ROOM_COMPONENTS } from '../constants'
 import { ComponentDetailSheet } from './ComponentDetailSheet'
 import { ComponentInspectionCard } from './ComponentInspectionCard'
+import { DetailComponentsSection } from './DetailComponentsSection'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 
@@ -34,6 +36,9 @@ interface RoomInspectionEditorProps {
     field: keyof InspectionRoom['componentPhotos'],
     index: number
   ) => void
+  onDetailComponentAdd: (component: { type: string; label: string }) => void
+  onDetailComponentRemove: (componentId: string) => void
+  onDetailComponentNoteUpdate: (componentId: string, note: string) => void
 }
 
 export function RoomInspectionEditor({
@@ -44,6 +49,9 @@ export function RoomInspectionEditor({
   onComponentNoteUpdate,
   onComponentPhotoAdd,
   onComponentPhotoRemove,
+  onDetailComponentAdd,
+  onDetailComponentRemove,
+  onDetailComponentNoteUpdate,
 }: RoomInspectionEditorProps) {
   const [openDetailComponent, setOpenDetailComponent] = useState<
     keyof InspectionRoom['conditions'] | null
@@ -79,6 +87,15 @@ export function RoomInspectionEditor({
             />
           ))}
         </div>
+
+        <Separator className="my-4" />
+
+        <DetailComponentsSection
+          detailComponents={inspectionData.detailComponents ?? []}
+          onAdd={onDetailComponentAdd}
+          onRemove={onDetailComponentRemove}
+          onNoteUpdate={onDetailComponentNoteUpdate}
+        />
 
         {/* Detail sheets for each component */}
         {ROOM_COMPONENTS.map((component) => (
