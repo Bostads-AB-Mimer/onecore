@@ -10,7 +10,7 @@ import { getBatchContactsCsv } from '../services/invoice-service/service'
 
 const getContactDetails = async () => {
   const contactCodesFile = await fs.readFile(
-    path.join(config.rentalInvoices.importDirectory, 'contacts2.txt')
+    path.join(config.rentalInvoices.importDirectory, 'contacts.txt')
   )
   const contactCodes = contactCodesFile.toString().split('\n')
 
