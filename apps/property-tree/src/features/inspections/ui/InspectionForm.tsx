@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
+  TenantInfoCardData,
   TenantSnapshot,
 } from '@/features/inspections/types/index'
 
@@ -31,8 +32,6 @@ import { Button } from '@/shared/ui/Button'
 import { useInspectionForm } from '../hooks/useInspectionForm'
 import { InspectionInfoSection } from './InspectionInfoSection'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
-import type { TenantInfoCardData } from './TenantInfoCard'
-
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 

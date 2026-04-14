@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { PlayCircle, RotateCcw } from 'lucide-react'
 
+import type {
+  InspectionSubmitData,
+  TenantInfoCardData,
+} from '@/features/inspections/types/index'
+
 import { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
@@ -15,11 +20,8 @@ import {
 
 import { InspectionForm } from './InspectionForm'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
-import type { TenantInfoCardData } from './TenantInfoCard'
 type InspectionRoom = components['schemas']['InspectionRoom']
 type Inspection = components['schemas']['InternalInspection']
-
-import type { InspectionSubmitData } from '@/features/inspections/types/index'
 
 import type { Room } from '@/services/types'
 

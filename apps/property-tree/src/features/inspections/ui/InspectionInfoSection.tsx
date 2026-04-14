@@ -1,7 +1,9 @@
+import type { TenantInfoCardData } from '@/features/inspections/types/index'
+
 import { cn } from '@/shared/lib/utils'
 
 import { InspectionDetailsCard } from './InspectionDetailsCard'
-import { TenantInfoCard, type TenantInfoCardData } from './TenantInfoCard'
+import { TenantInfoCard } from './TenantInfoCard'
 
 interface InspectionInfoSectionProps {
   inspectorName: string

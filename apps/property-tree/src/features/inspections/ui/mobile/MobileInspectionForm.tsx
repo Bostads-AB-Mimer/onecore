@@ -3,6 +3,7 @@ import { ChevronLeft, User } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
+  TenantInfoCardData,
   TenantSnapshot,
 } from '@/features/inspections/types/index'
 
@@ -17,7 +18,6 @@ import { ScrollArea } from '@/shared/ui/ScrollArea'
 import { useInspectionForm } from '../../hooks/useInspectionForm'
 import { InspectionInfoSection } from '../InspectionInfoSection'
 import { RoomInspectionEditor } from '../RoomInspectionEditor'
-import type { TenantInfoCardData } from '../TenantInfoCard'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']

@@ -1,37 +1,19 @@
 import { useNavigate } from 'react-router-dom'
 import { ExternalLink, MapPin, User } from 'lucide-react'
 
+import { formatISODate } from '@/shared/lib/formatters'
 import { paths } from '@/shared/routes'
 import { Avatar, AvatarFallback } from '@/shared/ui/Avatar'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
-/**
- * Minimal view-model for the tenant card. Kept separate from the full
- * `Tenant` type so callers can render the card from different data sources
- * (e.g. a lightweight `TenantContactsResponse` entry or a fully-hydrated
- * `Tenant` with its housing contract).
- */
-export interface TenantInfoCardData {
-  contactCode: string
-  fullName: string
-  moveInDate?: string | null
-  moveOutDate?: string | null
-  isAboutToLeave?: boolean
-}
+import type { TenantInfoCardData } from '../types'
 
 interface TenantInfoCardProps {
   tenant: TenantInfoCardData
   address?: string
   apartmentCode?: string | null
-}
-
-const formatDate = (value?: string | null): string => {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleDateString('sv-SE')
 }
 
 export function TenantInfoCard({
@@ -81,11 +63,11 @@ export function TenantInfoCard({
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-muted-foreground">Inflyttningsdatum</p>
-            <p className="font-medium">{formatDate(tenant.moveInDate)}</p>
+            <p className="font-medium">{formatISODate(tenant.moveInDate)}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Utflyttningsdatum</p>
-            <p className="font-medium">{formatDate(tenant.moveOutDate)}</p>
+            <p className="font-medium">{formatISODate(tenant.moveOutDate)}</p>
           </div>
         </div>
 
