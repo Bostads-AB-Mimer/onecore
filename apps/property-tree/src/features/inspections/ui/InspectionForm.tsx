@@ -31,6 +31,7 @@ import { Button } from '@/shared/ui/Button'
 
 import { useInspectionForm } from '../hooks/useInspectionForm'
 import { InspectionInfoSection } from './InspectionInfoSection'
+import { InspectionSummary } from './InspectionSummary'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
@@ -217,9 +218,7 @@ export function InspectionForm({
             <ChevronLeft />
             Tillbaka till rum
           </Button>
-          <div className="p-8 border rounded-lg text-center text-muted-foreground">
-            Sammanställning kommer här
-          </div>
+          <InspectionSummary inspectionData={inspectionData} rooms={rooms} />
           <div
             className="mt-4 p-4 border rounded-lg space-y-3"
             role="radiogroup"
