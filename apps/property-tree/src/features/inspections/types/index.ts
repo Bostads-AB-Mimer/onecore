@@ -61,6 +61,7 @@ export interface ResidenceInfo {
  */
 export interface InspectionSubmitData {
   needsMasterKey: boolean
+  isFurnished: boolean
   tenant?: TenantSnapshot
 }
 

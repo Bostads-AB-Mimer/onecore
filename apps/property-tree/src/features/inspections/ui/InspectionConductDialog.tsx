@@ -75,11 +75,17 @@ export function InspectionConductDialog({
     <InspectionFormDialog
       isOpen={isOpen}
       onClose={onClose}
-      onSubmit={async (inspectorName, inspectionRooms, status) => {
+      onSubmit={async (
+        inspectorName,
+        inspectionRooms,
+        status,
+        additionalData
+      ) => {
         try {
           await inspectionService.saveInspectionDraft(inspectionId, {
             inspectorName,
             rooms: Object.values(inspectionRooms),
+            isFurnished: additionalData.isFurnished,
           })
 
           if (status === 'completed') {

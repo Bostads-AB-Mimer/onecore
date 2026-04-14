@@ -8,12 +8,14 @@ export interface InspectorInfo {
   inspectorName: string
   inspectionTime: string
   needsMasterKey: boolean
+  isFurnished: boolean
 }
 
 export interface UseInspectorInfoReturn extends InspectorInfo {
   setInspectorName: (name: string) => void
   setInspectionTime: (time: string) => void
   setNeedsMasterKey: (value: boolean) => void
+  setIsFurnished: (value: boolean) => void
   isValid: boolean
 }
 
@@ -39,6 +41,10 @@ export function useInspectorInfo(
     Boolean(existingInspection?.masterKeyAccess)
   )
 
+  const [isFurnished, setIsFurnished] = useState(
+    existingInspection?.isFurnished ?? false
+  )
+
   // Validation: inspector name is required
   const isValid = Boolean(inspectorName.trim() && inspectionTime)
 
@@ -46,9 +52,11 @@ export function useInspectorInfo(
     inspectorName,
     inspectionTime,
     needsMasterKey,
+    isFurnished,
     setInspectorName,
     setInspectionTime,
     setNeedsMasterKey,
+    setIsFurnished,
     isValid,
   }
 }

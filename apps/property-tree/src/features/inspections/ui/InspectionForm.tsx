@@ -65,6 +65,9 @@ export function InspectionForm({
     inspectorName,
     setInspectorName,
     needsMasterKey,
+    setNeedsMasterKey,
+    isFurnished,
+    setIsFurnished,
     inspectionData,
     handleConditionUpdate,
     handleActionUpdate,
@@ -103,6 +106,7 @@ export function InspectionForm({
     if (canComplete) {
       onSave(inspectorName, inspectionData, 'completed', {
         needsMasterKey,
+        isFurnished,
         tenant: createTenantSnapshot(),
       })
     }
@@ -111,6 +115,7 @@ export function InspectionForm({
   const handleConfirmSaveDraft = () => {
     onSave(inspectorName, inspectionData, 'draft', {
       needsMasterKey,
+      isFurnished,
       tenant: createTenantSnapshot(),
     })
     setIsDraftConfirmOpen(false)
@@ -214,6 +219,35 @@ export function InspectionForm({
           </Button>
           <div className="p-8 border rounded-lg text-center text-muted-foreground">
             Sammanställning kommer här
+          </div>
+          <div
+            className="mt-4 p-4 border rounded-lg space-y-3"
+            role="radiogroup"
+            aria-label="Är bostaden möblerad vid besiktningstillfället?"
+          >
+            <div className="text-sm font-medium">
+              Är bostaden möblerad vid besiktningstillfället?
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                role="radio"
+                aria-checked={isFurnished}
+                variant={isFurnished ? 'default' : 'outline'}
+                onClick={() => setIsFurnished(true)}
+              >
+                Ja
+              </Button>
+              <Button
+                type="button"
+                role="radio"
+                aria-checked={!isFurnished}
+                variant={!isFurnished ? 'default' : 'outline'}
+                onClick={() => setIsFurnished(false)}
+              >
+                Nej
+              </Button>
+            </div>
           </div>
         </div>
       )}

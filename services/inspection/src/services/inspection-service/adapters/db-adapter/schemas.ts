@@ -121,4 +121,5 @@ export type { InspectionRoom } from '../../schemas'
 export type SaveInspectionDraftParams = {
   inspectorName: string
   rooms: InspectionRoom[]
+  isFurnished: boolean
 }
