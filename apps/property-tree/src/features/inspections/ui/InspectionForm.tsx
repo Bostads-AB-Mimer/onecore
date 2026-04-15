@@ -197,14 +197,14 @@ export function InspectionForm({
 
       {step === 'summary' && (
         <div className="max-h-[70vh] overflow-y-auto pr-2 pb-24 min-w-0">
-          <button
-            type="button"
+          <Button
+            variant="link"
             onClick={() => setStep('rooms')}
-            className="flex items-center gap-1 text-sm font-medium hover:underline mb-4"
+            className="h-auto p-0 mb-4"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft />
             Tillbaka till rum
-          </button>
+          </Button>
           <div className="p-8 border rounded-lg text-center text-muted-foreground">
             Sammanställning kommer här
           </div>
