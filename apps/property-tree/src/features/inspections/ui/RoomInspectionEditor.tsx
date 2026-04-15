@@ -4,6 +4,8 @@ import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
 import { Card, CardContent } from '@/shared/ui/Card'
+import { Separator } from '@/shared/ui/Separator'
+import { Skeleton } from '@/shared/ui/Skeleton'
 
 import { mergeComponentsWithDefaults } from '../constants'
 import { useRoomComponents } from '../hooks/useRoomComponents'
