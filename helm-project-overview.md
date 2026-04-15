@@ -419,11 +419,182 @@ helm install onecore ./onecore-chart \
 - Aktivera RBAC för klustret
 - Använd network policies för att begränsa trafik
 
+### Resource Configuration
+
+```yaml
+# Resurser för alla komponenter
+resources:
+  defaults:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+
+  # Överrida per komponent
+  core:
+    requests:
+      memory: 256Mi
+      cpu: 200m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+```
+
+### Advanced Configuration (via Bitnami Common Library)
+
+```yaml
+# Bitnami common library ger oss avancerade features som:
+components:
+  core:
+    # Extra environment variables
+    extraEnv:
+      - name: CUSTOM_VAR
+        value: 'custom-value'
+      - name: SECRET_VAR
+        valueFrom:
+          secretKeyRef:
+            name: my-secret
+            key: secret-key
+
+    # Extra volumes
+    extraVolumes:
+      - name: custom-volume
+        configMap:
+          name: custom-config
+
+    extraVolumeMounts:
+      - name: custom-volume
+        mountPath: /etc/custom/config
+        readOnly: true
+
+    # Sidecar containers
+    sidecars:
+      - name: log-collector
+        image: fluent/fluent-bit:latest
+
+    # Init containers
+    initContainers:
+      - name: init-db
+        image: busybox:latest
+        command: ['sh', '-c', 'echo init']
+
+    # Security context
+    podSecurityContext:
+      fsGroup: 1001
+      runAsNonRoot: true
+
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+
+    # Health checks
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 80
+      initialDelaySeconds: 30
+
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 80
+      initialDelaySeconds: 10
+
+    startupProbe:
+      httpGet:
+        path: /ready
+        port: 80
+      failureThreshold: 30
+
+    # Scheduling
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: node-role.kubernetes.io/application
+                  operator: In
+                  values:
+                    - onecore
+
+    tolerations:
+      - key: dedicated
+        operator: Equal
+        value: onecore
+        effect: NoSchedule
+
+    nodeSelector:
+      node-role.kubernetes.io/application: onecore
+
+    # Service account
+    serviceAccount:
+      create: true
+      name: ''
+      annotations: {}
+
+    # Pod labels and annotations
+    podLabels:
+      component: core
+      app: onecore
+
+    podAnnotations:
+      prometheus.io/scrape: 'true'
+```
+
+## 🔧 Bitnami Common Library Integration
+
+Vi använder **Bitnami Common Library Chart** som bas för att få tillgång till avancerade Helm features utan att behöva implementera dem själva.
+
+### Fördelar med Bitnami Common Library
+
+- ✅ **Färdiga helpers** för labels, names, secrets, image handling
+- ✅ **Advanced features** som extraEnv, sidecars, init containers
+- ✅ **Security context** management
+- ✅ **Health checks** (liveness, readiness, startup)
+- ✅ **Affinity/tolerations** och scheduling
+- ✅ **Resource management** med presets
+- ✅ **Validation helpers** för values
+- ✅ **Compatibility layer** för olika Kubernetes versioner
+- ✅ **Secret management** med existing secret support
+- ✅ **Image handling** med pull secrets och version management
+
+### Chart Dependency
+
+```yaml
+# Chart.yaml
+dependencies:
+  - name: common
+    repository: oci://registry-1.docker.io/bitnamicharts
+    version: 2.x.x
+    tags:
+      - bitnami-common
+    condition: global.common.enabled
+```
+
+### Installation
+
+```bash
+# Installera dependencies
+helm dependency update ./onecore-chart
+
+# Installera med alla features
+helm install onecore ./onecore-chart -f values.yaml
+
+# Använd Bitnami common features
+helm install onecore ./onecore-chart \
+  --set components.core.extraEnv[0].name=CUSTOM_VAR \
+  --set components.core.extraEnv[0].value=custom-value
+```
+
 ## 🚀 Nästa Steg
 
-1. Skapa Helm chart struktur
-2. Implementera templates för alla komponenter
-3. Skapa values.yaml med default värden
-4. Skapa dokumentation
-5. Testa installation i test-kluster
-6. Skapa CI/CD för chartet
+1. Skapa Helm chart struktur med Bitnami common dependency
+2. Implementera templates som använder Bitnami common helpers
+3. Skapa values.yaml med default värden + advanced options
+4. Testa advanced features (extraEnv, sidecars, etc)
+5. Skapa dokumentation för alla available features
+6. Testa installation i test-kluster
+7. Skapa CI/CD för chartet
