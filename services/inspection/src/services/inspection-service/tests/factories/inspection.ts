@@ -263,4 +263,5 @@ export const SaveInspectionDraftParamsFactory =
   Factory.define<SaveInspectionDraftParams>(() => ({
     inspectorName: 'Test Inspector',
     rooms: [InspectionRoomFactory.build()],
+    isFurnished: false,
   }))

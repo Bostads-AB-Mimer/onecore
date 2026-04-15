@@ -148,12 +148,14 @@ export const InspectionRoomSchema = z.object({
 
 export const InternalInspectionSchema = XpandInspectionSchema.extend({
   residenceId: z.string(),
+  isFurnished: z.boolean(),
   rooms: z.array(InspectionRoomSchema).nullable(),
 })
 
 export const SaveInspectionDraftRequestSchema = z.object({
   inspectorName: z.string(),
   rooms: z.array(InspectionRoomSchema),
+  isFurnished: z.boolean(),
 })
 
 export type InspectionRoom = z.infer<typeof InspectionRoomSchema>

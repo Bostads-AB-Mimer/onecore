@@ -686,6 +686,7 @@ export interface components {
       leaseId: string
       masterKeyAccess: string | null
       residenceId: string
+      isFurnished: boolean
       rooms:
         | {
             roomId: string
@@ -740,6 +741,7 @@ export interface components {
     }
     SaveInspectionDraftRequest: {
       inspectorName: string
+      isFurnished: boolean
       rooms: {
         roomId: string
         conditions: {

@@ -11461,6 +11461,13 @@ export interface components {
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
+          /** @default [] */
+          detailComponents?: {
+              id: string;
+              type: string;
+              label: string;
+              note: string;
+            }[];
         }[] | null;
     };
     InspectionRoom: {
@@ -11504,6 +11511,13 @@ export interface components {
       photos: string[];
       isApproved: boolean;
       isHandled: boolean;
+      /** @default [] */
+      detailComponents?: {
+          id: string;
+          type: string;
+          label: string;
+          note: string;
+        }[];
     };
     DetailedInspection: {
       id: string;
@@ -12570,6 +12584,7 @@ export interface components {
       leaseId: string;
       masterKeyAccess: string | null;
       residenceId: string;
+      isFurnished: boolean;
       rooms: {
           roomId: string;
           conditions: {
@@ -12611,6 +12626,13 @@ export interface components {
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
+          /** @default [] */
+          detailComponents?: {
+              id: string;
+              type: string;
+              label: string;
+              note: string;
+            }[];
         }[] | null;
     };
     SaveInspectionDraftRequest: {
@@ -12656,7 +12678,15 @@ export interface components {
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
+          /** @default [] */
+          detailComponents?: {
+              id: string;
+              type: string;
+              label: string;
+              note: string;
+            }[];
         }[];
+      isFurnished: boolean;
     };
     FileListItem: {
       /** @description Full file path/name */

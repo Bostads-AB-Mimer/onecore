@@ -426,6 +426,7 @@ export async function saveInspectionDraft(
       .update({
         inspector: params.inspectorName,
         draftRooms: JSON.stringify(params.rooms),
+        isFurnished: params.isFurnished,
         status: INSPECTION_STATUS.STARTED,
         startedAt: new Date(),
       })
@@ -457,6 +458,7 @@ export async function getInspectionById(
         'leaseId',
         'masterKeyAccess',
         'residenceId',
+        'isFurnished',
         'draftRooms'
       )
       .from<DbInspection>('inspection')
@@ -491,6 +493,7 @@ export async function getInspectionById(
         leaseId: inspection.leaseId,
         masterKeyAccess: inspection.masterKeyAccess,
         residenceId: inspection.residenceId,
+        isFurnished: inspection.isFurnished,
         rooms,
       },
     }

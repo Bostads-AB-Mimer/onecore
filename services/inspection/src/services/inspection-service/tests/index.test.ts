@@ -403,6 +403,7 @@ describe('inspection-service', () => {
       const mockInspection = {
         ...XpandInspectionFactory.build({ id: inspectionId }),
         residenceId: 'RES001',
+        isFurnished: true,
         rooms: [InspectionRoomFactory.build({ isHandled: true })],
       }
       jest
@@ -416,6 +417,7 @@ describe('inspection-service', () => {
       expect(res.status).toBe(200)
       expect(res.body.content.inspection.id).toBe(inspectionId)
       expect(res.body.content.inspection.rooms).toHaveLength(1)
+      expect(res.body.content.inspection.isFurnished).toBe(true)
     })
 
     it('returns 404 when inspection not found', async () => {
@@ -443,10 +445,11 @@ describe('inspection-service', () => {
   describe('PATCH /inspections/internal/:inspectionId/draft', () => {
     const validDraftBody = SaveInspectionDraftParamsFactory.build({
       rooms: [InspectionRoomFactory.build({ isHandled: true })],
+      isFurnished: true,
     })
 
     it('saves draft successfully', async () => {
-      jest
+      const saveDraftSpy = jest
         .spyOn(dbAdapter, 'saveInspectionDraft')
         .mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -456,6 +459,11 @@ describe('inspection-service', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content.success).toBe(true)
+      expect(saveDraftSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        '1',
+        expect.objectContaining({ isFurnished: true })
+      )
     })
 
     it('returns 400 for invalid request body', async () => {

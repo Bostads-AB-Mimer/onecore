@@ -48,6 +48,8 @@ export function useInspectionForm(
     setInspectionTime: inspectorInfo.setInspectionTime,
     needsMasterKey: inspectorInfo.needsMasterKey,
     setNeedsMasterKey: inspectorInfo.setNeedsMasterKey,
+    isFurnished: inspectorInfo.isFurnished,
+    setIsFurnished: inspectorInfo.setIsFurnished,
 
     // Form state
     inspectionData: formState.inspectionData,
