@@ -32,6 +32,12 @@ vi.mock('../api/contactService', () => ({
   fetchContactByContactCode: vi.fn(),
 }))
 
+vi.mock('../api/rentalObjectSearchService', () => ({
+  rentalObjectSearchService: {
+    getAddressesByRentalIds: vi.fn().mockResolvedValue({}),
+  },
+}))
+
 // --- Minimal fixtures ---
 
 function makeKey(overrides: Partial<KeyDetails> & { id: string }): KeyDetails {
