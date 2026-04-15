@@ -42,6 +42,11 @@ interface XledgerResponse {
   query?: string
 }
 
+interface XledgerGraphQlQuery {
+  query: string
+  variables?: Record<string, any>
+}
+
 const getCallerFromError = (error: Error) => {
   return error.stack
     ?.split('\n')[4]
@@ -50,11 +55,11 @@ const getCallerFromError = (error: Error) => {
     .split(' ')[0]
 }
 
+const stringifyGraphQlQuery = (query: XledgerGraphQlQuery) =>
+  `Query: ${query.query}${query.variables ? `\nVariables: ${JSON.stringify(query.variables, null, 2)}` : ''}`
+
 const makeXledgerRequest = async (
-  query: {
-    query: string
-    variables?: Record<string, any>
-  },
+  query: XledgerGraphQlQuery,
   attachment?: any // TODO formidable file PersistentFileStorage
 ): Promise<any> => {
   function sleep(ms: number) {
@@ -75,17 +80,14 @@ const makeXledgerRequest = async (
     )
     logger.error(
       result.data,
-      `Error making Xledger request (${getCallerFromError(error)})`
+      `Error making Xledger request\n${stringifyGraphQlQuery(query)}\n(${getCallerFromError(error)})`
     )
     throw error
   }
 }
 
 const makeXledgerHttpRequest = async (
-  query: {
-    query: string
-    variables?: Record<string, any>
-  },
+  query: XledgerGraphQlQuery,
   attachment?: any
 ): Promise<XledgerResponse> => {
   let result: axios.AxiosResponse
