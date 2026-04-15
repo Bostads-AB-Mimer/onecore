@@ -30,6 +30,9 @@ type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface InspectionFormProps {
+  // Initial rooms from the property system. The form maintains its own
+  // rooms state internally (via useInspectionForm) to support ad-hoc rooms
+  // added by the inspector via InspectionMoreMenu.
   rooms: Room[]
   onSave: (
     inspectorName: string,
@@ -48,7 +51,7 @@ interface InspectionFormProps {
 const currentUser = 'Anna Andersson'
 
 export function InspectionForm({
-  rooms,
+  rooms: initialRooms,
   onSave,
   onCancel,
   tenant,
@@ -65,7 +68,9 @@ export function InspectionForm({
     setNeedsMasterKey,
     isFurnished,
     setIsFurnished,
+    rooms,
     inspectionData,
+    handleAddRoom,
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
@@ -74,7 +79,7 @@ export function InspectionForm({
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
-  } = useInspectionForm(rooms, existingInspection)
+  } = useInspectionForm(initialRooms, existingInspection)
 
   useEffect(() => {
     if (!inspectorName && currentUser && !existingInspection) {
@@ -250,7 +255,11 @@ export function InspectionForm({
       {/* Footer buttons */}
 
       <div className="flex gap-3 justify-between pt-4 border-t">
-        <InspectionMoreMenu floorplanImage={floorplanImage} variant="buttons" />
+        <InspectionMoreMenu
+          floorplanImage={floorplanImage}
+          variant="buttons"
+          onAddRoom={handleAddRoom}
+        />
         <div className="flex gap-3">
           <Button variant="outline" onClick={onCancel}>
             Avbryt

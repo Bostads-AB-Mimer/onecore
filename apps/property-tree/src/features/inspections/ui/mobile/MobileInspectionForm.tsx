@@ -25,6 +25,9 @@ type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface MobileInspectionFormProps {
+  // Initial rooms from the property system. The form maintains its own
+  // rooms state internally (via useInspectionForm) to support ad-hoc rooms
+  // added by the inspector via InspectionMoreMenu.
   rooms: Room[]
   onSave: (
     inspectorName: string,
@@ -41,7 +44,7 @@ interface MobileInspectionFormProps {
 }
 
 export function MobileInspectionForm({
-  rooms,
+  rooms: initialRooms,
   onSave,
   onCancel,
   tenant,
@@ -71,7 +74,9 @@ export function MobileInspectionForm({
     setInspectorName,
     needsMasterKey,
     isFurnished,
+    rooms,
     inspectionData,
+    handleAddRoom,
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
@@ -80,7 +85,16 @@ export function MobileInspectionForm({
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
-  } = useInspectionForm(rooms, existingInspection)
+  } = useInspectionForm(initialRooms, existingInspection)
+
+  // After adding an ad-hoc room, jump to it so the inspector can start
+  // filling it in immediately. The new room is always appended, so its
+  // index is the current length (before the state update completes, that
+  // length equals the new room's index).
+  const handleAddRoomAndNavigate = (name: string) => {
+    handleAddRoom(name)
+    setCurrentRoomIndex(rooms.length)
+  }
 
   const currentRoom = rooms[currentRoomIndex]
   const completedRooms = rooms.filter(
@@ -294,7 +308,10 @@ export function MobileInspectionForm({
             <span className="sr-only">Föregående rum</span>
           </Button>
 
-          <InspectionMoreMenu rentalId={rentalId} />
+          <InspectionMoreMenu
+            rentalId={rentalId}
+            onAddRoom={handleAddRoomAndNavigate}
+          />
 
           <Button
             variant="secondary"
