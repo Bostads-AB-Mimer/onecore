@@ -1,5 +1,9 @@
 import { logger } from '@onecore/utilities'
-import { Contact, RentalObjectAvailabilityInfo } from '@onecore/types'
+import {
+  Contact,
+  RentalObjectAvailabilityInfo,
+  SyncContactToLeasingPayload,
+} from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -645,6 +649,75 @@ function buildTenantRequestData(contact: Contact) {
     postadress: `${contact.address?.street} ${contact.address?.number}`,
     postnummer: contact.address?.postalCode,
     stad: contact.address?.city,
+  }
+}
+
+function buildTenantRequestDataFromPayload(
+  payload: SyncContactToLeasingPayload
+) {
+  return {
+    externalId: payload.contactCode,
+    idbeteckning: payload.nationalRegistrationNumber ?? '',
+    isCompany: false,
+    name: {
+      first: payload.firstName ?? '',
+      last: payload.lastName ?? '',
+    },
+    email: payload.emailAddress,
+    phone: payload.phoneNumber,
+    postadress: payload.street ?? '',
+    postnummer: payload.zipCode ?? '',
+    stad: payload.city ?? '',
+  }
+}
+
+export const syncTenant = async (
+  payload: SyncContactToLeasingPayload
+): Promise<
+  AdapterResult<
+    TenfastTenant | null,
+    | 'could-not-retrieve-tenant'
+    | 'could-not-update-tenant'
+    | 'tenant-could-not-be-parsed'
+    | 'unknown'
+  >
+> => {
+  try {
+    const existingTenant = await getTenantByContactCode(payload.contactCode)
+
+    if (!existingTenant.ok) {
+      return { ok: false, err: 'could-not-retrieve-tenant' }
+    }
+
+    if (!existingTenant.data) {
+      logger.warn(
+        { contactCode: payload.contactCode },
+        'tenfast-adapter.syncTenant: tenant not found in Tenfast, skipping'
+      )
+      return { ok: true, data: null }
+    }
+
+    const requestData = buildTenantRequestDataFromPayload(payload)
+
+    const tenantResponse = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${existingTenant.data._id}?hyresvard=${tenfastCompanyId}`,
+      data: requestData,
+    })
+
+    if (tenantResponse.status !== 200 && tenantResponse.status !== 201) {
+      return handleTenfastError(
+        { error: tenantResponse.data.error, status: tenantResponse.status },
+        'could-not-update-tenant'
+      )
+    }
+
+    const parsed = TenfastTenantSchema.safeParse(tenantResponse.data)
+    if (!parsed.success)
+      return handleTenfastError(parsed.error, 'tenant-could-not-be-parsed')
+    return { ok: true, data: parsed.data }
+  } catch (err: unknown) {
+    return handleTenfastError(err, 'unknown')
   }
 }
 

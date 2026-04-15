@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 import { leasing, WaitingListType } from '@onecore/types'
 
 import { routes } from '../../routes/contacts'
+import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
@@ -398,5 +399,65 @@ describe('GET /contacts/:contactCode/tenant', () => {
     expect(res.body.title).toEqual('No valid housing contract found')
     expect(res.body.status).toEqual(500)
     expect(res.body.detail).toEqual('No active or upcoming contract found.')
+  })
+})
+
+describe('POST /contacts/:contactCode/sync', () => {
+  it('responds with 200 and skipped:false on successful sync', async () => {
+    const syncPayload = factory.syncTenantPayload.build()
+    const mockTenant = factory.tenfastTenant.build()
+
+    jest.spyOn(tenfastAdapter, 'syncTenant').mockResolvedValueOnce({
+      ok: true,
+      data: mockTenant,
+    })
+
+    const res = await request(app.callback())
+      .post(`/contacts/${syncPayload.contactCode}/sync`)
+      .send(syncPayload)
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(mockTenant)
+    expect(res.body.skipped).toBe(false)
+  })
+
+  it('responds with 200 and skipped:true when tenant does not exist', async () => {
+    const syncPayload = factory.syncTenantPayload.build()
+
+    jest.spyOn(tenfastAdapter, 'syncTenant').mockResolvedValueOnce({
+      ok: true,
+      data: null,
+    })
+
+    const res = await request(app.callback())
+      .post(`/contacts/${syncPayload.contactCode}/sync`)
+      .send(syncPayload)
+
+    expect(res.status).toBe(200)
+    expect(res.body.skipped).toBe(true)
+  })
+
+  it('responds with 500 when sync fails', async () => {
+    const syncPayload = factory.syncTenantPayload.build()
+
+    jest.spyOn(tenfastAdapter, 'syncTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'could-not-update-tenant',
+    })
+
+    const res = await request(app.callback())
+      .post(`/contacts/${syncPayload.contactCode}/sync`)
+      .send(syncPayload)
+
+    expect(res.status).toBe(500)
+    expect(res.body.type).toBe('tenfast-error')
+  })
+
+  it('responds with 400 when request body is invalid', async () => {
+    const res = await request(app.callback())
+      .post('/contacts/P12345/sync')
+      .send({ invalid: true })
+
+    expect(res.status).toBe(400)
   })
 })

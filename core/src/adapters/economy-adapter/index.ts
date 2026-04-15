@@ -12,6 +12,7 @@ import {
 
 import config from '../../common/config'
 import { AdapterResult } from './../types'
+import type { SyncContactToEconomyPayload } from '@onecore/types'
 
 export async function getInvoiceByInvoiceId(
   invoiceId: string
@@ -309,6 +310,34 @@ export async function processIMD(
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err) {
     logger.error(err, 'economy-adapter.processIMD')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function syncContactToEconomy(
+  contactCode: string,
+  contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>
+): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
+  const payload: SyncContactToEconomyPayload = {
+    contactCode,
+    ...contactData,
+  }
+
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/contacts/${contactCode}/sync`,
+      payload
+    )
+    return { ok: true, data: { skipped: response.data?.skipped === true } }
+  } catch (err) {
+    logger.error(err, 'economy-adapter.syncContactToEconomy')
+    if (axios.isAxiosError(err) && err.response) {
+      return {
+        ok: false,
+        err: 'sync-failed',
+        statusCode: err.response.status,
+      }
+    }
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }

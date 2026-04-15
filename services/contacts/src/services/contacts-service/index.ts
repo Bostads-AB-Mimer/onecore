@@ -8,9 +8,11 @@ import {
 import { ContactsRepository } from '@src/adapters/contact-adapter'
 import {
   ContactSchema,
+  ErrorResponseBodySchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
+  SyncContactsResponseBodySchema,
 } from './schema'
 import { paginatedResponseSchema } from '@onecore/types'
 
@@ -69,6 +71,50 @@ export const routes = (
           ...(ctx.query.type ? { type: String(ctx.query.type) } : {}),
         },
       })
+    }
+  )
+
+  router.get(
+    '/contacts/sync',
+    {
+      summary: 'Get contacts updated since a given timestamp',
+      description:
+        'Queries cmlog in Xpand for changes since the given timestamp. If no timestamp is provided, falls back to the last 5 minutes.',
+      tags: ['Contacts'],
+      query: {
+        since: {
+          description: 'ISO 8601 timestamp to query changes from',
+          schema: z.optional(z.string()),
+        },
+      },
+      response: {
+        200: SyncContactsResponseBodySchema,
+        400: ErrorResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const sinceParam = ctx.query.since as string | undefined
+      const since = sinceParam ? new Date(sinceParam) : null
+
+      if (since && isNaN(since.getTime())) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid since parameter, expected ISO 8601 date',
+          ...metadata,
+        }
+        return
+      }
+
+      const contactCodes =
+        await contactsRepository.getChangedContactCodes(since)
+      const contacts = await contactsRepository.getByContactCodes(contactCodes)
+
+      ctx.status = 200
+      ctx.body = {
+        content: { contacts },
+        ...metadata,
+      }
     }
   )
 

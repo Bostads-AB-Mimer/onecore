@@ -12,5 +12,13 @@ export * as keys from './keys'
 export * as leasing from './leasing'
 export * as economy from './economy'
 export * as schemas from './schemas'
+export {
+  SyncContactToLeasingSchema,
+  type SyncContactToLeasingPayload,
+  SyncContactToEconomySchema,
+  type SyncContactToEconomyPayload,
+  SyncContactToWorkOrderSchema,
+  type SyncContactToWorkOrderPayload,
+} from './schemas/v1/contact-sync'
 export { paginatedResponseSchema } from './schemas/pagination'
 export * as fileStorageSchemas from './schemas/file-storage'
