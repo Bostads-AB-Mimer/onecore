@@ -216,17 +216,56 @@ const addTenantInfo = async (
 }
 
 /**
+ * Column x-positions for the keys table. When `withTillhorighet` is true
+ * (maintenance receipts) Flex.nr is replaced by a wider Tillhörighet column
+ * so the address of each key sits alongside its row.
+ */
+const KEYS_COLS_TENANT = {
+  namn: MARGIN_X,
+  lassystem: 50,
+  lopnr: 90,
+  flexnr: 115,
+  typ: 145,
+  status: 175,
+} as const
+
+const KEYS_COLS_MAINTENANCE = {
+  namn: MARGIN_X,
+  lassystem: 42,
+  lopnr: 62,
+  tillhorighet: 78,
+  tillhorighetMax: 148 - 78, // 70mm available
+  typ: 148,
+  status: 175,
+} as const
+
+/**
  * Renders table header row for keys table
  */
-const renderKeysTableHeader = (doc: jsPDF, y: number): void => {
+const renderKeysTableHeader = (
+  doc: jsPDF,
+  y: number,
+  withTillhorighet = false
+): void => {
   doc.setFont(FONT_GRAPHIK, 'bold')
   doc.setFontSize(FONT_SIZE.TABLE_HEADER)
-  doc.text('Namn', MARGIN_X, y)
-  doc.text('Låssystem', 50, y)
-  doc.text('Löp.nr', 90, y)
-  doc.text('Flex.nr', 115, y)
-  doc.text('Typ', 145, y)
-  doc.text('Status', 175, y)
+  if (withTillhorighet) {
+    const c = KEYS_COLS_MAINTENANCE
+    doc.text('Namn', c.namn, y)
+    doc.text('Låssystem', c.lassystem, y)
+    doc.text('Löp.nr', c.lopnr, y)
+    doc.text('Tillhörighet', c.tillhorighet, y)
+    doc.text('Typ', c.typ, y)
+    doc.text('Status', c.status, y)
+  } else {
+    const c = KEYS_COLS_TENANT
+    doc.text('Namn', c.namn, y)
+    doc.text('Låssystem', c.lassystem, y)
+    doc.text('Löp.nr', c.lopnr, y)
+    doc.text('Flex.nr', c.flexnr, y)
+    doc.text('Typ', c.typ, y)
+    doc.text('Status', c.status, y)
+  }
 
   doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
   doc.setLineWidth(0.3)
@@ -251,22 +290,51 @@ const renderCardsTableHeader = (doc: jsPDF, y: number): void => {
 }
 
 /**
- * Renders a single key row
+ * Renders a single key row. Returns the height used (lets the caller advance
+ * correctly when a long Tillhörighet value wraps to a second line).
  */
-const renderKeyRow = (doc: jsPDF, k: KeyDetails, y: number): void => {
+const renderKeyRow = (
+  doc: jsPDF,
+  k: KeyDetails,
+  y: number,
+  tillhorighet?: string
+): number => {
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
 
-  doc.text(k.keyName, MARGIN_X, y)
-  const systemCode = k.keySystem?.systemCode || '-'
-  doc.text(systemCode, 50, y)
-  doc.text(k.keySequenceNumber ? String(k.keySequenceNumber) : '-', 90, y)
-  doc.text(k.flexNumber ? String(k.flexNumber) : '-', 115, y)
   const labelForType =
     (KeyTypeLabels as Record<string, string>)[k.keyType as unknown as string] ||
     (k.keyType as string)
-  doc.text(labelForType, 145, y)
-  doc.text(k.disposed ? 'Kasserad' : 'Aktiv', 175, y)
+  const systemCode = k.keySystem?.systemCode || '-'
+  const status = k.disposed ? 'Kasserad' : 'Aktiv'
+
+  if (tillhorighet !== undefined) {
+    const c = KEYS_COLS_MAINTENANCE
+    const lines = doc.splitTextToSize(
+      tillhorighet || '-',
+      c.tillhorighetMax
+    ) as string[]
+    doc.text(k.keyName, c.namn, y)
+    doc.text(systemCode, c.lassystem, y)
+    doc.text(
+      k.keySequenceNumber ? String(k.keySequenceNumber) : '-',
+      c.lopnr,
+      y
+    )
+    doc.text(lines, c.tillhorighet, y)
+    doc.text(labelForType, c.typ, y)
+    doc.text(status, c.status, y)
+    return Math.max(6, lines.length * 5)
+  }
+
+  const c = KEYS_COLS_TENANT
+  doc.text(k.keyName, c.namn, y)
+  doc.text(systemCode, c.lassystem, y)
+  doc.text(k.keySequenceNumber ? String(k.keySequenceNumber) : '-', c.lopnr, y)
+  doc.text(k.flexNumber ? String(k.flexNumber) : '-', c.flexnr, y)
+  doc.text(labelForType, c.typ, y)
+  doc.text(status, c.status, y)
+  return 6
 }
 
 /**
@@ -286,7 +354,9 @@ const renderCardRow = (doc: jsPDF, c: Card, y: number): void => {
 }
 
 /**
- * Renders keys and cards as two separate tables under one section header
+ * Renders keys and cards as two separate tables under one section header.
+ * When `tillhorighetByKeyId` is provided, the keys table switches to the
+ * maintenance variant with an inline Tillhörighet column per row.
  */
 const renderItemsTableSection = (
   doc: jsPDF,
@@ -294,7 +364,8 @@ const renderItemsTableSection = (
   cards: Card[] | undefined,
   y: number,
   headerText: string,
-  headerColor: { r: number; g: number; b: number } = BLUE
+  headerColor: { r: number; g: number; b: number } = BLUE,
+  tillhorighetByKeyId?: Record<string, string>
 ): number => {
   const hasKeys = keys.length > 0
   const hasCards = cards && cards.length > 0
@@ -302,7 +373,8 @@ const renderItemsTableSection = (
 
   const bottom = contentBottom(doc)
   const minSpaceNeeded = 35
-  const rowH = 6
+  const defaultRowH = 6
+  const withTillhorighet = !!tillhorighetByKeyId
 
   if (y + minSpaceNeeded > bottom) {
     doc.addPage()
@@ -320,11 +392,11 @@ const renderItemsTableSection = (
 
   // Keys table
   if (hasKeys) {
-    renderKeysTableHeader(doc, cy)
+    renderKeysTableHeader(doc, cy, withTillhorighet)
     cy += 9
 
     keys.forEach((key) => {
-      if (cy + rowH + 5 > bottom) {
+      if (cy + defaultRowH + 5 > bottom) {
         doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
@@ -337,12 +409,17 @@ const renderItemsTableSection = (
         doc.setTextColor(0, 0, 0)
 
         cy += 10
-        renderKeysTableHeader(doc, cy)
+        renderKeysTableHeader(doc, cy, withTillhorighet)
         cy += 9
       }
 
-      renderKeyRow(doc, key, cy)
-      cy += rowH
+      const defaultRowHeight = renderKeyRow(
+        doc,
+        key,
+        cy,
+        tillhorighetByKeyId?.[key.id]
+      )
+      cy += defaultRowHeight
     })
 
     // Bottom line for keys table
@@ -364,7 +441,7 @@ const renderItemsTableSection = (
     cy += 9
 
     cards.forEach((card) => {
-      if (cy + rowH + 5 > bottom) {
+      if (cy + defaultRowH + 5 > bottom) {
         doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
@@ -382,7 +459,7 @@ const renderItemsTableSection = (
       }
 
       renderCardRow(doc, card, cy)
-      cy += rowH
+      cy += defaultRowH
     })
 
     // Bottom line for cards table
@@ -418,11 +495,20 @@ const renderItemsTable = (
   doc: jsPDF,
   keys: ReceiptData['keys'],
   cards: Card[] | undefined,
-  y: number
+  y: number,
+  tillhorighetByKeyId?: Record<string, string>
 ): number => {
   const hasCards = cards && cards.length > 0
   const headerText = hasCards ? 'NYCKLAR OCH DROPPAR' : 'NYCKLAR'
-  return renderItemsTableSection(doc, keys, cards, y, headerText, BLUE)
+  return renderItemsTableSection(
+    doc,
+    keys,
+    cards,
+    y,
+    headerText,
+    BLUE,
+    tillhorighetByKeyId
+  )
 }
 
 /**
@@ -435,7 +521,8 @@ const renderReturnItemsTable = (
   missingKeys: ReceiptData['keys'] | undefined,
   missingCards: Card[] | undefined,
   disposedKeys: ReceiptData['keys'] | undefined,
-  y: number
+  y: number,
+  tillhorighetByKeyId?: Record<string, string>
 ): number => {
   const hasMissingKeys = missingKeys && missingKeys.length > 0
   const hasMissingCards = missingCards && missingCards.length > 0
@@ -462,7 +549,8 @@ const renderReturnItemsTable = (
     returnedCards,
     y,
     returnedHeader,
-    BLUE
+    BLUE,
+    tillhorighetByKeyId
   )
 
   // Missing items section (red)
@@ -477,7 +565,8 @@ const renderReturnItemsTable = (
       missingCards,
       y,
       missingHeader,
-      RED
+      RED,
+      tillhorighetByKeyId
     )
   }
 
@@ -490,7 +579,8 @@ const renderReturnItemsTable = (
       undefined,
       y,
       'KASSERADE NYCKLAR',
-      BLUE
+      BLUE,
+      tillhorighetByKeyId
     )
   }
 
@@ -498,7 +588,8 @@ const renderReturnItemsTable = (
 }
 
 /**
- * Adds maintenance info (Företag) and details in two columns
+ * Adds the Företag header block for a maintenance receipt. Per-key Tillhörighet
+ * is rendered inline in the Nycklar table further down, so no right column here.
  */
 const addMaintenanceInfo = (
   doc: jsPDF,
@@ -506,47 +597,26 @@ const addMaintenanceInfo = (
   y: number
 ): number => {
   const leftCol = MARGIN_X
-  const rightCol = 110
 
-  // Section headers - BOLD (Graphik Semibold)
   doc.setFont(FONT_GRAPHIK, 'bold')
   doc.setFontSize(FONT_SIZE.SUB_HEADER)
   doc.setTextColor(0, 0, 0)
-
-  // Left column header
   doc.text('Företag', leftCol, y)
-  // Right column header (only if we have content)
-  if (data.contactPerson || data.description) {
-    doc.text('Detaljer', rightCol, y)
-  }
 
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
   let leftY = y + 7
-  let rightY = y + 7
 
-  // Left column: Company name and customer number
   doc.text(`Namn: ${data.contactName}`, leftCol, leftY)
   leftY += 5
   doc.text(`Kundnummer: ${data.contact}`, leftCol, leftY)
-  leftY += 8
-
-  // Right column: Contact person and description
+  leftY += 5
   if (data.contactPerson) {
-    doc.text(`Kontaktperson: ${data.contactPerson}`, rightCol, rightY)
-    rightY += 5
+    doc.text(`Kontaktperson: ${data.contactPerson}`, leftCol, leftY)
+    leftY += 5
   }
 
-  if (data.description) {
-    const descLines = doc.splitTextToSize(
-      `Beskrivning: ${data.description}`,
-      75
-    )
-    doc.text(descLines, rightCol, rightY)
-    rightY += Array.isArray(descLines) ? descLines.length * 5 : 5
-  }
-
-  return Math.max(leftY, rightY) + 6
+  return leftY + 6
 }
 
 /**
@@ -911,8 +981,14 @@ async function buildMaintenanceLoanDoc(data: MaintenanceReceiptData) {
   y = addMeta(doc, y, 'loan')
   y = addMaintenanceInfo(doc, data, y)
 
-  // Combined keys and cards table (sorted)
-  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y)
+  // Combined keys and cards table (sorted) — pass Tillhörighet map for inline column
+  y = renderItemsTable(
+    doc,
+    sortKeys(data.keys),
+    data.cards,
+    y,
+    data.tillhorighetByKeyId
+  )
 
   y = addMaintenanceLoanConfirmation(doc, y)
   addComment(doc, y, data.description ?? undefined)
@@ -950,7 +1026,8 @@ async function buildMaintenanceReturnDoc(data: MaintenanceReceiptData) {
     data.missingKeys ? sortKeys(data.missingKeys) : undefined,
     data.missingCards,
     data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
-    y
+    y,
+    data.tillhorighetByKeyId
   )
 
   y = addMaintenanceReturnConfirmation(doc, y, hasMissingItems)
