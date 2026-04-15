@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, ChevronLeft } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
@@ -86,6 +86,7 @@ export function InspectionForm({
   const canComplete = inspectorName && completedRooms === rooms.length
 
   const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
+  const [step, setStep] = useState<'rooms' | 'summary'>('rooms')
 
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
     if (!tenant) return undefined
@@ -131,58 +132,75 @@ export function InspectionForm({
         </span>
       </div>
 
-      {/* Room accordion */}
-      <div className="max-h-[70vh] overflow-y-auto pr-2 pb-24 min-w-0">
-        <Accordion type="multiple" className="space-y-2">
-          {rooms.map((room) => {
-            const roomData = inspectionData[room.id]
-            const isCompleted = roomData?.isHandled
+      {step === 'rooms' && (
+        <div className="max-h-[70vh] overflow-y-auto pr-2 pb-24 min-w-0">
+          <Accordion type="multiple" className="space-y-2">
+            {rooms.map((room) => {
+              const roomData = inspectionData[room.id]
+              const isCompleted = roomData?.isHandled
 
-            return (
-              <AccordionItem
-                key={room.id}
-                value={room.id}
-                className="border rounded-lg"
-              >
-                <AccordionTrigger className="hover:no-underline sticky top-0 bg-background z-10">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{room.name}</span>
+              return (
+                <AccordionItem
+                  key={room.id}
+                  value={room.id}
+                  className="border rounded-lg"
+                >
+                  <AccordionTrigger className="hover:no-underline sticky top-0 bg-background z-10">
+                    <div className="flex items-center justify-between w-full pr-4">
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{room.name}</span>
+                      </div>
+                      {isCompleted && (
+                        <Badge variant="default" className="gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Klar
+                        </Badge>
+                      )}
                     </div>
-                    {isCompleted && (
-                      <Badge variant="default" className="gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Klar
-                      </Badge>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="pr-4 min-w-0">
-                  <RoomInspectionEditor
-                    room={room}
-                    inspectionData={roomData}
-                    onConditionUpdate={(field, value) =>
-                      handleConditionUpdate(room.id, field, value)
-                    }
-                    onActionUpdate={(field, action) =>
-                      handleActionUpdate(room.id, field, action)
-                    }
-                    onComponentNoteUpdate={(field, note) =>
-                      handleComponentNoteUpdate(room.id, field, note)
-                    }
-                    onComponentPhotoAdd={(field, photoDataUrl) =>
-                      handleComponentPhotoAdd(room.id, field, photoDataUrl)
-                    }
-                    onComponentPhotoRemove={(field, index) =>
-                      handleComponentPhotoRemove(room.id, field, index)
-                    }
-                  />
-                </AccordionContent>
-              </AccordionItem>
-            )
-          })}
-        </Accordion>
-      </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pr-4 min-w-0">
+                    <RoomInspectionEditor
+                      room={room}
+                      inspectionData={roomData}
+                      onConditionUpdate={(field, value) =>
+                        handleConditionUpdate(room.id, field, value)
+                      }
+                      onActionUpdate={(field, action) =>
+                        handleActionUpdate(room.id, field, action)
+                      }
+                      onComponentNoteUpdate={(field, note) =>
+                        handleComponentNoteUpdate(room.id, field, note)
+                      }
+                      onComponentPhotoAdd={(field, photoDataUrl) =>
+                        handleComponentPhotoAdd(room.id, field, photoDataUrl)
+                      }
+                      onComponentPhotoRemove={(field, index) =>
+                        handleComponentPhotoRemove(room.id, field, index)
+                      }
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              )
+            })}
+          </Accordion>
+        </div>
+      )}
+
+      {step === 'summary' && (
+        <div className="max-h-[70vh] overflow-y-auto pr-2 pb-24 min-w-0">
+          <Button
+            variant="link"
+            onClick={() => setStep('rooms')}
+            className="h-auto p-0 mb-4"
+          >
+            <ChevronLeft />
+            Tillbaka till rum
+          </Button>
+          <div className="p-8 border rounded-lg text-center text-muted-foreground">
+            Sammanställning kommer här
+          </div>
+        </div>
+      )}
 
       {/* Footer buttons */}
       <div className="flex gap-3 justify-end pt-4 border-t">
@@ -197,9 +215,19 @@ export function InspectionForm({
           Spara utkast
         </Button>
 
-        <Button onClick={handleSubmit} disabled={!canComplete}>
-          Slutför besiktning
-        </Button>
+        {step === 'rooms' && (
+          <Button
+            onClick={() => setStep('summary')}
+            disabled={!inspectorName.trim()}
+          >
+            Sammanställning
+          </Button>
+        )}
+        {step === 'summary' && (
+          <Button onClick={handleSubmit} disabled={!canComplete}>
+            Slutför besiktning
+          </Button>
+        )}
       </div>
 
       <AlertDialog
