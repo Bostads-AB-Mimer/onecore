@@ -248,17 +248,20 @@ export function InspectionForm({
       )}
 
       {/* Footer buttons */}
-      <div className="flex gap-3 justify-end pt-4 border-t">
-        <Button variant="outline" onClick={onCancel}>
-          Avbryt
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => setIsDraftConfirmOpen(true)}
-          disabled={!inspectorName.trim()}
-        >
-          Spara utkast
-        </Button>
+
+      <div className="flex gap-3 justify-between pt-4 border-t">
+        <InspectionMoreMenu floorplanImage={floorplanImage} variant="buttons" />
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onCancel}>
+            Avbryt
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setIsDraftConfirmOpen(true)}
+            disabled={!inspectorName.trim()}
+          >
+            Spara utkast
+          </Button>
 
           {step === 'rooms' && (
             <Button
