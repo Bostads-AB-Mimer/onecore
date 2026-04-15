@@ -6,7 +6,6 @@ import {
   TenfastInvoiceRow,
   TenfastLease,
   TenfastRentArticle,
-  TenfastTenantByContactCodeResponse,
   TenfastInvoicesByTenantIdResponse,
 } from '@src/common/adapters/tenfast/schemas'
 
@@ -85,6 +84,7 @@ export const TenfastInvoiceFactory = Factory.define<TenfastInvoice>(
     late: false,
     state: 'ny',
     hyror: [],
+    roundingAmount: 0,
   })
 )
 
@@ -95,6 +95,7 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     hyresgaster: [
       {
         _id: `tenant-${sequence}`,
+        externalId: `P${sequence}`,
         name: {
           first: 'Test',
           last: 'Persson',
@@ -145,9 +146,7 @@ export const TenfastRentArticleFactory = Factory.define<TenfastRentArticle>(
 )
 
 export const TenfastTenantByContactCodeResponseFactory =
-  Factory.define<TenfastTenantByContactCodeResponse>(() => ({
-    records: [TenfastTenantFactory.build()],
-  }))
+  Factory.define<TenfastTenant>(() => TenfastTenantFactory.build())
 
 export const TenfastInvoicesByTenantIdResponseFactory =
   Factory.define<TenfastInvoicesByTenantIdResponse>(() => [

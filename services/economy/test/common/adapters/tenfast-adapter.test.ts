@@ -45,11 +45,11 @@ describe('Tenfast Adapter', () => {
 
       expect(result).toEqual({
         ok: true,
-        data: mockResponse.records[0],
+        data: mockResponse,
       })
     })
 
-    it('should return null when no tenant is found', async () => {
+    it('should return schema error when response does not match tenant schema', async () => {
       mockAxios.request.mockResolvedValue({
         status: 200,
         data: { records: [] },
@@ -58,8 +58,8 @@ describe('Tenfast Adapter', () => {
       const result = await getTenantByContactCode('NONEXISTENT')
 
       expect(result).toEqual({
-        ok: true,
-        data: null,
+        ok: false,
+        err: 'schema-error',
       })
     })
 
@@ -112,7 +112,7 @@ describe('Tenfast Adapter', () => {
         paidAmount: 0,
         remainingAmount: 1000,
         invoiceId: '55123456',
-        leaseId: '',
+        leaseId: undefined,
         paymentStatus: PaymentStatus.Unpaid,
         reference: '55123456',
         source: 'next',
