@@ -11422,6 +11422,7 @@ export interface components {
       }) | null;
       rooms: {
           roomId: string;
+          name?: string;
           conditions: {
             wall1: string;
             wall2: string;
@@ -11472,6 +11473,7 @@ export interface components {
     };
     InspectionRoom: {
       roomId: string;
+      name?: string;
       conditions: {
         wall1: string;
         wall2: string;
@@ -12587,6 +12589,7 @@ export interface components {
       isFurnished: boolean;
       rooms: {
           roomId: string;
+          name?: string;
           conditions: {
             wall1: string;
             wall2: string;
@@ -12639,6 +12642,7 @@ export interface components {
       inspectorName: string;
       rooms: {
           roomId: string;
+          name?: string;
           conditions: {
             wall1: string;
             wall2: string;
