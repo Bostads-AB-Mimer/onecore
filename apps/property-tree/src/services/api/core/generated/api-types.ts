@@ -1464,7 +1464,7 @@ export interface paths {
           /** @description Items per page */
           limit?: number;
           /** @description Sort field */
-          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId";
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
           /** @description Sort direction */
           sortOrder?: "asc" | "desc";
         };
@@ -1548,7 +1548,7 @@ export interface paths {
           /** @description Items per page */
           limit?: number;
           /** @description Sort field */
-          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId";
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
           /** @description Sort direction */
           sortOrder?: "asc" | "desc";
         };
