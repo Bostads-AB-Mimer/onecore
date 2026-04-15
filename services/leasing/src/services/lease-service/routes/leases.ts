@@ -1129,7 +1129,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/leases/:leaseId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    console.log('HALLÅ DÄR')
+
     try {
       // TODO: NON-TENANT-CONTACTS/LEASE
       const getLease = await tenfastAdapter.getLeaseByLeaseId(

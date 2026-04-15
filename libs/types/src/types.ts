@@ -297,6 +297,7 @@ interface RentalPropertyInfo {
   marketAreaCode: string
   marketArea: string
   building: BuildingInfo
+  address?: Address
 }
 
 interface ApartmentInfo {

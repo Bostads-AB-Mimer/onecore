@@ -1,4 +1,4 @@
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import { logger } from '@onecore/utilities'
 import knex from 'knex'
 import {
   RentalPropertyInfo,
@@ -116,6 +116,13 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
       buildingTypeCode: row.building_type_code,
       buildingTypeCaption: row.building_type_caption,
     },
+    address: {
+      street: row.street,
+      street2: row.street2,
+      postalCode: row.postal_code,
+      city: row.city,
+      number: '',
+    },
   }
 }
 
@@ -168,7 +175,11 @@ const getRentalPropertyInfo = async (
       'babyg.ombyggar as building_renovation_year',
       'babyg.assyear as building_assessment_year',
       'babyt.code as building_type_code',
-      'babyt.caption as building_type_caption'
+      'babyt.caption as building_type_caption',
+      'cmadr.adress1 as street',
+      'cmadr.adress2 as street2',
+      'cmadr.adress3 as postal_code',
+      'cmadr.adress4 as city'
     )
     .innerJoin('cmobt', 'cmobj.keycmobt', 'cmobt.keycmobt')
     .innerJoin('hyinf', 'cmobj.keycmobj', 'hyinf.keycmobj')
@@ -190,6 +201,7 @@ const getRentalPropertyInfo = async (
     })
     .leftJoin('balok', 'cmobj.keycmobj', 'balok.keycmobj')
     .leftJoin('balot', 'balok.keybalot', 'balot.keybalot')
+    .leftJoin('cmadr', 'cmobj.keycmobj', 'cmadr.keycode')
     .where('hyinf.hyresid', rentalPropertyId)
 
   if (!row || row.length === 0) {

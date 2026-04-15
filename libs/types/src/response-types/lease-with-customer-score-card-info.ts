@@ -13,8 +13,8 @@ export const LeaseWithAdditionalCustomerScoreCardInfoSchema = z.object({
   division_1140: z.string(), //rentalObjectTypeCode
   object_type: z.string(), //objectType
   object_street_1: z.string(), //objectStreet
-  // object_zip: z.string(),
-  // object_city: z.string(),
+  object_zip: z.string(),
+  object_city: z.string(),
   //contact info
   division_1501: z.string(), //contactCode
   respondent_name_first: z.string(), //contactFirstName

@@ -295,8 +295,6 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      // console.log('Lease search result:', leaseSearchResult)
-
       //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
       const parsedContent = await Promise.all(
         leaseSearchResult.content.map(async (lease: Lease) => {
@@ -369,8 +367,6 @@ export const routes = (router: KoaRouter) => {
 
           const rentalObjectData = rentalPropertyResult.data
 
-          console.log('rentalObjectData', rentalObjectData)
-
           //Filter out leases for contacts with protected identity.
           if (tenant.protectedIdentity) return null
 
@@ -396,16 +392,16 @@ export const routes = (router: KoaRouter) => {
             contract_start_date: lease.leaseStartDate,
             contract_end_date: lease.leaseEndDate,
             contract_type: lease.type,
-            object_street_1: rentalObjectData.property.address,
-            //object_zip: //hur lösa adress på objektet?
-            //object_city: //hur lösa adress på objektet?
+            object_street_1: rentalObjectData.address?.street,
+            object_zip: rentalObjectData.address?.postalCode,
+            object_city: rentalObjectData.address?.city,
             //contact info
             division_1501: tenant.contactCode,
             respondent_name_first: tenant.firstName,
             respondent_name_last: tenant.lastName,
             respondent_email: tenant.emailAddress,
             respondent_phone:
-              tenant.phoneNumbers?.find((number: any) => number.isMainNumber)
+              tenant.phoneNumbers?.find((number) => number.isMainNumber)
                 ?.phoneNumber ?? '',
             postal_street_1: tenant.address?.street,
             postal_street_2: tenant.address?.street2 ?? undefined,
@@ -426,17 +422,11 @@ export const routes = (router: KoaRouter) => {
             object_type: rentalObjectData.type,
           }
 
-          // console.log('mappedLease', mappedLease)
-
           const parseResult =
             LeaseWithAdditionalCustomerScoreCardInfoSchema.safeParse(
               mappedLease
             )
           if (parseResult.success) {
-            // console.log(
-            //   'Parsed lease with contact and rental object info:',
-            //   parseResult.data
-            // )
             return parseResult.data
           } else {
             logger.warn(
@@ -447,9 +437,6 @@ export const routes = (router: KoaRouter) => {
           }
         })
       )
-
-      // console.log('Lease search result:', leaseSearchResult.content.length)
-      // console.log('Parsed content:', parsedContent.length)
 
       const filteredLeases = parsedContent.filter(Boolean)
 

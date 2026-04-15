@@ -741,7 +741,7 @@ const getContacts = async (contactCodes: string[]) => {
           : 'redacted',
       isTenant: false,
       specialAttention: !!row.specialAttention,
-      protectedIdentity: !!row.protectedIdentity,
+      protectedIdentity: protectedIdentity,
       deceased: deceased,
       emigrated: emigrated,
       noAdvertising: noAdvertising,
