@@ -30,6 +30,16 @@ export interface UseComponentInspectionReturn {
     field: keyof InspectionRoom['componentPhotos'],
     photoIndex: number
   ) => void
+  addDetailComponent: (
+    roomId: string,
+    component: { type: string; label: string }
+  ) => void
+  removeDetailComponent: (roomId: string, componentId: string) => void
+  updateDetailComponentNote: (
+    roomId: string,
+    componentId: string,
+    note: string
+  ) => void
 }
 
 export function useComponentInspection(
@@ -39,7 +49,8 @@ export function useComponentInspection(
 ): UseComponentInspectionReturn {
   /**
    * Update condition for a component in a room
-   * Auto-calculates isHandled based on whether all conditions are set
+   * Auto-calculates isHandled based on whether all structural conditions are set
+   * (excludes 'details' which is handled by the detail components section)
    */
   const updateCondition = useCallback(
     (
@@ -56,8 +67,9 @@ export function useComponentInspection(
           },
         }
 
-        // Auto-calculate isHandled based on conditions
-        const allConditionsSet = Object.values(updatedRoom.conditions).every(
+        // Auto-calculate isHandled based on structural conditions (excluding details)
+        const { details: _, ...structuralConditions } = updatedRoom.conditions
+        const allConditionsSet = Object.values(structuralConditions).every(
           (condition) => condition && condition.trim() !== ''
         )
         updatedRoom.isHandled = allConditionsSet
@@ -173,11 +185,74 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
+  /**
+   * Add a detail component to a room
+   */
+  const addDetailComponent = useCallback(
+    (roomId: string, component: { type: string; label: string }) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: [
+            ...(prev[roomId].detailComponents ?? []),
+            {
+              id: crypto.randomUUID(),
+              type: component.type,
+              label: component.label,
+              note: '',
+            },
+          ],
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  /**
+   * Remove a detail component from a room
+   */
+  const removeDetailComponent = useCallback(
+    (roomId: string, componentId: string) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: (prev[roomId].detailComponents ?? []).filter(
+            (c) => c.id !== componentId
+          ),
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  /**
+   * Update the note for a detail component
+   */
+  const updateDetailComponentNote = useCallback(
+    (roomId: string, componentId: string, note: string) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: (prev[roomId].detailComponents ?? []).map((c) =>
+            c.id === componentId ? { ...c, note } : c
+          ),
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
   return {
     updateCondition,
     updateAction,
     updateNote,
     addPhoto,
     removePhoto,
+    addDetailComponent,
+    removeDetailComponent,
+    updateDetailComponentNote,
   }
 }

@@ -2,6 +2,8 @@ import type { components } from '@/services/api/core/generated/api-types'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 
+// 'details' fields are initialized for backward compatibility with existing persisted data.
+// New detail inspections use the detailComponents array instead.
 export const initialRoomData: InspectionRoom = {
   roomId: '',
   conditions: {
@@ -43,6 +45,7 @@ export const initialRoomData: InspectionRoom = {
   photos: [],
   isApproved: false,
   isHandled: false,
+  detailComponents: [],
 }
 
 export const initializeInspectionData = (rooms: { id: string }[]) => {

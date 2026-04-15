@@ -25,6 +25,16 @@ export const XpandInspectionSchema = z.object({
   masterKeyAccess: z.string().nullable(),
 })
 
+const DetailComponentSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  label: z.string(),
+  note: z.string(),
+})
+
+// Note: 'details' fields in conditions/actions/componentNotes/componentPhotos are kept
+// for backward compatibility with existing persisted data. New detail inspections use
+// the detailComponents array instead. The UI no longer renders these fields.
 export const InspectionRoomSchema = z.object({
   roomId: z.string(),
   conditions: z.object({
@@ -66,6 +76,7 @@ export const InspectionRoomSchema = z.object({
   photos: z.array(z.string()),
   isApproved: z.boolean(),
   isHandled: z.boolean(),
+  detailComponents: z.array(DetailComponentSchema).optional().default([]),
 })
 
 export const InspectionSchema = XpandInspectionSchema.extend({

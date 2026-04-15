@@ -104,6 +104,9 @@ export type DetailedXpandInspection = z.infer<
   typeof DetailedXpandInspectionSchema
 >
 
+// Note: 'details' fields in conditions/actions/componentNotes/componentPhotos are kept
+// for backward compatibility with existing persisted data. New detail inspections use
+// the detailComponents array instead. The UI no longer renders these fields.
 const InspectionRoomConditionsSchema = z.object({
   wall1: z.string(),
   wall2: z.string(),
@@ -124,6 +127,13 @@ const InspectionRoomActionsSchema = z.object({
   details: z.array(z.string()),
 })
 
+const DetailComponentSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  label: z.string(),
+  note: z.string(),
+})
+
 export const InspectionRoomSchema = z.object({
   roomId: z.string(),
   conditions: InspectionRoomConditionsSchema,
@@ -133,6 +143,7 @@ export const InspectionRoomSchema = z.object({
   photos: z.array(z.string()),
   isApproved: z.boolean(),
   isHandled: z.boolean(),
+  detailComponents: z.array(DetailComponentSchema).optional().default([]),
 })
 
 export const InternalInspectionSchema = XpandInspectionSchema.extend({

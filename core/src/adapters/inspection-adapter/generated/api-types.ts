@@ -666,6 +666,13 @@ export interface components {
       photos: string[]
       isApproved: boolean
       isHandled: boolean
+      /** @default [] */
+      detailComponents?: {
+        id: string
+        type: string
+        label: string
+        note: string
+      }[]
     }
     InternalInspection: {
       id: string
@@ -721,6 +728,13 @@ export interface components {
             photos: string[]
             isApproved: boolean
             isHandled: boolean
+            /** @default [] */
+            detailComponents?: {
+              id: string
+              type: string
+              label: string
+              note: string
+            }[]
           }[]
         | null
     }
@@ -767,6 +781,13 @@ export interface components {
         photos: string[]
         isApproved: boolean
         isHandled: boolean
+        /** @default [] */
+        detailComponents?: {
+          id: string
+          type: string
+          label: string
+          note: string
+        }[]
       }[]
     }
   }
