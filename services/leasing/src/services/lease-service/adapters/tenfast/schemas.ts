@@ -69,6 +69,33 @@ export const TenfastRentalObjectSchema = z.object({
     )
     .optional(), // We omit tenants and rental objects to avoid circular reference, also we don't need them in the context of rental object
   displayName: z.string().optional(),
+})
+
+export const TenfastRentalObjectWithEstateSchema = z.object({
+  _id: z.string(),
+  externalId: z.string(),
+  hyra: z.number(), //total hyra inklusive moms
+  hyraVat: z.number(), // total moms pa hyran
+  hyraExcludingVat: z.number(), // hyran exklusive moms
+  hyror: z.array(TenfastInvoiceRowSchema),
+  contractTemplate: z.string().optional().nullable(),
+  postadress: z.string().nullish(),
+  stadsdel: z.string().nullish(),
+  typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
+  subType: z.string().optional(),
+  kvm: z.number().nullish(),
+  avtal: z
+    .array(
+      z.lazy(
+        (): z.ZodTypeAny =>
+          TenfastLeaseSchema.partial().omit({
+            hyresgaster: true,
+            hyresobjekt: true,
+          })
+      )
+    )
+    .optional(), // We omit tenants and rental objects to avoid circular reference, also we don't need them in the context of rental object
+  displayName: z.string().optional(),
   fastighet: z
     .object({
       _id: z.string(),
@@ -238,7 +265,7 @@ export const TenfastLeaseSchema = z.object({
   // Filter out incomplete/invalid rental objects (e.g. test data with missing fields)
   hyresobjekt: z.array(z.unknown()).transform((items) =>
     items.flatMap((item) => {
-      const result = TenfastRentalObjectSchema.safeParse(item)
+      const result = TenfastRentalObjectWithEstateSchema.safeParse(item)
       return result.success ? [result.data] : []
     })
   ),
