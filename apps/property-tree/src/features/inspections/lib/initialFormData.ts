@@ -1,4 +1,5 @@
 import type { components } from '@/services/api/core/generated/api-types'
+import type { Room } from '@/services/types'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 
@@ -58,3 +59,40 @@ export const initializeInspectionData = (rooms: { id: string }[]) => {
   })
   return initialData
 }
+
+/**
+ * Build a synthetic Room for an ad-hoc inspection room. Used when the
+ * inspector adds a room on the fly via InspectionMoreMenu because the
+ * Xpand-sourced room list is incomplete. Only `id` and `name` drive the
+ * UI — the remaining fields exist to satisfy the `Room` type shape and
+ * are zero-valued placeholders (the synthetic room has no matching Xpand
+ * record).
+ */
+export const createAdHocRoom = (name: string): Room => ({
+  id: crypto.randomUUID(),
+  propertyObjectId: '',
+  code: '',
+  name,
+  usage: {
+    shared: false,
+    allowPeriodicWorks: false,
+    spaceType: 0,
+  },
+  features: {
+    hasToilet: false,
+    isHeated: false,
+    hasThermostatValve: false,
+    orientation: 0,
+  },
+  dates: {
+    installation: null,
+    from: '',
+    to: '',
+    availableFrom: null,
+    availableTo: null,
+  },
+  sortingOrder: 0,
+  deleted: false,
+  timestamp: '',
+  roomType: null,
+})
