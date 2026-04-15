@@ -20,6 +20,7 @@ import { useInspectionForm } from '../../hooks/useInspectionForm'
 import { InspectionInfoSection } from '../InspectionInfoSection'
 import { InspectionMoreMenu } from '../InspectionMoreMenu'
 import { RoomInspectionEditor } from '../RoomInspectionEditor'
+import { SaveDraftConfirmDialog } from '../SaveDraftConfirmDialog'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
@@ -51,6 +52,7 @@ export function MobileInspectionForm({
   rentalId,
 }: MobileInspectionFormProps) {
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0)
+  const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
   // Show the inspector-selection landing screen for brand-new inspections
   // and for "start over" restarts. Continuing a draft has persisted room
   // data and skips straight into the form.
@@ -109,13 +111,12 @@ export function MobileInspectionForm({
     }
   }
 
-  const handleSaveDraft = () => {
-    if (inspectorName.trim()) {
-      onSave(inspectorName, inspectionData, 'draft', {
-        needsMasterKey,
-        tenant: createTenantSnapshot(),
-      })
-    }
+  const handleConfirmSaveDraft = () => {
+    onSave(inspectorName, inspectionData, 'draft', {
+      needsMasterKey,
+      tenant: createTenantSnapshot(),
+    })
+    setIsDraftConfirmOpen(false)
   }
 
   // Reset scroll position when room changes
@@ -297,13 +298,16 @@ export function MobileInspectionForm({
 
           <Button
             variant="secondary"
-            onClick={handleSaveDraft}
+            onClick={() => setIsDraftConfirmOpen(true)}
             disabled={!inspectorName.trim()}
             className="flex-1"
           >
             Spara utkast
           </Button>
 
+          {/* TODO(MIM-?): add "Slutför besiktning" path on mobile. Mobile
+              currently has no way to finalize an inspection — only draft
+              saves. The right chevron just disables on the last room. */}
           <Button
             variant="outline"
             size="icon"
@@ -315,6 +319,12 @@ export function MobileInspectionForm({
           </Button>
         </div>
       </div>
+
+      <SaveDraftConfirmDialog
+        open={isDraftConfirmOpen}
+        onOpenChange={setIsDraftConfirmOpen}
+        onConfirm={handleConfirmSaveDraft}
+      />
     </div>
   )
 }

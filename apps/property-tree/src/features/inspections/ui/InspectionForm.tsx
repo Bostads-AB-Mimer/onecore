@@ -17,16 +17,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/shared/ui/AlertDialog'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
@@ -35,6 +25,7 @@ import { InspectionInfoSection } from './InspectionInfoSection'
 import { InspectionMoreMenu } from './InspectionMoreMenu'
 import { InspectionSummary } from './InspectionSummary'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
+import { SaveDraftConfirmDialog } from './SaveDraftConfirmDialog'
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
@@ -288,25 +279,11 @@ export function InspectionForm({
         </div>
       </div>
 
-      <AlertDialog
+      <SaveDraftConfirmDialog
         open={isDraftConfirmOpen}
         onOpenChange={setIsDraftConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Spara utkast?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Dina framsteg sparas och du kan fortsätta besiktningen senare.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Avbryt</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSaveDraft}>
-              Spara utkast
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onConfirm={handleConfirmSaveDraft}
+      />
     </div>
   )
 }

@@ -53,9 +53,7 @@ export function InspectionMoreMenu({
             <span className="sr-only">Fler alternativ</span>
           </Button>
         </DropdownMenuTrigger>
-        {/* z-[90] overrides the default z-50 so the menu renders above the
-            mobile Sheet (z-[80]) when this component is used inside one. */}
-        <DropdownMenuContent side="top" align="start" className="z-[90]">
+        <DropdownMenuContent side="top" align="start">
           <DropdownMenuItem
             onSelect={() => setShowFloorplan(true)}
             className="py-3 text-base"
@@ -75,10 +73,10 @@ export function InspectionMoreMenu({
 
       {/* Floorplan Dialog */}
       <Dialog open={showFloorplan} onOpenChange={setShowFloorplan}>
-        <DialogContent
-          className="z-[90] max-w-3xl max-h-[90vh] p-2 sm:p-4"
-          overlayClassName="z-[90]"
-        >
+        <DialogContent className="max-w-3xl max-h-[90vh] p-2 sm:p-4">
+          <DialogHeader>
+            <DialogTitle>Planritning</DialogTitle>
+          </DialogHeader>
           {canShowFloorplan ? (
             <img
               src={floorplanImage}
@@ -98,7 +96,7 @@ export function InspectionMoreMenu({
       {/* Add Room Dialog */}
       {onAddRoom && (
         <Dialog open={showAddRoom} onOpenChange={setShowAddRoom}>
-          <DialogContent className="z-[90] max-w-sm" overlayClassName="z-[90]">
+          <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle>Lägg till rum/utrymme</DialogTitle>
             </DialogHeader>
