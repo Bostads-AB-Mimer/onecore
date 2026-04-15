@@ -452,3 +452,19 @@ export const getInvoicesNotExported = async (
     return { ok: false, err: err.message }
   }
 }
+
+export const markInvoicesAsExported = async (invoices: Invoice[]) => {
+  for (const invoice of invoices) {
+    if (invoice.externalId) {
+      const result = await makeTenfastRequest(
+        `/v1/hyresvard/hyror/${invoice.externalId}/manual-export`,
+        { method: 'POST' }
+      )
+    } else {
+      logger.error(
+        { invoiceId: invoice.invoiceId },
+        'Invoice has no external id'
+      )
+    }
+  }
+}

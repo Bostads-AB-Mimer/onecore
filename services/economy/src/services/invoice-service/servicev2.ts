@@ -20,7 +20,10 @@ import {
   setInvoiceRowsTaxRule,
 } from '../common/adapters/xledger-adapter'
 import { logger } from '@onecore/utilities'
-import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
+import {
+  getInvoicesNotExported,
+  markInvoicesAsExported,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
 
 /**
  *
@@ -33,7 +36,7 @@ export const exportRentalInvoicesAccounting = async (
 }> => {
   try {
     const errors: { invoiceNumber: string; error: string }[] = []
-    const CHUNK_SIZE = 200 //500
+    const CHUNK_SIZE = 5 // 100
 
     const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE)
     if (!invoicesResult.ok) {
@@ -99,6 +102,8 @@ export const exportRentalInvoicesAccounting = async (
         0
       )
     })
+
+    await markInvoicesAsExported(invoices)
 
     return {
       invoices,
