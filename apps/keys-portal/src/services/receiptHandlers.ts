@@ -155,21 +155,12 @@ export function assembleReturnReceipt(
 }
 
 /**
- * Resolves the "Hyresobjekt" rows for a maintenance receipt.
- *
- * For each key: prefer rentalObjectCode → resolved street address (matches
- * how tenant receipts show Avtal). Keys without a rentalObjectCode (typical
- * HN master-key case) fall back to their keySystem: systemCode → systemName,
- * which in real data is the building/street scope (e.g. "Lövsångarg 35").
- *
- * Rows are deduped by code, preserving first-seen order.
+ * Builds a per-key scope map for a maintenance receipt's Tillhörighet column.
+ * Each key resolves to its rentalObjectCode's street address, or falls back to
+ * keySystem.name for HN master keys where rentalObjectCode is null. Missing
+ * data renders as '-' so the receipt keeps a single consistent empty state.
  */
-/**
- * Builds a per-key Tillhörighet map for a maintenance receipt.
- * Each key resolves to either the resolved street address (via rentalObjectCode)
- * or the keySystem name as a fallback for HN master keys (where rentalObjectCode is null).
- */
-async function resolveTillhorighetByKeyId(
+async function resolveScopeByKeyId(
   keys: KeyDetails[]
 ): Promise<Record<string, string>> {
   const uniqueCodes = Array.from(
@@ -188,11 +179,9 @@ async function resolveTillhorighetByKeyId(
   const result: Record<string, string> = {}
   for (const key of keys) {
     if (key.rentalObjectCode) {
-      result[key.id] = addressMap[key.rentalObjectCode] ?? 'Okänd adress'
-    } else if (key.keySystem?.name) {
-      result[key.id] = key.keySystem.name
+      result[key.id] = addressMap[key.rentalObjectCode] || '-'
     } else {
-      result[key.id] = ''
+      result[key.id] = key.keySystem?.name || '-'
     }
   }
   return result
@@ -225,7 +214,7 @@ export async function assembleMaintenanceLoanReceipt(
   const description =
     [loan.notes, comment].filter(Boolean).join('\n\n') || undefined
 
-  const tillhorighetByKeyId = await resolveTillhorighetByKeyId(keys)
+  const scopeByKeyId = await resolveScopeByKeyId(keys)
 
   return {
     contact: loan.contact || 'Unknown',
@@ -233,7 +222,7 @@ export async function assembleMaintenanceLoanReceipt(
     contactPerson: loan.contactPerson ?? null,
     description,
     keys,
-    tillhorighetByKeyId,
+    scopeByKeyId,
     receiptType: 'LOAN',
     operationDate: new Date(),
     loanId,
@@ -265,9 +254,9 @@ export async function assembleMaintenanceReturnReceipt(
     selectedCardIds
   )
 
-  // Resolve Tillhörighet for the full loan set (not just the returned subset)
-  // so every row in the receipt tables carries its address.
-  const tillhorighetByKeyId = await resolveTillhorighetByKeyId(loanKeys)
+  // Resolve scope for the full loan set (not just the returned subset) so every
+  // row in the receipt tables carries its Tillhörighet value.
+  const scopeByKeyId = await resolveScopeByKeyId(loanKeys)
 
   return {
     contact,
@@ -275,7 +264,7 @@ export async function assembleMaintenanceReturnReceipt(
     contactPerson,
     description,
     keys: returned,
-    tillhorighetByKeyId,
+    scopeByKeyId,
     receiptType: 'RETURN',
     operationDate: new Date(),
     missingKeys: missing.length > 0 ? missing : undefined,
