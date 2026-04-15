@@ -10,6 +10,7 @@ import type {
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
+import { getFloorplanUrl } from '@/shared/lib/floorplan'
 import {
   Accordion,
   AccordionContent,
@@ -56,6 +57,7 @@ export function InspectionForm({
   existingInspection,
   rentalId,
 }: InspectionFormProps) {
+  const floorplanImage = rentalId ? getFloorplanUrl(rentalId) : undefined
   const {
     inspectorName,
     setInspectorName,
@@ -246,20 +248,17 @@ export function InspectionForm({
       )}
 
       {/* Footer buttons */}
-
-      <div className="flex gap-3 justify-between pt-4 border-t">
-        <InspectionMoreMenu rentalId={rentalId} variant="buttons" />
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={onCancel}>
-            Avbryt
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => setIsDraftConfirmOpen(true)}
-            disabled={!inspectorName.trim()}
-          >
-            Spara utkast
-          </Button>
+      <div className="flex gap-3 justify-end pt-4 border-t">
+        <Button variant="outline" onClick={onCancel}>
+          Avbryt
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => setIsDraftConfirmOpen(true)}
+          disabled={!inspectorName.trim()}
+        >
+          Spara utkast
+        </Button>
 
           {step === 'rooms' && (
             <Button

@@ -29,14 +29,26 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    // Override for the internal DialogOverlay className. Needed when rendering
+    // a Dialog from inside a higher-z container (e.g. a mobile Sheet) so the
+    // dim backdrop can be bumped above it.
+    overlayClassName?: string
+  }
 >(
   (
-    { className, children, onInteractOutside, onPointerDownOutside, ...props },
+    {
+      className,
+      overlayClassName,
+      children,
+      onInteractOutside,
+      onPointerDownOutside,
+      ...props
+    },
     ref
   ) => (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         ref={ref}
         onInteractOutside={(e) => {
