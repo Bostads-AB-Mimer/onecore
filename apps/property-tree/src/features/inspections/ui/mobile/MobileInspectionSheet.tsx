@@ -26,6 +26,7 @@ interface MobileInspectionSheetProps {
   address?: string
   apartmentCode?: string | null
   existingInspection?: Inspection
+  rentalId?: string
 }
 
 export function MobileInspectionSheet({
@@ -37,6 +38,7 @@ export function MobileInspectionSheet({
   address,
   apartmentCode,
   existingInspection,
+  rentalId,
 }: MobileInspectionSheetProps) {
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -49,6 +51,7 @@ export function MobileInspectionSheet({
           address={address}
           apartmentCode={apartmentCode}
           existingInspection={existingInspection}
+          rentalId={rentalId}
         />
       </SheetContent>
     </Sheet>

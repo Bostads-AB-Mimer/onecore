@@ -10,6 +10,7 @@ import type {
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
+import { getFloorplanUrl } from '@/shared/lib/floorplan'
 import {
   Accordion,
   AccordionContent,
@@ -31,6 +32,7 @@ import { Button } from '@/shared/ui/Button'
 
 import { useInspectionForm } from '../hooks/useInspectionForm'
 import { InspectionInfoSection } from './InspectionInfoSection'
+import { InspectionMoreMenu } from './InspectionMoreMenu'
 import { InspectionSummary } from './InspectionSummary'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 type Inspection = components['schemas']['InternalInspection']
@@ -49,6 +51,7 @@ interface InspectionFormProps {
   address?: string
   apartmentCode?: string | null
   existingInspection?: Inspection
+  rentalId?: string
 }
 
 const currentUser = 'Anna Andersson'
@@ -61,7 +64,9 @@ export function InspectionForm({
   address,
   apartmentCode,
   existingInspection,
+  rentalId,
 }: InspectionFormProps) {
+  const floorplanImage = rentalId ? getFloorplanUrl(rentalId) : undefined
   const {
     inspectorName,
     setInspectorName,
@@ -252,31 +257,35 @@ export function InspectionForm({
       )}
 
       {/* Footer buttons */}
-      <div className="flex gap-3 justify-end pt-4 border-t">
-        <Button variant="outline" onClick={onCancel}>
-          Avbryt
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => setIsDraftConfirmOpen(true)}
-          disabled={!inspectorName.trim()}
-        >
-          Spara utkast
-        </Button>
 
-        {step === 'rooms' && (
+      <div className="flex gap-3 justify-between pt-4 border-t">
+        <InspectionMoreMenu floorplanImage={floorplanImage} />
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onCancel}>
+            Avbryt
+          </Button>
           <Button
-            onClick={() => setStep('summary')}
+            variant="secondary"
+            onClick={() => setIsDraftConfirmOpen(true)}
             disabled={!inspectorName.trim()}
           >
-            Sammanställning
+            Spara utkast
           </Button>
-        )}
-        {step === 'summary' && (
-          <Button onClick={handleSubmit} disabled={!canComplete}>
-            Slutför besiktning
-          </Button>
-        )}
+
+          {step === 'rooms' && (
+            <Button
+              onClick={() => setStep('summary')}
+              disabled={!inspectorName.trim()}
+            >
+              Sammanställning
+            </Button>
+          )}
+          {step === 'summary' && (
+            <Button onClick={handleSubmit} disabled={!canComplete}>
+              Slutför besiktning
+            </Button>
+          )}
+        </div>
       </div>
 
       <AlertDialog

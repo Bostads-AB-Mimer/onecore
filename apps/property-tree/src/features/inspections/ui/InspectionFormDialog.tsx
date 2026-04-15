@@ -40,6 +40,7 @@ interface InspectionFormDialogProps {
   address?: string
   apartmentCode?: string | null
   existingInspection?: Inspection
+  rentalId?: string
 }
 
 // Check if inspection has actual saved data
@@ -62,6 +63,7 @@ export function InspectionFormDialog({
   address,
   apartmentCode,
   existingInspection,
+  rentalId,
 }: InspectionFormDialogProps) {
   const isMobile = useIsMobile()
   const hasSavedData = hasExistingData(existingInspection)
@@ -145,6 +147,7 @@ export function InspectionFormDialog({
         address={address}
         apartmentCode={apartmentCode}
         existingInspection={inspectionToUse}
+        rentalId={rentalId}
       />
     )
   }
@@ -167,6 +170,7 @@ export function InspectionFormDialog({
           address={address}
           apartmentCode={apartmentCode}
           existingInspection={inspectionToUse}
+          rentalId={rentalId}
         />
       </DialogContent>
     </Dialog>
