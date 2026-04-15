@@ -28,7 +28,7 @@ export const handleUnpaidInvoicePaymentSummaries = async () => {
     try {
       const result = await sendEmail({
         to: config.emailAddresses.economy,
-        subject: 'Körning: rapport av obetalda hyresavier',
+        subject: 'Körning: rapport av obetalda VHK, HYRSÄT och HEMFÖR',
         body: notification.join('\n'),
         attachments: resultFiles,
       })

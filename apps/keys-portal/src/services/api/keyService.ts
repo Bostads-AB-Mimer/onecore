@@ -64,8 +64,14 @@ export const keyService = {
   },
 
   async deleteKey(id: string): Promise<void> {
-    const { error } = await DELETE('/keys/{id}', { params: { path: { id } } })
-    if (error) throw error
+    const { error, response } = await DELETE('/keys/{id}', {
+      params: { path: { id } },
+    })
+    if (error) {
+      const err = new Error(response.statusText)
+      ;(err as any).status = response.status
+      throw err
+    }
   },
 
   async searchKeys(
@@ -120,10 +126,14 @@ export const keyService = {
   },
 
   async bulkDeleteKeys(keyIds: string[]): Promise<number> {
-    const { data, error } = await POST('/keys/bulk-delete', {
+    const { data, error, response } = await POST('/keys/bulk-delete', {
       body: { keyIds },
     })
-    if (error) throw error
+    if (error) {
+      const err = new Error(response.statusText)
+      ;(err as any).status = response.status
+      throw err
+    }
     return data?.content as number
   },
 

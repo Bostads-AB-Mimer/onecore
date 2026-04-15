@@ -275,6 +275,84 @@ export interface paths {
       };
     };
   };
+  "/getLinearTickets": {
+    /**
+     * Get Linear tickets with mimer-visible label
+     * @description Fetch Linear issues that have the mimer-visible label
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Number of tickets to fetch */
+          first?: number;
+          /** @description Cursor for pagination */
+          after?: string;
+        };
+      };
+      responses: {
+        /** @description Linear tickets fetched successfully */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/createLinearErrand": {
+    /**
+     * Create a new Linear errand
+     * @description Create a new issue in Linear with specified team, project, and labels
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @description Errand title */
+            title: string;
+            /** @description Errand description */
+            description: string;
+            /** @description Label ID for category (Bug, Improvement, etc.) */
+            categoryLabelId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Linear errand created successfully */
+        200: {
+          content: never;
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/getLinearLabels": {
+    /**
+     * Get Linear category labels
+     * @description Fetch available category labels (Bug, Improvement, new feature)
+     */
+    get: {
+      responses: {
+        /** @description Linear labels fetched successfully */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
@@ -309,6 +387,31 @@ export interface paths {
                 })[];
             };
           };
+        };
+      };
+    };
+  };
+  "/leases/parking-space-types": {
+    /**
+     * Get all parking space types
+     * @description Returns a list of all parking space types (P-platstyper).
+     */
+    get: {
+      responses: {
+        /** @description List of parking space types */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  code?: string;
+                  caption?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
         };
       };
     };
@@ -1414,6 +1517,58 @@ export interface paths {
       };
     };
   };
+  "/leases/search-v2": {
+    /**
+     * Search and filter leases
+     * @description Search leases with comprehensive filtering options.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, PNR, contact code) */
+          q?: string;
+          /** @description Search by tenant name */
+          name?: string;
+          /** @description Search by rental object address */
+          address?: string;
+          /** @description Object types (bostad, parkering, lokal, ovrigt) */
+          objectType?: string[];
+          /** @description Contract status filter */
+          status?: ("current" | "active" | "upcoming" | "abouttoend" | "ended" | "pendingsignature" | "preliminaryterminated" | "notsent")[];
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string;
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string;
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string;
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string;
+          /** @description Page number */
+          page?: number;
+          /** @description Items per page */
+          limit?: number;
+          /** @description Sort field */
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId";
+          /** @description Sort direction */
+          sortOrder?: "asc" | "desc";
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved lease search results with pagination */
+        200: {
+          content: never;
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/by-rental-object-code/{rentalObjectCode}": {
     /**
      * Get leases with related entities for a specific rental object code.
@@ -2023,28 +2178,37 @@ export interface paths {
       };
     };
   };
-  "/rental-objects/by-code/{rentalObjectCode}/rent": {
+  "/rental-objects/by-code/{rentalObjectCode}/availability": {
     /**
-     * Get rent for a rental object
-     * @description Fetches rent for a rental object by Rental Object Code.
+     * Get availability for a rental object
+     * @description Fetches availability for a rental object by Rental Object Code.
      */
     get: {
       parameters: {
         path: {
-          /** @description The rental object code of the rent to fetch. */
+          /** @description The rental object code of the availability to fetch. */
           rentalObjectCode: string;
         };
       };
       responses: {
-        /** @description Successfully retrieved the rental object. */
+        /** @description Successfully retrieved the rental object availability. */
         200: {
           content: {
             "application/json": {
-              rent?: number;
+              content?: {
+                rentalObjectCode?: string;
+                /** Format: date-time */
+                vacantFrom?: string | null;
+                rent?: {
+                  amount?: number;
+                  vat?: number;
+                  rows?: Record<string, never>[];
+                };
+              };
             };
           };
         };
-        /** @description Not found. The rent of the specified rental object was not found. */
+        /** @description Not found. The availability of the specified rental object was not found. */
         404: {
           content: {
             "application/json": {
@@ -2053,7 +2217,7 @@ export interface paths {
             };
           };
         };
-        /** @description Internal server error. Failed to fetch rental object. */
+        /** @description Internal server error. Failed to fetch rental object availability. */
         500: {
           content: {
             "application/json": {
@@ -2065,10 +2229,10 @@ export interface paths {
       };
     };
   };
-  "/rental-objects/rent": {
+  "/rental-objects/availabilities": {
     /**
-     * Get rent for rental objects
-     * @description Fetches rent for rental objects by Rental Object Codes.
+     * Get availabilities for rental objects
+     * @description Fetches availabilities for rental objects by Rental Object Codes.
      */
     post: {
       requestBody?: {
@@ -2087,15 +2251,24 @@ export interface paths {
         };
       };
       responses: {
-        /** @description Successfully retrieved the rental object. */
+        /** @description Successfully retrieved the rental object availabilities. */
         200: {
           content: {
             "application/json": {
-              rent?: number;
+              content?: ({
+                  rentalObjectCode?: string;
+                  /** Format: date-time */
+                  vacantFrom?: string | null;
+                  rent?: {
+                    amount?: number;
+                    vat?: number;
+                    rows?: Record<string, never>[];
+                  };
+                })[];
             };
           };
         };
-        /** @description Not found. The rent of the specified rental object was not found. */
+        /** @description Not found. The availability of the specified rental object was not found. */
         404: {
           content: {
             "application/json": {
@@ -2104,7 +2277,7 @@ export interface paths {
             };
           };
         };
-        /** @description Internal server error. Failed to fetch rental object. */
+        /** @description Internal server error. Failed to fetch rental object availabilities. */
         500: {
           content: {
             "application/json": {
@@ -5625,7 +5798,8 @@ export interface paths {
      * - Residences: Matches on rental ID or residence name
      * - Parking Spaces: Matches on rental ID or parking space name
      * - Maintenance Units: Matches on code
-     * Returns up to 10 results per entity type (max 50 total results).
+     * - Facilities: Matches on rental ID or facility name
+     * Returns up to 10 results per entity type (max 60 total results).
      */
     get: {
       parameters: {
@@ -9022,6 +9196,213 @@ export interface paths {
       };
     };
   };
+  "/v1/contacts": {
+    /**
+     * List and filter(search) for contact information
+     * @description Filtering can be done by wildcard search
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Wildcard search string */
+          q?: string[];
+          /** @description Filter on contact type */
+          type?: "individual" | "organisation";
+          /** @description Page number for paginated results (1-based) */
+          page?: number;
+          /** @description Number of records per page */
+          limit?: number;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              content: components["schemas"]["ContactV1"][];
+              _meta: {
+                totalRecords: number;
+                page: number;
+                limit: number;
+                count: number;
+              };
+              _links: ({
+                  href: string;
+                  /** @enum {string} */
+                  rel: "self" | "first" | "last" | "prev" | "next";
+                })[];
+            };
+          };
+        };
+        /** @description Not Found */
+        404: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/v1/contacts/{contactCode}": {
+    /** Get a single contact by canonical id (contact code) */
+    get: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+              content: components["schemas"]["ContactV1"];
+            };
+          };
+        };
+        /** @description Not Found */
+        404: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/v1/contacts/{contactCode}/trustee": {
+    /** Get the trustee of a contact */
+    get: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+              content: components["schemas"]["ContactV1"];
+            };
+          };
+        };
+        /** @description Not Found */
+        404: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/v1/contacts/by-phone-number/{phoneNumber}": {
+    /** List contacts by phone number */
+    get: {
+      parameters: {
+        path: {
+          /** @description Phone Number */
+          phoneNumber: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+              content: components["schemas"]["ContactV1"];
+            };
+          };
+        };
+        /** @description Not Found */
+        404: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/v1/contacts/by-email-address/{emailAddress}": {
+    /** List contacts by email address */
+    get: {
+      parameters: {
+        path: {
+          /** @description Email Address */
+          emailAddress: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+              content: components["schemas"]["ContactV1"];
+            };
+          };
+        };
+        /** @description Not Found */
+        404: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/v1/contacts/by-national-id/{nid}": {
+    /** List contacts by national id (Personnummer / Org.nr) */
+    get: {
+      parameters: {
+        path: {
+          /** @description National ID */
+          nid: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+              content: components["schemas"]["ContactV1"];
+            };
+          };
+        };
+        /** @description Not Found */
+        404: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -9163,6 +9544,7 @@ export interface components {
             type: number;
           };
           specialAttention?: boolean;
+          leaseContactType?: string;
         }[];
     };
     IdentityCheckContact: {
@@ -9172,7 +9554,8 @@ export interface components {
     LeaseSearchResult: {
       leaseId: string;
       objectTypeCode: string;
-      leaseType: string;
+      /** @enum {string} */
+      leaseType: "Bostadskontrakt" | "Campuskontrakt" | "Garagekontrakt" | "Kooperativ hyresrätt" | "Lokalkontrakt" | "Omförhandlingskontrakt" | "Förrådskontrakt" | "Övrigt" | "P-Platskontrakt" | "Korttidsuthyrning";
       contacts: ({
           name: string;
           contactCode: string;
@@ -9186,11 +9569,13 @@ export interface components {
       lastDebitDate: string | null;
       /** @enum {number} */
       status: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+      rentalObjectCode: string | null;
       property?: string | null;
       buildingCode?: string | null;
       area?: string | null;
       buildingManager?: string | null;
       districtName?: string | null;
+      parkingSpaceType?: string | null;
     };
     ContactInfo: {
       name: string;
@@ -9851,16 +10236,27 @@ export interface components {
       };
     };
     FacilitySearchResult: {
+      /** @description Unique identifier for the search result */
       id: string;
-      rentalId: string;
-      code: string;
+      /**
+       * @description Indicates this is a facility result
+       * @enum {string}
+       */
+      type: "facility";
+      /** @description Name of the facility */
       name: string | null;
+      /** @description Rental ID of the facility */
+      rentalId: string;
+      /** @description Code of the facility */
+      code: string;
       property: {
         code: string | null;
+        /** @description Name of property associated with the facility */
         name: string | null;
       };
       building: {
         code: string | null;
+        /** @description Name of building associated with the facility */
         name: string | null;
       };
     };
@@ -10475,7 +10871,7 @@ export interface components {
       id: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
-      contact?: string;
+      contact?: string | null;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10528,13 +10924,14 @@ export interface components {
           /** Format: date-time */
           updatedAt: string;
         })[]) | null;
+      activeLoanContact?: string | null;
     };
     KeyLoanWithDetails: {
       /** Format: uuid */
       id: string;
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
-      contact?: string;
+      contact?: string | null;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10623,6 +11020,7 @@ export interface components {
               /** Format: date-time */
               updatedAt: string;
             })[]) | null;
+          activeLoanContact?: string | null;
         })[];
       keyCardsArray: ({
           cardId: string;
@@ -10770,7 +11168,7 @@ export interface components {
       keyCards?: string[];
       /** @enum {string} */
       loanType: "TENANT" | "MAINTENANCE";
-      contact?: string;
+      contact?: string | null;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10787,7 +11185,7 @@ export interface components {
       keyCards?: string[];
       /** @enum {string} */
       loanType?: "TENANT" | "MAINTENANCE";
-      contact?: string;
+      contact?: string | null;
       contact2?: string | null;
       contactPerson?: string | null;
       notes?: string | null;
@@ -10936,6 +11334,7 @@ export interface components {
               /** Format: date-time */
               updatedAt: string;
             })[]) | null;
+          activeLoanContact?: string | null;
         })[];
     };
     CreateKeyEventRequest: {
@@ -11092,7 +11491,7 @@ export interface components {
           id: string;
           /** @enum {string} */
           loanType: "TENANT" | "MAINTENANCE";
-          contact?: string;
+          contact?: string | null;
           contact2?: string | null;
           contactPerson?: string | null;
           notes?: string | null;
@@ -11192,7 +11591,7 @@ export interface components {
       /** @description Property name */
       estate: string | null;
     };
-    /** @description A search result that can be either a property, building, residence, parking space or maintenance unit */
+    /** @description A search result that can be either a property, building, residence, parking space, maintenance unit or facility */
     SearchResult: {
       /** @description Unique identifier for the search result */
       id: string;
@@ -11287,6 +11686,30 @@ export interface components {
       estateCode: string | null;
       /** @description Property name */
       estate: string | null;
+    }) | ({
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a facility result
+       * @enum {string}
+       */
+      type: "facility";
+      /** @description Name of the facility */
+      name: string | null;
+      /** @description Rental ID of the facility */
+      rentalId: string;
+      /** @description Code of the facility */
+      code: string;
+      property: {
+        code: string | null;
+        /** @description Name of property associated with the facility */
+        name: string | null;
+      };
+      building: {
+        code: string | null;
+        /** @description Name of building associated with the facility */
+        name: string | null;
+      };
     });
     Inspection: {
       id: string;
@@ -11434,6 +11857,7 @@ export interface components {
               type: number;
             };
             specialAttention?: boolean;
+            leaseContactType?: string;
           }[];
       }) | null;
       rooms: {
@@ -11698,6 +12122,7 @@ export interface components {
               type: number;
             };
             specialAttention?: boolean;
+            leaseContactType?: string;
           }[];
       }) | null;
       residence: ({
@@ -12017,6 +12442,7 @@ export interface components {
               type: number;
             };
             specialAttention?: boolean;
+            leaseContactType?: string;
           }[];
       }) | null;
       residence: ({
@@ -12336,6 +12762,7 @@ export interface components {
               type: number;
             };
             specialAttention?: boolean;
+            leaseContactType?: string;
           }[];
       }) | null;
       residence: ({
@@ -12703,6 +13130,7 @@ export interface components {
               type: number;
             };
             specialAttention?: boolean;
+            leaseContactType?: string;
           }[];
       }) | null;
     };
@@ -12946,6 +13374,76 @@ export interface components {
         };
       };
     };
+    ContactV1: ({
+      contactCode: string;
+      communication: {
+        phoneNumbers: ({
+            phoneNumber: string;
+            /** @enum {string} */
+            type: "work" | "home" | "mobile" | "direct-line" | "fax" | "pager" | "unspecified";
+            comment?: string;
+            isPrimary: boolean;
+          })[];
+        emailAddresses: {
+            emailAddress: string;
+            type: string;
+            isPrimary: boolean;
+          }[];
+        specialAttention: boolean;
+      };
+      addresses: ({
+          careOf?: string;
+          street: string | null;
+          zipCode: string | null;
+          city: string | null;
+          region: string | null;
+          country: string | null;
+        })[];
+      /** @enum {string} */
+      type: "individual";
+      personal: {
+        nationalRegistrationNumber: string | null;
+        birthDate: string | null;
+        firstName: string | null;
+        lastName: string | null;
+        fullName: string;
+      };
+      trustee?: {
+        contactCode: string;
+        fullName?: string;
+      };
+    }) | ({
+      contactCode: string;
+      communication: {
+        phoneNumbers: ({
+            phoneNumber: string;
+            /** @enum {string} */
+            type: "work" | "home" | "mobile" | "direct-line" | "fax" | "pager" | "unspecified";
+            comment?: string;
+            isPrimary: boolean;
+          })[];
+        emailAddresses: {
+            emailAddress: string;
+            type: string;
+            isPrimary: boolean;
+          }[];
+        specialAttention: boolean;
+      };
+      addresses: ({
+          careOf?: string;
+          street: string | null;
+          zipCode: string | null;
+          city: string | null;
+          region: string | null;
+          country: string | null;
+        })[];
+      /** @enum {string} */
+      type: "organisation";
+      organisation: {
+        organisationNumber: string;
+        name: string;
+      };
+    });
   };
   responses: never;
   parameters: never;

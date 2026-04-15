@@ -1,15 +1,16 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Warehouse } from 'lucide-react'
+import { Hotel } from 'lucide-react'
 
 import { Building, Property } from '@/services/types'
 
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
+import { toTitleCase } from '@/shared/lib/textUtils'
 import { matchesRoute, paths, routes } from '@/shared/routes'
 import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
 
 import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
-import { ResidenceList } from './ResidenceList'
+import { StaircaseList } from './StaircaseList'
 
 interface BuildingNavigationProps {
   building: Building
@@ -61,13 +62,13 @@ export function BuildingNavigation({
           }}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Warehouse />
-          <span>{building.code}</span>
+          <Hotel />
+          <span>{toTitleCase(building.name ?? building.code)}</span>
         </Link>
       </SidebarMenuButton>
       {isExpanded && (
         <div className="pl-4 mt-1">
-          <ResidenceList
+          <StaircaseList
             building={building}
             propertyCode={property.code}
             organizationNumber={organizationNumber}

@@ -8,6 +8,7 @@ import {
   Command,
   Loader2,
   SquareUser,
+  Store,
   User2,
   Wrench,
 } from 'lucide-react'
@@ -26,6 +27,7 @@ const iconMap = {
   contact: User2,
   'parking-space': CarFront,
   'maintenance-unit': Wrench,
+  facility: Store,
 } as const
 
 function getResultProps(item: CombinedSearchResult) {
@@ -87,6 +89,18 @@ function getResultProps(item: CombinedSearchResult) {
         subtitle: item.estate,
         path: paths.maintenanceUnit(item.code),
         state: {},
+      }
+    case 'facility':
+      return {
+        icon,
+        label: item.rentalId,
+        prefix: '[LOK]',
+        subtitle: item.property?.name,
+        path: paths.facility(item.rentalId),
+        state: {
+          buildingCode: item.building?.code || null,
+          propertyCode: item.property?.code || null,
+        },
       }
     default:
       return null

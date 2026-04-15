@@ -87,13 +87,6 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
             includeTerminatedLeases: true,
             includeContacts: true,
           })
-          if (!contracts.length) {
-            toast({
-              title: 'Ingen träff',
-              description: 'Hittade inga kontrakt för valt hyresobjekt.',
-            })
-            return
-          }
           const tenant = pickPrimaryTenant(contracts)
           onResultFound(tenant, contracts, rentalId, 'object')
         }
@@ -204,14 +197,6 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
         includeTerminatedLeases: true,
         includeContacts: true,
       })
-
-      if (!contracts.length) {
-        toast({
-          title: 'Ingen träff',
-          description: 'Hittade inga kontrakt för angivet hyresobjekt.',
-        })
-        return
-      }
 
       const tenant = pickPrimaryTenant(contracts)
       onResultFound(tenant, contracts, id, 'object')

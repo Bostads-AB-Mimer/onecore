@@ -154,6 +154,7 @@ export const leaseTypes = {
   renegotiationContract: LeaseType.RenegotiationContract,
   otherContract: LeaseType.OtherContract,
   parkingspaceContract: LeaseType.ParkingSpaceContract,
+  shortTermRental: LeaseType.ShortTermRental,
 } as const
 
 export { LeaseType }

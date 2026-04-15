@@ -20,7 +20,7 @@ import logoUrl from '../../assets/MimerLogo_RGB_blk-blue.png'
 const PAGE_W = 210
 const MARGIN_X = 20
 const MARGIN_TOP = 10
-const MARGIN_TOP_CONTINUATION = 25
+const MARGIN_TOP_CONTINUATION = 35
 const FOOTER_H = 25
 const BLUE = { r: 0, g: 123, b: 196 }
 const RED = { r: 200, g: 0, b: 0 }
@@ -75,9 +75,9 @@ const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
     margin: 1,
     errorCorrectionLevel: 'M',
   })
-  const qrSize = 25
-  const x = PAGE_W - 5 - qrSize
-  const y = MARGIN_TOP - 5
+  const qrSize = 35
+  const x = PAGE_W - MARGIN_X - qrSize
+  const y = 5
   const totalPages = doc.getNumberOfPages()
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page)
@@ -554,7 +554,17 @@ const addMaintenanceInfo = (
  */
 const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
   const bottom = contentBottom(doc)
-  const spaceNeeded = 50
+
+  const confirmText =
+    'För Mimers personal: Lån av nycklar sker under förutsättning att nyckellånaren tar hela ansvaret för dess användande. Om nyckel förkommer skall nyckellånaren omgående informera aktuell Distriktschef för vidare hantering. Nycklar ska alltid fästas med kedja.\n\nFör övriga: Lån av huvudnyckel/fastighetsskötarnyckel sker under förutsättning att nyckellånaren tar hela ansvaret för dess användande enligt ansvarsförbindelsen. Denne förbinder sig att svara för samtliga kostnader som kan uppstå genom förlust av utkvitterad nyckel, såsom till exempel byte av låssystem inkl. nycklar och cylindrar och ev. nödvändig bevakning under tiden. Nycklar ska alltid fästas med kedja.'
+
+  // Pre-compute wrapped lines to calculate actual space needed
+  doc.setFont(FONT_GRAPHIK, 'normal')
+  doc.setFontSize(FONT_SIZE.BODY)
+  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
+  const textHeight = lines.length * 5.5
+  // header (10) + text + gap (10) + signature line (5) + label (10)
+  const spaceNeeded = 10 + textHeight + 10 + 5 + 10
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
@@ -574,10 +584,6 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
 
-  const confirmText =
-    'Jag bekräftar att jag har mottagit ovanstående nycklar och att jag är ansvarig för dem. Vid förlust eller skada debiteras kostnad för byte av lås.'
-
-  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
   lines.forEach((line: string) => {
     doc.text(line, MARGIN_X, y)
     y += 5.5

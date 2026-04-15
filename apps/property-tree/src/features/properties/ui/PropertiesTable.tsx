@@ -1,7 +1,9 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
 import type { Property } from '@/services/types'
 
+import { numericCompare } from '@/shared/lib/sorting'
 import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -70,9 +72,19 @@ export const PropertiesTable = ({ properties }: PropertiesTableProps) => {
     </div>
   )
 
+  const sortedProperties = useMemo(
+    () =>
+      properties.slice().sort((a, b) => {
+        const designationCompare = numericCompare(a.designation, b.designation)
+        if (designationCompare !== 0) return designationCompare
+        return numericCompare(a.code, b.code)
+      }),
+    [properties]
+  )
+
   return (
     <ResponsiveTable
-      data={properties}
+      data={sortedProperties}
       columns={columns}
       keyExtractor={(property) => property.id}
       emptyMessage="Inga fastigheter hittades med angivna sökkriterier"

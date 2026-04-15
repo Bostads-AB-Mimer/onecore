@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import config from '../../common/config'
 import { healthCheck as infobipHealthCheck } from '../infobip-service/adapters/email-adapter'
+import { linearHealthCheck } from '../linear-service/adapters/linear-adapter'
 import {
   HealthCheckTarget,
   pollSystemHealth,
@@ -18,6 +19,16 @@ const subsystems: HealthCheckTarget[] = [
         healthChecks,
         config.health.infobip.minimumMinutesBetweenRequests,
         infobipHealthCheck
+      )
+    },
+  },
+  {
+    probe: async (): Promise<SystemHealth> => {
+      return await probe(
+        config.health.linear.systemName,
+        healthChecks,
+        config.health.linear.minimumMinutesBetweenRequests,
+        linearHealthCheck
       )
     },
   },

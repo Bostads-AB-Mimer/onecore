@@ -5733,7 +5733,8 @@ export interface paths {
      * - Residences: Matches on rental ID or residence name
      * - Parking Spaces: Matches on rental ID or parking space name
      * - Maintenance Units: Matches on code
-     * Returns up to 10 results per entity type (max 50 total results).
+     * - Facilities: Matches on rental ID or facility name
+     * Returns up to 10 results per entity type (max 60 total results).
      */
     get: {
       parameters: {

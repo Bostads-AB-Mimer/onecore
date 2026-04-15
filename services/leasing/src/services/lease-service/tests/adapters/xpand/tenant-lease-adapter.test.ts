@@ -232,12 +232,13 @@ describe('transformFromDbContact', () => {
       type: string
       isMainNumber: number
     }[] = []
-    const leases: Lease[] = []
+    const leaseIds: string[] = []
 
     const contact: Contact = tenantLeaseAdapter.transformFromDbContact(
       rows,
       phoneNumbers,
-      leases
+      leaseIds,
+      false
     )
 
     expect(contact.firstName).toBeUndefined()
@@ -270,12 +271,13 @@ describe('transformFromDbContact', () => {
       type: string
       isMainNumber: number
     }[] = []
-    const leases: Lease[] = []
+    const leaseIds: string[] = []
 
     const contact: Contact = tenantLeaseAdapter.transformFromDbContact(
       rows,
       phoneNumbers,
-      leases
+      leaseIds,
+      false
     )
 
     expect(contact.specialAttention).toBe(true)

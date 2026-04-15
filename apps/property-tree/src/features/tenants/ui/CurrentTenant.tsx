@@ -1,14 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { LeaseInfo } from '@/entities/lease'
-import { TenantLeaseCard } from '@/entities/tenant'
+import { TenantLeaseCard, formatTenantName } from '@/entities/tenant'
 
 import { leaseService } from '@/services/api/core'
 import type { Lease } from '@/services/api/core/leaseService'
+import { tenantService } from '@/services/api/core/tenantService'
 
+import { useSingleEmail, useSingleSms } from '@/shared/hooks'
+import { EmailModal } from '@/shared/ui/EmailModal'
 import { Grid } from '@/shared/ui/Grid'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Separator } from '@/shared/ui/Separator'
+import { SmsModal } from '@/shared/ui/SmsModal'
 
 interface CurrentTenantProps {
   rentalPropertyId: string
@@ -21,6 +25,9 @@ export function CurrentTenant({
   leases: externalLeases,
   isLoading: externalIsLoading,
 }: CurrentTenantProps) {
+  const sms = useSingleSms({ sendSms: tenantService.sendBulkSms })
+  const email = useSingleEmail({ sendEmail: tenantService.sendBulkEmail })
+
   // Only fetch if leases not provided from parent
   const leasesQuery = useQuery({
     queryKey: ['leases', rentalPropertyId],
@@ -49,7 +56,9 @@ export function CurrentTenant({
     )
   }
 
-  const lease = leases.find((lease) => lease.status === 'Current')
+  const lease =
+    leases.find((lease) => lease.status === 'Current') ??
+    leases.find((lease) => lease.status === 'AboutToEnd')
 
   if (!lease) {
     return (
@@ -69,10 +78,32 @@ export function CurrentTenant({
           {lease.tenants?.map((tenant, i) => (
             <div key={tenant.contactCode}>
               {i > 0 && <Separator />}
-              <TenantLeaseCard tenant={tenant} />
+              <TenantLeaseCard
+                tenant={tenant}
+                onSendSms={(phone) =>
+                  sms.openSmsModal(formatTenantName(tenant), phone)
+                }
+                onSendEmail={(addr) =>
+                  email.openEmailModal(formatTenantName(tenant), addr)
+                }
+              />
             </div>
           ))}
         </div>
+        <SmsModal
+          open={sms.smsModalOpen}
+          onOpenChange={sms.onOpenChange}
+          recipientName={sms.smsRecipientName}
+          phoneNumber={sms.smsPhoneNumber}
+          onSend={sms.handleSendSms}
+        />
+        <EmailModal
+          open={email.emailModalOpen}
+          onOpenChange={email.onOpenChange}
+          recipientName={email.emailRecipientName}
+          emailAddress={email.emailAddress}
+          onSend={email.handleSendEmail}
+        />
       </div>
     </TabLayout>
   )

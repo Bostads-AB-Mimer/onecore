@@ -20,9 +20,9 @@ export function useParkingSpace(rentalId: string | undefined) {
     enabled: !!parkingSpace?.rentalId,
   })
 
-  const currentLease = leasesQuery.data?.find(
-    (lease) => lease.status === 'Current'
-  )
+  const currentLease =
+    leasesQuery.data?.find((lease) => lease.status === 'Current') ??
+    leasesQuery.data?.find((lease) => lease.status === 'AboutToEnd')
   const currentRent = currentLease?.rentInfo?.currentRent?.currentRent
 
   return {

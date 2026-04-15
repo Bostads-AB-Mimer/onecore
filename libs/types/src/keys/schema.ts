@@ -59,7 +59,7 @@ export const KeySchema = z.object({
 export const KeyLoanSchema = z.object({
   id: z.string().uuid(),
   loanType: LoanTypeSchema,
-  contact: z.string().optional(),
+  contact: z.string().nullable().optional(),
   contact2: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -152,6 +152,7 @@ export const KeyDetailsSchema = KeySchema.extend({
   keySystem: KeySystemSchema.optional().nullable(),
   loans: z.array(KeyLoanSchema).optional().nullable(),
   events: z.array(KeyEventSchema).optional().nullable(),
+  activeLoanContact: z.string().nullable().optional(),
 })
 
 // Response schema for key bundle with loan status endpoint
@@ -222,7 +223,7 @@ export const CreateKeyLoanRequestSchema = z.object({
   keys: z.array(z.string()).optional(),
   keyCards: z.array(z.string()).optional(),
   loanType: LoanTypeSchema,
-  contact: z.string().optional(),
+  contact: z.string().nullable().optional(),
   contact2: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -236,7 +237,7 @@ export const UpdateKeyLoanRequestSchema = z.object({
   keys: z.array(z.string()).optional(),
   keyCards: z.array(z.string()).optional(),
   loanType: LoanTypeSchema.optional(),
-  contact: z.string().optional(),
+  contact: z.string().nullable().optional(),
   contact2: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),

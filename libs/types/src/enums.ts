@@ -102,6 +102,7 @@ enum LeaseType {
   StorageContract = 'Förrådskontrakt',
   OtherContract = 'Övrigt',
   ParkingSpaceContract = 'P-Platskontrakt',
+  ShortTermRental = 'Korttidsuthyrning',
 }
 
 enum WaitingListType {

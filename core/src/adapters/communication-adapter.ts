@@ -14,6 +14,11 @@ import {
   BulkEmailResult,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
+  LinearPaginationParams,
+  GetLinearTicketsResult,
+  CreateLinearErrandRequest,
+  LinearIssue,
+  LinearLabel,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from './types'
@@ -472,6 +477,64 @@ export const sendEmail = async ({
 
     return { ok: true, data: result.data.content }
   } catch (e) {
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const getLinearTickets = async (
+  pagination?: LinearPaginationParams
+): Promise<AdapterResult<GetLinearTicketsResult, 'error'>> => {
+  try {
+    const params = new URLSearchParams()
+    if (pagination?.first) params.set('first', String(pagination.first))
+    if (pagination?.after) params.set('after', pagination.after)
+
+    const url = `${config.communicationService.url}/getLinearTickets${params.toString() ? `?${params.toString()}` : ''}`
+    const result = await axios.get(url)
+
+    return {
+      ok: true,
+      data: { tickets: result.data.content, pageInfo: result.data.pageInfo },
+    }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const createLinearErrand = async (
+  data: CreateLinearErrandRequest
+): Promise<AdapterResult<LinearIssue, 'error'>> => {
+  try {
+    const result = await axios.post(
+      `${config.communicationService.url}/createLinearErrand`,
+      data
+    )
+
+    return { ok: true, data: result.data.content }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const getLinearLabels = async (): Promise<
+  AdapterResult<LinearLabel[], 'error'>
+> => {
+  try {
+    const result = await axios.get(
+      `${config.communicationService.url}/getLinearLabels`
+    )
+
+    return { ok: true, data: result.data.content }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }

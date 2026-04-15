@@ -23,7 +23,16 @@ export const sortLeasesByStatus = (
     if (aHasProperty === bHasProperty) {
       if (aIsEnded && !bIsEnded) return 1 // a is ended, b is not -> a goes after b
       if (!aIsEnded && bIsEnded) return -1 // a is not ended, b is -> a goes before b
-      return 0 // Keep original order for items in same category
+      // Secondary: leases without lastDebitDate on top
+      const aHasEnd = a.lastDebitDate ? 1 : 0
+      const bHasEnd = b.lastDebitDate ? 1 : 0
+      if (aHasEnd !== bHasEnd) return aHasEnd - bHasEnd
+
+      // Tertiary: newest start date first
+      return (
+        new Date(b.leaseStartDate).getTime() -
+        new Date(a.leaseStartDate).getTime()
+      )
     }
 
     // Otherwise, prioritize those with property data

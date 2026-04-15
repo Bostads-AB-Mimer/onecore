@@ -25,7 +25,7 @@ export const ObjectTypeBadge = ({ type }: { type: string | null }) => {
     case 'bilplats':
       return (
         <Badge variant="outline" className={badgeClass}>
-          Parkering
+          Bilplats
         </Badge>
       )
     case 'lokal':

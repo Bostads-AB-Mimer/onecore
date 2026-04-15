@@ -107,6 +107,7 @@ jobs:
             echo "CI snapshot (main)"
             echo "build_type=snapshot" >> $GITHUB_OUTPUT
             echo "build_tag_base=${PKGVER}-ci" >> $GITHUB_OUTPUT
+            echo "build_tag_inc=true" >> $GITHUB_OUTPUT
             echo "version_bump_type=patch" >> $GITHUB_OUTPUT
 
           elif [[ "$HEAD_BRANCH" == epic/* ]]; then
@@ -262,12 +263,12 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.28.0
+          version: 10.28.1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '22'
           cache: pnpm
 
       - name: Configure Git

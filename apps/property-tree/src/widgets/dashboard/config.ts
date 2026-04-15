@@ -12,6 +12,7 @@ import {
   Key,
   Lock,
   MessageSquare,
+  Receipt,
   ShieldX,
   TrendingUp,
 } from 'lucide-react'
@@ -69,7 +70,7 @@ export const dashboardCards: DashboardCard[] = [
   },
   {
     id: 'odoo',
-    title: 'Ärendehantering (Odoo)',
+    title: 'Ärendehantering',
     icon: MessageSquare,
     description: 'Hantera ärenden och support',
     path: resolve('VITE_ODOO_URL', ''),
@@ -166,7 +167,18 @@ export const dashboardCards: DashboardCard[] = [
     isExternal: true,
     isDisabled: true,
   },
-].map((card) => ({
-  ...card,
-  isDisabled: card.isDisabled || !card.path,
-}))
+  {
+    id: 'stray-invoice',
+    title: 'Skapa ströfaktura',
+    icon: Receipt,
+    description: 'Skapa ströfakturor',
+    path: '/economy',
+    isExternal: false,
+    isDisabled: false,
+  },
+]
+  .map((card) => ({
+    ...card,
+    isDisabled: card.isDisabled || !card.path,
+  }))
+  .sort((a, b) => Number(a.isDisabled) - Number(b.isDisabled))

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
@@ -21,7 +21,9 @@ import {
   FilterBar,
   MultiSelectFilterDropdown,
   MultiSelectSearchFilterDropdown,
+  type SearchFilterOption,
 } from '@/shared/ui/filters'
+import { ObjectTypeFilter } from '@/shared/ui/filters/ObjectTypeFilter'
 import { ViewLayout } from '@/shared/ui/layout'
 import { Pagination } from '@/shared/ui/Pagination'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
@@ -29,16 +31,28 @@ import { SmsModal } from '@/shared/ui/SmsModal'
 
 const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
-  { label: 'Parkering', value: 'parkering' },
+  { label: 'Bilplats', value: 'parkering' },
   { label: 'Lokal', value: 'lokal' },
   { label: 'Övrigt', value: 'ovrigt' },
+] as const
+
+const leaseTypeOptions = [
+  { label: 'Bostadskontrakt', value: 'Bostadskontrakt' },
+  { label: 'Campuskontrakt', value: 'Campuskontrakt' },
+  { label: 'Garagekontrakt', value: 'Garagekontrakt' },
+  { label: 'Kooperativ hyresrätt', value: 'Kooperativ hyresrätt' },
+  { label: 'Korttidsuthyrning', value: 'Korttidsuthyrning' },
+  { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
+  { label: 'Omförhandlingskontrakt', value: 'Omförhandlingskontrakt' },
+  { label: 'Övrigt', value: 'Övrigt' },
+  { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
 ] as const
 
 const statusOptions = [
   { label: 'Gällande', value: '0' },
   { label: 'Kommande', value: '1' },
   { label: 'Uppsagd', value: '2' },
-  { label: 'Upphört', value: '3' },
+  { label: 'Upphörd', value: '3' },
 ] as const
 
 const districtOptions = [
@@ -54,6 +68,18 @@ const LeasesPage = () => {
   const [isExporting, setIsExporting] = useState(false)
   const filters = useLeaseFilters()
   const searchProperties = usePropertySearch()
+
+  // Client-side search over the static leaseTypeOptions list for the
+  // MultiSelectSearchFilterDropdown pattern (no backend call needed)
+  const searchLeaseTypes = useCallback(
+    async (query: string): Promise<SearchFilterOption[]> => {
+      const q = query.toLowerCase()
+      return leaseTypeOptions
+        .filter((opt) => opt.label.toLowerCase().includes(q))
+        .map((opt) => ({ label: opt.label, value: opt.value }))
+    },
+    []
+  )
 
   const handlePageChange = (newPage: number) => {
     filters.setPage(newPage)
@@ -76,8 +102,8 @@ const LeasesPage = () => {
         URL.revokeObjectURL(url)
         a.remove()
       }, 1000)
-    } catch (error) {
-      console.error('Export failed:', error)
+    } catch {
+      // Export errors are visible to the user via the button state resetting
     } finally {
       setIsExporting(false)
     }
@@ -178,14 +204,20 @@ const LeasesPage = () => {
               hasActiveFilters={filters.hasActiveFilters}
               onClearFilters={filters.clearFilters}
             >
-              <MultiSelectFilterDropdown
-                options={objectTypeOptions.map((o) => ({
+              <ObjectTypeFilter
+                objectTypeOptions={objectTypeOptions.map((o) => ({
                   label: o.label,
                   value: o.value,
                 }))}
-                selectedValues={filters.selectedObjectTypes}
-                onSelectionChange={(vals) =>
+                selectedObjectTypes={filters.selectedObjectTypes}
+                onObjectTypeChange={(vals) =>
                   filters.setFilterValues('objectType', vals)
+                }
+                parkingOptionValue="parkering"
+                loadParkingSpaceTypes={filters.loadParkingSpaceTypes}
+                selectedParkingSpaceTypes={filters.selectedParkingSpaceTypes}
+                onParkingSpaceTypeChange={(vals) =>
+                  filters.setFilterValues('parkingSpaceType', vals)
                 }
                 placeholder="Objekttyp"
               />
@@ -200,6 +232,17 @@ const LeasesPage = () => {
                   filters.setFilterValues('status', vals)
                 }
                 placeholder="Status"
+              />
+
+              <MultiSelectSearchFilterDropdown
+                searchFn={searchLeaseTypes}
+                minSearchLength={0}
+                selectedValues={filters.selectedLeaseTypes}
+                onSelectionChange={(vals) =>
+                  filters.setFilterValues('leaseType', vals)
+                }
+                placeholder="Kontraktstyp"
+                searchPlaceholder="Sök kontraktstyp"
               />
 
               <MultiSelectSearchFilterDropdown
@@ -275,6 +318,9 @@ const LeasesPage = () => {
               columns={[selectColumn, ...leaseColumns]}
               keyExtractor={(lease) => lease.leaseId}
               mobileCardRenderer={LeaseMobileCard}
+              sortBy={filters.sortBy}
+              sortOrder={filters.sortOrder}
+              onSort={filters.handleSort}
             />
           )}
 

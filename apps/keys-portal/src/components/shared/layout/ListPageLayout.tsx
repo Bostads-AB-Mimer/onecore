@@ -19,6 +19,8 @@ interface ListPageLayoutProps {
   searchPlaceholder?: string
   /** Extra content rendered before the search input (e.g. additional search bars) */
   searchExtra?: React.ReactNode
+  /** Extra content rendered after the search input (e.g. additional filter inputs) */
+  searchAfterExtra?: React.ReactNode
   /** Add button click handler - if omitted, no add button shown */
   onAddNew?: () => void
   /** Add button label */
@@ -38,6 +40,7 @@ export function ListPageLayout({
   onSearchChange,
   searchPlaceholder = 'Sök...',
   searchExtra,
+  searchAfterExtra,
   onAddNew,
   addButtonLabel = 'Lägg till',
   pagination,
@@ -54,6 +57,7 @@ export function ListPageLayout({
           onChange={onSearchChange}
           placeholder={searchPlaceholder}
         />
+        {searchAfterExtra}
         {onAddNew && <AddButton onClick={onAddNew}>{addButtonLabel}</AddButton>}
       </div>
 

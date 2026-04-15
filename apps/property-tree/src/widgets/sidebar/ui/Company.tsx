@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Building2 } from 'lucide-react'
+import { Landmark } from 'lucide-react'
 
 import { Company } from '@/services/types'
 
@@ -57,7 +57,7 @@ export function CompanyNavigation({ company }: CompanyNavigationProps) {
           to={paths.company(company.organizationNumber)}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Building2 />
+          <Landmark />
           <span>{company.name.replace('** TEST **', '')}</span>
         </Link>
       </SidebarMenuButton>

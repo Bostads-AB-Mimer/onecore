@@ -208,6 +208,7 @@ export const Lease = z.object({
           })
           .optional(),
         specialAttention: z.boolean().optional(),
+        leaseContactType: z.string().optional(),
       })
     )
     .optional(),
@@ -264,8 +265,15 @@ const IncludeContactsQueryParamSchema = z.object({
     .transform((value) => value === 'true'),
 })
 
+const IncludeNonTenantContactsQueryParamSchema = z.object({
+  includeNonTenantContacts: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+})
+
 export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
   IncludeContactsQueryParamSchema
-)
+).merge(IncludeNonTenantContactsQueryParamSchema)
 
 export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema

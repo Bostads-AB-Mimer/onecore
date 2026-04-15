@@ -105,7 +105,7 @@ export default function KeyLoan() {
       </div>
 
       {/* Show results even when tenant is null (property search) */}
-      {tenantContracts.length > 0 && (
+      {searchType !== null && (
         <div ref={resultsRef} className="border-t pt-8">
           <TenantInfo
             tenant={selectedTenant}
@@ -113,6 +113,7 @@ export default function KeyLoan() {
             onClearSearch={handleClearSearch}
             showTenantCard={showTenantCard}
             searchType={searchType}
+            rentalPropertyId={searchType === 'object' ? searchValue : undefined}
           />
         </div>
       )}

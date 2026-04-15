@@ -9,7 +9,7 @@ import * as adapter from '@src/services/invoice-service/adapters/xpand-db-adapte
 
 describe(adapter.getInvoiceRows, () => {
   it('returns empty array when no invoice numbers are provided', async () => {
-    const result = await adapter.getInvoiceRows(2025, '001', [])
+    const result = await adapter.getInvoiceRows('001', [])
     expect(result).toEqual([])
   })
 
@@ -45,7 +45,7 @@ describe(adapter.getInvoiceRows, () => {
       },
     ])
 
-    const result = await adapter.getInvoiceRows(2025, '001', ['1234567890'])
+    const result = await adapter.getInvoiceRows('001', ['1234567890'])
 
     expect(result).toHaveLength(1)
     expect(() =>

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Building } from 'lucide-react'
+import { Building2 } from 'lucide-react'
 
 import { Property } from '@/services/types'
 
@@ -57,7 +57,7 @@ export function PropertyNavigation({
           state={{ organizationNumber }}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Building />
+          <Building2 />
           <span>{toTitleCase(property.designation)}</span>
         </Link>
       </SidebarMenuButton>

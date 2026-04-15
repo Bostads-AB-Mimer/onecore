@@ -5,22 +5,35 @@ import { Button } from '@/shared/ui/Button'
 interface TenantContactActionsProps {
   phoneNumbers?: Array<{ phoneNumber: string }>
   email?: string
+  onSendSms?: (phoneNumber: string) => void
+  onSendEmail?: (emailAddress: string) => void
 }
 
 export function TenantContactActions({
   phoneNumbers,
   email,
+  onSendSms,
+  onSendEmail,
 }: TenantContactActionsProps) {
   const handleCall = (phoneNumber: string) => {
     window.location.href = `tel:${phoneNumber.replace(/[\s-]/g, '')}`
   }
 
   const handleSMS = (phoneNumber: string) => {
-    window.location.href = `sms:${phoneNumber.replace(/[\s-]/g, '')}`
+    const cleaned = phoneNumber.replace(/[\s-]/g, '')
+    if (onSendSms) {
+      onSendSms(cleaned)
+    } else {
+      window.location.href = `sms:${cleaned}`
+    }
   }
 
   const handleEmail = (emailAddress: string) => {
-    window.location.href = `mailto:${emailAddress}`
+    if (onSendEmail) {
+      onSendEmail(emailAddress)
+    } else {
+      window.location.href = `mailto:${emailAddress}`
+    }
   }
 
   return (

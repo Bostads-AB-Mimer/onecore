@@ -35,6 +35,7 @@ export const routes = (router: KoaRouter) => {
     'MaintenanceUnitSearchResult',
     schemas.MaintenanceUnitSearchResultSchema
   )
+  registerSchema('FacilitySearchResult', schemas.FacilitySearchResultSchema)
   registerSchema('SearchResult', schemas.SearchResultSchema)
 
   /**
@@ -51,7 +52,8 @@ export const routes = (router: KoaRouter) => {
    *       - Residences: Matches on rental ID or residence name
    *       - Parking Spaces: Matches on rental ID or parking space name
    *       - Maintenance Units: Matches on code
-   *       Returns up to 10 results per entity type (max 50 total results).
+   *       - Facilities: Matches on rental ID or facility name
+   *       Returns up to 10 results per entity type (max 60 total results).
    *     parameters:
    *       - in: query
    *         name: q
@@ -90,31 +92,30 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const getProperties = await propertyBaseAdapter.searchProperties(
-      queryParams.data.q
-    )
-
-    const getBuildings = await propertyBaseAdapter.searchBuildings(
-      queryParams.data.q
-    )
-
-    const getResidences = await propertyBaseAdapter.searchResidences(
-      queryParams.data.q
-    )
-
-    const getParkingSpaces = await propertyBaseAdapter.searchParkingSpaces(
-      queryParams.data.q
-    )
-
-    const getMaintenanceUnits =
-      await propertyBaseAdapter.searchMaintenanceUnits(queryParams.data.q)
+    const q = queryParams.data.q
+    const [
+      getProperties,
+      getBuildings,
+      getResidences,
+      getParkingSpaces,
+      getMaintenanceUnits,
+      getFacilities,
+    ] = await Promise.all([
+      propertyBaseAdapter.searchProperties(q),
+      propertyBaseAdapter.searchBuildings(q),
+      propertyBaseAdapter.searchResidences(q),
+      propertyBaseAdapter.searchParkingSpaces(q),
+      propertyBaseAdapter.searchMaintenanceUnits(q),
+      propertyBaseAdapter.searchFacilities(q),
+    ])
 
     if (
       !getProperties.ok ||
       !getBuildings.ok ||
       !getResidences.ok ||
       !getParkingSpaces.ok ||
-      !getMaintenanceUnits.ok
+      !getMaintenanceUnits.ok ||
+      !getFacilities.ok
     ) {
       ctx.status = 500
       return
@@ -174,6 +175,18 @@ export const routes = (router: KoaRouter) => {
       })
     )
 
+    const mappedFacilities = getFacilities.data.map(
+      (facility): schemas.FacilitySearchResult => ({
+        id: facility.id,
+        type: 'facility',
+        name: facility.name,
+        rentalId: facility.rentalId,
+        code: facility.code,
+        property: facility.property,
+        building: facility.building,
+      })
+    )
+
     ctx.body = {
       ...metadata,
       content: [
@@ -182,6 +195,7 @@ export const routes = (router: KoaRouter) => {
         ...mappedResidences,
         ...mappedParkingSpaces,
         ...mappedMaintenanceUnits,
+        ...mappedFacilities,
       ] satisfies SearchResultResponseContent,
     }
   })

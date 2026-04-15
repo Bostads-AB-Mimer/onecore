@@ -219,7 +219,7 @@ export const searchLeasesV2 = async (
     if (Array.isArray(value)) {
       value.forEach((v) => params.append(key, v))
     } else {
-      params.append(key, value)
+      params.append(key, value.toString())
     }
   })
 

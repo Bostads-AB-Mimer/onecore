@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+
+    "module": "preserve",
+    "moduleResolution": "bundler",
+
+    "rootDirs": ["./src", "./test", "./scripts"],
+    "types": [
+      "jest",
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["./src/*"],
+      "@xpand/*": ["./src/adapters/xpand/*"]
+    }
+  },
+  "include": ["scripts/", "src/", "test/"]
+}

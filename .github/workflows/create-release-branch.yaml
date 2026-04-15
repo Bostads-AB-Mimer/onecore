@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       source_branch:
-        description: "Branch to create release from"
+        description: 'Branch to create release from'
         required: true
-        default: "main"
+        default: 'main'
       override_version:
-        description: "Override version (e.g. 1.8.0). Leave empty to auto-bump"
+        description: 'Override version (e.g. 1.8.0). Leave empty to auto-bump'
         required: false
-        default: ""
+        default: ''
 
 jobs:
   create-release-branch:
@@ -27,7 +27,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.28.0
+          version: 10.28.1
 
       - name: Setup Node.js + pnpm
         uses: actions/setup-node@v4

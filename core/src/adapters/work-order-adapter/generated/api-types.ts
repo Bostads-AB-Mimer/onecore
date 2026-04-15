@@ -798,20 +798,20 @@ export interface components {
           hasElevator: boolean;
           washSpace: string | null;
           area: number;
-          estateCode: string;
-          estate: string;
+          estateCode: string | null;
+          estate: string | null;
           buildingCode: string;
           building: string;
         };
-        maintenanceUnits?: {
+        maintenanceUnits?: ({
             id: string;
             rentalPropertyId: string;
             code: string;
             caption: string;
             type: string;
-            estateCode: string;
-            estate: string;
-          }[];
+            estateCode: string | null;
+            estate: string | null;
+          })[];
       };
       tenant: {
         contactCode: string;
@@ -917,20 +917,20 @@ export interface components {
         hasElevator: boolean;
         washSpace: string | null;
         area: number;
-        estateCode: string;
-        estate: string;
+        estateCode: string | null;
+        estate: string | null;
         buildingCode: string;
         building: string;
       };
-      maintenanceUnits?: {
+      maintenanceUnits?: ({
           id: string;
           rentalPropertyId: string;
           code: string;
           caption: string;
           type: string;
-          estateCode: string;
-          estate: string;
-        }[];
+          estateCode: string | null;
+          estate: string | null;
+        })[];
     };
   };
   responses: never;

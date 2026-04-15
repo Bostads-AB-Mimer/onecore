@@ -661,9 +661,6 @@ export const importInvoiceRows = async (
         !importedInvoiceNumbers.includes(rentalInvoiceNumber)
     )
 
-    /*const rentalInvoiceNumbers = []
-    const invoicesToImport = ['552511356128155K']*/
-
     if (!invoicesToImport || invoicesToImport.length === 0) {
       return {
         batchId: null,
@@ -682,11 +679,7 @@ export const importInvoiceRows = async (
       'Importing invoices'
     )
 
-    const invoiceRows = await getXpandInvoiceRows(
-      fromDate.getFullYear(),
-      companyId,
-      invoicesToImport
-    )
+    const invoiceRows = await getXpandInvoiceRows(companyId, invoicesToImport)
     const invoiceDataRows = cleanInvoiceRows(invoiceRows as any)
 
     logger.info(
@@ -742,8 +735,21 @@ export const importInvoiceRows = async (
         chunkInvoiceDataRows,
         batchId
       )
+
+      if (contactCodes.errors) {
+        errors.push(...contactCodes.errors)
+      }
       const contacts = await getXpandContacts(contactCodes.contacts)
       await saveContacts(contacts, batchId)
+    }
+
+    if (errors && errors.length > 0) {
+      errors.forEach((error) => {
+        const index = invoicesToImport.indexOf(error.invoiceNumber, 0)
+        if (index > -1) {
+          invoicesToImport.splice(index, 1)
+        }
+      })
     }
 
     await verifyImport(invoicesToImport, batchId, batchTotal)

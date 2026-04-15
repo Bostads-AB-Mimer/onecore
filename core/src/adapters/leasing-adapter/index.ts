@@ -30,6 +30,8 @@ interface GetLeasesOptions {
   includeTerminatedLeases: boolean
   includeContacts: boolean
   includeRentInfo?: boolean // defaults to true
+  includeNonTenantLeases?: boolean
+  includeNonTenantContacts?: boolean
 }
 
 const getLease = async (
@@ -72,6 +74,12 @@ const getLeasesForPnr = async (
     includeUpcomingLeases: options.includeUpcomingLeases.toString(),
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
+    ...(options.includeNonTenantLeases && {
+      includeNonTenantLeases: options.includeNonTenantLeases.toString(),
+    }),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
 
   const leasesResponse = await axios.get(
@@ -89,6 +97,12 @@ const getLeasesForContactCode = async (
     includeUpcomingLeases: options.includeUpcomingLeases.toString(),
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
+    ...(options.includeNonTenantLeases && {
+      includeNonTenantLeases: options.includeNonTenantLeases.toString(),
+    }),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
 
   const leasesResponse = await axios.get(
@@ -107,6 +121,9 @@ const getLeasesForPropertyId = async (
     includeTerminatedLeases: options.includeTerminatedLeases.toString(),
     includeContacts: options.includeContacts.toString(),
     includeRentInfo: (options.includeRentInfo !== false).toString(),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
   })
   const leasesResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
@@ -131,35 +148,13 @@ const getLeasesBatch = async (leaseIds: string[]): Promise<Lease[]> => {
   return allLeases
 }
 
-// TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
-const getBuildingManagers = async (): Promise<
-  { code: string; name: string; district: string }[]
+const getParkingSpaceTypes = async (): Promise<
+  { code: string; caption: string }[]
 > => {
   const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/building-managers`
+    `${tenantsLeasesServiceUrl}/leases/parking-space-types`
   )
   return response.data.content
-}
-
-const searchLeases = async (
-  queryParams: Record<string, string | string[] | undefined>
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const params = new URLSearchParams()
-
-  Object.entries(queryParams).forEach(([key, value]) => {
-    if (value === undefined) return
-    if (Array.isArray(value)) {
-      value.forEach((v) => params.append(key, v))
-    } else {
-      params.append(key, value)
-    }
-  })
-
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/search?${params.toString()}`
-  )
-
-  return response.data
 }
 
 const getContactForPnr = async (
@@ -774,6 +769,7 @@ export {
   getLeasesForContactCode,
   getLeasesForPropertyId,
   getLeasesBatch,
+  getParkingSpaceTypes,
   getTenantByContactCode,
   preliminaryTerminateLease,
   resetWaitingList,
