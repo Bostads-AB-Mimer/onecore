@@ -71,39 +71,16 @@ export const TenfastRentalObjectSchema = z.object({
   displayName: z.string().optional(),
 })
 
-export const TenfastRentalObjectWithEstateSchema = z.object({
-  _id: z.string(),
-  externalId: z.string(),
-  hyra: z.number(), //total hyra inklusive moms
-  hyraVat: z.number(), // total moms pa hyran
-  hyraExcludingVat: z.number(), // hyran exklusive moms
-  hyror: z.array(TenfastInvoiceRowSchema),
-  contractTemplate: z.string().optional().nullable(),
-  postadress: z.string().nullish(),
-  stadsdel: z.string().nullish(),
-  typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
-  subType: z.string().optional(),
-  kvm: z.number().nullish(),
-  avtal: z
-    .array(
-      z.lazy(
-        (): z.ZodTypeAny =>
-          TenfastLeaseSchema.partial().omit({
-            hyresgaster: true,
-            hyresobjekt: true,
-          })
-      )
-    )
-    .optional(), // We omit tenants and rental objects to avoid circular reference, also we don't need them in the context of rental object
-  displayName: z.string().optional(),
-  fastighet: z
-    .object({
-      _id: z.string(),
-      fastighetsbeteckning: z.string(),
-      stadsdel: z.string().optional(),
-    })
-    .optional(),
-})
+export const TenfastRentalObjectWithEstateSchema =
+  TenfastRentalObjectSchema.extend({
+    fastighet: z
+      .object({
+        _id: z.string(),
+        fastighetsbeteckning: z.string(),
+        stadsdel: z.string().optional(),
+      })
+      .optional(),
+  })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
   records: z.array(TenfastTenantSchema),
