@@ -71,6 +71,7 @@ export function MobileInspectionForm({
     inspectorName,
     setInspectorName,
     needsMasterKey,
+    isFurnished,
     inspectionData,
     handleConditionUpdate,
     handleActionUpdate,
@@ -114,6 +115,7 @@ export function MobileInspectionForm({
   const handleConfirmSaveDraft = () => {
     onSave(inspectorName, inspectionData, 'draft', {
       needsMasterKey,
+      isFurnished,
       tenant: createTenantSnapshot(),
     })
     setIsDraftConfirmOpen(false)
