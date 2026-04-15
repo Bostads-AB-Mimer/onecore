@@ -12584,6 +12584,7 @@ export interface components {
       leaseId: string;
       masterKeyAccess: string | null;
       residenceId: string;
+      isFurnished: boolean;
       rooms: {
           roomId: string;
           conditions: {
@@ -12685,6 +12686,7 @@ export interface components {
               note: string;
             }[];
         }[];
+      isFurnished: boolean;
     };
     FileListItem: {
       /** @description Full file path/name */
