@@ -97,3 +97,83 @@ export function isValidComponentKey(key: string): key is ComponentFieldKey {
 export function getAllComponentKeys(): ComponentFieldKey[] {
   return ROOM_COMPONENTS.map((c) => c.key)
 }
+
+type FetchedComponent = components['schemas']['Component']
+
+/**
+ * A row rendered in the inspection form. Either a hardcoded surface default
+ * (key matches an InspectionRoom field like 'wall1') or a real component
+ * instance fetched from the API (keyed by component.id).
+ */
+export interface InspectionRow {
+  key: string
+  label: string
+  type: ComponentType
+  isDefault: boolean
+  componentId?: string
+}
+
+// Swedish category names that supersede a default surface row when present in
+// the fetched components. Matches the existing DB convention (e.g. 'Vitvaror').
+// Variants like 'Innertak' won't match and would render alongside the default —
+// add them here when those categories get imported.
+const SURFACE_CATEGORY: Record<string, ComponentType> = {
+  Väggar: 'walls',
+  Golv: 'floor',
+  Tak: 'ceiling',
+}
+
+function getCategoryName(component: FetchedComponent): string | undefined {
+  return component.model?.subtype?.componentType?.category?.categoryName
+}
+
+function getDisplayName(component: FetchedComponent): string {
+  return (
+    component.model?.subtype?.subTypeName ||
+    component.model?.modelName ||
+    component.id
+  )
+}
+
+function getComponentType(component: FetchedComponent): ComponentType {
+  const categoryName = getCategoryName(component)
+  return (categoryName && SURFACE_CATEGORY[categoryName]) || 'details'
+}
+
+/**
+ * Merge fetched components with hardcoded surface defaults.
+ *
+ * Defaults are dropped per type when ANY fetched component carries the
+ * matching Swedish category name (Väggar/Golv/Tak). Once Mimer imports real
+ * surface components, the defaults disappear entirely. `details` is an
+ * inspection-only concept with no API equivalent and is always rendered.
+ */
+export function mergeComponentsWithDefaults(
+  fetched: readonly FetchedComponent[]
+): InspectionRow[] {
+  const supersededTypes = new Set<ComponentType>()
+  for (const component of fetched) {
+    const categoryName = getCategoryName(component)
+    const supersededType = categoryName && SURFACE_CATEGORY[categoryName]
+    if (supersededType) supersededTypes.add(supersededType)
+  }
+
+  const defaults: InspectionRow[] = ROOM_COMPONENTS.filter(
+    (c) => !supersededTypes.has(c.type)
+  ).map((c) => ({
+    key: c.key,
+    label: c.label,
+    type: c.type,
+    isDefault: true,
+  }))
+
+  const equipment: InspectionRow[] = fetched.map((component) => ({
+    key: component.id,
+    label: getDisplayName(component),
+    type: getComponentType(component),
+    isDefault: false,
+    componentId: component.id,
+  }))
+
+  return [...defaults, ...equipment]
+}
