@@ -1233,8 +1233,6 @@ export const healthCheck = async () => {
   return {}
 }
 
-const quote = (s: string | number) => `"${s}"`
-
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
 ) => {
@@ -1244,40 +1242,40 @@ export const submitMiscellaneousInvoice = async (
     (ir, index) => gql`
       {
         node: {
-          subledger: { code: ${quote(invoice.contactCode)} }
+          subledger: { code: ${JSON.stringify(invoice.contactCode)} }
           lineNumber: ${index}
           product: {
-            code: ${quote(ir.articleId)}
+            code: ${JSON.stringify(ir.articleId)}
           }
-          text: ${quote(`${ir.articleName}${ir.text ? `: ${ir.text}` : ''}`)}
+          text: ${JSON.stringify(`${ir.articleName}${ir.text ? `: ${ir.text}` : ''}`)}
           quantity: ${ir.amount}
           unitPrice: ${ir.price}
           glObject1: {
-            code: ${quote(invoice.costCentre)}
+            code: ${JSON.stringify(invoice.costCentre)}
           }
           glObject3: {
-            code: ${quote(invoice.propertyCode)}
+            code: ${JSON.stringify(invoice.propertyCode)}
           }
-          headerInfo: ${quote(headerInfo)}
+          headerInfo: ${JSON.stringify(headerInfo)}
           approved: false
-          invoiceDate: ${quote(dateToGraphQlDateString(new Date(invoice.invoiceDate)))}
+          invoiceDate: ${JSON.stringify(dateToGraphQlDateString(new Date(invoice.invoiceDate)))}
           ourRef: {
-            dbId: ${quote(invoice.reference)}
+            dbId: ${JSON.stringify(invoice.reference)}
           }
           ${
             invoice.projectCode
               ? `
                 glObject2: {
-                  code: ${quote(invoice.projectCode)}
+                  code: ${JSON.stringify(invoice.projectCode)}
                 }
               `
               : ''
           }
-          comment: ${quote(invoice.comment ?? '')}
+          comment: ${JSON.stringify(invoice.comment ?? '')}
           ${
             invoice.attachment
               ? `
-                attachment: ${quote(invoice.attachment.originalFilename)}
+                attachment: ${JSON.stringify(invoice.attachment.originalFilename)}
                 `
               : ''
           }
