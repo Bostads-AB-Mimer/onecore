@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FileImage } from 'lucide-react'
 
+import { getFloorplanUrl } from '@/shared/lib/floorplan'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
@@ -22,7 +23,7 @@ export const ResidenceFloorplanTabsContent = ({
       ) : (
         <div className="text-center">
           <img
-            src={`https://pub.mimer.nu/bofaktablad/bofaktablad/${rentalId}.jpg`}
+            src={getFloorplanUrl(rentalId)}
             alt="Planritning"
             onError={() => setImageError(true)}
             className="max-w-full h-auto mx-auto"
