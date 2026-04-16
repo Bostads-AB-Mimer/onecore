@@ -184,13 +184,11 @@ export function AddKeyForm({
     })
 
     setRows(newRows)
-  }, [
-    selectedKeyIds,
-    keys,
-    rentalObjectCode,
-    calculateNextSequenceNumber,
-    selectedKeySystem,
-  ])
+    // selectedKeySystem intentionally omitted: handleSelectKeySystem patches
+    // keySystemId on existing rows in place, so re-running this effect on
+    // system change would wipe user-entered Typ/Namn values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKeyIds, keys, rentalObjectCode, calculateNextSequenceNumber])
 
   // Recalculate sequence numbers when keys changes
   useEffect(() => {
