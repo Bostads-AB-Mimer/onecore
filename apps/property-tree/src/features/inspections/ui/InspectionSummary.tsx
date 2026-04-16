@@ -117,12 +117,13 @@ export function InspectionSummary({
                       <Input
                         type="number"
                         min={0}
+                        step={1}
                         value={roomData?.componentCosts?.[component.key] ?? 0}
                         onChange={(e) =>
                           onComponentCostUpdate(
                             room.id,
                             component.key,
-                            Number(e.target.value) || 0
+                            Math.max(0, Math.trunc(Number(e.target.value) || 0))
                           )
                         }
                         aria-label={`Kostnad för ${getComponentLabel(component.key)}`}

@@ -128,13 +128,13 @@ const InspectionRoomActionsSchema = z.object({
 })
 
 const InspectionRoomCostsSchema = z.object({
-  wall1: z.number().default(0),
-  wall2: z.number().default(0),
-  wall3: z.number().default(0),
-  wall4: z.number().default(0),
-  floor: z.number().default(0),
-  ceiling: z.number().default(0),
-  details: z.number().default(0),
+  wall1: z.number().int().min(0).default(0),
+  wall2: z.number().int().min(0).default(0),
+  wall3: z.number().int().min(0).default(0),
+  wall4: z.number().int().min(0).default(0),
+  floor: z.number().int().min(0).default(0),
+  ceiling: z.number().int().min(0).default(0),
+  details: z.number().int().min(0).default(0),
 })
 
 const DetailComponentSchema = z.object({
