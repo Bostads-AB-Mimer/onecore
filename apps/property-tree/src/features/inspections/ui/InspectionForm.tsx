@@ -72,6 +72,7 @@ export function InspectionForm({
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
+    handleComponentCostUpdate,
     handleComponentPhotoAdd,
     handleComponentPhotoRemove,
     handleDetailComponentAdd,
@@ -219,7 +220,11 @@ export function InspectionForm({
               <ChevronLeft />
               Tillbaka till rum
             </Button>
-            <InspectionSummary inspectionData={inspectionData} rooms={rooms} />
+            <InspectionSummary
+              inspectionData={inspectionData}
+              rooms={rooms}
+              onComponentCostUpdate={handleComponentCostUpdate}
+            />
             <div
               className="p-4 border rounded-lg space-y-3"
               role="radiogroup"

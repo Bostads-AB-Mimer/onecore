@@ -68,6 +68,15 @@ export const InspectionRoomSchema = z.object({
     ceiling: z.string(),
     details: z.string(),
   }),
+  componentCosts: z.object({
+    wall1: z.number().default(0),
+    wall2: z.number().default(0),
+    wall3: z.number().default(0),
+    wall4: z.number().default(0),
+    floor: z.number().default(0),
+    ceiling: z.number().default(0),
+    details: z.number().default(0),
+  }),
   componentPhotos: z.object({
     wall1: z.array(z.string()),
     wall2: z.array(z.string()),

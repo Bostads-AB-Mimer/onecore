@@ -34,6 +34,15 @@ export const initialRoomData: InspectionRoom = {
     ceiling: '',
     details: '',
   },
+  componentCosts: {
+    wall1: 0,
+    wall2: 0,
+    wall3: 0,
+    wall4: 0,
+    floor: 0,
+    ceiling: 0,
+    details: 0,
+  },
   componentPhotos: {
     wall1: [],
     wall2: [],

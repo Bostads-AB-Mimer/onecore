@@ -73,6 +73,7 @@ export function useInspectionForm(
     handleConditionUpdate: componentOps.updateCondition,
     handleActionUpdate: componentOps.updateAction,
     handleComponentNoteUpdate: componentOps.updateNote,
+    handleComponentCostUpdate: componentOps.updateComponentCost,
     handleComponentPhotoAdd: componentOps.addPhoto,
     handleComponentPhotoRemove: componentOps.removePhoto,
 

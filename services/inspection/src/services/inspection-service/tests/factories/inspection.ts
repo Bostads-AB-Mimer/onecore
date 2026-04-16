@@ -247,11 +247,22 @@ const emptyActions = {
   details: [],
 }
 
+const emptyCosts = {
+  wall1: 0,
+  wall2: 0,
+  wall3: 0,
+  wall4: 0,
+  floor: 0,
+  ceiling: 0,
+  details: 0,
+}
+
 export const InspectionRoomFactory = Factory.define<InspectionRoom>(() => ({
   roomId: 'room-1',
   conditions: { ...emptyConditions },
   actions: { ...emptyActions },
   componentNotes: { ...emptyConditions },
+  componentCosts: { ...emptyCosts },
   componentPhotos: { ...emptyActions },
   photos: [],
   isApproved: false,
