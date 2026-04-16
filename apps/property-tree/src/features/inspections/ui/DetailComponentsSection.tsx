@@ -83,7 +83,7 @@ export function DetailComponentsSection({
             Lägg till detalj...
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[280px] p-0" align="start">
+        <PopoverContent className="w-[280px] p-0 z-[100]" align="start">
           <Command shouldFilter={true}>
             <CommandInput
               placeholder="Sök eller skriv egen detalj..."

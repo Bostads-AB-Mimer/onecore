@@ -230,7 +230,7 @@ export function MobileInspectionForm({
                   onClick={() => setCurrentRoomIndex(index)}
                 >
                   <CardContent className="p-4 text-center space-y-2">
-                    <div className="text-sm font-medium leading-tight">
+                    <div className="text-sm font-medium leading-tight uppercase">
                       {room.name}
                     </div>
                     <Badge

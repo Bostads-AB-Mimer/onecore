@@ -124,26 +124,27 @@ export function InspectionForm({
   }
 
   return (
-    <div className="space-y-6 min-w-0">
-      <InspectionInfoSection
-        inspectorName={inspectorName}
-        setInspectorName={setInspectorName}
-        tenant={tenant}
-        address={address}
-        apartmentCode={apartmentCode}
-        layout="horizontal"
-      />
+    <div className="flex flex-col overflow-hidden min-w-0 min-h-0 flex-1">
+      {/* Scrollable area — info, progress, and rooms/summary all scroll together */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-6">
+        <InspectionInfoSection
+          inspectorName={inspectorName}
+          setInspectorName={setInspectorName}
+          tenant={tenant}
+          address={address}
+          apartmentCode={apartmentCode}
+          layout="horizontal"
+        />
 
-      {/* Progress counter */}
-      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-        <span className="text-sm font-medium">Besiktningsframsteg</span>
-        <span className="text-sm text-muted-foreground">
-          {completedRooms}/{rooms.length} rum klara
-        </span>
-      </div>
+        {/* Progress counter */}
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+          <span className="text-sm font-medium">Besiktningsframsteg</span>
+          <span className="text-sm text-muted-foreground">
+            {completedRooms}/{rooms.length} rum klara
+          </span>
+        </div>
 
-      {step === 'rooms' && (
-        <div className="max-h-[70vh] overflow-y-auto pr-2 pb-24 min-w-0">
+        {step === 'rooms' && (
           <Accordion type="multiple" className="space-y-2">
             {rooms.map((room) => {
               const roomData = inspectionData[room.id]
@@ -153,12 +154,14 @@ export function InspectionForm({
                 <AccordionItem
                   key={room.id}
                   value={room.id}
-                  className="border rounded-lg"
+                  className="border rounded-lg overflow-hidden"
                 >
                   <AccordionTrigger className="hover:no-underline sticky top-0 bg-background z-10">
                     <div className="flex items-center justify-between w-full pr-4">
                       <div className="flex items-center gap-3">
-                        <span className="font-medium">{room.name}</span>
+                        <span className="font-medium uppercase">
+                          {room.name}
+                        </span>
                       </div>
                       {isCompleted && (
                         <Badge variant="default" className="gap-1">
@@ -206,55 +209,54 @@ export function InspectionForm({
               )
             })}
           </Accordion>
-        </div>
-      )}
+        )}
 
-      {step === 'summary' && (
-        <div className="max-h-[70vh] overflow-y-auto pr-2 pb-24 min-w-0">
-          <Button
-            variant="link"
-            onClick={() => setStep('rooms')}
-            className="h-auto p-0 mb-4"
-          >
-            <ChevronLeft />
-            Tillbaka till rum
-          </Button>
-          <InspectionSummary inspectionData={inspectionData} rooms={rooms} />
-          <div
-            className="mt-4 p-4 border rounded-lg space-y-3"
-            role="radiogroup"
-            aria-label="Är bostaden möblerad vid besiktningstillfället?"
-          >
-            <div className="text-sm font-medium">
-              Är bostaden möblerad vid besiktningstillfället?
+        {step === 'summary' && (
+          <>
+            <Button
+              variant="link"
+              onClick={() => setStep('rooms')}
+              className="h-auto p-0"
+            >
+              <ChevronLeft />
+              Tillbaka till rum
+            </Button>
+            <InspectionSummary inspectionData={inspectionData} rooms={rooms} />
+            <div
+              className="p-4 border rounded-lg space-y-3"
+              role="radiogroup"
+              aria-label="Är bostaden möblerad vid besiktningstillfället?"
+            >
+              <div className="text-sm font-medium">
+                Är bostaden möblerad vid besiktningstillfället?
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  role="radio"
+                  aria-checked={isFurnished}
+                  variant={isFurnished ? 'default' : 'outline'}
+                  onClick={() => setIsFurnished(true)}
+                >
+                  Ja
+                </Button>
+                <Button
+                  type="button"
+                  role="radio"
+                  aria-checked={!isFurnished}
+                  variant={!isFurnished ? 'default' : 'outline'}
+                  onClick={() => setIsFurnished(false)}
+                >
+                  Nej
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                role="radio"
-                aria-checked={isFurnished}
-                variant={isFurnished ? 'default' : 'outline'}
-                onClick={() => setIsFurnished(true)}
-              >
-                Ja
-              </Button>
-              <Button
-                type="button"
-                role="radio"
-                aria-checked={!isFurnished}
-                variant={!isFurnished ? 'default' : 'outline'}
-                onClick={() => setIsFurnished(false)}
-              >
-                Nej
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
-      {/* Footer buttons */}
-
-      <div className="flex gap-3 justify-between pt-4 border-t">
+      {/* Footer — always visible at the bottom */}
+      <div className="shrink-0 flex gap-3 justify-between pt-4 border-t">
         <InspectionMoreMenu
           floorplanImage={floorplanImage}
           variant="buttons"
