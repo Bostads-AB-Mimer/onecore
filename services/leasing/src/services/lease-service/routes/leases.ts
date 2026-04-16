@@ -1733,4 +1733,76 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /leases/hemforsakring-export:
+   *   get:
+   *     summary: Export home insurance data for Länsförsäkringar
+   *     description: Returns all active leases with a home insurance rent row, with all fields needed for the daily LF export.
+   *     tags: [Leases]
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved home insurance export data.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/leases/hemforsakring-export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await tenfastAdapter.getLeasesWithHomeInsurance()
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
+
+    const rows = result.data
+      .filter((lease) => lease.hyresgaster.some((t) => !t.isCompany))
+      .flatMap((lease) => {
+        const tenant = lease.hyresgaster.find((t) => !t.isCompany)
+        if (!tenant) return []
+
+        const rentalObject = lease.hyresobjekt[0]
+        if (!rentalObject) return []
+
+        const insuranceRow = lease.hyror.find(
+          (row) => row.article === articleId
+        )
+        if (!insuranceRow) return []
+
+        const leaseStatus = insuranceRow.to != null
+          ? '*'
+          : lease.stage === 'upcoming'
+          ? 'K'
+          : 'G'
+
+        return [
+          {
+            leaseId: lease.externalId,
+            leaseStatus,
+            leaseFromDate: lease.startDate,
+            leaseToDate: lease.endDate ?? null,
+            rentalObjectCode: rentalObject.externalId,
+            numberOfRooms: rentalObject.roomCount ?? null,
+            squareMeters: rentalObject.kvm ?? null,
+            rowFromDate: insuranceRow.from ?? '',
+            rowToDate: insuranceRow.to ?? null,
+            annualRent: insuranceRow.amount,
+            articleText: insuranceRow.label ?? '',
+            nationalIdNumber: tenant.idbeteckning,
+            fullName: `${tenant.name.last} ${tenant.name.first}`,
+            address: tenant.postadress,
+            phoneNumber: tenant.phone,
+            email: tenant.invoiceEmail ?? null,
+          },
+        ]
+      })
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(rows, metadata)
+  })
 }

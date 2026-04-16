@@ -42,6 +42,7 @@ export const TenfastTenantSchema = z.object({
   borgenarer: z.array(z.any()),
   firmatecknare: z.array(z.any()),
   displayName: z.string().optional(),
+  invoiceEmail: z.string().optional().nullable(),
 })
 
 export const TenfastRentalObjectSchema = z.object({
@@ -57,6 +58,7 @@ export const TenfastRentalObjectSchema = z.object({
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
   kvm: z.number().nullish(),
+  roomCount: z.number().nullish(),
   avtal: z
     .array(
       z.lazy(
@@ -280,3 +282,14 @@ export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 export const TenfastLeaseTemplateResponseSchema = z.object({
   records: z.array(TenfastLeaseSchema),
 })
+
+export const TenfastLeasesByArticleResponseSchema = z.object({
+  records: z.array(TenfastLeaseSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
+export type TenfastLeasesByArticleResponse = z.infer<
+  typeof TenfastLeasesByArticleResponseSchema
+>

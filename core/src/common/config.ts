@@ -70,6 +70,7 @@ export interface Config {
     tenantDefault: string
     economy: string
     bosociala: string
+    lf: string
     dev: string
   }
   scanner: {
@@ -145,6 +146,7 @@ const config = configPackage({
       tenantDefault: '',
       economy: '',
       bosociala: '',
+      lf: '',
     },
     scanner: {
       allowedIps: [],

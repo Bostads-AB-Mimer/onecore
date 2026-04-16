@@ -13,6 +13,7 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+type LfInsuranceExportRow = z.infer<typeof schemas.v1.LfInsuranceExportRowSchema>
 
 export const getLease = async (leaseId: string): Promise<Lease | null> => {
   const leaseResponse = await axios(
@@ -228,4 +229,13 @@ export const searchLeasesV2 = async (
   )
 
   return response.data
+}
+
+export const getHomeInsuranceExport = async (): Promise<
+  LfInsuranceExportRow[]
+> => {
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/hemforsakring-export`
+  )
+  return response.data.content
 }

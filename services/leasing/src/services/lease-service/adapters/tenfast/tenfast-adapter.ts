@@ -17,6 +17,7 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
   TenfastLeaseTemplateResponseSchema,
+  TenfastLeasesByArticleResponseSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -923,6 +924,53 @@ export async function updateLeaseInvoiceRows(params: {
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.updateLeaseInvoiceRows')
     return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getLeasesWithHomeInsurance = async (): Promise<
+  AdapterResult<
+    TenfastLease[],
+    'unknown' | 'bad-request' | 'parsing-error'
+  >
+> => {
+  try {
+    const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
+    let page = ''
+    let allRecords: TenfastLease[] = []
+    let totalCount = 0
+    let first = true
+
+    do {
+      const response = await tenfastApi.request({
+        method: 'get',
+        url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?hyresvard=${tenfastCompanyId}&populate=hyresgaster,hyresobjekt&paginate=${page}`,
+      })
+
+      if (response.status === 400)
+        return handleTenfastError(response.data.error, 'bad-request')
+      else if (response.status !== 200 && response.status !== 201)
+        return handleTenfastError(
+          { error: response.data.error, status: response.status },
+          'unknown'
+        )
+
+      const parsed = TenfastLeasesByArticleResponseSchema.safeParse(
+        response.data
+      )
+      if (!parsed.success)
+        return handleTenfastError(parsed.error, 'parsing-error')
+
+      if (first) {
+        totalCount = parsed.data.totalCount
+        first = false
+      }
+      allRecords = allRecords.concat(parsed.data.records)
+      page = parsed.data.next ?? ''
+    } while (allRecords.length < totalCount)
+
+    return { ok: true, data: allRecords }
+  } catch (err: any) {
+    return handleTenfastError(err, 'unknown')
   }
 }
 
