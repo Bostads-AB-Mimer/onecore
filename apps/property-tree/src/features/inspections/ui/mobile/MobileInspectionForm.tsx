@@ -63,12 +63,8 @@ export function MobileInspectionForm({
     !isContinuingExistingInspection
   )
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  // TODO: mobile form does not yet have the Sammanställning step or the
-  // `isFurnished` Ja/Nej toggle wired up in InspectionForm.tsx (MIM-1676).
-  // When the commented-out save handlers below are re-enabled, destructure
-  // `isFurnished` / `setIsFurnished` from useInspectionForm and include
-  // `isFurnished` in the additionalData payloads, otherwise the mobile flow
-  // will silently drop the value on both draft save and complete.
+  // TODO(MIM-1676): mobile form does not yet have the Sammanställning step
+  // or the `isFurnished` Ja/Nej toggle that the desktop form has.
   const {
     inspectorName,
     setInspectorName,

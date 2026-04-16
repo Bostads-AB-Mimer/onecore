@@ -61,15 +61,18 @@ export const initializeInspectionData = (rooms: { id: string }[]) => {
 }
 
 /**
- * Build a synthetic Room for an ad-hoc inspection room. Used when the
- * inspector adds a room on the fly via InspectionMoreMenu because the
- * Xpand-sourced room list is incomplete. Only `id` and `name` drive the
- * UI — the remaining fields exist to satisfy the `Room` type shape and
- * are zero-valued placeholders (the synthetic room has no matching Xpand
- * record).
+ * Build a synthetic Room for an ad-hoc inspection room. Used both when
+ * the inspector adds a room on the fly (new UUID) and when rehydrating
+ * an ad-hoc room from a persisted draft (existing id). Only `id` and
+ * `name` drive the UI — the remaining fields exist to satisfy the `Room`
+ * type shape and are zero-valued placeholders (the synthetic room has no
+ * matching Xpand record).
  */
-export const createAdHocRoom = (name: string): Room => ({
-  id: crypto.randomUUID(),
+export const createAdHocRoom = (
+  name: string,
+  id: string = crypto.randomUUID()
+): Room => ({
+  id,
   propertyObjectId: '',
   code: '',
   name,

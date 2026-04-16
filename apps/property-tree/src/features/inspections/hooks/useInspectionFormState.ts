@@ -24,40 +24,6 @@ export interface UseInspectionFormStateReturn {
   isAllRoomsComplete: boolean
 }
 
-// Build a synthetic Room object for an ad-hoc room recovered from persisted
-// draft data. Used when the draft contains a roomId that isn't in the current
-// Xpand rooms list — e.g. a room the inspector created on the fly in a
-// previous session.
-const rehydrateAdHocRoom = (
-  roomId: string,
-  name: string | undefined
-): Room => ({
-  id: roomId,
-  propertyObjectId: '',
-  code: '',
-  // Fallback label if persisted data somehow lacks a name (e.g. draft saved
-  // before this field existed).
-  name: name ?? 'Okänt rum',
-  usage: { shared: false, allowPeriodicWorks: false, spaceType: 0 },
-  features: {
-    hasToilet: false,
-    isHeated: false,
-    hasThermostatValve: false,
-    orientation: 0,
-  },
-  dates: {
-    installation: null,
-    from: '',
-    to: '',
-    availableFrom: null,
-    availableTo: null,
-  },
-  sortingOrder: 0,
-  deleted: false,
-  timestamp: '',
-  roomType: null,
-})
-
 export function useInspectionFormState(
   initialRooms: Room[],
   existingInspection?: Inspection
@@ -70,7 +36,7 @@ export function useInspectionFormState(
     const knownIds = new Set(initialRooms.map((r) => r.id))
     const adHocRooms = existingInspection.rooms
       .filter((r) => !knownIds.has(r.roomId))
-      .map((r) => rehydrateAdHocRoom(r.roomId, r.name))
+      .map((r) => createAdHocRoom(r.name ?? 'Okänt rum', r.roomId))
     return [...initialRooms, ...adHocRooms]
   })
 
