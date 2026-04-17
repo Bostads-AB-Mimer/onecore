@@ -6,6 +6,7 @@ import { linkToOdooCreateMaintenanceRequestForContext } from '@/features/work-or
 
 import { Building, ResidenceSummary, Staircase } from '@/services/types'
 
+import { useIsMobile } from '@/shared/hooks/useMobile'
 import { numericCompare } from '@/shared/lib/sorting'
 import { paths } from '@/shared/routes'
 import { ContextType } from '@/shared/types/ui'
@@ -13,6 +14,8 @@ import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { Grid } from '@/shared/ui/Grid'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
+
+import { StaircaseTabsMobile } from './StaircaseTabsMobile'
 
 interface StaircaseTabsProps {
   staircase: Staircase
@@ -30,10 +33,23 @@ export const StaircaseTabs = ({
   organizationNumber,
 }: StaircaseTabsProps) => {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const sortedResidences = residences
     .slice()
     .sort((a, b) => numericCompare(a.rentalId, b.rentalId))
+
+  if (isMobile) {
+    return (
+      <StaircaseTabsMobile
+        staircase={staircase}
+        building={building}
+        residences={residences}
+        propertyCode={propertyCode}
+        organizationNumber={organizationNumber}
+      />
+    )
+  }
 
   return (
     <Tabs defaultValue="residences" className="space-y-6">

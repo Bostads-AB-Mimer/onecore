@@ -13,6 +13,8 @@ export const useWorkOrders = (id: string, contextType: ContextType) => {
       case 'building':
         // id = building code
         return workOrderService.getWorkOrdersForBuilding(id)
+      // Staircase is currently bsent
+      // as there is no staircase-specific work order endpoint to fetch errands for .
       case 'residence':
       case 'facility':
       case 'parkingSpace':
