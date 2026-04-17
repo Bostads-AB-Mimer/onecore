@@ -1,0 +1,37 @@
+[
+  {
+    "id": "rn-2026-04-17-v337-1",
+    "date": "2026-04-17",
+    "title": "Skapa ärende från lokal och bilplats skickar nu rätt typ till Odoo",
+    "description": "Tidigare skickades lokal- och bilplatsärenden som lägenhet till Odoo, vilket gav fel utrymme i ärendet. Nu skickas rätt typ (Lokal respektive Bilplats).",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-04-17-v337-2",
+    "date": "2026-04-17",
+    "title": "Skapa ärende från uppgång",
+    "description": "Det går nu att skapa ärenden direkt från uppgångsvyn. Ärendet öppnas i Odoo med byggnadskod och utrymme Uppgång förifyllt.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-04-17-v337-3",
+    "date": "2026-04-17",
+    "title": "Skapa ärende från underhållsenhet i byggnadsvyn",
+    "description": "Knappen 'Skapa ärende' på underhållsenheter i byggnadsvyn är nu aktiverad. Ärendet öppnas i Odoo med fastighetsnamn, typ och enhetskod förifyllt.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-04-17-v337-4",
+    "date": "2026-04-17",
+    "title": "Ärendehistorik visas nu för lokaler och bilplatser",
+    "description": "Fliken Ärenden på lokal- och bilplatssidor hämtar och visar nu ärendehistorik korrekt.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-04-17-v337-5",
+    "date": "2026-04-17",
+    "title": "Mobilanpassad uppgångssida",
+    "description": "Uppgångssidan visar nu ett mobilanpassat accordion-gränssnitt på små skärmar, i linje med övriga detaljsidor.",
+    "category": "improvement"
+  }
+]
