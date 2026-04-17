@@ -44,7 +44,7 @@ export const StaircaseTabs = ({
       <StaircaseTabsMobile
         staircase={staircase}
         building={building}
-        residences={residences}
+        residences={sortedResidences}
         propertyCode={propertyCode}
         organizationNumber={organizationNumber}
       />

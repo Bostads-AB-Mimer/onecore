@@ -5,7 +5,6 @@ import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooU
 
 import { Building, ResidenceSummary, Staircase } from '@/services/types'
 
-import { numericCompare } from '@/shared/lib/sorting'
 import { paths } from '@/shared/routes'
 import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'
@@ -31,10 +30,6 @@ export function StaircaseTabsMobile({
 }: StaircaseTabsMobileProps) {
   const navigate = useNavigate()
 
-  const sortedResidences = residences
-    .slice()
-    .sort((a, b) => numericCompare(a.rentalId, b.rentalId))
-
   const accordionItems: MobileAccordionItem[] = [
     {
       id: 'residences',
@@ -42,7 +37,7 @@ export function StaircaseTabsMobile({
       title: 'Bostäder',
       content: (
         <div className="space-y-2">
-          {sortedResidences.map((residence) => (
+          {residences.map((residence) => (
             <div
               key={residence.id}
               onClick={() =>
