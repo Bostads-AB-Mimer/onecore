@@ -89,7 +89,7 @@ export function FacilityTabsMobile({
       title: 'Ärenden',
       content: rentalId ? (
         <WorkOrdersTabContent
-          contextType={ContextType.Residence}
+          contextType={ContextType.Facility}
           id={rentalId}
         />
       ) : null,

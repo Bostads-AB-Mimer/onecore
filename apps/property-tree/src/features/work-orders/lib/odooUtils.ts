@@ -41,9 +41,18 @@ export const linkToOdooCreateMaintenanceRequestForContactCode = (
   )
 }
 
+// Maps maintenance unit type to a valid Odoo space_caption selection value
+const maintenanceUnitTypeToSpaceCaption: Record<string, string> = {
+  Tvättstuga: 'Tvättstuga',
+  Miljöbod: 'Miljöbod',
+  Sopskåp: 'Miljöbod',
+  Lekplats: 'Lekplats',
+}
+
 export const linkToOdooCreateMaintenanceRequestForContext = (
   contextType: ContextType,
-  id: string // Id is different things depending on contextType
+  id: string, // Id is different things depending on contextType
+  metadata?: Record<string, string>
 ) => {
   // Search types from Odoo
   enum SEARCH_TYPES {
@@ -99,6 +108,19 @@ export const linkToOdooCreateMaintenanceRequestForContext = (
         WINDOW_OPEN_FEATURES
       )
       break
+    case ContextType.Staircase:
+      window.open(
+        `${CREATE_MAINTENANCE_REQUEST_URL}&context=${encodeURIComponent(
+          JSON.stringify({
+            default_search_type: SEARCH_TYPES.buildingCode,
+            default_space_caption: SPACE_CAPTIONS.entrance,
+            default_search_value: id, // Building code
+          })
+        )}`,
+        WINDOW_OPEN_TARGET,
+        WINDOW_OPEN_FEATURES
+      )
+      break
     case ContextType.Residence:
       window.open(
         `${CREATE_MAINTENANCE_REQUEST_URL}&context=${encodeURIComponent(
@@ -112,6 +134,57 @@ export const linkToOdooCreateMaintenanceRequestForContext = (
         WINDOW_OPEN_FEATURES
       )
       break
+    case ContextType.Facility:
+      window.open(
+        `${CREATE_MAINTENANCE_REQUEST_URL}&context=${encodeURIComponent(
+          JSON.stringify({
+            default_search_type: SEARCH_TYPES.rentalObjectId,
+            default_space_caption: SPACE_CAPTIONS.facility,
+            default_search_value: id, // rentalId
+          })
+        )}`,
+        WINDOW_OPEN_TARGET,
+        WINDOW_OPEN_FEATURES
+      )
+      break
+    case ContextType.ParkingSpace:
+      window.open(
+        `${CREATE_MAINTENANCE_REQUEST_URL}&context=${encodeURIComponent(
+          JSON.stringify({
+            default_search_type: SEARCH_TYPES.rentalObjectId,
+            default_space_caption: SPACE_CAPTIONS.parkingSpace,
+            default_search_value: id, // rentalId
+          })
+        )}`,
+        WINDOW_OPEN_TARGET,
+        WINDOW_OPEN_FEATURES
+      )
+      break
+    case ContextType.MaintenanceUnit: {
+      const spaceCaption = metadata?.type
+        ? maintenanceUnitTypeToSpaceCaption[metadata.type] ||
+          SPACE_CAPTIONS.other
+        : SPACE_CAPTIONS.other
+
+      const context: Record<string, string> = {
+        default_search_type: SEARCH_TYPES.propertyName,
+        default_space_caption: spaceCaption,
+        default_search_value: id, // Property name (estate)
+      }
+
+      if (metadata?.code) {
+        context.default_maintenance_unit_code = metadata.code
+      }
+
+      window.open(
+        `${CREATE_MAINTENANCE_REQUEST_URL}&context=${encodeURIComponent(
+          JSON.stringify(context)
+        )}`,
+        WINDOW_OPEN_TARGET,
+        WINDOW_OPEN_FEATURES
+      )
+      break
+    }
     case ContextType.Tenant:
       window.open(
         `${CREATE_MAINTENANCE_REQUEST_URL}&context=${encodeURIComponent(

@@ -109,7 +109,7 @@ export function FacilityTabs({
       <TabsContent value="work-orders">
         {rentalId && (
           <WorkOrdersTabContent
-            contextType={ContextType.Residence}
+            contextType={ContextType.Facility}
             id={rentalId}
           />
         )}

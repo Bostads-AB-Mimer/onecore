@@ -33,6 +33,15 @@ export function WorkOrdersTabContent({
         return
       }
     }
+    // Maintenance units use property name for search and type as space caption
+    if (contextType === ContextType.MaintenanceUnit) {
+      linkToOdooCreateMaintenanceRequestForContext(
+        contextType,
+        metadata?.propertyName || id,
+        metadata
+      )
+      return
+    }
     linkToOdooCreateMaintenanceRequestForContext(contextType, id)
   }
 

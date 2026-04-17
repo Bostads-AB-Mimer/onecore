@@ -14,6 +14,8 @@ export const useWorkOrders = (id: string, contextType: ContextType) => {
         // id = building code
         return workOrderService.getWorkOrdersForBuilding(id)
       case 'residence':
+      case 'facility':
+      case 'parkingSpace':
         // id = rental object code
         return workOrderService.getWorkOrdersForResidence(id)
       case 'tenant':
@@ -30,6 +32,8 @@ export const useWorkOrders = (id: string, contextType: ContextType) => {
     contextType === 'property' ||
     contextType === 'building' ||
     contextType === 'residence' ||
+    contextType === 'facility' ||
+    contextType === 'parkingSpace' ||
     contextType === 'tenant' ||
     contextType === 'maintenanceUnit'
 

@@ -2,10 +2,13 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, FilePlus } from 'lucide-react'
 
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/features/work-orders/lib/odooUtils'
+
 import { Building, ResidenceSummary, Staircase } from '@/services/types'
 
 import { numericCompare } from '@/shared/lib/sorting'
 import { paths } from '@/shared/routes'
+import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { Grid } from '@/shared/ui/Grid'
@@ -84,13 +87,18 @@ export const StaircaseTabs = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Button disabled variant="default">
+              <Button
+                variant="default"
+                onClick={() =>
+                  linkToOdooCreateMaintenanceRequestForContext(
+                    ContextType.Staircase,
+                    building.code
+                  )
+                }
+              >
                 <FilePlus className="mr-2 h-4 w-4" />
                 Skapa ärende
               </Button>
-              <p className="text-slate-500">
-                Ärenden för uppgångar kommer snart.
-              </p>
             </div>
           </CardContent>
         </Card>
