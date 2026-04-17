@@ -77,7 +77,7 @@ export function ParkingSpaceTabs({
 
       <TabsContent value="work-orders">
         <WorkOrdersTabContent
-          contextType={ContextType.Residence}
+          contextType={ContextType.ParkingSpace}
           id={parkingSpace.rentalId}
         />
       </TabsContent>

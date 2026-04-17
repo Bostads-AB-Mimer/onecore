@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, FilePlus, Wrench } from 'lucide-react'
 
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooUtils'
+
 import type { MaintenanceUnit } from '@/services/types'
 
 import { paths } from '@/shared/routes'
+import { ContextType } from '@/shared/types/ui'
 import {
   Accordion,
   AccordionContent,
@@ -44,10 +47,17 @@ const MaintenanceUnitItem = ({ unit }: { unit: MaintenanceUnit }) => (
         <Button
           variant="outline"
           size="sm"
-          disabled
-          className="opacity-50 cursor-not-allowed"
-          title="Funktionalitet kommer snart"
-          onClick={(e) => e.preventDefault()}
+          onClick={(e) => {
+            e.preventDefault()
+            linkToOdooCreateMaintenanceRequestForContext(
+              ContextType.MaintenanceUnit,
+              unit.estate || '',
+              {
+                type: unit.type || '',
+                code: unit.code,
+              }
+            )
+          }}
         >
           <FilePlus className="h-4 w-4 mr-2" />
           Skapa ärende

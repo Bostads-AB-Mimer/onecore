@@ -1,6 +1,9 @@
 import { FilePlus } from 'lucide-react'
 
-import { linkToOdooCreateMaintenanceRequestForContext } from '@/features/work-orders/lib/odooUtils'
+import {
+  linkToOdooCreateMaintenanceRequestForContext,
+  type WorkOrderMetadata,
+} from '@/shared/lib/odooUtils'
 
 import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'
@@ -13,7 +16,7 @@ import { WorkOrdersTableSkeleton } from './WorkOrdersTableSkeleton'
 export interface WorkOrdersTabContentProps {
   id: string
   contextType?: ContextType
-  metadata?: Record<string, string>
+  metadata?: WorkOrderMetadata
 }
 
 export function WorkOrdersTabContent({
@@ -28,10 +31,21 @@ export function WorkOrdersTabContent({
     // Special handling for property context to use property name
     if (contextType === ContextType.Property) {
       if (metadata?.propertyName) {
-        const id = metadata.propertyName
-        linkToOdooCreateMaintenanceRequestForContext(contextType, id)
+        linkToOdooCreateMaintenanceRequestForContext(
+          contextType,
+          metadata.propertyName
+        )
         return
       }
+    }
+    // Maintenance units use property name for search and type as space caption
+    if (contextType === ContextType.MaintenanceUnit) {
+      linkToOdooCreateMaintenanceRequestForContext(
+        contextType,
+        metadata?.propertyName || id,
+        metadata
+      )
+      return
     }
     linkToOdooCreateMaintenanceRequestForContext(contextType, id)
   }

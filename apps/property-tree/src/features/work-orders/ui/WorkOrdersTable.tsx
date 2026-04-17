@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { linkToWorkOrderInOdoo } from '@/features/work-orders/lib/odooUtils'
+import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
 
 import { WorkOrder } from '@/services/api/core'
 

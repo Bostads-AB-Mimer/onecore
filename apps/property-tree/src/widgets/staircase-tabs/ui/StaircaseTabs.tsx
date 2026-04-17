@@ -2,14 +2,20 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, FilePlus } from 'lucide-react'
 
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooUtils'
+
 import { Building, ResidenceSummary, Staircase } from '@/services/types'
 
+import { useIsMobile } from '@/shared/hooks/useMobile'
 import { numericCompare } from '@/shared/lib/sorting'
 import { paths } from '@/shared/routes'
+import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { Grid } from '@/shared/ui/Grid'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
+
+import { StaircaseTabsMobile } from './StaircaseTabsMobile'
 
 interface StaircaseTabsProps {
   staircase: Staircase
@@ -27,10 +33,23 @@ export const StaircaseTabs = ({
   organizationNumber,
 }: StaircaseTabsProps) => {
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const sortedResidences = residences
     .slice()
     .sort((a, b) => numericCompare(a.rentalId, b.rentalId))
+
+  if (isMobile) {
+    return (
+      <StaircaseTabsMobile
+        staircase={staircase}
+        building={building}
+        residences={sortedResidences}
+        propertyCode={propertyCode}
+        organizationNumber={organizationNumber}
+      />
+    )
+  }
 
   return (
     <Tabs defaultValue="residences" className="space-y-6">
@@ -84,13 +103,18 @@ export const StaircaseTabs = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Button disabled variant="default">
+              <Button
+                variant="default"
+                onClick={() =>
+                  linkToOdooCreateMaintenanceRequestForContext(
+                    ContextType.Staircase,
+                    building.code
+                  )
+                }
+              >
                 <FilePlus className="mr-2 h-4 w-4" />
                 Skapa ärende
               </Button>
-              <p className="text-slate-500">
-                Ärenden för uppgångar kommer snart.
-              </p>
             </div>
           </CardContent>
         </Card>
