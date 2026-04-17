@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, FilePlus } from 'lucide-react'
 
-import { linkToOdooCreateMaintenanceRequestForContext } from '@/features/work-orders/lib/odooUtils'
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooUtils'
 
 import { Building, ResidenceSummary, Staircase } from '@/services/types'
 

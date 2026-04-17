@@ -3,7 +3,7 @@ import { FilePlus } from 'lucide-react'
 import {
   linkToOdooCreateMaintenanceRequestForContext,
   type WorkOrderMetadata,
-} from '@/features/work-orders/lib/odooUtils'
+} from '@/shared/lib/odooUtils'
 
 import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'

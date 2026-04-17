@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, FilePlus, Wrench } from 'lucide-react'
 
-import { linkToOdooCreateMaintenanceRequestForContext } from '@/features/work-orders/lib/odooUtils'
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooUtils'
 
 import type { MaintenanceUnit } from '@/services/types'
 
