@@ -1,14 +1,17 @@
-import { InternalWorkOrder } from '@/services/api/core'
-
 import { resolve } from '@/shared/lib/env'
 import { ContextType } from '@/shared/types/ui'
+
+interface OdooLinkableWorkOrder {
+  url?: string
+  code: string
+}
 
 const ODOO_URL = resolve('VITE_ODOO_URL', '')
 const CREATE_MAINTENANCE_REQUEST_URL = `${ODOO_URL}/web#action=onecore_maintenance_extension.action_maintenance_request_create`
 const WINDOW_OPEN_TARGET = '_blank'
 const WINDOW_OPEN_FEATURES = 'noopener,noreferrer'
 
-export const linkToWorkOrderInOdoo = (order: InternalWorkOrder) => {
+export const linkToWorkOrderInOdoo = (order: OdooLinkableWorkOrder) => {
   // If the order has a URL, open it directly
   if (order.url)
     return window.open(order.url, WINDOW_OPEN_TARGET, WINDOW_OPEN_FEATURES)
