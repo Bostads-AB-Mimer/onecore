@@ -379,6 +379,18 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
   return results
 }
 
+export const mapContactFlags = (row: {
+  protectedIdentity: unknown
+  deceased: unknown
+  emigrated: unknown
+  noAdvertising: unknown
+}) => ({
+  protectedIdentity: row.protectedIdentity !== null,
+  deceased: row.deceased !== null,
+  emigrated: row.emigrated !== null,
+  noAdvertising: row.noAdvertising == null ? false : row.noAdvertising !== 0,
+})
+
 export const getContacts = async (
   contactCodes: string[]
 ): Promise<XpandContact[]> => {
@@ -500,11 +512,12 @@ export const getContacts = async (
     const contactCode = contactRow.contactCode?.trimEnd()
     const emailAddress = getContactEmail(contactCode)
 
-    const protectedIdentity = contactRow.protectedIdentity !== null
-    const deceased = contactRow.deceased !== null
-    const emigrated = contactRow.emigrated !== null
-    const noAdvertising =
-      contactRow.noAdvertising == null ? false : contactRow.noAdvertising !== 0
+    const {
+      protectedIdentity,
+      deceased,
+      emigrated,
+      noAdvertising,
+    } = mapContactFlags(contactRow)
 
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
@@ -524,10 +537,10 @@ export const getContacts = async (
         emailAddress !== ''
           ? InvoiceDeliveryMethod.Email
           : InvoiceDeliveryMethod.Other,
-      protectedIdentity: protectedIdentity,
-      deceased: deceased,
-      emigrated: emigrated,
-      noAdvertising: noAdvertising,
+      protectedIdentity,
+      deceased,
+      emigrated,
+      noAdvertising,
     }
   })
 

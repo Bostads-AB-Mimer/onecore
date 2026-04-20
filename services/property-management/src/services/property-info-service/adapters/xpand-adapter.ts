@@ -32,7 +32,7 @@ function trimRow(obj: any): any {
   )
 }
 
-const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
+export const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
   let property: ApartmentInfo | CommercialSpaceInfo | ParkingSpaceInfo
   let rentalPropertyType: string
 

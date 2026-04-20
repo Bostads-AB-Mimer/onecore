@@ -17,6 +17,7 @@ import {
   xledgerDateString,
   XpandContact,
 } from '@src/common/types'
+import { mapContactFlags } from '@src/services/common/adapters/xpand-db-adapter'
 import { match, P } from 'ts-pattern'
 
 type RentalSpecificRule = {
@@ -437,11 +438,8 @@ export const getContacts = async (
     const contactCode = contactRow.contactCode?.trimEnd()
     const emailAddress = getContactEmail(contactCode)
 
-    const protectedIdentity = contactRow.protectedIdentity !== null
-    const deceased = contactRow.deceased !== null
-    const emigrated = contactRow.emigrated !== null
-    const noAdvertising =
-      contactRow.noAdvertising == null ? false : contactRow.noAdvertising !== 0
+    const { protectedIdentity, deceased, emigrated, noAdvertising } =
+      mapContactFlags(contactRow)
 
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
