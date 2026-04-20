@@ -512,12 +512,8 @@ export const getContacts = async (
     const contactCode = contactRow.contactCode?.trimEnd()
     const emailAddress = getContactEmail(contactCode)
 
-    const {
-      protectedIdentity,
-      deceased,
-      emigrated,
-      noAdvertising,
-    } = mapContactFlags(contactRow)
+    const { protectedIdentity, deceased, emigrated, noAdvertising } =
+      mapContactFlags(contactRow)
 
     return {
       contactCode: contactRow.contactCode?.trimEnd(),

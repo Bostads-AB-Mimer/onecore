@@ -13,7 +13,12 @@ import { Lease as LeaseSchema } from '../schemas/lease'
 
 const buildPaginatedResponse = (leases: Lease[]) => ({
   content: leases,
-  _meta: { totalRecords: leases.length, page: 1, limit: 500, count: leases.length },
+  _meta: {
+    totalRecords: leases.length,
+    page: 1,
+    limit: 500,
+    count: leases.length,
+  },
   _links: [],
 })
 
@@ -443,7 +448,9 @@ describe('leases routes', () => {
       jest
         .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
         .mockResolvedValue(
-          buildPaginatedResponse([factory.lease.build({ tenantContactIds: [] })])
+          buildPaginatedResponse([
+            factory.lease.build({ tenantContactIds: [] }),
+          ])
         )
 
       const res = await request(app.callback()).get('/leases/for-CSC')
@@ -639,16 +646,33 @@ describe('leases routes', () => {
     })
 
     it('response _meta count reflects number of leases after filtering', async () => {
-      const lease1 = factory.lease.build({ leaseId: '705-001-01-0101/1', tenantContactIds: ['P158770'], leaseStartDate: '2024-01-01' as unknown as Date })
-      const lease2 = factory.lease.build({ leaseId: '705-001-01-0102/1', tenantContactIds: ['P158771'], leaseStartDate: '2024-01-01' as unknown as Date })
+      const lease1 = factory.lease.build({
+        leaseId: '705-001-01-0101/1',
+        tenantContactIds: ['P158770'],
+        leaseStartDate: '2024-01-01' as unknown as Date,
+      })
+      const lease2 = factory.lease.build({
+        leaseId: '705-001-01-0102/1',
+        tenantContactIds: ['P158771'],
+        leaseStartDate: '2024-01-01' as unknown as Date,
+      })
 
       jest
         .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
         .mockResolvedValue(buildPaginatedResponse([lease1, lease2]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-        .mockResolvedValueOnce({ ok: true, data: factory.contact.build({ contactCode: 'P158770' }) })
-        .mockResolvedValueOnce({ ok: true, data: factory.contact.build({ contactCode: 'P158771', deceased: true }) })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.contact.build({ contactCode: 'P158770' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.contact.build({
+            contactCode: 'P158771',
+            deceased: true,
+          }),
+        })
       jest
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: validRentalProperty() })
