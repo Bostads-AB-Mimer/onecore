@@ -4,21 +4,17 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy, Invoice } from '@onecore/types'
+import { economy } from '@onecore/types'
 
 import {
   getAllInvoicesWithMatchIds,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
-  getInvoicesByContactCode as getXledgerInvoicesByContactCode,
   submitMiscellaneousInvoice,
 } from '../common/adapters/xledger-adapter'
-import {
-  getInvoiceRows,
-  getInvoicesByContactCode as getXpandInvoicesByContactCode,
-} from './adapters/xpand-db-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
+  getInvoicesByContactCode,
   fetchInvoiceRows,
   fetchPaymentEvents,
   getLeaseDetails,
@@ -40,75 +36,10 @@ export const routes = (router: KoaRouter) => {
     const from = queryParams.data?.from
     const contactCode = ctx.params.contactCode
     try {
-      const xledgerInvoices =
-        (await getXledgerInvoicesByContactCode(contactCode, { from: from })) ??
-        []
-      const xpandInvoices =
-        (await getXpandInvoicesByContactCode(contactCode, { from: from })) ?? []
-
-      const xledgerInvoiceIds = xledgerInvoices.map(
-        (invoice) => invoice.invoiceId
-      )
-
-      const regularInvoices: Invoice[] = []
-      const losses: Invoice[] = []
-
-      xledgerInvoices.forEach((i) => {
-        // A loss is recorded as a transaction on account 1529
-        if (i.accountCode === '1529') {
-          losses.push(i)
-        } else {
-          regularInvoices.push(i)
-        }
-      })
-
-      // An invoice is marked as an expected loss if there is a recorded loss with the same invoice number
-      regularInvoices.forEach((i) => {
-        const lossForInvoice = losses.find((l) => l.invoiceId === i.invoiceId)
-        if (lossForInvoice) {
-          i.expectedLoss = true
-        }
-      })
-
-      // If invoice exists in xpand, use period (fromDate, toDate) from xpand invoice
-      // Otherwise use period from xledger invoice
-      const invoices = regularInvoices
-        .map((invoice) => {
-          const xpandInvoice = xpandInvoices.find(
-            (v) => v.invoiceId === invoice.invoiceId
-          )
-
-          if (xpandInvoice?.fromDate && xpandInvoice.toDate) {
-            return {
-              ...invoice,
-              fromDate: xpandInvoice.fromDate,
-              toDate: xpandInvoice.toDate,
-            }
-          } else {
-            return invoice
-          }
-        })
-        .concat(
-          xpandInvoices.filter(
-            (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
-          )
-        )
-
-      const invoiceRows = await getInvoiceRows(
-        '001', // Mimer company id.
-        invoices.map((v) => v.invoiceId)
-      )
-
-      const invoicesWithRows = invoices.map((invoice) => {
-        const rows = invoiceRows.filter(
-          (row) => row.invoiceNumber === invoice.invoiceId
-        )
-
-        return { ...invoice, invoiceRows: rows }
-      })
+      const invoices = await getInvoicesByContactCode(contactCode, { from })
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(invoicesWithRows, metadata)
+      ctx.body = makeSuccessResponseBody(invoices, metadata)
     } catch (error: any) {
       logger.error(
         { error, contactCode: contactCode },

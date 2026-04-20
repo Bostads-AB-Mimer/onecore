@@ -34,6 +34,7 @@ import {
   createCustomerLedgerRow,
   getAllInvoicePaymentEvents,
   getInvoiceByInvoiceNumber,
+  getInvoicesByContactCode as getXledgerInvoicesByContactCode,
   transformAggregatedInvoiceRow,
   transformContact,
   uploadFile as uploadFileToXledger,
@@ -52,6 +53,9 @@ import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'
 import {
   getInvoiceArticle,
   getInvoiceByOcr,
+  getInvoicesByContactCode as getTenfastInvoicesByContactCode,
+  getInvoicesForTenant,
+  getTenantByContactCode,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 
 const createRoundOffRow = async (
@@ -872,6 +876,65 @@ export const getLeaseDetails = async (invoiceIds: string[]) => {
   )
 }
 
+export const getInvoicesByContactCode = async (
+  contactCode: string,
+  filters?: { from?: Date }
+) => {
+  const xledgerInvoices =
+    (await getXledgerInvoicesByContactCode(contactCode, {
+      from: filters?.from,
+    })) ?? []
+  const tenfastInvoices = await getTenfastInvoicesByContactCode(contactCode, {
+    from: filters?.from,
+  })
+
+  const xledgerInvoiceIds = xledgerInvoices.map((invoice) => invoice.invoiceId)
+
+  const regularInvoices: Invoice[] = []
+  const losses: Invoice[] = []
+
+  xledgerInvoices.forEach((i) => {
+    // A loss is recorded as a transaction on account 1529
+    if (i.accountCode === '1529') {
+      losses.push(i)
+    } else {
+      regularInvoices.push(i)
+    }
+  })
+
+  // An invoice is marked as an expected loss if there is a recorded loss with the same invoice number
+  regularInvoices.forEach((i) => {
+    const lossForInvoice = losses.find((l) => l.invoiceId === i.invoiceId)
+    if (lossForInvoice) {
+      i.expectedLoss = true
+    }
+  })
+
+  // If invoice exists in tenfast, use period (fromDate, toDate) from tenfast invoice
+  // Otherwise use period from xledger invoice
+  return regularInvoices
+    .map((invoice) => {
+      const tenfastInvoice = tenfastInvoices.find(
+        (v) => v.invoiceId === invoice.invoiceId
+      )
+
+      if (tenfastInvoice?.fromDate && tenfastInvoice.toDate) {
+        return {
+          ...invoice,
+          fromDate: tenfastInvoice.fromDate,
+          toDate: tenfastInvoice.toDate,
+        }
+      } else {
+        return invoice
+      }
+    })
+    .concat(
+      tenfastInvoices.filter(
+        (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
+      )
+    )
+}
+
 export const getInvoiceDetails = async (
   invoiceNumber: string
 ): Promise<Invoice | null> => {
@@ -887,28 +950,57 @@ export const getInvoiceDetails = async (
   }
 
   if (tenfastInvoiceResult.data) {
-    const articleIds = tenfastInvoiceResult.data.invoiceRows.reduce<string[]>(
-      (acc, ir) => {
-        if (ir.rentArticle) {
-          acc.push(ir.rentArticle)
-        }
-        return acc
-      },
-      []
+    result.invoiceRows = await enrichInvoiceRowsWithText(
+      tenfastInvoiceResult.data.invoiceRows
     )
+  }
 
-    const articleResults = await Promise.all(
-      articleIds.map((id) => getInvoiceArticle(id))
-    )
-    const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
-      if (ar.ok) {
-        acc.push(ar.data)
-      }
-      return acc
-    }, [])
+  return result
+}
 
-    result.invoiceRows = tenfastInvoiceResult.data.invoiceRows.map(
-      (ir): InvoiceRow => {
+export const getInvoiceDetailsForContactCode = async (
+  contactCode: string,
+  from?: Date
+): Promise<Invoice[]> => {
+  const tenfastTenantResult = await getTenantByContactCode(contactCode)
+  if (!tenfastTenantResult.ok || tenfastTenantResult.data === null) {
+    return []
+  }
+
+  const tenfastInvoicesResult = await getInvoicesForTenant(
+    tenfastTenantResult.data._id,
+    from
+  )
+  if (!tenfastInvoicesResult.ok) {
+    return []
+  }
+
+  return enrichInvoices(tenfastInvoicesResult.data)
+}
+
+const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {
+  const allInvoiceRows = invoices.flatMap((i) => i.invoiceRows)
+  const articleIds = allInvoiceRows.reduce<string[]>((acc, ir) => {
+    if (ir.rentArticle) {
+      acc.push(ir.rentArticle)
+    }
+    return acc
+  }, [])
+
+  const articleResults = await Promise.all(
+    articleIds.map((id) => getInvoiceArticle(id))
+  )
+  const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
+    if (ar.ok) {
+      acc.push(ar.data)
+    }
+    return acc
+  }, [])
+
+  return invoices.map((i): Invoice => {
+    return {
+      ...i,
+      invoiceRows: i.invoiceRows.map((ir) => {
         const article = articles.find((a) => {
           return a._id === ir.rentArticle
         })
@@ -917,9 +1009,39 @@ export const getInvoiceDetails = async (
           ...ir,
           invoiceRowText: article?.label ?? null,
         }
-      }
-    )
-  }
+      }),
+    }
+  })
+}
 
-  return result
+const enrichInvoiceRowsWithText = async (
+  invoiceRows: InvoiceRow[]
+): Promise<InvoiceRow[]> => {
+  const articleIds = invoiceRows.reduce<string[]>((acc, ir) => {
+    if (ir.rentArticle) {
+      acc.push(ir.rentArticle)
+    }
+    return acc
+  }, [])
+
+  const articleResults = await Promise.all(
+    articleIds.map((id) => getInvoiceArticle(id))
+  )
+  const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
+    if (ar.ok) {
+      acc.push(ar.data)
+    }
+    return acc
+  }, [])
+
+  return invoiceRows.map((ir): InvoiceRow => {
+    const article = articles.find((a) => {
+      return a._id === ir.rentArticle
+    })
+
+    return {
+      ...ir,
+      invoiceRowText: article?.label ?? null,
+    }
+  })
 }
