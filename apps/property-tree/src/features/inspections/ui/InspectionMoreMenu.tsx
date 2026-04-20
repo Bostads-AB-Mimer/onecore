@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileImage, MoreHorizontal } from 'lucide-react'
+import { MoreHorizontal } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
 import {
@@ -15,26 +15,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
+import { FloorplanImage } from '@/shared/ui/FloorplanImage'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 
 interface InspectionMoreMenuProps {
-  floorplanImage?: string
+  rentalId?: string
   onAddRoom?: (name: string) => void
 }
 
 export function InspectionMoreMenu({
-  floorplanImage,
+  rentalId,
   onAddRoom,
 }: InspectionMoreMenuProps) {
   const [showFloorplan, setShowFloorplan] = useState(false)
   const [showAddRoom, setShowAddRoom] = useState(false)
   const [newRoomName, setNewRoomName] = useState('')
-  // The floorplan CDN returns 404 for residences without a published
-  // planritning — fall back to the empty state when the image fails to load.
-  const [floorplanError, setFloorplanError] = useState(false)
-
-  const canShowFloorplan = !!floorplanImage && !floorplanError
 
   const handleAddRoom = () => {
     if (newRoomName.trim()) {
@@ -77,19 +73,10 @@ export function InspectionMoreMenu({
           <DialogHeader>
             <DialogTitle>Planritning</DialogTitle>
           </DialogHeader>
-          {canShowFloorplan ? (
-            <img
-              src={floorplanImage}
-              alt="Planritning"
-              onError={() => setFloorplanError(true)}
-              className="w-full h-auto max-h-[80vh] object-contain rounded"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-              <FileImage className="h-16 w-16 opacity-30" />
-              <p className="text-sm">Ingen planritning tillgänglig</p>
-            </div>
-          )}
+          <FloorplanImage
+            rentalId={rentalId}
+            className="w-full h-auto max-h-[80vh] object-contain rounded"
+          />
         </DialogContent>
       </Dialog>
 

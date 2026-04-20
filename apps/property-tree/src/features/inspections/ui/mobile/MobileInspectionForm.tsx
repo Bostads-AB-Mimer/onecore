@@ -10,7 +10,6 @@ import type {
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
-import { getFloorplanUrl } from '@/shared/lib/floorplan'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
@@ -83,7 +82,6 @@ export function MobileInspectionForm({
     handleDetailComponentNoteUpdate,
   } = useInspectionForm(rooms, existingInspection)
 
-  const floorplanImage = rentalId ? getFloorplanUrl(rentalId) : undefined
   const currentRoom = rooms[currentRoomIndex]
   const completedRooms = rooms.filter(
     (room) => inspectionData[room.id]?.isHandled
@@ -296,7 +294,7 @@ export function MobileInspectionForm({
             <span className="sr-only">Föregående rum</span>
           </Button>
 
-          <InspectionMoreMenu floorplanImage={floorplanImage} />
+          <InspectionMoreMenu rentalId={rentalId} />
 
           <Button
             variant="secondary"
