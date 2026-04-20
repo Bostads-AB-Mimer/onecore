@@ -66,6 +66,9 @@ export function InspectionConductDialog({
   )
 
   const resolvedRooms = rooms && rooms.length > 0 ? rooms : (fetchedRooms ?? [])
+  // Floorplan lookup uses the Xpand rentalId — prefer the explicit prop,
+  // fall back to the inspection's residenceId.
+  const resolvedRentalId = rentalId ?? internalInspection?.residenceId
 
   if (!isOpen || isLoadingInternal || isLoadingRooms) {
     return null
@@ -75,6 +78,7 @@ export function InspectionConductDialog({
     <InspectionFormDialog
       isOpen={isOpen}
       onClose={onClose}
+      rentalId={resolvedRentalId}
       onSubmit={async (
         inspectorName,
         inspectionRooms,

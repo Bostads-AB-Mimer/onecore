@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, User } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
@@ -17,7 +17,9 @@ import { ScrollArea } from '@/shared/ui/ScrollArea'
 
 import { useInspectionForm } from '../../hooks/useInspectionForm'
 import { InspectionInfoSection } from '../InspectionInfoSection'
+import { InspectionMoreMenu } from '../InspectionMoreMenu'
 import { RoomInspectionEditor } from '../RoomInspectionEditor'
+import { SaveDraftConfirmDialog } from '../SaveDraftConfirmDialog'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
@@ -35,6 +37,7 @@ interface MobileInspectionFormProps {
   address?: string
   apartmentCode?: string | null
   existingInspection?: Inspection
+  rentalId?: string
 }
 
 export function MobileInspectionForm({
@@ -45,8 +48,10 @@ export function MobileInspectionForm({
   address,
   apartmentCode,
   existingInspection,
+  rentalId,
 }: MobileInspectionFormProps) {
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0)
+  const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
   // Show the inspector-selection landing screen for brand-new inspections
   // and for "start over" restarts. Continuing a draft has persisted room
   // data and skips straight into the form.
@@ -64,6 +69,8 @@ export function MobileInspectionForm({
   const {
     inspectorName,
     setInspectorName,
+    needsMasterKey,
+    isFurnished,
     inspectionData,
     handleConditionUpdate,
     handleActionUpdate,
@@ -79,6 +86,8 @@ export function MobileInspectionForm({
   const completedRooms = rooms.filter(
     (room) => inspectionData[room.id]?.isHandled
   ).length
+  const isFirstRoom = currentRoomIndex === 0
+  const isLastRoom = currentRoomIndex >= rooms.length - 1
 
   // Create tenant snapshot for saving
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
@@ -90,30 +99,25 @@ export function MobileInspectionForm({
   }
 
   const handlePrevious = () => {
-    if (currentRoomIndex > 0) {
+    if (!isFirstRoom) {
       setCurrentRoomIndex(currentRoomIndex - 1)
     }
   }
 
-  // const handleSubmit = () => {
-  //   if (canComplete) {
-  //     onSave(inspectorName, inspectionData, 'completed', {
-  //       needsMasterKey,
-  //       tenant: createTenantSnapshot(),
-  //     })
-  //   }
-  // }
+  const handleNext = () => {
+    if (!isLastRoom) {
+      setCurrentRoomIndex(currentRoomIndex + 1)
+    }
+  }
 
-  // const handleSaveDraft = () => {
-  //   if (inspectorName.trim()) {
-  //     onSave(inspectorName, inspectionData, 'draft', {
-  //       needsMasterKey,
-  //       tenant: createTenantSnapshot(),
-  //     })
-  //   }
-  // }
-
-  const canComplete = inspectorName && completedRooms === rooms.length
+  const handleConfirmSaveDraft = () => {
+    onSave(inspectorName, inspectionData, 'draft', {
+      needsMasterKey,
+      isFurnished,
+      tenant: createTenantSnapshot(),
+    })
+    setIsDraftConfirmOpen(false)
+  }
 
   // Reset scroll position when room changes
   useEffect(() => {
@@ -278,44 +282,49 @@ export function MobileInspectionForm({
       </div>
 
       {/* Bottom Navigation */}
-      <div className="sticky bottom-0 bg-background border-t p-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentRoomIndex === 0}
-              className="flex-1"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Föregående
-            </Button>
+      <div className="sticky bottom-0 bg-background border-t px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handlePrevious}
+            disabled={isFirstRoom}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">Föregående rum</span>
+          </Button>
 
-            {/* {currentRoomIndex === rooms.length - 1 ? (
-              <Button
-                onClick={handleSubmit}
-                disabled={!canComplete}
-                className="flex-1"
-              >
-                Slutför
-              </Button>
-            ) : (
-              <Button onClick={handleNext} className="flex-1">
-                Nästa
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            )} */}
-          </div>
-          {/* <Button
+          <InspectionMoreMenu rentalId={rentalId} />
+
+          <Button
             variant="secondary"
-            onClick={handleSaveDraft}
+            onClick={() => setIsDraftConfirmOpen(true)}
             disabled={!inspectorName.trim()}
-            className="w-full"
+            className="flex-1"
           >
             Spara utkast
-          </Button> */}
+          </Button>
+
+          {/* TODO(MIM-?): add "Slutför besiktning" path on mobile. Mobile
+              currently has no way to finalize an inspection — only draft
+              saves. The right chevron just disables on the last room. */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleNext}
+            disabled={isLastRoom}
+          >
+            <ChevronRight className="h-4 w-4" />
+            <span className="sr-only">Nästa rum</span>
+          </Button>
         </div>
       </div>
+
+      <SaveDraftConfirmDialog
+        open={isDraftConfirmOpen}
+        onOpenChange={setIsDraftConfirmOpen}
+        onConfirm={handleConfirmSaveDraft}
+      />
     </div>
   )
 }
