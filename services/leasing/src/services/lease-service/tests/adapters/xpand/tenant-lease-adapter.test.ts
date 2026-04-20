@@ -316,7 +316,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ deceased: null })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.deceased).toBe(false)
   })
@@ -325,7 +326,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ deceased: '2024-01-01' })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.deceased).toBe(true)
   })
@@ -334,7 +336,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ emigrated: null })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.emigrated).toBe(false)
   })
@@ -343,7 +346,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ emigrated: '2024-01-01' })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.emigrated).toBe(true)
   })
@@ -352,7 +356,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ noAdvertising: null })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.noAdvertising).toBe(false)
   })
@@ -361,7 +366,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ noAdvertising: 0 })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.noAdvertising).toBe(false)
   })
@@ -370,7 +376,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ noAdvertising: 1 })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.noAdvertising).toBe(true)
   })
@@ -379,7 +386,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ street2: 'c/o Någon' })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.address?.street2).toBe('c/o Någon')
   })
@@ -388,7 +396,8 @@ describe('transformFromDbContact', () => {
     const contact = tenantLeaseAdapter.transformFromDbContact(
       [buildRow({ street2: undefined })],
       [],
-      []
+      [],
+      false
     )
     expect(contact.address?.street2).toBeUndefined()
   })
