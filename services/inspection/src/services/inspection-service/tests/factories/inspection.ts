@@ -257,6 +257,16 @@ const emptyCosts = {
   details: 0,
 }
 
+const emptyCostResponsibilities = {
+  wall1: null,
+  wall2: null,
+  wall3: null,
+  wall4: null,
+  floor: null,
+  ceiling: null,
+  details: null,
+}
+
 export const InspectionRoomFactory = Factory.define<InspectionRoom>(() => ({
   roomId: 'room-1',
   conditions: { ...emptyConditions },
@@ -264,6 +274,7 @@ export const InspectionRoomFactory = Factory.define<InspectionRoom>(() => ({
   componentNotes: { ...emptyConditions },
   componentCosts: { ...emptyCosts },
   componentPhotos: { ...emptyActions },
+  componentCostResponsibilities: { ...emptyCostResponsibilities },
   photos: [],
   isApproved: false,
   isHandled: false,

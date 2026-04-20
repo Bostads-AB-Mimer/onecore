@@ -38,6 +38,10 @@ interface RoomInspectionEditorProps {
     field: keyof InspectionRoom['componentPhotos'],
     index: number
   ) => void
+  onComponentCostResponsibilityUpdate: (
+    field: keyof InspectionRoom['componentCostResponsibilities'],
+    value: 'tenant' | 'landlord' | null
+  ) => void
   onDetailComponentAdd: (component: { type: string; label: string }) => void
   onDetailComponentRemove: (componentId: string) => void
   onDetailComponentNoteUpdate: (componentId: string, note: string) => void
@@ -51,6 +55,7 @@ export function RoomInspectionEditor({
   onComponentNoteUpdate,
   onComponentPhotoAdd,
   onComponentPhotoRemove,
+  onComponentCostResponsibilityUpdate,
   onDetailComponentAdd,
   onDetailComponentRemove,
   onDetailComponentNoteUpdate,
@@ -110,10 +115,17 @@ export function RoomInspectionEditor({
                 note={inspectionData.componentNotes[surfaceKey]}
                 photoCount={inspectionData.componentPhotos[surfaceKey].length}
                 actions={inspectionData.actions[surfaceKey]}
+                costResponsibility={
+                  inspectionData.componentCostResponsibilities[surfaceKey] ??
+                  null
+                }
                 onConditionChange={(value) =>
                   onConditionUpdate(surfaceKey, value)
                 }
                 onNoteChange={(note) => onComponentNoteUpdate(surfaceKey, note)}
+                onCostResponsibilityChange={(value) =>
+                  onComponentCostResponsibilityUpdate(surfaceKey, value)
+                }
                 onPhotoCapture={(photoDataUrl) =>
                   onComponentPhotoAdd(surfaceKey, photoDataUrl)
                 }
@@ -135,8 +147,10 @@ export function RoomInspectionEditor({
                 note=""
                 photoCount={0}
                 actions={[]}
+                costResponsibility={null}
                 onConditionChange={noop}
                 onNoteChange={noop}
+                onCostResponsibilityChange={noop}
                 onPhotoCapture={noop}
                 onOpenDetail={noop}
               />

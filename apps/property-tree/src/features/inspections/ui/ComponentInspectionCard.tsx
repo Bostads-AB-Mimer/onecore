@@ -4,8 +4,10 @@ import { Camera, ChevronRight, MessageSquare, Wrench } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Textarea } from '@/shared/ui/Textarea'
 
-import { CONDITION_OPTIONS } from '../constants'
+import { CONDITION_OPTIONS, CONDITION_TYPE } from '../constants'
 import { PhotoCapture } from './PhotoCapture'
+
+type CostResponsibility = 'tenant' | 'landlord' | null
 
 interface ComponentInspectionCardProps {
   componentKey: string
@@ -14,20 +16,25 @@ interface ComponentInspectionCardProps {
   note: string
   photoCount: number
   actions: string[]
+  costResponsibility: CostResponsibility
   onConditionChange: (value: string) => void
   onNoteChange: (value: string) => void
+  onCostResponsibilityChange: (value: CostResponsibility) => void
   onPhotoCapture: (photoDataUrl: string) => void
   onOpenDetail: () => void
 }
 
 export function ComponentInspectionCard({
+  componentKey,
   label,
   condition,
   note,
   photoCount,
   actions,
+  costResponsibility,
   onConditionChange,
   onNoteChange,
+  onCostResponsibilityChange,
   onPhotoCapture,
   onOpenDetail,
 }: ComponentInspectionCardProps) {
@@ -89,6 +96,36 @@ export function ComponentInspectionCard({
           </Button>
         ))}
       </div>
+
+      {/* Cost responsibility radio — only shown for Skadad / Acceptabel */}
+      {(condition === CONDITION_TYPE.DAMAGED ||
+        condition === CONDITION_TYPE.ACCEPTABLE) && (
+        <div className="mb-3">
+          <p className="text-sm text-muted-foreground mb-2">Kostnadsansvar</p>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name={`cost-${componentKey}`}
+                value="tenant"
+                checked={costResponsibility === 'tenant'}
+                onChange={() => onCostResponsibilityChange('tenant')}
+              />
+              Hyresgäst
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name={`cost-${componentKey}`}
+                value="landlord"
+                checked={costResponsibility === 'landlord'}
+                onChange={() => onCostResponsibilityChange('landlord')}
+              />
+              Hyresvärd
+            </label>
+          </div>
+        </div>
+      )}
 
       {/* Note field and photo button */}
       <div className="flex gap-2 items-start">

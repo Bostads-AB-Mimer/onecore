@@ -11420,7 +11420,7 @@ export interface components {
             leaseContactType?: string;
           }[];
       }) | null;
-      rooms: {
+      rooms: (({
           roomId: string;
           name?: string;
           conditions: {
@@ -11475,6 +11475,43 @@ export interface components {
             ceiling: string[];
             details: string[];
           };
+          componentCostResponsibilities: {
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall1?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall2?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall3?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall4?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            floor?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            ceiling?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            details?: "tenant" | "landlord" | null;
+          };
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
@@ -11485,7 +11522,7 @@ export interface components {
               label: string;
               note: string;
             }[];
-        }[] | null;
+        })[]) | null;
     };
     InspectionRoom: {
       roomId: string;
@@ -11541,6 +11578,43 @@ export interface components {
         floor: string[];
         ceiling: string[];
         details: string[];
+      };
+      componentCostResponsibilities: {
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        wall1?: "tenant" | "landlord" | null;
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        wall2?: "tenant" | "landlord" | null;
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        wall3?: "tenant" | "landlord" | null;
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        wall4?: "tenant" | "landlord" | null;
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        floor?: "tenant" | "landlord" | null;
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        ceiling?: "tenant" | "landlord" | null;
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        details?: "tenant" | "landlord" | null;
       };
       photos: string[];
       isApproved: boolean;
@@ -12619,7 +12693,7 @@ export interface components {
       masterKeyAccess: string | null;
       residenceId: string;
       isFurnished: boolean;
-      rooms: {
+      rooms: (({
           roomId: string;
           name?: string;
           conditions: {
@@ -12674,6 +12748,43 @@ export interface components {
             ceiling: string[];
             details: string[];
           };
+          componentCostResponsibilities: {
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall1?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall2?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall3?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall4?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            floor?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            ceiling?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            details?: "tenant" | "landlord" | null;
+          };
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
@@ -12684,11 +12795,11 @@ export interface components {
               label: string;
               note: string;
             }[];
-        }[] | null;
+        })[]) | null;
     };
     SaveInspectionDraftRequest: {
       inspectorName: string;
-      rooms: {
+      rooms: ({
           roomId: string;
           name?: string;
           conditions: {
@@ -12743,6 +12854,43 @@ export interface components {
             ceiling: string[];
             details: string[];
           };
+          componentCostResponsibilities: {
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall1?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall2?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall3?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            wall4?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            floor?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            ceiling?: "tenant" | "landlord" | null;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            details?: "tenant" | "landlord" | null;
+          };
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
@@ -12753,7 +12901,7 @@ export interface components {
               label: string;
               note: string;
             }[];
-        }[];
+        })[];
       isFurnished: boolean;
     };
     FileListItem: {

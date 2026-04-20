@@ -75,6 +75,7 @@ export function InspectionForm({
     handleComponentCostUpdate,
     handleComponentPhotoAdd,
     handleComponentPhotoRemove,
+    handleComponentCostResponsibilityUpdate,
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
@@ -188,6 +189,13 @@ export function InspectionForm({
                       }
                       onComponentPhotoRemove={(field, index) =>
                         handleComponentPhotoRemove(room.id, field, index)
+                      }
+                      onComponentCostResponsibilityUpdate={(field, value) =>
+                        handleComponentCostResponsibilityUpdate(
+                          room.id,
+                          field,
+                          value
+                        )
                       }
                       onDetailComponentAdd={(component) =>
                         handleDetailComponentAdd(room.id, component)

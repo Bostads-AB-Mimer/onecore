@@ -76,6 +76,8 @@ export function useInspectionForm(
     handleComponentCostUpdate: componentOps.updateComponentCost,
     handleComponentPhotoAdd: componentOps.addPhoto,
     handleComponentPhotoRemove: componentOps.removePhoto,
+    handleComponentCostResponsibilityUpdate:
+      componentOps.updateComponentCostResponsibility,
 
     // Detail component operations
     handleDetailComponentAdd: componentOps.addDetailComponent,

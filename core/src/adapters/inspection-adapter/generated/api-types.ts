@@ -679,6 +679,22 @@ export interface components {
         ceiling: string[]
         details: string[]
       }
+      componentCostResponsibilities: {
+        /** @default null */
+        wall1?: ('tenant' | 'landlord') | null
+        /** @default null */
+        wall2?: ('tenant' | 'landlord') | null
+        /** @default null */
+        wall3?: ('tenant' | 'landlord') | null
+        /** @default null */
+        wall4?: ('tenant' | 'landlord') | null
+        /** @default null */
+        floor?: ('tenant' | 'landlord') | null
+        /** @default null */
+        ceiling?: ('tenant' | 'landlord') | null
+        /** @default null */
+        details?: ('tenant' | 'landlord') | null
+      }
       photos: string[]
       isApproved: boolean
       isHandled: boolean
@@ -758,6 +774,22 @@ export interface components {
               ceiling: string[]
               details: string[]
             }
+            componentCostResponsibilities: {
+              /** @default null */
+              wall1?: ('tenant' | 'landlord') | null
+              /** @default null */
+              wall2?: ('tenant' | 'landlord') | null
+              /** @default null */
+              wall3?: ('tenant' | 'landlord') | null
+              /** @default null */
+              wall4?: ('tenant' | 'landlord') | null
+              /** @default null */
+              floor?: ('tenant' | 'landlord') | null
+              /** @default null */
+              ceiling?: ('tenant' | 'landlord') | null
+              /** @default null */
+              details?: ('tenant' | 'landlord') | null
+            }
             photos: string[]
             isApproved: boolean
             isHandled: boolean
@@ -826,6 +858,22 @@ export interface components {
           floor: string[]
           ceiling: string[]
           details: string[]
+        }
+        componentCostResponsibilities: {
+          /** @default null */
+          wall1?: ('tenant' | 'landlord') | null
+          /** @default null */
+          wall2?: ('tenant' | 'landlord') | null
+          /** @default null */
+          wall3?: ('tenant' | 'landlord') | null
+          /** @default null */
+          wall4?: ('tenant' | 'landlord') | null
+          /** @default null */
+          floor?: ('tenant' | 'landlord') | null
+          /** @default null */
+          ceiling?: ('tenant' | 'landlord') | null
+          /** @default null */
+          details?: ('tenant' | 'landlord') | null
         }
         photos: string[]
         isApproved: boolean

@@ -137,6 +137,16 @@ const InspectionRoomCostsSchema = z.object({
   details: z.number().int().min(0).default(0),
 })
 
+const InspectionRoomCostResponsibilitiesSchema = z.object({
+  wall1: z.enum(['tenant', 'landlord']).nullable().default(null),
+  wall2: z.enum(['tenant', 'landlord']).nullable().default(null),
+  wall3: z.enum(['tenant', 'landlord']).nullable().default(null),
+  wall4: z.enum(['tenant', 'landlord']).nullable().default(null),
+  floor: z.enum(['tenant', 'landlord']).nullable().default(null),
+  ceiling: z.enum(['tenant', 'landlord']).nullable().default(null),
+  details: z.enum(['tenant', 'landlord']).nullable().default(null),
+})
+
 const DetailComponentSchema = z.object({
   id: z.string(),
   type: z.string(),
@@ -155,6 +165,7 @@ export const InspectionRoomSchema = z.object({
   componentNotes: InspectionRoomConditionsSchema,
   componentCosts: InspectionRoomCostsSchema,
   componentPhotos: InspectionRoomActionsSchema,
+  componentCostResponsibilities: InspectionRoomCostResponsibilitiesSchema,
   photos: z.array(z.string()),
   isApproved: z.boolean(),
   isHandled: z.boolean(),
