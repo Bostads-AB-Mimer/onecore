@@ -4,7 +4,6 @@ import {
   linkToOdooCreateMaintenanceRequestForContext,
   type WorkOrderMetadata,
 } from '@/shared/lib/odooUtils'
-
 import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
