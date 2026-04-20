@@ -7,6 +7,7 @@ import {
   Invoice,
   InvoicePaymentEvent,
   InvoiceTransactionType,
+  MiscellaneousInvoiceArticle,
   PaymentStatus,
   XledgerContact,
   XledgerProject,
@@ -1236,7 +1237,7 @@ export const healthCheck = async () => {
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
 ) => {
-  const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
+  const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.article.name).join(', ')}`
 
   const nodes = invoice.invoiceRows.map(
     (ir, index) => gql`
@@ -1245,9 +1246,9 @@ export const submitMiscellaneousInvoice = async (
           subledger: { code: ${JSON.stringify(invoice.contactCode)} }
           lineNumber: ${index}
           product: {
-            code: ${JSON.stringify(ir.articleId)}
+            code: ${JSON.stringify(ir.article.id)}
           }
-          text: ${JSON.stringify(`${ir.articleName}${ir.text ? `: ${ir.text}` : ''}`)}
+          text: ${JSON.stringify(`${ir.article.name}${ir.text ? `: ${ir.text}` : ''}`)}
           quantity: ${ir.amount}
           unitPrice: ${ir.price}
           glObject1: {
@@ -1317,8 +1318,7 @@ interface XledgerInvoiceRow {
   text?: string
   price: number
   amount: number
-  articleName: string
-  articleId: string
+  article: MiscellaneousInvoiceArticle
 }
 
 interface MiscellaneousInvoicePayload {

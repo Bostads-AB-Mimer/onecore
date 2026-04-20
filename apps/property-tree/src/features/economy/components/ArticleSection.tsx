@@ -58,18 +58,15 @@ export function ArticleSection({
       return
     }
 
-    newRows[index].articleId = articleId
-    newRows[index].articleName = article.name
+    newRows[index].article = article
     newRows[index].price =
       article.standardPrice === 0 ? '' : article.standardPrice.toString()
+
     onInvoiceRowsChange(newRows)
   }
 
   const handleAddRow = () => {
-    onInvoiceRowsChange([
-      ...invoiceRows,
-      { price: '0', amount: 1, articleId: '', articleName: '' },
-    ])
+    onInvoiceRowsChange([...invoiceRows, { price: '0', amount: 1 }])
   }
 
   const handleRemoveRow = (index: number) => {
@@ -92,7 +89,7 @@ export function ArticleSection({
               <div className="space-y-2">
                 <Label htmlFor="artikel">Artikel</Label>
                 <Select
-                  value={row.articleId}
+                  value={row.article?.id}
                   onValueChange={(articleId) =>
                     handleChangeRowArticle(index, articleId)
                   }
@@ -120,7 +117,7 @@ export function ArticleSection({
                 <Label htmlFor="artikelnummer">Artikelnummer</Label>
                 <Input
                   id="artikelnummer"
-                  value={row.articleId}
+                  value={row.article?.id}
                   readOnly
                   disabled
                   placeholder="Fylls i automatiskt"
