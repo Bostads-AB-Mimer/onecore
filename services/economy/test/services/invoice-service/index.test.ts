@@ -4,7 +4,6 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
-import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
 import { routes } from '@src/services/invoice-service'
 
@@ -31,13 +30,19 @@ describe('Invoice Service', () => {
     it('responds with invoices', async () => {
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce(factory.invoice.buildList(3))
+        .mockResolvedValueOnce([
+          factory.invoice.build({ invoiceId: '123' }),
+          factory.invoice.build({ invoiceId: '456' }),
+          factory.invoice.build({ invoiceId: '789' }),
+        ])
 
       jest
-        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce(factory.invoice.buildList(3))
-
-      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([
+          factory.invoice.build({ invoiceId: '123' }),
+          factory.invoice.build({ invoiceId: '456' }),
+          factory.invoice.build({ invoiceId: '789' }),
+        ])
 
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`
@@ -56,22 +61,13 @@ describe('Invoice Service', () => {
         factory.invoice.build({ invoiceId: 'bar' }),
       ]
 
-      const [invoiceRows_1, invoiceRows_2] = [
-        factory.invoiceRow.buildList(3, { invoiceNumber: invoice_1.invoiceId }),
-        factory.invoiceRow.buildList(3, { invoiceNumber: invoice_2.invoiceId }),
-      ]
-
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
         .mockResolvedValueOnce([invoice_1])
 
       jest
-        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
         .mockResolvedValueOnce([invoice_2])
-
-      jest
-        .spyOn(xpandAdapter, 'getInvoiceRows')
-        .mockResolvedValueOnce(invoiceRows_1.concat(invoiceRows_2))
 
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`
@@ -106,7 +102,7 @@ describe('Invoice Service', () => {
 
     it('uses fromDate and toDate from Xpand if available', async () => {
       const invoiceId = 'foo'
-      const xpandInvoice = factory.invoice.build({
+      const tenfastInvoice = factory.invoice.build({
         invoiceId,
         fromDate: new Date('2023-03-01T00:00:00.000Z'),
         toDate: new Date('2023-03-31T00:00:00.000Z'),
@@ -119,14 +115,12 @@ describe('Invoice Service', () => {
       })
 
       jest
-        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([xpandInvoice])
-
-      jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
         .mockResolvedValueOnce([xledgerInvoice])
 
-      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
+      jest
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([tenfastInvoice])
 
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`
@@ -135,8 +129,8 @@ describe('Invoice Service', () => {
       expect(res.body.content).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            fromDate: xpandInvoice.fromDate.toISOString(),
-            toDate: xpandInvoice.toDate.toISOString(),
+            fromDate: tenfastInvoice.fromDate.toISOString(),
+            toDate: tenfastInvoice.toDate.toISOString(),
           }),
         ])
       )
@@ -151,14 +145,12 @@ describe('Invoice Service', () => {
       })
 
       jest
-        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
         .mockResolvedValueOnce([])
 
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
         .mockResolvedValueOnce([xledgerInvoice])
-
-      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
 
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`

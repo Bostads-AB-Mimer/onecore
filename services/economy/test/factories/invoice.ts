@@ -7,9 +7,12 @@ import {
   InvoiceTransactionType,
 } from '@onecore/types'
 
-export const InvoiceFactory = Factory.define<Invoice>(() => {
+export const InvoiceFactory = Factory.define<Invoice>((options) => {
+  const invoiceId =
+    options.params.invoiceId ?? `55230331503045${options.sequence}`
+
   return {
-    invoiceId: '552303315030452',
+    invoiceId,
     leaseId: '705-025-03-0205/01',
     reference: 'P123456',
     amount: 7687.77,
@@ -23,7 +26,10 @@ export const InvoiceFactory = Factory.define<Invoice>(() => {
     transactionTypeName: 'HYRA',
     type: 'Regular',
     source: 'legacy',
-    invoiceRows: [],
+    invoiceRows: InvoiceRowFactory.buildList(1, {
+      invoiceNumber: invoiceId,
+      amount: 7687.77,
+    }),
     credit: null,
   }
 })

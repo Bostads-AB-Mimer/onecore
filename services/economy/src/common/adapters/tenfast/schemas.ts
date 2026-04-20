@@ -49,7 +49,7 @@ export const TenfastInvoiceRowSchema = z.object({
   hyresobjekt: z.string().optional(),
   article: z.string().nullable(),
   label: z.string().nullable(),
-  accountingRows: z.array(z.any()),
+  accountingRows: z.array(z.any()).optional(),
   consolidationLabel: z.string().nullable().optional(),
   _id: z.string(),
 })
@@ -79,14 +79,12 @@ export const TenfastInvoiceSchema = z.object({
   ekoNotifications: z.array(z.any()),
   skipEmail: z.boolean(),
   markedAsLate: z.boolean(),
-  reference: z.number(),
+  reference: z.number().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  __v: z.number(),
   ocrNumber: z.string(),
   late: z.boolean(),
   state: z.string(),
-  id: z.string(),
 })
 
 // Getting invoices by OCR from Tenfast returns a list of full Lease objects,

@@ -51,7 +51,7 @@ export const getTenantByContactCode = async (
 ): Promise<AdapterResult<TenfastTenant | null, string>> => {
   try {
     const tenantResponse = await makeTenfastRequest(
-      '/v1/hyresvard/hyresgaster',
+      '/v1/hyresvard/hyresgaster/search',
       {
         params: {
           'filter[externalId]': contactCode,
@@ -79,12 +79,24 @@ export const getTenantByContactCode = async (
   }
 }
 
+const dateToDateString = (date: Date): string => {
+  return date.toISOString().split('T')[0]
+}
+
 export const getInvoicesForTenant = async (
-  tenantId: string
+  tenantId: string,
+  from?: Date
 ): Promise<AdapterResult<Invoice[], string>> => {
   try {
     const result = await makeTenfastRequest(
-      `/v1/hyresvard/hyresgaster/${tenantId}/hyror`
+      `/v1/hyresvard/hyresgaster/${tenantId}/hyror`,
+      {
+        params: {
+          // these have no effect currently
+          from: from ? dateToDateString(from) : undefined,
+          to: from ? dateToDateString(new Date()) : undefined,
+        },
+      }
     )
     if (result.status !== 200) {
       return { ok: false, err: result.statusText }
@@ -103,6 +115,29 @@ export const getInvoicesForTenant = async (
     logger.error(err)
     return { ok: false, err: err.message }
   }
+}
+
+export const getInvoicesByContactCode = async (
+  contactCode: string,
+  filters?: { from?: Date }
+): Promise<Invoice[]> => {
+  const tenantResult = await getTenantByContactCode(contactCode)
+  if (!tenantResult.ok) {
+    throw tenantResult.err
+  }
+  if (!tenantResult.data) {
+    return []
+  }
+
+  const invoicesResult = await getInvoicesForTenant(
+    tenantResult.data._id,
+    filters?.from
+  )
+  if (!invoicesResult.ok) {
+    throw invoicesResult.err
+  }
+
+  return invoicesResult.data
 }
 
 export const getInvoiceByOcr = async (
