@@ -1,8 +1,4 @@
-export interface MiscellaneousInvoiceArticle {
-  id: string
-  name: string
-  standardPrice: number
-}
+import { MiscellaneousInvoiceArticle } from '@onecore/types/src/economy/miscellaneous-invoice'
 
 // TODO These should ideally be fetched from Xledger
 export const MiscellaneousInvoiceArticles: MiscellaneousInvoiceArticle[] = [
@@ -130,6 +126,7 @@ export const MiscellaneousInvoiceArticles: MiscellaneousInvoiceArticle[] = [
     id: '361001',
     name: 'Vidarefakturering med moms',
     standardPrice: 0,
+    vatExcluded: true,
   },
   {
     id: '369300',
@@ -150,6 +147,7 @@ export const MiscellaneousInvoiceArticles: MiscellaneousInvoiceArticle[] = [
     id: '369800',
     name: 'Övriga intäkter med moms konto 3698',
     standardPrice: 0,
+    vatExcluded: true,
   },
   {
     id: '369900',
