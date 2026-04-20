@@ -10,7 +10,6 @@ import type {
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
-import { getFloorplanUrl } from '@/shared/lib/floorplan'
 import {
   Accordion,
   AccordionContent,
@@ -60,7 +59,6 @@ export function InspectionForm({
   existingInspection,
   rentalId,
 }: InspectionFormProps) {
-  const floorplanImage = rentalId ? getFloorplanUrl(rentalId) : undefined
   const {
     inspectorName,
     setInspectorName,
@@ -258,7 +256,7 @@ export function InspectionForm({
       {/* Footer — always visible at the bottom */}
       <div className="shrink-0 flex gap-3 justify-between pt-4 border-t">
         <InspectionMoreMenu
-          floorplanImage={floorplanImage}
+          rentalId={rentalId}
           variant="buttons"
           onAddRoom={handleAddRoom}
         />
