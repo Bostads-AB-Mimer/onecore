@@ -248,7 +248,7 @@ export function InspectionForm({
       {/* Footer buttons */}
 
       <div className="flex gap-3 justify-between pt-4 border-t">
-        <InspectionMoreMenu rentalId={rentalId} />
+        <InspectionMoreMenu rentalId={rentalId} variant="buttons" />
         <div className="flex gap-3">
           <Button variant="outline" onClick={onCancel}>
             Avbryt

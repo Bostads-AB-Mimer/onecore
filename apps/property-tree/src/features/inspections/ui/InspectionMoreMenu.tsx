@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MoreHorizontal } from 'lucide-react'
+import { FileImage, MoreHorizontal, Plus } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
 import {
@@ -22,11 +22,16 @@ import { Label } from '@/shared/ui/Label'
 interface InspectionMoreMenuProps {
   rentalId?: string
   onAddRoom?: (name: string) => void
+  // `menu` renders a single icon trigger with a dropdown — used on mobile
+  // where the bottom bar is tight. `buttons` renders each action as its own
+  // labeled button, used on desktop where there is room for captions.
+  variant?: 'menu' | 'buttons'
 }
 
 export function InspectionMoreMenu({
   rentalId,
   onAddRoom,
+  variant = 'menu',
 }: InspectionMoreMenuProps) {
   const [showFloorplan, setShowFloorplan] = useState(false)
   const [showAddRoom, setShowAddRoom] = useState(false)
@@ -42,30 +47,45 @@ export function InspectionMoreMenu({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon">
-            <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Fler alternativ</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="start">
-          <DropdownMenuItem
-            onSelect={() => setShowFloorplan(true)}
-            className="py-3 text-base"
-          >
+      {variant === 'buttons' ? (
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowFloorplan(true)}>
+            <FileImage className="h-4 w-4" />
             Se planritning
-          </DropdownMenuItem>
+          </Button>
           {onAddRoom && (
+            <Button variant="outline" onClick={() => setShowAddRoom(true)}>
+              <Plus className="h-4 w-4" />
+              Lägg till rum/utrymme
+            </Button>
+          )}
+        </div>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">Fler alternativ</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start">
             <DropdownMenuItem
-              onSelect={() => setShowAddRoom(true)}
+              onSelect={() => setShowFloorplan(true)}
               className="py-3 text-base"
             >
-              Lägg till rum/utrymme
+              Se planritning
             </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            {onAddRoom && (
+              <DropdownMenuItem
+                onSelect={() => setShowAddRoom(true)}
+                className="py-3 text-base"
+              >
+                Lägg till rum/utrymme
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {/* Floorplan Dialog */}
       <Dialog open={showFloorplan} onOpenChange={setShowFloorplan}>
