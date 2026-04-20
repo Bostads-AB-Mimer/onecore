@@ -10,8 +10,11 @@ import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
+import { PaginatedResponse } from '@onecore/utilities'
 
-const buildPaginatedResponse = (leases: Lease[]) => ({
+const buildPaginatedResponse = (
+  leases: Lease[] = []
+): PaginatedResponse<Lease> => ({
   content: leases,
   _meta: {
     totalRecords: leases.length,
@@ -377,7 +380,7 @@ describe('leases routes', () => {
     })
   })
 
-  describe('GET /leases/for-CSC', () => {
+  describe('GET /leases/for-csc', () => {
     const validContact = () => factory.contact.build({ contactCode: 'P158770' })
     const validRentalProperty = () =>
       factory.rentalPropertyInfo.build({
@@ -393,7 +396,7 @@ describe('leases routes', () => {
       factory.lease.build({
         leaseId: '705-001-01-0101/1',
         tenantContactIds: ['P158770'],
-        leaseStartDate: '2024-01-01' as unknown as Date,
+        leaseStartDate: new Date('2024-01-01'),
       })
 
     it('returns 200 with empty array when no leases found', async () => {
@@ -401,7 +404,7 @@ describe('leases routes', () => {
         .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
         .mockResolvedValue(buildPaginatedResponse([]))
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -412,7 +415,7 @@ describe('leases routes', () => {
         .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
         .mockRejectedValue(new Error('adapter error'))
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(500)
     })
@@ -422,7 +425,7 @@ describe('leases routes', () => {
         .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
         .mockResolvedValue(buildPaginatedResponse([]))
 
-      await request(app.callback()).get('/leases/for-CSC')
+      await request(app.callback()).get('/leases/for-csc')
 
       expect(searchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -437,7 +440,7 @@ describe('leases routes', () => {
         .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
         .mockResolvedValue(buildPaginatedResponse([]))
 
-      await request(app.callback()).get('/leases/for-CSC?limit=9999')
+      await request(app.callback()).get('/leases/for-csc?limit=9999')
 
       expect(searchSpy).toHaveBeenCalledWith(
         expect.objectContaining({ limit: '500' })
@@ -453,7 +456,7 @@ describe('leases routes', () => {
           ])
         )
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -470,7 +473,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: validRentalProperty() })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -487,7 +490,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 500, data: undefined })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -507,7 +510,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: validRentalProperty() })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -527,7 +530,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: validRentalProperty() })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -547,7 +550,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: validRentalProperty() })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -567,7 +570,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: validRentalProperty() })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -587,7 +590,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: validRentalProperty() })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -607,7 +610,7 @@ describe('leases routes', () => {
           data: factory.rentalPropertyInfo.build({ id: '000-000-01-0101' }),
         })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual([])
@@ -628,7 +631,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: rentalProperty })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toHaveLength(1)
@@ -649,12 +652,12 @@ describe('leases routes', () => {
       const lease1 = factory.lease.build({
         leaseId: '705-001-01-0101/1',
         tenantContactIds: ['P158770'],
-        leaseStartDate: '2024-01-01' as unknown as Date,
+        leaseStartDate: new Date('2024-01-01'),
       })
       const lease2 = factory.lease.build({
         leaseId: '705-001-01-0102/1',
         tenantContactIds: ['P158771'],
-        leaseStartDate: '2024-01-01' as unknown as Date,
+        leaseStartDate: new Date('2024-01-01'),
       })
 
       jest
@@ -677,7 +680,7 @@ describe('leases routes', () => {
         .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
         .mockResolvedValue({ status: 200, data: validRentalProperty() })
 
-      const res = await request(app.callback()).get('/leases/for-CSC')
+      const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(200)
       expect(res.body.content).toHaveLength(1)

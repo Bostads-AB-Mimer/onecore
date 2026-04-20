@@ -1,11 +1,5 @@
 import { transformRow } from '../../../adapters/xpand/lease-search-adapter'
 
-jest.mock('knex', () => () => ({}))
-jest.mock('@onecore/utilities', () => ({
-  logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn() },
-  loggedAxios: {},
-}))
-
 const baseRow = {
   leaseId: '705-001-01-0101/1',
   objectTypeCode: 'balgh',

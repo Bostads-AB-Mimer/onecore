@@ -7,10 +7,10 @@ import {
 import {
   Contact,
   Lease,
-  LeaseWithAdditionalCustomerScoreCardInfoSchema,
   leasing,
   schemas,
   LeaseStatus,
+  CustomerScoreCardInfoSchema,
 } from '@onecore/types'
 import z from 'zod'
 
@@ -238,7 +238,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/for-CSC:
+   * /leases/for-csc:
    *   get:
    *     summary: Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
    *     tags:
@@ -255,7 +255,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/LeaseWithAdditionalCustomerScoreCardInfoSchema'
+   *                     $ref: '#/components/schemas/CustomerScoreCardInfoSchema'
    *                 _meta:
    *                   type: object
    *       '400':
@@ -265,7 +265,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leases/for-CSC', async (ctx) => {
+  router.get('/leases/for-csc', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
@@ -385,28 +385,28 @@ export const routes = (router: KoaRouter) => {
           //Filter out rental objects that are created for testing purposes in XPand (rental object codes starting with 000-000)
           if (rentalObjectData.id.startsWith('000-000')) return null
 
-          const mappedLease = {
+          const mappedLease: z.input<typeof CustomerScoreCardInfoSchema> = {
             //lease info
             division_1038: lease.leaseId,
-            division_1037: lease.contractDate,
-            contract_start_date: lease.leaseStartDate,
-            contract_end_date: lease.leaseEndDate,
+            division_1037: lease.contractDate?.toString(),
+            contract_start_date: lease.leaseStartDate?.toString() ?? '',
+            contract_end_date: lease.leaseEndDate?.toString(),
             contract_type: lease.type,
-            object_street_1: rentalObjectData.address?.street,
-            object_zip: rentalObjectData.address?.postalCode,
-            object_city: rentalObjectData.address?.city,
+            object_street_1: rentalObjectData.address?.street ?? '',
+            object_zip: rentalObjectData.address?.postalCode ?? '',
+            object_city: rentalObjectData.address?.city ?? '',
             //contact info
             division_1501: tenant.contactCode,
             respondent_name_first: tenant.firstName,
             respondent_name_last: tenant.lastName,
-            respondent_email: tenant.emailAddress,
+            respondent_email: tenant.emailAddress ?? '',
             respondent_phone:
               tenant.phoneNumbers?.find((number) => number.isMainNumber)
                 ?.phoneNumber ?? '',
-            postal_street_1: tenant.address?.street,
+            postal_street_1: tenant.address?.street ?? '',
             postal_street_2: tenant.address?.street2 ?? undefined,
-            postal_zip: tenant.address?.postalCode,
-            postal_city: tenant.address?.city,
+            postal_zip: tenant.address?.postalCode ?? '',
+            postal_city: tenant.address?.city ?? '',
             //rental object info
             object_ref_nr: rentalObjectData.id,
             division_1011: rentalObjectData.districtCode,
@@ -422,10 +422,7 @@ export const routes = (router: KoaRouter) => {
             object_type: rentalObjectData.type,
           }
 
-          const parseResult =
-            LeaseWithAdditionalCustomerScoreCardInfoSchema.safeParse(
-              mappedLease
-            )
+          const parseResult = CustomerScoreCardInfoSchema.safeParse(mappedLease)
           if (parseResult.success) {
             return parseResult.data
           } else {

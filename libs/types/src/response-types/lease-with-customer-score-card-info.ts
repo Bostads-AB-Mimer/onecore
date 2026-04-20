@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const LeaseWithAdditionalCustomerScoreCardInfoSchema = z.object({
+export const CustomerScoreCardInfoSchema = z.object({
   //rental object info
   object_ref_nr: z.string(), //rentalObjectCode
   division_1011: z.string(), //districtCode
@@ -32,3 +32,5 @@ export const LeaseWithAdditionalCustomerScoreCardInfoSchema = z.object({
   contract_end_date: z.string().optional(), //endDate
   contract_type: z.string(), //leaseType
 })
+
+export type CustomerScoreCardInfo = z.infer<typeof CustomerScoreCardInfoSchema>
