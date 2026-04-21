@@ -1124,7 +1124,10 @@ export const routes = (router: KoaRouter) => {
     const rows = result.data
       .filter((lease) => lease.hyresgaster.some((t) => !t.isCompany))
       .flatMap((lease) => {
-        const tenant = lease.hyresgaster.find((t) => !t.isCompany)
+        const tenant = lease.hyresgaster.find(
+          (t): t is typeof t & { idbeteckning: string } =>
+            !t.isCompany && !!t.idbeteckning
+        )
         if (!tenant) return []
 
         const rentalObject = lease.hyresobjekt[0]

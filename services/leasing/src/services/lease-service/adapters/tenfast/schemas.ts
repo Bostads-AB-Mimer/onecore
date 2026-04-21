@@ -34,7 +34,7 @@ export const TenfastTenantSchema = z.object({
   hyresvard: z.string(),
   isCompany: z.boolean(),
   phone: z.string(),
-  idbeteckning: z.string(),
+  idbeteckning: z.string().optional().nullable(),
   postadress: z.string(),
   postnummer: z.string(),
   stad: z.string(),
