@@ -36,7 +36,7 @@ export const exportRentalInvoicesAccounting = async (
 }> => {
   try {
     const errors: { invoiceNumber: string; error: string }[] = []
-    const CHUNK_SIZE = 5 // 100
+    const CHUNK_SIZE = 100 // 100
 
     const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE)
     if (!invoicesResult.ok) {
@@ -53,9 +53,15 @@ export const exportRentalInvoicesAccounting = async (
     }
 
     let invoices = invoicesResult.data.invoices
+    if (invoicesResult.data.errors) {
+      errors.push(...invoicesResult.data.errors)
+    }
     const counterPartCustomers = await getCounterPartCustomers()
 
     for (const invoice of invoices) {
+      console.log('Incoming invoice')
+      console.table(invoice.invoiceRows)
+
       try {
         await enrichInvoiceWithAccounting(invoice)
         await setInvoiceRowsTaxRule(invoice)
@@ -103,7 +109,7 @@ export const exportRentalInvoicesAccounting = async (
       )
     })
 
-    await markInvoicesAsExported(invoices)
+    // await markInvoicesAsExported(invoices)
 
     return {
       invoices,

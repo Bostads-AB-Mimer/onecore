@@ -34,6 +34,7 @@ auto-save-list/
 npm-debug.log*
 .eslintcache
 .node_repl_history
+.qwen/
 
 # ---- OS ----
 .DS_Store
@@ -59,23 +60,6 @@ lib-cov
 *.sw?
 .turbo
 
-.claude/*
-!.claude/commands/
-.claude/commands/*
-!.claude/commands/prereview.md
-!.claude/skills/
-!.claude/skills/*
 
-CLAUDE.md
-
-# --- Private Keys ---
+# --- Private Keys --- 
 *.pem
-
-# --- Documentation ---
-docs/
-
-examples/
-.envrc
-
-data
-runcommands.md
