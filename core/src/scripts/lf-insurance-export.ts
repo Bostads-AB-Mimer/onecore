@@ -1,3 +1,5 @@
+import fs from 'fs'
+import path from 'path'
 import { logger } from '@onecore/utilities'
 import config from '../common/config'
 import { getLfInsuranceExport } from '../processes/reports/service'
@@ -15,11 +17,14 @@ export const handleLfInsuranceExport = async () => {
 
   const xlsxBuffer = await convertLfInsuranceToXlsx(rows)
 
-  await sftpAdapter.uploadFile(xlsxBuffer, fileName, config.lf.sftp)
-  logger.info(
-    { fileName, rowCount: rows.length },
-    'LF insurance export complete'
-  )
+  if (process.env['LOCAL_OUTPUT']) {
+    const outputPath = path.resolve(process.env['LOCAL_OUTPUT'], fileName)
+    fs.writeFileSync(outputPath, xlsxBuffer)
+    logger.info({ outputPath, rowCount: rows.length }, 'LF insurance export written locally')
+  } else {
+    await sftpAdapter.uploadFile(xlsxBuffer, fileName, config.lf.sftp)
+    logger.info({ fileName, rowCount: rows.length }, 'LF insurance export complete')
+  }
 }
 
 if (require.main === module) {
