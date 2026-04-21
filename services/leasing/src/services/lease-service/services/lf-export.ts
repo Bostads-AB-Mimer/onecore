@@ -23,11 +23,7 @@ export const mapLeasesToLfExportRows = (
       if (!insuranceRow) return []
 
       const leaseStatus =
-        insuranceRow.to != null
-          ? '*'
-          : lease.stage === 'upcoming'
-            ? 'K'
-            : 'G'
+        insuranceRow.to != null ? '*' : lease.stage === 'upcoming' ? 'K' : 'G'
 
       return [
         {
@@ -38,7 +34,9 @@ export const mapLeasesToLfExportRows = (
           rentalObjectCode: rentalObject.externalId,
           numberOfRooms: rentalObject.roomCount ?? null,
           squareMeters: rentalObject.kvm ?? null,
-          rowFromDate: insuranceRow.from ? new Date(insuranceRow.from) : new Date(0),
+          rowFromDate: insuranceRow.from
+            ? new Date(insuranceRow.from)
+            : new Date(0),
           rowToDate: insuranceRow.to ? new Date(insuranceRow.to) : null,
           annualRent: insuranceRow.amount,
           articleText: insuranceRow.label ?? '',

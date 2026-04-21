@@ -85,9 +85,7 @@ describe('mapLeasesToLfExportRows', () => {
       const rows = mapLeasesToLfExportRows(
         [
           makeLease({
-            hyresgaster: [
-              factory.tenfastTenant.build({ idbeteckning: null }),
-            ],
+            hyresgaster: [factory.tenfastTenant.build({ idbeteckning: null })],
           }),
         ],
         ARTICLE_ID
@@ -100,9 +98,7 @@ describe('mapLeasesToLfExportRows', () => {
       const rows = mapLeasesToLfExportRows(
         [
           makeLease({
-            hyresgaster: [
-              factory.tenfastTenant.build({ isCompany: true }),
-            ],
+            hyresgaster: [factory.tenfastTenant.build({ isCompany: true })],
           }),
         ],
         ARTICLE_ID
@@ -115,7 +111,9 @@ describe('mapLeasesToLfExportRows', () => {
       const rows = mapLeasesToLfExportRows(
         [
           makeLease({
-            hyror: [factory.tenfastInvoiceRow.build({ article: 'other-article' })],
+            hyror: [
+              factory.tenfastInvoiceRow.build({ article: 'other-article' }),
+            ],
           }),
         ],
         ARTICLE_ID

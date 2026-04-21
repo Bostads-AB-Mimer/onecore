@@ -1765,5 +1765,4 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
-
 }
