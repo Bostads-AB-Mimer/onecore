@@ -5,12 +5,21 @@ import { TenfastRentalObjectFactory } from '../../factories/tenfast-rental-objec
 
 import * as tenfastLeaseSearchAdapter from '../../../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastApi from '../../../adapters/tenfast/tenfast-api'
+import * as xpandLeaseSearchAdapter from '../../../adapters/xpand/lease-search-adapter'
 
 jest.mock('../../../adapters/tenfast/tenfast-api')
+jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
+  getRentalObjectCodesByBuildingManager: jest.fn(),
+}))
 
 const mockedRequest = tenfastApi.request as jest.MockedFunction<
   typeof tenfastApi.request
 >
+
+const mockedGetRentalObjectCodesByBuildingManager =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager
+  >
 
 const buildLeaseWithTenants = (
   overrides: Partial<TenfastLease> = {},
@@ -980,6 +989,55 @@ describe('tenfast-lease-search-adapter', () => {
 
       const calledUrl = mockedRequest.mock.calls[0][0].url as string
       expect(calledUrl).toContain('filter[hyresobjekt][stadsdel]=Vetterstorp')
+    })
+
+    it('should post-filter by buildingManager via Xpand rental object codes', async () => {
+      mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
+        'ROC-001',
+        'ROC-002',
+      ])
+
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          {},
+          { externalId: 'ROC-001' }
+        ),
+        buildLeaseWithTenants(
+          { externalId: 'lease-2' },
+          {},
+          { externalId: 'ROC-999' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { buildingManager: ['Anna Andersson'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByBuildingManager).toHaveBeenCalledWith([
+        'Anna Andersson',
+      ])
+
+      // Only lease-1 matches (ROC-001 is in the allowed set)
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-1')
+      expect(result._meta.totalRecords).toBe(1)
+    })
+
+    it('should return empty when buildingManager matches no rental objects', async () => {
+      mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { buildingManager: ['Unknown Manager'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(0)
+      expect(result._meta.totalRecords).toBe(0)
+      // Should not call Tenfast at all
+      expect(mockedRequest).not.toHaveBeenCalled()
     })
   })
 })

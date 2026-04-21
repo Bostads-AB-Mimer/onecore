@@ -26,7 +26,7 @@ const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
   ovrigt: LeaseType.OtherContract,
 }
 
-const mapTenfastTypToLeaseType = (typ: string | undefined): LeaseType => {
+export const mapTenfastTypToLeaseType = (typ: string | undefined): LeaseType => {
   if (!typ) return LeaseType.OtherContract
   return TENFAST_TYP_TO_LEASE_TYPE[typ.toLowerCase()] ?? LeaseType.OtherContract
 }
