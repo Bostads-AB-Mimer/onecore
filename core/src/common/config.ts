@@ -70,8 +70,16 @@ export interface Config {
     tenantDefault: string
     economy: string
     bosociala: string
-    lf: string
     dev: string
+  }
+  lf: {
+    sftp: {
+      host: string
+      port: number
+      username: string
+      password: string
+      directory: string
+    }
   }
   scanner: {
     allowedIps: string[]
@@ -146,7 +154,15 @@ const config = configPackage({
       tenantDefault: '',
       economy: '',
       bosociala: '',
-      lf: '',
+    },
+    lf: {
+      sftp: {
+        host: '',
+        port: 22,
+        username: '',
+        password: '',
+        directory: '',
+      },
     },
     scanner: {
       allowedIps: [],

@@ -1,47 +1,30 @@
 import { logger } from '@onecore/utilities'
 import config from '../common/config'
-import { sendEmail } from '../adapters/communication-adapter'
 import { getLfInsuranceExport } from '../processes/reports/service'
 import { convertLfInsuranceToXlsx } from '../processes/reports/converters/excelConverter'
+import * as sftpAdapter from '../adapters/sftp-adapter'
 
 export const handleLfInsuranceExport = async () => {
-  const now = new Date()
-  const dateStr = now.toISOString().split('T')[0]
+  const dateStr = new Date().toISOString().split('T')[0]
+  const fileName = `Hemforsakring_LF_${dateStr}.xlsx`
 
-  const notification: string[] = [
-    `Körning startad: ${now.toLocaleString('sv').replace('T', ' ')}\n`,
-  ]
+  logger.info('Starting LF insurance export')
 
-  try {
-    const rows = await getLfInsuranceExport()
-    const xlsxBuffer = await convertLfInsuranceToXlsx(rows)
-    const fileName = `Hemforsakring_LF_${dateStr}.xlsx`
+  const rows = await getLfInsuranceExport()
+  logger.info({ rowCount: rows.length }, 'Fetched home insurance rows')
 
-    notification.push(
-      `Antal rader: ${rows.length}\n`,
-      `Körning avslutad: ${new Date().toLocaleString('sv').replace('T', ' ')}\n---\n`
-    )
+  const xlsxBuffer = await convertLfInsuranceToXlsx(rows)
 
-    try {
-      const result = await sendEmail({
-        to: config.emailAddresses.lf,
-        subject: `Hemförsäkringsexport till LF ${dateStr}`,
-        body: notification.join('\n'),
-        attachments: [{ data: xlsxBuffer, name: fileName }],
-      })
-
-      if (!result.ok) {
-        throw result.err
-      }
-    } catch (error: any) {
-      logger.error(error, 'Error sending LF insurance export email')
-    }
-  } catch (err) {
-    logger.error(err, 'Error generating LF insurance export')
-    throw err
-  }
+  await sftpAdapter.uploadFile(xlsxBuffer, fileName, config.lf.sftp)
+  logger.info(
+    { fileName, rowCount: rows.length },
+    'LF insurance export complete'
+  )
 }
 
 if (require.main === module) {
-  handleLfInsuranceExport()
+  handleLfInsuranceExport().catch((err) => {
+    logger.error(err, 'LF insurance export failed')
+    process.exit(1)
+  })
 }
