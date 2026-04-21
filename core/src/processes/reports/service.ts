@@ -109,7 +109,6 @@ export const getUnpaidInvoicePaymentSummaries = async (
   return invoicePaymentSummaries
 }
 
-
 const getVerksamhetskostnadTotal = (rows: RentInvoiceRow[], code: string) => {
   const vhkRow = rows.find((r) => r.code === code)
   return vhkRow ? vhkRow.amount + vhkRow.reduction + vhkRow.vat : 0
