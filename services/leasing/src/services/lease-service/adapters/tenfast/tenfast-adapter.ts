@@ -30,6 +30,58 @@ const tenfastCompanyId = config.tenfast.companyId
 
 type SchemaError = { tag: 'schema-error'; error: z.ZodError }
 
+/**
+ * Fetches all pages from a paginated Tenfast endpoint.
+ *
+ * @param buildUrl - Called with the current page cursor on each iteration.
+ *                   Pass an empty string for the first page.
+ * @param schema   - Zod schema for the paginated response. Must have
+ *                   `records`, `next`, and `totalCount` fields.
+ * @returns        - All records across all pages combined, typed as the
+ *                   schema's own output type (preserving branded strings etc.)
+ * @throws         - On non-200/201 responses or schema parse failures.
+ */
+const fetchAllPages = async <
+  S extends z.ZodType<{
+    records: unknown[]
+    next: string | null
+    totalCount: number
+  }>,
+>(
+  buildUrl: (paginate: string) => string,
+  schema: S
+): Promise<z.output<S>['records']> => {
+  const fetchPage = async (
+    paginate: string,
+    accumulated: z.output<S>['records']
+  ): Promise<z.output<S>['records']> => {
+    const response = await tenfastApi.request({
+      method: 'get',
+      url: buildUrl(paginate),
+    })
+
+    if (response.status !== 200 && response.status !== 201) {
+      throw new Error(
+        `Tenfast responded with status ${response.status}: ${JSON.stringify(response.data)}`
+      )
+    }
+
+    const parsed = schema.safeParse(response.data)
+    if (!parsed.success) throw parsed.error
+
+    const records = accumulated.concat(parsed.data.records)
+    const next = parsed.data.next
+
+    if (next && records.length < parsed.data.totalCount) {
+      return fetchPage(next, records)
+    }
+
+    return records
+  }
+
+  return fetchPage('', [])
+}
+
 export const createLease = async (
   contact: Contact,
   rentalObjectCode: string,
@@ -928,47 +980,23 @@ export async function updateLeaseInvoiceRows(params: {
 }
 
 export const getLeasesWithHomeInsurance = async (): Promise<
-  AdapterResult<
-    TenfastLease[],
-    'unknown' | 'bad-request' | 'parsing-error'
-  >
+  AdapterResult<TenfastLease[], 'unknown'>
 > => {
   try {
     const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
-    let page = ''
-    let allRecords: TenfastLease[] = []
-    let totalCount = 0
-    let first = true
+    const params = new URLSearchParams({
+      hyresvard: tenfastCompanyId,
+      populate: 'hyresgaster,hyresobjekt',
+      states: 'active,upcoming,preTermination,terminationScheduled',
+    })
 
-    do {
-      const response = await tenfastApi.request({
-        method: 'get',
-        url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?hyresvard=${tenfastCompanyId}&populate=hyresgaster,hyresobjekt&states=active,upcoming,preTermination,terminationScheduled&paginate=${page}`,
-      })
+    const records = await fetchAllPages(
+      (paginate) =>
+        `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}&paginate=${paginate}`,
+      TenfastLeasesByArticleResponseSchema
+    )
 
-      if (response.status === 400)
-        return handleTenfastError(response.data.error, 'bad-request')
-      else if (response.status !== 200 && response.status !== 201)
-        return handleTenfastError(
-          { error: response.data.error, status: response.status },
-          'unknown'
-        )
-
-      const parsed = TenfastLeasesByArticleResponseSchema.safeParse(
-        response.data
-      )
-      if (!parsed.success)
-        return handleTenfastError(parsed.error, 'parsing-error')
-
-      if (first) {
-        totalCount = parsed.data.totalCount
-        first = false
-      }
-      allRecords = allRecords.concat(parsed.data.records)
-      page = parsed.data.next ?? ''
-    } while (allRecords.length < totalCount)
-
-    return { ok: true, data: allRecords }
+    return { ok: true, data: records }
   } catch (err: any) {
     return handleTenfastError(err, 'unknown')
   }
