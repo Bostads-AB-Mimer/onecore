@@ -2,6 +2,8 @@ import { useCallback } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
+import type { CostResponsibility } from '../constants'
+
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 export interface UseComponentInspectionReturn {
@@ -38,7 +40,7 @@ export interface UseComponentInspectionReturn {
   updateComponentCostResponsibility: (
     roomId: string,
     field: keyof InspectionRoom['componentCostResponsibilities'],
-    value: 'tenant' | 'landlord' | null
+    value: CostResponsibility
   ) => void
   addDetailComponent: (
     roomId: string,
@@ -222,7 +224,7 @@ export function useComponentInspection(
     (
       roomId: string,
       field: keyof InspectionRoom['componentCostResponsibilities'],
-      value: 'tenant' | 'landlord' | null
+      value: CostResponsibility
     ) => {
       setInspectionData((prev) => ({
         ...prev,

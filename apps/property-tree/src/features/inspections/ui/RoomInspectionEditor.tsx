@@ -7,7 +7,10 @@ import { Card, CardContent } from '@/shared/ui/Card'
 import { Separator } from '@/shared/ui/Separator'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
-import { mergeComponentsWithDefaults } from '../constants'
+import {
+  mergeComponentsWithDefaults,
+  type CostResponsibility,
+} from '../constants'
 import { useRoomComponents } from '../hooks/useRoomComponents'
 import { ComponentDetailSheet } from './ComponentDetailSheet'
 import { ComponentInspectionCard } from './ComponentInspectionCard'
@@ -40,7 +43,7 @@ interface RoomInspectionEditorProps {
   ) => void
   onComponentCostResponsibilityUpdate: (
     field: keyof InspectionRoom['componentCostResponsibilities'],
-    value: 'tenant' | 'landlord' | null
+    value: CostResponsibility
   ) => void
   onDetailComponentAdd: (component: { type: string; label: string }) => void
   onDetailComponentRemove: (componentId: string) => void

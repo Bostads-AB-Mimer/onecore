@@ -4,10 +4,14 @@ import { Camera, ChevronRight, MessageSquare, Wrench } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Textarea } from '@/shared/ui/Textarea'
 
-import { CONDITION_OPTIONS, CONDITION_TYPE } from '../constants'
+import {
+  CONDITION_OPTIONS,
+  CONDITION_TYPE,
+  COST_RESPONSIBILITY,
+  COST_RESPONSIBILITY_LABEL,
+  type CostResponsibility,
+} from '../constants'
 import { PhotoCapture } from './PhotoCapture'
-
-type CostResponsibility = 'tenant' | 'landlord' | null
 
 interface ComponentInspectionCardProps {
   componentKey: string
@@ -103,26 +107,26 @@ export function ComponentInspectionCard({
         <div className="mb-3">
           <p className="text-sm text-muted-foreground mb-2">Kostnadsansvar</p>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name={`cost-${componentKey}`}
-                value="tenant"
-                checked={costResponsibility === 'tenant'}
-                onChange={() => onCostResponsibilityChange('tenant')}
-              />
-              Hyresgäst
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name={`cost-${componentKey}`}
-                value="landlord"
-                checked={costResponsibility === 'landlord'}
-                onChange={() => onCostResponsibilityChange('landlord')}
-              />
-              Hyresvärd
-            </label>
+            {(
+              [
+                COST_RESPONSIBILITY.TENANT,
+                COST_RESPONSIBILITY.LANDLORD,
+              ] as const
+            ).map((value) => (
+              <label
+                key={value}
+                className="flex items-center gap-2 text-sm cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name={`cost-${componentKey}`}
+                  value={value}
+                  checked={costResponsibility === value}
+                  onChange={() => onCostResponsibilityChange(value)}
+                />
+                {COST_RESPONSIBILITY_LABEL[value]}
+              </label>
+            ))}
           </div>
         </div>
       )}
