@@ -943,7 +943,7 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     do {
       const response = await tenfastApi.request({
         method: 'get',
-        url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?hyresvard=${tenfastCompanyId}&populate=hyresgaster,hyresobjekt&paginate=${page}`,
+        url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?hyresvard=${tenfastCompanyId}&populate=hyresgaster,hyresobjekt&states=active,upcoming,preTermination,terminationScheduled&paginate=${page}`,
       })
 
       if (response.status === 400)
