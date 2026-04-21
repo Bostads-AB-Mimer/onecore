@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { logger } from '@onecore/utilities'
 import config from '../common/config'
-import { getLfInsuranceExport } from '../processes/reports/service'
+import { getHomeInsuranceExport } from '../adapters/leasing-adapter'
 import { convertLfInsuranceToXlsx } from '../processes/reports/converters/excelConverter'
 import * as sftpAdapter from '../adapters/sftp-adapter'
 
@@ -12,7 +12,7 @@ export const handleLfInsuranceExport = async () => {
 
   logger.info('Starting LF insurance export')
 
-  const rows = await getLfInsuranceExport()
+  const rows = await getHomeInsuranceExport()
   logger.info({ rowCount: rows.length }, 'Fetched home insurance rows')
 
   const xlsxBuffer = await convertLfInsuranceToXlsx(rows)

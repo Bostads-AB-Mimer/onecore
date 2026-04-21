@@ -235,7 +235,14 @@ export const getHomeInsuranceExport = async (): Promise<
   LfInsuranceExportRow[]
 > => {
   const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/hemforsakring-export`
+    `${tenantsLeasesServiceUrl}/leases/lf-export`
   )
+
+  if (response.status !== 200) {
+    throw new Error(
+      `leases/lf-export responded with status ${response.status}: ${JSON.stringify(response.data)}`
+    )
+  }
+
   return response.data.content
 }

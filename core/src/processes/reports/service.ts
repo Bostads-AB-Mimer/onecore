@@ -4,7 +4,7 @@ import { BosocialaObject, InvoicePaymentSummary } from './types'
 import { logger } from '@onecore/utilities'
 import * as economyAdapter from '../../adapters/economy-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import { Lease, RentInvoiceRow, schemas } from '@onecore/types'
+import { Lease, RentInvoiceRow } from '@onecore/types'
 import dayjs from 'dayjs'
 
 export const getUnpaidInvoicePaymentSummaries = async (
@@ -109,14 +109,6 @@ export const getUnpaidInvoicePaymentSummaries = async (
   return invoicePaymentSummaries
 }
 
-export const getLfInsuranceExport = async (): Promise<
-  schemas.v1.LfInsuranceExportRow[]
-> => {
-  logger.info('Fetching home insurance export data from leasing service')
-  const rows = await leasingAdapter.getHomeInsuranceExport()
-  logger.info(`Got ${rows.length} home insurance rows`)
-  return rows
-}
 
 const getVerksamhetskostnadTotal = (rows: RentInvoiceRow[], code: string) => {
   const vhkRow = rows.find((r) => r.code === code)

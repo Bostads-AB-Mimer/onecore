@@ -984,6 +984,7 @@ export const getLeasesWithHomeInsurance = async (): Promise<
 > => {
   try {
     const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
+    logger.info({ articleId }, 'Fetching leases with home insurance from Tenfast')
     const params = new URLSearchParams({
       hyresvard: tenfastCompanyId,
       populate: 'hyresgaster,hyresobjekt',
