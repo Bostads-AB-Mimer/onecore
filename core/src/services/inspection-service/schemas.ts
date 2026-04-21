@@ -37,6 +37,10 @@ const DetailComponentSchema = z.object({
 // the detailComponents array instead. The UI no longer renders these fields.
 export const InspectionRoomSchema = z.object({
   roomId: z.string(),
+  // Populated for ad-hoc rooms created by the inspector when the Xpand room
+  // list is incomplete. Absent for rooms sourced from the property system —
+  // their display name is resolved via the Room record from roomService.
+  name: z.string().optional(),
   conditions: z.object({
     wall1: z.string(),
     wall2: z.string(),

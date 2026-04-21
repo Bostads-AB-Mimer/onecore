@@ -627,6 +627,7 @@ export interface components {
     }
     InspectionRoom: {
       roomId: string
+      name?: string
       conditions: {
         wall1: string
         wall2: string
@@ -690,6 +691,7 @@ export interface components {
       rooms:
         | {
             roomId: string
+            name?: string
             conditions: {
               wall1: string
               wall2: string
@@ -741,9 +743,9 @@ export interface components {
     }
     SaveInspectionDraftRequest: {
       inspectorName: string
-      isFurnished: boolean
       rooms: {
         roomId: string
+        name?: string
         conditions: {
           wall1: string
           wall2: string
@@ -791,6 +793,7 @@ export interface components {
           note: string
         }[]
       }[]
+      isFurnished: boolean
     }
   }
   responses: never

@@ -16,7 +16,10 @@ export function useInspectionForm(
   // Inspector metadata (name, time, master key)
   const inspectorInfo = useInspectorInfo(existingInspection)
 
-  // Inspection data state (rooms, conditions, actions, notes, photos)
+  // Inspection data state (rooms, conditions, actions, notes, photos). The
+  // `rooms` arg is the initial list; formState.rooms is the mutable version
+  // that includes any ad-hoc rooms added via the "Lägg till rum/utrymme"
+  // action and any ad-hoc rooms rehydrated from a persisted draft.
   const formState = useInspectionFormState(rooms, existingInspection)
 
   // Component operations (CRUD for conditions, actions, notes, photos)
@@ -52,10 +55,15 @@ export function useInspectionForm(
     setIsFurnished: inspectorInfo.setIsFurnished,
 
     // Form state
+    rooms: formState.rooms,
     inspectionData: formState.inspectionData,
     completedRooms: formState.completedRooms,
     totalRooms: formState.totalRooms,
     isAllRoomsComplete: formState.isAllRoomsComplete,
+
+    // Ad-hoc room creation (returns the newly-created Room so callers can
+    // navigate to it — e.g. mobile auto-focuses the new room card)
+    handleAddRoom: formState.addAdHocRoom,
 
     // Room operations
     expandedRoomIds: roomOps.expandedRoomIds,
