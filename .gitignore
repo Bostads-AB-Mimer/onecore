@@ -34,6 +34,7 @@ auto-save-list/
 npm-debug.log*
 .eslintcache
 .node_repl_history
+.qwen/
 
 # ---- OS ----
 .DS_Store
@@ -62,4 +63,3 @@ lib-cov
 
 # --- Private Keys --- 
 *.pem
-

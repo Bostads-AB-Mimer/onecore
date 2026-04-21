@@ -319,10 +319,14 @@ const replaceRentalObjectExternalIds = async (invoice: Invoice) => {
 }
 
 const enrichInvoiceRowsWithAccounting = async (
-  invoice: Invoice,
+  invoice: Invoice
+): Promise<{
+  invoiceRows: InvoiceRowWithAccounting[]
   errors: { invoiceNumber: string; error: string }[]
-): Promise<InvoiceRowWithAccounting[]> => {
+}> => {
   const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
+  const errors: { invoiceNumber: string; error: string }[] = []
+
   for (const invoiceRow of invoice.invoiceRows) {
     const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
       ...invoiceRow,
@@ -370,7 +374,10 @@ const enrichInvoiceRowsWithAccounting = async (
 
     invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
   }
-  return invoiceRowsWithAccounting
+  return {
+    invoiceRows: invoiceRowsWithAccounting,
+    errors,
+  }
 }
 
 export const getInvoicesNotExported = async (
@@ -417,7 +424,6 @@ export const getInvoicesNotExported = async (
     }
 
     const invoices: InvoiceWithAccounting[] = []
-
     for (const invoiceResult of parsedResponse.data.records) {
       const invoice = transformToInvoice(invoiceResult)
 
@@ -427,23 +433,25 @@ export const getInvoicesNotExported = async (
 
       await replaceRentalObjectExternalIds(invoice)
 
-      const invoiceRowsWithAccounting = await enrichInvoiceRowsWithAccounting(
-        invoice,
-        errors
-      )
+      const invoiceRowsWithAccountingResult =
+        await enrichInvoiceRowsWithAccounting(invoice)
 
-      const invoiceWithAccounting = {
-        ...invoice,
-        invoiceRows: invoiceRowsWithAccounting,
+      if (invoiceRowsWithAccountingResult.errors?.length === 0) {
+        const invoiceWithAccounting = {
+          ...invoice,
+          invoiceRows: invoiceRowsWithAccountingResult.invoiceRows,
+        }
+
+        invoices.push(invoiceWithAccounting)
+      } else {
+        errors.push(...invoiceRowsWithAccountingResult.errors)
       }
-
-      invoices.push(invoiceWithAccounting)
     }
 
     return {
       ok: true,
       data: {
-        invoices: invoices,
+        invoices,
         errors,
       },
     }
