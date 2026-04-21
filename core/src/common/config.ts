@@ -231,4 +231,5 @@ export default {
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
   scanner: config.get('scanner'),
+  lf: config.get('lf'),
 } as Config

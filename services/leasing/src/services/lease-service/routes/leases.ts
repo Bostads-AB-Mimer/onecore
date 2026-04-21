@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { leasing, schemas } from '@onecore/types'
+import { mapLeasesToLfExportRows } from '../services/lf-export'
 import { z } from 'zod'
 import { getParkingSpaceTypes } from '../adapters/xpand/lease-search-adapter'
 import {
@@ -1120,52 +1121,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
-
-    const rows = result.data
-      .filter((lease) => lease.hyresgaster.some((t) => !t.isCompany))
-      .flatMap((lease) => {
-        const tenant = lease.hyresgaster.find(
-          (t): t is typeof t & { idbeteckning: string } =>
-            !t.isCompany && !!t.idbeteckning
-        )
-        if (!tenant) return []
-
-        const rentalObject = lease.hyresobjekt[0]
-        if (!rentalObject) return []
-
-        const insuranceRow = lease.hyror.find(
-          (row) => row.article === articleId
-        )
-        if (!insuranceRow) return []
-
-        const leaseStatus =
-          insuranceRow.to != null
-            ? '*'
-            : lease.stage === 'upcoming'
-              ? 'K'
-              : 'G'
-
-        return [
-          {
-            leaseId: lease.externalId,
-            leaseStatus,
-            leaseFromDate: lease.startDate,
-            leaseToDate: lease.endDate ?? null,
-            rentalObjectCode: rentalObject.externalId,
-            numberOfRooms: rentalObject.roomCount ?? null,
-            squareMeters: rentalObject.kvm ?? null,
-            rowFromDate: insuranceRow.from ?? '',
-            rowToDate: insuranceRow.to ?? null,
-            annualRent: insuranceRow.amount,
-            articleText: insuranceRow.label ?? '',
-            nationalIdNumber: tenant.idbeteckning,
-            fullName: `${tenant.name.last} ${tenant.name.first}`,
-            address: tenant.postadress,
-            phoneNumber: tenant.phone,
-            email: tenant.invoiceEmail ?? null,
-          },
-        ]
-      })
+    const rows = mapLeasesToLfExportRows(result.data, articleId)
 
     ctx.status = 200
     ctx.body = makeSuccessResponseBody(rows, metadata)
