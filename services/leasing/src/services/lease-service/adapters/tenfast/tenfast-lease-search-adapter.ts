@@ -11,7 +11,10 @@ import * as tenfastApi from './tenfast-api'
 import { TenfastLeaseSchema } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../types'
-import { mapToOnecoreLease, mapTenfastTypToLeaseType } from '../../helpers/tenfast'
+import {
+  mapToOnecoreLease,
+  mapTenfastTypToLeaseType,
+} from '../../helpers/tenfast'
 import {
   getRentalObjectCodesByBuildingManager,
   getRentalObjectCodesByBuildingCodes,
@@ -559,9 +562,7 @@ export const searchLeases = async (
       filterLabels.push('buildingCodes')
     }
     if (params.areaCodes && params.areaCodes.length > 0) {
-      codeSetPromises.push(
-        getRentalObjectCodesByAreaCodes(params.areaCodes)
-      )
+      codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
       filterLabels.push('areaCodes')
     }
     if (params.districtNames && params.districtNames.length > 0) {
@@ -641,23 +642,31 @@ export const searchLeases = async (
         seenLeaseIds.add(leaseId)
 
         const od = raw.originalData as Record<string, unknown> | undefined
-        const tenants = (od?.hyresgaster ?? []) as Array<Record<string, unknown>>
-        const rentalObjects = (od?.hyresobjekt ?? []) as Array<Record<string, unknown>>
+        const tenants = (od?.hyresgaster ?? []) as Array<
+          Record<string, unknown>
+        >
+        const rentalObjects = (od?.hyresobjekt ?? []) as Array<
+          Record<string, unknown>
+        >
 
         batchLeases.push({
           externalId: leaseId,
-          startDate: raw.startDate ? new Date(raw.startDate as string) : new Date(),
+          startDate: raw.startDate
+            ? new Date(raw.startDate as string)
+            : new Date(),
           endDate: raw.endDate ? new Date(raw.endDate as string) : undefined,
           stage: (raw.stage as string) ?? 'active',
           signedAt: raw.signedAt ? new Date(raw.signedAt as string) : undefined,
           uppsagningstid: (raw.uppsagningstid as string) ?? '',
           cancellation: {
             cancelled: (raw.cancellation as any)?.cancelled ?? false,
-            cancelledByType: (raw.cancellation as any)?.cancelledByType ?? undefined,
+            cancelledByType:
+              (raw.cancellation as any)?.cancelledByType ?? undefined,
             handledAt: (raw.cancellation as any)?.handledAt
               ? new Date((raw.cancellation as any).handledAt)
               : undefined,
-            preferredMoveOutDate: (raw.cancellation as any)?.preferredMoveOutDate
+            preferredMoveOutDate: (raw.cancellation as any)
+              ?.preferredMoveOutDate
               ? new Date((raw.cancellation as any).preferredMoveOutDate)
               : undefined,
           },
@@ -681,9 +690,14 @@ export const searchLeases = async (
             typ: (o.typ as string) ?? undefined,
             postadress: (o.postadress as string) ?? undefined,
             stadsdel: (o.stadsdel as string) ?? undefined,
-            fastighet: typeof o.fastighet === 'object' && o.fastighet
-              ? { fastighetsbeteckning: (o.fastighet as any).fastighetsbeteckning ?? '', stadsdel: (o.fastighet as any).stadsdel }
-              : undefined,
+            fastighet:
+              typeof o.fastighet === 'object' && o.fastighet
+                ? {
+                    fastighetsbeteckning:
+                      (o.fastighet as any).fastighetsbeteckning ?? '',
+                    stadsdel: (o.fastighet as any).stadsdel,
+                  }
+                : undefined,
             kvm: (o.kvm as number) ?? undefined,
           })),
         })

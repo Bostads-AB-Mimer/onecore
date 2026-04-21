@@ -10,6 +10,9 @@ import * as xpandLeaseSearchAdapter from '../../../adapters/xpand/lease-search-a
 jest.mock('../../../adapters/tenfast/tenfast-api')
 jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
   getRentalObjectCodesByBuildingManager: jest.fn(),
+  getRentalObjectCodesByBuildingCodes: jest.fn(),
+  getRentalObjectCodesByAreaCodes: jest.fn(),
+  getRentalObjectCodesByDistrictNames: jest.fn(),
 }))
 
 const mockedRequest = tenfastApi.request as jest.MockedFunction<
@@ -19,6 +22,21 @@ const mockedRequest = tenfastApi.request as jest.MockedFunction<
 const mockedGetRentalObjectCodesByBuildingManager =
   xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager as jest.MockedFunction<
     typeof xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager
+  >
+
+const mockedGetRentalObjectCodesByBuildingCodes =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingCodes as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingCodes
+  >
+
+const mockedGetRentalObjectCodesByAreaCodes =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByAreaCodes as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByAreaCodes
+  >
+
+const mockedGetRentalObjectCodesByDistrictNames =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByDistrictNames as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByDistrictNames
   >
 
 const buildLeaseWithTenants = (
@@ -270,14 +288,14 @@ describe('tenfast-lease-search-adapter', () => {
       expect(params.get('limit')).toBe('20')
     })
 
-    it('should push district filter to API', () => {
+    it('should not push district filter to API (handled via Xpand bridging)', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
         districtNames: ['Vetterstorp'],
         page: 1,
         limit: 20,
       })
 
-      expect(params.get('filter[hyresobjekt][stadsdel]')).toBe('Vetterstorp')
+      expect(params.get('filter[hyresobjekt][stadsdel]')).toBeNull()
       expect(params.get('limit')).toBe('20')
     })
 
@@ -978,38 +996,120 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result._meta.totalRecords).toBe(3)
     })
 
-    it('should push single district filter to API', async () => {
-      const leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
-      setupMockLeases(leases)
+    it('should use batch-get path for districtNames via Xpand', async () => {
+      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+        'ROC-001',
+      ])
 
-      await tenfastLeaseSearchAdapter.searchLeases(
+      // Mock the batch-get response (not the search endpoint)
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-001',
+            avtal: [
+              {
+                externalId: 'lease-1',
+                startDate: '2024-01-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-001',
+                      displayName: 'Test Tenant',
+                      idbeteckning: '199001011234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    {
+                      externalId: 'ROC-001',
+                      postadress: 'Testgatan 1',
+                      stadsdel: 'Vetterstorp',
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
         { districtNames: ['Vetterstorp'], page: 1, limit: 20 },
         mockCtx
       )
 
-      const calledUrl = mockedRequest.mock.calls[0][0].url as string
-      expect(calledUrl).toContain('filter[hyresobjekt][stadsdel]=Vetterstorp')
+      expect(mockedGetRentalObjectCodesByDistrictNames).toHaveBeenCalledWith([
+        'Vetterstorp',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-1')
     })
 
-    it('should post-filter by buildingManager via Xpand rental object codes', async () => {
+    it('should filter by buildingManager via batch-get', async () => {
       mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
         'ROC-001',
         'ROC-002',
       ])
 
-      const leases = [
-        buildLeaseWithTenants(
-          { externalId: 'lease-1' },
-          {},
-          { externalId: 'ROC-001' }
-        ),
-        buildLeaseWithTenants(
-          { externalId: 'lease-2' },
-          {},
-          { externalId: 'ROC-999' }
-        ),
-      ]
-      setupMockLeases(leases)
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-001',
+            avtal: [
+              {
+                externalId: 'lease-1',
+                startDate: '2024-01-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-001',
+                      displayName: 'Anna Tenant',
+                      idbeteckning: '199001011234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-001', postadress: 'Testgatan 1' },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            externalId: 'ROC-002',
+            avtal: [
+              {
+                externalId: 'lease-2',
+                startDate: '2024-01-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-002',
+                      displayName: 'Bob Tenant',
+                      idbeteckning: '199002021234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-002', postadress: 'Testgatan 2' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
 
       const result = await tenfastLeaseSearchAdapter.searchLeases(
         { buildingManager: ['Anna Andersson'], page: 1, limit: 20 },
@@ -1019,11 +1119,8 @@ describe('tenfast-lease-search-adapter', () => {
       expect(mockedGetRentalObjectCodesByBuildingManager).toHaveBeenCalledWith([
         'Anna Andersson',
       ])
-
-      // Only lease-1 matches (ROC-001 is in the allowed set)
-      expect(result.content).toHaveLength(1)
-      expect(result.content[0].leaseId).toBe('lease-1')
-      expect(result._meta.totalRecords).toBe(1)
+      expect(result.content).toHaveLength(2)
+      expect(result._meta.totalRecords).toBe(2)
     })
 
     it('should return empty when buildingManager matches no rental objects', async () => {
@@ -1036,7 +1133,188 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(result.content).toHaveLength(0)
       expect(result._meta.totalRecords).toBe(0)
-      // Should not call Tenfast at all
+      expect(mockedRequest).not.toHaveBeenCalled()
+    })
+
+    it('should filter by buildingCodes via batch-get', async () => {
+      mockedGetRentalObjectCodesByBuildingCodes.mockResolvedValueOnce([
+        'ROC-100',
+      ])
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-100',
+            avtal: [
+              {
+                externalId: 'lease-bc-1',
+                startDate: '2024-03-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-100',
+                      displayName: 'BC Tenant',
+                      idbeteckning: '199003031234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-100', postadress: 'Bygggatan 5' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { buildingCodes: ['BYG-001'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByBuildingCodes).toHaveBeenCalledWith([
+        'BYG-001',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-bc-1')
+    })
+
+    it('should filter by areaCodes via batch-get', async () => {
+      mockedGetRentalObjectCodesByAreaCodes.mockResolvedValueOnce(['ROC-200'])
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-200',
+            avtal: [
+              {
+                externalId: 'lease-ac-1',
+                startDate: '2024-04-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-200',
+                      displayName: 'AC Tenant',
+                      idbeteckning: '199004041234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-200', postadress: 'Områdesgatan 3' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { areaCodes: ['AREA-01'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByAreaCodes).toHaveBeenCalledWith([
+        'AREA-01',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-ac-1')
+    })
+
+    it('should intersect codes when multiple Xpand filters are active', async () => {
+      // buildingManager returns ROC-001, ROC-002
+      mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
+        'ROC-001',
+        'ROC-002',
+      ])
+      // districtNames returns ROC-002, ROC-003
+      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+        'ROC-002',
+        'ROC-003',
+      ])
+
+      // Only ROC-002 is in the intersection
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-002',
+            avtal: [
+              {
+                externalId: 'lease-intersect',
+                startDate: '2024-05-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-300',
+                      displayName: 'Intersect Tenant',
+                      idbeteckning: '199005051234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-002', postadress: 'Korsningen 1' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          buildingManager: ['Anna Andersson'],
+          districtNames: ['Vetterstorp'],
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByBuildingManager).toHaveBeenCalledWith([
+        'Anna Andersson',
+      ])
+      expect(mockedGetRentalObjectCodesByDistrictNames).toHaveBeenCalledWith([
+        'Vetterstorp',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-intersect')
+    })
+
+    it('should return empty when intersected codes are empty', async () => {
+      mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
+        'ROC-001',
+      ])
+      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+        'ROC-999',
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          buildingManager: ['Anna Andersson'],
+          districtNames: ['Other District'],
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(0)
+      expect(result._meta.totalRecords).toBe(0)
+      // No batch-get call since intersection is empty
       expect(mockedRequest).not.toHaveBeenCalled()
     })
   })
