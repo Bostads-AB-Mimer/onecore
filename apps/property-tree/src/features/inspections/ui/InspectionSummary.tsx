@@ -118,7 +118,7 @@ export function InspectionSummary({
                         type="number"
                         min={0}
                         step={1}
-                        value={roomData?.componentCosts?.[component.key] ?? 0}
+                        value={roomData?.componentCosts?.[component.key] || ''}
                         onChange={(e) =>
                           onComponentCostUpdate(
                             room.id,
