@@ -6,7 +6,7 @@ import { getHomeInsuranceExport } from '../adapters/leasing-adapter'
 import { convertLfInsuranceToXlsx } from '../processes/reports/converters/excelConverter'
 import * as sftpAdapter from '../adapters/sftp-adapter'
 
-export const handleLfInsuranceExport = async () => {
+export async function handleLfInsuranceExport() {
   const dateStr = new Date().toISOString().split('T')[0]
   const fileName = `Hemforsakring_LF_${dateStr}.xlsx`
 
@@ -20,16 +20,22 @@ export const handleLfInsuranceExport = async () => {
   if (process.env['LOCAL_OUTPUT']) {
     const outputPath = path.resolve(process.env['LOCAL_OUTPUT'], fileName)
     fs.writeFileSync(outputPath, xlsxBuffer)
-    logger.info({ outputPath, rowCount: rows.length }, 'LF insurance export written locally')
+    logger.info(
+      { outputPath, rowCount: rows.length },
+      'LF insurance export written locally'
+    )
   } else {
     await sftpAdapter.uploadFile(xlsxBuffer, fileName, config.lf.sftp)
-    logger.info({ fileName, rowCount: rows.length }, 'LF insurance export complete')
+    logger.info(
+      { fileName, rowCount: rows.length },
+      'LF insurance export complete'
+    )
   }
 }
 
 if (require.main === module) {
   handleLfInsuranceExport().catch((err) => {
     logger.error(err, 'LF insurance export failed')
-    process.exit(1)
+    throw err
   })
 }

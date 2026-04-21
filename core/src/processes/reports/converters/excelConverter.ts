@@ -1,4 +1,5 @@
 import ExcelJs from 'exceljs'
+import dayjs from 'dayjs'
 import { BosocialaObject, InvoicePaymentSummary } from '../types'
 import { LeaseStatus, schemas } from '@onecore/types'
 
@@ -198,6 +199,11 @@ const transformBosociala = (bosocial: BosocialaObject): BosocialaRow => {
   }
 }
 
+const toDateString = (value: Date | null | undefined): string | null => {
+  if (!value) return null
+  return dayjs(value).format('YYYY-MM-DD')
+}
+
 export const convertLfInsuranceToXlsx = async (
   rows: schemas.v1.LfInsuranceExportRow[]
 ): Promise<Buffer> => {
@@ -206,13 +212,6 @@ export const convertLfInsuranceToXlsx = async (
     properties: { defaultColWidth: ColumnWidth },
   })
 
-  // Two-row header matching the original Xpand export format
-  worksheet.addRow([
-    'Information hämtad från kontrakt',
-    '', '', '', '', '', '', '', '', '',
-    'Information hämtad från hyresrad "HEMFÖR"',
-    '', '', '', '', '',
-  ])
   worksheet.addRow([
     'Kontraktsnummer',
     'Personnummer',
@@ -232,18 +231,9 @@ export const convertLfInsuranceToXlsx = async (
     'Avitext',
   ])
 
-  // Style header rows
-  ;[1, 2].forEach((rowNumber) => {
-    const row = worksheet.getRow(rowNumber)
-    row.font = { bold: true }
-    row.commit()
-  })
-
-  // Date columns: Kontrakt Fr.o.m (col 7), Kontrakt T.o.m (col 8),
-  // HEMFÖR Fr.o.m (col 11), HEMFÖR T.o.m (col 12)
-  ;[7, 8, 11, 12].forEach((col) => {
-    worksheet.getColumn(col).numFmt = DateFormat
-  })
+  const headerRow = worksheet.getRow(1)
+  headerRow.font = { bold: true }
+  headerRow.commit()
 
   rows.forEach((row) => {
     worksheet.addRow([
@@ -253,12 +243,12 @@ export const convertLfInsuranceToXlsx = async (
       row.address,
       row.numberOfRooms,
       row.squareMeters,
-      row.leaseFromDate,
-      row.leaseToDate,
+      toDateString(row.leaseFromDate),
+      toDateString(row.leaseToDate),
       row.phoneNumber,
       row.email,
-      row.rowFromDate ? new Date(row.rowFromDate) : null,
-      row.rowToDate ? new Date(row.rowToDate) : null,
+      toDateString(row.rowFromDate),
+      toDateString(row.rowToDate),
       row.annualRent,
       row.rentalObjectCode,
       row.leaseStatus,
