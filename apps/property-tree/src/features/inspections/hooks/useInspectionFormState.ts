@@ -5,6 +5,7 @@ import type { Room } from '@/services/types'
 
 import {
   createAdHocRoom,
+  EMPTY_COMPONENT_COST_RESPONSIBILITIES,
   initializeInspectionData,
   initialRoomData,
 } from '../lib/initialFormData'
@@ -54,13 +55,7 @@ export function useInspectionFormState(
             detailComponents: room.detailComponents ?? [],
             componentCostResponsibilities:
               room.componentCostResponsibilities ?? {
-                wall1: null,
-                wall2: null,
-                wall3: null,
-                wall4: null,
-                floor: null,
-                ceiling: null,
-                details: null,
+                ...EMPTY_COMPONENT_COST_RESPONSIBILITIES,
               },
           }
           return acc

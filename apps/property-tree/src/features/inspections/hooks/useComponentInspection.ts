@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
-import type { CostResponsibility } from '../constants'
+import { CONDITION_TYPE, type CostResponsibility } from '../constants'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 
@@ -85,6 +85,15 @@ export function useComponentInspection(
           (condition) => condition && condition.trim() !== ''
         )
         updatedRoom.isHandled = allConditionsSet
+
+        // Cost responsibility only applies to Acceptabel/Skadad; clear it when
+        // the condition is switched back to God so stale data isn't persisted.
+        if (value === CONDITION_TYPE.GOOD) {
+          updatedRoom.componentCostResponsibilities = {
+            ...updatedRoom.componentCostResponsibilities,
+            [field]: null,
+          }
+        }
 
         return {
           ...prev,

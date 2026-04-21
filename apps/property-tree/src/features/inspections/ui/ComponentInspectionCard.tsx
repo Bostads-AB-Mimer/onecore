@@ -107,26 +107,23 @@ export function ComponentInspectionCard({
         <div className="mb-3">
           <p className="text-sm text-muted-foreground mb-2">Kostnadsansvar</p>
           <div className="flex gap-4">
-            {(
-              [
-                COST_RESPONSIBILITY.TENANT,
-                COST_RESPONSIBILITY.LANDLORD,
-              ] as const
-            ).map((value) => (
-              <label
-                key={value}
-                className="flex items-center gap-2 text-sm cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  name={`cost-${componentKey}`}
-                  value={value}
-                  checked={costResponsibility === value}
-                  onChange={() => onCostResponsibilityChange(value)}
-                />
-                {COST_RESPONSIBILITY_LABEL[value]}
-              </label>
-            ))}
+            {[COST_RESPONSIBILITY.TENANT, COST_RESPONSIBILITY.LANDLORD].map(
+              (value) => (
+                <label
+                  key={value}
+                  className="flex items-center gap-2 text-sm cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name={`cost-${componentKey}`}
+                    value={value}
+                    checked={costResponsibility === value}
+                    onChange={() => onCostResponsibilityChange(value)}
+                  />
+                  {COST_RESPONSIBILITY_LABEL[value]}
+                </label>
+              )
+            )}
           </div>
         </div>
       )}
