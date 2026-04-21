@@ -12,18 +12,23 @@ import {
   TableRow,
 } from '@/shared/ui/Table'
 
-import { CONDITION_TYPE, getConditionConfig } from '../constants/conditions'
 import {
-  ROOM_COMPONENTS,
-  getComponentLabel,
   type ComponentDefinition,
+  getComponentLabel,
+  ROOM_COMPONENTS,
 } from '../constants/components'
+import { CONDITION_TYPE, getConditionConfig } from '../constants/conditions'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface InspectionSummaryProps {
   inspectionData: Record<string, InspectionRoom>
   rooms: Room[]
+  onComponentCostUpdate: (
+    roomId: string,
+    field: keyof InspectionRoom['componentCosts'],
+    cost: number
+  ) => void
 }
 
 function getRoomRemarks(
@@ -42,6 +47,7 @@ function getRoomRemarks(
 export function InspectionSummary({
   inspectionData,
   rooms,
+  onComponentCostUpdate,
 }: InspectionSummaryProps) {
   const roomSections = rooms
     .map((room) => ({
@@ -111,7 +117,16 @@ export function InspectionSummary({
                       <Input
                         type="number"
                         min={0}
-                        defaultValue={0}
+                        step={1}
+                        value={roomData?.componentCosts?.[component.key] ?? 0}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) =>
+                          onComponentCostUpdate(
+                            room.id,
+                            component.key,
+                            Math.max(0, Math.trunc(Number(e.target.value) || 0))
+                          )
+                        }
                         aria-label={`Kostnad för ${getComponentLabel(component.key)}`}
                       />
                     </TableCell>

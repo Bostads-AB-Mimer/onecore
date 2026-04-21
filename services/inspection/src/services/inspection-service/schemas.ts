@@ -127,6 +127,16 @@ const InspectionRoomActionsSchema = z.object({
   details: z.array(z.string()),
 })
 
+const InspectionRoomCostsSchema = z.object({
+  wall1: z.number().int().min(0).default(0),
+  wall2: z.number().int().min(0).default(0),
+  wall3: z.number().int().min(0).default(0),
+  wall4: z.number().int().min(0).default(0),
+  floor: z.number().int().min(0).default(0),
+  ceiling: z.number().int().min(0).default(0),
+  details: z.number().int().min(0).default(0),
+})
+
 const DetailComponentSchema = z.object({
   id: z.string(),
   type: z.string(),
@@ -143,6 +153,7 @@ export const InspectionRoomSchema = z.object({
   conditions: InspectionRoomConditionsSchema,
   actions: InspectionRoomActionsSchema,
   componentNotes: InspectionRoomConditionsSchema,
+  componentCosts: InspectionRoomCostsSchema,
   componentPhotos: InspectionRoomActionsSchema,
   photos: z.array(z.string()),
   isApproved: z.boolean(),

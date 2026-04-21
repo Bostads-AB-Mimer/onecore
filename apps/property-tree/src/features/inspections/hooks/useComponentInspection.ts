@@ -20,6 +20,11 @@ export interface UseComponentInspectionReturn {
     field: keyof InspectionRoom['componentNotes'],
     note: string
   ) => void
+  updateComponentCost: (
+    roomId: string,
+    field: keyof InspectionRoom['componentCosts'],
+    cost: number
+  ) => void
   addPhoto: (
     roomId: string,
     field: keyof InspectionRoom['componentPhotos'],
@@ -130,6 +135,26 @@ export function useComponentInspection(
           componentNotes: {
             ...prev[roomId].componentNotes,
             [field]: note,
+          },
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  const updateComponentCost = useCallback(
+    (
+      roomId: string,
+      field: keyof InspectionRoom['componentCosts'],
+      cost: number
+    ) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          componentCosts: {
+            ...prev[roomId].componentCosts,
+            [field]: cost,
           },
         },
       }))
@@ -249,6 +274,7 @@ export function useComponentInspection(
     updateCondition,
     updateAction,
     updateNote,
+    updateComponentCost,
     addPhoto,
     removePhoto,
     addDetailComponent,
