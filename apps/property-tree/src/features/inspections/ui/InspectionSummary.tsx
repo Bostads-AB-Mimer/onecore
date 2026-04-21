@@ -12,12 +12,12 @@ import {
   TableRow,
 } from '@/shared/ui/Table'
 
-import { CONDITION_TYPE, getConditionConfig } from '../constants/conditions'
 import {
-  ROOM_COMPONENTS,
-  getComponentLabel,
   type ComponentDefinition,
+  getComponentLabel,
+  ROOM_COMPONENTS,
 } from '../constants/components'
+import { CONDITION_TYPE, getConditionConfig } from '../constants/conditions'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 
@@ -118,7 +118,8 @@ export function InspectionSummary({
                         type="number"
                         min={0}
                         step={1}
-                        value={roomData?.componentCosts?.[component.key] || ''}
+                        value={roomData?.componentCosts?.[component.key] ?? 0}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) =>
                           onComponentCostUpdate(
                             room.id,
