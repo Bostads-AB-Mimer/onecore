@@ -11,6 +11,9 @@ jest.mock('@onecore/utilities', () => {
       debug: () => {
         return
       },
+      warn: () => {
+        return
+      },
     },
     // Use axios.create() to get a fresh instance without interceptors
     loggedAxios: axios,

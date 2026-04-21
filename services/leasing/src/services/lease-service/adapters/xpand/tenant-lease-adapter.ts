@@ -90,6 +90,10 @@ const transformFromDbContact = (
 ): Contact => {
   const row = trimRow(rows[0])
   const protectedIdentity = row.protectedIdentity !== null
+  const deceased = row.deceased !== null
+  const emigrated = row.emigrated !== null
+  const noAdvertising =
+    row.noAdvertising == null ? false : row.noAdvertising !== 0
 
   const contact = {
     contactCode: row.contactCode,
@@ -102,10 +106,11 @@ const transformFromDbContact = (
       ? undefined
       : row.nationalRegistrationNumber,
     birthDate: protectedIdentity ? undefined : row.birthDate,
-    ...(row.street || row.postalCode || row.city
+    ...(row.street || row.street2 || row.postalCode || row.city
       ? {
           address: {
             street: row.street,
+            street2: row.street2,
             number: '',
             postalCode: row.postalCode,
             city: row.city,
@@ -124,6 +129,10 @@ const transformFromDbContact = (
     housingWaitingList: getHousingWaitingList(rows),
     storageWaitingList: getStorageWaitingList(rows),
     specialAttention: !!row.specialAttention,
+    protectedIdentity: protectedIdentity,
+    deceased: deceased,
+    emigrated: emigrated,
+    noAdvertising: noAdvertising,
   }
 
   return contact
@@ -525,6 +534,7 @@ const getContactQuery = () => {
         'cmctc.persorgnr as nationalRegistrationNumber',
         'cmctc.birthdate as birthDate',
         'cmadr.adress1 as street',
+        'cmadr.adress2 as street2',
         'cmadr.adress3 as postalCode',
         'cmadr.adress4 as city',
         'cmeml.cmemlben as emailAddress',
@@ -533,7 +543,10 @@ const getContactQuery = () => {
         'bkkty.bkktyben as queueName',
         'bkqte.quetime as queueTime',
         'cmctc.lagsokt as protectedIdentity',
-        'cmctc.utslag as specialAttention'
+        'cmctc.utslag as specialAttention',
+        'cmctc.avliden as deceased',
+        'cmctc.konkurs as emigrated',
+        'cmctc.blockinfo as noAdvertising'
       )
       .leftJoin('cmadr', function () {
         this.on('cmadr.keycode', '=', 'cmctc.keycmobj')
@@ -672,7 +685,10 @@ const getContacts = async (contactCodes: string[]) => {
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
-      'cmctc.utslag as specialAttention'
+      'cmctc.avliden as deceased',
+      'cmctc.utslag as specialAttention',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
     .leftJoin('cmeml', function () {
@@ -696,7 +712,10 @@ const getContacts = async (contactCodes: string[]) => {
 
   return rows.map((row: any): Contact => {
     const protectedIdentity = row.protectedIdentity !== null
-
+    const deceased = row.deceased !== null
+    const emigrated = row.emigrated !== null
+    const noAdvertising =
+      row.noAdvertising == null ? false : row.noAdvertising !== 0
     return {
       contactCode: row.contactCode,
       contactKey: row.contactKey,
@@ -722,6 +741,10 @@ const getContacts = async (contactCodes: string[]) => {
           : 'redacted',
       isTenant: false,
       specialAttention: !!row.specialAttention,
+      protectedIdentity: protectedIdentity,
+      deceased: deceased,
+      emigrated: emigrated,
+      noAdvertising: noAdvertising,
     }
   })
 }

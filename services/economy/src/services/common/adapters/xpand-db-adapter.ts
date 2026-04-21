@@ -379,6 +379,18 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
   return results
 }
 
+export const mapContactFlags = (row: {
+  protectedIdentity: unknown
+  deceased: unknown
+  emigrated: unknown
+  noAdvertising: unknown
+}) => ({
+  protectedIdentity: row.protectedIdentity !== null,
+  deceased: row.deceased !== null,
+  emigrated: row.emigrated !== null,
+  noAdvertising: row.noAdvertising == null ? false : row.noAdvertising !== 0,
+})
+
 export const getContacts = async (
   contactCodes: string[]
 ): Promise<XpandContact[]> => {
@@ -394,6 +406,9 @@ export const getContacts = async (
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
+      'cmctc.avliden as deceased',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising',
       'cmctcCareOf.cmctcben as careOf',
       'krknr.autogiro as autogiro'
     )
@@ -497,6 +512,9 @@ export const getContacts = async (
     const contactCode = contactRow.contactCode?.trimEnd()
     const emailAddress = getContactEmail(contactCode)
 
+    const { protectedIdentity, deceased, emigrated, noAdvertising } =
+      mapContactFlags(contactRow)
+
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
       contactKey: contactRow.contactKey?.trimEnd(),
@@ -515,6 +533,10 @@ export const getContacts = async (
         emailAddress !== ''
           ? InvoiceDeliveryMethod.Email
           : InvoiceDeliveryMethod.Other,
+      protectedIdentity,
+      deceased,
+      emigrated,
+      noAdvertising,
     }
   })
 

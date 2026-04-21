@@ -6,8 +6,6 @@ import {
   ConsumerReport,
   ReplyToOfferErrorCodes,
   GetActiveOfferByListingIdErrorCodes,
-  ListingStatus,
-  UpdateListingStatusErrorCodes,
 } from '@onecore/types'
 
 import { routes } from '../index'

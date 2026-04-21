@@ -342,11 +342,13 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
 
       if (error instanceof Error) {
+        logger.error({ error, metadata }, 'Unknown error during lease search')
         ctx.body = {
           error: error.message,
           ...metadata,
         }
       } else {
+        logger.error({ error, metadata }, 'Unknown error during lease search')
         ctx.body = {
           error: 'Unknown error occurred during lease search',
           ...metadata,

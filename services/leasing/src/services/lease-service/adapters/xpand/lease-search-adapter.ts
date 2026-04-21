@@ -436,7 +436,9 @@ export class LeaseSearchQueryBuilder {
       'cmobj.keycmobt as objectTypeCode',
       'hyhav.hyhavben as leaseType',
       'cmadr.adress1 as address',
-      'babuf.hyresid as rentalObjectCode'
+      'babuf.hyresid as rentalObjectCode',
+      'cmadr.adress3 as postalCode',
+      'cmadr.adress4 as city'
     )
 
     // Add JSON subquery to fetch contacts with email/phone in one go
@@ -578,6 +580,8 @@ export const transformRow = (
     objectTypeCode: getObjectTypeLabel(trimmedRow.objectTypeCode),
     leaseType: parseLeaseType(trimmedRow.leaseType),
     address: trimmedRow.address || null,
+    postalCode: trimmedRow.postalCode || null,
+    city: trimmedRow.city || null,
     startDate: trimmedRow.startDate || null,
     lastDebitDate: trimmedRow.lastDebitDate || null,
     rentalObjectCode: trimmedRow.rentalObjectCode || null,

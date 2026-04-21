@@ -17,6 +17,7 @@ import {
   xledgerDateString,
   XpandContact,
 } from '@src/common/types'
+import { mapContactFlags } from '@src/services/common/adapters/xpand-db-adapter'
 import { match, P } from 'ts-pattern'
 
 type RentalSpecificRule = {
@@ -353,7 +354,10 @@ export const getContacts = async (
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
       'krknr.autogiro as autogiro',
-      'krknr.stopdate as autogiroCancelledAt'
+      'krknr.stopdate as autogiroCancelledAt',
+      'cmctc.avliden as deceased',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising'
     )
     .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
 
@@ -434,6 +438,9 @@ export const getContacts = async (
     const contactCode = contactRow.contactCode?.trimEnd()
     const emailAddress = getContactEmail(contactCode)
 
+    const { protectedIdentity, deceased, emigrated, noAdvertising } =
+      mapContactFlags(contactRow)
+
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
       contactKey: contactRow.contactKey?.trimEnd(),
@@ -454,6 +461,10 @@ export const getContacts = async (
         emailAddress !== ''
           ? InvoiceDeliveryMethod.Email
           : InvoiceDeliveryMethod.Other,
+      protectedIdentity,
+      deceased,
+      emigrated,
+      noAdvertising,
     }
   })
 

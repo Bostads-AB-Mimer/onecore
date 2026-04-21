@@ -34,6 +34,9 @@ jest.mock('knex', () => () => ({
           queueName: 'Bilplats (intern)',
           queueTime: sub(new Date(), { days: 366 }),
           protectedIdentity: null,
+          deceased: null,
+          emigrated: null,
+          noAdvertising: null,
         },
       ])
     )
@@ -71,6 +74,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         birthDate: '1212-12-12',
         address: {
           street: 'Gatvägen 12',
+          street2: undefined,
           number: '',
           postalCode: '12345',
           city: null,
@@ -92,6 +96,10 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         },
         housingWaitingList: undefined,
         storageWaitingList: undefined,
+        protectedIdentity: false,
+        deceased: false,
+        emigrated: false,
+        noAdvertising: false,
       },
     })
   })
@@ -209,6 +217,27 @@ describe('isLeaseTerminated', () => {
   })
 })
 
+const buildRow = (overrides = {}) => ({
+  contactCode: 'P123456',
+  contactKey: '_ADBAEC',
+  firstName: 'Test',
+  lastName: 'Testman',
+  fullName: 'Test Testman',
+  nationalRegistrationNumber: '121212121212',
+  birthDate: '1212-12-12',
+  street: 'Gatvägen 12',
+  street2: undefined,
+  postalCode: '12345',
+  city: 'Test City',
+  emailAddress: 'noreply@mimer.nu',
+  protectedIdentity: null,
+  deceased: null,
+  emigrated: null,
+  noAdvertising: null,
+  specialAttention: null,
+  ...overrides,
+})
+
 describe('transformFromDbContact', () => {
   it('should handle protected identity correctly', () => {
     const rows = [
@@ -281,5 +310,95 @@ describe('transformFromDbContact', () => {
     )
 
     expect(contact.specialAttention).toBe(true)
+  })
+
+  it('deceased is false when db value is null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ deceased: null })],
+      [],
+      [],
+      false
+    )
+    expect(contact.deceased).toBe(false)
+  })
+
+  it('deceased is true when db value is non-null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ deceased: '2024-01-01' })],
+      [],
+      [],
+      false
+    )
+    expect(contact.deceased).toBe(true)
+  })
+
+  it('emigrated is false when db value is null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ emigrated: null })],
+      [],
+      [],
+      false
+    )
+    expect(contact.emigrated).toBe(false)
+  })
+
+  it('emigrated is true when db value is non-null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ emigrated: '2024-01-01' })],
+      [],
+      [],
+      false
+    )
+    expect(contact.emigrated).toBe(true)
+  })
+
+  it('noAdvertising is false when db value is null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ noAdvertising: null })],
+      [],
+      [],
+      false
+    )
+    expect(contact.noAdvertising).toBe(false)
+  })
+
+  it('noAdvertising is false when db value is 0', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ noAdvertising: 0 })],
+      [],
+      [],
+      false
+    )
+    expect(contact.noAdvertising).toBe(false)
+  })
+
+  it('noAdvertising is true when db value is non-zero', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ noAdvertising: 1 })],
+      [],
+      [],
+      false
+    )
+    expect(contact.noAdvertising).toBe(true)
+  })
+
+  it('maps street2 from db row', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ street2: 'c/o Någon' })],
+      [],
+      [],
+      false
+    )
+    expect(contact.address?.street2).toBe('c/o Någon')
+  })
+
+  it('street2 is undefined when db value is undefined', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ street2: undefined })],
+      [],
+      [],
+      false
+    )
+    expect(contact.address?.street2).toBeUndefined()
   })
 })
