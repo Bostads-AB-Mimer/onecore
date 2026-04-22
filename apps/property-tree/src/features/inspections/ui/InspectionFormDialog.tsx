@@ -43,15 +43,40 @@ interface InspectionFormDialogProps {
   rentalId?: string
 }
 
-// Check if inspection has actual saved data
+// Returns true if the room holds any user-entered data. The dialog uses this
+// to decide whether to offer the "resume draft" choice; a false negative here
+// causes the form to start fresh and silently overwrite the persisted draft
+// on next save.
+const roomHasAnyData = (room: InspectionRoom): boolean => {
+  if (Object.values(room.conditions).some((c) => c && c.trim() !== '')) {
+    return true
+  }
+  if (room.components && room.components.length > 0) return true
+  if (room.detailComponents && room.detailComponents.length > 0) return true
+  if (Object.values(room.componentNotes).some((n) => n && n.trim() !== '')) {
+    return true
+  }
+  if (Object.values(room.componentPhotos).some((p) => p.length > 0)) return true
+  if (Object.values(room.actions).some((a) => a.length > 0)) return true
+  if (
+    room.componentCosts &&
+    Object.values(room.componentCosts).some((c) => (c ?? 0) > 0)
+  ) {
+    return true
+  }
+  if (
+    room.componentCostResponsibilities &&
+    Object.values(room.componentCostResponsibilities).some((r) => r != null)
+  ) {
+    return true
+  }
+  if (room.photos.length > 0) return true
+  return false
+}
+
 const hasExistingData = (inspection?: Inspection): boolean => {
-  if (!inspection?.rooms) return false
-  return (
-    Object.keys(inspection.rooms).length > 0 &&
-    Object.values(inspection.rooms).some((room) =>
-      Object.values(room.conditions).some((c) => c && c.trim() !== '')
-    )
-  )
+  if (!inspection?.rooms || inspection.rooms.length === 0) return false
+  return inspection.rooms.some(roomHasAnyData)
 }
 
 export function InspectionFormDialog({

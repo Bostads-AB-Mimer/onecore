@@ -82,6 +82,13 @@ export function MobileInspectionForm({
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
+    handleComponentConditionUpdate,
+    handleComponentActionUpdate,
+    handleComponentNoteUpdateById,
+    handleComponentPhotoAddById,
+    handleComponentPhotoRemoveById,
+    handleComponentCostResponsibilityUpdateById,
+    handleRoomHandledSet,
   } = useInspectionForm(initialRooms, existingInspection)
 
   // After adding an ad-hoc room, jump to it so the inspector can start
@@ -293,6 +300,61 @@ export function MobileInspectionForm({
                   componentId,
                   note
                 )
+              }
+              onFetchedComponentConditionUpdate={(componentId, label, value) =>
+                handleComponentConditionUpdate(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  value
+                )
+              }
+              onFetchedComponentActionUpdate={(componentId, label, action) =>
+                handleComponentActionUpdate(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  action
+                )
+              }
+              onFetchedComponentNoteUpdate={(componentId, label, note) =>
+                handleComponentNoteUpdateById(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  note
+                )
+              }
+              onFetchedComponentPhotoAdd={(componentId, label, photoDataUrl) =>
+                handleComponentPhotoAddById(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  photoDataUrl
+                )
+              }
+              onFetchedComponentPhotoRemove={(componentId, label, index) =>
+                handleComponentPhotoRemoveById(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  index
+                )
+              }
+              onFetchedComponentCostResponsibilityUpdate={(
+                componentId,
+                label,
+                value
+              ) =>
+                handleComponentCostResponsibilityUpdateById(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  value
+                )
+              }
+              onRoomHandledChange={(isHandled) =>
+                handleRoomHandledSet(currentRoom.id, isHandled)
               }
             />
           </div>

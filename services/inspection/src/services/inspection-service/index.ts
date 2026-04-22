@@ -9,6 +9,7 @@ import {
   DetailedXpandInspectionSchema,
   GetInspectionsFromXpandQuerySchema,
   GetInspectionsByResidenceIdQuerySchema,
+  InspectionComponentSchema,
   InspectionRoomSchema,
   InternalInspectionSchema,
   SaveInspectionDraftRequestSchema,
@@ -39,6 +40,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('DetailedXpandInspectionRemark', DetailedXpandInspectionSchema)
   registerSchema('CreateInspection', CreateInspectionSchema)
   registerSchema('UpdateInspectionStatus', UpdateInspectionStatusSchema)
+  registerSchema('InspectionComponent', InspectionComponentSchema)
   registerSchema('InspectionRoom', InspectionRoomSchema)
   registerSchema('InternalInspection', InternalInspectionSchema)
   registerSchema('SaveInspectionDraftRequest', SaveInspectionDraftRequestSchema)

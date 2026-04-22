@@ -11660,8 +11660,37 @@ export interface components {
               label: string
               note: string
             }[]
+            /** @default [] */
+            components?: {
+              componentId: string
+              label: string
+              condition: string
+              action: string[]
+              note: string
+              photos: string[]
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
+            }[]
           }[]
         | null
+    }
+    InspectionComponent: {
+      componentId: string
+      label: string
+      condition: string
+      action: string[]
+      note: string
+      photos: string[]
+      cost?: number
+      /**
+       * @default null
+       * @enum {string|null}
+       */
+      costResponsibility?: 'tenant' | 'landlord' | null
     }
     InspectionRoom: {
       roomId: string
@@ -11764,6 +11793,21 @@ export interface components {
         type: string
         label: string
         note: string
+      }[]
+      /** @default [] */
+      components?: {
+        componentId: string
+        label: string
+        condition: string
+        action: string[]
+        note: string
+        photos: string[]
+        cost?: number
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        costResponsibility?: 'tenant' | 'landlord' | null
       }[]
     }
     DetailedInspection: {
@@ -12935,6 +12979,21 @@ export interface components {
               label: string
               note: string
             }[]
+            /** @default [] */
+            components?: {
+              componentId: string
+              label: string
+              condition: string
+              action: string[]
+              note: string
+              photos: string[]
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
+            }[]
           }[]
         | null
     }
@@ -13041,6 +13100,21 @@ export interface components {
           type: string
           label: string
           note: string
+        }[]
+        /** @default [] */
+        components?: {
+          componentId: string
+          label: string
+          condition: string
+          action: string[]
+          note: string
+          photos: string[]
+          cost?: number
+          /**
+           * @default null
+           * @enum {string|null}
+           */
+          costResponsibility?: 'tenant' | 'landlord' | null
         }[]
       }[]
       isFurnished: boolean

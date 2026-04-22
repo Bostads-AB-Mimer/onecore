@@ -34,6 +34,7 @@ import {
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('Inspection', schemas.InspectionSchema)
+  registerSchema('InspectionComponent', schemas.InspectionComponentSchema)
   registerSchema('InspectionRoom', schemas.InspectionRoomSchema)
   registerSchema('DetailedInspection', schemas.DetailedInspectionSchema)
   registerSchema('DetailedInspectionRoom', schemas.DetailedInspectionSchema)

@@ -625,8 +625,20 @@ export interface components {
       status?: 'Registrerad' | 'Påbörjad' | 'Genomförd'
       inspector?: string
     }
+    InspectionComponent: {
+      componentId: string
+      label: string
+      condition: string
+      action: string[]
+      note: string
+      photos: string[]
+      cost?: number
+      /** @default null */
+      costResponsibility?: ('tenant' | 'landlord') | null
+    }
     InspectionRoom: {
       roomId: string
+      name?: string
       conditions: {
         wall1: string
         wall2: string
@@ -705,6 +717,18 @@ export interface components {
         label: string
         note: string
       }[]
+      /** @default [] */
+      components?: {
+        componentId: string
+        label: string
+        condition: string
+        action: string[]
+        note: string
+        photos: string[]
+        cost?: number
+        /** @default null */
+        costResponsibility?: ('tenant' | 'landlord') | null
+      }[]
     }
     InternalInspection: {
       id: string
@@ -722,6 +746,7 @@ export interface components {
       rooms:
         | {
             roomId: string
+            name?: string
             conditions: {
               wall1: string
               wall2: string
@@ -800,6 +825,18 @@ export interface components {
               label: string
               note: string
             }[]
+            /** @default [] */
+            components?: {
+              componentId: string
+              label: string
+              condition: string
+              action: string[]
+              note: string
+              photos: string[]
+              cost?: number
+              /** @default null */
+              costResponsibility?: ('tenant' | 'landlord') | null
+            }[]
           }[]
         | null
     }
@@ -807,6 +844,7 @@ export interface components {
       inspectorName: string
       rooms: {
         roomId: string
+        name?: string
         conditions: {
           wall1: string
           wall2: string
@@ -884,6 +922,18 @@ export interface components {
           type: string
           label: string
           note: string
+        }[]
+        /** @default [] */
+        components?: {
+          componentId: string
+          label: string
+          condition: string
+          action: string[]
+          note: string
+          photos: string[]
+          cost?: number
+          /** @default null */
+          costResponsibility?: ('tenant' | 'landlord') | null
         }[]
       }[]
       isFurnished: boolean

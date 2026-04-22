@@ -32,6 +32,19 @@ const DetailComponentSchema = z.object({
   note: z.string(),
 })
 
+export const InspectionComponentSchema = z.object({
+  componentId: z.string(),
+  // Snapshot of the display label at inspection time so the summary still
+  // reads correctly if the component is renamed or removed from property-base.
+  label: z.string(),
+  condition: z.string(),
+  action: z.array(z.string()),
+  note: z.string(),
+  photos: z.array(z.string()),
+  cost: z.number().optional(),
+  costResponsibility: z.enum(['tenant', 'landlord']).nullable().default(null),
+})
+
 // Note: 'details' fields in conditions/actions/componentNotes/componentPhotos are kept
 // for backward compatibility with existing persisted data. New detail inspections use
 // the detailComponents array instead. The UI no longer renders these fields.
@@ -99,6 +112,7 @@ export const InspectionRoomSchema = z.object({
   isApproved: z.boolean(),
   isHandled: z.boolean(),
   detailComponents: z.array(DetailComponentSchema).optional().default([]),
+  components: z.array(InspectionComponentSchema).optional().default([]),
 })
 
 export const InspectionSchema = XpandInspectionSchema.extend({
@@ -210,6 +224,7 @@ export const InspectionWithSourceSchema = XpandInspectionSchema.extend({
 export type XpandInspection = z.infer<typeof XpandInspectionSchema>
 export type InspectionWithSource = z.infer<typeof InspectionWithSourceSchema>
 export type Inspection = z.infer<typeof InspectionSchema>
+export type InspectionComponent = z.infer<typeof InspectionComponentSchema>
 export type InspectionRoom = z.infer<typeof InspectionRoomSchema>
 export type DetailedInspection = z.infer<typeof DetailedInspectionSchema>
 
