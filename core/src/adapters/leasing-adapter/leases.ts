@@ -249,9 +249,14 @@ export const getHomeInsuranceExport = async (): Promise<
       return { ok: false, err: 'unknown' }
     }
 
-    const parsed = schemas.v1.LfInsuranceExportResponseSchema.safeParse(response.data)
+    const parsed = schemas.v1.LfInsuranceExportResponseSchema.safeParse(
+      response.data
+    )
     if (!parsed.success) {
-      logger.error({ err: parsed.error }, 'leases/lf-export response failed schema validation')
+      logger.error(
+        { err: parsed.error },
+        'leases/lf-export response failed schema validation'
+      )
       return { ok: false, err: 'schema-error' }
     }
 

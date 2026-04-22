@@ -686,7 +686,9 @@ describe('GET /leases/lf-export', () => {
   it('returns 200 with mapped rows on success', async () => {
     const lease = factory.tenfastLease.build({
       stage: 'active',
-      hyresgaster: [factory.tenfastTenant.build({ idbeteckning: '199001011234' })],
+      hyresgaster: [
+        factory.tenfastTenant.build({ idbeteckning: '199001011234' }),
+      ],
       hyresobjekt: [factory.tenfastRentalObject.build()],
       hyror: [
         factory.tenfastInvoiceRow.build({
