@@ -77,7 +77,7 @@ export const ListingInfo = (props: { listing: Listing }) => {
         flex="1"
         paddingTop="0.5rem"
       >
-        <Typography>Datum tilldelas</Typography>
+        <Typography>Publicerad t.o.m.</Typography>
         <Box>
           <Typography>
             {props.listing.publishedTo

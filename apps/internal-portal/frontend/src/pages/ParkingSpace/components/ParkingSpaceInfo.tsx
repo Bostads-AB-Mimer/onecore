@@ -149,7 +149,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
                 </Box>
               </Box>
               <Box display="flex" justifyContent="space-between" flex="1">
-                <Typography>Datum tilldelas</Typography>
+                <Typography>Publicerad t.o.m.</Typography>
                 <Box>
                   <Typography fontWeight="bold">
                     {parkingSpaceListing.publishedTo
