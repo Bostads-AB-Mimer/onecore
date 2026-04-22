@@ -45,6 +45,7 @@ const blockTypeLabels: Record<ContentBlockType, string> = {
   subtitle: 'Underrubrik',
   text: 'Text',
   bullet_list: 'Punktlista',
+  bold_text: 'Underrubrik 2',
   link: 'Länk',
 }
 
@@ -127,6 +128,7 @@ export const ContentBlockEditor = ({
               <MenuItem value="preamble">{blockTypeLabels.preamble}</MenuItem>
               <MenuItem value="headline">{blockTypeLabels.headline}</MenuItem>
               <MenuItem value="subtitle">{blockTypeLabels.subtitle}</MenuItem>
+              <MenuItem value="bold_text">{blockTypeLabels.bold_text}</MenuItem>
               <MenuItem value="text">{blockTypeLabels.text}</MenuItem>
               <MenuItem value="bullet_list">
                 {blockTypeLabels.bullet_list}

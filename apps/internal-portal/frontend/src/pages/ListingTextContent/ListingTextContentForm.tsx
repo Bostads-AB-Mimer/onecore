@@ -136,9 +136,8 @@ const ListingTextContentForm = () => {
           contentBlocks,
         })
         toast.success('Annonsinnehåll skapat!')
+        navigate(`/annonsinnehall/${objectCode}/redigera`, { replace: true })
       }
-
-      navigate('/annonsinnehall')
     } catch (error) {
       if (error instanceof AxiosError) {
         if (error.response?.status === 409) {

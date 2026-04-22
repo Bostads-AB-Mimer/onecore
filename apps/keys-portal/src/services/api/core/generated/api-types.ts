@@ -9239,6 +9239,10 @@ export interface components {
           content: string;
         } | {
           /** @enum {string} */
+          type: "bold_text";
+          content: string;
+        } | {
+          /** @enum {string} */
           type: "link";
           name: string;
           /** Format: uri */
@@ -9273,6 +9277,10 @@ export interface components {
           content: string;
         } | {
           /** @enum {string} */
+          type: "bold_text";
+          content: string;
+        } | {
+          /** @enum {string} */
           type: "link";
           name: string;
           /** Format: uri */
@@ -9299,6 +9307,10 @@ export interface components {
         } | {
           /** @enum {string} */
           type: "bullet_list";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "bold_text";
           content: string;
         } | {
           /** @enum {string} */
