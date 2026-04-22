@@ -1101,7 +1101,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/lf-export:
    *   get:
    *     summary: Export home insurance data for Länsförsäkringar
-   *     description: Returns all active leases with a home insurance rent row, with all fields needed for the daily LF export.
+   *     description: Returns leases with a home insurance rent row in states active, upcoming, preTermination, and terminationScheduled, with all fields needed for the daily LF export.
    *     tags: [Leases]
    *     responses:
    *       200:
