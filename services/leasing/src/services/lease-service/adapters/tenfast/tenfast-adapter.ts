@@ -51,13 +51,14 @@ const fetchAllPages = async <
   buildUrl: (paginate: string) => string,
   schema: S
 ): Promise<z.output<S>['records']> => {
-  const fetchPage = async (
-    paginate: string,
-    accumulated: z.output<S>['records']
-  ): Promise<z.output<S>['records']> => {
+  let next: string | null = ''
+  let totalCount = Infinity
+  let records: z.output<S>['records'] = []
+
+  while (next !== null && records.length < totalCount) {
     const response = await tenfastApi.request({
       method: 'get',
-      url: buildUrl(paginate),
+      url: buildUrl(next),
     })
 
     if (response.status !== 200 && response.status !== 201) {
@@ -69,17 +70,12 @@ const fetchAllPages = async <
     const parsed = schema.safeParse(response.data)
     if (!parsed.success) throw parsed.error
 
-    const records = accumulated.concat(parsed.data.records)
-    const next = parsed.data.next
-
-    if (next && records.length < parsed.data.totalCount) {
-      return fetchPage(next, records)
-    }
-
-    return records
+    records = records.concat(parsed.data.records)
+    next = parsed.data.next
+    totalCount = parsed.data.totalCount
   }
 
-  return fetchPage('', [])
+  return records
 }
 
 export const createLease = async (
