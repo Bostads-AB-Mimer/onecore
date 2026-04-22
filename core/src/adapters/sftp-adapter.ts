@@ -18,6 +18,8 @@ export const uploadFile = async (
   const remotePath = path.posix.join(sftpConfig.directory, fileName)
   const sftp = new SftpClient()
 
+  let connected = false
+
   try {
     await sftp.connect({
       host: sftpConfig.host,
@@ -25,10 +27,17 @@ export const uploadFile = async (
       username: sftpConfig.username,
       password: sftpConfig.password,
     })
+    connected = true
 
     await sftp.put(buffer, remotePath)
     logger.info({ remotePath }, 'File uploaded via SFTP')
   } finally {
-    await sftp.end()
+    if (connected) {
+      try {
+        await sftp.end()
+      } catch (endErr) {
+        logger.warn({ err: endErr }, 'Failed to close SFTP connection')
+      }
+    }
   }
 }
