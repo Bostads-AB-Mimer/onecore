@@ -21,6 +21,7 @@ export const mapLeasesToLfExportRows = (
 
       const insuranceRow = lease.hyror.find((row) => row.article === articleId)
       if (!insuranceRow) return []
+      if (!insuranceRow.from) return []
 
       const leaseStatus =
         insuranceRow.to != null ? '*' : lease.stage === 'upcoming' ? 'K' : 'G'
@@ -34,9 +35,7 @@ export const mapLeasesToLfExportRows = (
           rentalObjectCode: rentalObject.externalId,
           numberOfRooms: rentalObject.roomCount ?? null,
           squareMeters: rentalObject.kvm ?? null,
-          rowFromDate: insuranceRow.from
-            ? new Date(insuranceRow.from)
-            : new Date(0),
+          rowFromDate: new Date(insuranceRow.from),
           rowToDate: insuranceRow.to ? new Date(insuranceRow.to) : null,
           annualRent: insuranceRow.amount,
           articleText: insuranceRow.label ?? '',

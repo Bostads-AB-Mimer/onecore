@@ -23,7 +23,7 @@ const makeLease = (overrides = {}) =>
     ...overrides,
   })
 
-describe('mapLeasesToLfExportRows', () => {
+describe(mapLeasesToLfExportRows, () => {
   describe('status derivation', () => {
     it('returns G for active lease with no to-date on insurance row', () => {
       const rows = mapLeasesToLfExportRows([makeLease()], ARTICLE_ID)
@@ -99,6 +99,19 @@ describe('mapLeasesToLfExportRows', () => {
         [
           makeLease({
             hyresgaster: [factory.tenfastTenant.build({ isCompany: true })],
+          }),
+        ],
+        ARTICLE_ID
+      )
+
+      expect(rows).toHaveLength(0)
+    })
+
+    it('excludes leases where insurance row has no from-date', () => {
+      const rows = mapLeasesToLfExportRows(
+        [
+          makeLease({
+            hyror: [makeInsuranceRow({ from: null })],
           }),
         ],
         ARTICLE_ID
