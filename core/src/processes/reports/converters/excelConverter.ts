@@ -1,5 +1,4 @@
 import ExcelJs from 'exceljs'
-import dayjs from 'dayjs'
 import { BosocialaObject, InvoicePaymentSummary } from '../types'
 import { LeaseStatus, schemas } from '@onecore/types'
 
@@ -201,7 +200,7 @@ const transformBosociala = (bosocial: BosocialaObject): BosocialaRow => {
 
 const toDateString = (value: Date | null | undefined): string | null => {
   if (!value) return null
-  return dayjs(value).format('YYYY-MM-DD')
+  return value.toISOString().slice(0, 10)
 }
 
 export const convertLfInsuranceToXlsx = async (
