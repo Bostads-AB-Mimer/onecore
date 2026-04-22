@@ -12,7 +12,12 @@ export async function handleLfInsuranceExport() {
 
   logger.info('Starting LF insurance export')
 
-  const rows = await getHomeInsuranceExport()
+  const result = await getHomeInsuranceExport()
+  if (!result.ok) {
+    throw new Error(`Failed to fetch home insurance export: ${result.err}`)
+  }
+
+  const rows = result.data
   logger.info({ rowCount: rows.length }, 'Fetched home insurance rows')
 
   const xlsxBuffer = await convertLfInsuranceToXlsx(rows)

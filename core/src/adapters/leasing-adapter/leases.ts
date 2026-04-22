@@ -234,17 +234,30 @@ export const searchLeasesV2 = async (
 }
 
 export const getHomeInsuranceExport = async (): Promise<
-  LfInsuranceExportRow[]
+  AdapterResult<LfInsuranceExportRow[], 'schema-error' | 'unknown'>
 > => {
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/lf-export`
-  )
-
-  if (response.status !== 200) {
-    throw new Error(
-      `leases/lf-export responded with status ${response.status}: ${JSON.stringify(response.data)}`
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/lf-export`
     )
-  }
 
-  return response.data.content
+    if (response.status !== 200) {
+      logger.error(
+        { status: response.status, data: response.data },
+        'leases/lf-export returned unexpected status'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = schemas.v1.LfInsuranceExportResponseSchema.safeParse(response.data)
+    if (!parsed.success) {
+      logger.error({ err: parsed.error }, 'leases/lf-export response failed schema validation')
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: parsed.data.content }
+  } catch (err) {
+    logger.error({ err }, 'leases/lf-export failed')
+    return { ok: false, err: 'unknown' }
+  }
 }
