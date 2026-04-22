@@ -70,7 +70,7 @@ const fetchAllPages = async <
     const parsed = schema.safeParse(response.data)
     if (!parsed.success) throw parsed.error
 
-    records = records.concat(parsed.data.records)
+    records.push(...parsed.data.records)
     next = parsed.data.next
     totalCount = parsed.data.totalCount
   }
