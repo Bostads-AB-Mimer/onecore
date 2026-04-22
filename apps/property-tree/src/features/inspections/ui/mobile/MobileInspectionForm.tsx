@@ -78,6 +78,7 @@ export function MobileInspectionForm({
     handleComponentNoteUpdate,
     handleComponentPhotoAdd,
     handleComponentPhotoRemove,
+    handleComponentCostResponsibilityUpdate,
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
@@ -272,6 +273,13 @@ export function MobileInspectionForm({
               }
               onComponentPhotoRemove={(field, index) =>
                 handleComponentPhotoRemove(currentRoom.id, field, index)
+              }
+              onComponentCostResponsibilityUpdate={(field, value) =>
+                handleComponentCostResponsibilityUpdate(
+                  currentRoom.id,
+                  field,
+                  value
+                )
               }
               onDetailComponentAdd={(component) =>
                 handleDetailComponentAdd(currentRoom.id, component)

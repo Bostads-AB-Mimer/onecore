@@ -16,6 +16,7 @@
 export * from './actions'
 export * from './components'
 export * from './conditions'
+export * from './costResponsibility'
 export * from './detailComponents'
 export * from './inspectionTypes'
 export * from './statuses'

@@ -2,6 +2,8 @@ import { useCallback } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
+import { CONDITION_TYPE, type CostResponsibility } from '../constants'
+
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 export interface UseComponentInspectionReturn {
@@ -34,6 +36,11 @@ export interface UseComponentInspectionReturn {
     roomId: string,
     field: keyof InspectionRoom['componentPhotos'],
     photoIndex: number
+  ) => void
+  updateComponentCostResponsibility: (
+    roomId: string,
+    field: keyof InspectionRoom['componentCostResponsibilities'],
+    value: CostResponsibility
   ) => void
   addDetailComponent: (
     roomId: string,
@@ -78,6 +85,15 @@ export function useComponentInspection(
           (condition) => condition && condition.trim() !== ''
         )
         updatedRoom.isHandled = allConditionsSet
+
+        // Cost responsibility only applies to Acceptabel/Skadad; clear it when
+        // the condition is switched back to God so stale data isn't persisted.
+        if (value === CONDITION_TYPE.GOOD) {
+          updatedRoom.componentCostResponsibilities = {
+            ...updatedRoom.componentCostResponsibilities,
+            [field]: null,
+          }
+        }
 
         return {
           ...prev,
@@ -211,6 +227,29 @@ export function useComponentInspection(
   )
 
   /**
+   * Update cost responsibility for a component in a room
+   */
+  const updateComponentCostResponsibility = useCallback(
+    (
+      roomId: string,
+      field: keyof InspectionRoom['componentCostResponsibilities'],
+      value: CostResponsibility
+    ) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          componentCostResponsibilities: {
+            ...prev[roomId].componentCostResponsibilities,
+            [field]: value,
+          },
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  /**
    * Add a detail component to a room
    */
   const addDetailComponent = useCallback(
@@ -277,6 +316,7 @@ export function useComponentInspection(
     updateComponentCost,
     addPhoto,
     removePhoto,
+    updateComponentCostResponsibility,
     addDetailComponent,
     removeDetailComponent,
     updateDetailComponentNote,

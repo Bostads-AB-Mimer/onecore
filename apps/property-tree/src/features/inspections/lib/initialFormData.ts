@@ -3,6 +3,17 @@ import type { Room } from '@/services/types'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 
+export const EMPTY_COMPONENT_COST_RESPONSIBILITIES: InspectionRoom['componentCostResponsibilities'] =
+  {
+    wall1: null,
+    wall2: null,
+    wall3: null,
+    wall4: null,
+    floor: null,
+    ceiling: null,
+    details: null,
+  }
+
 // 'details' fields are initialized for backward compatibility with existing persisted data.
 // New detail inspections use the detailComponents array instead.
 export const initialRoomData: InspectionRoom = {
@@ -52,6 +63,7 @@ export const initialRoomData: InspectionRoom = {
     ceiling: [],
     details: [],
   },
+  componentCostResponsibilities: { ...EMPTY_COMPONENT_COST_RESPONSIBILITIES },
   photos: [],
   isApproved: false,
   isHandled: false,

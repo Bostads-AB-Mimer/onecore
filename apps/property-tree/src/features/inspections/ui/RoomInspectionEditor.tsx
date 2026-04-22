@@ -7,7 +7,10 @@ import { Card, CardContent } from '@/shared/ui/Card'
 import { Separator } from '@/shared/ui/Separator'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
-import { mergeComponentsWithDefaults } from '../constants'
+import {
+  mergeComponentsWithDefaults,
+  type CostResponsibility,
+} from '../constants'
 import { useRoomComponents } from '../hooks/useRoomComponents'
 import { ComponentDetailSheet } from './ComponentDetailSheet'
 import { ComponentInspectionCard } from './ComponentInspectionCard'
@@ -38,6 +41,10 @@ interface RoomInspectionEditorProps {
     field: keyof InspectionRoom['componentPhotos'],
     index: number
   ) => void
+  onComponentCostResponsibilityUpdate: (
+    field: keyof InspectionRoom['componentCostResponsibilities'],
+    value: CostResponsibility
+  ) => void
   onDetailComponentAdd: (component: { type: string; label: string }) => void
   onDetailComponentRemove: (componentId: string) => void
   onDetailComponentNoteUpdate: (componentId: string, note: string) => void
@@ -51,6 +58,7 @@ export function RoomInspectionEditor({
   onComponentNoteUpdate,
   onComponentPhotoAdd,
   onComponentPhotoRemove,
+  onComponentCostResponsibilityUpdate,
   onDetailComponentAdd,
   onDetailComponentRemove,
   onDetailComponentNoteUpdate,
@@ -110,10 +118,17 @@ export function RoomInspectionEditor({
                 note={inspectionData.componentNotes[surfaceKey]}
                 photoCount={inspectionData.componentPhotos[surfaceKey].length}
                 actions={inspectionData.actions[surfaceKey]}
+                costResponsibility={
+                  inspectionData.componentCostResponsibilities[surfaceKey] ??
+                  null
+                }
                 onConditionChange={(value) =>
                   onConditionUpdate(surfaceKey, value)
                 }
                 onNoteChange={(note) => onComponentNoteUpdate(surfaceKey, note)}
+                onCostResponsibilityChange={(value) =>
+                  onComponentCostResponsibilityUpdate(surfaceKey, value)
+                }
                 onPhotoCapture={(photoDataUrl) =>
                   onComponentPhotoAdd(surfaceKey, photoDataUrl)
                 }
@@ -135,8 +150,10 @@ export function RoomInspectionEditor({
                 note=""
                 photoCount={0}
                 actions={[]}
+                costResponsibility={null}
                 onConditionChange={noop}
                 onNoteChange={noop}
+                onCostResponsibilityChange={noop}
                 onPhotoCapture={noop}
                 onOpenDetail={noop}
               />
