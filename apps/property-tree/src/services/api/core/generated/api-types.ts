@@ -11560,8 +11560,8 @@ export interface components {
       rooms:
         | {
             roomId: string
-            name?: string;
-          conditions: {
+            name?: string
+            conditions: {
               wall1: string
               wall2: string
               wall3: string
@@ -11587,6 +11587,22 @@ export interface components {
               floor: string
               ceiling: string
               details: string
+            }
+            componentCosts: {
+              /** @default 0 */
+              wall1?: number
+              /** @default 0 */
+              wall2?: number
+              /** @default 0 */
+              wall3?: number
+              /** @default 0 */
+              wall4?: number
+              /** @default 0 */
+              floor?: number
+              /** @default 0 */
+              ceiling?: number
+              /** @default 0 */
+              details?: number
             }
             componentPhotos: {
               wall1: string[]
@@ -11649,7 +11665,7 @@ export interface components {
     }
     InspectionRoom: {
       roomId: string
-      name?: string;
+      name?: string
       conditions: {
         wall1: string
         wall2: string
@@ -11676,6 +11692,22 @@ export interface components {
         floor: string
         ceiling: string
         details: string
+      }
+      componentCosts: {
+        /** @default 0 */
+        wall1?: number
+        /** @default 0 */
+        wall2?: number
+        /** @default 0 */
+        wall3?: number
+        /** @default 0 */
+        wall4?: number
+        /** @default 0 */
+        floor?: number
+        /** @default 0 */
+        ceiling?: number
+        /** @default 0 */
+        details?: number
       }
       componentPhotos: {
         wall1: string[]
@@ -12803,8 +12835,8 @@ export interface components {
       rooms:
         | {
             roomId: string
-            name?: string;
-          conditions: {
+            name?: string
+            conditions: {
               wall1: string
               wall2: string
               wall3: string
@@ -12830,6 +12862,22 @@ export interface components {
               floor: string
               ceiling: string
               details: string
+            }
+            componentCosts: {
+              /** @default 0 */
+              wall1?: number
+              /** @default 0 */
+              wall2?: number
+              /** @default 0 */
+              wall3?: number
+              /** @default 0 */
+              wall4?: number
+              /** @default 0 */
+              floor?: number
+              /** @default 0 */
+              ceiling?: number
+              /** @default 0 */
+              details?: number
             }
             componentPhotos: {
               wall1: string[]
@@ -12894,7 +12942,7 @@ export interface components {
       inspectorName: string
       rooms: {
         roomId: string
-          name?: string;
+        name?: string
         conditions: {
           wall1: string
           wall2: string
@@ -12921,6 +12969,22 @@ export interface components {
           floor: string
           ceiling: string
           details: string
+        }
+        componentCosts: {
+          /** @default 0 */
+          wall1?: number
+          /** @default 0 */
+          wall2?: number
+          /** @default 0 */
+          wall3?: number
+          /** @default 0 */
+          wall4?: number
+          /** @default 0 */
+          floor?: number
+          /** @default 0 */
+          ceiling?: number
+          /** @default 0 */
+          details?: number
         }
         componentPhotos: {
           wall1: string[]
