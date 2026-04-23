@@ -12,8 +12,8 @@ import { TenfastLeaseSchema } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../types'
 import {
-  mapToOnecoreLease,
   mapTenfastTypToLeaseType,
+  calculateLeaseStatus,
 } from '../../helpers/tenfast'
 import {
   getRentalObjectCodesByBuildingManager,
@@ -21,6 +21,7 @@ import {
   getRentalObjectCodesByAreaCodes,
   getRentalObjectCodesByDistrictNames,
 } from '../xpand/lease-search-adapter'
+import { getContacts } from '../xpand/tenant-lease-adapter'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -130,6 +131,105 @@ function mapBatchGetLeaseToOncoreLease(lease: BatchGetLease): Lease {
       to: r.to as any,
     })),
   }
+}
+
+/** Map Tenfast typ to Swedish label (matching Xpand's objectTypeCode output) */
+const TENFAST_TYP_TO_LABEL: Record<string, string> = {
+  bostad: 'Bostad',
+  parkering: 'Parkering',
+  lokal: 'Lokal',
+  ovrigt: 'Övrigt',
+  forrad: 'Förråd',
+}
+
+/** Build a LeaseSearchResult from a TenfastLease + Xpand contact info */
+function mapTenfastLeaseToSearchResult(
+  lease: TenfastLease,
+  contactMap: Map<string, leasing.v1.ContactInfo>
+): leasing.v1.LeaseSearchResult {
+  const ro = lease.hyresobjekt[0]
+  const contacts: leasing.v1.ContactInfo[] = lease.hyresgaster.map((t) => {
+    const xpandContact = contactMap.get(t.externalId)
+    return {
+      name: xpandContact?.name || t.displayName || `${t.name.first} ${t.name.last}`,
+      contactCode: t.externalId,
+      email: xpandContact?.email ?? null,
+      phone: xpandContact?.phone ?? null,
+    }
+  })
+
+  return {
+    leaseId: lease.externalId,
+    objectTypeCode: TENFAST_TYP_TO_LABEL[ro?.typ ?? ''] ?? ro?.typ ?? '',
+    leaseType: mapTenfastTypToLeaseType(ro?.typ),
+    contacts,
+    address: ro?.postadress ?? null,
+    startDate: lease.startDate ?? null,
+    lastDebitDate: lease.endDate ?? null,
+    status: calculateLeaseStatus(lease),
+  }
+}
+
+/** Build a LeaseSearchResult from a BatchGetLease + Xpand contact info */
+function mapBatchGetLeaseToSearchResult(
+  lease: BatchGetLease,
+  contactMap: Map<string, leasing.v1.ContactInfo>
+): leasing.v1.LeaseSearchResult {
+  const ro = lease.rentalObjects[0]
+  const stageToStatus: Record<string, LeaseStatus> = {
+    active: LeaseStatus.Current,
+    upcoming: LeaseStatus.Upcoming,
+    terminationScheduled: LeaseStatus.AboutToEnd,
+    archived: LeaseStatus.Ended,
+    terminated: LeaseStatus.Ended,
+    signingInProgress: LeaseStatus.PendingSignature,
+    preTermination: LeaseStatus.PreliminaryTerminated,
+    draft: LeaseStatus.NotSent,
+  }
+
+  const contacts: leasing.v1.ContactInfo[] = lease.tenants.map((t) => {
+    const xpandContact = contactMap.get(t.externalId)
+    return {
+      name: xpandContact?.name || t.displayName || (t.name ? `${t.name.first} ${t.name.last}` : ''),
+      contactCode: t.externalId,
+      email: xpandContact?.email ?? null,
+      phone: xpandContact?.phone ?? null,
+    }
+  })
+
+  return {
+    leaseId: lease.externalId,
+    objectTypeCode: TENFAST_TYP_TO_LABEL[ro?.typ ?? ''] ?? ro?.typ ?? '',
+    leaseType: mapTenfastTypToLeaseType(ro?.typ),
+    contacts,
+    address: ro?.postadress ?? null,
+    startDate: lease.startDate ?? null,
+    lastDebitDate: lease.endDate ?? null,
+    status: stageToStatus[lease.stage] ?? LeaseStatus.Ended,
+  }
+}
+
+/**
+ * Collect all unique contact codes, fetch full Contact objects from Xpand,
+ * and return a Map of contactCode → ContactInfo (name, email, phone).
+ */
+async function fetchContactInfoForLeases(
+  contactCodes: string[]
+): Promise<Map<string, leasing.v1.ContactInfo>> {
+  const uniqueCodes = [...new Set(contactCodes)]
+  if (uniqueCodes.length === 0) return new Map()
+
+  const contacts = await getContacts(uniqueCodes)
+  const map = new Map<string, leasing.v1.ContactInfo>()
+  for (const c of contacts) {
+    map.set(c.contactCode, {
+      name: c.fullName ?? '',
+      contactCode: c.contactCode,
+      email: c.emailAddress ?? null,
+      phone: c.phoneNumbers?.[0]?.phoneNumber ?? null,
+    })
+  }
+  return map
 }
 
 /**
@@ -379,9 +479,6 @@ export function buildTenfastQueryParams(
     )
   }
 
-  // districtNames is handled via Xpand bridging (batch-get path),
-  // not via Tenfast search API, because Tenfast's stadsdel values differ.
-
   query.set('limit', String(params.limit ?? 20))
 
   return query
@@ -469,21 +566,21 @@ export async function fetchLeases(
 }
 
 const applySorting = (
-  results: Lease[],
+  results: leasing.v1.LeaseSearchResult[],
   params: leasing.v1.LeaseSearchQueryParams
-): Lease[] => {
+): leasing.v1.LeaseSearchResult[] => {
   const sortBy = params.sortBy || 'leaseStartDate'
   const sortOrder = params.sortOrder || 'desc'
   const multiplier = sortOrder === 'asc' ? 1 : -1
 
   return [...results].sort((a, b) => {
-    let aVal: Date | string | undefined
-    let bVal: Date | string | undefined
+    let aVal: Date | string | null | undefined
+    let bVal: Date | string | null | undefined
 
     switch (sortBy) {
       case 'leaseStartDate':
-        aVal = a.leaseStartDate
-        bVal = b.leaseStartDate
+        aVal = a.startDate
+        bVal = b.startDate
         break
       case 'lastDebitDate':
         aVal = a.lastDebitDate
@@ -494,14 +591,14 @@ const applySorting = (
         bVal = b.leaseId
         break
       default:
-        aVal = a.leaseStartDate
-        bVal = b.leaseStartDate
+        aVal = a.startDate
+        bVal = b.startDate
     }
 
-    // Handle undefined: push to end regardless of sort order
-    if (aVal === undefined && bVal === undefined) return 0
-    if (aVal === undefined) return 1
-    if (bVal === undefined) return -1
+    // Handle null/undefined: push to end regardless of sort order
+    if ((aVal === undefined || aVal === null) && (bVal === undefined || bVal === null)) return 0
+    if (aVal === undefined || aVal === null) return 1
+    if (bVal === undefined || bVal === null) return -1
 
     if (aVal instanceof Date && bVal instanceof Date) {
       return (aVal.getTime() - bVal.getTime()) * multiplier
@@ -514,7 +611,7 @@ const applySorting = (
 export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
-): Promise<PaginatedResponse<Lease>> => {
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
   // Unrecognized q patterns return empty — use `name`/`address` params for text search
   if (params.q) {
     const filters = analyzeSearchTermForApi(params.q)
@@ -603,27 +700,35 @@ export const searchLeases = async (
       }
     }
 
-    // Call Tenfast batch-get with the rental object codes
+    // Call Tenfast batch-get with the rental object codes (parallel batches)
+    // Tenfast API enforces a max of 500 per request
     const batchSize = 500
-    const allRentalObjects: Array<Record<string, unknown>> = []
+    const batchPromises: Promise<Array<Record<string, unknown>>>[] = []
 
     for (let i = 0; i < codes.length; i += batchSize) {
       const batch = codes.slice(i, i + batchSize)
-      const res = await tenfastApi.request({
-        method: 'post',
-        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
-        data: { externalIds: batch },
-      })
-
-      if (res.status === 200 || res.status === 201) {
-        allRentalObjects.push(...(res.data as Array<Record<string, unknown>>))
-      } else {
-        logger.error(
-          { status: res.status, data: res.data },
-          'Xpand-bridged filters: batch-get failed'
-        )
-      }
+      batchPromises.push(
+        tenfastApi
+          .request({
+            method: 'post',
+            url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
+            data: { externalIds: batch },
+          })
+          .then((res) => {
+            if (res.status === 200 || res.status === 201) {
+              return res.data as Array<Record<string, unknown>>
+            }
+            logger.error(
+              { status: res.status, data: res.data },
+              'Xpand-bridged filters: batch-get failed'
+            )
+            return []
+          })
+      )
     }
+
+    const batchResults = await Promise.all(batchPromises)
+    const allRentalObjects = batchResults.flat()
 
     // Extract leases from batch-get response.
     // The avtal from batch-get has full tenant/rental object data in originalData.
@@ -709,16 +814,28 @@ export const searchLeases = async (
     // Apply all other filters locally since batch-get doesn't support them.
     leases = applyLocalFilters(leases, batchLeases, params)
 
+    // Map filtered leases to LeaseSearchResult (without contacts yet)
+    const emptyContactMap = new Map<string, leasing.v1.ContactInfo>()
+    const batchLeaseMap = new Map(batchLeases.map((bl) => [bl.externalId, bl]))
+    const searchResults = leases
+      .map((l) => {
+        const bl = batchLeaseMap.get(l.leaseId)
+        return bl
+          ? mapBatchGetLeaseToSearchResult(bl, emptyContactMap)
+          : undefined
+      })
+      .filter((r): r is leasing.v1.LeaseSearchResult => r !== undefined)
+
     logger.info(
       {
         rentalObjectsFromBatchGet: allRentalObjects.length,
         uniqueLeases: seenLeaseIds.size,
-        afterFilters: leases.length,
+        afterFilters: searchResults.length,
       },
       'Xpand-bridged filters: batch-get leases processed'
     )
 
-    const sorted = applySorting(leases, params)
+    const sorted = applySorting(searchResults, params)
     const page = params.page ?? 1
     const limit = params.limit ?? 20
     const totalCount = sorted.length
@@ -726,13 +843,26 @@ export const searchLeases = async (
     const pageSlice = sorted.slice(start, start + limit)
     const totalPages = Math.ceil(totalCount / limit)
 
+    // Fetch contacts from Xpand only for the current page
+    const pageLeaseIds = new Set(pageSlice.map((r) => r.leaseId))
+    const pageContactCodes = batchLeases
+      .filter((bl) => pageLeaseIds.has(bl.externalId))
+      .flatMap((bl) => bl.tenants.map((t) => t.externalId))
+    const contactMap = await fetchContactInfoForLeases(pageContactCodes)
+
+    // Enrich page slice with contact data
+    const enrichedPage = pageSlice.map((r) => {
+      const bl = batchLeaseMap.get(r.leaseId)
+      return bl ? mapBatchGetLeaseToSearchResult(bl, contactMap) : r
+    })
+
     return {
-      content: pageSlice,
+      content: enrichedPage,
       _meta: {
         totalRecords: totalCount,
         page,
         limit,
-        count: pageSlice.length,
+        count: enrichedPage.length,
       },
       _links: buildPaginationLinks(ctx, page, limit, totalPages),
     }
@@ -748,8 +878,17 @@ export const searchLeases = async (
   }
 
   const { leases: tenfastLeases, totalCount } = leasesResult.data
-  const leases = tenfastLeases.map(mapToOnecoreLease)
-  const sortedResults = applySorting(leases, params)
+
+  // Fetch contact info from Xpand for all tenants on this page
+  const allContactCodes = tenfastLeases.flatMap((l) =>
+    l.hyresgaster.map((t) => t.externalId)
+  )
+  const contactMap = await fetchContactInfoForLeases(allContactCodes)
+
+  const searchResults = tenfastLeases.map((l) =>
+    mapTenfastLeaseToSearchResult(l, contactMap)
+  )
+  const sortedResults = applySorting(searchResults, params)
   const totalPages = Math.ceil(totalCount / limit)
 
   return {

@@ -14,6 +14,9 @@ jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
   getRentalObjectCodesByAreaCodes: jest.fn(),
   getRentalObjectCodesByDistrictNames: jest.fn(),
 }))
+jest.mock('../../../adapters/xpand/tenant-lease-adapter', () => ({
+  getContacts: jest.fn().mockResolvedValue([]),
+}))
 
 const mockedRequest = tenfastApi.request as jest.MockedFunction<
   typeof tenfastApi.request
@@ -288,9 +291,9 @@ describe('tenfast-lease-search-adapter', () => {
       expect(params.get('limit')).toBe('20')
     })
 
-    it('should not push district filter to API (handled via Xpand bridging)', () => {
+    it('should not push district filter to Tenfast API (districts are Xpand-only)', () => {
       const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
-        districtNames: ['Vetterstorp'],
+        districtNames: ['Distrikt Norr'],
         page: 1,
         limit: 20,
       })
@@ -896,8 +899,9 @@ describe('tenfast-lease-search-adapter', () => {
         mockCtx
       )
 
-      expect(result.content[0].tenantContactIds).toHaveLength(1)
-      expect(result.content[0].tenantContactIds![0]).toBe('P965339')
+      expect(result.content[0].contacts).toHaveLength(1)
+      expect(result.content[0].contacts[0].contactCode).toBe('P965339')
+      expect(result.content[0].contacts[0].name).toBe('Anna Andersson')
     })
 
     it('should include address from rental object', async () => {
@@ -915,7 +919,7 @@ describe('tenfast-lease-search-adapter', () => {
         mockCtx
       )
 
-      expect(result.content[0].rentalPropertyId).toBeDefined()
+      expect(result.content[0].address).toBe('Kungsgatan 12')
     })
 
     it('should throw error when Tenfast request fails', async () => {
@@ -996,20 +1000,19 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result._meta.totalRecords).toBe(3)
     })
 
-    it('should use batch-get path for districtNames via Xpand', async () => {
+    it('should filter by districtNames via batch-get', async () => {
       mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
-        'ROC-001',
+        'ROC-500',
       ])
 
-      // Mock the batch-get response (not the search endpoint)
       mockedRequest.mockResolvedValueOnce({
         status: 200,
         data: [
           {
-            externalId: 'ROC-001',
+            externalId: 'ROC-500',
             avtal: [
               {
-                externalId: 'lease-1',
+                externalId: 'lease-dist-1',
                 startDate: '2024-01-01',
                 stage: 'active',
                 uppsagningstid: '',
@@ -1018,17 +1021,13 @@ describe('tenfast-lease-search-adapter', () => {
                 originalData: {
                   hyresgaster: [
                     {
-                      externalId: 'T-001',
-                      displayName: 'Test Tenant',
+                      externalId: 'T-500',
+                      displayName: 'District Tenant',
                       idbeteckning: '199001011234',
                     },
                   ],
                   hyresobjekt: [
-                    {
-                      externalId: 'ROC-001',
-                      postadress: 'Testgatan 1',
-                      stadsdel: 'Vetterstorp',
-                    },
+                    { externalId: 'ROC-500', postadress: 'Distriktsgatan 1' },
                   ],
                 },
               },
@@ -1038,15 +1037,15 @@ describe('tenfast-lease-search-adapter', () => {
       } as any)
 
       const result = await tenfastLeaseSearchAdapter.searchLeases(
-        { districtNames: ['Vetterstorp'], page: 1, limit: 20 },
+        { districtNames: ['Distrikt Norr'], page: 1, limit: 20 },
         mockCtx
       )
 
       expect(mockedGetRentalObjectCodesByDistrictNames).toHaveBeenCalledWith([
-        'Vetterstorp',
+        'Distrikt Norr',
       ])
       expect(result.content).toHaveLength(1)
-      expect(result.content[0].leaseId).toBe('lease-1')
+      expect(result.content[0].leaseId).toBe('lease-dist-1')
     })
 
     it('should filter by buildingManager via batch-get', async () => {
@@ -1236,8 +1235,8 @@ describe('tenfast-lease-search-adapter', () => {
         'ROC-001',
         'ROC-002',
       ])
-      // districtNames returns ROC-002, ROC-003
-      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+      // buildingCodes returns ROC-002, ROC-003
+      mockedGetRentalObjectCodesByBuildingCodes.mockResolvedValueOnce([
         'ROC-002',
         'ROC-003',
       ])
@@ -1277,7 +1276,7 @@ describe('tenfast-lease-search-adapter', () => {
       const result = await tenfastLeaseSearchAdapter.searchLeases(
         {
           buildingManager: ['Anna Andersson'],
-          districtNames: ['Vetterstorp'],
+          buildingCodes: ['BYG-002'],
           page: 1,
           limit: 20,
         },
@@ -1287,8 +1286,8 @@ describe('tenfast-lease-search-adapter', () => {
       expect(mockedGetRentalObjectCodesByBuildingManager).toHaveBeenCalledWith([
         'Anna Andersson',
       ])
-      expect(mockedGetRentalObjectCodesByDistrictNames).toHaveBeenCalledWith([
-        'Vetterstorp',
+      expect(mockedGetRentalObjectCodesByBuildingCodes).toHaveBeenCalledWith([
+        'BYG-002',
       ])
       expect(result.content).toHaveLength(1)
       expect(result.content[0].leaseId).toBe('lease-intersect')
@@ -1298,14 +1297,14 @@ describe('tenfast-lease-search-adapter', () => {
       mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
         'ROC-001',
       ])
-      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+      mockedGetRentalObjectCodesByBuildingCodes.mockResolvedValueOnce([
         'ROC-999',
       ])
 
       const result = await tenfastLeaseSearchAdapter.searchLeases(
         {
           buildingManager: ['Anna Andersson'],
-          districtNames: ['Other District'],
+          buildingCodes: ['BYG-999'],
           page: 1,
           limit: 20,
         },
