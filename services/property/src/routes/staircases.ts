@@ -13,7 +13,6 @@ import {
 import {
   staircasesQueryParamsSchema,
   staircasesSearchQueryParamsSchema,
-  type Staircase,
 } from '../types/staircase'
 import { parseRequest } from '../middleware/parse-request'
 
@@ -141,14 +140,12 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error.
    */
   router.get(
-    '(.*)/staircases/search',
+    ['(.*)/staircases/search'],
     parseRequest({ query: staircasesSearchQueryParamsSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
-        const staircases: Staircase[] = await searchStaircases(
-          ctx.request.parsedQuery.q
-        )
+        const staircases = await searchStaircases(ctx.request.parsedQuery.q)
 
         ctx.body = {
           content: staircases,

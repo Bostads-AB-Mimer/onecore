@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { createGenericResponseSchema } from './response'
-import { StaircaseSchema } from './staircase'
+import { StaircaseBaseSchema } from './staircase'
 
 // Boolean schema for rental block active filtering
 const booleanStringSchema = z
@@ -197,7 +197,7 @@ export const ResidenceDetailedSchema = z.object({
     name: z.string().nullable(),
     code: z.string().nullable(),
   }),
-  staircase: StaircaseSchema.nullable(),
+  staircase: StaircaseBaseSchema.nullable(),
   areaSize: z.number().nullable(),
   malarEnergiFacilityId: z.string().nullable(),
 })

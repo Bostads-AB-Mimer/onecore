@@ -198,18 +198,14 @@ export const routes = (router: KoaRouter) => {
         type: 'staircase',
         code: staircase.code,
         name: staircase.name,
-        property: staircase.property
-          ? {
-              code: staircase.property.propertyCode,
-              name: staircase.property.propertyName,
-            }
-          : null,
-        building: staircase.building
-          ? {
-              code: staircase.building.buildingCode,
-              name: staircase.building.buildingName,
-            }
-          : null,
+        property: {
+          code: staircase.property.propertyCode,
+          name: staircase.property.propertyName,
+        },
+        building: {
+          code: staircase.building.buildingCode,
+          name: staircase.building.buildingName,
+        },
       })
     )
 

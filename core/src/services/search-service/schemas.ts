@@ -89,24 +89,20 @@ export const StaircaseSearchResultSchema = z.object({
   type: z.literal('staircase').describe('Indicates this is a staircase result'),
   code: z.string().describe('Code of the staircase'),
   name: z.string().nullable().describe('Name (caption) of the staircase'),
-  property: z
-    .object({
-      code: z.string().nullable(),
-      name: z
-        .string()
-        .nullable()
-        .describe('Name of property associated with the staircase'),
-    })
-    .nullable(),
-  building: z
-    .object({
-      code: z.string().nullable(),
-      name: z
-        .string()
-        .nullable()
-        .describe('Name of building associated with the staircase'),
-    })
-    .nullable(),
+  property: z.object({
+    code: z.string(),
+    name: z
+      .string()
+      .nullable()
+      .describe('Name of property associated with the staircase'),
+  }),
+  building: z.object({
+    code: z.string(),
+    name: z
+      .string()
+      .nullable()
+      .describe('Name of building associated with the staircase'),
+  }),
 })
 
 export const FacilitySearchResultSchema = z.object({

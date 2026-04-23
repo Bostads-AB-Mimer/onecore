@@ -2,17 +2,24 @@ import { map } from 'lodash'
 import { logger } from '@onecore/utilities'
 
 import { toBoolean, trimStrings } from '../utils/data-conversion'
+import { Staircase } from '../types/staircase'
 
 import { prisma } from './db'
 
-//todo: add types
+// Staircase codes '00' and '99' are placeholder/synthetic entries that aren't
+// real, navigable staircases. Also filtered out in the sidebar (see
+// apps/property-tree/src/widgets/sidebar/ui/StaircaseList.tsx).
+const PLACEHOLDER_STAIRCASE_CODES = ['00', '99']
 
+// Domain invariant: every staircase in onecore has a building and a property.
+// These codes/ids are guaranteed non-null in the returned data; the Prisma
+// `where` filters below enforce it at the query layer.
 type StaircasePropertyData = {
-  propertyId: string | null
-  propertyCode: string | null
+  propertyId: string
+  propertyCode: string
   propertyName: string | null
-  buildingId: string | null
-  buildingCode: string | null
+  buildingId: string
+  buildingCode: string
   buildingName: string | null
 }
 
@@ -25,6 +32,11 @@ type PropertyStructureRow = Awaited<
 >[number]
 
 function extractPropertyData(ps: PropertyStructureRow): StaircasePropertyData {
+  if (!ps.propertyId || !ps.propertyCode || !ps.buildingId || !ps.buildingCode) {
+    throw new Error(
+      `staircase property structure ${ps.propertyObjectId} is missing required code/id fields`
+    )
+  }
   return {
     propertyId: ps.propertyId,
     propertyCode: ps.propertyCode,
@@ -37,8 +49,8 @@ function extractPropertyData(ps: PropertyStructureRow): StaircasePropertyData {
 
 function mapStaircase(
   staircase: StaircaseRow,
-  propertyData: StaircasePropertyData | undefined
-) {
+  propertyData: StaircasePropertyData
+): Staircase {
   return {
     id: staircase.id,
     code: staircase.code,
@@ -54,33 +66,43 @@ function mapStaircase(
     deleted: toBoolean(staircase.deleteMark),
     timestamp: staircase.timestamp,
     property: {
-      propertyId: propertyData?.propertyId ?? null,
-      propertyCode: propertyData?.propertyCode ?? null,
-      propertyName: propertyData?.propertyName ?? null,
+      propertyId: propertyData.propertyId,
+      propertyCode: propertyData.propertyCode,
+      propertyName: propertyData.propertyName,
     },
     building: {
-      buildingId: propertyData?.buildingId ?? null,
-      buildingCode: propertyData?.buildingCode ?? null,
-      buildingName: propertyData?.buildingName ?? null,
+      buildingId: propertyData.buildingId,
+      buildingCode: propertyData.buildingCode,
+      buildingName: propertyData.buildingName,
     },
   }
+}
+
+function requirePropertyData(
+  staircase: StaircaseRow,
+  propertyData: StaircasePropertyData | undefined
+): StaircasePropertyData {
+  if (!propertyData) {
+    throw new Error(
+      `missing property structure for staircase ${staircase.id} (${staircase.propertyObjectId})`
+    )
+  }
+  return propertyData
 }
 
 async function getStaircasesByBuildingCode(
   buildingCode: string,
   staircaseCode?: string
-) {
+): Promise<(Staircase & { buildingCode: string })[]> {
   const propertyStructures = await prisma.propertyStructure
     .findMany({
       where: {
-        buildingCode: {
-          contains: buildingCode,
-        },
-        NOT: {
-          staircaseId: null,
-        },
+        buildingCode: { contains: buildingCode },
+        staircaseId: { not: null },
         residenceId: null,
         localeId: null,
+        propertyId: { not: null },
+        propertyCode: { not: null },
         ...(staircaseCode ? { staircaseCode } : {}),
       },
     })
@@ -106,33 +128,31 @@ async function getStaircasesByBuildingCode(
   return staircases.map((staircase) => ({
     ...mapStaircase(
       staircase,
-      propertyStructureMap.get(staircase.propertyObjectId)
+      requirePropertyData(
+        staircase,
+        propertyStructureMap.get(staircase.propertyObjectId)
+      )
     ),
     buildingCode,
   }))
 }
 
-// Staircase codes '00' and '99' are placeholder/synthetic entries not shown in
-// the UI sidebar (see apps/property-tree/src/widgets/sidebar/ui/StaircaseList.tsx).
-// We exclude them from global search results to stay consistent.
-const EXCLUDED_STAIRCASE_CODES = ['00', '99']
-
-async function searchStaircases(q: string) {
+async function searchStaircases(q: string): Promise<Staircase[]> {
   try {
     const staircases = await prisma.staircase
       .findMany({
         where: {
           name: { contains: q },
           deleteMark: 0,
-          code: { notIn: EXCLUDED_STAIRCASE_CODES },
-          // Require a staircase-level PropertyStructure row with a non-null
-          // buildingCode so search results are guaranteed to be navigable.
+          code: { notIn: PLACEHOLDER_STAIRCASE_CODES },
           PropertyStructure: {
             some: {
               companyCode: '001',
               residenceId: null,
               localeId: null,
               buildingCode: { not: null },
+              propertyCode: { not: null },
+              propertyId: { not: null },
             },
           },
         },
@@ -165,7 +185,10 @@ async function searchStaircases(q: string) {
     return staircases.map((staircase) =>
       mapStaircase(
         staircase,
-        propertyStructureMap.get(staircase.propertyObjectId)
+        requirePropertyData(
+          staircase,
+          propertyStructureMap.get(staircase.propertyObjectId)
+        )
       )
     )
   } catch (err) {

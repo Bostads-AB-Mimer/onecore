@@ -11210,16 +11210,16 @@ export interface components {
       code: string;
       /** @description Name (caption) of the staircase */
       name: string | null;
-      property: ({
-        code: string | null;
+      property: {
+        code: string;
         /** @description Name of property associated with the staircase */
         name: string | null;
-      }) | null;
-      building: ({
-        code: string | null;
+      };
+      building: {
+        code: string;
         /** @description Name of building associated with the staircase */
         name: string | null;
-      }) | null;
+      };
     };
     /** @description A search result that can be either a property, building, residence, parking space, maintenance unit, facility or staircase */
     SearchResult: {
@@ -11352,16 +11352,16 @@ export interface components {
       code: string;
       /** @description Name (caption) of the staircase */
       name: string | null;
-      property: ({
-        code: string | null;
+      property: {
+        code: string;
         /** @description Name of property associated with the staircase */
         name: string | null;
-      }) | null;
-      building: ({
-        code: string | null;
+      };
+      building: {
+        code: string;
         /** @description Name of building associated with the staircase */
         name: string | null;
-      }) | null;
+      };
     });
     Inspection: {
       id: string;

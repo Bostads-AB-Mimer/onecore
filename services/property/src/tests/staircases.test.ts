@@ -1,5 +1,6 @@
 import request from 'supertest'
 import app from '../app'
+import { Staircase } from '../types/staircase'
 
 describe('Staircases API', () => {
   let buildingCode: string
@@ -66,12 +67,12 @@ describe('Staircases API', () => {
         .query({ buildingCode })
 
       const namedStaircase = staircasesResponse.body.content.find(
-        (s: { name: string | null; code: string }) =>
-          s.name && !['00', '99'].includes(s.code)
+        (s: Staircase) => s.name && !['00', '99'].includes(s.code)
       )
 
-      // Skip if the test fixture happens not to expose a usable staircase name.
-      if (!namedStaircase) return
+      // The shared test fixture is expected to include a real staircase.
+      expect(namedStaircase).toBeDefined()
+      expect(namedStaircase.name).toBeTruthy()
 
       const response = await request(app.callback())
         .get('/staircases/search')
@@ -80,12 +81,10 @@ describe('Staircases API', () => {
       expect(response.status).toBe(200)
       expect(Array.isArray(response.body.content)).toBe(true)
 
-      response.body.content.forEach(
-        (s: { code: string; building: { buildingCode: string | null } }) => {
-          expect(['00', '99']).not.toContain(s.code)
-          expect(s.building.buildingCode).not.toBeNull()
-        }
-      )
+      response.body.content.forEach((s: Staircase) => {
+        expect(['00', '99']).not.toContain(s.code)
+        expect(s.building.buildingCode).toBeTruthy()
+      })
     })
   })
 })
