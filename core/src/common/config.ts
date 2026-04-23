@@ -1,6 +1,7 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
 import ms from 'ms'
+import { type KnexConnectionParameters } from '@onecore/utilities'
 
 dotenv.config()
 
@@ -17,6 +18,7 @@ export interface HealthCheck {
 
 export interface Config {
   port: number
+  xpandDatabase: KnexConnectionParameters
   tenantsLeasesService: {
     url: string
   }
@@ -93,6 +95,13 @@ const config = configPackage({
   file: `${__dirname}/../config.json`,
   defaults: {
     port: 5010,
+    xpandDatabase: {
+      host: '',
+      user: '',
+      password: '',
+      port: 1433,
+      database: '',
+    },
     tenantsLeasesService: {
       url: 'http://localhost:5020',
     },
@@ -197,6 +206,7 @@ const config = configPackage({
 
 export default {
   port: config.get('port'),
+  xpandDatabase: config.get('xpandDatabase'),
   contactsService: config.get('contactsService'),
   tenantsLeasesService: config.get('tenantsLeasesService'),
   propertyInfoService: config.get('propertyInfoService'),
