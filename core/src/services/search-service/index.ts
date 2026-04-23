@@ -36,6 +36,7 @@ export const routes = (router: KoaRouter) => {
     schemas.MaintenanceUnitSearchResultSchema
   )
   registerSchema('FacilitySearchResult', schemas.FacilitySearchResultSchema)
+  registerSchema('StaircaseSearchResult', schemas.StaircaseSearchResultSchema)
   registerSchema('SearchResult', schemas.SearchResultSchema)
 
   /**
@@ -53,7 +54,8 @@ export const routes = (router: KoaRouter) => {
    *       - Parking Spaces: Matches on rental ID or parking space name
    *       - Maintenance Units: Matches on code
    *       - Facilities: Matches on rental ID or facility name
-   *       Returns up to 10 results per entity type (max 60 total results).
+   *       - Staircases: Matches on staircase name
+   *       Returns up to 10 results per entity type (max 70 total results).
    *     parameters:
    *       - in: query
    *         name: q
@@ -100,6 +102,7 @@ export const routes = (router: KoaRouter) => {
       getParkingSpaces,
       getMaintenanceUnits,
       getFacilities,
+      getStaircases,
     ] = await Promise.all([
       propertyBaseAdapter.searchProperties(q),
       propertyBaseAdapter.searchBuildings(q),
@@ -107,6 +110,7 @@ export const routes = (router: KoaRouter) => {
       propertyBaseAdapter.searchParkingSpaces(q),
       propertyBaseAdapter.searchMaintenanceUnits(q),
       propertyBaseAdapter.searchFacilities(q),
+      propertyBaseAdapter.searchStaircases(q),
     ])
 
     if (
@@ -115,7 +119,8 @@ export const routes = (router: KoaRouter) => {
       !getResidences.ok ||
       !getParkingSpaces.ok ||
       !getMaintenanceUnits.ok ||
-      !getFacilities.ok
+      !getFacilities.ok ||
+      !getStaircases.ok
     ) {
       ctx.status = 500
       return
@@ -187,6 +192,27 @@ export const routes = (router: KoaRouter) => {
       })
     )
 
+    const mappedStaircases = getStaircases.data.map(
+      (staircase): schemas.StaircaseSearchResult => ({
+        id: staircase.id,
+        type: 'staircase',
+        code: staircase.code,
+        name: staircase.name,
+        property: staircase.property
+          ? {
+              code: staircase.property.propertyCode,
+              name: staircase.property.propertyName,
+            }
+          : null,
+        building: staircase.building
+          ? {
+              code: staircase.building.buildingCode,
+              name: staircase.building.buildingName,
+            }
+          : null,
+      })
+    )
+
     ctx.body = {
       ...metadata,
       content: [
@@ -196,6 +222,7 @@ export const routes = (router: KoaRouter) => {
         ...mappedParkingSpaces,
         ...mappedMaintenanceUnits,
         ...mappedFacilities,
+        ...mappedStaircases,
       ] satisfies SearchResultResponseContent,
     }
   })

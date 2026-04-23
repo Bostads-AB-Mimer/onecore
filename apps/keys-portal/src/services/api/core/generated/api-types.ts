@@ -5481,7 +5481,8 @@ export interface paths {
      * - Parking Spaces: Matches on rental ID or parking space name
      * - Maintenance Units: Matches on code
      * - Facilities: Matches on rental ID or facility name
-     * Returns up to 10 results per entity type (max 60 total results).
+     * - Staircases: Matches on staircase name
+     * Returns up to 10 results per entity type (max 70 total results).
      */
     get: {
       parameters: {
@@ -11197,7 +11198,30 @@ export interface components {
       /** @description Property name */
       estate: string | null;
     };
-    /** @description A search result that can be either a property, building, residence, parking space, maintenance unit or facility */
+    StaircaseSearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a staircase result
+       * @enum {string}
+       */
+      type: "staircase";
+      /** @description Code of the staircase */
+      code: string;
+      /** @description Name (caption) of the staircase */
+      name: string | null;
+      property: ({
+        code: string | null;
+        /** @description Name of property associated with the staircase */
+        name: string | null;
+      }) | null;
+      building: ({
+        code: string | null;
+        /** @description Name of building associated with the staircase */
+        name: string | null;
+      }) | null;
+    };
+    /** @description A search result that can be either a property, building, residence, parking space, maintenance unit, facility or staircase */
     SearchResult: {
       /** @description Unique identifier for the search result */
       id: string;
@@ -11316,6 +11340,28 @@ export interface components {
         /** @description Name of building associated with the facility */
         name: string | null;
       };
+    }) | ({
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a staircase result
+       * @enum {string}
+       */
+      type: "staircase";
+      /** @description Code of the staircase */
+      code: string;
+      /** @description Name (caption) of the staircase */
+      name: string | null;
+      property: ({
+        code: string | null;
+        /** @description Name of property associated with the staircase */
+        name: string | null;
+      }) | null;
+      building: ({
+        code: string | null;
+        /** @description Name of building associated with the staircase */
+        name: string | null;
+      }) | null;
     });
     Inspection: {
       id: string;

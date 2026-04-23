@@ -83,6 +83,27 @@ export async function searchResidences(
   }
 }
 
+type SearchStaircasesResponse = components['schemas']['Staircase'][]
+
+export async function searchStaircases(
+  q: string
+): Promise<AdapterResult<SearchStaircasesResponse, 'staircase-search-failed'>> {
+  try {
+    const response = await client().GET('/staircases/search', {
+      params: { query: { q } },
+    })
+
+    if (response.data) {
+      return { ok: true, data: response.data.content ?? [] }
+    }
+
+    return { ok: false, err: 'staircase-search-failed' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.searchStaircases')
+    return { ok: false, err: 'staircase-search-failed' }
+  }
+}
+
 type GetBuildingsResponse = components['schemas']['Building'][]
 
 export async function getBuildings(

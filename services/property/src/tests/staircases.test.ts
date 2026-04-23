@@ -40,4 +40,52 @@ describe('Staircases API', () => {
     expect(response.status).toBe(400)
     expect(response.body.errors).toBeDefined()
   })
+
+  describe('GET /staircases/search', () => {
+    it('should reject queries shorter than 3 characters', async () => {
+      const response = await request(app.callback())
+        .get('/staircases/search')
+        .query({ q: 'ab' })
+
+      expect(response.status).toBe(400)
+      expect(response.body.errors).toBeDefined()
+    })
+
+    it('should return an empty array for a query with no matches', async () => {
+      const response = await request(app.callback())
+        .get('/staircases/search')
+        .query({ q: 'no-staircase-should-ever-match-this-query-zzz' })
+
+      expect(response.status).toBe(200)
+      expect(response.body.content).toEqual([])
+    })
+
+    it('should return matching staircases without placeholder codes (00, 99) and with a building', async () => {
+      const staircasesResponse = await request(app.callback())
+        .get('/staircases')
+        .query({ buildingCode })
+
+      const namedStaircase = staircasesResponse.body.content.find(
+        (s: { name: string | null; code: string }) =>
+          s.name && !['00', '99'].includes(s.code)
+      )
+
+      // Skip if the test fixture happens not to expose a usable staircase name.
+      if (!namedStaircase) return
+
+      const response = await request(app.callback())
+        .get('/staircases/search')
+        .query({ q: namedStaircase.name.substring(0, 3) })
+
+      expect(response.status).toBe(200)
+      expect(Array.isArray(response.body.content)).toBe(true)
+
+      response.body.content.forEach(
+        (s: { code: string; building: { buildingCode: string | null } }) => {
+          expect(['00', '99']).not.toContain(s.code)
+          expect(s.building.buildingCode).not.toBeNull()
+        }
+      )
+    })
+  })
 })

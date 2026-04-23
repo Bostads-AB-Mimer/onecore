@@ -1623,6 +1623,41 @@ export interface paths {
       };
     };
   };
+  "/staircases/search": {
+    /**
+     * Search staircases
+     * @description Searches for staircases by name (caption). The query is matched against
+     * the staircase name using a case-insensitive contains operation. Staircases
+     * with placeholder codes ('00', '99') are excluded to stay consistent with
+     * the sidebar navigation. Returns up to 10 results.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query. Matches against staircase name. */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the staircases. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Staircase"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/rooms": {
     /**
      * Get rooms by residence id.

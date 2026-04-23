@@ -7,6 +7,10 @@ export const staircasesQueryParamsSchema = z.object({
   staircaseCode: z.string().optional(),
 })
 
+export const staircasesSearchQueryParamsSchema = z.object({
+  q: z.string().min(3, { message: 'q must be at least 3 characters long.' }),
+})
+
 export const StaircaseSchema = z.object({
   id: z.string(),
   code: z.string(),
