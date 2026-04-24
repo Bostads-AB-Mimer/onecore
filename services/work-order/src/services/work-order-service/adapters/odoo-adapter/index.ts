@@ -441,7 +441,7 @@ const createWorkOrderRecord = async (
         }
       }
 
-      const trimmedPartOfBuildingCode = row.PartOfBuildingCode?.trim()
+      const trimmedPartOfBuildingCode = row.PartOfBuildingCode.trim()
       if (!uniqueEquipmentCodes.includes(trimmedPartOfBuildingCode)) {
         uniqueEquipmentCodes.push(trimmedPartOfBuildingCode)
       }
