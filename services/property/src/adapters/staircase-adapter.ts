@@ -32,7 +32,12 @@ type PropertyStructureRow = Awaited<
 >[number]
 
 function extractPropertyData(ps: PropertyStructureRow): StaircasePropertyData {
-  if (!ps.propertyId || !ps.propertyCode || !ps.buildingId || !ps.buildingCode) {
+  if (
+    !ps.propertyId ||
+    !ps.propertyCode ||
+    !ps.buildingId ||
+    !ps.buildingCode
+  ) {
     throw new Error(
       `staircase property structure ${ps.propertyObjectId} is missing required code/id fields`
     )
