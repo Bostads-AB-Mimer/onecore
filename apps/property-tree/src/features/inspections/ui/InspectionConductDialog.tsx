@@ -112,7 +112,11 @@ export function InspectionConductDialog({
                 ? 'Besiktningen har markerats som genomförd.'
                 : 'Besiktningen har sparats som utkast.',
           })
-          onClose()
+          // Only close on completion. Closing on draft save triggers a Radix
+          // body-pointer-events lock race (outer Sheet + inner AlertDialog
+          // unmount in overlapping windows), and booting the inspector out of
+          // the flow on every save is poor UX anyway.
+          if (status === 'completed') onClose()
         } catch {
           toast({
             title: 'Fel',
