@@ -57,6 +57,12 @@ export function useInspectionFormState(
               room.componentCostResponsibilities ?? {
                 ...EMPTY_COMPONENT_COST_RESPONSIBILITIES,
               },
+            // Default costResponsibility: null for components saved before
+            // the field existed; Zod's server-side default covers writes.
+            components: (room.components ?? []).map((c) => ({
+              costResponsibility: null,
+              ...c,
+            })),
           }
           return acc
         },

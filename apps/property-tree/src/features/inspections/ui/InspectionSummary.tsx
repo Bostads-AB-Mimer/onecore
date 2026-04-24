@@ -4,6 +4,13 @@ import type { Room } from '@/services/types'
 import { Badge } from '@/shared/ui/Badge'
 import { Input } from '@/shared/ui/Input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
+import {
   Table,
   TableBody,
   TableCell,
@@ -18,8 +25,244 @@ import {
   ROOM_COMPONENTS,
 } from '../constants/components'
 import { CONDITION_TYPE, getConditionConfig } from '../constants/conditions'
+import {
+  COST_RESPONSIBILITY,
+  COST_RESPONSIBILITY_LABEL,
+  type CostResponsibility,
+} from '../constants/costResponsibility'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
+
+// Sentinel used in the <Select> since shadcn's SelectItem disallows empty values.
+// Parsed back to `null` before reaching the handler.
+const UNSET = '__unset__'
+
+interface Remark {
+  key: string
+  label: string
+  condition: string
+  componentId?: string
+  rawLabel?: string
+}
+
+function isReportable(condition: string | undefined): boolean {
+  return (
+    condition === CONDITION_TYPE.ACCEPTABLE ||
+    condition === CONDITION_TYPE.DAMAGED
+  )
+}
+
+function getSurfaceRemarks(roomData: InspectionRoom | undefined): Remark[] {
+  if (!roomData) return []
+  return ROOM_COMPONENTS.filter((component: ComponentDefinition) =>
+    isReportable(roomData.conditions[component.key])
+  ).map((component) => ({
+    key: `surface-${component.key}`,
+    label: getComponentLabel(component.key),
+    condition: roomData.conditions[component.key],
+  }))
+}
+
+function getComponentRemarks(roomData: InspectionRoom | undefined): Remark[] {
+  if (!roomData?.components?.length) return []
+  return roomData.components
+    .filter((c) => isReportable(c.condition))
+    .map((c) => ({
+      key: `component-${c.componentId}`,
+      // Label is snapshotted at write-time (see InspectionComponent.label) so
+      // renames or deletions in property-base don't break old summaries.
+      label: c.label || c.componentId,
+      rawLabel: c.label,
+      componentId: c.componentId,
+      condition: c.condition,
+    }))
+}
+
+function surfaceKeyFromRemarkKey(
+  key: string
+): keyof InspectionRoom['componentCosts'] {
+  return key.replace(/^surface-/, '') as keyof InspectionRoom['componentCosts']
+}
+
+function CostResponsibilitySelect({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: CostResponsibility
+  onChange: (value: CostResponsibility) => void
+  ariaLabel: string
+}) {
+  return (
+    <Select
+      value={value ?? UNSET}
+      onValueChange={(v) =>
+        onChange(v === UNSET ? null : (v as Exclude<CostResponsibility, null>))
+      }
+    >
+      <SelectTrigger className="h-9" aria-label={ariaLabel}>
+        <SelectValue placeholder="—" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={UNSET}>—</SelectItem>
+        <SelectItem value={COST_RESPONSIBILITY.TENANT}>
+          {COST_RESPONSIBILITY_LABEL[COST_RESPONSIBILITY.TENANT]}
+        </SelectItem>
+        <SelectItem value={COST_RESPONSIBILITY.LANDLORD}>
+          {COST_RESPONSIBILITY_LABEL[COST_RESPONSIBILITY.LANDLORD]}
+        </SelectItem>
+      </SelectContent>
+    </Select>
+  )
+}
+
+interface RoomSectionProps {
+  room: Room
+  roomData: InspectionRoom | undefined
+  onComponentCostUpdate: (
+    roomId: string,
+    field: keyof InspectionRoom['componentCosts'],
+    cost: number
+  ) => void
+  onComponentCostByIdUpdate: (
+    roomId: string,
+    componentId: string,
+    label: string,
+    cost: number
+  ) => void
+  onComponentCostResponsibilityUpdate: (
+    roomId: string,
+    field: keyof InspectionRoom['componentCostResponsibilities'],
+    value: CostResponsibility
+  ) => void
+  onComponentCostResponsibilityByIdUpdate: (
+    roomId: string,
+    componentId: string,
+    label: string,
+    value: CostResponsibility
+  ) => void
+}
+
+function RoomSummarySection({
+  room,
+  roomData,
+  onComponentCostUpdate,
+  onComponentCostByIdUpdate,
+  onComponentCostResponsibilityUpdate,
+  onComponentCostResponsibilityByIdUpdate,
+}: RoomSectionProps) {
+  const remarks = [
+    ...getSurfaceRemarks(roomData),
+    ...getComponentRemarks(roomData),
+  ]
+
+  if (remarks.length === 0) return null
+
+  return (
+    <section className="border rounded-lg p-4 space-y-3 bg-card">
+      <h3 className="text-base font-semibold">{room.name}</h3>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Komponent</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="w-40">Kostnad (kr)</TableHead>
+            <TableHead className="w-44">Kostnadsansvar</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {remarks.map((remark) => {
+            const conditionConfig = getConditionConfig(remark.condition)
+            const isSurface = remark.key.startsWith('surface-')
+            const surfaceKey = isSurface
+              ? surfaceKeyFromRemarkKey(remark.key)
+              : null
+            const component = !isSurface
+              ? roomData?.components?.find(
+                  (c) => c.componentId === remark.componentId
+                )
+              : null
+            const costValue = isSurface
+              ? (roomData?.componentCosts?.[surfaceKey!] ?? 0)
+              : (component?.cost ?? 0)
+            const costResponsibility = isSurface
+              ? (roomData?.componentCostResponsibilities?.[surfaceKey!] ?? null)
+              : (component?.costResponsibility ?? null)
+
+            return (
+              <TableRow key={remark.key}>
+                <TableCell className="font-medium">{remark.label}</TableCell>
+                <TableCell>
+                  {conditionConfig && (
+                    <Badge
+                      variant={conditionConfig.badgeVariant}
+                      className={conditionConfig.badgeClassName}
+                    >
+                      {conditionConfig.label}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    // Render 0 as an empty field so the placeholder shows and
+                    // the user can type from scratch without fighting a sticky
+                    // "0" from the controlled value.
+                    value={costValue === 0 ? '' : costValue}
+                    placeholder="0"
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      const cost =
+                        raw === ''
+                          ? 0
+                          : Math.max(0, Math.trunc(Number(raw) || 0))
+                      if (isSurface) {
+                        onComponentCostUpdate(room.id, surfaceKey!, cost)
+                      } else if (remark.componentId) {
+                        onComponentCostByIdUpdate(
+                          room.id,
+                          remark.componentId,
+                          remark.rawLabel ?? remark.label,
+                          cost
+                        )
+                      }
+                    }}
+                    aria-label={`Kostnad för ${remark.label}`}
+                  />
+                </TableCell>
+                <TableCell>
+                  <CostResponsibilitySelect
+                    value={costResponsibility}
+                    onChange={(value) => {
+                      if (isSurface) {
+                        onComponentCostResponsibilityUpdate(
+                          room.id,
+                          surfaceKey!,
+                          value
+                        )
+                      } else if (remark.componentId) {
+                        onComponentCostResponsibilityByIdUpdate(
+                          room.id,
+                          remark.componentId,
+                          remark.rawLabel ?? remark.label,
+                          value
+                        )
+                      }
+                    }}
+                    ariaLabel={`Kostnadsansvar för ${remark.label}`}
+                  />
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </section>
+  )
+}
 
 interface InspectionSummaryProps {
   inspectionData: Record<string, InspectionRoom>
@@ -29,39 +272,46 @@ interface InspectionSummaryProps {
     field: keyof InspectionRoom['componentCosts'],
     cost: number
   ) => void
-}
-
-function getRoomRemarks(
-  roomData: InspectionRoom | undefined
-): ComponentDefinition[] {
-  if (!roomData) return []
-  return ROOM_COMPONENTS.filter((component) => {
-    const condition = roomData.conditions[component.key]
-    return (
-      condition === CONDITION_TYPE.ACCEPTABLE ||
-      condition === CONDITION_TYPE.DAMAGED
-    )
-  })
+  onComponentCostByIdUpdate: (
+    roomId: string,
+    componentId: string,
+    label: string,
+    cost: number
+  ) => void
+  onComponentCostResponsibilityUpdate: (
+    roomId: string,
+    field: keyof InspectionRoom['componentCostResponsibilities'],
+    value: CostResponsibility
+  ) => void
+  onComponentCostResponsibilityByIdUpdate: (
+    roomId: string,
+    componentId: string,
+    label: string,
+    value: CostResponsibility
+  ) => void
 }
 
 export function InspectionSummary({
   inspectionData,
   rooms,
   onComponentCostUpdate,
+  onComponentCostByIdUpdate,
+  onComponentCostResponsibilityUpdate,
+  onComponentCostResponsibilityByIdUpdate,
 }: InspectionSummaryProps) {
-  const roomSections = rooms
-    .map((room) => ({
-      room,
-      roomData: inspectionData[room.id],
-      remarks: getRoomRemarks(inspectionData[room.id]),
-    }))
-    .filter((section) => section.remarks.length > 0)
+  const perRoom = rooms.map((room) => {
+    const roomData = inspectionData[room.id]
+    const surfaceCount = ROOM_COMPONENTS.filter((c) =>
+      isReportable(roomData?.conditions[c.key])
+    ).length
+    const componentCount = (roomData?.components ?? []).filter((c) =>
+      isReportable(c.condition)
+    ).length
+    return { room, roomData, total: surfaceCount + componentCount }
+  })
 
-  const totalRemarks = roomSections.reduce(
-    (sum, section) => sum + section.remarks.length,
-    0
-  )
-
+  const roomsWithRemarks = perRoom.filter((r) => r.total > 0)
+  const totalRemarks = roomsWithRemarks.reduce((sum, r) => sum + r.total, 0)
   const remarksLabel = totalRemarks === 1 ? 'anmärkning' : 'anmärkningar'
 
   return (
@@ -69,73 +319,30 @@ export function InspectionSummary({
       <header className="border rounded-lg p-4 space-y-1 bg-card">
         <h2 className="text-xl font-semibold">Sammanställning</h2>
         <p className="text-sm text-muted-foreground">
-          {totalRemarks} {remarksLabel} i {roomSections.length} rum
+          {totalRemarks} {remarksLabel} i {roomsWithRemarks.length} rum
         </p>
       </header>
 
-      {roomSections.length === 0 && (
+      {totalRemarks === 0 && (
         <div className="p-8 border rounded-lg text-center text-muted-foreground">
           Inga anmärkningar registrerade. Alla komponenter är i gott skick.
         </div>
       )}
 
-      {roomSections.map(({ room, roomData, remarks }) => (
-        <section
+      {roomsWithRemarks.map(({ room, roomData }) => (
+        <RoomSummarySection
           key={room.id}
-          className="border rounded-lg p-4 space-y-3 bg-card"
-        >
-          <h3 className="text-base font-semibold">{room.name}</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Komponent</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-40">Kostnad (kr)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {remarks.map((component) => {
-                const condition = roomData?.conditions[component.key]
-                const conditionConfig = getConditionConfig(condition)
-
-                return (
-                  <TableRow key={component.key}>
-                    <TableCell className="font-medium">
-                      {getComponentLabel(component.key)}
-                    </TableCell>
-                    <TableCell>
-                      {conditionConfig && (
-                        <Badge
-                          variant={conditionConfig.badgeVariant}
-                          className={conditionConfig.badgeClassName}
-                        >
-                          {conditionConfig.label}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={roomData?.componentCosts?.[component.key] ?? 0}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) =>
-                          onComponentCostUpdate(
-                            room.id,
-                            component.key,
-                            Math.max(0, Math.trunc(Number(e.target.value) || 0))
-                          )
-                        }
-                        aria-label={`Kostnad för ${getComponentLabel(component.key)}`}
-                      />
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </section>
+          room={room}
+          roomData={roomData}
+          onComponentCostUpdate={onComponentCostUpdate}
+          onComponentCostByIdUpdate={onComponentCostByIdUpdate}
+          onComponentCostResponsibilityUpdate={
+            onComponentCostResponsibilityUpdate
+          }
+          onComponentCostResponsibilityByIdUpdate={
+            onComponentCostResponsibilityByIdUpdate
+          }
+        />
       ))}
     </div>
   )

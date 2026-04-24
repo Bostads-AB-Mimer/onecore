@@ -84,6 +84,17 @@ export function useInspectionForm(
     handleDetailComponentRemove: componentOps.removeDetailComponent,
     handleDetailComponentNoteUpdate: componentOps.updateDetailComponentNote,
 
+    // Fetched component operations (keyed by componentId)
+    handleComponentConditionUpdate: componentOps.updateComponentCondition,
+    handleComponentActionUpdate: componentOps.updateComponentAction,
+    handleComponentNoteUpdateById: componentOps.updateComponentNote,
+    handleComponentPhotoAddById: componentOps.addComponentPhoto,
+    handleComponentPhotoRemoveById: componentOps.removeComponentPhoto,
+    handleComponentCostUpdateById: componentOps.updateComponentCostById,
+    handleComponentCostResponsibilityUpdateById:
+      componentOps.updateComponentCostResponsibilityById,
+    handleRoomHandledSet: componentOps.setRoomHandled,
+
     // Legacy handlers
     handleCancel,
 

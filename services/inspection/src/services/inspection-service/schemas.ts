@@ -154,6 +154,19 @@ const DetailComponentSchema = z.object({
   note: z.string(),
 })
 
+export const InspectionComponentSchema = z.object({
+  componentId: z.string(),
+  // Snapshot of the display label at inspection time so the summary still
+  // reads correctly if the component is renamed or removed from property-base.
+  label: z.string(),
+  condition: z.string(),
+  action: z.array(z.string()),
+  note: z.string(),
+  photos: z.array(z.string()),
+  cost: z.number().optional(),
+  costResponsibility: z.enum(['tenant', 'landlord']).nullable().default(null),
+})
+
 export const InspectionRoomSchema = z.object({
   roomId: z.string(),
   // Populated for ad-hoc rooms created by the inspector when the Xpand room
@@ -170,6 +183,7 @@ export const InspectionRoomSchema = z.object({
   isApproved: z.boolean(),
   isHandled: z.boolean(),
   detailComponents: z.array(DetailComponentSchema).optional().default([]),
+  components: z.array(InspectionComponentSchema).optional().default([]),
 })
 
 export const InternalInspectionSchema = XpandInspectionSchema.extend({
@@ -184,5 +198,6 @@ export const SaveInspectionDraftRequestSchema = z.object({
   isFurnished: z.boolean(),
 })
 
+export type InspectionComponent = z.infer<typeof InspectionComponentSchema>
 export type InspectionRoom = z.infer<typeof InspectionRoomSchema>
 export type InternalInspection = z.infer<typeof InternalInspectionSchema>

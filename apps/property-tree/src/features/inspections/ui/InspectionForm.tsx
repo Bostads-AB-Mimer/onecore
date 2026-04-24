@@ -79,6 +79,14 @@ export function InspectionForm({
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
+    handleComponentConditionUpdate,
+    handleComponentActionUpdate,
+    handleComponentNoteUpdateById,
+    handleComponentPhotoAddById,
+    handleComponentPhotoRemoveById,
+    handleComponentCostUpdateById,
+    handleComponentCostResponsibilityUpdateById,
+    handleRoomHandledSet,
   } = useInspectionForm(initialRooms, existingInspection)
 
   useEffect(() => {
@@ -210,6 +218,81 @@ export function InspectionForm({
                           note
                         )
                       }
+                      onFetchedComponentConditionUpdate={(
+                        componentId,
+                        label,
+                        value
+                      ) =>
+                        handleComponentConditionUpdate(
+                          room.id,
+                          componentId,
+                          label,
+                          value
+                        )
+                      }
+                      onFetchedComponentActionUpdate={(
+                        componentId,
+                        label,
+                        action
+                      ) =>
+                        handleComponentActionUpdate(
+                          room.id,
+                          componentId,
+                          label,
+                          action
+                        )
+                      }
+                      onFetchedComponentNoteUpdate={(
+                        componentId,
+                        label,
+                        note
+                      ) =>
+                        handleComponentNoteUpdateById(
+                          room.id,
+                          componentId,
+                          label,
+                          note
+                        )
+                      }
+                      onFetchedComponentPhotoAdd={(
+                        componentId,
+                        label,
+                        photoDataUrl
+                      ) =>
+                        handleComponentPhotoAddById(
+                          room.id,
+                          componentId,
+                          label,
+                          photoDataUrl
+                        )
+                      }
+                      onFetchedComponentPhotoRemove={(
+                        componentId,
+                        label,
+                        index
+                      ) =>
+                        handleComponentPhotoRemoveById(
+                          room.id,
+                          componentId,
+                          label,
+                          index
+                        )
+                      }
+                      onFetchedComponentCostResponsibilityUpdate={(
+                        componentId,
+                        label,
+                        value
+                      ) =>
+                        handleComponentCostResponsibilityUpdateById(
+                          room.id,
+                          componentId,
+                          label,
+                          value
+                        )
+                      }
+                      onRoomHandledChange={(isHandled) =>
+                        handleRoomHandledSet(room.id, isHandled)
+                      }
                     />
                   </AccordionContent>
                 </AccordionItem>
@@ -232,6 +315,13 @@ export function InspectionForm({
               inspectionData={inspectionData}
               rooms={rooms}
               onComponentCostUpdate={handleComponentCostUpdate}
+              onComponentCostByIdUpdate={handleComponentCostUpdateById}
+              onComponentCostResponsibilityUpdate={
+                handleComponentCostResponsibilityUpdate
+              }
+              onComponentCostResponsibilityByIdUpdate={
+                handleComponentCostResponsibilityUpdateById
+              }
             />
             <div
               className="p-4 border rounded-lg space-y-3"
