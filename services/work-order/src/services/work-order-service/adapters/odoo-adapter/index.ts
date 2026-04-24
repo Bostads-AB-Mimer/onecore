@@ -267,14 +267,12 @@ export const createWorkOrder = async (
   try {
     await odoo.connect()
     const isPestWorkOrder = details.Rows.some(
-        (row) =>
-          row.PartOfBuildingCode.trim() === 'SD' ||
-          row.PartOfBuildingCode.trim() === 'DJUR'
-      )
+      (row) =>
+        row.PartOfBuildingCode.trim() === 'SD' ||
+        row.PartOfBuildingCode.trim() === 'DJUR'
+    )
     const maintenanceTeamId = await getMaintenanceTeamId(
-     isPestWorkOrder
-        ? 'Skadedjurssamordnare'
-        : 'Kundcenter'
+      isPestWorkOrder ? 'Skadedjurssamordnare' : 'Kundcenter'
     )
 
     const newRentalPropertyRecord =
@@ -407,7 +405,7 @@ const createWorkOrderRecord = async (
 ): Promise<number> => {
   try {
     const supportedSpaceCodes = z.enum(['TV', 'BWC', 'KÖ', 'LGH', 'FÖR', 'KÄL'])
-    const captionForSpace: Record<
+    const odooSpaceCategory: Record<
       z.infer<typeof supportedSpaceCodes>,
       string
     > = {
@@ -415,6 +413,11 @@ const createWorkOrderRecord = async (
       BWC: 'Lägenhet',
       KÖ: 'Lägenhet',
       LGH: 'Lägenhet',
+      FÖR: 'Lägenhet',
+      KÄL: 'Lägenhet',
+    }
+    const spaceInTitle: Record<z.infer<typeof supportedSpaceCodes>, string> = {
+      ...odooSpaceCategory,
       FÖR: 'Förråd',
       KÄL: 'Källare',
     }
@@ -436,8 +439,8 @@ const createWorkOrderRecord = async (
       if (!uniqueSpaceCodes.includes(spaceCode)) {
         uniqueSpaceCodes.push(spaceCode)
 
-        if (!uniqueSpaceCaptions.includes(captionForSpace[spaceCode])) {
-          uniqueSpaceCaptions.push(captionForSpace[spaceCode])
+        if (!uniqueSpaceCaptions.includes(odooSpaceCategory[spaceCode])) {
+          uniqueSpaceCaptions.push(odooSpaceCategory[spaceCode])
         }
       }
 
@@ -458,10 +461,10 @@ const createWorkOrderRecord = async (
     const name =
       uniqueEquipmentCodes.includes('SD') ||
       uniqueEquipmentCodes.includes('DJUR')
-        ? `Felanmäld Skadedjur - ${uniqueSpaceCaptions.join(', ')}`
+        ? `Felanmäld Skadedjur - ${[...new Set(uniqueSpaceCodes.map((c) => spaceInTitle[c]))].join(', ')}`
         : uniqueEquipmentCodes.length > 1
           ? `Felanmälda vitvaror - ${uniqueEquipmentCodes.map(transformEquipmentCode).join(', ')}`
-          : `Felanmäld ${captionForSpace[uniqueSpaceCodes[0]]} - ${transformEquipmentCode(uniqueEquipmentCodes[0])}`
+          : `Felanmäld ${spaceInTitle[uniqueSpaceCodes[0]]} - ${transformEquipmentCode(uniqueEquipmentCodes[0])}`
 
     return await odoo.create('maintenance.request', {
       rental_property_id: rentalPropertyRecord.toString(),
