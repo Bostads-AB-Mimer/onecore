@@ -426,7 +426,7 @@ const createWorkOrderRecord = async (
 
     details.Rows.forEach((row) => {
       const spaceCodeParseResult = supportedSpaceCodes.safeParse(
-        row.LocationCode?.trim()
+        row.LocationCode.trim()
       )
       if (!spaceCodeParseResult.success) {
         throw new Error('Unsupported location code')
