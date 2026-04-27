@@ -332,7 +332,10 @@ export const enrichInvoiceRows = async (
     )
   )
 
-  const rows = (await Promise.all(enrichedInvoiceRows)).filter((row) => row)
+  const errorInvoiceNumbers = new Set(errors.map((e) => e.invoiceNumber))
+  const rows = (await Promise.all(enrichedInvoiceRows)).filter(
+    (row) => row !== null && !errorInvoiceNumbers.has(row.invoiceNumber as string)
+  )
 
   return { rows: rows as InvoiceDataRow[], errors }
 }

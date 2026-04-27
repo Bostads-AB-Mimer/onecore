@@ -520,6 +520,10 @@ export const getBatchContactsCsv = async (batchId: string) => {
   const invoiceContacts = await getInvoiceContacts(batchId)
   const contacts = invoiceContacts.map(transformContact)
 
+  if (contacts.length === 0) {
+    return null
+  }
+
   const csvContent: string[] = []
 
   csvContent.push(
@@ -537,7 +541,7 @@ export const getBatchContactsCsv = async (batchId: string) => {
 
 export const getBatchAggregatedRowsCsv = async (batchId: string) => {
   const transactionRows = await createAggregateRows(batchId)
-  if (transactionRows) {
+  if (transactionRows?.length) {
     const csvContent: string[] = []
 
     csvContent.push(
@@ -556,6 +560,10 @@ export const getBatchAggregatedRowsCsv = async (batchId: string) => {
 
 export const getBatchLedgerRowsCsv = async (batchId: string) => {
   const transactionRows = await createLedgerRows(batchId)
+
+  if (transactionRows.length === 0) {
+    return null
+  }
 
   const csvContent: string[] = []
 
@@ -638,7 +646,7 @@ export const importInvoiceRows = async (
     const errors: { invoiceNumber: string; error: string }[] = []
     const CHUNK_SIZE = 500
 
-    const importedInvoiceNumbers = await getImportedInvoiceNumbers()
+    /*const importedInvoiceNumbers = await getImportedInvoiceNumbers()
     const rentalInvoiceNumbers = (
       await getRentalInvoices(fromDate, toDate, companyId)
     ).map((invoice: any) => {
@@ -661,8 +669,10 @@ export const importInvoiceRows = async (
         processedInvoices: 0,
         errorInvoices: null,
       }
-    }
+    }*/
 
+    const rentalInvoiceNumbers = ['552605363452259']
+    const invoicesToImport = rentalInvoiceNumbers
     const batchTotal = await getXpandBatchTotalAmount(invoicesToImport)
 
     logger.info(

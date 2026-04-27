@@ -20,10 +20,12 @@ const getContactDetails = async () => {
 
   const contactsFilename = `${batchId}-001-contacts-open-ledger2.csv`
   const contactsCsv = await getBatchContactsCsv(batchId)
-  await fs.writeFile(
-    path.join(config.rentalInvoices.exportDirectory, contactsFilename),
-    contactsCsv
-  )
+  if (contactsCsv) {
+    await fs.writeFile(
+      path.join(config.rentalInvoices.exportDirectory, contactsFilename),
+      contactsCsv
+    )
+  }
 }
 
 getContactDetails()
