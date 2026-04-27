@@ -5,10 +5,10 @@ import {
   PaginationMeta,
   PaginationLinks,
 } from '@onecore/utilities'
+import { inspection } from '@onecore/types'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
-import { InspectionStatusFilter } from '../../services/inspection-service/schemas'
 
 export type XpandInspection = components['schemas']['XpandInspection']
 export type DetailedXpandInspection =
@@ -32,7 +32,7 @@ export const getXpandInspections = async ({
 }: {
   page?: number
   limit?: number
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
   sortAscending?: boolean
   inspector?: string
   address?: string
@@ -73,7 +73,7 @@ export const getXpandInspections = async ({
 
 export const getXpandInspectionsByResidenceId = async (
   residenceId: string,
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
 ): Promise<AdapterResult<XpandInspection[], 'unknown' | 'not-found'>> => {
   try {
     const fetchResponse = await client().GET(
@@ -151,7 +151,7 @@ export const getInternalInspections = async ({
 }: {
   page?: number
   limit?: number
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
   sortAscending?: boolean
   inspector?: string
   address?: string
@@ -192,7 +192,7 @@ export const getInternalInspections = async ({
 
 export const getInternalInspectionsByResidenceId = async (
   residenceId: string,
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
 ): Promise<AdapterResult<XpandInspection[], 'unknown' | 'not-found'>> => {
   try {
     const fetchResponse = await client().GET(

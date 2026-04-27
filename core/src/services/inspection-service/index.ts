@@ -3,6 +3,7 @@ import KoaRouter from '@koa/router'
 import * as inspectionAdapter from '../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as schemas from './schemas'
+import { inspection } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
@@ -34,8 +35,8 @@ import {
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('Inspection', schemas.InspectionSchema)
-  registerSchema('InspectionComponent', schemas.InspectionComponentSchema)
-  registerSchema('InspectionRoom', schemas.InspectionRoomSchema)
+  registerSchema('InspectionComponent', inspection.InspectionComponentSchema)
+  registerSchema('InspectionRoom', inspection.InspectionRoomSchema)
   registerSchema('DetailedInspection', schemas.DetailedInspectionSchema)
   registerSchema('DetailedInspectionRoom', schemas.DetailedInspectionSchema)
   registerSchema('DetailedInspectionRemark', schemas.DetailedInspectionSchema)
@@ -51,10 +52,10 @@ export const routes = (router: KoaRouter) => {
     schemas.UpdateInspectionStatusRequestSchema
   )
   registerSchema('InspectionWithSource', schemas.InspectionWithSourceSchema)
-  registerSchema('InternalInspection', schemas.InternalInspectionSchema)
+  registerSchema('InternalInspection', inspection.InternalInspectionSchema)
   registerSchema(
     'SaveInspectionDraftRequest',
-    schemas.SaveInspectionDraftRequestSchema
+    inspection.SaveInspectionDraftRequestSchema
   )
 
   /**
@@ -157,9 +158,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/inspections', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsedParams = schemas.GetInspectionsFromXpandQuerySchema.safeParse(
-      ctx.query
-    )
+    const parsedParams =
+      inspection.GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
     if (!parsedParams.success) {
       ctx.status = 400
       ctx.body = {
@@ -301,7 +301,7 @@ export const routes = (router: KoaRouter) => {
     const { residenceId } = ctx.params
 
     const parsedQuery =
-      schemas.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
+      inspection.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
     const statusFilter = parsedQuery.success
       ? parsedQuery.data.statusFilter
       : undefined
@@ -460,9 +460,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/inspections/xpand', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsedParams = schemas.GetInspectionsFromXpandQuerySchema.safeParse(
-      ctx.query
-    )
+    const parsedParams =
+      inspection.GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
     if (!parsedParams.success) {
       ctx.status = 400
       ctx.body = {
@@ -594,7 +593,7 @@ export const routes = (router: KoaRouter) => {
     const { residenceId } = ctx.params
 
     const parsedQuery =
-      schemas.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
+      inspection.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
     const statusFilter = parsedQuery.success
       ? parsedQuery.data.statusFilter
       : undefined
@@ -1532,9 +1531,8 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 
-    const validationResult = schemas.SaveInspectionDraftRequestSchema.safeParse(
-      ctx.request.body
-    )
+    const validationResult =
+      inspection.SaveInspectionDraftRequestSchema.safeParse(ctx.request.body)
     if (!validationResult.success) {
       ctx.status = 400
       ctx.body = {

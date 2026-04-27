@@ -1,19 +1,11 @@
 import { Knex } from 'knex'
 import { logger } from '@onecore/utilities'
+import { inspection as inspectionTypes } from '@onecore/types'
 import { db } from '../db'
 import { AdapterResult } from '../../types'
 import {
-  DetailedXpandInspection,
-  InternalInspection,
-  XpandInspection,
-  XpandInspectionSchema,
-  InspectionStatusFilter,
-  INSPECTION_STATUS_FILTER,
-} from '../../schemas'
-import {
   CreateInspectionParams,
   INSPECTION_STATUS,
-  InspectionRoom,
   InspectionStatus,
   SaveInspectionDraftParams,
   UpdateInternalInspectionParams,
@@ -41,8 +33,8 @@ function mapDbRemarkToResponse(r: DbInspectionRemark) {
 
 function mapDbInspectionToResponse(
   inspection: DbInspection,
-  rooms: DetailedXpandInspection['rooms']
-): DetailedXpandInspection {
+  rooms: inspectionTypes.DetailedXpandInspection['rooms']
+): inspectionTypes.DetailedXpandInspection {
   return {
     id: String(inspection.id),
     status: inspection.status,
@@ -71,7 +63,10 @@ export async function createInspection(
   dbConnection: Knex = db,
   params: CreateInspectionParams
 ): Promise<
-  AdapterResult<DetailedXpandInspection, 'validation-error' | 'unknown'>
+  AdapterResult<
+    inspectionTypes.DetailedXpandInspection,
+    'validation-error' | 'unknown'
+  >
 > {
   try {
     const result = await dbConnection.transaction(async (trx) => {
@@ -167,7 +162,7 @@ export async function updateInternalInspection(
   params: UpdateInternalInspectionParams
 ): Promise<
   AdapterResult<
-    DetailedXpandInspection,
+    inspectionTypes.DetailedXpandInspection,
     'not-found' | 'invalid-status-transition' | 'unknown'
   >
 > {
@@ -246,7 +241,7 @@ export async function updateInspectionStatus(
   newStatus: InspectionStatus
 ): Promise<
   AdapterResult<
-    DetailedXpandInspection,
+    inspectionTypes.DetailedXpandInspection,
     'not-found' | 'invalid-status-transition' | 'unknown'
   >
 > {
@@ -268,13 +263,13 @@ export async function getInspections(
     page?: number
     limit?: number
     sortAscending?: boolean
-    statusFilter?: InspectionStatusFilter
+    statusFilter?: inspectionTypes.InspectionStatusFilter
     inspector?: string
     address?: string
   } = {}
 ): Promise<
   AdapterResult<
-    { inspections: XpandInspection[]; totalRecords: number },
+    { inspections: inspectionTypes.XpandInspection[]; totalRecords: number },
     'schema-error' | 'unknown'
   >
 > {
@@ -293,9 +288,11 @@ export async function getInspections(
       'masterKeyAccess'
     )
 
-    if (statusFilter === INSPECTION_STATUS_FILTER.ONGOING) {
+    if (statusFilter === inspectionTypes.INSPECTION_STATUS_FILTER.ONGOING) {
       baseQuery.whereNot('status', 'completed')
-    } else if (statusFilter === INSPECTION_STATUS_FILTER.COMPLETED) {
+    } else if (
+      statusFilter === inspectionTypes.INSPECTION_STATUS_FILTER.COMPLETED
+    ) {
       baseQuery.where('status', 'completed')
     }
 
@@ -325,7 +322,8 @@ export async function getInspections(
       id: String(row.id),
     }))
 
-    const parsed = XpandInspectionSchema.array().safeParse(inspections)
+    const parsed =
+      inspectionTypes.XpandInspectionSchema.array().safeParse(inspections)
     if (!parsed.success) {
       logger.error(
         { error: parsed.error.format() },
@@ -350,8 +348,10 @@ export async function getInspections(
 export async function getInspectionsByResidenceId(
   dbConnection: Knex = db,
   residenceId: string,
-  statusFilter?: InspectionStatusFilter
-): Promise<AdapterResult<XpandInspection[], 'schema-error' | 'unknown'>> {
+  statusFilter?: inspectionTypes.InspectionStatusFilter
+): Promise<
+  AdapterResult<inspectionTypes.XpandInspection[], 'schema-error' | 'unknown'>
+> {
   logger.info(
     `Getting inspections from local database for residenceId: ${residenceId}`
   )
@@ -371,9 +371,11 @@ export async function getInspectionsByResidenceId(
       )
       .where('residenceId', residenceId)
 
-    if (statusFilter === INSPECTION_STATUS_FILTER.ONGOING) {
+    if (statusFilter === inspectionTypes.INSPECTION_STATUS_FILTER.ONGOING) {
       query.whereNot('status', 'completed')
-    } else if (statusFilter === INSPECTION_STATUS_FILTER.COMPLETED) {
+    } else if (
+      statusFilter === inspectionTypes.INSPECTION_STATUS_FILTER.COMPLETED
+    ) {
       query.where('status', 'completed')
     }
 
@@ -384,7 +386,8 @@ export async function getInspectionsByResidenceId(
       id: String(row.id),
     }))
 
-    const parsed = XpandInspectionSchema.array().safeParse(inspections)
+    const parsed =
+      inspectionTypes.XpandInspectionSchema.array().safeParse(inspections)
     if (!parsed.success) {
       logger.error(
         { error: parsed.error.format() },
@@ -444,7 +447,9 @@ export async function saveInspectionDraft(
 export async function getInspectionById(
   dbConnection: Knex = db,
   inspectionId: string
-): Promise<AdapterResult<InternalInspection, 'not-found' | 'unknown'>> {
+): Promise<
+  AdapterResult<inspectionTypes.InternalInspection, 'not-found' | 'unknown'>
+> {
   try {
     const [inspection] = await dbConnection
       .select(
@@ -468,10 +473,12 @@ export async function getInspectionById(
       return { ok: false, err: 'not-found' }
     }
 
-    let rooms: InspectionRoom[] | null = null
+    let rooms: inspectionTypes.InspectionRoom[] | null = null
     if (inspection.draftRooms) {
       try {
-        rooms = JSON.parse(inspection.draftRooms) as InspectionRoom[]
+        rooms = JSON.parse(
+          inspection.draftRooms
+        ) as inspectionTypes.InspectionRoom[]
       } catch {
         logger.error(
           { inspectionId },

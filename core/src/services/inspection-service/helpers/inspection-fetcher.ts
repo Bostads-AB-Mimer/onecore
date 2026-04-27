@@ -1,3 +1,4 @@
+import { inspection } from '@onecore/types'
 import * as inspectionAdapter from '../../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
@@ -54,14 +55,14 @@ export const fetchEnrichedInspection = async (
 
   // Validate inspection data from Xpand
   const validatedInspection =
-    schemas.DetailedXpandInspectionSchema.parse(rawInspection)
+    inspection.DetailedXpandInspectionSchema.parse(rawInspection)
 
   // Combine into enriched inspection
-  const inspection: schemas.DetailedInspection = {
+  const enrichedInspection: schemas.DetailedInspection = {
     ...validatedInspection,
     lease,
     residence,
   }
 
-  return { ok: true, data: inspection }
+  return { ok: true, data: enrichedInspection }
 }

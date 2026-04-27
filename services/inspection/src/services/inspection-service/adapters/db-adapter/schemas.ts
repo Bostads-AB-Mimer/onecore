@@ -1,5 +1,7 @@
 import { z } from 'zod'
-import type { InspectionRoom } from '../../schemas'
+import { inspection } from '@onecore/types'
+
+type InspectionRoom = inspection.InspectionRoom
 
 export const CreateInspectionRemarkSchema = z.object({
   remarkId: z.string({ required_error: 'Remark ID is required' }),
@@ -111,12 +113,6 @@ export function validateStatusTransition(
   }
   return { ok: true }
 }
-
-export {
-  InspectionRoomSchema,
-  SaveInspectionDraftRequestSchema as SaveInspectionDraftSchema,
-} from '../../schemas'
-export type { InspectionRoom } from '../../schemas'
 
 export type SaveInspectionDraftParams = {
   inspectorName: string
