@@ -685,10 +685,32 @@ export const getInvoiceRows = async (
     return column ? (column as string).trimEnd() : column
   }
 
+  const now = new Date()
+  const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const y = now.getFullYear()
+  const m = pad(now.getMonth() + 1)
+  const lastDay = pad(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())
+  const startOfCurrentMonthString = `${y}${m}01`
+  const endOfCurrentMonthString = `${y}${m}${lastDay}`
+
   const convertedInvoiceRows: InvoiceRow[] = invoiceRows.map(
     (invoiceRow: any) => {
       try {
         const type = invoiceRow['type'] as number
+
+        const invoiceFromDate = invoiceRow['invoiceFromDate'] as Date
+        const fromDateString =
+          invoiceFromDate < startOfCurrentMonth
+            ? startOfCurrentMonthString
+            : xledgerDateString(invoiceFromDate)
+
+        const invoiceToDate = invoiceRow['invoiceToDate'] as Date
+        const toDateString =
+          invoiceToDate < startOfCurrentMonth
+            ? endOfCurrentMonthString
+            : xledgerDateString(invoiceToDate)
 
         const invoice: InvoiceRow = {
           account: trim(invoiceRow['p1']),
@@ -697,7 +719,7 @@ export const getInvoiceRows = async (
           contactCode: trim(invoiceRow['cmctckod']),
           deduction: sumColumns(invoiceRow['rowReduction']),
           freeCode: trim(invoiceRow['p5']),
-          fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
+          fromDate: fromDateString,
           invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
           invoiceDueDate: xledgerDateString(
             invoiceRow['expirationDate'] as Date
@@ -712,7 +734,7 @@ export const getInvoiceRows = async (
           roundoff: sumColumns(invoiceRow['roundoff']),
           rowType: sumColumns(invoiceRow['rowtype']),
           tenantName: trim(invoiceRow['cmctcben']),
-          toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
+          toDate: toDateString,
           totalAmount: sumColumns(
             invoiceRow['rowAmount'],
             invoiceRow['rowReduction'],

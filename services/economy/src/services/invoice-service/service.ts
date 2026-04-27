@@ -671,7 +671,27 @@ export const importInvoiceRows = async (
       }
     }*/
 
-    const rentalInvoiceNumbers = ['552605363452259']
+    const rentalInvoiceNumbers = [
+      '552602360030956K',
+      '552603360722154K',
+      '552603360813854K',
+      '552603360920956K',
+      '552603361110359K',
+      '552603361208054K',
+      '552603361210357K',
+      '552603361358552K',
+      '552603361528550K',
+      '552604362036452K',
+      '552604362128853K',
+      '552604362235153K',
+      '552604362425556K',
+      '552604362523350K',
+      '552604362525751K',
+      '552604362663255K',
+      '552604362674757K',
+      '552604362845753K',
+      '552604363186850',
+    ]
     const invoicesToImport = rentalInvoiceNumbers
     const batchTotal = await getXpandBatchTotalAmount(invoicesToImport)
 
