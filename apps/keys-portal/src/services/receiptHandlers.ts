@@ -15,6 +15,7 @@ import {
 import { receiptService } from './api/receiptService'
 import { keyLoanService } from './api/keyLoanService'
 import { fetchContactByContactCode } from './api/contactService'
+import { rentalObjectSearchService } from './api/rentalObjectSearchService'
 import type {
   ReceiptData,
   MaintenanceReceiptData,
@@ -154,6 +155,39 @@ export function assembleReturnReceipt(
 }
 
 /**
+ * Builds a per-key scope map for a maintenance receipt's Tillhörighet column.
+ * Each key resolves to its rentalObjectCode's street address, or falls back to
+ * keySystem.name for HN master keys where rentalObjectCode is null. Missing
+ * data renders as '-' so the receipt keeps a single consistent empty state.
+ */
+async function resolveScopeByKeyId(
+  keys: KeyDetails[]
+): Promise<Record<string, string>> {
+  const uniqueCodes = Array.from(
+    new Set(
+      keys
+        .map((k) => k.rentalObjectCode)
+        .filter((c): c is string => !!c && c.length > 0)
+    )
+  )
+
+  const addressMap =
+    uniqueCodes.length > 0
+      ? await rentalObjectSearchService.getAddressesByRentalIds(uniqueCodes)
+      : {}
+
+  const result: Record<string, string> = {}
+  for (const key of keys) {
+    if (key.rentalObjectCode) {
+      result[key.id] = addressMap[key.rentalObjectCode] || '-'
+    } else {
+      result[key.id] = key.keySystem?.name || '-'
+    }
+  }
+  return result
+}
+
+/**
  * Assembles MaintenanceReceiptData from loan ID
  * Used for: maintenance loan receipt generation
  */
@@ -180,12 +214,15 @@ export async function assembleMaintenanceLoanReceipt(
   const description =
     [loan.notes, comment].filter(Boolean).join('\n\n') || undefined
 
+  const scopeByKeyId = await resolveScopeByKeyId(keys)
+
   return {
     contact: loan.contact || 'Unknown',
     contactName,
     contactPerson: loan.contactPerson ?? null,
     description,
     keys,
+    scopeByKeyId,
     receiptType: 'LOAN',
     operationDate: new Date(),
     loanId,
@@ -194,10 +231,11 @@ export async function assembleMaintenanceLoanReceipt(
 }
 
 /**
- * Assembles MaintenanceReceiptData for a return receipt from pre-fetched data
- * Used for: generating maintenance return receipt PDFs (no additional API calls)
+ * Assembles MaintenanceReceiptData for a return receipt.
+ * Resolves rentalObjectCode → address via the rental-object search API,
+ * so it needs to be awaited (one network call at most per receipt).
  */
-export function assembleMaintenanceReturnReceipt(
+export async function assembleMaintenanceReturnReceipt(
   contact: string,
   contactName: string,
   contactPerson: string | null,
@@ -206,7 +244,7 @@ export function assembleMaintenanceReturnReceipt(
   selectedKeyIds: Set<string>,
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set()
-): MaintenanceReceiptData {
+): Promise<MaintenanceReceiptData> {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
     selectedKeyIds
@@ -216,12 +254,17 @@ export function assembleMaintenanceReturnReceipt(
     selectedCardIds
   )
 
+  // Resolve scope for the full loan set (not just the returned subset) so every
+  // row in the receipt tables carries its Tillhörighet value.
+  const scopeByKeyId = await resolveScopeByKeyId(loanKeys)
+
   return {
     contact,
     contactName,
     contactPerson,
     description,
     keys: returned,
+    scopeByKeyId,
     receiptType: 'RETURN',
     operationDate: new Date(),
     missingKeys: missing.length > 0 ? missing : undefined,
@@ -432,8 +475,7 @@ export async function generateAndUploadMaintenanceReturnReceipt(
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set()
 ): Promise<void> {
-  // Assemble receipt data (no API calls - uses pre-fetched data with keySystem)
-  const receiptData = assembleMaintenanceReturnReceipt(
+  const receiptData = await assembleMaintenanceReturnReceipt(
     contact,
     contactName,
     contactPerson,

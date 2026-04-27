@@ -264,6 +264,7 @@ export interface MaintenanceReceiptData {
   contactPerson: string | null
   description?: string | null
   keys: KeyDetails[] // Keys with keySystem included for display
+  scopeByKeyId?: Record<string, string> // Per-key scope for the maintenance receipt's Tillhörighet column (rentalObjectCode → resolved address, or keySystem.name as fallback for HN master keys where rentalObjectCode is null).
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
   loanId?: string // Key loan UUID, used for QR code on printed receipt
