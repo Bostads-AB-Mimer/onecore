@@ -72,6 +72,15 @@ export interface Config {
     bosociala: string
     dev: string
   }
+  homeInsurance: {
+    sftp: {
+      host: string
+      port: number
+      username: string
+      password: string
+      directory: string
+    }
+  }
   scanner: {
     allowedIps: string[]
     errorNotificationEmail: string
@@ -146,6 +155,15 @@ const config = configPackage({
       economy: '',
       bosociala: '',
     },
+    homeInsurance: {
+      sftp: {
+        host: '',
+        port: 22,
+        username: '',
+        password: '',
+        directory: '',
+      },
+    },
     scanner: {
       allowedIps: [],
       errorNotificationEmail: '',
@@ -213,4 +231,5 @@ export default {
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
   scanner: config.get('scanner'),
+  homeInsurance: config.get('homeInsurance'),
 } as Config

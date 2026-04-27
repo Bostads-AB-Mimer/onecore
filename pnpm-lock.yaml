@@ -899,6 +899,9 @@ importers:
       pino-pretty:
         specifier: ^11.1.0
         version: 11.3.0
+      ssh2-sftp-client:
+        specifier: ^12.0.1
+        version: 12.0.1
       striptags:
         specifier: ^3.2.0
         version: 3.2.0
@@ -948,6 +951,9 @@ importers:
       '@types/pino-multi-stream':
         specifier: ^5.1.6
         version: 5.1.6
+      '@types/ssh2-sftp-client':
+        specifier: ^9.0.5
+        version: 9.0.5
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3

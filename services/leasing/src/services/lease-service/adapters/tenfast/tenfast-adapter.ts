@@ -17,6 +17,7 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
   TenfastLeaseTemplateResponseSchema,
+  TenfastLeasesByArticleResponseSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -28,6 +29,54 @@ const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
 
 type SchemaError = { tag: 'schema-error'; error: z.ZodError }
+
+/**
+ * Fetches all pages from a paginated Tenfast endpoint.
+ *
+ * @param buildUrl - Called with the current page cursor on each iteration.
+ *                   Pass an empty string for the first page.
+ * @param schema   - Zod schema for the paginated response. Must have
+ *                   `records`, `next`, and `totalCount` fields.
+ * @returns        - All records across all pages combined, typed as the
+ *                   schema's own output type (preserving branded strings etc.)
+ * @throws         - On non-200/201 responses or schema parse failures.
+ */
+const fetchAllPages = async <
+  S extends z.ZodType<{
+    records: unknown[]
+    next: string | null
+    totalCount: number
+  }>,
+>(
+  buildUrl: (paginate: string) => string,
+  schema: S
+): Promise<z.output<S>['records']> => {
+  let next: string | null = ''
+  let totalCount = Infinity
+  let records: z.output<S>['records'] = []
+
+  while (next !== null && records.length < totalCount) {
+    const response = await tenfastApi.request({
+      method: 'get',
+      url: buildUrl(next),
+    })
+
+    if (response.status !== 200 && response.status !== 201) {
+      throw new Error(
+        `Tenfast responded with status ${response.status}: ${JSON.stringify(response.data)}`
+      )
+    }
+
+    const parsed = schema.safeParse(response.data)
+    if (!parsed.success) throw parsed.error
+
+    records.push(...parsed.data.records)
+    next = parsed.data.next
+    totalCount = parsed.data.totalCount
+  }
+
+  return records
+}
 
 export const createLease = async (
   contact: Contact,
@@ -923,6 +972,33 @@ export async function updateLeaseInvoiceRows(params: {
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.updateLeaseInvoiceRows')
     return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getLeasesWithHomeInsurance = async (): Promise<
+  AdapterResult<TenfastLease[], 'unknown'>
+> => {
+  try {
+    const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
+    logger.info(
+      { articleId },
+      'Fetching leases with home insurance from Tenfast'
+    )
+    const params = new URLSearchParams({
+      hyresvard: tenfastCompanyId,
+      populate: 'hyresgaster,hyresobjekt',
+      states: 'active,upcoming,preTermination,terminationScheduled',
+    })
+
+    const records = await fetchAllPages(
+      (paginate) =>
+        `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}&paginate=${paginate}`,
+      TenfastLeasesByArticleResponseSchema
+    )
+
+    return { ok: true, data: records }
+  } catch (err: any) {
+    return handleTenfastError(err, 'unknown')
   }
 }
 
