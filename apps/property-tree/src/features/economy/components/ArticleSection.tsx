@@ -26,6 +26,10 @@ interface ArticleSectionProps {
   }
 }
 
+function sanitizePriceInput(value: string): string {
+  return value.replace(/\D/g, '')
+}
+
 export function ArticleSection({
   invoiceRows,
   administrativeCosts,
@@ -35,7 +39,7 @@ export function ArticleSection({
 }: ArticleSectionProps) {
   const handleChangeRowPrice = (index: number, value: string) => {
     const newRows = [...invoiceRows]
-    newRows[index] = { ...newRows[index], price: value }
+    newRows[index] = { ...newRows[index], price: sanitizePriceInput(value) }
     onInvoiceRowsChange(newRows)
   }
 
