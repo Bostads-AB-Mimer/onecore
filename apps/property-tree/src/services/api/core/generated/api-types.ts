@@ -1517,33 +1517,6 @@ export interface paths {
       };
     };
   };
-  "/leases/for-csc": {
-    /**
-     * Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
-     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
-     */
-    get: {
-      responses: {
-        /** @description Successfully retrieved upcoming move-ins */
-        200: {
-          content: {
-            "application/json": {
-              content?: components["schemas"]["CustomerScoreCardInfoSchema"][];
-              _meta?: Record<string, never>;
-            };
-          };
-        };
-        /** @description Invalid query parameters */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
   "/leases/search-v2": {
     /**
      * Search and filter leases
@@ -9590,8 +9563,6 @@ export interface components {
           phone: string | null;
         })[];
       address: string | null;
-      postalCode: string | null;
-      city: string | null;
       /** Format: date-time */
       startDate: string | null;
       /** Format: date-time */
