@@ -27,9 +27,7 @@ interface ArticleSectionProps {
 }
 
 function sanitizePriceInput(value: string): string {
-  const stripped = value.replace(/[^\d.,]/g, '').replace(/,/g, '.')
-  const [integer, ...fractions] = stripped.split('.')
-  return fractions.length === 0 ? integer : `${integer}.${fractions.join('')}`
+  return value.replace(/\D/g, '')
 }
 
 export function ArticleSection({
