@@ -1,7 +1,7 @@
 import { TenfastLease } from '../adapters/tenfast/schemas'
 import { schemas } from '@onecore/types'
 
-type LfExportRow = schemas.v1.LfInsuranceExportRow
+type LfExportRow = schemas.v1.HomeInsuranceExportRow
 
 export const mapLeasesToLfExportRows = (
   leases: TenfastLease[],
