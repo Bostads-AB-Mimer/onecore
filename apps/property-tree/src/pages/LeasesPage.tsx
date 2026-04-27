@@ -49,10 +49,13 @@ const leaseTypeOptions = [
 ] as const
 
 const statusOptions = [
-  { label: 'Gällande', value: '0' },
-  { label: 'Kommande', value: '1' },
-  { label: 'Uppsagd', value: '2' },
-  { label: 'Upphörd', value: '3' },
+  { label: 'Gällande', value: 'current' },
+  { label: 'Kommande', value: 'upcoming' },
+  { label: 'Uppsagd', value: 'abouttoend' },
+  { label: 'Upphört', value: 'ended' },
+  { label: 'Prel. uppsagt', value: 'preliminaryterminated' },
+  { label: 'Signering', value: 'pendingsignature' },
+  { label: 'Ej skickat', value: 'notsent' },
 ] as const
 
 const districtOptions = [

@@ -11,11 +11,30 @@ export type PaginatedResponse<T> = {
   _links: PaginationLinks[]
 }
 
-// Derived from generated types — single source of truth
-type SearchQuery = NonNullable<
-  paths['/leases/search']['get']['parameters']['query']
->
-export type LeaseSearchQueryParams = Omit<SearchQuery, 'page' | 'limit'>
+export type LeaseSearchQueryParams = {
+  q?: string
+  objectType?: string[]
+  status?: (
+    | 'current'
+    | 'upcoming'
+    | 'abouttoend'
+    | 'ended'
+    | 'preliminaryterminated'
+    | 'pendingsignature'
+    | 'notsent'
+  )[]
+  startDateFrom?: string
+  startDateTo?: string
+  endDateFrom?: string
+  endDateTo?: string
+  property?: string[]
+  buildingCodes?: string[]
+  areaCodes?: string[]
+  districtNames?: string[]
+  buildingManager?: string[]
+  sortBy?: 'leaseStartDate' | 'lastDebitDate' | 'leaseId'
+  sortOrder?: 'asc' | 'desc'
+}
 
 export type ContactInfo = {
   contactCode: string
@@ -29,7 +48,7 @@ async function search(
   page = 1,
   limit = 50
 ): Promise<PaginatedResponse<LeaseSearchResult>> {
-  const { data, error } = await GET('/leases/search', {
+  const { data, error } = await GET('/leases/search-v2', {
     params: {
       query: {
         ...params,

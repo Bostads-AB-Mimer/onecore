@@ -54,7 +54,7 @@ export function useLeaseFilters() {
     [urlSearchParams]
   )
   const selectedStatuses = useMemo(
-    () => urlSearchParams.getAll('status') as ('0' | '1' | '2' | '3')[],
+    () => urlSearchParams.getAll('status') as ('current' | 'upcoming' | 'abouttoend' | 'ended')[],
     [urlSearchParams]
   )
   const selectedLeaseTypes = useMemo(
