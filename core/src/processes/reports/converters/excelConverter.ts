@@ -203,8 +203,8 @@ const toDateString = (value: Date | null | undefined): string | null => {
   return value.toISOString().slice(0, 10)
 }
 
-export const convertLfInsuranceToXlsx = async (
-  rows: schemas.v1.LfInsuranceExportRow[]
+export const convertHomeInsuranceToXlsx = async (
+  rows: schemas.v1.HomeInsuranceExportRow[]
 ): Promise<Buffer> => {
   const workbook = new ExcelJs.Workbook()
   const worksheet = workbook.addWorksheet('Hemförsäkring', {

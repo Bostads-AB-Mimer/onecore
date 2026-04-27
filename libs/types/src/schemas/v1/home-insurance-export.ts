@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const LfInsuranceExportRowSchema = z.object({
+export const HomeInsuranceExportRowSchema = z.object({
   leaseId: z.string(),
   leaseStatus: z.string(),
   leaseFromDate: z.coerce.date(),
@@ -19,8 +19,8 @@ export const LfInsuranceExportRowSchema = z.object({
   email: z.string().nullable(),
 })
 
-export type LfInsuranceExportRow = z.infer<typeof LfInsuranceExportRowSchema>
+export type HomeInsuranceExportRow = z.infer<typeof HomeInsuranceExportRowSchema>
 
-export const LfInsuranceExportResponseSchema = z.object({
-  content: z.array(LfInsuranceExportRowSchema),
+export const HomeInsuranceExportResponseSchema = z.object({
+  content: z.array(HomeInsuranceExportRowSchema),
 })

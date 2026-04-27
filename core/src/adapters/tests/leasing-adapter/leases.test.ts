@@ -7,7 +7,7 @@ const serviceUrl = config.tenantsLeasesService.url
 
 describe(leasingAdapter.getHomeInsuranceExport, () => {
   it('returns ok with parsed rows on 200', async () => {
-    const rows = factory.lfInsuranceExportRow.buildList(2)
+    const rows = factory.homeInsuranceExportRow.buildList(2)
     nock(serviceUrl).get('/leases/lf-export').reply(200, { content: rows })
 
     const result = await leasingAdapter.getHomeInsuranceExport()

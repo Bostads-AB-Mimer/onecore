@@ -13,8 +13,8 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
-type LfInsuranceExportRow = z.infer<
-  typeof schemas.v1.LfInsuranceExportRowSchema
+type HomeInsuranceExportRow = z.infer<
+  typeof schemas.v1.HomeInsuranceExportRowSchema
 >
 
 export const getLease = async (leaseId: string): Promise<Lease | null> => {
@@ -234,7 +234,7 @@ export const searchLeasesV2 = async (
 }
 
 export const getHomeInsuranceExport = async (): Promise<
-  AdapterResult<LfInsuranceExportRow[], 'schema-error' | 'unknown'>
+  AdapterResult<HomeInsuranceExportRow[], 'schema-error' | 'unknown'>
 > => {
   try {
     const response = await axios.get(
@@ -249,7 +249,7 @@ export const getHomeInsuranceExport = async (): Promise<
       return { ok: false, err: 'unknown' }
     }
 
-    const parsed = schemas.v1.LfInsuranceExportResponseSchema.safeParse(
+    const parsed = schemas.v1.HomeInsuranceExportResponseSchema.safeParse(
       response.data
     )
     if (!parsed.success) {

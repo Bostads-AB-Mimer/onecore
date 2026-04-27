@@ -72,7 +72,7 @@ export interface Config {
     bosociala: string
     dev: string
   }
-  lf: {
+  homeInsurance: {
     sftp: {
       host: string
       port: number
@@ -155,7 +155,7 @@ const config = configPackage({
       economy: '',
       bosociala: '',
     },
-    lf: {
+    homeInsurance: {
       sftp: {
         host: '',
         port: 22,
@@ -231,5 +231,5 @@ export default {
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
   scanner: config.get('scanner'),
-  lf: config.get('lf'),
+  homeInsurance: config.get('homeInsurance'),
 } as Config

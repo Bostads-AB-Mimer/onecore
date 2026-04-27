@@ -1,10 +1,10 @@
 import { Factory } from 'fishery'
 import { schemas } from '@onecore/types'
 
-type LfInsuranceExportRow = schemas.v1.LfInsuranceExportRow
+type HomeInsuranceExportRow = schemas.v1.HomeInsuranceExportRow
 
-export const LfInsuranceExportRowFactory = Factory.define<LfInsuranceExportRow>(
-  ({ sequence }) => ({
+export const HomeInsuranceExportRowFactory =
+  Factory.define<HomeInsuranceExportRow>(({ sequence }) => ({
     leaseId: `lease-${sequence}`,
     leaseStatus: 'G',
     leaseFromDate: new Date('2023-01-01'),
@@ -21,5 +21,4 @@ export const LfInsuranceExportRowFactory = Factory.define<LfInsuranceExportRow>(
     address: 'Storgatan 1',
     phoneNumber: '0701234567',
     email: null,
-  })
-)
+  }))
