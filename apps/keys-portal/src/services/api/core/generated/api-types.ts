@@ -11988,9 +11988,287 @@ export interface components {
       quantity: number;
       isMissing: boolean;
       /** Format: date-time */
-      fixedDate: string | null;
-      workOrderCreated: boolean;
-      workOrderStatus: number | null;
+      date: string;
+      /** Format: date-time */
+      startedAt: string | null;
+      /** Format: date-time */
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string | null;
+      isFurnished: boolean;
+      leaseId: string;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              /** Format: date-time */
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+      lease: ({
+        leaseId: string;
+        leaseNumber: string;
+        /** Format: date-time */
+        leaseStartDate: string;
+        /** Format: date-time */
+        leaseEndDate?: string;
+        /** @enum {string} */
+        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
+        tenantContactIds?: string[];
+        rentalPropertyId: string;
+        rentalProperty?: {
+          rentalPropertyId: string;
+          apartmentNumber: number;
+          size: number;
+          type: string;
+          address?: {
+            street?: string;
+            number: string;
+            postalCode: string;
+            city: string;
+          };
+          rentalPropertyType: string;
+          additionsIncludedInRent: string;
+          otherInfo?: string;
+          roomTypes?: {
+              roomTypeId: string;
+              name: string;
+            }[];
+          /** Format: date-time */
+          lastUpdated?: string;
+        };
+        type: string;
+        rentInfo?: {
+          currentRent: {
+            rentId?: string;
+            leaseId?: string;
+            currentRent: number;
+            vat: number;
+            additionalChargeDescription?: string;
+            additionalChargeAmount?: number;
+            /** Format: date-time */
+            rentStartDate?: string;
+            /** Format: date-time */
+            rentEndDate?: string;
+          };
+        };
+        address?: {
+          street?: string;
+          number: string;
+          postalCode: string;
+          city: string;
+        };
+        noticeGivenBy?: string;
+        /** Format: date-time */
+        noticeDate?: string;
+        noticeTimeTenant?: string | number;
+        /** Format: date-time */
+        preferredMoveOutDate?: string;
+        /** Format: date-time */
+        terminationDate?: string;
+        /** Format: date-time */
+        contractDate?: string;
+        /** Format: date-time */
+        lastDebitDate?: string;
+        /** Format: date-time */
+        approvalDate?: string;
+        residentialArea?: {
+          code: string;
+          caption: string;
+        };
+        tenants?: {
+            contactCode: string;
+            contactKey: string;
+            leaseIds?: string[];
+            firstName: string;
+            lastName: string;
+            fullName: string;
+            nationalRegistrationNumber: string;
+            /** Format: date-time */
+            birthDate: string;
+            address?: {
+              street?: string;
+              number: string;
+              postalCode: string;
+              city: string;
+            };
+            phoneNumbers?: {
+                phoneNumber: string;
+                type: string;
+                isMainNumber: boolean;
+              }[];
+            emailAddress?: string;
+            isTenant: boolean;
+            parkingSpaceWaitingList?: {
+              /** Format: date-time */
+              queueTime: string;
+              queuePoints: number;
+              type: number;
+            };
+            specialAttention?: boolean;
+            leaseContactType?: string;
+          }[];
+      }) | null;
+      residence: ({
+        id: string;
+        code: string;
+        name: string | null;
+        /** @enum {string|null} */
+        status: "VACANT" | "LEASED" | null;
+        entrance: string | null;
+        location: string | null;
+        floor: string | null;
+        partNo: number | null;
+        part: string | null;
+        deleted: boolean;
+        validityPeriod: {
+          /** Format: date-time */
+          fromDate: string;
+          /** Format: date-time */
+          toDate: string;
+        };
+        accessibility: {
+          wheelchairAccessible: boolean;
+          elevator: boolean;
+          residenceAdapted: boolean;
+        };
+        features: {
+          hygieneFacility: string | null;
+          balcony1?: {
+            location: string;
+            type: string;
+          };
+          balcony2?: {
+            location: string;
+            type: string;
+          };
+          patioLocation: string | null;
+          sauna: boolean;
+          extraToilet: boolean;
+          sharedKitchen: boolean;
+          petAllergyFree: boolean;
+          /** @description Is the apartment checked for electric allergy intolerance? */
+          electricAllergyIntolerance: boolean;
+          smokeFree: boolean;
+          asbestos: boolean;
+        };
+        type: {
+          code: string;
+          name: string | null;
+          roomCount: number | null;
+          kitchen: number;
+        };
+        residenceType: {
+          residenceTypeId: string;
+          code: string;
+          name: string | null;
+          roomCount: number | null;
+          kitchen: number;
+          systemStandard: number;
+          checklistId: string | null;
+          componentTypeActionId: string | null;
+          statisticsGroupSCBId: string | null;
+          statisticsGroup2Id: string | null;
+          statisticsGroup3Id: string | null;
+          statisticsGroup4Id: string | null;
+          timestamp: string;
+        };
+        rentalInformation: ({
+          apartmentNumber: string | null;
+          rentalId: string | null;
+          type: {
+            code: string;
+            name: string | null;
+          };
+        }) | null;
+        propertyObject: {
+          energy: {
+            energyClass: number;
+            /** Format: date-time */
+            energyRegistered?: string;
+            /** Format: date-time */
+            energyReceived?: string;
+            energyIndex?: number;
+          };
+          rentalId: string | null;
+          rentalInformation: ({
+            type: {
+              code: string;
+              name: string | null;
+            };
+          }) | null;
+          rentalBlocks: ({
+              id: string;
+              blockReasonId: string | null;
+              blockReason: string | null;
+              /** Format: date-time */
+              fromDate: string;
+              /** Format: date-time */
+              toDate: string | null;
+              amount: number | null;
+            })[];
+        };
+        property: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        building: {
+          id: string | null;
+          name: string | null;
+          code: string | null;
+        };
+        staircase: ({
+          id: string;
+          code: string;
+          name: string | null;
+          features: {
+            floorPlan: string | null;
+            accessibleByElevator: boolean;
+          };
+          dates: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+          };
+          property?: {
+            propertyId: string | null;
+            propertyName: string | null;
+            propertyCode: string | null;
+          };
+          building?: {
+            buildingId: string | null;
+            buildingName: string | null;
+            buildingCode: string | null;
+          };
+          deleted: boolean;
+          timestamp: string;
+        }) | null;
+        areaSize: number | null;
+        malarEnergiFacilityId: string | null;
+      }) | null;
     };
     TenantContactsResponse: {
       inspection: {

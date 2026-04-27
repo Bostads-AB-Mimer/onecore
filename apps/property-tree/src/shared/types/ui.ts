@@ -6,4 +6,5 @@ export enum ContextType {
   MaintenanceUnit = 'maintenanceUnit',
   ComponentInstance = 'component-instance',
   ComponentModel = 'component-model',
+  InspectionPhoto = 'inspection-photo',
 }

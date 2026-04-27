@@ -7,6 +7,7 @@ import { Textarea } from '@/shared/ui/Textarea'
 
 import { type ComponentType, getConditionConfig } from '../constants'
 import { ActionChecklist } from './ActionChecklist'
+import type { InspectionPhotoUploadContext } from './PhotoCapture'
 import { PhotoGallery } from './PhotoGallery'
 
 interface ComponentDetailSheetProps {
@@ -20,9 +21,10 @@ interface ComponentDetailSheetProps {
   actions: string[]
   componentType: ComponentType
   onNoteChange: (note: string) => void
-  onPhotoAdd: (photoDataUrl: string) => void
+  onPhotoAdd: (path: string) => void
   onPhotoRemove: (index: number) => void
   onActionToggle: (action: string) => void
+  uploadContext: InspectionPhotoUploadContext
 }
 
 export function ComponentDetailSheet({
@@ -38,6 +40,7 @@ export function ComponentDetailSheet({
   onPhotoAdd,
   onPhotoRemove,
   onActionToggle,
+  uploadContext,
 }: ComponentDetailSheetProps) {
   const conditionConfig = getConditionConfig(condition)
 
@@ -74,6 +77,7 @@ export function ComponentDetailSheet({
               photos={photos}
               onRemovePhoto={onPhotoRemove}
               onAddPhoto={onPhotoAdd}
+              uploadContext={uploadContext}
             />
           </div>
 

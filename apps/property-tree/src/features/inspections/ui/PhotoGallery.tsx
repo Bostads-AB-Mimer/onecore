@@ -1,33 +1,47 @@
 import { useState } from 'react'
-import { Plus, X, ZoomIn } from 'lucide-react'
+import { X, ZoomIn } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
 import { Dialog, DialogContent } from '@/shared/ui/Dialog'
 
-import { PhotoCapture } from './PhotoCapture'
+import { useInspectionPhotos } from '../hooks/useInspectionPhotos'
+
+import { InspectionPhoto } from './InspectionPhoto'
+import { PhotoCapture, type InspectionPhotoUploadContext } from './PhotoCapture'
 
 interface PhotoGalleryProps {
   photos: string[]
   onRemovePhoto: (index: number) => void
-  onAddPhoto: (photoDataUrl: string) => void
+  onAddPhoto: (path: string) => void
+  uploadContext: InspectionPhotoUploadContext
 }
 
 export function PhotoGallery({
   photos,
   onRemovePhoto,
   onAddPhoto,
+  uploadContext,
 }: PhotoGalleryProps) {
   const [fullscreenPhotoIndex, setFullscreenPhotoIndex] = useState<
     number | null
   >(null)
+  const { deleteAsync } = useInspectionPhotos(uploadContext.inspectionId)
+
+  const handleRemove = (index: number) => {
+    const path = photos[index]
+    onRemovePhoto(index)
+    // Best-effort cleanup; the array entry is gone regardless. Orphan files
+    // are tolerated (retention policy is out of scope per MIM-1709).
+    void deleteAsync(path).catch(() => {})
+  }
 
   return (
     <>
       <div className="grid grid-cols-3 gap-2">
         {photos.map((photo, index) => (
           <div key={index} className="relative aspect-square group">
-            <img
-              src={photo}
+            <InspectionPhoto
+              path={photo}
               alt={`Foto ${index + 1}`}
               className="w-full h-full object-cover rounded-lg border border-border cursor-pointer"
               onClick={() => setFullscreenPhotoIndex(index)}
@@ -38,7 +52,7 @@ export function PhotoGallery({
               className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => {
                 e.stopPropagation()
-                onRemovePhoto(index)
+                handleRemove(index)
               }}
             >
               <X className="h-3 w-3" />
@@ -49,7 +63,10 @@ export function PhotoGallery({
           </div>
         ))}
         <div className="aspect-square border-2 border-dashed border-border rounded-lg flex items-center justify-center">
-          <PhotoCapture onPhotoCapture={onAddPhoto} photoCount={0} />
+          <PhotoCapture
+            onPhotoCaptured={onAddPhoto}
+            uploadContext={uploadContext}
+          />
         </div>
       </div>
 
@@ -61,8 +78,8 @@ export function PhotoGallery({
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
           {fullscreenPhotoIndex !== null && (
             <div className="relative">
-              <img
-                src={photos[fullscreenPhotoIndex]}
+              <InspectionPhoto
+                path={photos[fullscreenPhotoIndex]}
                 alt={`Foto ${fullscreenPhotoIndex + 1}`}
                 className="w-full h-full object-contain"
               />
@@ -71,7 +88,7 @@ export function PhotoGallery({
                   variant="secondary"
                   size="icon"
                   onClick={() => {
-                    onRemovePhoto(fullscreenPhotoIndex)
+                    handleRemove(fullscreenPhotoIndex)
                     setFullscreenPhotoIndex(null)
                   }}
                 >

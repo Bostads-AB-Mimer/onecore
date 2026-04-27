@@ -183,6 +183,7 @@ export function InspectionForm({
                     <RoomInspectionEditor
                       room={room}
                       inspectionData={roomData}
+                      inspectionId={existingInspection?.id}
                       onConditionUpdate={(field, value) =>
                         handleConditionUpdate(room.id, field, value)
                       }

@@ -11,7 +11,7 @@ import {
   COST_RESPONSIBILITY_LABEL,
   type CostResponsibility,
 } from '../constants'
-import { PhotoCapture } from './PhotoCapture'
+import { PhotoCapture, type InspectionPhotoUploadContext } from './PhotoCapture'
 
 interface ComponentInspectionCardProps {
   componentKey: string
@@ -24,7 +24,8 @@ interface ComponentInspectionCardProps {
   onConditionChange: (value: string) => void
   onNoteChange: (value: string) => void
   onCostResponsibilityChange: (value: CostResponsibility) => void
-  onPhotoCapture: (photoDataUrl: string) => void
+  onPhotoCaptured: (path: string) => void
+  uploadContext: InspectionPhotoUploadContext
   onOpenDetail: () => void
 }
 
@@ -39,7 +40,8 @@ export function ComponentInspectionCard({
   onConditionChange,
   onNoteChange,
   onCostResponsibilityChange,
-  onPhotoCapture,
+  onPhotoCaptured,
+  uploadContext,
   onOpenDetail,
 }: ComponentInspectionCardProps) {
   const [isNoteFocused, setIsNoteFocused] = useState(false)
@@ -140,7 +142,10 @@ export function ComponentInspectionCard({
             isNoteFocused ? 'min-h-[80px]' : 'min-h-[40px] h-[40px]'
           }`}
         />
-        <PhotoCapture onPhotoCapture={onPhotoCapture} photoCount={0} />
+        <PhotoCapture
+          onPhotoCaptured={onPhotoCaptured}
+          uploadContext={uploadContext}
+        />
       </div>
     </div>
   )

@@ -266,6 +266,7 @@ export function MobileInspectionForm({
             <RoomInspectionEditor
               room={currentRoom}
               inspectionData={inspectionData[currentRoom.id]}
+              inspectionId={existingInspection?.id}
               onConditionUpdate={(field, value) =>
                 handleConditionUpdate(currentRoom.id, field, value)
               }

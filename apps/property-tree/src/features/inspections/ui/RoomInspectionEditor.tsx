@@ -31,6 +31,7 @@ type OpenDetail =
 interface RoomInspectionEditorProps {
   room: Room
   inspectionData: InspectionRoom
+  inspectionId: string | undefined
   onConditionUpdate: (
     field: keyof InspectionRoom['conditions'],
     value: string
@@ -94,6 +95,7 @@ interface RoomInspectionEditorProps {
 export function RoomInspectionEditor({
   room,
   inspectionData,
+  inspectionId,
   onConditionUpdate,
   onActionUpdate,
   onComponentNoteUpdate,
@@ -199,9 +201,15 @@ export function RoomInspectionEditor({
                 onCostResponsibilityChange={(value) =>
                   onComponentCostResponsibilityUpdate(surfaceKey, value)
                 }
-                onPhotoCapture={(photoDataUrl) =>
-                  onComponentPhotoAdd(surfaceKey, photoDataUrl)
+                onPhotoCaptured={(path) =>
+                  onComponentPhotoAdd(surfaceKey, path)
                 }
+                uploadContext={{
+                  inspectionId,
+                  roomId: room.id,
+                  roomName: room.name,
+                  target: { kind: 'surface', surfaceKey },
+                }}
                 onOpenDetail={() =>
                   setOpenDetail({ kind: 'surface', key: surfaceKey })
                 }
@@ -240,13 +248,15 @@ export function RoomInspectionEditor({
                     value
                   )
                 }
-                onPhotoCapture={(photoDataUrl) =>
-                  onFetchedComponentPhotoAdd(
-                    componentId,
-                    row.label,
-                    photoDataUrl
-                  )
+                onPhotoCaptured={(path) =>
+                  onFetchedComponentPhotoAdd(componentId, row.label, path)
                 }
+                uploadContext={{
+                  inspectionId,
+                  roomId: room.id,
+                  roomName: room.name,
+                  target: { kind: 'component', componentId },
+                }}
                 onOpenDetail={() =>
                   setOpenDetail({ kind: 'component', id: componentId })
                 }
@@ -281,13 +291,17 @@ export function RoomInspectionEditor({
               actions={inspectionData.actions[surfaceKey]}
               componentType={row.type}
               onNoteChange={(note) => onComponentNoteUpdate(surfaceKey, note)}
-              onPhotoAdd={(photoDataUrl) =>
-                onComponentPhotoAdd(surfaceKey, photoDataUrl)
-              }
+              onPhotoAdd={(path) => onComponentPhotoAdd(surfaceKey, path)}
               onPhotoRemove={(index) =>
                 onComponentPhotoRemove(surfaceKey, index)
               }
               onActionToggle={(action) => onActionUpdate(surfaceKey, action)}
+              uploadContext={{
+                inspectionId,
+                roomId: room.id,
+                roomName: room.name,
+                target: { kind: 'surface', surfaceKey },
+              }}
             />
           )
         })}
@@ -313,8 +327,8 @@ export function RoomInspectionEditor({
               onNoteChange={(note) =>
                 onFetchedComponentNoteUpdate(componentId, row.label, note)
               }
-              onPhotoAdd={(photoDataUrl) =>
-                onFetchedComponentPhotoAdd(componentId, row.label, photoDataUrl)
+              onPhotoAdd={(path) =>
+                onFetchedComponentPhotoAdd(componentId, row.label, path)
               }
               onPhotoRemove={(index) =>
                 onFetchedComponentPhotoRemove(componentId, row.label, index)
@@ -322,6 +336,12 @@ export function RoomInspectionEditor({
               onActionToggle={(action) =>
                 onFetchedComponentActionUpdate(componentId, row.label, action)
               }
+              uploadContext={{
+                inspectionId,
+                roomId: room.id,
+                roomName: room.name,
+                target: { kind: 'component', componentId },
+              }}
             />
           )
         })}
