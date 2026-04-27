@@ -30,7 +30,11 @@ export async function handleHomeInsuranceExport() {
       'Home insurance export written locally'
     )
   } else {
-    await sftpAdapter.uploadFile(xlsxBuffer, fileName, config.homeInsurance.sftp)
+    await sftpAdapter.uploadFile(
+      xlsxBuffer,
+      fileName,
+      config.homeInsurance.sftp
+    )
     logger.info(
       { fileName, rowCount: rows.length },
       'Home insurance export complete'

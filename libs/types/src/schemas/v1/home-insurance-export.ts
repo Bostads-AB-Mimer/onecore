@@ -19,7 +19,9 @@ export const HomeInsuranceExportRowSchema = z.object({
   email: z.string().nullable(),
 })
 
-export type HomeInsuranceExportRow = z.infer<typeof HomeInsuranceExportRowSchema>
+export type HomeInsuranceExportRow = z.infer<
+  typeof HomeInsuranceExportRowSchema
+>
 
 export const HomeInsuranceExportResponseSchema = z.object({
   content: z.array(HomeInsuranceExportRowSchema),
