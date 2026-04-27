@@ -1,16 +1,10 @@
 import { Factory } from 'fishery'
+import { inspection } from '@onecore/types'
 import {
   XpandDbInspection,
   XpandDbDetailedInspection,
   XpandDbDetailedInspectionRemark,
 } from '../../adapters/xpand-adapter'
-import {
-  XpandInspection,
-  DetailedXpandInspection,
-  DetailedXpandInspectionRoom,
-  DetailedXpandInspectionRemark,
-  InspectionRoom,
-} from '../../schemas'
 import {
   CreateInspectionParams,
   SaveInspectionDraftParams,
@@ -31,17 +25,18 @@ export const XpandDbInspectionFactory = Factory.define<XpandDbInspection>(
   })
 )
 
-export const XpandInspectionFactory = Factory.define<XpandInspection>(() => ({
-  id: 'INSPECTION001',
-  status: 'Genomförd',
-  date: new Date('2023-01-01T10:00:00Z'),
-  inspector: 'INSPECTOR001',
-  type: 'Type A',
-  address: '123 Main St',
-  apartmentCode: 'APT001',
-  leaseId: 'LEASE001',
-  masterKeyAccess: 'Huvudnyckel',
-}))
+export const XpandInspectionFactory =
+  Factory.define<inspection.XpandInspection>(() => ({
+    id: 'INSPECTION001',
+    status: 'Genomförd',
+    date: new Date('2023-01-01T10:00:00Z'),
+    inspector: 'INSPECTOR001',
+    type: 'Type A',
+    address: '123 Main St',
+    apartmentCode: 'APT001',
+    leaseId: 'LEASE001',
+    masterKeyAccess: 'Huvudnyckel',
+  }))
 
 export const XpandDbDetailedInspectionFactory =
   Factory.define<XpandDbDetailedInspection>(() => ({
@@ -66,7 +61,7 @@ export const XpandDbDetailedInspectionFactory =
   }))
 
 export const DetailedXpandInspectionFactory =
-  Factory.define<DetailedXpandInspection>(() => ({
+  Factory.define<inspection.DetailedXpandInspection>(() => ({
     id: 'INSPECTION001',
     status: 'Genomförd',
     date: new Date('2023-01-01T10:00:00Z'),
@@ -109,7 +104,7 @@ export const DetailedXpandInspectionFactory =
   }))
 
 export const DetailedXpandInspectionRoomFactory =
-  Factory.define<DetailedXpandInspectionRoom>(() => ({
+  Factory.define<inspection.DetailedXpandInspectionRoom>(() => ({
     room: 'Living Room',
     remarks: [],
   }))
@@ -132,7 +127,7 @@ export const XpandDbDetailedInspectionRemarkFactory =
   }))
 
 export const DetailedXpandInspectionRemarkFactory =
-  Factory.define<DetailedXpandInspectionRemark>(() => ({
+  Factory.define<inspection.DetailedXpandInspectionRemark>(() => ({
     remarkId: 'REMARK001',
     location: 'Living Room',
     buildingComponent: 'Wall',
@@ -267,20 +262,22 @@ const emptyCostResponsibilities = {
   details: null,
 }
 
-export const InspectionRoomFactory = Factory.define<InspectionRoom>(() => ({
-  roomId: 'room-1',
-  conditions: { ...emptyConditions },
-  actions: { ...emptyActions },
-  componentNotes: { ...emptyConditions },
-  componentCosts: { ...emptyCosts },
-  componentPhotos: { ...emptyActions },
-  componentCostResponsibilities: { ...emptyCostResponsibilities },
-  photos: [],
-  isApproved: false,
-  isHandled: false,
-  detailComponents: [],
-  components: [],
-}))
+export const InspectionRoomFactory = Factory.define<inspection.InspectionRoom>(
+  () => ({
+    roomId: 'room-1',
+    conditions: { ...emptyConditions },
+    actions: { ...emptyActions },
+    componentNotes: { ...emptyConditions },
+    componentCosts: { ...emptyCosts },
+    componentPhotos: { ...emptyActions },
+    componentCostResponsibilities: { ...emptyCostResponsibilities },
+    photos: [],
+    isApproved: false,
+    isHandled: false,
+    detailComponents: [],
+    components: [],
+  })
+)
 
 export const SaveInspectionDraftParamsFactory =
   Factory.define<SaveInspectionDraftParams>(() => ({

@@ -1,15 +1,9 @@
 import { z } from 'zod'
 
-/**
- * Inspection status filter constants
- */
 export const INSPECTION_STATUS_FILTER = {
   ONGOING: 'ongoing',
   COMPLETED: 'completed',
 } as const
-
-export type InspectionStatusFilter =
-  (typeof INSPECTION_STATUS_FILTER)[keyof typeof INSPECTION_STATUS_FILTER]
 
 export const XpandInspectionSchema = z.object({
   id: z.string(),
@@ -93,21 +87,10 @@ export const GetInspectionsByResidenceIdQuerySchema = z.object({
     .optional(),
 })
 
-export type XpandInspection = z.infer<typeof XpandInspectionSchema>
-export type DetailedXpandInspectionRemark = z.infer<
-  typeof DetailedXpandInspectionRemarkSchema
->
-export type DetailedXpandInspectionRoom = z.infer<
-  typeof DetailedXpandInspectionRoomSchema
->
-export type DetailedXpandInspection = z.infer<
-  typeof DetailedXpandInspectionSchema
->
-
 // Note: 'details' fields in conditions/actions/componentNotes/componentPhotos are kept
 // for backward compatibility with existing persisted data. New detail inspections use
 // the detailComponents array instead. The UI no longer renders these fields.
-const InspectionRoomConditionsSchema = z.object({
+export const InspectionRoomConditionsSchema = z.object({
   wall1: z.string(),
   wall2: z.string(),
   wall3: z.string(),
@@ -117,7 +100,7 @@ const InspectionRoomConditionsSchema = z.object({
   details: z.string(),
 })
 
-const InspectionRoomActionsSchema = z.object({
+export const InspectionRoomActionsSchema = z.object({
   wall1: z.array(z.string()),
   wall2: z.array(z.string()),
   wall3: z.array(z.string()),
@@ -127,7 +110,7 @@ const InspectionRoomActionsSchema = z.object({
   details: z.array(z.string()),
 })
 
-const InspectionRoomCostsSchema = z.object({
+export const InspectionRoomCostsSchema = z.object({
   wall1: z.number().int().min(0).default(0),
   wall2: z.number().int().min(0).default(0),
   wall3: z.number().int().min(0).default(0),
@@ -137,7 +120,7 @@ const InspectionRoomCostsSchema = z.object({
   details: z.number().int().min(0).default(0),
 })
 
-const InspectionRoomCostResponsibilitiesSchema = z.object({
+export const InspectionRoomCostResponsibilitiesSchema = z.object({
   wall1: z.enum(['tenant', 'landlord']).nullable().default(null),
   wall2: z.enum(['tenant', 'landlord']).nullable().default(null),
   wall3: z.enum(['tenant', 'landlord']).nullable().default(null),
@@ -147,7 +130,7 @@ const InspectionRoomCostResponsibilitiesSchema = z.object({
   details: z.enum(['tenant', 'landlord']).nullable().default(null),
 })
 
-const DetailComponentSchema = z.object({
+export const DetailComponentSchema = z.object({
   id: z.string(),
   type: z.string(),
   label: z.string(),
@@ -197,7 +180,3 @@ export const SaveInspectionDraftRequestSchema = z.object({
   rooms: z.array(InspectionRoomSchema),
   isFurnished: z.boolean(),
 })
-
-export type InspectionComponent = z.infer<typeof InspectionComponentSchema>
-export type InspectionRoom = z.infer<typeof InspectionRoomSchema>
-export type InternalInspection = z.infer<typeof InternalInspectionSchema>
