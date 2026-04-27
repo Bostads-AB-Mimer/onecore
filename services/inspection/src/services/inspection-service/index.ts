@@ -31,11 +31,11 @@ export const routes = (router: KoaRouter) => {
   )
   registerSchema(
     'DetailedXpandInspectionRoom',
-    inspection.DetailedXpandInspectionSchema
+    inspection.DetailedXpandInspectionRoomSchema
   )
   registerSchema(
     'DetailedXpandInspectionRemark',
-    inspection.DetailedXpandInspectionSchema
+    inspection.DetailedXpandInspectionRemarkSchema
   )
   registerSchema('CreateInspection', CreateInspectionSchema)
   registerSchema('UpdateInspectionStatus', UpdateInspectionStatusSchema)

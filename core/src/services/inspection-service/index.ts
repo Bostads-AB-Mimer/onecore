@@ -38,8 +38,14 @@ export const routes = (router: KoaRouter) => {
   registerSchema('InspectionComponent', inspection.InspectionComponentSchema)
   registerSchema('InspectionRoom', inspection.InspectionRoomSchema)
   registerSchema('DetailedInspection', schemas.DetailedInspectionSchema)
-  registerSchema('DetailedInspectionRoom', schemas.DetailedInspectionSchema)
-  registerSchema('DetailedInspectionRemark', schemas.DetailedInspectionSchema)
+  registerSchema(
+    'DetailedInspectionRoom',
+    inspection.DetailedXpandInspectionRoomSchema
+  )
+  registerSchema(
+    'DetailedInspectionRemark',
+    inspection.DetailedXpandInspectionRemarkSchema
+  )
   registerSchema('TenantContactsResponse', schemas.TenantContactsResponseSchema)
   registerSchema('SendProtocolRequest', schemas.SendProtocolRequestSchema)
   registerSchema('SendProtocolResponse', schemas.SendProtocolResponseSchema)

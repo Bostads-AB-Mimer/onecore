@@ -503,84 +503,37 @@ export interface components {
       }[]
     }
     DetailedXpandInspectionRoom: {
-      id: string
-      status: string
-      /** Format: date-time */
-      date: string
-      startedAt: string | null
-      endedAt: string | null
-      inspector: string
-      type: string
-      residenceId: string
-      address: string
-      apartmentCode: string | null
-      isFurnished: boolean
-      leaseId: string
-      isTenantPresent: boolean
-      isNewTenantPresent: boolean
-      masterKeyAccess: string | null
-      hasRemarks: boolean
-      notes: string | null
-      totalCost: number | null
-      remarkCount: number
-      rooms: {
-        room: string
-        remarks: {
-          remarkId: string
-          location: string | null
-          buildingComponent: string | null
-          notes: string | null
-          remarkGrade: number
-          remarkStatus: string | null
-          cost: number
-          invoice: boolean
-          quantity: number
-          isMissing: boolean
-          fixedDate: string | null
-          workOrderCreated: boolean
-          workOrderStatus: number | null
-        }[]
+      room: string
+      remarks: {
+        remarkId: string
+        location: string | null
+        buildingComponent: string | null
+        notes: string | null
+        remarkGrade: number
+        remarkStatus: string | null
+        cost: number
+        invoice: boolean
+        quantity: number
+        isMissing: boolean
+        fixedDate: string | null
+        workOrderCreated: boolean
+        workOrderStatus: number | null
       }[]
     }
     DetailedXpandInspectionRemark: {
-      id: string
-      status: string
-      /** Format: date-time */
-      date: string
-      startedAt: string | null
-      endedAt: string | null
-      inspector: string
-      type: string
-      residenceId: string
-      address: string
-      apartmentCode: string | null
-      isFurnished: boolean
-      leaseId: string
-      isTenantPresent: boolean
-      isNewTenantPresent: boolean
-      masterKeyAccess: string | null
-      hasRemarks: boolean
+      remarkId: string
+      location: string | null
+      buildingComponent: string | null
       notes: string | null
-      totalCost: number | null
-      remarkCount: number
-      rooms: {
-        room: string
-        remarks: {
-          remarkId: string
-          location: string | null
-          buildingComponent: string | null
-          notes: string | null
-          remarkGrade: number
-          remarkStatus: string | null
-          cost: number
-          invoice: boolean
-          quantity: number
-          isMissing: boolean
-          fixedDate: string | null
-          workOrderCreated: boolean
-          workOrderStatus: number | null
-        }[]
-      }[]
+      remarkGrade: number
+      remarkStatus: string | null
+      cost: number
+      invoice: boolean
+      quantity: number
+      isMissing: boolean
+      fixedDate: string | null
+      workOrderCreated: boolean
+      workOrderStatus: number | null
     }
     CreateInspection: {
       status: string
