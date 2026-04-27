@@ -93,4 +93,22 @@ export interface ContactsRepository {
    * @returns A promise that resolves to an array of Contact objects
    */
   getByEmailAddress: (emailAddress: string) => Promise<Contact[]>
+
+  /**
+   * Retrieves contact codes for contacts changed since the given timestamp.
+   *
+   * @param since - The timestamp to query changes from, or null to use the fallback window.
+   *
+   * @returns A promise that resolves to a deduplicated array of contact codes.
+   */
+  getChangedContactCodes: (since: Date | null) => Promise<string[]>
+
+  /**
+   * Retrieves full Contact objects for the given list of contact codes in a single batch.
+   *
+   * @param codes - The contact codes to fetch.
+   *
+   * @returns A promise that resolves to an array of Contact objects.
+   */
+  getByContactCodes: (codes: ContactCode[]) => Promise<Contact[]>
 }

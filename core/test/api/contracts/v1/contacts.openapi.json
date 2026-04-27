@@ -9,9 +9,7 @@
       "get": {
         "summary": "List and filter(search) for contact information",
         "description": "Filtering can be done by wildcard search",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "responses": {
           "200": {
             "description": "OK",
@@ -143,9 +141,7 @@
                               },
                               "type": {
                                 "type": "string",
-                                "enum": [
-                                  "individual"
-                                ]
+                                "enum": ["individual"]
                               },
                               "personal": {
                                 "type": "object",
@@ -189,9 +185,7 @@
                                     "type": "string"
                                   }
                                 },
-                                "required": [
-                                  "contactCode"
-                                ],
+                                "required": ["contactCode"],
                                 "additionalProperties": false
                               }
                             },
@@ -323,9 +317,7 @@
                               },
                               "type": {
                                 "type": "string",
-                                "enum": [
-                                  "organisation"
-                                ]
+                                "enum": ["organisation"]
                               },
                               "organisation": {
                                 "type": "object",
@@ -337,10 +329,7 @@
                                     "type": "string"
                                   }
                                 },
-                                "required": [
-                                  "organisationNumber",
-                                  "name"
-                                ],
+                                "required": ["organisationNumber", "name"],
                                 "additionalProperties": false
                               }
                             },
@@ -372,12 +361,7 @@
                           "type": "number"
                         }
                       },
-                      "required": [
-                        "totalRecords",
-                        "page",
-                        "limit",
-                        "count"
-                      ],
+                      "required": ["totalRecords", "page", "limit", "count"],
                       "additionalProperties": false
                     },
                     "_links": {
@@ -390,28 +374,15 @@
                           },
                           "rel": {
                             "type": "string",
-                            "enum": [
-                              "self",
-                              "first",
-                              "last",
-                              "prev",
-                              "next"
-                            ]
+                            "enum": ["self", "first", "last", "prev", "next"]
                           }
                         },
-                        "required": [
-                          "href",
-                          "rel"
-                        ],
+                        "required": ["href", "rel"],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": [
-                    "content",
-                    "_meta",
-                    "_links"
-                  ],
+                  "required": ["content", "_meta", "_links"],
                   "additionalProperties": false
                 }
               }
@@ -468,10 +439,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "individual",
-                "organisation"
-              ]
+              "enum": ["individual", "organisation"]
             }
           },
           {
@@ -498,9 +466,7 @@
     "/v1/contacts/{contactCode}": {
       "get": {
         "summary": "Get a single contact by canonical id (contact code)",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "responses": {
           "200": {
             "description": "OK",
@@ -631,9 +597,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "individual"
-                              ]
+                              "enum": ["individual"]
                             },
                             "personal": {
                               "type": "object",
@@ -677,9 +641,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "contactCode"
-                              ],
+                              "required": ["contactCode"],
                               "additionalProperties": false
                             }
                           },
@@ -811,9 +773,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "organisation"
-                              ]
+                              "enum": ["organisation"]
                             },
                             "organisation": {
                               "type": "object",
@@ -825,10 +785,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "organisationNumber",
-                                "name"
-                              ],
+                              "required": ["organisationNumber", "name"],
                               "additionalProperties": false
                             }
                           },
@@ -844,9 +801,7 @@
                       ]
                     }
                   },
-                  "required": [
-                    "content"
-                  ],
+                  "required": ["content"],
                   "additionalProperties": false
                 }
               }
@@ -883,9 +838,7 @@
     "/v1/contacts/{contactCode}/trustee": {
       "get": {
         "summary": "Get the trustee of a contact",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "responses": {
           "200": {
             "description": "OK",
@@ -1016,9 +969,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "individual"
-                              ]
+                              "enum": ["individual"]
                             },
                             "personal": {
                               "type": "object",
@@ -1062,9 +1013,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "contactCode"
-                              ],
+                              "required": ["contactCode"],
                               "additionalProperties": false
                             }
                           },
@@ -1196,9 +1145,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "organisation"
-                              ]
+                              "enum": ["organisation"]
                             },
                             "organisation": {
                               "type": "object",
@@ -1210,10 +1157,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "organisationNumber",
-                                "name"
-                              ],
+                              "required": ["organisationNumber", "name"],
                               "additionalProperties": false
                             }
                           },
@@ -1229,9 +1173,7 @@
                       ]
                     }
                   },
-                  "required": [
-                    "content"
-                  ],
+                  "required": ["content"],
                   "additionalProperties": false
                 }
               }
@@ -1268,9 +1210,7 @@
     "/v1/contacts/by-phone-number/{phoneNumber}": {
       "get": {
         "summary": "List contacts by phone number",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "responses": {
           "200": {
             "description": "OK",
@@ -1401,9 +1341,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "individual"
-                              ]
+                              "enum": ["individual"]
                             },
                             "personal": {
                               "type": "object",
@@ -1447,9 +1385,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "contactCode"
-                              ],
+                              "required": ["contactCode"],
                               "additionalProperties": false
                             }
                           },
@@ -1581,9 +1517,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "organisation"
-                              ]
+                              "enum": ["organisation"]
                             },
                             "organisation": {
                               "type": "object",
@@ -1595,10 +1529,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "organisationNumber",
-                                "name"
-                              ],
+                              "required": ["organisationNumber", "name"],
                               "additionalProperties": false
                             }
                           },
@@ -1614,9 +1545,7 @@
                       ]
                     }
                   },
-                  "required": [
-                    "content"
-                  ],
+                  "required": ["content"],
                   "additionalProperties": false
                 }
               }
@@ -1653,9 +1582,7 @@
     "/v1/contacts/by-email-address/{emailAddress}": {
       "get": {
         "summary": "List contacts by email address",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "responses": {
           "200": {
             "description": "OK",
@@ -1786,9 +1713,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "individual"
-                              ]
+                              "enum": ["individual"]
                             },
                             "personal": {
                               "type": "object",
@@ -1832,9 +1757,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "contactCode"
-                              ],
+                              "required": ["contactCode"],
                               "additionalProperties": false
                             }
                           },
@@ -1966,9 +1889,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "organisation"
-                              ]
+                              "enum": ["organisation"]
                             },
                             "organisation": {
                               "type": "object",
@@ -1980,10 +1901,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "organisationNumber",
-                                "name"
-                              ],
+                              "required": ["organisationNumber", "name"],
                               "additionalProperties": false
                             }
                           },
@@ -1999,9 +1917,7 @@
                       ]
                     }
                   },
-                  "required": [
-                    "content"
-                  ],
+                  "required": ["content"],
                   "additionalProperties": false
                 }
               }
@@ -2038,9 +1954,7 @@
     "/v1/contacts/by-national-id/{nid}": {
       "get": {
         "summary": "List contacts by national id (Personnummer / Org.nr)",
-        "tags": [
-          "Contacts"
-        ],
+        "tags": ["Contacts"],
         "responses": {
           "200": {
             "description": "OK",
@@ -2171,9 +2085,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "individual"
-                              ]
+                              "enum": ["individual"]
                             },
                             "personal": {
                               "type": "object",
@@ -2217,9 +2129,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "contactCode"
-                              ],
+                              "required": ["contactCode"],
                               "additionalProperties": false
                             }
                           },
@@ -2351,9 +2261,7 @@
                             },
                             "type": {
                               "type": "string",
-                              "enum": [
-                                "organisation"
-                              ]
+                              "enum": ["organisation"]
                             },
                             "organisation": {
                               "type": "object",
@@ -2365,10 +2273,7 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "organisationNumber",
-                                "name"
-                              ],
+                              "required": ["organisationNumber", "name"],
                               "additionalProperties": false
                             }
                           },
@@ -2384,9 +2289,7 @@
                       ]
                     }
                   },
-                  "required": [
-                    "content"
-                  ],
+                  "required": ["content"],
                   "additionalProperties": false
                 }
               }
@@ -2461,11 +2364,7 @@
                           "type": "boolean"
                         }
                       },
-                      "required": [
-                        "phoneNumber",
-                        "type",
-                        "isPrimary"
-                      ],
+                      "required": ["phoneNumber", "type", "isPrimary"],
                       "additionalProperties": false
                     }
                   },
@@ -2484,11 +2383,7 @@
                           "type": "boolean"
                         }
                       },
-                      "required": [
-                        "emailAddress",
-                        "type",
-                        "isPrimary"
-                      ],
+                      "required": ["emailAddress", "type", "isPrimary"],
                       "additionalProperties": false
                     }
                   },
@@ -2544,9 +2439,7 @@
               },
               "type": {
                 "type": "string",
-                "enum": [
-                  "individual"
-                ]
+                "enum": ["individual"]
               },
               "personal": {
                 "type": "object",
@@ -2590,9 +2483,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "contactCode"
-                ],
+                "required": ["contactCode"],
                 "additionalProperties": false
               }
             },
@@ -2641,11 +2532,7 @@
                           "type": "boolean"
                         }
                       },
-                      "required": [
-                        "phoneNumber",
-                        "type",
-                        "isPrimary"
-                      ],
+                      "required": ["phoneNumber", "type", "isPrimary"],
                       "additionalProperties": false
                     }
                   },
@@ -2664,11 +2551,7 @@
                           "type": "boolean"
                         }
                       },
-                      "required": [
-                        "emailAddress",
-                        "type",
-                        "isPrimary"
-                      ],
+                      "required": ["emailAddress", "type", "isPrimary"],
                       "additionalProperties": false
                     }
                   },
@@ -2724,9 +2607,7 @@
               },
               "type": {
                 "type": "string",
-                "enum": [
-                  "organisation"
-                ]
+                "enum": ["organisation"]
               },
               "organisation": {
                 "type": "object",
@@ -2738,10 +2619,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "organisationNumber",
-                  "name"
-                ],
+                "required": ["organisationNumber", "name"],
                 "additionalProperties": false
               }
             },

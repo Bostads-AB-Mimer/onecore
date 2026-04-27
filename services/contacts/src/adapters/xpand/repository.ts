@@ -1,4 +1,4 @@
-import { type Resource } from '@onecore/utilities'
+import { type Resource, logger } from '@onecore/utilities'
 import knex from 'knex'
 import {
   ContactListParams,
@@ -11,6 +11,7 @@ import {
   NationalIdNumber,
 } from '@src/domain'
 import {
+  cmlogContactChanges,
   contactObjectKeysForEmailAddress,
   contactObjectKeysForPhoneNumber,
   contactsQuery,
@@ -152,6 +153,52 @@ export const xpandContactsRepository = (
       }
 
       return []
+    },
+
+    /**
+     * Retrieves full Contact objects for the given list of contact codes in a single batch.
+     *
+     * @param codes - The contact codes to fetch.
+     * @returns A promise that resolves to an array of Contact objects.
+     */
+    getByContactCodes: async (codes: ContactCode[]): Promise<Contact[]> => {
+      if (codes.length === 0) return []
+      const rows = await contactsQuery()
+        .withContactCodeIn(codes)
+        .getPage(db.get())
+      return transformDbContactRows(rows)
+    },
+
+    /**
+     * Retrieves contact codes for contacts updated since the given timestamp.
+     *
+     * Filters cmlog for rows whose logmemo starts with "Kontakt {contactCode}"
+     * and returns a deduplicated list of the extracted contact codes.
+     * If no timestamp is provided, falls back to the last 5 minutes.
+     *
+     * @param since - The timestamp to query changes from, or null to use the fallback window.
+     * @returns A promise that resolves to a deduplicated array of contact codes.
+     */
+    getChangedContactCodes: async (since: Date | null): Promise<string[]> => {
+      const rows = await cmlogContactChanges(db.get(), since)
+
+      const contactCodes = [
+        ...new Set(
+          rows
+            .map((row) => {
+              const match = (row['logmemo'] as string)?.match(/^Kontakt (\S+)/)
+              return match?.[1] ?? null
+            })
+            .filter((code): code is string => code !== null)
+        ),
+      ]
+
+      logger.info(
+        { contactCodes },
+        'cmlog contact codes updated since last sync'
+      )
+
+      return contactCodes
     },
   }
 }

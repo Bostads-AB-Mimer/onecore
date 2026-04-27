@@ -179,6 +179,31 @@ export const contactObjectKeysForEmailAddress = async (
 }
 
 /**
+ * Retrieves cmlog rows for contact changes recorded since the given timestamp.
+ *
+ * Only rows whose logmemo starts with "Kontakt " are returned, as these
+ * represent changes to contacts. If no timestamp is provided, falls back
+ * to the last 5 minutes.
+ *
+ * @param db - The Knex database connection to use
+ * @param since - The timestamp to query changes from, or null to use the fallback window
+ * @returns A promise that resolves to an array of cmlog rows
+ */
+export const cmlogContactChanges = (
+  db: knex.Knex,
+  since: Date | null
+): Promise<Record<string, unknown>[]> => {
+  const base = db
+    .from('cmlog')
+    .whereLike('logmemo', 'Kontakt %')
+    .orderBy('logtime', 'desc')
+
+  return since
+    ? base.andWhere('logtime', '>', since)
+    : base.andWhereRaw('logtime >= DATEADD(minute, -5, GETDATE())')
+}
+
+/**
  * Fluent query builder for contacts, tailored to the requirements
  * of the Contacts repository, and thus supports those and absolutely
  * nothing else.
@@ -208,6 +233,7 @@ export const contactsQuery = () => {
   let wildcards: string[] = []
   let contactType: ContactTypeFilter = 'any'
   let objectKeyFilter: ContactCode[] = []
+  let contactCodeFilter: ContactCode[] = []
 
   /**
    * Applies the base cmctc-only criteria/filters to a knex
@@ -236,6 +262,10 @@ export const contactsQuery = () => {
 
     if (objectKeyFilter.length) {
       qb.andWhereRaw(...trimInCriteria('cmctc.keycmobj', objectKeyFilter))
+    }
+
+    if (contactCodeFilter.length) {
+      qb.andWhereRaw(...trimInCriteria('cmctc.cmctckod', contactCodeFilter))
     }
 
     Object.keys(wheres).forEach((key) => {
@@ -315,6 +345,14 @@ export const contactsQuery = () => {
      */
     withObjectKeyIn(objectKeys: ObjectKey[]) {
       objectKeyFilter = objectKeys
+      return this
+    },
+
+    /**
+     * Adds a WHERE-criteria for multiple contact codes.
+     */
+    withContactCodeIn(codes: ContactCode[]) {
+      contactCodeFilter = codes
       return this
     },
 

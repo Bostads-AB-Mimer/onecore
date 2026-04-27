@@ -318,7 +318,7 @@ const transformToCustomer = (customerData: any): XledgerCustomer => {
 const getCustomer = async (contactCode: string) => {
   const query = {
     query: `{
-      customers(first: 1, filter: { code: "${contactCode}" }) {
+      customers(first: 1, filter: { code: "${escapeGraphQLString(contactCode)}" }) {
         edges {
           node {
             code
@@ -348,6 +348,9 @@ const getCustomer = async (contactCode: string) => {
   return result.data?.customers?.edges?.[0]?.node ?? null
 }
 
+const escapeGraphQLString = (value: string): string =>
+  value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
 const addContact = async (contact: any) => {
   const customerQuery = {
     query: `mutation AddCustomers {
@@ -355,11 +358,11 @@ const addContact = async (contact: any) => {
         {
           node: {
             company:{dbId: ${TENANT_COMPANY_DB_ID}},
-            code:"${contact.ContactCode}",
-            description:"${contact.FullName}",
-            streetAddress:"${contact.StreetAddress}",
-            zipCode:"${contact.PostalCode}",
-            place:"${contact.City}"
+            code:"${escapeGraphQLString(contact.ContactCode)}",
+            description:"${escapeGraphQLString(contact.FullName)}",
+            streetAddress:"${escapeGraphQLString(contact.StreetAddress)}",
+            zipCode:"${escapeGraphQLString(contact.PostalCode)}",
+            place:"${escapeGraphQLString(contact.City)}"
           }
         }
       ]) {
@@ -392,7 +395,7 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
     // Todo lookup/make sure tenant company exists.
     const customerQuery = {
       query: `mutation UpdateContact {
-        updateCustomer(dbId: "${xledgerContact.dbId}", description: "${dbContact.FullName}", streetAddress: "${dbContact.Street}", zipCode: "${dbContact.PostalCode}", place: "${dbContact.City}") {
+        updateCustomer(dbId: "${xledgerContact.dbId}", description: "${escapeGraphQLString(dbContact.FullName)}", streetAddress: "${escapeGraphQLString(dbContact.Street)}", zipCode: "${escapeGraphQLString(dbContact.PostalCode)}", place: "${escapeGraphQLString(dbContact.City)}", email: "${escapeGraphQLString(dbContact.Email)}") {
           dbId
         }
       }`,
@@ -410,7 +413,7 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
 const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
     query: `{
-      customers (first: 1, filter: { code: "${contactCode}" }) {
+      customers (first: 1, filter: { code: "${escapeGraphQLString(contactCode)}" }) {
         edges {
           node {
             code
@@ -958,8 +961,40 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   }
 }
 
+export interface XledgerDbContact {
+  ContactCode: string
+  FullName: string
+  StreetAddress: string
+  Street: string
+  PostalCode: string
+  City: string
+  Email: string
+}
+
 export const syncContact = async (
-  dbContact: any
+  dbContact: XledgerDbContact
+): Promise<AdapterResult<any, 'could-not-update-contact' | 'unknown'>> => {
+  try {
+    const xledgerContact = await getCustomer(dbContact.ContactCode)
+
+    if (!xledgerContact) {
+      logger.warn(
+        { contactCode: dbContact.ContactCode },
+        'xledger-adapter.syncContact: contact not found in Xledger, skipping'
+      )
+      return { ok: true, data: null }
+    }
+
+    await updateContact(xledgerContact, dbContact)
+    return { ok: true, data: xledgerContact }
+  } catch (err: unknown) {
+    logger.error({ err }, 'xledger-adapter.syncContact')
+    return { ok: false, err: 'could-not-update-contact' }
+  }
+}
+
+export const createOrUpdateContact = async (
+  dbContact: XledgerDbContact
 ): Promise<AdapterResult<any, string>> => {
   const xledgerContact = await getCustomer(dbContact.ContactCode)
 
