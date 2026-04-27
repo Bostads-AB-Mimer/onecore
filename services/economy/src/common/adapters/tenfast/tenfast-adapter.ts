@@ -400,6 +400,8 @@ export const getInvoicesNotExported = async (
         status: 'issued',
         limit: maxCount,
         hyresvard: '6344b398b63ff59d5bde8257',
+        paginate:
+          'eyJpZCI6IjY5ZDZmM2I2MGM4NGU2YzRjMDRlMTFjMiIsImlzTmV4dCI6dHJ1ZX0',
       },
     })
 
@@ -451,7 +453,9 @@ export const getInvoicesNotExported = async (
     return {
       ok: true,
       data: {
-        invoices,
+        invoices /*: invoices.filter(
+          (invoice) => invoice.invoiceId === '552605001202918'
+        )*/,
         errors,
       },
     }
