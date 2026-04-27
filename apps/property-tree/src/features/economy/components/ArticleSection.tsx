@@ -26,6 +26,12 @@ interface ArticleSectionProps {
   }
 }
 
+function sanitizePriceInput(value: string): string {
+  const stripped = value.replace(/[^\d.,]/g, '').replace(/,/g, '.')
+  const [integer, ...fractions] = stripped.split('.')
+  return fractions.length === 0 ? integer : `${integer}.${fractions.join('')}`
+}
+
 export function ArticleSection({
   invoiceRows,
   administrativeCosts,
@@ -35,7 +41,7 @@ export function ArticleSection({
 }: ArticleSectionProps) {
   const handleChangeRowPrice = (index: number, value: string) => {
     const newRows = [...invoiceRows]
-    newRows[index] = { ...newRows[index], price: value }
+    newRows[index] = { ...newRows[index], price: sanitizePriceInput(value) }
     onInvoiceRowsChange(newRows)
   }
 
