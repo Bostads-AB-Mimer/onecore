@@ -140,6 +140,7 @@ export function useUrlFilters({
     // URL params (for reading and batch-updating params)
     searchParams,
     updateUrlParams,
+    setSearchParams,
 
     // Active state
     hasActiveFilters,

@@ -41,6 +41,9 @@ type ValidSortKey = (typeof VALID_SORT_KEYS)[number]
 const isValidSortKey = (v: string | null): v is ValidSortKey =>
   VALID_SORT_KEYS.includes(v as ValidSortKey)
 
+// These three filters are mutually exclusive — only one can be active at a time
+const EXCLUSIVE_FILTERS = ['property', 'district', 'buildingManager'] as const
+
 export function useLeaseFilters() {
   const filters = useUrlFilters({
     filterKeys: FILTER_KEYS,
@@ -48,6 +51,35 @@ export function useLeaseFilters() {
   })
 
   const { searchParams: urlSearchParams } = filters
+
+  // Wrap setFilterValues to enforce mutual exclusivity and single-select
+  // for property/district/buildingManager
+  const setFilterValues = useCallback(
+    (key: string, values: string[]) => {
+      if (
+        EXCLUSIVE_FILTERS.includes(key as (typeof EXCLUSIVE_FILTERS)[number])
+      ) {
+        // Single-select: keep only the newest value
+        const current = urlSearchParams.getAll(key)
+        const newValue = values.find((v) => !current.includes(v))
+        const singleValue = newValue ?? values[values.length - 1]
+
+        // Clear all exclusive filters, then set the single value
+        const newParams = new URLSearchParams(urlSearchParams)
+        for (const exKey of EXCLUSIVE_FILTERS) {
+          newParams.delete(exKey)
+        }
+        if (singleValue && values.length > 0) {
+          newParams.append(key, singleValue)
+        }
+        newParams.delete('page')
+        filters.setSearchParams(newParams)
+      } else {
+        filters.setFilterValues(key, values)
+      }
+    },
+    [urlSearchParams, filters]
+  )
 
   const selectedObjectTypes = useMemo(
     () => urlSearchParams.getAll('objectType'),
@@ -203,6 +235,7 @@ export function useLeaseFilters() {
 
   return {
     ...filters,
+    setFilterValues, // Override with exclusive-filter-aware version
     pageSize: PAGE_SIZE,
 
     // Resolved filter values
