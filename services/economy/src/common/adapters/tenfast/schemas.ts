@@ -249,7 +249,6 @@ export type TenfastAccountConfiguration = z.infer<
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
-  accountNr: z.string().nullable(),
   createdAt: z.string(),
   hyresvard: z.string(),
   code: z.string(),
