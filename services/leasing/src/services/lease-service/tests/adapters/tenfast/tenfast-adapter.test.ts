@@ -7,6 +7,7 @@ import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
 import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
+import { Lease, LeaseStatus, LeaseType } from '@onecore/types'
 
 // Shared clock offset used to bust the module-level tag cache (TTL: 5 min) between tests.
 // Each test that needs a fresh tag fetch increments this by 1 hour before mocking Date.now.
@@ -1023,6 +1024,163 @@ describe(tenfastAdapter.createLease, () => {
   })
 })
 
+describe(tenfastAdapter.importLease, () => {
+  const leaseId = '216-704-00-0022/02'
+  const rentalObjectCode = '216-704-00-0022'
+  const fromDate = new Date('2025-01-01T00:00:00.000Z')
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('sends externalId=leaseId and the expected sync payload to Tenfast', async () => {
+    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: true,
+      data: mockTenant.records[0],
+    })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 201,
+      data: { _id: 'created-lease-id' },
+    })
+
+    const payload = factory.syncTenantPayload.build()
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      payload,
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: true, data: { _id: 'created-lease-id' } })
+
+    expect(request).toHaveBeenCalledTimes(1)
+    const call = (request as jest.Mock).mock.calls[0][0]
+    expect(call.method).toBe('post')
+    expect(call.data).toEqual({
+      externalId: leaseId,
+      hyresgaster: [mockTenant.records[0]._id],
+      hyresobjekt: [mockRentalObject._id],
+      startDate: fromDate.toISOString(),
+      avtalsbyggare: false,
+      aviseringsFrekvens: '1m',
+      forskottAvisering: '2v',
+      betalningsOffset: '1d',
+      betalasForskott: true,
+      hyror: mockRentalObject.hyror.map(({ _id, ...rest }) => ({
+        ...rest,
+        hyresobjekt: mockRentalObject._id,
+      })),
+      method: 'import',
+      signed: true,
+    })
+  })
+
+  it('returns "could-not-retrieve-tenant" when getOrCreateTenant fails', async () => {
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: false,
+      err: 'unknown',
+    })
+
+    const payload = factory.syncTenantPayload.build()
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      payload,
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: false, err: 'could-not-retrieve-tenant' })
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('returns "could-not-find-rental-object" when rental object lookup fails', async () => {
+    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: true,
+      data: mockTenant.records[0],
+    })
+
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: false,
+      err: 'could-not-find-rental-object',
+    })
+
+    const payload = factory.syncTenantPayload.build()
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      payload,
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: false, err: 'could-not-find-rental-object' })
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('returns "lease-could-not-be-created" when Tenfast returns non-2xx', async () => {
+    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: true,
+      data: mockTenant.records[0],
+    })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 500,
+      data: { error: 'boom' },
+    })
+
+    const payload = factory.syncTenantPayload.build()
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      payload,
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: false, err: 'lease-could-not-be-created' })
+  })
+
+  it('returns "unknown" when the request throws', async () => {
+    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: true,
+      data: mockTenant.records[0],
+    })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+
+    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+    const payload = factory.syncTenantPayload.build()
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      payload,
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
 describe(tenfastAdapter.preliminaryTerminateLease, () => {
   const leaseId = '216-704-00-0022/02'
   const contactCode = 'P12345'
@@ -1949,5 +2107,199 @@ describe(tenfastAdapter.syncTenant, () => {
       ok: false,
       err: 'could-not-update-tenant',
     })
+  })
+})
+
+describe('terminateLease', () => {
+  const terminateBody: tenfastAdapter.TerminateLeaseBody = {
+    endDate: new Date('2026-04-30T00:00:00.000Z'),
+    reason: 'Synced from xpand',
+    notifyHg: false,
+    supplementaryAgreements: true,
+    handled: true,
+  }
+
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('returns ok:true with action:terminated on successful POST /terminate', async () => {
+    const lease = factory.tenfastLease.build({ externalId: '211-021-09-0101/08' })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200, data: {} })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      terminateBody
+    )
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'terminated', leaseId: lease.externalId },
+    })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'post',
+        url: expect.stringContaining(`/avtal/${lease._id}/terminate`),
+        data: {
+          endDate: '2026-04-30',
+          reason: 'Synced from xpand',
+          notifyHg: false,
+          supplementaryAgreements: true,
+          handled: true,
+        },
+      })
+    )
+  })
+
+  it('returns ok:false err:lease-not-found when getLeaseByExternalId returns not-found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await tenfastAdapter.terminateLease('999/01', terminateBody)
+
+    expect(result).toEqual({ ok: false, err: 'lease-not-found' })
+  })
+
+  it('returns ok:true with action:skipped when Tenfast returns 400 already-terminated', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Avtalet kan inte sägas upp' },
+    })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      terminateBody
+    )
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'skipped', leaseId: lease.externalId },
+    })
+  })
+
+  it('returns ok:false err:terminate-failed on unexpected 4xx response', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Something else went wrong' },
+    })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      terminateBody
+    )
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.err).toBe('terminate-failed')
+  })
+
+  it('returns ok:false err:unknown on network error', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      terminateBody
+    )
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.err).toBe('unknown')
+  })
+})
+
+describe('voidLease', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('returns ok:true with action:voided on successful PATCH /void', async () => {
+    const lease = factory.tenfastLease.build({ externalId: '104-013-01-0106/10' })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200, data: {} })
+
+    const result = await tenfastAdapter.voidLease(lease.externalId)
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'voided', leaseId: lease.externalId },
+    })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'patch',
+        url: expect.stringContaining(`/avtal/${lease._id}/void`),
+      })
+    )
+  })
+
+  it('returns ok:false err:lease-not-found when getLeaseByExternalId returns not-found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await tenfastAdapter.voidLease('999/01')
+
+    expect(result).toEqual({ ok: false, err: 'lease-not-found' })
+  })
+
+  it('returns ok:false err:lease-signed when Tenfast returns 400 signed-error', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Avtalet kan bara makuleras innan det är signerat.' },
+    })
+
+    const result = await tenfastAdapter.voidLease(lease.externalId)
+
+    expect(result).toEqual({ ok: false, err: 'lease-signed' })
+  })
+
+  it('returns ok:false err:void-failed on unexpected 4xx response', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Something else went wrong' },
+    })
+
+    const result = await tenfastAdapter.voidLease(lease.externalId)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.err).toBe('void-failed')
+  })
+
+  it('returns ok:false err:unknown on network error', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await tenfastAdapter.voidLease(lease.externalId)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.err).toBe('unknown')
   })
 })

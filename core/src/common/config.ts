@@ -71,6 +71,7 @@ export interface Config {
     economy: string
     bosociala: string
     dev: string
+    xpandSync: string
   }
   homeInsurance: {
     sftp: {
@@ -154,6 +155,7 @@ const config = configPackage({
       tenantDefault: '',
       economy: '',
       bosociala: '',
+      xpandSync: '',
     },
     homeInsurance: {
       sftp: {
