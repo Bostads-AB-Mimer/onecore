@@ -1,7 +1,42 @@
 const mockRaw = jest.fn()
-jest.mock('knex', () => () => ({
-  raw: mockRaw,
-}))
+
+// Per-table query results for the chainable query-builder mock (db('table')...).
+// Tests set entries here to control what `await db('repsk').innerJoin(...).where(...)` resolves to.
+const mockTableQueries: Record<string, unknown[]> = {}
+
+const createChainable = (resolveValue: unknown[]) => {
+  const chain: Record<string, unknown> = {
+    then: (resolve: (value: unknown[]) => unknown) => resolve(resolveValue),
+    catch: () => chain,
+  }
+  for (const method of [
+    'innerJoin',
+    'leftJoin',
+    'where',
+    'andWhere',
+    'andWhereLike',
+    'whereIn',
+    'orWhere',
+    'orWhereLike',
+    'whereLike',
+    'distinct',
+    'select',
+    'from',
+    'orderBy',
+    'limit',
+    'offset',
+  ]) {
+    chain[method] = jest.fn().mockReturnValue(chain)
+  }
+  return chain
+}
+
+const mockDb: any = jest.fn((table: string) =>
+  createChainable(mockTableQueries[table] ?? [])
+)
+mockDb.raw = mockRaw
+
+jest.mock('knex', () => () => mockDb)
 
 import { schemas } from '@onecore/types'
 
@@ -138,5 +173,126 @@ describe(adapter.getInvoiceRows, () => {
     const result = await adapter.getInvoiceRows('001', ['1234567890'])
 
     expect(result[0].toDate).toBe(toXledger(futureToDate))
+  })
+})
+
+describe(adapter.enrichInvoiceRows, () => {
+  beforeEach(() => {
+    for (const key of Object.keys(mockTableQueries)) {
+      delete mockTableQueries[key]
+    }
+  })
+
+  const xpandInvoice = {
+    invdate: '20250115',
+    fromdate: '20250101',
+    todate: '20250131',
+    expdate: '20250228',
+  }
+
+  it('drops every row of an invoice when any of its rows fails enrichment', async () => {
+    // Specific rule exists for rental "000-A" only, not "000-B".
+    // Both rows belong to invoice INV-1 — one row will succeed, the other will fail.
+    // Per the "no partial invoices" guarantee, BOTH rows should be excluded.
+    mockTableQueries['repsk'] = [
+      { hyresid: '000-A', p2: 'COSTCODE-A', p3: 'PROPERTY-A' },
+    ]
+
+    const invoices = { 'INV-1': xpandInvoice } as any
+
+    const rows = [
+      {
+        invoiceNumber: 'INV-1',
+        contractCode: '000-A/01',
+        company: '001',
+        fromDate: '20250101',
+      },
+      {
+        invoiceNumber: 'INV-1',
+        contractCode: '000-B/01',
+        company: '001',
+        fromDate: '20250101',
+      },
+    ] as any
+
+    const result = await adapter.enrichInvoiceRows(rows, invoices)
+
+    expect(result.rows).toHaveLength(0)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0].invoiceNumber).toBe('INV-1')
+  })
+
+  it('keeps rows of a fully-successful invoice when a different invoice fails', async () => {
+    // INV-1's rental ("000-A") has a rule. INV-2's rental ("000-B") does not.
+    // INV-1 should pass through cleanly; INV-2 should be filtered out entirely.
+    mockTableQueries['repsk'] = [
+      { hyresid: '000-A', p2: 'COSTCODE-A', p3: 'PROPERTY-A' },
+    ]
+
+    const invoices = {
+      'INV-1': xpandInvoice,
+      'INV-2': xpandInvoice,
+    } as any
+
+    const rows = [
+      {
+        invoiceNumber: 'INV-1',
+        contractCode: '000-A/01',
+        company: '001',
+        fromDate: '20250101',
+      },
+      {
+        invoiceNumber: 'INV-1',
+        contractCode: '000-A/02',
+        company: '001',
+        fromDate: '20250101',
+      },
+      {
+        invoiceNumber: 'INV-2',
+        contractCode: '000-B/01',
+        company: '001',
+        fromDate: '20250101',
+      },
+    ] as any
+
+    const result = await adapter.enrichInvoiceRows(rows, invoices)
+
+    expect(result.rows).toHaveLength(2)
+    expect(
+      result.rows.every((row) => row.invoiceNumber === 'INV-1')
+    ).toBe(true)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0].invoiceNumber).toBe('INV-2')
+  })
+
+  it('records an error and excludes the rows when an invoice is not found in Xpand', async () => {
+    mockTableQueries['repsk'] = [
+      { hyresid: '000-A', p2: 'COSTCODE-A', p3: 'PROPERTY-A' },
+    ]
+
+    // The invoices map is empty — every row's invoice will be "not found".
+    const invoices = {} as any
+
+    const rows = [
+      {
+        invoiceNumber: 'INV-MISSING',
+        contractCode: '000-A/01',
+        company: '001',
+        fromDate: '20250101',
+      },
+      {
+        invoiceNumber: 'INV-MISSING',
+        contractCode: '000-A/02',
+        company: '001',
+        fromDate: '20250101',
+      },
+    ] as any
+
+    const result = await adapter.enrichInvoiceRows(rows, invoices)
+
+    expect(result.rows).toHaveLength(0)
+    expect(
+      result.errors.some((e) => e.invoiceNumber === 'INV-MISSING')
+    ).toBe(true)
   })
 })

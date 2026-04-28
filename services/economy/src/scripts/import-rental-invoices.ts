@@ -101,13 +101,19 @@ const importRentalInvoicesScript = async (
         if (!dryRun) {
           await uploadInvoiceFile(ledgerFilename, ledgerCsv)
           logger.info({ ledgerFilename }, 'Uploaded file')
+
+          await markBatchAsProcessed(parseInt(batchId))
+
+          notification.push('Filer uppladdade till Xledger för import')
         }
-      }
-
-      if (!dryRun) {
-        await markBatchAsProcessed(parseInt(batchId))
-
-        notification.push('Filer uppladdade till Xledger för import')
+      } else if (!dryRun) {
+        notification.push(
+          'Inga avier kunde laddas upp till Xledger. Batchen markeras inte som hanterad och kommer att försökas igen vid nästa körning.'
+        )
+        logger.warn(
+          { batchId, companyId },
+          'No ledger rows produced for batch — not marking as processed'
+        )
       }
     } else {
       notification.push('Inga nya avier hittade sen senaste importen')

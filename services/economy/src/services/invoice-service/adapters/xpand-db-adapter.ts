@@ -686,14 +686,16 @@ export const getInvoiceRows = async (
     return column ? (column as string).trimEnd() : column
   }
 
+  // Derive "current month" strings in UTC so they share the same calendar as
+  // xledgerDateString (which uses toISOString → UTC). Comparing in any other
+  // timezone risks a row being rewritten to a different month than the one
+  // its formatted date string ends up in around month boundaries.
   const now = new Date()
-  const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-
   const pad = (n: number) => String(n).padStart(2, '0')
-  const y = now.getFullYear()
-  const m = pad(now.getMonth() + 1)
+  const y = now.getUTCFullYear()
+  const m = pad(now.getUTCMonth() + 1)
   const lastDay = pad(
-    new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate()
   )
   const startOfCurrentMonthString = `${y}${m}01`
   const endOfCurrentMonthString = `${y}${m}${lastDay}`
@@ -703,17 +705,21 @@ export const getInvoiceRows = async (
       try {
         const type = invoiceRow['type'] as number
 
-        const invoiceFromDate = invoiceRow['invoiceFromDate'] as Date
+        const invoiceFromDateString = xledgerDateString(
+          invoiceRow['invoiceFromDate'] as Date
+        )
         const fromDateString =
-          invoiceFromDate < startOfCurrentMonth
+          invoiceFromDateString < startOfCurrentMonthString
             ? startOfCurrentMonthString
-            : xledgerDateString(invoiceFromDate)
+            : invoiceFromDateString
 
-        const invoiceToDate = invoiceRow['invoiceToDate'] as Date
+        const invoiceToDateString = xledgerDateString(
+          invoiceRow['invoiceToDate'] as Date
+        )
         const toDateString =
-          invoiceToDate < startOfCurrentMonth
+          invoiceToDateString < startOfCurrentMonthString
             ? endOfCurrentMonthString
-            : xledgerDateString(invoiceToDate)
+            : invoiceToDateString
 
         const invoice: InvoiceRow = {
           account: trim(invoiceRow['p1']),

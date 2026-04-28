@@ -17,6 +17,9 @@ export const createMockCounterPartCustomer = (
 export const getCounterPartCustomers = jest.fn()
 export const saveInvoiceRows = jest.fn()
 export const addAccountInformation = jest.fn()
+export const getContacts = jest.fn()
+export const getAllInvoiceRows = jest.fn()
+export const getInvoicesByChunks = jest.fn()
 
 // Setup default mock implementations
 export const setupDefaultMocks = () => {
@@ -35,6 +38,9 @@ export const setupDefaultMocks = () => {
     })
     return Promise.resolve(newRows)
   })
+  getContacts.mockResolvedValue([])
+  getAllInvoiceRows.mockResolvedValue([])
+  getInvoicesByChunks.mockResolvedValue([])
 }
 
 // Reset all mocks
@@ -42,4 +48,7 @@ export const resetMocks = () => {
   getCounterPartCustomers.mockReset()
   saveInvoiceRows.mockReset()
   addAccountInformation.mockReset()
+  getContacts.mockReset()
+  getAllInvoiceRows.mockReset()
+  getInvoicesByChunks.mockReset()
 }
