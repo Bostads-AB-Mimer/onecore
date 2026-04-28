@@ -865,6 +865,34 @@ export async function getBlockReasons(): Promise<
   }
 }
 
+type GetRentalObjectTypeResponse = {
+  code: string
+  name: string | null
+}
+
+export async function getRentalObjectType(
+  rentalId: string
+): Promise<AdapterResult<GetRentalObjectTypeResponse, 'not-found' | 'unknown'>> {
+  try {
+    const response = await axios.get(
+      `${config.propertyBaseService.url}/rental-objects/${rentalId}/type`
+    )
+
+    if (response.status === 200 && response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.getRentalObjectType')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {

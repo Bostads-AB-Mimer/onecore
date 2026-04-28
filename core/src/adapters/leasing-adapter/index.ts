@@ -770,6 +770,55 @@ const syncContactToLeasing = async (
   }
 }
 
+interface LeaseChange {
+  leaseId: string
+  contactCode: string
+  rentalObjectId: string
+}
+
+const getUpdatedLeases = async (
+  since: Date | null
+): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
+  try {
+    const params = since ? { since: since.toISOString() } : {}
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/sync`,
+      { params }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getUpdatedLeases')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncLease = async (
+  leaseId: string,
+  contact: Contact
+): Promise<AdapterResult<{ action: string; leaseId: string }, 'sync-failed' | 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/sync`,
+      { leaseId, contact }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'leasing-adapter.syncLease')
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncLease')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   exportLeasesToExcel,
@@ -799,6 +848,8 @@ export {
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,
+  getUpdatedLeases,
+  syncLease,
 }
 
 export {
