@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X, ZoomIn } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
-import { Dialog, DialogContent } from '@/shared/ui/Dialog'
+import { Dialog, DialogOverlay, DialogPortal } from '@/shared/ui/Dialog'
 
 import { useInspectionPhotos } from '../hooks/useInspectionPhotos'
 
@@ -73,47 +74,55 @@ export function PhotoGallery({
         </div>
       </div>
 
-      {/* Fullscreen photo viewer */}
+      {/* Fullscreen photo viewer. Composed from radix primitives directly so
+          we can pin overlay + content to z-[120]; the shared Dialog defaults
+          to z-[90], which would render behind a parent Sheet (z-[100]) like
+          ComponentDetailSheet or MobileInspectionSheet. */}
       <Dialog
         open={fullscreenPhotoIndex !== null}
         onOpenChange={() => setFullscreenPhotoIndex(null)}
       >
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
-          {fullscreenPhotoIndex !== null && (
-            <div className="relative">
-              <InspectionPhoto
-                path={photos[fullscreenPhotoIndex]}
-                alt={`Foto ${fullscreenPhotoIndex + 1}`}
-                className="w-full h-full object-contain"
-              />
-              <div className="absolute top-2 right-2 flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  onClick={() => {
-                    handleRemove(fullscreenPhotoIndex)
-                    setFullscreenPhotoIndex(null)
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              {photos.length > 1 && (
-                <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
-                  {photos.map((_, idx) => (
-                    <button
-                      key={idx}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        idx === fullscreenPhotoIndex ? 'bg-primary' : 'bg-muted'
-                      }`}
-                      onClick={() => setFullscreenPhotoIndex(idx)}
-                    />
-                  ))}
+        <DialogPortal>
+          <DialogOverlay className="z-[120]" />
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-[120] grid w-full max-w-[95vw] max-h-[95vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-0 shadow-lg sm:rounded-lg">
+            {fullscreenPhotoIndex !== null && (
+              <div className="relative">
+                <InspectionPhoto
+                  path={photos[fullscreenPhotoIndex]}
+                  alt={`Foto ${fullscreenPhotoIndex + 1}`}
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => {
+                      handleRemove(fullscreenPhotoIndex)
+                      setFullscreenPhotoIndex(null)
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
+                {photos.length > 1 && (
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
+                    {photos.map((_, idx) => (
+                      <button
+                        key={idx}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          idx === fullscreenPhotoIndex
+                            ? 'bg-primary'
+                            : 'bg-muted'
+                        }`}
+                        onClick={() => setFullscreenPhotoIndex(idx)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogPrimitive.Content>
+        </DialogPortal>
       </Dialog>
     </>
   )
