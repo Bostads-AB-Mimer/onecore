@@ -92,5 +92,5 @@ export interface InspectionFormProps {
   ) => void
   onCancel: () => void
   tenant?: any
-  existingInspection?: Inspection
+  existingInspection: Inspection
 }

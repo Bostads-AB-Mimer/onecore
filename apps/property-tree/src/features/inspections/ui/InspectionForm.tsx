@@ -43,7 +43,7 @@ interface InspectionFormProps {
   tenant?: TenantInfoCardData
   address?: string
   apartmentCode?: string | null
-  existingInspection?: Inspection
+  existingInspection: Inspection
   rentalId?: string
 }
 
@@ -183,6 +183,7 @@ export function InspectionForm({
                     <RoomInspectionEditor
                       room={room}
                       inspectionData={roomData}
+                      inspectionId={existingInspection?.id}
                       onConditionUpdate={(field, value) =>
                         handleConditionUpdate(room.id, field, value)
                       }
@@ -192,8 +193,8 @@ export function InspectionForm({
                       onComponentNoteUpdate={(field, note) =>
                         handleComponentNoteUpdate(room.id, field, note)
                       }
-                      onComponentPhotoAdd={(field, photoDataUrl) =>
-                        handleComponentPhotoAdd(room.id, field, photoDataUrl)
+                      onComponentPhotoAdd={(field, photoPath) =>
+                        handleComponentPhotoAdd(room.id, field, photoPath)
                       }
                       onComponentPhotoRemove={(field, index) =>
                         handleComponentPhotoRemove(room.id, field, index)
@@ -257,13 +258,13 @@ export function InspectionForm({
                       onFetchedComponentPhotoAdd={(
                         componentId,
                         label,
-                        photoDataUrl
+                        photoPath
                       ) =>
                         handleComponentPhotoAddById(
                           room.id,
                           componentId,
                           label,
-                          photoDataUrl
+                          photoPath
                         )
                       }
                       onFetchedComponentPhotoRemove={(

@@ -70,7 +70,7 @@ export function InspectionConductDialog({
   // fall back to the inspection's residenceId.
   const resolvedRentalId = rentalId ?? internalInspection?.residenceId
 
-  if (!isOpen || isLoadingInternal || isLoadingRooms) {
+  if (!isOpen || isLoadingInternal || isLoadingRooms || !internalInspection) {
     return null
   }
 

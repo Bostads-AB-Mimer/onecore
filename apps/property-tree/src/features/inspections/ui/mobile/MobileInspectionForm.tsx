@@ -39,7 +39,7 @@ interface MobileInspectionFormProps {
   tenant?: TenantInfoCardData
   address?: string
   apartmentCode?: string | null
-  existingInspection?: Inspection
+  existingInspection: Inspection
   rentalId?: string
 }
 
@@ -266,6 +266,7 @@ export function MobileInspectionForm({
             <RoomInspectionEditor
               room={currentRoom}
               inspectionData={inspectionData[currentRoom.id]}
+              inspectionId={existingInspection.id}
               onConditionUpdate={(field, value) =>
                 handleConditionUpdate(currentRoom.id, field, value)
               }
@@ -275,8 +276,8 @@ export function MobileInspectionForm({
               onComponentNoteUpdate={(field, note) =>
                 handleComponentNoteUpdate(currentRoom.id, field, note)
               }
-              onComponentPhotoAdd={(field, photoDataUrl) =>
-                handleComponentPhotoAdd(currentRoom.id, field, photoDataUrl)
+              onComponentPhotoAdd={(field, photoPath) =>
+                handleComponentPhotoAdd(currentRoom.id, field, photoPath)
               }
               onComponentPhotoRemove={(field, index) =>
                 handleComponentPhotoRemove(currentRoom.id, field, index)
@@ -325,12 +326,12 @@ export function MobileInspectionForm({
                   note
                 )
               }
-              onFetchedComponentPhotoAdd={(componentId, label, photoDataUrl) =>
+              onFetchedComponentPhotoAdd={(componentId, label, photoPath) =>
                 handleComponentPhotoAddById(
                   currentRoom.id,
                   componentId,
                   label,
-                  photoDataUrl
+                  photoPath
                 )
               }
               onFetchedComponentPhotoRemove={(componentId, label, index) =>
