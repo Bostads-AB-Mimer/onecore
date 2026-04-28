@@ -12,26 +12,7 @@ export type InspectionPhotoTarget =
 export interface UploadInspectionPhotoArgs {
   file: File
   roomId: string
-  roomName?: string | null
   target: InspectionPhotoTarget
-}
-
-// Slugify for storage-key readability. Folds Swedish diacritics (å/ä → a,
-// ö → o), lowercases, replaces non-alphanumerics with hyphens, and trims
-// leading/trailing/duplicate hyphens. Used only for path readability —
-// the immutable `roomId` is appended for stability across renames.
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[åä]/g, 'a')
-    .replace(/ö/g, 'o')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-function roomSegment(roomId: string, roomName?: string | null): string {
-  const slug = roomName ? slugify(roomName) : ''
-  return slug ? `${slug}-${roomId}` : roomId
 }
 
 // Photos are always JPEG-compressed before upload (see compressToJpegFile),
@@ -39,11 +20,10 @@ function roomSegment(roomId: string, roomName?: string | null): string {
 function buildInspectionPhotoPath(
   inspectionId: string,
   roomId: string,
-  roomName: string | null | undefined,
   target: InspectionPhotoTarget
 ): string {
   const uuid = crypto.randomUUID()
-  const base = `${ContextType.InspectionPhoto}/${inspectionId}/room/${roomSegment(roomId, roomName)}`
+  const base = `${ContextType.InspectionPhoto}/${inspectionId}/room/${roomId}`
   if (target.kind === 'surface') {
     return `${base}/surface/${target.surfaceKey}/${uuid}.jpg`
   }
@@ -52,19 +32,9 @@ function buildInspectionPhotoPath(
 
 export function useInspectionPhotos(inspectionId: string) {
   const uploadMutation = useMutation({
-    mutationFn: async ({
-      file,
-      roomId,
-      roomName,
-      target,
-    }: UploadInspectionPhotoArgs) => {
+    mutationFn: async ({ file, roomId, target }: UploadInspectionPhotoArgs) => {
       const fileData = await fileToBase64(file)
-      const path = buildInspectionPhotoPath(
-        inspectionId,
-        roomId,
-        roomName,
-        target
-      )
+      const path = buildInspectionPhotoPath(inspectionId, roomId, target)
       await fileStorageService.uploadFile(path, fileData, file.type)
       return path
     },
@@ -88,9 +58,6 @@ export function useInspectionPhotos(inspectionId: string) {
   return {
     uploadAsync: uploadMutation.mutateAsync,
     isUploading: uploadMutation.isPending,
-    uploadError: uploadMutation.error,
     deleteAsync: deleteMutation.mutateAsync,
-    isDeleting: deleteMutation.isPending,
-    getDownloadUrl: (path: string) => fileStorageService.getFileUrl(path),
   }
 }

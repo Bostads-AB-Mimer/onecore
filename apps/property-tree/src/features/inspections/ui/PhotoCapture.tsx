@@ -16,7 +16,6 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 export interface InspectionPhotoUploadContext {
   inspectionId: string
   roomId: string
-  roomName?: string | null
   target: InspectionPhotoTarget
 }
 
@@ -94,7 +93,6 @@ export function PhotoCapture({
       const path = await uploadAsync({
         file: compressed,
         roomId: uploadContext.roomId,
-        roomName: uploadContext.roomName,
         target: uploadContext.target,
       })
       onPhotoCaptured(path)

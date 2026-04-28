@@ -8,8 +8,8 @@ import { Separator } from '@/shared/ui/Separator'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
 import {
-  mergeComponentsWithDefaults,
   type CostResponsibility,
+  mergeComponentsWithDefaults,
 } from '../constants'
 import { useRoomComponents } from '../hooks/useRoomComponents'
 import {
@@ -207,7 +207,6 @@ export function RoomInspectionEditor({
                 uploadContext={{
                   inspectionId,
                   roomId: room.id,
-                  roomName: room.name,
                   target: { kind: 'surface', surfaceKey },
                 }}
                 onOpenDetail={() =>
@@ -254,7 +253,6 @@ export function RoomInspectionEditor({
                 uploadContext={{
                   inspectionId,
                   roomId: room.id,
-                  roomName: room.name,
                   target: { kind: 'component', componentId },
                 }}
                 onOpenDetail={() =>
@@ -299,7 +297,6 @@ export function RoomInspectionEditor({
               uploadContext={{
                 inspectionId,
                 roomId: room.id,
-                roomName: room.name,
                 target: { kind: 'surface', surfaceKey },
               }}
             />
@@ -339,7 +336,6 @@ export function RoomInspectionEditor({
               uploadContext={{
                 inspectionId,
                 roomId: room.id,
-                roomName: room.name,
                 target: { kind: 'component', componentId },
               }}
             />
