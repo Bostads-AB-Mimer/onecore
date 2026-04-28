@@ -151,7 +151,8 @@ function mapTenfastLeaseToSearchResult(
   const contacts: leasing.v1.ContactInfo[] = lease.hyresgaster.map((t) => {
     const xpandContact = contactMap.get(t.externalId)
     return {
-      name: xpandContact?.name || t.displayName || `${t.name.first} ${t.name.last}`,
+      name:
+        xpandContact?.name || t.displayName || `${t.name.first} ${t.name.last}`,
       contactCode: t.externalId,
       email: xpandContact?.email ?? null,
       phone: xpandContact?.phone ?? null,
@@ -190,7 +191,10 @@ function mapBatchGetLeaseToSearchResult(
   const contacts: leasing.v1.ContactInfo[] = lease.tenants.map((t) => {
     const xpandContact = contactMap.get(t.externalId)
     return {
-      name: xpandContact?.name || t.displayName || (t.name ? `${t.name.first} ${t.name.last}` : ''),
+      name:
+        xpandContact?.name ||
+        t.displayName ||
+        (t.name ? `${t.name.first} ${t.name.last}` : ''),
       contactCode: t.externalId,
       email: xpandContact?.email ?? null,
       phone: xpandContact?.phone ?? null,
@@ -596,7 +600,11 @@ const applySorting = (
     }
 
     // Handle null/undefined: push to end regardless of sort order
-    if ((aVal === undefined || aVal === null) && (bVal === undefined || bVal === null)) return 0
+    if (
+      (aVal === undefined || aVal === null) &&
+      (bVal === undefined || bVal === null)
+    )
+      return 0
     if (aVal === undefined || aVal === null) return 1
     if (bVal === undefined || bVal === null) return -1
 
@@ -700,119 +708,138 @@ export const searchLeases = async (
       }
     }
 
-    // Call Tenfast batch-get with the rental object codes (parallel batches)
-    // Tenfast API enforces a max of 500 per request
+    // Lazy batch-get: fetch batches one at a time until we have enough
+    // results for the requested page. This avoids downloading ALL data
+    // when the code set is large (e.g., 10,000 codes for broad district filters).
     const batchSize = 500
-    const batchPromises: Promise<Array<Record<string, unknown>>>[] = []
+    const page = params.page ?? 1
+    const limit = params.limit ?? 20
+    const needed = page * limit // total results needed to fill through current page
+
+    const seenLeaseIds = new Set<string>()
+    const batchLeases: BatchGetLease[] = []
+    let batchesFetched = 0
+    const totalBatches = Math.ceil(codes.length / batchSize)
 
     for (let i = 0; i < codes.length; i += batchSize) {
       const batch = codes.slice(i, i + batchSize)
-      batchPromises.push(
-        tenfastApi
-          .request({
-            method: 'post',
-            url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
-            data: { externalIds: batch },
-          })
-          .then((res) => {
-            if (res.status === 200 || res.status === 201) {
-              return res.data as Array<Record<string, unknown>>
-            }
-            logger.error(
-              { status: res.status, data: res.data },
-              'Xpand-bridged filters: batch-get failed'
-            )
-            return []
-          })
-      )
-    }
 
-    const batchResults = await Promise.all(batchPromises)
-    const allRentalObjects = batchResults.flat()
+      const res = await tenfastApi.request({
+        method: 'post',
+        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
+        data: { externalIds: batch },
+      })
 
-    // Extract leases from batch-get response.
-    // The avtal from batch-get has full tenant/rental object data in originalData.
-    // We map directly from the raw data instead of going through TenfastLeaseSchema
-    // because the originalData shape is missing several fields that the strict schema requires.
-    const seenLeaseIds = new Set<string>()
-    const batchLeases: BatchGetLease[] = []
+      batchesFetched++
 
-    for (const ro of allRentalObjects) {
-      const avtal = ro.avtal as Array<Record<string, unknown>> | undefined
-      if (!avtal) continue
+      if (res.status !== 200 && res.status !== 201) {
+        logger.error(
+          { status: res.status, data: res.data },
+          'Xpand-bridged filters: batch-get failed'
+        )
+        continue
+      }
 
-      for (const raw of avtal) {
-        const leaseId = raw.externalId as string | undefined
-        if (!leaseId || seenLeaseIds.has(leaseId)) continue
-        seenLeaseIds.add(leaseId)
+      const rentalObjects = res.data as Array<Record<string, unknown>>
 
-        const od = raw.originalData as Record<string, unknown> | undefined
-        const tenants = (od?.hyresgaster ?? []) as Array<
-          Record<string, unknown>
-        >
-        const rentalObjects = (od?.hyresobjekt ?? []) as Array<
-          Record<string, unknown>
-        >
+      for (const ro of rentalObjects) {
+        const avtal = ro.avtal as Array<Record<string, unknown>> | undefined
+        if (!avtal) continue
 
-        batchLeases.push({
-          externalId: leaseId,
-          startDate: raw.startDate
-            ? new Date(raw.startDate as string)
-            : new Date(),
-          endDate: raw.endDate ? new Date(raw.endDate as string) : undefined,
-          stage: (raw.stage as string) ?? 'active',
-          signedAt: raw.signedAt ? new Date(raw.signedAt as string) : undefined,
-          uppsagningstid: (raw.uppsagningstid as string) ?? '',
-          cancellation: {
-            cancelled: (raw.cancellation as any)?.cancelled ?? false,
-            cancelledByType:
-              (raw.cancellation as any)?.cancelledByType ?? undefined,
-            handledAt: (raw.cancellation as any)?.handledAt
-              ? new Date((raw.cancellation as any).handledAt)
+        for (const raw of avtal) {
+          const leaseId = raw.externalId as string | undefined
+          if (!leaseId || seenLeaseIds.has(leaseId)) continue
+          seenLeaseIds.add(leaseId)
+
+          const od = raw.originalData as Record<string, unknown> | undefined
+          const tenants = (od?.hyresgaster ?? []) as Array<
+            Record<string, unknown>
+          >
+          const rentalObjectsData = (od?.hyresobjekt ?? []) as Array<
+            Record<string, unknown>
+          >
+
+          batchLeases.push({
+            externalId: leaseId,
+            startDate: raw.startDate
+              ? new Date(raw.startDate as string)
+              : new Date(),
+            endDate: raw.endDate ? new Date(raw.endDate as string) : undefined,
+            stage: (raw.stage as string) ?? 'active',
+            signedAt: raw.signedAt
+              ? new Date(raw.signedAt as string)
               : undefined,
-            preferredMoveOutDate: (raw.cancellation as any)
-              ?.preferredMoveOutDate
-              ? new Date((raw.cancellation as any).preferredMoveOutDate)
-              : undefined,
-          },
-          hyror: ((raw.hyror as any[]) ?? []).map((r) => ({
-            _id: r._id ?? '',
-            amount: r.amount ?? 0,
-            vat: r.vat ?? 0,
-            label: r.label ?? '',
-            article: r.article ?? '',
-            from: r.from ?? undefined,
-            to: r.to ?? undefined,
-          })),
-          tenants: tenants.map((t) => ({
-            externalId: (t.externalId as string) ?? '',
-            displayName: (t.displayName as string) ?? '',
-            name: t.name as { first: string; last: string } | undefined,
-            idbeteckning: (t.idbeteckning as string) ?? '',
-          })),
-          rentalObjects: rentalObjects.map((o) => ({
-            externalId: (o.externalId as string) ?? '',
-            typ: (o.typ as string) ?? undefined,
-            postadress: (o.postadress as string) ?? undefined,
-            stadsdel: (o.stadsdel as string) ?? undefined,
-            fastighet:
-              typeof o.fastighet === 'object' && o.fastighet
-                ? {
-                    fastighetsbeteckning:
-                      (o.fastighet as any).fastighetsbeteckning ?? '',
-                    stadsdel: (o.fastighet as any).stadsdel,
-                  }
+            uppsagningstid: (raw.uppsagningstid as string) ?? '',
+            cancellation: {
+              cancelled: (raw.cancellation as any)?.cancelled ?? false,
+              cancelledByType:
+                (raw.cancellation as any)?.cancelledByType ?? undefined,
+              handledAt: (raw.cancellation as any)?.handledAt
+                ? new Date((raw.cancellation as any).handledAt)
                 : undefined,
-            kvm: (o.kvm as number) ?? undefined,
-          })),
-        })
+              preferredMoveOutDate: (raw.cancellation as any)
+                ?.preferredMoveOutDate
+                ? new Date((raw.cancellation as any).preferredMoveOutDate)
+                : undefined,
+            },
+            hyror: ((raw.hyror as any[]) ?? []).map((r) => ({
+              _id: r._id ?? '',
+              amount: r.amount ?? 0,
+              vat: r.vat ?? 0,
+              label: r.label ?? '',
+              article: r.article ?? '',
+              from: r.from ?? undefined,
+              to: r.to ?? undefined,
+            })),
+            tenants: tenants.map((t) => ({
+              externalId: (t.externalId as string) ?? '',
+              displayName: (t.displayName as string) ?? '',
+              name: t.name as { first: string; last: string } | undefined,
+              idbeteckning: (t.idbeteckning as string) ?? '',
+            })),
+            rentalObjects: rentalObjectsData.map((o) => ({
+              externalId: (o.externalId as string) ?? '',
+              typ: (o.typ as string) ?? undefined,
+              postadress: (o.postadress as string) ?? undefined,
+              stadsdel: (o.stadsdel as string) ?? undefined,
+              fastighet:
+                typeof o.fastighet === 'object' && o.fastighet
+                  ? {
+                      fastighetsbeteckning:
+                        (o.fastighet as any).fastighetsbeteckning ?? '',
+                      stadsdel: (o.fastighet as any).stadsdel,
+                    }
+                  : undefined,
+              kvm: (o.kvm as number) ?? undefined,
+            })),
+          })
+        }
+      }
+
+      // Apply local filters to check if we have enough results
+      const currentLeases = batchLeases.map(mapBatchGetLeaseToOncoreLease)
+      const filtered = applyLocalFilters(currentLeases, batchLeases, params)
+
+      // Stop fetching if we have enough to fill the requested page
+      if (filtered.length >= needed) {
+        break
       }
     }
 
     let leases = batchLeases.map(mapBatchGetLeaseToOncoreLease)
-
-    // Apply all other filters locally since batch-get doesn't support them.
     leases = applyLocalFilters(leases, batchLeases, params)
+
+    // Estimate total count based on hit rate from fetched batches
+    const hitRate =
+      batchesFetched < totalBatches && leases.length > 0
+        ? leases.length / (batchesFetched * batchSize)
+        : 0
+    const estimatedTotal =
+      batchesFetched >= totalBatches
+        ? leases.length
+        : Math.round(hitRate * codes.length)
+    const totalCount =
+      batchesFetched >= totalBatches ? leases.length : estimatedTotal
 
     // Map filtered leases to LeaseSearchResult (without contacts yet)
     const emptyContactMap = new Map<string, leasing.v1.ContactInfo>()
@@ -828,17 +855,16 @@ export const searchLeases = async (
 
     logger.info(
       {
-        rentalObjectsFromBatchGet: allRentalObjects.length,
+        batchesFetched,
+        totalBatches,
         uniqueLeases: seenLeaseIds.size,
         afterFilters: searchResults.length,
+        estimatedTotal: totalCount,
       },
-      'Xpand-bridged filters: batch-get leases processed'
+      'Xpand-bridged filters: lazy batch-get completed'
     )
 
     const sorted = applySorting(searchResults, params)
-    const page = params.page ?? 1
-    const limit = params.limit ?? 20
-    const totalCount = sorted.length
     const start = (page - 1) * limit
     const pageSlice = sorted.slice(start, start + limit)
     const totalPages = Math.ceil(totalCount / limit)

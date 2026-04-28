@@ -311,20 +311,37 @@ const LeasesPage = () => {
             <div className="text-center py-8 text-destructive">
               Ett fel uppstod vid hämtning av hyreskontrakt
             </div>
+          ) : filters.isFetching && filters.leases.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="flex items-center justify-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <span>Söker...</span>
+              </div>
+            </div>
           ) : filters.leases.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Inga hyreskontrakt hittades
             </div>
           ) : (
-            <ResponsiveTable
-              data={filters.leases}
-              columns={[selectColumn, ...leaseColumns]}
-              keyExtractor={(lease) => lease.leaseId}
-              mobileCardRenderer={LeaseMobileCard}
-              sortBy={filters.sortBy}
-              sortOrder={filters.sortOrder}
-              onSort={filters.handleSort}
-            />
+            <div className="relative">
+              {filters.isFetching && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center z-10 rounded-md">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    <span>Söker...</span>
+                  </div>
+                </div>
+              )}
+              <ResponsiveTable
+                data={filters.leases}
+                columns={[selectColumn, ...leaseColumns]}
+                keyExtractor={(lease) => lease.leaseId}
+                mobileCardRenderer={LeaseMobileCard}
+                sortBy={filters.sortBy}
+                sortOrder={filters.sortOrder}
+                onSort={filters.handleSort}
+              />
+            </div>
           )}
 
           <Pagination

@@ -11,7 +11,7 @@ import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFi
 
 import { useLeaseSearch } from './useLeaseSearch'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 100
 
 const FILTER_KEYS = [
   'objectType',
@@ -54,7 +54,13 @@ export function useLeaseFilters() {
     [urlSearchParams]
   )
   const selectedStatuses = useMemo(
-    () => urlSearchParams.getAll('status') as ('current' | 'upcoming' | 'abouttoend' | 'ended')[],
+    () =>
+      urlSearchParams.getAll('status') as (
+        | 'current'
+        | 'upcoming'
+        | 'abouttoend'
+        | 'ended'
+      )[],
     [urlSearchParams]
   )
   const selectedLeaseTypes = useMemo(
