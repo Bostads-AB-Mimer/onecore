@@ -30,9 +30,12 @@ export function PhotoGallery({
   const handleRemove = (index: number) => {
     const path = photos[index]
     onRemovePhoto(index)
-    // Best-effort cleanup; the array entry is gone regardless. Orphan files
-    // are tolerated (retention policy is out of scope per MIM-1709).
-    void deleteAsync(path).catch(() => {})
+    // Best-effort cleanup; the array entry is gone regardless. 404s are
+    // tolerated inside useInspectionPhotos; non-404 failures leave an
+    // orphan file and are logged for visibility.
+    void deleteAsync(path).catch((err) => {
+      console.error('Failed to delete inspection photo:', err)
+    })
   }
 
   return (

@@ -54,7 +54,7 @@ export function buildInspectionPhotoPath(
   return `${base}/component/${target.componentId}/${uuid}${fileExtension}`
 }
 
-export function useInspectionPhotos(inspectionId: string | undefined) {
+export function useInspectionPhotos(inspectionId: string) {
   const uploadMutation = useMutation({
     mutationFn: async ({
       file,
@@ -62,8 +62,6 @@ export function useInspectionPhotos(inspectionId: string | undefined) {
       roomName,
       target,
     }: UploadInspectionPhotoArgs) => {
-      if (!inspectionId) throw new Error('No inspection ID provided for upload')
-
       const fileData = await fileToBase64(file)
       const path = buildInspectionPhotoPath(
         inspectionId,

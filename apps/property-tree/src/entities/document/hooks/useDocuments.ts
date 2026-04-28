@@ -8,26 +8,9 @@ import { ContextType } from '@/shared/types/ui'
 
 import { extractFileName, getFileTypeFromName } from '../lib/fileUtils'
 
-export interface UseDocumentsOptions {
-  /**
-   * When provided, returns the full storage key for an uploaded file.
-   * In this mode, `deleteFile` and `getDownloadUrl` also accept full paths
-   * directly (no `${contextType}/${id}/` prefix is prepended), and the upload
-   * mutation result includes the stored path under `path` so the caller can
-   * persist it. The list query still uses the default prefix; callers that
-   * don't rely on listing can simply ignore `documents`.
-   */
-  pathBuilder?: (file: File) => string
-}
-
-export function useDocuments(
-  contextType: ContextType,
-  id: string | undefined,
-  options?: UseDocumentsOptions
-) {
+export function useDocuments(contextType: ContextType, id: string | undefined) {
   const queryClient = useQueryClient()
   const prefix = id ? `${contextType}/${id}/` : undefined
-  const pathBuilder = options?.pathBuilder
 
   // Fetch documents for this context
   const documentsQuery = useQuery({
@@ -95,15 +78,8 @@ export function useDocuments(
 
       // Fallback for other context types (property, building, residence, tenant)
       // Keep using file-storage directly (no DB linking needed for these)
-      const fullPath = pathBuilder
-        ? pathBuilder(file)
-        : `${contextType}/${id}/${file.name}`
-      const response = await fileStorageService.uploadFile(
-        fullPath,
-        fileData,
-        file.type
-      )
-      return { ...response, path: fullPath }
+      const fullPath = `${contextType}/${id}/${file.name}`
+      return fileStorageService.uploadFile(fullPath, fileData, file.type)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -112,15 +88,12 @@ export function useDocuments(
     },
   })
 
-  // Delete mutation. When `pathBuilder` is set the argument is treated as a
-  // full storage key; otherwise it is a file name within the default prefix.
+  // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: (fileNameOrPath: string) => {
+    mutationFn: (fileName: string) => {
       if (!id) throw new Error('No ID provided for delete')
 
-      const fullPath = pathBuilder
-        ? fileNameOrPath
-        : `${contextType}/${id}/${fileNameOrPath}`
+      const fullPath = `${contextType}/${id}/${fileName}`
       return fileStorageService.deleteFile(fullPath)
     },
     onSuccess: () => {
@@ -130,13 +103,11 @@ export function useDocuments(
     },
   })
 
-  // Get download URL. Same path-mode rules as `deleteFile`.
-  const getDownloadUrl = async (fileNameOrPath: string) => {
+  // Get download URL
+  const getDownloadUrl = async (fileName: string) => {
     if (!id) throw new Error('No ID provided for download')
 
-    const fullPath = pathBuilder
-      ? fileNameOrPath
-      : `${contextType}/${id}/${fileNameOrPath}`
+    const fullPath = `${contextType}/${id}/${fileName}`
     return fileStorageService.getFileUrl(fullPath)
   }
 

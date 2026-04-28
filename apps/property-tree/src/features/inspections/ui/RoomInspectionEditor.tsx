@@ -31,7 +31,7 @@ type OpenDetail =
 interface RoomInspectionEditorProps {
   room: Room
   inspectionData: InspectionRoom
-  inspectionId: string | undefined
+  inspectionId: string
   onConditionUpdate: (
     field: keyof InspectionRoom['conditions'],
     value: string
@@ -46,7 +46,7 @@ interface RoomInspectionEditorProps {
   ) => void
   onComponentPhotoAdd: (
     field: keyof InspectionRoom['componentPhotos'],
-    photoDataUrl: string
+    photoPath: string
   ) => void
   onComponentPhotoRemove: (
     field: keyof InspectionRoom['componentPhotos'],
@@ -77,7 +77,7 @@ interface RoomInspectionEditorProps {
   onFetchedComponentPhotoAdd: (
     componentId: string,
     label: string,
-    photoDataUrl: string
+    photoPath: string
   ) => void
   onFetchedComponentPhotoRemove: (
     componentId: string,

@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Camera, Loader2 } from 'lucide-react'
 
+import { useToast } from '@/shared/hooks/useToast'
 import { Button } from '@/shared/ui/Button'
 
 import {
@@ -13,7 +14,7 @@ const JPEG_QUALITY = 0.7
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 export interface InspectionPhotoUploadContext {
-  inspectionId: string | undefined
+  inspectionId: string
   roomId: string
   roomName?: string | null
   target: InspectionPhotoTarget
@@ -67,7 +68,7 @@ export function PhotoCapture({
   disabled,
 }: PhotoCaptureProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
   const { uploadAsync, isUploading } = useInspectionPhotos(
     uploadContext.inspectionId
   )
@@ -79,14 +80,12 @@ export function PhotoCapture({
     if (event.target) event.target.value = ''
     if (!file) return
 
-    setError(null)
-
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Filtypen stöds inte')
-      return
-    }
-    if (!uploadContext.inspectionId) {
-      setError('Saknar besiktnings-id')
+      toast({
+        title: 'Filtypen stöds inte',
+        description: 'Använd JPEG, PNG eller WebP.',
+        variant: 'destructive',
+      })
       return
     }
 
@@ -99,12 +98,16 @@ export function PhotoCapture({
         target: uploadContext.target,
       })
       onPhotoCaptured(path)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte ladda upp foto')
+    } catch {
+      toast({
+        title: 'Kunde inte ladda upp foto',
+        description: 'Försök igen om en stund.',
+        variant: 'destructive',
+      })
     }
   }
 
-  const isDisabled = disabled || isUploading || !uploadContext.inspectionId
+  const isDisabled = disabled || isUploading
 
   return (
     <div className="relative inline-block shrink-0">
@@ -131,11 +134,6 @@ export function PhotoCapture({
           <Camera className="h-4 w-4" />
         )}
       </Button>
-      {error && (
-        <p className="absolute top-full mt-1 text-xs text-destructive whitespace-nowrap">
-          {error}
-        </p>
-      )}
     </div>
   )
 }

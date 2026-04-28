@@ -33,7 +33,7 @@ export interface UseComponentInspectionReturn {
   addPhoto: (
     roomId: string,
     field: keyof InspectionRoom['componentPhotos'],
-    photoDataUrl: string
+    photoPath: string
   ) => void
   removePhoto: (
     roomId: string,
@@ -77,7 +77,7 @@ export interface UseComponentInspectionReturn {
     roomId: string,
     componentId: string,
     label: string,
-    photoDataUrl: string
+    photoPath: string
   ) => void
   removeComponentPhoto: (
     roomId: string,
@@ -240,7 +240,7 @@ export function useComponentInspection(
     (
       roomId: string,
       field: keyof InspectionRoom['componentPhotos'],
-      photoDataUrl: string
+      photoPath: string
     ) => {
       setInspectionData((prev) => ({
         ...prev,
@@ -248,7 +248,7 @@ export function useComponentInspection(
           ...prev[roomId],
           componentPhotos: {
             ...prev[roomId].componentPhotos,
-            [field]: [...prev[roomId].componentPhotos[field], photoDataUrl],
+            [field]: [...prev[roomId].componentPhotos[field], photoPath],
           },
         },
       }))
@@ -445,12 +445,7 @@ export function useComponentInspection(
    * Append a photo to a fetched component.
    */
   const addComponentPhoto = useCallback(
-    (
-      roomId: string,
-      componentId: string,
-      label: string,
-      photoDataUrl: string
-    ) => {
+    (roomId: string, componentId: string, label: string, photoPath: string) => {
       setInspectionData((prev) => ({
         ...prev,
         [roomId]: {
@@ -459,7 +454,7 @@ export function useComponentInspection(
             prev[roomId].components,
             componentId,
             label,
-            (c) => ({ ...c, photos: [...c.photos, photoDataUrl] })
+            (c) => ({ ...c, photos: [...c.photos, photoPath] })
           ),
         },
       }))

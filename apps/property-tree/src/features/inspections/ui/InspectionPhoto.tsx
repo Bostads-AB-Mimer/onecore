@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 
 import { fileStorageService } from '@/services/api/core'
 
+import { cn } from '@/shared/lib/utils'
+
 interface InspectionPhotoProps {
   path: string
   alt: string
@@ -25,7 +27,7 @@ export function InspectionPhoto({
   if (urlQuery.isLoading) {
     return (
       <div
-        className={`${className ?? ''} bg-muted animate-pulse`}
+        className={cn('bg-muted animate-pulse', className)}
         aria-label={`${alt} (laddar)`}
       />
     )
@@ -34,7 +36,10 @@ export function InspectionPhoto({
   if (urlQuery.isError || !urlQuery.data) {
     return (
       <div
-        className={`${className ?? ''} bg-muted flex items-center justify-center text-xs text-muted-foreground`}
+        className={cn(
+          'bg-muted flex items-center justify-center text-xs text-muted-foreground',
+          className
+        )}
         aria-label={`${alt} (kunde inte laddas)`}
       >
         Kunde inte ladda foto

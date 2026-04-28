@@ -39,7 +39,7 @@ interface InspectionFormDialogProps {
   tenant?: TenantInfoCardData
   address?: string
   apartmentCode?: string | null
-  existingInspection?: Inspection
+  existingInspection: Inspection
   rentalId?: string
 }
 
@@ -110,9 +110,7 @@ export function InspectionFormDialog({
   // but clear rooms so the form starts blank.
   const inspectionToUse =
     userChoice === 'fresh'
-      ? existingInspection
-        ? { ...existingInspection, rooms: null, isFurnished: false }
-        : undefined
+      ? { ...existingInspection, rooms: null, isFurnished: false }
       : existingInspection
 
   // Show choice dialog if there's saved data and user hasn't chosen yet

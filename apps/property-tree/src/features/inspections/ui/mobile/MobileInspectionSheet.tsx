@@ -25,7 +25,7 @@ interface MobileInspectionSheetProps {
   tenant?: TenantInfoCardData
   address?: string
   apartmentCode?: string | null
-  existingInspection?: Inspection
+  existingInspection: Inspection
   rentalId?: string
 }
 
