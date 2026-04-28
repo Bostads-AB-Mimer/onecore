@@ -592,6 +592,40 @@ async function getOrCreateTenant(
   return { ok: true, data: tenantResponse.data }
 }
 
+export async function getOrCreateAndUpdateTenant(
+  contact: Contact
+): Promise<
+  AdapterResult<
+    TenfastTenant,
+    | 'could-not-retrieve-tenant'
+    | 'could-not-create-tenant'
+    | 'could-not-update-tenant'
+  >
+> {
+  const result = await getOrCreateTenant(contact)
+  if (!result.ok) return result
+
+  // Update with latest contact data
+  const requestData = buildTenantRequestData(contact)
+  const updateResponse = await tenfastApi.request({
+    method: 'patch',
+    url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${result.data._id}?hyresvard=${tenfastCompanyId}`,
+    data: requestData,
+  })
+
+  if (updateResponse.status !== 200 && updateResponse.status !== 201) {
+    return handleTenfastError(
+      { error: updateResponse.data.error, status: updateResponse.status },
+      'could-not-update-tenant'
+    )
+  }
+
+  const parsed = TenfastTenantSchema.safeParse(updateResponse.data)
+  if (!parsed.success)
+    return handleTenfastError(parsed.error, 'could-not-update-tenant')
+  return { ok: true, data: parsed.data }
+}
+
 function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
   if (isAxiosError(errorObj)) {
     logger.error(
