@@ -695,7 +695,9 @@ export const getInvoiceRows = async (
   const y = now.getUTCFullYear()
   const m = pad(now.getUTCMonth() + 1)
   const lastDay = pad(
-    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate()
+    new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)
+    ).getUTCDate()
   )
   const startOfCurrentMonthString = `${y}${m}01`
   const endOfCurrentMonthString = `${y}${m}${lastDay}`
