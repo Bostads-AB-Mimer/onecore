@@ -1,4 +1,4 @@
-import { parseLeaseChanges } from './cmlog-lease-adapter'
+import { parseLeaseChanges } from '../../../adapters/xpand/cmlog-lease-adapter'
 
 describe('parseLeaseChanges', () => {
   it('extracts leaseId, contactCode and rentalObjectId from logmemo', () => {

@@ -1,4 +1,4 @@
-import knex from 'knex'
+import { Knex } from 'knex'
 import { logger } from '@onecore/utilities'
 
 export interface LeaseChange {
@@ -20,7 +20,7 @@ const RELEVANT_CONTRACT_TYPES = [
  * If no timestamp is provided, falls back to the last 5 minutes.
  */
 export const cmlogLeaseChanges = (
-  db: knex.Knex,
+  db: Knex,
   since: Date | null
 ): Promise<Record<string, unknown>[]> => {
   const base = db
@@ -81,7 +81,7 @@ export const parseLeaseChanges = (
  * Fetches and parses lease changes from cmlog.
  */
 export const getLeaseChanges = async (
-  db: knex.Knex,
+  db: Knex,
   since: Date | null
 ): Promise<LeaseChange[]> => {
   const rows = (await cmlogLeaseChanges(db, since)) as {
