@@ -232,7 +232,7 @@ const getAdditionalColumns = async (
       )
       return {
         row: undefined,
-        error: `Kunde inte hitta kostnadsställe och fastighet för hyresobjekt ${contractCode.split('/')[0]} på faktura ${row.invoiceNumber} med fråndatum ${row.fromDate}`,
+        error: `Kunde inte hitta kostnadsställe och fastighet för hyresobjekt ${contractCode.split('/')[0]} på faktura ${row.invoiceNumber} med fråndatum ${row.fromDate}. Denna faktura måste bokföras manuellt i Xledger (både reskontra och intäktskonton)`,
       }
     }
   } else if (row.company === '006') {
@@ -334,7 +334,8 @@ export const enrichInvoiceRows = async (
 
   const errorInvoiceNumbers = new Set(errors.map((e) => e.invoiceNumber))
   const rows = (await Promise.all(enrichedInvoiceRows)).filter(
-    (row) => row !== null && !errorInvoiceNumbers.has(row.invoiceNumber as string)
+    (row) =>
+      row !== null && !errorInvoiceNumbers.has(row.invoiceNumber as string)
   )
 
   return { rows: rows as InvoiceDataRow[], errors }
@@ -691,7 +692,9 @@ export const getInvoiceRows = async (
   const pad = (n: number) => String(n).padStart(2, '0')
   const y = now.getFullYear()
   const m = pad(now.getMonth() + 1)
-  const lastDay = pad(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())
+  const lastDay = pad(
+    new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  )
   const startOfCurrentMonthString = `${y}${m}01`
   const endOfCurrentMonthString = `${y}${m}${lastDay}`
 
