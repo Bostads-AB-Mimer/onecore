@@ -175,8 +175,8 @@ const getExportInvoiceRows = async (invoices: InvoiceWithAccounting[]) => {
         invoiceDueDate: invoice.expirationDate,
         invoiceNumber: invoice.invoiceId,
         invoiceRowText: invoiceRow.invoiceRowText,
-        fromDate: invoice.fromDate,
-        toDate: invoice.toDate,
+        fromDate: clampToCurrentMonth(invoice.fromDate, 'start'),
+        toDate: clampToCurrentMonth(invoice.toDate, 'end'),
         contractCode: invoice.leaseId,
         rentArticleName: invoiceRow.rentArticleName,
         account: invoiceRow.account,
@@ -214,8 +214,8 @@ const createRoundOffRow = async (
     invoiceDate: invoice.invoiceDate,
     invoiceNumber: invoice.invoiceId,
     invoiceRowText: 'Öresutjämning',
-    fromDate: invoice.fromDate,
-    toDate: invoice.toDate,
+    fromDate: clampToCurrentMonth(invoice.fromDate, 'start'),
+    toDate: clampToCurrentMonth(invoice.toDate, 'end'),
     contractCode: invoice.leaseId,
     totalAccount,
     ledgerAccount,
@@ -281,6 +281,31 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
 
 const dateString = (date: Date | undefined) => {
   return date ? date.toISOString().split('T')[0] : undefined
+}
+
+// Uses UTC throughout to stay consistent with dateString() which calls toISOString().
+// Replacement dates are built with Date.UTC so toISOString() always returns the
+// intended calendar date regardless of the server's local timezone offset.
+const clampToCurrentMonth = (
+  date: Date | undefined,
+  position: 'start' | 'end'
+): Date | undefined => {
+  if (!date) return undefined
+
+  const now = new Date()
+  const currentYear = now.getUTCFullYear()
+  const currentMonth = now.getUTCMonth()
+
+  if (
+    date.getUTCFullYear() < currentYear ||
+    (date.getUTCFullYear() === currentYear && date.getUTCMonth() < currentMonth)
+  ) {
+    return position === 'start'
+      ? new Date(Date.UTC(currentYear, currentMonth, 1))
+      : new Date(Date.UTC(currentYear, currentMonth + 1, 0))
+  }
+
+  return date
 }
 
 const safeAdd = (
