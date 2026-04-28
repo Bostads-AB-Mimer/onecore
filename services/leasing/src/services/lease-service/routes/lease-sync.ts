@@ -22,6 +22,12 @@ export const routes = (router: KoaRouter) => {
         ? new Date(ctx.query.since as string)
         : null
 
+      if (since && isNaN(since.getTime())) {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid since parameter, expected ISO 8601 date', ...metadata }
+        return
+      }
+
       const changes = await getLeaseChanges(xpandDb, since)
 
       ctx.status = 200
