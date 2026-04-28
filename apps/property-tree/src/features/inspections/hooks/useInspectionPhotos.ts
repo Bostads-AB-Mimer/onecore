@@ -16,11 +16,6 @@ export interface UploadInspectionPhotoArgs {
   target: InspectionPhotoTarget
 }
 
-function getFileExtension(file: File): string {
-  const match = /\.([a-zA-Z0-9]+)$/.exec(file.name)
-  return match ? `.${match[1].toLowerCase()}` : '.jpg'
-}
-
 // Slugify for storage-key readability. Folds Swedish diacritics (å/ä → a,
 // ö → o), lowercases, replaces non-alphanumerics with hyphens, and trims
 // leading/trailing/duplicate hyphens. Used only for path readability —
@@ -39,19 +34,20 @@ function roomSegment(roomId: string, roomName?: string | null): string {
   return slug ? `${slug}-${roomId}` : roomId
 }
 
-export function buildInspectionPhotoPath(
+// Photos are always JPEG-compressed before upload (see compressToJpegFile),
+// so the storage key extension is fixed.
+function buildInspectionPhotoPath(
   inspectionId: string,
   roomId: string,
   roomName: string | null | undefined,
-  target: InspectionPhotoTarget,
-  fileExtension: string
+  target: InspectionPhotoTarget
 ): string {
   const uuid = crypto.randomUUID()
   const base = `${ContextType.InspectionPhoto}/${inspectionId}/room/${roomSegment(roomId, roomName)}`
   if (target.kind === 'surface') {
-    return `${base}/surface/${target.surfaceKey}/${uuid}${fileExtension}`
+    return `${base}/surface/${target.surfaceKey}/${uuid}.jpg`
   }
-  return `${base}/component/${target.componentId}/${uuid}${fileExtension}`
+  return `${base}/component/${target.componentId}/${uuid}.jpg`
 }
 
 export function useInspectionPhotos(inspectionId: string) {
@@ -67,8 +63,7 @@ export function useInspectionPhotos(inspectionId: string) {
         inspectionId,
         roomId,
         roomName,
-        target,
-        getFileExtension(file)
+        target
       )
       await fileStorageService.uploadFile(path, fileData, file.type)
       return path
