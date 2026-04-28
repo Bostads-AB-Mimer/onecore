@@ -87,49 +87,6 @@ export const GetInspectionsByResidenceIdQuerySchema = z.object({
     .optional(),
 })
 
-// Note: 'details' fields in conditions/actions/componentNotes/componentPhotos are kept
-// for backward compatibility with existing persisted data. New detail inspections use
-// the detailComponents array instead. The UI no longer renders these fields.
-export const InspectionRoomConditionsSchema = z.object({
-  wall1: z.string(),
-  wall2: z.string(),
-  wall3: z.string(),
-  wall4: z.string(),
-  floor: z.string(),
-  ceiling: z.string(),
-  details: z.string(),
-})
-
-export const InspectionRoomActionsSchema = z.object({
-  wall1: z.array(z.string()),
-  wall2: z.array(z.string()),
-  wall3: z.array(z.string()),
-  wall4: z.array(z.string()),
-  floor: z.array(z.string()),
-  ceiling: z.array(z.string()),
-  details: z.array(z.string()),
-})
-
-export const InspectionRoomCostsSchema = z.object({
-  wall1: z.number().int().min(0).default(0),
-  wall2: z.number().int().min(0).default(0),
-  wall3: z.number().int().min(0).default(0),
-  wall4: z.number().int().min(0).default(0),
-  floor: z.number().int().min(0).default(0),
-  ceiling: z.number().int().min(0).default(0),
-  details: z.number().int().min(0).default(0),
-})
-
-export const InspectionRoomCostResponsibilitiesSchema = z.object({
-  wall1: z.enum(['tenant', 'landlord']).nullable().default(null),
-  wall2: z.enum(['tenant', 'landlord']).nullable().default(null),
-  wall3: z.enum(['tenant', 'landlord']).nullable().default(null),
-  wall4: z.enum(['tenant', 'landlord']).nullable().default(null),
-  floor: z.enum(['tenant', 'landlord']).nullable().default(null),
-  ceiling: z.enum(['tenant', 'landlord']).nullable().default(null),
-  details: z.enum(['tenant', 'landlord']).nullable().default(null),
-})
-
 export const DetailComponentSchema = z.object({
   id: z.string(),
   type: z.string(),
@@ -150,18 +107,76 @@ export const InspectionComponentSchema = z.object({
   costResponsibility: z.enum(['tenant', 'landlord']).nullable().default(null),
 })
 
+// Note: 'details' fields in conditions/actions/componentNotes/componentPhotos are kept
+// for backward compatibility with existing persisted data. New detail inspections use
+// the detailComponents array instead. The UI no longer renders these fields.
+//
+// The conditions/actions/componentNotes/componentPhotos/componentCosts/componentCostResponsibilities
+// sub-shapes are intentionally inlined (rather than extracted into reusable z.object consts) so
+// zod-to-json-schema sees independent instances at each site. Reusing a single instance across
+// multiple fields here causes the OpenAPI generator to emit deep-path $refs (e.g.
+// #/components/schemas/Inspection/properties/rooms/items/properties/conditions) which
+// openapi-typescript can't translate, breaking the frontend api-types regen.
 export const InspectionRoomSchema = z.object({
   roomId: z.string(),
   // Populated for ad-hoc rooms created by the inspector when the Xpand room
   // list is incomplete. Absent for rooms sourced from the property system —
   // their display name is resolved via the Room record from roomService.
   name: z.string().optional(),
-  conditions: InspectionRoomConditionsSchema,
-  actions: InspectionRoomActionsSchema,
-  componentNotes: InspectionRoomConditionsSchema,
-  componentCosts: InspectionRoomCostsSchema,
-  componentPhotos: InspectionRoomActionsSchema,
-  componentCostResponsibilities: InspectionRoomCostResponsibilitiesSchema,
+  conditions: z.object({
+    wall1: z.string(),
+    wall2: z.string(),
+    wall3: z.string(),
+    wall4: z.string(),
+    floor: z.string(),
+    ceiling: z.string(),
+    details: z.string(),
+  }),
+  actions: z.object({
+    wall1: z.array(z.string()),
+    wall2: z.array(z.string()),
+    wall3: z.array(z.string()),
+    wall4: z.array(z.string()),
+    floor: z.array(z.string()),
+    ceiling: z.array(z.string()),
+    details: z.array(z.string()),
+  }),
+  componentNotes: z.object({
+    wall1: z.string(),
+    wall2: z.string(),
+    wall3: z.string(),
+    wall4: z.string(),
+    floor: z.string(),
+    ceiling: z.string(),
+    details: z.string(),
+  }),
+  componentCosts: z.object({
+    wall1: z.number().int().min(0).default(0),
+    wall2: z.number().int().min(0).default(0),
+    wall3: z.number().int().min(0).default(0),
+    wall4: z.number().int().min(0).default(0),
+    floor: z.number().int().min(0).default(0),
+    ceiling: z.number().int().min(0).default(0),
+    details: z.number().int().min(0).default(0),
+  }),
+  componentPhotos: z.object({
+    wall1: z.array(z.string()),
+    wall2: z.array(z.string()),
+    wall3: z.array(z.string()),
+    wall4: z.array(z.string()),
+    floor: z.array(z.string()),
+    ceiling: z.array(z.string()),
+    details: z.array(z.string()),
+  }),
+  componentCostResponsibilities: z.object({
+    wall1: z.enum(['tenant', 'landlord']).nullable().default(null),
+    wall2: z.enum(['tenant', 'landlord']).nullable().default(null),
+    wall3: z.enum(['tenant', 'landlord']).nullable().default(null),
+    wall4: z.enum(['tenant', 'landlord']).nullable().default(null),
+    floor: z.enum(['tenant', 'landlord']).nullable().default(null),
+    ceiling: z.enum(['tenant', 'landlord']).nullable().default(null),
+    details: z.enum(['tenant', 'landlord']).nullable().default(null),
+  }),
   photos: z.array(z.string()),
   isApproved: z.boolean(),
   isHandled: z.boolean(),
