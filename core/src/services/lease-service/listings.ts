@@ -141,25 +141,43 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { content: listingsWithRentalObjects, ...metadata }
       } else {
         //filter listings on validToRentForContactCode
-        const leases = await leasingAdapter.getLeasesForContactCode(
-          query.data.validToRentForContactCode,
-          {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
-            includeContacts: false,
-          }
+        const tenantResult = await leasingAdapter.getTenantByContactCode(
+          query.data.validToRentForContactCode
         )
 
-        const leaseAreaCodes = new Set(
-          leases.map((lease) => lease.residentialArea?.code).filter(Boolean)
-        )
+        const leaseAreaCodes = new Set<string>()
+        if (tenantResult.ok) {
+          const current =
+            tenantResult.data.currentHousingContract?.residentialArea?.code
+          const upcoming =
+            tenantResult.data.upcomingHousingContract?.residentialArea?.code
+          if (current) leaseAreaCodes.add(current)
+          if (upcoming) leaseAreaCodes.add(upcoming)
+        } else if (
+          tenantResult.err !== 'contact-not-tenant' &&
+          tenantResult.err !== 'no-valid-housing-contract'
+        ) {
+          // contact-not-found shouldn't happen for an authenticated contact, so
+          // log it alongside any genuinely unexpected errors.
+          logger.error(
+            {
+              err: tenantResult.err,
+              contactCode: query.data.validToRentForContactCode,
+            },
+            'Unexpected error from getTenantByContactCode in /listings; falling back to NON_SCORED-only'
+          )
+        }
+        // Any error path leaves leaseAreaCodes empty so the contact still sees
+        // NON_SCORED listings. Expected soft-fail cases (contact-not-tenant /
+        // no-valid-housing-contract — e.g. parking-only contacts) are silent;
+        // unexpected errors are logged above.
 
-        var listings = listingsWithRentalObjects.filter((listing) => {
+        const listings = listingsWithRentalObjects.filter((listing) => {
           return (
             listing.rentalRule == 'NON_SCORED' || //all NON_SCORED will be included
             (listing.rentalRule == 'SCORED' &&
               listing.rentalObject.residentialAreaCode &&
-              leaseAreaCodes.has(listing.rentalObject.residentialAreaCode)) // all SCORED where contact has a lease in the area will be included
+              leaseAreaCodes.has(listing.rentalObject.residentialAreaCode)) // SCORED visible only if contact has a housing contract in that area
           )
         })
 
