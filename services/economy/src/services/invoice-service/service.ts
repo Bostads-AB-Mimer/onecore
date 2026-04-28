@@ -646,7 +646,7 @@ export const importInvoiceRows = async (
     const errors: { invoiceNumber: string; error: string }[] = []
     const CHUNK_SIZE = 500
 
-    /*const importedInvoiceNumbers = await getImportedInvoiceNumbers()
+    const importedInvoiceNumbers = await getImportedInvoiceNumbers()
     const rentalInvoiceNumbers = (
       await getRentalInvoices(fromDate, toDate, companyId)
     ).map((invoice: any) => {
@@ -669,10 +669,7 @@ export const importInvoiceRows = async (
         processedInvoices: 0,
         errorInvoices: null,
       }
-    }*/
-
-    const rentalInvoiceNumbers = ['552602360030956K']
-    const invoicesToImport = rentalInvoiceNumbers
+    }
 
     const batchTotal = await getXpandBatchTotalAmount(invoicesToImport)
 
