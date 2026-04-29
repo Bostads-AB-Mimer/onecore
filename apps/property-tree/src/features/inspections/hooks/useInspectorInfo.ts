@@ -41,8 +41,11 @@ export function useInspectorInfo(
     Boolean(existingInspection?.masterKeyAccess)
   )
 
+  // Default true — apartments are furnished at inspection time in ~99% of
+  // cases. The inspector flips this off only for the rare empty-apartment
+  // case. Mirrors the create-dialog seed.
   const [isFurnished, setIsFurnished] = useState(
-    existingInspection?.isFurnished ?? false
+    existingInspection?.isFurnished ?? true
   )
 
   // Validation: inspector name is required

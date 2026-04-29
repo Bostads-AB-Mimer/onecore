@@ -5874,11 +5874,19 @@ export interface paths {
         };
         /** @description Inspection not found. */
         404: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
         /** @description Internal server error. */
         500: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
       };
     };
@@ -5913,11 +5921,19 @@ export interface paths {
         };
         /** @description Inspection not found. */
         404: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
         /** @description Internal server error. */
         500: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
       };
     };
@@ -5944,11 +5960,19 @@ export interface paths {
         };
         /** @description Inspection or residence not found. */
         404: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
         /** @description Internal server error. */
         500: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
       };
     };
@@ -5980,15 +6004,27 @@ export interface paths {
         };
         /** @description Invalid request or no contract found. */
         400: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
         /** @description Inspection not found. */
         404: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
         /** @description Internal server error. */
         500: {
-          content: never;
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
         };
       };
     };

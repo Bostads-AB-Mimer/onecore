@@ -5,11 +5,14 @@
  */
 
 /**
- * Inspection type constants
+ * Inspection type constants.
+ *
+ * MAINTENANCE is reserved for an upcoming card (underhållsbesiktningar) and is
+ * deliberately not yet exposed in the create-inspection picker.
  */
 export const INSPECTION_TYPE = {
-  MOVE_IN: 'inflytt',
   MOVE_OUT: 'avflytt',
+  MAINTENANCE: 'underhall',
 } as const
 
 export type InspectionType =
@@ -19,8 +22,8 @@ export type InspectionType =
  * Inspection type labels (Swedish)
  */
 export const INSPECTION_TYPE_LABELS = {
-  [INSPECTION_TYPE.MOVE_IN]: 'Inflytt',
   [INSPECTION_TYPE.MOVE_OUT]: 'Avflytt',
+  [INSPECTION_TYPE.MAINTENANCE]: 'Underhåll',
 } as const
 
 /**
