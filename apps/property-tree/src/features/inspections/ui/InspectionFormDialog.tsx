@@ -106,11 +106,14 @@ export function InspectionFormDialog({
   }
 
   // Determine which inspection data to use based on user choice.
-  // When starting fresh, preserve the existing inspection metadata (e.g. inspector)
-  // but clear rooms so the form starts blank.
+  // When starting fresh, preserve the existing inspection metadata (e.g.
+  // inspector, isFurnished as captured at create time) but clear rooms so the
+  // form starts blank.
   const inspectionToUse =
     userChoice === 'fresh'
-      ? { ...existingInspection, rooms: null, isFurnished: false }
+      ? existingInspection
+        ? { ...existingInspection, rooms: null }
+        : undefined
       : existingInspection
 
   // Show choice dialog if there's saved data and user hasn't chosen yet

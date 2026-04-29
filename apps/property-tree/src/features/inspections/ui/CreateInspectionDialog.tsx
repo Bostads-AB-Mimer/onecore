@@ -22,7 +22,10 @@ import {
 } from '@/shared/ui/Select'
 import { Textarea } from '@/shared/ui/Textarea'
 
-import { INSPECTION_TYPE_LABELS } from '../constants/inspectionTypes'
+import {
+  INSPECTION_TYPE,
+  INSPECTION_TYPE_LABELS,
+} from '../constants/inspectionTypes'
 import { INSPECTION_STATUS } from '../constants/statuses'
 import { useCreateInspection } from '../hooks/useCreateInspection'
 import { useInspectors } from '../hooks/useInspectors'
@@ -30,9 +33,11 @@ import { useInspectors } from '../hooks/useInspectors'
 type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
 type DetailedInspection = components['schemas']['DetailedInspection']
 
-const INSPECTION_TYPES = Object.entries(INSPECTION_TYPE_LABELS).map(
-  ([value, label]) => ({ value, label })
-)
+// Underhåll-besiktningar are coming in a future card; leave the constant
+// in place but keep the picker scoped to Avflytt for now.
+const INSPECTION_TYPES = Object.entries(INSPECTION_TYPE_LABELS)
+  .filter(([value]) => value !== INSPECTION_TYPE.MAINTENANCE)
+  .map(([value, label]) => ({ value, label }))
 
 interface CreateInspectionDialogProps {
   isOpen: boolean
@@ -61,11 +66,8 @@ export function CreateInspectionDialog({
   const { data: inspectors, isLoading: isLoadingInspectors } = useInspectors()
   const [inspector, setInspector] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [type, setType] = useState('')
-  // Apartments are furnished at inspection time in ~99% of cases; default to
-  // true so the protocol's "Möblerad" field reflects reality without the
-  // inspector having to remember to tick the box at create time.
-  const [isFurnished, setIsFurnished] = useState(true)
+  // Default to "avflytt" — the most common case at inspection time.
+  const [type, setType] = useState<string>(INSPECTION_TYPE.MOVE_OUT)
   const [isTenantPresent, setIsTenantPresent] = useState(false)
   const [isNewTenantPresent, setIsNewTenantPresent] = useState(false)
   const [masterKeyAccess, setMasterKeyAccess] = useState('')
@@ -86,7 +88,11 @@ export function CreateInspectionDialog({
       residenceId: rentalId,
       address,
       apartmentCode,
-      isFurnished,
+      // The inspector confirms furnishing during the conduct dialog (where
+      // they're physically on-site). Seed `true` here since apartments are
+      // furnished at inspection time in ~99% of cases; the conduct toggle is
+      // the source of truth.
+      isFurnished: true,
       leaseId,
       isTenantPresent,
       isNewTenantPresent,
@@ -109,8 +115,7 @@ export function CreateInspectionDialog({
   const resetForm = () => {
     setInspector('')
     setDate(new Date().toISOString().slice(0, 10))
-    setType('')
-    setIsFurnished(false)
+    setType(INSPECTION_TYPE.MOVE_OUT)
     setIsTenantPresent(false)
     setIsNewTenantPresent(false)
     setMasterKeyAccess('')
@@ -191,15 +196,6 @@ export function CreateInspectionDialog({
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="isFurnished"
-                checked={isFurnished}
-                onCheckedChange={(checked) => setIsFurnished(checked === true)}
-              />
-              <Label htmlFor="isFurnished">Möblerad</Label>
-            </div>
-
             <div className="flex items-center gap-2">
               <Checkbox
                 id="isTenantPresent"
