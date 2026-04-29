@@ -134,16 +134,26 @@ describe('tenfast-lease-search-adapter', () => {
       ])
     })
 
-    it('should return empty for letters-only (use explicit name param instead)', () => {
+    it('should default letters-only to address search', () => {
       expect(tenfastLeaseSearchAdapter.analyzeSearchTermForApi('Anna')).toEqual(
-        []
+        [
+          {
+            filterKey: 'filter[hyresobjekt][postadress]',
+            filterValue: 'Anna',
+          },
+        ]
       )
     })
 
-    it('should return empty for mixed alphanumeric (use explicit address param instead)', () => {
+    it('should default mixed alphanumeric to address search', () => {
       expect(
         tenfastLeaseSearchAdapter.analyzeSearchTermForApi('Kungsgatan 12')
-      ).toEqual([])
+      ).toEqual([
+        {
+          filterKey: 'filter[hyresobjekt][postadress]',
+          filterValue: 'Kungsgatan 12',
+        },
+      ])
     })
 
     it('should return empty array for empty string', () => {
@@ -610,16 +620,18 @@ describe('tenfast-lease-search-adapter', () => {
       expect(calledUrl).toContain('filter[hyresgaster][idbeteckning]=0022')
     })
 
-    it('should return empty results when q is a name (use explicit name param)', async () => {
-      const result = await tenfastLeaseSearchAdapter.searchLeases(
+    it('should search by address when q is a name', async () => {
+      const leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
+      setupMockLeases(leases)
+
+      await tenfastLeaseSearchAdapter.searchLeases(
         { q: 'Anna', page: 1, limit: 20 },
         mockCtx
       )
 
-      // q='Anna' doesn't match any known pattern, returns empty without calling API
-      expect(result.content).toHaveLength(0)
-      expect(result._meta.totalRecords).toBe(0)
-      expect(mockedRequest).not.toHaveBeenCalled()
+      // q='Anna' defaults to address search
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[hyresobjekt][postadress]=Anna')
     })
 
     it('should push explicit name param to API as displayName filter', async () => {
@@ -686,15 +698,26 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result.content[0].leaseId).toBe('lease-1')
     })
 
-    it('should return empty results when q is an address (use explicit address param)', async () => {
-      const result = await tenfastLeaseSearchAdapter.searchLeases(
+    it('should search by address when q is an address string', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          {},
+          { postadress: 'Kungsgatan 12' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      await tenfastLeaseSearchAdapter.searchLeases(
         { q: 'Kungsgatan 12', page: 1, limit: 20 },
         mockCtx
       )
 
-      // q='Kungsgatan 12' doesn't match any known pattern, returns empty
-      expect(result.content).toHaveLength(0)
-      expect(mockedRequest).not.toHaveBeenCalled()
+      // q='Kungsgatan 12' defaults to address search
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain(
+        'filter[hyresobjekt][postadress]=Kungsgatan+12'
+      )
     })
 
     it('should push explicit address param to API as postadress filter', async () => {

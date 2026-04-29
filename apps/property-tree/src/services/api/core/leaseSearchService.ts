@@ -13,6 +13,7 @@ export type PaginatedResponse<T> = {
 
 export type LeaseSearchQueryParams = {
   q?: string
+  name?: string
   objectType?: string[]
   status?: (
     | 'current'

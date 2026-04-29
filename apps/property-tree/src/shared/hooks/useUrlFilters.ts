@@ -27,7 +27,11 @@ export function useUrlFilters({
   const debouncedSearch = useDebounce(searchInput, debounceMs)
 
   // Sync debounced search → URL
+  // Only write to URL if the debounced value matches the current input
+  // (avoids stale debounce overwriting a clear)
   useEffect(() => {
+    if (debouncedSearch !== searchInput) return
+
     const currentSearch = searchParams.get('search') || ''
     if (debouncedSearch !== currentSearch) {
       updateUrlParams(
@@ -35,7 +39,7 @@ export function useUrlFilters({
         { replace: true }
       )
     }
-  }, [debouncedSearch, searchParams, updateUrlParams])
+  }, [debouncedSearch, searchInput, searchParams, updateUrlParams])
 
   // Sync URL → input (browser back/forward)
   useEffect(() => {

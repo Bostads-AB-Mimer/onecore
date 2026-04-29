@@ -17,6 +17,7 @@ const FILTER_KEYS = [
   'objectType',
   'status',
   'leaseType',
+  'tenantName',
   'property',
   'district',
   'buildingManager',
@@ -41,8 +42,12 @@ type ValidSortKey = (typeof VALID_SORT_KEYS)[number]
 const isValidSortKey = (v: string | null): v is ValidSortKey =>
   VALID_SORT_KEYS.includes(v as ValidSortKey)
 
-// These three filters are mutually exclusive — only one can be active at a time
-const EXCLUSIVE_FILTERS = ['property', 'district', 'buildingManager'] as const
+// These filters only allow a single value at a time
+const SINGLE_SELECT_FILTERS = [
+  'property',
+  'district',
+  'buildingManager',
+] as const
 
 export function useLeaseFilters() {
   const filters = useUrlFilters({
@@ -52,28 +57,23 @@ export function useLeaseFilters() {
 
   const { searchParams: urlSearchParams } = filters
 
-  // Wrap setFilterValues to enforce mutual exclusivity and single-select
-  // for property/district/buildingManager
+  // Wrap setFilterValues to enforce single-select for certain filters
   const setFilterValues = useCallback(
     (key: string, values: string[]) => {
       if (
-        EXCLUSIVE_FILTERS.includes(key as (typeof EXCLUSIVE_FILTERS)[number])
+        SINGLE_SELECT_FILTERS.includes(
+          key as (typeof SINGLE_SELECT_FILTERS)[number]
+        )
       ) {
         // Single-select: keep only the newest value
         const current = urlSearchParams.getAll(key)
         const newValue = values.find((v) => !current.includes(v))
         const singleValue = newValue ?? values[values.length - 1]
 
-        // Clear all exclusive filters, then set the single value
-        const newParams = new URLSearchParams(urlSearchParams)
-        for (const exKey of EXCLUSIVE_FILTERS) {
-          newParams.delete(exKey)
-        }
-        if (singleValue && values.length > 0) {
-          newParams.append(key, singleValue)
-        }
-        newParams.delete('page')
-        filters.setSearchParams(newParams)
+        filters.setFilterValues(
+          key,
+          singleValue && values.length > 0 ? [singleValue] : []
+        )
       } else {
         filters.setFilterValues(key, values)
       }
@@ -99,6 +99,7 @@ export function useLeaseFilters() {
     () => urlSearchParams.getAll('leaseType'),
     [urlSearchParams]
   )
+  const selectedTenantName = urlSearchParams.get('tenantName') || ''
   const selectedProperties = useMemo(
     () => urlSearchParams.getAll('property'),
     [urlSearchParams]
@@ -130,7 +131,11 @@ export function useLeaseFilters() {
 
   const searchParams = useMemo(
     () => ({
-      q: filters.debouncedSearch || undefined,
+      q:
+        filters.debouncedSearch && filters.debouncedSearch.length >= 3
+          ? filters.debouncedSearch
+          : undefined,
+      name: selectedTenantName || undefined,
       objectType:
         selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
       status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
@@ -155,6 +160,7 @@ export function useLeaseFilters() {
     }),
     [
       filters.debouncedSearch,
+      selectedTenantName,
       selectedObjectTypes,
       selectedStatuses,
       selectedLeaseTypes,
@@ -242,6 +248,7 @@ export function useLeaseFilters() {
     selectedObjectTypes,
     selectedStatuses,
     selectedLeaseTypes,
+    selectedTenantName,
     selectedProperties,
     selectedDistricts,
     selectedBuildingManagers,

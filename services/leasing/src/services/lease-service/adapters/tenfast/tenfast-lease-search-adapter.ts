@@ -1,5 +1,5 @@
 import { Context } from 'koa'
-import { Lease, leasing, LeaseStatus } from '@onecore/types'
+import { Lease, leasing, LeaseStatus, LeaseType } from '@onecore/types'
 import {
   PaginatedResponse,
   buildPaginationLinks,
@@ -253,8 +253,20 @@ const OBJECT_TYPE_TO_TENFAST_TYP: Record<string, string> = {
   bostad: 'bostad',
   parkering: 'parkering',
   lokal: 'lokal',
-  ovrigt: 'ovrigt',
-  forrad: 'forrad',
+}
+
+// UI param value → LeaseType enum values that match.
+// 'ovrigt' is a catch-all for anything not bostad/parkering/lokal.
+const KNOWN_NON_OVRIGT_TYPES = new Set([
+  LeaseType.HousingContract,
+  LeaseType.ParkingSpaceContract,
+  LeaseType.CommercialTenantContract,
+])
+
+const OBJECT_TYPE_PARAM_TO_LEASE_TYPES: Record<string, LeaseType[]> = {
+  bostad: [LeaseType.HousingContract],
+  parkering: [LeaseType.ParkingSpaceContract],
+  lokal: [LeaseType.CommercialTenantContract],
 }
 
 const STATUS_TO_TENFAST_STAGE: Record<string, string> = {
@@ -309,12 +321,21 @@ function applyLocalFilters(
 
     // Object type filter
     if (params.objectType && params.objectType.length > 0) {
-      const typeSet = new Set(params.objectType.map((t) => t.toLowerCase()))
-      if (
-        lease.type === undefined ||
-        !typeSet.has(lease.type.toString().toLowerCase())
+      const paramTypes = params.objectType.map((t) => t.toLowerCase())
+      const includesOvrigt = paramTypes.includes('ovrigt')
+      const allowedTypes = new Set(
+        paramTypes.flatMap((t) => OBJECT_TYPE_PARAM_TO_LEASE_TYPES[t] ?? [])
       )
-        return false
+
+      const leaseType = lease.type as LeaseType | undefined
+      if (leaseType === undefined) return false
+
+      // Match if lease type is in the allowed set, or if 'ovrigt' is
+      // selected and the type isn't one of the known non-övrigt types
+      const matches =
+        allowedTypes.has(leaseType) ||
+        (includesOvrigt && !KNOWN_NON_OVRIGT_TYPES.has(leaseType))
+      if (!matches) return false
     }
 
     // Free-text search (q)
@@ -421,7 +442,13 @@ export function analyzeSearchTermForApi(q: string): Array<{
     return [{ filterKey: 'filter[externalId]', filterValue: trimmed }]
   }
 
-  return []
+  // Default: treat as address search
+  return [
+    {
+      filterKey: 'filter[hyresobjekt][postadress]',
+      filterValue: trimmed,
+    },
+  ]
 }
 
 export function buildTenfastQueryParams(
@@ -461,7 +488,7 @@ export function buildTenfastQueryParams(
   if (params.objectType && params.objectType.length > 0) {
     const tenfastTypes = params.objectType
       .map((t) => OBJECT_TYPE_TO_TENFAST_TYP[t.toLowerCase()])
-      .filter(Boolean)
+      .filter((t) => t && t !== 'ovrigt') // 'ovrigt' not supported by Tenfast search API
     if (tenfastTypes.length > 0) {
       query.set('filter[hyresobjekt][typ]', tenfastTypes.join(','))
     }
@@ -620,23 +647,6 @@ export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  // Unrecognized q patterns return empty — use `name`/`address` params for text search
-  if (params.q) {
-    const filters = analyzeSearchTermForApi(params.q)
-    if (filters.length === 0) {
-      return {
-        content: [],
-        _meta: {
-          totalRecords: 0,
-          page: params.page ?? 1,
-          limit: params.limit ?? 20,
-          count: 0,
-        },
-        _links: [],
-      }
-    }
-  }
-
   // Bridge Xpand-only filters via batch-get:
   // buildingManager, buildingCodes, areaCodes, districtNames
   // 1. Get rental object codes from Xpand for each active filter

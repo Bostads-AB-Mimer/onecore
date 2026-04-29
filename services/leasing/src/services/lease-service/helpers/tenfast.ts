@@ -23,6 +23,7 @@ const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
   lokal: LeaseType.CommercialTenantContract,
   garage: LeaseType.GarageContract,
   forrad: LeaseType.StorageContract,
+  mark: LeaseType.OtherContract,
   ovrigt: LeaseType.OtherContract,
 }
 

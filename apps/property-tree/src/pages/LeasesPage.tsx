@@ -21,6 +21,7 @@ import {
   FilterBar,
   MultiSelectFilterDropdown,
   MultiSelectSearchFilterDropdown,
+  SearchFilterDropdown,
   type SearchFilterOption,
 } from '@/shared/ui/filters'
 import { ObjectTypeFilter } from '@/shared/ui/filters/ObjectTypeFilter'
@@ -33,7 +34,6 @@ const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
   { label: 'Bilplats', value: 'parkering' },
   { label: 'Lokal', value: 'lokal' },
-  { label: 'Övrigt', value: 'ovrigt' },
 ] as const
 
 const leaseTypeOptions = [
@@ -193,8 +193,17 @@ const LeasesPage = () => {
               onClick={handleExport}
               disabled={isExporting || (filters.meta?.totalRecords ?? 0) === 0}
             >
-              <Download className="h-4 w-4 mr-2" />
-              {isExporting ? 'Exporterar...' : 'Exportera Excel'}
+              {isExporting ? (
+                <>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Exporterar...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportera Excel
+                </>
+              )}
             </Button>
           </div>
         </CardHeader>
@@ -203,7 +212,7 @@ const LeasesPage = () => {
             <FilterBar
               searchValue={filters.searchInput}
               onSearchChange={filters.setSearchInput}
-              searchPlaceholder="Sök på kontraktsnummer, hyresgäst, personnummer, adress..."
+              searchPlaceholder="Sök på kontraktsnummer, kundnummer, personnummer, adress..."
               hasActiveFilters={filters.hasActiveFilters}
               onClearFilters={filters.clearFilters}
             >
@@ -235,6 +244,21 @@ const LeasesPage = () => {
                   filters.setFilterValues('status', vals)
                 }
                 placeholder="Status"
+              />
+
+              <SearchFilterDropdown
+                searchFn={async (query) =>
+                  query.trim()
+                    ? [{ label: query.trim(), value: query.trim() }]
+                    : []
+                }
+                minSearchLength={2}
+                selectedValue={filters.selectedTenantName || null}
+                onSelectionChange={(val) =>
+                  filters.setFilterValue('tenantName', val)
+                }
+                placeholder="Hyresgäst"
+                searchPlaceholder="Sök hyresgästnamn"
               />
 
               <MultiSelectSearchFilterDropdown
