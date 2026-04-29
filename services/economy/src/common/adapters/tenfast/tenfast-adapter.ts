@@ -394,14 +394,15 @@ export const getInvoicesNotExported = async (
   const errors: { invoiceNumber: string; error: string }[] = []
 
   try {
-    const result = await makeTenfastRequest('/v1/hyresvard/hyror/search', {
+    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         isManuallyExported: 'false',
         status: 'issued',
         limit: maxCount,
         hyresvard: '6344b398b63ff59d5bde8257',
-        paginate:
-          'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',
+        /*paginate:
+          'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
+        ocrNumber: '552605001109212',
       },
     })
 
