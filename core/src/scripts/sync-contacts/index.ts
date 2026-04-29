@@ -32,18 +32,21 @@ const syncContacts = async () => {
   if (lastTimestamp) {
     logger.info({ lastTimestamp }, 'syncing contacts since last timestamp')
   } else {
-    logger.info('no saved timestamp, using fallback window')
+    logger.info('no saved timestamp, syncing all')
   }
 
   const contactsAdapter = makeContactsAdapter(config.contactsService.url)
-  const result = await contactsAdapter.getUpdatedContacts(lastTimestamp)
+  const contactsResult = await contactsAdapter.getUpdatedContacts(lastTimestamp)
 
-  if (!result.ok) {
-    logger.error({ err: result.err }, 'Failed to fetch updated contacts')
-    throw new Error(result.err)
+  if (!contactsResult.ok) {
+    logger.error(
+      { err: contactsResult.err },
+      'Failed to fetch updated contacts'
+    )
+    throw new Error(contactsResult.err)
   }
 
-  const contacts = result.data
+  const contacts = contactsResult.data
   logger.info({ count: contacts.length }, 'contacts to sync')
 
   for (const contact of contacts) {

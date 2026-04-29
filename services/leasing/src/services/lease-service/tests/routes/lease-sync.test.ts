@@ -61,10 +61,7 @@ describe('GET /leases/sync', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.content).toEqual(mockChanges)
-    expect(cmlogLeaseAdapter.getLeaseChanges).toHaveBeenCalledWith(
-      expect.anything(),
-      null
-    )
+    expect(cmlogLeaseAdapter.getLeaseChanges).toHaveBeenCalledWith(null)
   })
 
   it('returns 400 when invalid since param', async () => {

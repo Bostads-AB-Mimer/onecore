@@ -182,11 +182,11 @@ export const contactObjectKeysForEmailAddress = async (
  * Retrieves cmlog rows for contact changes recorded since the given timestamp.
  *
  * Only rows whose logmemo starts with "Kontakt " are returned, as these
- * represent changes to contacts. If no timestamp is provided, falls back
- * to the last 5 minutes.
+ * represent changes to contacts. If no timestamp is provided, returns all
+ * matching rows.
  *
  * @param db - The Knex database connection to use
- * @param since - The timestamp to query changes from, or null to use the fallback window
+ * @param since - The timestamp to query changes from, or null to return all
  * @returns A promise that resolves to an array of cmlog rows
  */
 export const cmlogContactChanges = (
@@ -200,7 +200,7 @@ export const cmlogContactChanges = (
 
   return since
     ? base.andWhere('logtime', '>', since)
-    : base.andWhereRaw('logtime >= DATEADD(minute, -5, GETDATE())')
+    : base
 }
 
 /**

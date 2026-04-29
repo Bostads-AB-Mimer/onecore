@@ -2,7 +2,6 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { Contact } from '@onecore/types'
 
-import { xpandDb } from '../adapters/xpand/xpandDb'
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
@@ -28,7 +27,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const changes = await getLeaseChanges(xpandDb, since)
+      const changes = await getLeaseChanges(since)
 
       ctx.status = 200
       ctx.body = { content: changes, ...metadata }

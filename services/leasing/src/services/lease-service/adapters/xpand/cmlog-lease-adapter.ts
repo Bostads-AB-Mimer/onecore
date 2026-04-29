@@ -1,6 +1,8 @@
 import { Knex } from 'knex'
 import { logger } from '@onecore/utilities'
 
+import { xpandDb } from './xpandDb'
+
 export interface LeaseChange {
   leaseId: string
   contactCode: string
@@ -17,7 +19,7 @@ const RELEVANT_CONTRACT_TYPES = [
  * Queries cmlog for lease changes since the given timestamp.
  *
  * Only rows whose logmemo starts with "Hyreskontrakt " are returned.
- * If no timestamp is provided, falls back to the last 5 minutes.
+ * If no timestamp is provided, returns all matching rows.
  */
 export const cmlogLeaseChanges = (
   db: Knex,
@@ -30,7 +32,7 @@ export const cmlogLeaseChanges = (
 
   return since
     ? base.andWhere('logtime', '>', since)
-    : base.andWhereRaw('logtime >= DATEADD(minute, -5, GETDATE())')
+    : base
 }
 
 /**
@@ -81,10 +83,9 @@ export const parseLeaseChanges = (
  * Fetches and parses lease changes from cmlog.
  */
 export const getLeaseChanges = async (
-  db: Knex,
   since: Date | null
 ): Promise<LeaseChange[]> => {
-  const rows = (await cmlogLeaseChanges(db, since)) as {
+  const rows = (await cmlogLeaseChanges(xpandDb, since)) as {
     logmemo: string
     logtime: Date
   }[]

@@ -33,7 +33,7 @@ const syncLeases = async () => {
   if (lastTimestamp) {
     logger.info({ lastTimestamp }, 'syncing leases since last timestamp')
   } else {
-    logger.info('no saved timestamp, using fallback window')
+    logger.info('no saved timestamp, syncing all')
   }
 
   const leasesResult = await getUpdatedLeases(lastTimestamp)
@@ -43,28 +43,30 @@ const syncLeases = async () => {
     throw new Error(leasesResult.err)
   }
 
-  const leaseChanges = leasesResult.data
-  logger.info({ count: leaseChanges.length }, 'lease changes to process')
+  const leases = leasesResult.data
+  logger.info({ count: leases.length }, 'lease changes to process')
 
   const contactsAdapter = makeContactsAdapter(config.contactsService.url)
 
-  for (const change of leaseChanges) {
+  for (const lease of leases) {
     // Step 1: Check rental object type via property service
-    const typeResult = await getRentalObjectType(change.rentalObjectId)
+    const rentalObjectTypeResult = await getRentalObjectType(lease.rentalObjectId)
 
-    if (!typeResult.ok) {
+    if (!rentalObjectTypeResult.ok) {
       logger.warn(
-        { rentalObjectId: change.rentalObjectId, err: typeResult.err },
+        { rentalObjectId: lease.rentalObjectId, err: rentalObjectTypeResult.err },
         'could not determine rental object type, skipping'
       )
       continue
     }
 
-    if (!ALLOWED_RENTAL_OBJECT_TYPES.includes(typeResult.data.name ?? '')) {
+    const rentalObjectType = rentalObjectTypeResult.data.name
+
+    if (!ALLOWED_RENTAL_OBJECT_TYPES.includes(rentalObjectType ?? '')) {
       logger.info(
         {
-          rentalObjectId: change.rentalObjectId,
-          type: typeResult.data.name,
+          rentalObjectId: lease.rentalObjectId,
+          type: rentalObjectType,
         },
         'rental object type not in scope, skipping'
       )
@@ -73,12 +75,12 @@ const syncLeases = async () => {
 
     // Step 2: Get full contact from contacts service
     const contactResult = await contactsAdapter.getByContactCode(
-      change.contactCode
+      lease.contactCode
     )
 
     if (!contactResult.ok) {
       throw new Error(
-        `Failed to get contact ${change.contactCode} for lease ${change.leaseId}: ${contactResult.err}`
+        `Failed to get contact ${lease.contactCode} for lease ${lease.leaseId}: ${contactResult.err}`
       )
     }
 
@@ -87,25 +89,25 @@ const syncLeases = async () => {
     // HTTP so the structural difference between the two Contact types is
     // irrelevant at runtime.
     const syncResult = await syncLease(
-      change.leaseId,
+      lease.leaseId,
       contactResult.data as unknown as Contact
     )
 
     if (!syncResult.ok) {
       throw new Error(
-        `Failed to sync lease ${change.leaseId}: ${syncResult.err}`
+        `Failed to sync lease ${lease.leaseId}: ${syncResult.err}`
       )
     }
 
     logger.info(
-      { leaseId: change.leaseId, action: syncResult.data.action },
+      { leaseId: lease.leaseId, action: syncResult.data.action },
       'lease synced'
     )
   }
 
   await saveLastTimestamp(syncStart)
   logger.info(
-    { count: leaseChanges.length },
+    { count: leases.length },
     'all leases processed, timestamp advanced'
   )
 }
