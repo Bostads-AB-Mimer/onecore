@@ -33,11 +33,9 @@ import { useInspectors } from '../hooks/useInspectors'
 type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
 type DetailedInspection = components['schemas']['DetailedInspection']
 
-// Underhåll-besiktningar are coming in a future card; leave the constant
-// in place but keep the picker scoped to Avflytt for now.
-const INSPECTION_TYPES = Object.entries(INSPECTION_TYPE_LABELS)
-  .filter(([value]) => value !== INSPECTION_TYPE.MAINTENANCE)
-  .map(([value, label]) => ({ value, label }))
+const INSPECTION_TYPES = Object.entries(INSPECTION_TYPE_LABELS).map(
+  ([value, label]) => ({ value, label })
+)
 
 interface CreateInspectionDialogProps {
   isOpen: boolean
