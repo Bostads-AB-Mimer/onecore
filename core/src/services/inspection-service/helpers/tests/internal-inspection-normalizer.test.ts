@@ -101,13 +101,13 @@ const propertyRoom = (
 
 describe('mapInternalRoomsToProtocolRooms', () => {
   describe('components[] data model', () => {
-    it('keeps components with non-OK condition and drops OK ones', () => {
+    it('keeps reportable conditions (Acceptabel, Skadad) and drops God', () => {
       const room = baseRoom({
         components: [
           {
             componentId: 'c1',
             label: 'Spis',
-            condition: 'Sliten',
+            condition: 'Skadad',
             action: [],
             note: '',
             photos: [],
@@ -116,7 +116,16 @@ describe('mapInternalRoomsToProtocolRooms', () => {
           {
             componentId: 'c2',
             label: 'Kyl',
-            condition: 'OK',
+            condition: 'Acceptabel',
+            action: [],
+            note: '',
+            photos: [],
+            costResponsibility: null,
+          },
+          {
+            componentId: 'c3',
+            label: 'Diskmaskin',
+            condition: 'God',
             action: [],
             note: '',
             photos: [],
@@ -126,17 +135,20 @@ describe('mapInternalRoomsToProtocolRooms', () => {
       })
 
       const [out] = mapInternalRoomsToProtocolRooms([room], [])
-      expect(out.remarks).toHaveLength(1)
-      expect(out.remarks[0].buildingComponent).toBe('Spis')
+      expect(out.remarks).toHaveLength(2)
+      expect(out.remarks.map((r) => r.buildingComponent)).toEqual([
+        'Spis',
+        'Kyl',
+      ])
     })
 
-    it('keeps a component with cost > 0 even if condition is OK', () => {
+    it('keeps a component with cost > 0 even if condition is God', () => {
       const room = baseRoom({
         components: [
           {
             componentId: 'c1',
             label: 'Spis',
-            condition: 'OK',
+            condition: 'God',
             action: [],
             note: '',
             photos: [],
@@ -151,13 +163,13 @@ describe('mapInternalRoomsToProtocolRooms', () => {
       expect(out.remarks[0].cost).toBe(500)
     })
 
-    it('keeps a component with an action even if condition is OK and cost is 0', () => {
+    it('keeps a component with an action even if condition is God and cost is 0', () => {
       const room = baseRoom({
         components: [
           {
             componentId: 'c1',
             label: 'Spis',
-            condition: 'OK',
+            condition: 'God',
             action: ['Rengör'],
             note: '',
             photos: [],
@@ -171,13 +183,13 @@ describe('mapInternalRoomsToProtocolRooms', () => {
       expect(out.remarks[0].remarkStatus).toBe('Rengör')
     })
 
-    it('keeps a component with only a note (condition OK, no cost, no actions)', () => {
+    it('keeps a component with only a note (condition God, no cost, no actions)', () => {
       const room = baseRoom({
         components: [
           {
             componentId: 'c1',
             label: 'Spis',
-            condition: 'OK',
+            condition: 'God',
             action: [],
             note: 'Repor',
             photos: [],
@@ -191,13 +203,13 @@ describe('mapInternalRoomsToProtocolRooms', () => {
       expect(out.remarks[0].notes).toBe('Repor')
     })
 
-    it('case-insensitive OK filter', () => {
+    it('drops empty / unknown conditions when no other reason to keep', () => {
       const room = baseRoom({
         components: [
           {
             componentId: 'c1',
             label: 'X',
-            condition: 'ok',
+            condition: '',
             action: [],
             note: '',
             photos: [],
@@ -206,7 +218,7 @@ describe('mapInternalRoomsToProtocolRooms', () => {
           {
             componentId: 'c2',
             label: 'Y',
-            condition: ' OK ',
+            condition: 'OK',
             action: [],
             note: '',
             photos: [],
@@ -217,6 +229,34 @@ describe('mapInternalRoomsToProtocolRooms', () => {
 
       const [out] = mapInternalRoomsToProtocolRooms([room], [])
       expect(out.remarks).toHaveLength(0)
+    })
+
+    it('case-insensitive reportable filter', () => {
+      const room = baseRoom({
+        components: [
+          {
+            componentId: 'c1',
+            label: 'X',
+            condition: 'skadad',
+            action: [],
+            note: '',
+            photos: [],
+            costResponsibility: null,
+          },
+          {
+            componentId: 'c2',
+            label: 'Y',
+            condition: ' ACCEPTABEL ',
+            action: [],
+            note: '',
+            photos: [],
+            costResponsibility: null,
+          },
+        ],
+      })
+
+      const [out] = mapInternalRoomsToProtocolRooms([room], [])
+      expect(out.remarks).toHaveLength(2)
     })
   })
 
@@ -280,13 +320,13 @@ describe('mapInternalRoomsToProtocolRooms', () => {
     it('passes component notes through to the description column', () => {
       const room = baseRoom({
         conditions: {
-          wall1: 'Sliten',
-          wall2: 'OK',
-          wall3: 'OK',
-          wall4: 'OK',
-          floor: 'OK',
-          ceiling: 'OK',
-          details: 'OK',
+          wall1: 'Skadad',
+          wall2: 'God',
+          wall3: 'God',
+          wall4: 'God',
+          floor: 'God',
+          ceiling: 'God',
+          details: 'God',
         },
         componentNotes: {
           wall1: 'Repor vid fönster',
@@ -301,7 +341,7 @@ describe('mapInternalRoomsToProtocolRooms', () => {
 
       const [out] = mapInternalRoomsToProtocolRooms([room], [])
       expect(out.remarks[0].notes).toBe('Repor vid fönster')
-      expect(out.remarks[0].remarkStatus).toBe('Sliten')
+      expect(out.remarks[0].remarkStatus).toBe('Skadad')
     })
   })
 
@@ -309,19 +349,19 @@ describe('mapInternalRoomsToProtocolRooms', () => {
     it('emits both component and fixed-key remarks for the same room', () => {
       const room = baseRoom({
         conditions: {
-          wall1: 'OK',
-          wall2: 'OK',
-          wall3: 'OK',
-          wall4: 'OK',
-          floor: 'Sliten',
-          ceiling: 'OK',
-          details: 'OK',
+          wall1: 'God',
+          wall2: 'God',
+          wall3: 'God',
+          wall4: 'God',
+          floor: 'Skadad',
+          ceiling: 'God',
+          details: 'God',
         },
         components: [
           {
             componentId: 'c1',
             label: 'Spis',
-            condition: 'Sliten',
+            condition: 'Acceptabel',
             action: [],
             note: '',
             photos: [],

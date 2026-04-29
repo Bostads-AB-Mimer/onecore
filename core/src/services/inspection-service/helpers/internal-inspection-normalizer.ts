@@ -42,16 +42,21 @@ type RemarkSeed = {
   actions: string[]
 }
 
-const isNonOkCondition = (condition: string): boolean => {
-  const trimmed = condition.trim()
-  if (!trimmed) return false
-  return trimmed.toLowerCase() !== 'ok'
+// Mirrors apps/property-tree/.../ui/InspectionSummary.tsx#isReportable — the
+// canonical convention for what counts as a remark in the internal vocabulary.
+// "God" is the no-issue grade and is never reportable; only "Acceptabel" and
+// "Skadad" carry a remark by virtue of their condition. An empty condition is
+// treated as no grade (drop). Other reasons to keep — cost, action, note —
+// still apply via `shouldKeep`.
+const isReportableCondition = (condition: string): boolean => {
+  const trimmed = condition.trim().toLowerCase()
+  return trimmed === 'acceptabel' || trimmed === 'skadad'
 }
 
 const shouldKeep = (seed: RemarkSeed): boolean =>
   seed.cost > 0 ||
   seed.actions.length > 0 ||
-  isNonOkCondition(seed.condition) ||
+  isReportableCondition(seed.condition) ||
   seed.notes.trim().length > 0
 
 const seedToRemark = (seed: RemarkSeed): DetailedXpandInspectionRemark => {
