@@ -888,8 +888,22 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/DetailedInspection'
    *       '404':
    *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '500':
    *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *     security:
    *       - bearerAuth: []
    */
@@ -959,8 +973,22 @@ export const routes = (router: KoaRouter) => {
    *                       description: Base64 encoded PDF document
    *       '404':
    *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '500':
    *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *     security:
    *       - bearerAuth: []
    */
@@ -1047,8 +1075,22 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/TenantContactsResponse'
    *       '404':
    *         description: Inspection or residence not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '500':
    *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *     security:
    *       - bearerAuth: []
    */
@@ -1117,10 +1159,31 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/SendProtocolResponse'
    *       '400':
    *         description: Invalid request or no contract found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '404':
    *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '500':
    *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *     security:
    *       - bearerAuth: []
    */

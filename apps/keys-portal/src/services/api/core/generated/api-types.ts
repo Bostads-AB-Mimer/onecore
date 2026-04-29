@@ -12342,6 +12342,16 @@ export interface components {
       masterKeyAccess: string | null;
       residenceId: string;
       isFurnished: boolean;
+      /** Format: date-time */
+      startedAt: string | null;
+      /** Format: date-time */
+      endedAt: string | null;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
       rooms: (({
           roomId: string;
           name?: string;

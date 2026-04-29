@@ -62,7 +62,10 @@ export function CreateInspectionDialog({
   const [inspector, setInspector] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [type, setType] = useState('')
-  const [isFurnished, setIsFurnished] = useState(false)
+  // Apartments are furnished at inspection time in ~99% of cases; default to
+  // true so the protocol's "Möblerad" field reflects reality without the
+  // inspector having to remember to tick the box at create time.
+  const [isFurnished, setIsFurnished] = useState(true)
   const [isTenantPresent, setIsTenantPresent] = useState(false)
   const [isNewTenantPresent, setIsNewTenantPresent] = useState(false)
   const [masterKeyAccess, setMasterKeyAccess] = useState('')
