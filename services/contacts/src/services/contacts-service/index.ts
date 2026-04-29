@@ -6,17 +6,26 @@ import {
   parsePaginationParams,
 } from '@onecore/utilities'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
+import { StralforsAdapter } from '@src/adapters/stralfors/stralfors-adapter'
 import {
   ContactSchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
+  PostChannelsRequestBodySchema,
+  PostChannelsResponseBodySchema,
 } from './schema'
 import { paginatedResponseSchema } from '@onecore/types'
 
 export const routes = (
   router: OkapiRouter,
-  { contactsRepository }: { contactsRepository: ContactsRepository }
+  {
+    contactsRepository,
+    stralforsAdapter,
+  }: {
+    contactsRepository: ContactsRepository
+    stralforsAdapter: StralforsAdapter
+  }
 ) => {
   router.get(
     '/contacts',
@@ -226,6 +235,45 @@ export const routes = (
           ...metadata,
           content: result,
         }
+      }
+    }
+  )
+
+  router.post(
+    '/contacts/invoice-channels',
+    {
+      summary: 'Get available invoice channels for contacts',
+      description:
+        'Accepts a list of contact codes and returns the available invoice channels for the matching contacts',
+      tags: ['Contacts'],
+      body: PostChannelsRequestBodySchema,
+      response: {
+        200: PostChannelsResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { contactCodes } = ctx.request.body
+
+      // TODO We currently do not have any test contacts in the Strålfors test environment, so we cannot test with actual contact codes
+      // const contacts = await contactsRepository.getByContactCodes(contactCodes)
+      const nationalIdentityNumbers = [
+        '191212121212',
+        '198112172385',
+        '197102125866',
+        '197701032380',
+        '192112039223',
+        '198110292383',
+        '198903092388',
+      ]
+      const results = await stralforsAdapter.postChannelLookup(
+        nationalIdentityNumbers
+      )
+
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+        content: results,
       }
     }
   )

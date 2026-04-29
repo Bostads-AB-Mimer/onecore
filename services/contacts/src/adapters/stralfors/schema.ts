@@ -1,15 +1,15 @@
 import z from 'zod'
 
-export const StralforsAccessTokenResponse = z.object({
+export const StralforsAccessTokenResponseSchema = z.object({
   access_token: z.string(),
   token_type: z.string(),
 })
 
-export const StralforsPostChannelLookupResponse = z.object({
+export const StralforsPostChannelLookupResponseSchema = z.object({
   correlationId: z.string(),
 })
 
-export const StralforsGetChannelLookupResponse = z.object({
+export const StralforsGetChannelLookupResponseSchema = z.object({
   customerId: z.string().nullable().optional(),
   subCustomerId: z.string().nullable().optional(),
   results: z
