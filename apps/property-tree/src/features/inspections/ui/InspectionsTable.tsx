@@ -77,12 +77,18 @@ export function InspectionsTable({
 
   const { mutate: updateInspector } = useUpdateInspector()
 
-  // Fetch detailed inspection when selected (for the completed-protocol view)
+  // Fetch detailed inspection when selected (for the completed-protocol view).
+  // Both sources land on the same DetailedInspection shape — internal goes
+  // through the /details endpoint, which enriches and normalizes server-side.
   const { data: detailedInspection } = useQuery<DetailedInspection>({
-    queryKey: ['inspections', selectedInspectionId],
+    queryKey: ['inspections', selectedInspectionSource, selectedInspectionId],
     queryFn: () =>
-      inspectionService.getInspectionById(selectedInspectionId as string),
-    enabled: !!selectedInspectionId && selectedInspectionSource === 'xpand',
+      selectedInspectionSource === 'internal'
+        ? inspectionService.getInternalInspectionDetails(
+            selectedInspectionId as string
+          )
+        : inspectionService.getInspectionById(selectedInspectionId as string),
+    enabled: !!selectedInspectionId && !!selectedInspectionSource,
   })
 
   const handleInspectionClick = (inspection: Inspection) => {
@@ -157,6 +163,7 @@ export function InspectionsTable({
           inspection={detailedInspection ?? null}
           isOpen={isProtocolDialogOpen}
           onClose={() => setIsProtocolDialogOpen(false)}
+          source={selectedInspectionSource ?? 'xpand'}
         />
       )}
     </>

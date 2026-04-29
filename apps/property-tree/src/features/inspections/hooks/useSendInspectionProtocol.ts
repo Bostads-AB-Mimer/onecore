@@ -8,7 +8,8 @@ type SendProtocolResponse = components['schemas']['SendProtocolResponse']
 export interface UseSendInspectionProtocolReturn {
   sendProtocol: (
     inspectionId: string,
-    recipient: 'new-tenant' | 'tenant'
+    recipient: 'new-tenant' | 'tenant',
+    source?: 'xpand' | 'internal'
   ) => Promise<SendProtocolResponse>
   isSending: boolean
   error: Error | null
@@ -20,14 +21,16 @@ export function useSendInspectionProtocol(): UseSendInspectionProtocolReturn {
 
   const sendProtocol = async (
     inspectionId: string,
-    recipient: 'new-tenant' | 'tenant'
+    recipient: 'new-tenant' | 'tenant',
+    source: 'xpand' | 'internal' = 'xpand'
   ): Promise<SendProtocolResponse> => {
     try {
       setIsSending(true)
       setError(null)
       const result = await inspectionService.sendProtocol(
         inspectionId,
-        recipient
+        recipient,
+        source
       )
       return result
     } catch (err) {

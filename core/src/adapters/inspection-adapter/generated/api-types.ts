@@ -696,6 +696,14 @@ export interface components {
       masterKeyAccess: string | null
       residenceId: string
       isFurnished: boolean
+      startedAt: string | null
+      endedAt: string | null
+      isTenantPresent: boolean
+      isNewTenantPresent: boolean
+      hasRemarks: boolean
+      notes: string | null
+      totalCost: number | null
+      remarkCount: number
       rooms:
         | {
             roomId: string

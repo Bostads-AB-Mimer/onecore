@@ -81,34 +81,52 @@ export const inspectionService = {
 
   async getInspectionPdfBase64(
     inspectionId: string,
-    options?: { includeCosts?: boolean }
+    options?: { includeCosts?: boolean; source?: 'xpand' | 'internal' }
   ): Promise<string> {
-    const pdfResponse = await GET(
-      '/inspections/xpand/{inspectionId}/pdf' as any,
-      {
-        params: {
-          path: { inspectionId },
-          query: { includeCosts: options?.includeCosts ?? true },
-        },
-      }
-    )
+    const path =
+      options?.source === 'internal'
+        ? '/inspections/internal/{inspectionId}/pdf'
+        : '/inspections/xpand/{inspectionId}/pdf'
+    const pdfResponse = await GET(path, {
+      params: {
+        path: { inspectionId },
+        query: { includeCosts: options?.includeCosts ?? true },
+      },
+    })
     if (pdfResponse.error) throw pdfResponse.error
-    if (!(pdfResponse.data as any).content?.pdfBase64)
+    if (!pdfResponse.data?.content?.pdfBase64)
       throw new Error('No PDF data returned from API')
 
-    return (pdfResponse.data as any).content.pdfBase64
+    return pdfResponse.data.content.pdfBase64
   },
 
   async getTenantContacts(
-    inspectionId: string
+    inspectionId: string,
+    source: 'xpand' | 'internal' = 'xpand'
   ): Promise<TenantContactsResponse> {
-    const response = await GET('/inspections/{inspectionId}/tenant-contacts', {
+    const path =
+      source === 'internal'
+        ? '/inspections/internal/{inspectionId}/tenant-contacts'
+        : '/inspections/{inspectionId}/tenant-contacts'
+    const response = await GET(path, {
       params: { path: { inspectionId } },
     })
     if (response.error) throw response.error
-    if (!response.data.content) throw new Error('No data returned from API')
+    if (!response.data?.content) throw new Error('No data returned from API')
 
     return response.data.content as TenantContactsResponse
+  },
+
+  async getInternalInspectionDetails(
+    inspectionId: string
+  ): Promise<DetailedInspection> {
+    const response = await GET('/inspections/internal/{inspectionId}/details', {
+      params: { path: { inspectionId } },
+    })
+    if (response.error) throw response.error
+    if (!response.data?.content) throw new Error('No data returned from API')
+
+    return response.data.content
   },
 
   async createInspection(
@@ -139,14 +157,19 @@ export const inspectionService = {
 
   async sendProtocol(
     inspectionId: string,
-    recipient: 'new-tenant' | 'tenant'
+    recipient: 'new-tenant' | 'tenant',
+    source: 'xpand' | 'internal' = 'xpand'
   ): Promise<SendProtocolResponse> {
-    const response = await POST('/inspections/{inspectionId}/send-protocol', {
+    const path =
+      source === 'internal'
+        ? '/inspections/internal/{inspectionId}/send-protocol'
+        : '/inspections/{inspectionId}/send-protocol'
+    const response = await POST(path, {
       params: { path: { inspectionId } },
       body: { recipient } as SendProtocolRequest,
     })
     if (response.error) throw response.error
-    if (!response.data.content) throw new Error('No data returned from API')
+    if (!response.data?.content) throw new Error('No data returned from API')
 
     return response.data.content as SendProtocolResponse
   },

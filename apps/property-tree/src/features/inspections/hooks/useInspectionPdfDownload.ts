@@ -8,7 +8,7 @@ export interface UseInspectionPdfDownloadReturn {
   downloadPdf: (
     inspectionId: string,
     filename?: string,
-    options?: { includeCosts?: boolean }
+    options?: { includeCosts?: boolean; source?: 'xpand' | 'internal' }
   ) => Promise<void>
   isDownloading: boolean
   error: Error | null
@@ -21,7 +21,7 @@ export function useInspectionPdfDownload(): UseInspectionPdfDownloadReturn {
   const downloadPdf = async (
     inspectionId: string,
     filename?: string,
-    options?: { includeCosts?: boolean }
+    options?: { includeCosts?: boolean; source?: 'xpand' | 'internal' }
   ) => {
     try {
       setIsDownloading(true)

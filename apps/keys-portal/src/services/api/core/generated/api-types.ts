@@ -5851,6 +5851,148 @@ export interface paths {
       };
     };
   };
+  "/inspections/internal/{inspectionId}/details": {
+    /**
+     * Retrieve an enriched internal inspection by ID
+     * @description Retrieves a specific internal inspection by its ID, normalized into the same shape as Xpand inspections (with lease, residence, and flattened room remarks) so it can be rendered by the protocol UI without source-specific branching.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the inspection to retrieve. */
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the inspection. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["DetailedInspection"];
+            };
+          };
+        };
+        /** @description Inspection not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/pdf": {
+    /**
+     * Generate PDF protocol for an internal inspection
+     * @description Generates and returns a PDF protocol for a specific internal inspection by its ID.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include cost information in the PDF. */
+          includeCosts?: boolean;
+        };
+        path: {
+          /** @description The ID of the inspection to generate a PDF for. */
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully generated PDF protocol. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description Base64 encoded PDF document */
+                pdfBase64?: string;
+              };
+            };
+          };
+        };
+        /** @description Inspection not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/tenant-contacts": {
+    /**
+     * Get tenant contacts for an internal inspection
+     * @description Retrieves contact information for new and previous tenants associated with an internal inspection's residence.
+     */
+    get: {
+      parameters: {
+        path: {
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved tenant contacts. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["TenantContactsResponse"];
+            };
+          };
+        };
+        /** @description Inspection or residence not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/send-protocol": {
+    /**
+     * Send inspection protocol to tenant for an internal inspection
+     * @description Sends the inspection protocol PDF via email to the specified tenant (new or previous) for an internal inspection.
+     */
+    post: {
+      parameters: {
+        path: {
+          inspectionId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["SendProtocolRequest"];
+        };
+      };
+      responses: {
+        /** @description Protocol sent successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["SendProtocolResponse"];
+            };
+          };
+        };
+        /** @description Invalid request or no contract found. */
+        400: {
+          content: never;
+        };
+        /** @description Inspection not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/inspections/{inspectionId}/tenant-contacts": {
     /**
      * Get tenant contacts for inspection protocol modal
