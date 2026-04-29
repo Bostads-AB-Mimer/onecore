@@ -208,6 +208,7 @@ export const contactsQuery = () => {
   let wildcards: string[] = []
   let contactType: ContactTypeFilter = 'any'
   let objectKeyFilter: ContactCode[] = []
+  let contactCodesFilter: ContactCode[] = []
 
   /**
    * Applies the base cmctc-only criteria/filters to a knex
@@ -236,6 +237,10 @@ export const contactsQuery = () => {
 
     if (objectKeyFilter.length) {
       qb.andWhereRaw(...trimInCriteria('cmctc.keycmobj', objectKeyFilter))
+    }
+
+    if (contactCodesFilter.length) {
+      qb.andWhereRaw(...trimInCriteria('cmctc.cmctckod', contactCodesFilter))
     }
 
     Object.keys(wheres).forEach((key) => {
@@ -315,6 +320,14 @@ export const contactsQuery = () => {
      */
     withObjectKeyIn(objectKeys: ObjectKey[]) {
       objectKeyFilter = objectKeys
+      return this
+    },
+
+    /**
+     * Adds a WHERE-criteria for multiple contact codes.
+     */
+    withContactCodeIn(contactCodes: ContactCode[]) {
+      contactCodesFilter = contactCodes
       return this
     },
 

@@ -153,5 +153,17 @@ export const xpandContactsRepository = (
 
       return []
     },
+
+    getByContactCodes: async (contactCodes: string[]): Promise<Contact[]> => {
+      if (contactCodes.length) {
+        const rows = await contactsQuery()
+          .withContactCodeIn(contactCodes)
+          .getPage(db.get())
+
+        return transformDbContactRows(rows)
+      }
+
+      return []
+    },
   }
 }

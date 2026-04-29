@@ -93,4 +93,13 @@ export interface ContactsRepository {
    * @returns A promise that resolves to an array of Contact objects
    */
   getByEmailAddress: (emailAddress: string) => Promise<Contact[]>
+
+  /**
+   * Retrieves multiple contacts by their contact codes.
+   *
+   * @param contactCodes - The contact codes to search for.
+   *
+   * @returns A promise that resolves to an array of Contact objects
+   */
+  getByContactCodes: (contactCodes: string[]) => Promise<Contact[]>
 }
