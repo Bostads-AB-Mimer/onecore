@@ -187,6 +187,14 @@ export const InspectionRoomSchema = z.object({
 export const InternalInspectionSchema = XpandInspectionSchema.extend({
   residenceId: z.string(),
   isFurnished: z.boolean(),
+  startedAt: z.coerce.date().nullable(),
+  endedAt: z.coerce.date().nullable(),
+  isTenantPresent: z.boolean(),
+  isNewTenantPresent: z.boolean(),
+  hasRemarks: z.boolean(),
+  notes: z.string().nullable(),
+  totalCost: z.number().nullable(),
+  remarkCount: z.number(),
   rooms: z.array(InspectionRoomSchema).nullable(),
 })
 

@@ -404,6 +404,14 @@ describe('inspection-service', () => {
         ...XpandInspectionFactory.build({ id: inspectionId }),
         residenceId: 'RES001',
         isFurnished: true,
+        startedAt: null,
+        endedAt: null,
+        isTenantPresent: true,
+        isNewTenantPresent: false,
+        hasRemarks: false,
+        notes: null,
+        totalCost: null,
+        remarkCount: 0,
         rooms: [InspectionRoomFactory.build({ isHandled: true })],
       }
       jest

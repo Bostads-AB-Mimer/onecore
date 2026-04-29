@@ -965,18 +965,21 @@ describe('db-adapter', () => {
       return mockDb
     }
 
-    it('returns inspection with parsed draft rooms', async () => {
+    it('returns inspection with parsed draft rooms and full field projection', async () => {
       const draftRooms = [InspectionRoomFactory.build({ isHandled: true })]
       const mockDb = createMockDbForGetById({
-        id: 1,
-        status: 'Påbörjad',
-        date: new Date('2024-01-01'),
-        inspector: 'Inspector A',
-        type: 'Move-in',
-        address: '123 Main St',
-        apartmentCode: 'APT001',
-        leaseId: 'LEASE001',
-        masterKeyAccess: null,
+        ...DbInspectionFactory.build({
+          id: 1,
+          status: 'Påbörjad',
+          isTenantPresent: true,
+          isNewTenantPresent: false,
+          notes: 'Inspector observation',
+          startedAt: new Date('2024-01-01T09:00:00Z'),
+          endedAt: null,
+          hasRemarks: true,
+          totalCost: 1250,
+          remarkCount: 3,
+        }),
         draftRooms: JSON.stringify(draftRooms),
       })
 
@@ -987,22 +990,21 @@ describe('db-adapter', () => {
         expect(result.data.id).toBe('1')
         expect(result.data.rooms).toHaveLength(1)
         expect(result.data.rooms![0].roomId).toBe('room-1')
+        expect(result.data.isTenantPresent).toBe(true)
+        expect(result.data.isNewTenantPresent).toBe(false)
+        expect(result.data.notes).toBe('Inspector observation')
+        expect(result.data.startedAt).toEqual(new Date('2024-01-01T09:00:00Z'))
+        expect(result.data.endedAt).toBeNull()
+        expect(result.data.hasRemarks).toBe(true)
+        expect(result.data.totalCost).toBe(1250)
+        expect(result.data.remarkCount).toBe(3)
       }
     })
 
     it('returns inspection with null rooms when no draft data', async () => {
-      const mockDb = createMockDbForGetById({
-        id: 1,
-        status: 'Registrerad',
-        date: new Date('2024-01-01'),
-        inspector: 'Inspector A',
-        type: 'Move-in',
-        address: '123 Main St',
-        apartmentCode: 'APT001',
-        leaseId: 'LEASE001',
-        masterKeyAccess: null,
-        draftRooms: null,
-      })
+      const mockDb = createMockDbForGetById(
+        DbInspectionFactory.build({ id: 1, draftRooms: null })
+      )
 
       const result = await dbAdapter.getInspectionById(mockDb, '1')
 

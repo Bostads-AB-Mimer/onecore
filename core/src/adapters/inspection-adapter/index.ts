@@ -124,7 +124,7 @@ export const getXpandInspectionById = async (
     }
 
     if (!fetchResponse.data.content?.inspection) {
-      return { ok: false, err: 'not-found' }
+      return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
     return {
@@ -271,7 +271,7 @@ export const getInternalInspectionById = async (
     }
 
     if (!fetchResponse.data.content?.inspection) {
-      return { ok: false, err: 'not-found' }
+      return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
     return {
