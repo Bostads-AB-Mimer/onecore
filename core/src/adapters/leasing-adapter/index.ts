@@ -868,6 +868,7 @@ export {
 export {
   createLease,
   getLease,
+  getLeaseFromXpand,
   getLeasesByContactCode,
   getLeasesByRentalObjectCode,
   addLeaseHomeInsurance,

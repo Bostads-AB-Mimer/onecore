@@ -1159,6 +1159,33 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve lease details.
    */
+  router.get('(.*)/leases/:leaseId/from-xpand', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const leases = await getLeases([ctx.params.leaseId])
+
+      if (!leases.length) {
+        ctx.status = 404
+        ctx.body = { error: 'Lease not found in xpand', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: leases[0], ...metadata }
+    } catch (error) {
+      logger.error(error, 'Error when getting lease from xpand')
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred fetching lease from xpand',
+        ...metadata,
+      }
+    }
+  })
+
   router.get('(.*)/leases/:leaseId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 

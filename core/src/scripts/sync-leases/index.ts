@@ -1,14 +1,24 @@
 import fs from 'fs/promises'
 import { logger } from '@onecore/utilities'
-import { Contact } from '@onecore/types'
+import { Contact, RentalPropertyInfo } from '@onecore/types'
 import config from '../../common/config'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { getUpdatedLeases, syncLease } from '../../adapters/leasing-adapter'
-import { getRentalObjectType } from '../../adapters/property-base-adapter'
+import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
 
-const STATE_FILE = '/data/last-timestamp-leases.txt'
+const STATE_FILE = './last-timestamp-leases.txt'
+// const STATE_FILE = '/data/last-timestamp-leases.txt'
 
-const ALLOWED_RENTAL_OBJECT_TYPES = ['Lägenhet', 'Förråd']
+const isResidenceOrStorage = (info: RentalPropertyInfo): boolean => {
+  if (info.type === 'Lägenhet') return true
+  if (
+    info.type === 'Lokal' &&
+    'type' in info.property &&
+    info.property.type === 'Förråd'
+  )
+    return true
+  return false
+}
 
 const getLastTimestamp = async (): Promise<Date | null> => {
   try {
@@ -49,24 +59,24 @@ const syncLeases = async () => {
   const contactsAdapter = makeContactsAdapter(config.contactsService.url)
 
   for (const lease of leases) {
-    // Step 1: Check rental object type via property service
-    const rentalObjectTypeResult = await getRentalObjectType(lease.rentalObjectId)
+    // Step 1: Check rental object type via property management service
+    const propertyInfo = await getRentalPropertyInfoFromXpand(
+      lease.rentalObjectId
+    )
 
-    if (!rentalObjectTypeResult.ok) {
+    if (propertyInfo.status !== 200 || !propertyInfo.data) {
       logger.warn(
-        { rentalObjectId: lease.rentalObjectId, err: rentalObjectTypeResult.err },
+        { rentalObjectId: lease.rentalObjectId, status: propertyInfo.status },
         'could not determine rental object type, skipping'
       )
       continue
     }
 
-    const rentalObjectType = rentalObjectTypeResult.data.name
-
-    if (!ALLOWED_RENTAL_OBJECT_TYPES.includes(rentalObjectType ?? '')) {
+    if (!isResidenceOrStorage(propertyInfo.data)) {
       logger.info(
         {
           rentalObjectId: lease.rentalObjectId,
-          type: rentalObjectType,
+          type: propertyInfo.data.type,
         },
         'rental object type not in scope, skipping'
       )

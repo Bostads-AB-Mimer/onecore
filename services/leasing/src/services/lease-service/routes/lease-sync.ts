@@ -53,33 +53,47 @@ export const routes = (router: KoaRouter) => {
       try {
         const { leaseId, contact } = ctx.request.body
 
-        const tenantResult =
-          await tenfastAdapter.getOrCreateAndUpdateTenant(contact)
-
-        if (!tenantResult.ok) {
-          logger.error(
-            { error: tenantResult.err, leaseId },
-            'Failed to get or create tenant in Tenfast'
-          )
-          ctx.status = 500
-          ctx.body = { error: tenantResult.err, ...metadata }
-          return
-        }
+        const slashIndex = leaseId.lastIndexOf('/')
+        const rentalObjectCode =
+          slashIndex !== -1 ? leaseId.substring(0, slashIndex) : leaseId
 
         const existingLease =
           await tenfastAdapter.getLeaseByExternalId(leaseId)
 
         if (existingLease.ok) {
-          logger.info({ leaseId }, 'Lease already exists in Tenfast, skipping')
+          // Lease exists — update it
+          const updateResult = await tenfastAdapter.syncExistingLease(
+            existingLease.data,
+            rentalObjectCode
+          )
+
+          if (!updateResult.ok) {
+            logger.error(
+              { error: updateResult.err, leaseId },
+              'Failed to update lease in Tenfast'
+            )
+            ctx.status = 500
+            ctx.body = { error: updateResult.err, ...metadata }
+            return
+          }
+
+          logger.info({ leaseId }, 'Lease updated in Tenfast')
           ctx.status = 200
-          ctx.body = { action: 'skipped', ...metadata }
+          ctx.body = { content: { action: 'updated', leaseId }, ...metadata }
           return
         }
 
-        const slashIndex = leaseId.lastIndexOf('/')
-        const rentalObjectCode =
-          slashIndex !== -1 ? leaseId.substring(0, slashIndex) : leaseId
+        if (existingLease.err !== 'not-found') {
+          logger.error(
+            { error: existingLease.err, leaseId },
+            'Failed to check existing lease in Tenfast'
+          )
+          ctx.status = 500
+          ctx.body = { error: existingLease.err, ...metadata }
+          return
+        }
 
+        // Lease does not exist — create it
         const createResult = await tenfastAdapter.createLease(
           contact,
           rentalObjectCode,
@@ -99,7 +113,7 @@ export const routes = (router: KoaRouter) => {
 
         logger.info({ leaseId }, 'Lease created in Tenfast')
         ctx.status = 201
-        ctx.body = { action: 'created', content: createResult.data, ...metadata }
+        ctx.body = { content: { action: 'created', leaseId }, ...metadata }
       } catch (error: unknown) {
         logger.error({ error, metadata }, 'Error syncing lease to Tenfast')
         ctx.status = 500

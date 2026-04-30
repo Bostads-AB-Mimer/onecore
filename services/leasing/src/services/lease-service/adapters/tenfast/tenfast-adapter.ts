@@ -626,6 +626,45 @@ export async function getOrCreateAndUpdateTenant(
   return { ok: true, data: parsed.data }
 }
 
+export async function syncExistingLease(
+  existingLease: TenfastLease,
+  rentalObjectCode: string
+): Promise<
+  AdapterResult<
+    any,
+    | 'could-not-find-rental-object'
+    | 'lease-could-not-be-updated'
+    | 'unknown'
+  >
+> {
+  const rentalObjectResponse = await getRentalObject(rentalObjectCode)
+  if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
+    return { ok: false, err: 'could-not-find-rental-object' }
+
+  try {
+    const updateData = {
+      hyror: rentalObjectResponse.data.hyror,
+    }
+
+    const response = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existingLease._id}?hyresvard=${tenfastCompanyId}`,
+      data: updateData,
+    })
+
+    if (response.status !== 200 && response.status !== 201) {
+      return handleTenfastError(
+        { error: response.data.error, status: response.status },
+        'lease-could-not-be-updated'
+      )
+    }
+
+    return { ok: true, data: response.data }
+  } catch (err) {
+    return handleTenfastError(err, 'lease-could-not-be-updated')
+  }
+}
+
 function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
   if (isAxiosError(errorObj)) {
     logger.error(
@@ -689,13 +728,13 @@ function buildTenantRequestData(contact: Contact) {
       first: contact.firstName ?? '',
       last: contact.lastName ?? '',
     },
-    email: contact.emailAddress,
+    email: contact.emailAddress ?? '',
     phone: contact.phoneNumbers?.find(
       (p: { isMainNumber: any }) => p.isMainNumber
-    )?.phoneNumber,
-    postadress: `${contact.address?.street} ${contact.address?.number}`,
-    postnummer: contact.address?.postalCode,
-    stad: contact.address?.city,
+    )?.phoneNumber ?? '',
+    postadress: `${contact.address?.street ?? ''} ${contact.address?.number ?? ''}`.trim(),
+    postnummer: contact.address?.postalCode ?? '',
+    stad: contact.address?.city ?? '',
   }
 }
 

@@ -49,6 +49,8 @@ const syncContacts = async () => {
   const contacts = contactsResult.data
   logger.info({ count: contacts.length }, 'contacts to sync')
 
+  let failedCount = 0
+
   for (const contact of contacts) {
     const payload = toSyncPayload(contact)
 
@@ -80,6 +82,7 @@ const syncContacts = async () => {
     ])
 
     if (!tenfastResult.ok || !xledgerResult.ok || !odooResult.ok) {
+      failedCount++
       logger.error(
         {
           contactCode: payload.contactCode,
@@ -87,20 +90,26 @@ const syncContacts = async () => {
           xledger: xledgerResult.ok ? 'ok' : xledgerResult.err,
           odoo: odooResult.ok ? 'ok' : odooResult.err,
         },
-        'contact failed to sync'
+        'contact failed to sync, continuing with remaining contacts'
       )
-      throw new Error(
-        `contact ${payload.contactCode} failed to sync, leaving last timestamp unchanged for retry`
-      )
+      continue
     }
     logger.info({ contactCode: payload.contactCode }, 'contact synced')
   }
 
   await saveLastTimestamp(syncStart)
-  logger.info(
-    { count: contacts.length },
-    'all contacts synced, timestamp advanced'
-  )
+
+  if (failedCount > 0) {
+    logger.warn(
+      { failedCount, totalCount: contacts.length },
+      'sync completed with failures, timestamp advanced'
+    )
+  } else {
+    logger.info(
+      { count: contacts.length },
+      'all contacts synced, timestamp advanced'
+    )
+  }
 }
 
 syncContacts().catch((err) => {

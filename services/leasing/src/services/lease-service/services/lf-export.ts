@@ -41,8 +41,8 @@ export const mapLeasesToLfExportRows = (
           articleText: insuranceRow.label ?? '',
           nationalIdNumber: tenant.idbeteckning,
           fullName: `${tenant.name.last} ${tenant.name.first}`,
-          address: tenant.postadress,
-          phoneNumber: tenant.phone,
+          address: tenant.postadress ?? '',
+          phoneNumber: tenant.phone ?? '',
           email: tenant.invoiceEmail ?? null,
         },
       ]

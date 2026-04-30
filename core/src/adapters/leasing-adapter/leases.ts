@@ -29,6 +29,20 @@ export const getLease = async (leaseId: string): Promise<Lease | null> => {
   return leaseResponse.data.content
 }
 
+export const getLeaseFromXpand = async (
+  leaseId: string
+): Promise<Lease | null> => {
+  const response = await axios(
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/from-xpand`
+  )
+
+  if (response.status === 404) {
+    return null
+  }
+
+  return response.data.content
+}
+
 export const getLeasesByContactCode = async (
   contactCode: string,
   options: GetLeasesOptions
