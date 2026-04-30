@@ -77,6 +77,15 @@ const syncContacts = async () => {
     ])
 
     if (!tenfastResult.ok || !xledgerResult.ok || !odooResult.ok) {
+      logger.error(
+        {
+          contactCode: payload.contactCode,
+          tenfast: tenfastResult.ok ? 'ok' : tenfastResult.err,
+          xledger: xledgerResult.ok ? 'ok' : xledgerResult.err,
+          odoo: odooResult.ok ? 'ok' : odooResult.err,
+        },
+        'contact failed to sync'
+      )
       throw new Error(
         `contact ${payload.contactCode} failed to sync, leaving last timestamp unchanged for retry`
       )
