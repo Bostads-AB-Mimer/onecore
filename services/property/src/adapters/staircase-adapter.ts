@@ -99,47 +99,52 @@ async function getStaircasesByBuildingCode(
   buildingCode: string,
   staircaseCode?: string
 ): Promise<(Staircase & { buildingCode: string })[]> {
-  const propertyStructures = await prisma.propertyStructure
-    .findMany({
-      where: {
-        buildingCode: { contains: buildingCode },
-        staircaseId: { not: null },
-        residenceId: null,
-        localeId: null,
-        propertyId: { not: null },
-        propertyCode: { not: null },
-        ...(staircaseCode ? { staircaseCode } : {}),
-      },
-    })
-    .then(trimStrings)
-
-  const staircases = await prisma.staircase
-    .findMany({
-      where: {
-        propertyObjectId: {
-          in: map(propertyStructures, 'propertyObjectId'),
+  try {
+    const propertyStructures = await prisma.propertyStructure
+      .findMany({
+        where: {
+          buildingCode: { contains: buildingCode },
+          staircaseId: { not: null },
+          residenceId: null,
+          localeId: null,
+          propertyId: { not: null },
+          propertyCode: { not: null },
+          ...(staircaseCode ? { staircaseCode } : {}),
         },
-      },
-    })
-    .then(trimStrings)
+      })
+      .then(trimStrings)
 
-  const propertyStructureMap = new Map(
-    propertyStructures.map((ps) => [
-      ps.propertyObjectId,
-      extractPropertyData(ps),
-    ])
-  )
+    const staircases = await prisma.staircase
+      .findMany({
+        where: {
+          propertyObjectId: {
+            in: map(propertyStructures, 'propertyObjectId'),
+          },
+        },
+      })
+      .then(trimStrings)
 
-  return staircases.map((staircase) => ({
-    ...mapStaircase(
-      staircase,
-      requirePropertyData(
+    const propertyStructureMap = new Map(
+      propertyStructures.map((ps) => [
+        ps.propertyObjectId,
+        extractPropertyData(ps),
+      ])
+    )
+
+    return staircases.map((staircase) => ({
+      ...mapStaircase(
         staircase,
-        propertyStructureMap.get(staircase.propertyObjectId)
-      )
-    ),
-    buildingCode,
-  }))
+        requirePropertyData(
+          staircase,
+          propertyStructureMap.get(staircase.propertyObjectId)
+        )
+      ),
+      buildingCode,
+    }))
+  } catch (err) {
+    logger.error({ err }, 'staircase-adapter.getStaircasesByBuildingCode')
+    throw err
+  }
 }
 
 async function searchStaircases(q: string): Promise<Staircase[]> {
