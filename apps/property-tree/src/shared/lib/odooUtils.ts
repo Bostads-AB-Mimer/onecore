@@ -7,7 +7,7 @@ interface OdooLinkableWorkOrder {
 }
 
 const ODOO_URL = resolve('VITE_ODOO_URL', '')
-const CREATE_MAINTENANCE_REQUEST_URL = `${ODOO_URL}/web#action=onecore_maintenance_extension.action_maintenance_request_create`
+const CREATE_MAINTENANCE_REQUEST_FROM_URL = `${ODOO_URL}/odoo/maintenance_create_from_url`
 const WINDOW_OPEN_TARGET = '_blank'
 const WINDOW_OPEN_FEATURES = 'noopener,noreferrer'
 
@@ -23,22 +23,6 @@ export const linkToWorkOrderInOdoo = (order: OdooLinkableWorkOrder) => {
   window.open(
     ODOO_URL +
       `/web#id=${workOrderId}&model=maintenance.request&view_type=form`,
-    WINDOW_OPEN_TARGET,
-    WINDOW_OPEN_FEATURES
-  )
-}
-
-export const linkToOdooCreateMaintenanceRequestForContactCode = (
-  contactCode: string
-) => {
-  const context = {
-    default_search_type: 'contactCode',
-    default_search_by_number: contactCode,
-  }
-
-  // Append "context" parameter to the URL to prefill the contact code and set the search type
-  window.open(
-    `${CREATE_MAINTENANCE_REQUEST_URL}&context=${encodeURIComponent(JSON.stringify(context))}`,
     WINDOW_OPEN_TARGET,
     WINDOW_OPEN_FEATURES
   )
@@ -163,19 +147,11 @@ export const linkToOdooCreateMaintenanceRequestForContext = (
 
   if (context) {
     window.open(
-      `${CREATE_MAINTENANCE_REQUEST_URL}&context=${encodeURIComponent(
+      `${CREATE_MAINTENANCE_REQUEST_FROM_URL}?context=${encodeURIComponent(
         JSON.stringify(context)
       )}`,
       WINDOW_OPEN_TARGET,
       WINDOW_OPEN_FEATURES
     )
   }
-}
-
-export const linkToOdooCreateMaintenanceRequest = () => {
-  window.open(
-    CREATE_MAINTENANCE_REQUEST_URL,
-    WINDOW_OPEN_TARGET,
-    WINDOW_OPEN_FEATURES
-  )
 }
