@@ -232,7 +232,7 @@ const getAdditionalColumns = async (
       )
       return {
         row: undefined,
-        error: `Kunde inte hitta kostnadsställe och fastighet för hyresobjekt ${contractCode.split('/')[0]} på faktura ${row.invoiceNumber} med fråndatum ${row.fromDate}`,
+        error: `Kunde inte hitta kostnadsställe och fastighet för hyresobjekt ${contractCode.split('/')[0]} på faktura ${row.invoiceNumber} med fråndatum ${row.fromDate}. Denna faktura måste bokföras manuellt i Xledger (både reskontra och intäktskonton)`,
       }
     }
   } else if (row.company === '006') {
@@ -332,7 +332,11 @@ export const enrichInvoiceRows = async (
     )
   )
 
-  const rows = (await Promise.all(enrichedInvoiceRows)).filter((row) => row)
+  const errorInvoiceNumbers = new Set(errors.map((e) => e.invoiceNumber))
+  const rows = (await Promise.all(enrichedInvoiceRows)).filter(
+    (row) =>
+      row !== null && !errorInvoiceNumbers.has(row.invoiceNumber as string)
+  )
 
   return { rows: rows as InvoiceDataRow[], errors }
 }
@@ -682,10 +686,42 @@ export const getInvoiceRows = async (
     return column ? (column as string).trimEnd() : column
   }
 
+  // Derive "current month" strings in UTC so they share the same calendar as
+  // xledgerDateString (which uses toISOString → UTC). Comparing in any other
+  // timezone risks a row being rewritten to a different month than the one
+  // its formatted date string ends up in around month boundaries.
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const y = now.getUTCFullYear()
+  const m = pad(now.getUTCMonth() + 1)
+  const lastDay = pad(
+    new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)
+    ).getUTCDate()
+  )
+  const startOfCurrentMonthString = `${y}${m}01`
+  const endOfCurrentMonthString = `${y}${m}${lastDay}`
+
   const convertedInvoiceRows: InvoiceRow[] = invoiceRows.map(
     (invoiceRow: any) => {
       try {
         const type = invoiceRow['type'] as number
+
+        const invoiceFromDateString = xledgerDateString(
+          invoiceRow['invoiceFromDate'] as Date
+        )
+        const fromDateString =
+          invoiceFromDateString < startOfCurrentMonthString
+            ? startOfCurrentMonthString
+            : invoiceFromDateString
+
+        const invoiceToDateString = xledgerDateString(
+          invoiceRow['invoiceToDate'] as Date
+        )
+        const toDateString =
+          invoiceToDateString < startOfCurrentMonthString
+            ? endOfCurrentMonthString
+            : invoiceToDateString
 
         const invoice: InvoiceRow = {
           account: trim(invoiceRow['p1']),
@@ -694,7 +730,7 @@ export const getInvoiceRows = async (
           contactCode: trim(invoiceRow['cmctckod']),
           deduction: sumColumns(invoiceRow['rowReduction']),
           freeCode: trim(invoiceRow['p5']),
-          fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
+          fromDate: fromDateString,
           invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
           invoiceDueDate: xledgerDateString(
             invoiceRow['expirationDate'] as Date
@@ -709,7 +745,7 @@ export const getInvoiceRows = async (
           roundoff: sumColumns(invoiceRow['roundoff']),
           rowType: sumColumns(invoiceRow['rowtype']),
           tenantName: trim(invoiceRow['cmctcben']),
-          toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
+          toDate: toDateString,
           totalAmount: sumColumns(
             invoiceRow['rowAmount'],
             invoiceRow['rowReduction'],
