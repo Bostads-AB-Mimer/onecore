@@ -1,8 +1,10 @@
 import { loggedAxios, PaginatedResponse } from '@onecore/utilities'
-import type {
+import {
   Contact,
+  ChannelLookup,
   GetContactResponseBody,
   GetContactsResponseBody,
+  PostChannelsResponseBody,
 } from '@onecore/contacts/schema'
 
 import { AdapterResult } from '@/adapters/types'
@@ -94,6 +96,19 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
         `/contacts/by-email-address/${emailAddress}`
       )
       return listResponse(response)
+    },
+
+    async getInvoiceChannels(
+      contactCodes: string[]
+    ): Promise<AdapterResult<ChannelLookup[], 'unknown'>> {
+      const response = await axios.post<PostChannelsResponseBody>(
+        '/contacts/invoice-channels',
+        {
+          contactCodes,
+        }
+      )
+
+      return { ok: true, data: response.data.content }
     },
   }
 }
