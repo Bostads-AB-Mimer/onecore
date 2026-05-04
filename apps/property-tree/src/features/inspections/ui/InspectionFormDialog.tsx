@@ -111,9 +111,7 @@ export function InspectionFormDialog({
   // form starts blank.
   const inspectionToUse =
     userChoice === 'fresh'
-      ? existingInspection
-        ? { ...existingInspection, rooms: null }
-        : undefined
+      ? { ...existingInspection, rooms: null }
       : existingInspection
 
   // Show choice dialog if there's saved data and user hasn't chosen yet
