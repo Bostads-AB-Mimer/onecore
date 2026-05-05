@@ -312,3 +312,20 @@ export async function processIMD(
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
+
+export async function getInvoiceChannels(
+  contactCodes: string[]
+): Promise<AdapterResult<economy.ChannelLookup, 'unknown'>> {
+  const response = await axios.post(
+    `${config.economyService.url}/invoice-channels`,
+    {
+      contactCodes,
+    }
+  )
+
+  if (response.status === 200) {
+    return { ok: true, data: response.data.content }
+  }
+
+  return { ok: true, data: response.data.content }
+}

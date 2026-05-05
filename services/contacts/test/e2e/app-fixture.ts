@@ -3,7 +3,6 @@ import fs from 'node:fs/promises'
 import makeApp from '@src/app'
 import config from '@src/common/config'
 import { makeAppContext } from '@src/context'
-import { StralforsAdapter } from '@src/adapters/stralfors/stralfors-adapter'
 import axios from 'axios'
 import sql, { ConnectionPool } from 'mssql'
 import { Server, Agent } from 'node:http'
@@ -53,11 +52,7 @@ export type FixtureOptions = {
   /**
    * The data set to apply to the test database.
    */
-  dataSet?: string[]
-  /**
-   * Override the Strålfors adapter.
-   */
-  stralforsAdapter?: StralforsAdapter
+  dataSet: string[]
 }
 
 /**
@@ -71,19 +66,14 @@ export type FixtureOptions = {
  */
 export const makeTestAppFixture = async (opts: FixtureOptions) => {
   const ctx = makeAppContext(config)
-
-  if (opts.stralforsAdapter) {
-    ctx.modules.stralforsAdapter = opts.stralforsAdapter
-  }
-
-  if (opts.dataSet) {
-    const pool = await connect()
-    await prepareDataSet(pool, opts.dataSet)
-    await pool.close()
-  }
-
   const app = makeApp(ctx)
   let server: Server | undefined = undefined
+
+  const pool = await connect()
+
+  await prepareDataSet(pool, opts.dataSet)
+
+  await pool.close()
 
   return {
     async start(): Promise<void> {

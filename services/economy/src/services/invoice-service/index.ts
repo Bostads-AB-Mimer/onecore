@@ -18,6 +18,7 @@ import {
   fetchInvoiceRows,
   fetchPaymentEvents,
   getLeaseDetails,
+  stralforsPostChannelLookup,
 } from './service'
 import { getInvoiceDetails } from './service'
 
@@ -226,6 +227,19 @@ export const routes = (router: KoaRouter) => {
       ctx.body = {
         message: error.message,
       }
+    }
+  })
+
+  router.post('(.*)/invoice-channels', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { contactCodes } = ctx.request.body
+
+    const results = await stralforsPostChannelLookup(contactCodes)
+
+    ctx.status = 200
+    ctx.body = {
+      ...metadata,
+      content: results,
     }
   })
 }

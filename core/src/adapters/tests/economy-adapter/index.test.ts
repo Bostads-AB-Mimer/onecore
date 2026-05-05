@@ -34,4 +34,67 @@ describe('economy-adapter', () => {
       data: JSON.parse(JSON.stringify(mockedProblematicInvoices)),
     })
   })
+
+  describe('getInvoiceChannels', () => {
+    const mockChannels = [
+      {
+        channel: 'Kivra',
+        matchedCandidates: ['P000111'],
+        error: null,
+      },
+      {
+        channel: 'eInvoiceB2C',
+        matchedCandidates: ['P000222'],
+        error: null,
+      },
+    ]
+
+    it('returns invoice channels for given contact codes', async () => {
+      nock(config.economyService.url)
+        .post('/invoice-channels', { contactCodes: ['P000111', 'P000222'] })
+        .reply(200, { content: mockChannels })
+
+      const result = await economyAdapter.getInvoiceChannels(['P000111', 'P000222'])
+
+      expect(result).toEqual({ ok: true, data: mockChannels })
+    })
+
+    it('passes contact codes in request body', async () => {
+      nock(config.economyService.url)
+        .post('/invoice-channels', { contactCodes: ['P000111', 'P000222', 'F111111'] })
+        .reply(200, { content: [] })
+
+      const result = await economyAdapter.getInvoiceChannels(['P000111', 'P000222', 'F111111'])
+
+      expect(result).toEqual({ ok: true, data: [] })
+    })
+
+    it('returns empty array when no channels found', async () => {
+      nock(config.economyService.url)
+        .post('/invoice-channels', { contactCodes: [] })
+        .reply(200, { content: [] })
+
+      const result = await economyAdapter.getInvoiceChannels([])
+
+      expect(result).toEqual({ ok: true, data: [] })
+    })
+
+    it('returns channel with error when lookup fails for a candidate', async () => {
+      const channelsWithError = [
+        {
+          channel: 'Kivra',
+          matchedCandidates: null,
+          error: 'Lookup failed',
+        },
+      ]
+
+      nock(config.economyService.url)
+        .post('/invoice-channels', { contactCodes: ['P000111'] })
+        .reply(200, { content: channelsWithError })
+
+      const result = await economyAdapter.getInvoiceChannels(['P000111'])
+
+      expect(result).toEqual({ ok: true, data: channelsWithError })
+    })
+  })
 })

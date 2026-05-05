@@ -9,11 +9,6 @@ export interface Config {
   port: number
   applicationName: string
   xpandDatabase: KnexConnectionParameters
-  stralfors: {
-    baseUrl: string
-    clientId: string
-    clientSecret: string
-  }
   logging: {
     enabled: boolean
   }
@@ -28,11 +23,6 @@ const config = configPackage({
       healthCheckInterval: 1,
       healthCheckTimeUnit: 'm',
     },
-    stralfors: {
-      baseUrl: '',
-      clientId: '',
-      clientSecret: '',
-    },
     logging: {
       enabled: true,
     },
@@ -44,5 +34,4 @@ export default {
   logging: config.get('logging'),
   applicationName: config.get('applicationName'),
   xpandDatabase: config.get('xpandDatabase'),
-  stralfors: config.get('stralfors'),
 } satisfies Config

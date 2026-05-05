@@ -35,6 +35,13 @@ export interface Config {
     apiToken: string
     sftp: SftpConfig
   }
+  stralfors: {
+    baseUrl: string
+    clientId: string
+    clientSecret: string
+    retryBackoffMs?: number
+    maxRetries?: number
+  }
   procurementInvoices: {
     importDirectory: string
     exportDirectory: string
@@ -124,6 +131,10 @@ const config = configPackage({
     economyDatabase: {
       port: 1438,
     },
+    stralfors: {
+      retryBackoffMs: 500,
+      maxRetries: 10,
+    },
     procurementInvoices: {
       importDirectory: './procurement-invoices/invoices',
       exportDirectory: './procurement-invoices/export',
@@ -178,6 +189,7 @@ export default {
   xpandDatabase: config.get('xpandDatabase'),
   economyDatabase: config.get('economyDatabase'),
   xledger: config.get('xledger'),
+  stralfors: config.get('stralfors'),
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
   debtCollection: config.get('debtCollection'),

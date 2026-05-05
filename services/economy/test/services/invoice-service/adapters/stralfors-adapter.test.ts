@@ -1,8 +1,5 @@
 import axios from 'axios'
-import {
-  stralforsAdapter,
-  StralforsAdapterConfig,
-} from '@src/adapters/stralfors/stralfors-adapter'
+import { postChannelLookup } from '@src/services/invoice-service/adapters/stralfors/stralfors-adapter'
 
 jest.mock('axios', () => {
   const mockAxios = Object.assign(jest.fn(), {
@@ -11,13 +8,18 @@ jest.mock('axios', () => {
   return { default: mockAxios, __esModule: true }
 })
 
-const config: StralforsAdapterConfig = {
-  baseUrl: 'https://stralfors.test',
-  clientId: 'test-client',
-  clientSecret: 'test-secret',
-  retryBackoffMs: 0,
-  maxRetries: 2,
-}
+jest.mock('@src/common/config', () => ({
+  default: {
+    stralfors: {
+      baseUrl: 'https://stralfors.test',
+      clientId: 'test-client-id',
+      clientSecret: 'test-client-secret',
+      retryBackoffMs: 0,
+      maxRetries: 10,
+    },
+  },
+  __esModule: true,
+}))
 
 const mockAuthResponse = {
   data: { access_token: 'test-token', token_type: 'Bearer' },
@@ -53,9 +55,7 @@ describe('stralforsAdapter', () => {
         .mockResolvedValueOnce(mockPostResponse)
         .mockResolvedValueOnce(mockGetResponse)
 
-      const result = await stralforsAdapter(config).postChannelLookup([
-        '191212121212',
-      ])
+      const result = await postChannelLookup(['191212121212'])
 
       expect(result).toEqual(mockChannels)
     })
@@ -69,9 +69,7 @@ describe('stralforsAdapter', () => {
         .mockResolvedValueOnce({ data: { results: null } })
         .mockResolvedValueOnce(mockGetResponse)
 
-      const result = await stralforsAdapter(config).postChannelLookup([
-        '191212121212',
-      ])
+      const result = await postChannelLookup(['191212121212'])
 
       expect(result).toEqual(mockChannels)
       // 1 POST + 3 GETs
@@ -85,9 +83,7 @@ describe('stralforsAdapter', () => {
         .mockResolvedValueOnce(mockPostResponse)
         .mockResolvedValue({ data: { results: null } })
 
-      await expect(
-        stralforsAdapter(config).postChannelLookup(['191212121212'])
-      ).rejects.toThrow()
+      await expect(postChannelLookup(['191212121212'])).rejects.toThrow()
     })
 
     it('throws when POST request fails', async () => {
@@ -95,9 +91,7 @@ describe('stralforsAdapter', () => {
       const error = Object.assign(new Error('Network error'), { status: 500 })
       jest.mocked(axios).mockRejectedValueOnce(error)
 
-      await expect(
-        stralforsAdapter(config).postChannelLookup(['191212121212'])
-      ).rejects.toThrow()
+      await expect(postChannelLookup(['191212121212'])).rejects.toThrow()
     })
 
     it('sends Bearer token in Authorization header', async () => {
@@ -107,7 +101,7 @@ describe('stralforsAdapter', () => {
         .mockResolvedValueOnce(mockPostResponse)
         .mockResolvedValueOnce(mockGetResponse)
 
-      await stralforsAdapter(config).postChannelLookup(['191212121212'])
+      await postChannelLookup(['191212121212'])
 
       expect(jest.mocked(axios)).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -125,10 +119,7 @@ describe('stralforsAdapter', () => {
         .mockResolvedValueOnce(mockPostResponse)
         .mockResolvedValueOnce(mockGetResponse)
 
-      await stralforsAdapter(config).postChannelLookup([
-        '191212121212',
-        '198112172385',
-      ])
+      await postChannelLookup(['191212121212', '198112172385'])
 
       expect(jest.mocked(axios)).toHaveBeenCalledWith(
         expect.objectContaining({

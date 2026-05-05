@@ -3,7 +3,7 @@ import {
   generateRouteMetadata,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy } from '@onecore/types'
+import { economy, schemas } from '@onecore/types'
 
 import * as economyAdapter from '../../adapters/economy-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
@@ -291,6 +291,27 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  )
+
+  router.post(
+    '/invoice-channels',
+    parseRequestBody(economy.ChannelLookupRequestBodySchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { contactCodes } = ctx.request.body
+
+      const response = await economyAdapter.getInvoiceChannels(contactCodes)
+
+      if (response.ok) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(response.data, metadata)
+      } else {
+        ctx.status = 500
+        ctx.body = {
+          error: response.err,
+        }
+      }
     }
   )
 }

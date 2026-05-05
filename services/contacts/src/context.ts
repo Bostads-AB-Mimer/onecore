@@ -4,10 +4,6 @@ import { Config } from './common/config'
 import { ContactsRepository, xpandContactsRepository } from './adapters'
 import { xpandDbClient } from './adapters/xpand/db'
 import Koa from 'koa'
-import {
-  stralforsAdapter,
-  StralforsAdapter,
-} from './adapters/stralfors/stralfors-adapter'
 
 /**
  * The Application Context for the Contacts Application,
@@ -38,11 +34,6 @@ export interface AppContext {
      * The ContactsRepository implementation to use.
      */
     contactsRepository: ContactsRepository
-
-    /**
-     * The Stralfors Adapter implementation to use.
-     */
-    stralforsAdapter: StralforsAdapter
   }
 }
 
@@ -85,11 +76,6 @@ export const makeAppContext = (config: Config): AppContext => {
     },
     modules: {
       contactsRepository: xpandContactsRepository(xpandDb),
-      stralforsAdapter: stralforsAdapter({
-        baseUrl: config.stralfors.baseUrl,
-        clientId: config.stralfors.clientId,
-        clientSecret: config.stralfors.clientSecret,
-      }),
     },
   }
 }

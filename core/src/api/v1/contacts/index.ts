@@ -5,8 +5,6 @@ import {
   ContactSchema,
   GetContactResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
-  PostChannelsRequestBodySchema,
-  PostChannelsResponseBodySchema,
 } from './schema'
 import {
   generateRouteMetadata,
@@ -252,34 +250,6 @@ export const routes = (router: OkapiRouter, config: Config) => {
       const response = await contactsAdapter.getByNationalId(nid)
 
       encodeSingleResponse(ctx, response)
-    }
-  )
-
-  router.post(
-    '/v1/contacts/invoice-channels',
-    {
-      summary: 'Get available invoice channels for contacts',
-      description:
-        'Accepts a list of contact codes and returns the available invoice channels for the matching contacts',
-      tags: ['Contacts'],
-      body: PostChannelsRequestBodySchema,
-      response: {
-        200: PostChannelsResponseBodySchema,
-      },
-    },
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-
-      const { contactCodes } = ctx.request.body
-
-      const response = await contactsAdapter.getInvoiceChannels(contactCodes)
-
-      if (response.ok) {
-        ctx.status = 200
-        ctx.body = makeSuccessResponseBody(response.data, metadata)
-      } else {
-        encodeError(ctx, response, metadata)
-      }
     }
   )
 }
