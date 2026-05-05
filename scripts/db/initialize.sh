@@ -1,24 +1,35 @@
 #!/bin/bash
 
-echo "Running database initialization..."
+# Waits for the local SQL Server container to be ready to accept connections.
+# Each service creates its own database on startup via its db:ensure script.
 
-# Find sqlcmd location (supports both mssql-tools and mssql-tools18)
-SQLCMD_PATH=$(docker exec onecore-sql bash -c "command -v sqlcmd || find /opt -name sqlcmd -type f 2>/dev/null | head -1")
+set -e
 
-if [ -z "$SQLCMD_PATH" ]; then
-    echo "ERROR: sqlcmd not found in container"
-    exit 1
+CONTAINER="onecore-sql"
+
+if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
+  echo "ERROR: Container '${CONTAINER}' is not running."
+  echo "       Start it first with: docker compose up -d"
+  exit 1
 fi
 
-echo "Using sqlcmd at: $SQLCMD_PATH"
+SQLCMD_PATH=$(docker exec "$CONTAINER" bash -c "command -v sqlcmd || find /opt -name sqlcmd -type f 2>/dev/null | head -1")
 
-docker exec -i onecore-sql bash -c "$SQLCMD_PATH -S localhost -U SA -P \"s3cr3t_p455w0rd\" -C" <<-EOSQL
-    CREATE DATABASE [tenants-leases];
-    CREATE DATABASE [tenants-leases-test];
-    CREATE DATABASE [property-info];
-    CREATE DATABASE [economy];
-    CREATE DATABASE [inspection];
-    CREATE DATABASE [keys-management];
-EOSQL
+if [ -z "$SQLCMD_PATH" ]; then
+  echo "ERROR: sqlcmd not found in container"
+  exit 1
+fi
 
-echo "Database initialization completed!"
+echo "Waiting for SQL Server to be ready..."
+retries=30
+until docker exec "$CONTAINER" bash -c "$SQLCMD_PATH -S localhost -U SA -P \"\$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' > /dev/null 2>&1"; do
+  retries=$((retries - 1))
+  if [ "$retries" -le 0 ]; then
+    echo "ERROR: SQL Server did not become ready in time."
+    exit 1
+  fi
+  echo "  Not ready yet, retrying in 2 seconds... ($retries retries left)"
+  sleep 2
+done
+
+echo "SQL Server is ready."

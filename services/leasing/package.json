@@ -12,7 +12,8 @@
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "pnpm run migrate:up && pnpm exec nodemon -e ts,js --exec ts-node -r dotenv/config src/index",
+    "db:ensure": "node scripts/ensure-db.js",
+    "dev": "pnpm run db:ensure && pnpm run migrate:up && pnpm exec nodemon -e ts,js --exec ts-node -r dotenv/config src/index",
     "dev:init": "pnpm prepare:dotenv",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -24,7 +25,7 @@
     "prettier": "prettier --check ./src",
     "dev:script:expire-listings": "ts-node src/scripts/expire-listings.ts",
     "script:expire-listings": "node build/scripts/expire-listings",
-    "start": "pnpm migrate:up && node -r dotenv/config build/index",
+    "start": "pnpm run db:ensure && pnpm migrate:up && node -r dotenv/config build/index",
     "test:create-db": "./scripts/create-test-db.sh",
     "test:drop-db": "docker compose -f ../../docker-compose.yaml up -d && docker exec -i onecore-sql sh -c '/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P $MSSQL_SA_PASSWORD -Q \"DROP DATABASE [tenants-leases-test];\"'",
     "test": "pnpm test:create-db && DOTENV_CONFIG_PATH=.env.test jest",
