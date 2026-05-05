@@ -1054,5 +1054,20 @@ const enrichInvoiceRowsWithText = async (
 
 export const stralforsPostChannelLookup = async (contactCodes: string[]) => {
   const contacts = await getContacts(contactCodes)
-  return postChannelLookup(contacts.map((c) => c.nationalRegistrationNumber))
+  const contactCodeByNationalRegistrationNumber = new Map(
+    contacts.map((c) => [c.nationalRegistrationNumber, c.contactCode] as const)
+  )
+  const response = await postChannelLookup(
+    contacts.map((c) => c.nationalRegistrationNumber)
+  )
+
+  return {
+    ...response,
+    matchedCandidates: Array.isArray(response.matchedCandidates)
+      ? response.matchedCandidates.map(
+          (candidate) =>
+            contactCodeByNationalRegistrationNumber.get(candidate) ?? candidate
+        )
+      : response.matchedCandidates,
+  }
 }
