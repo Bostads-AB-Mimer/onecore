@@ -1631,3 +1631,95 @@ describe(tenfastAdapter.getLeaseByExternalId, () => {
     })
   })
 })
+
+describe(tenfastAdapter.syncTenant, () => {
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('should skip when tenant does not exist', async () => {
+    const payload = factory.syncTenantPayload.build()
+
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: { records: [] },
+    })
+
+    const result = await tenfastAdapter.syncTenant(payload)
+
+    expect(result).toEqual({ ok: true, data: null })
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('should update tenant when tenant already exists', async () => {
+    const payload = factory.syncTenantPayload.build()
+    const existingTenant = factory.tenfastTenant.build({
+      _id: 'existing-tenant-id',
+      externalId: payload.contactCode,
+    })
+    const updatedTenant = factory.tenfastTenant.build({
+      _id: 'existing-tenant-id',
+      externalId: payload.contactCode,
+      name: { first: 'Knut', last: 'Kansen' },
+    })
+
+    // First call: getTenantByContactCode → found
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: { records: [existingTenant] },
+    })
+
+    // Second call: updateTenant (patch) → updated
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: updatedTenant,
+    })
+
+    const result = await tenfastAdapter.syncTenant(payload)
+
+    expect(result).toEqual({ ok: true, data: updatedTenant })
+    expect(request).toHaveBeenCalledTimes(2)
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ method: 'patch' })
+    )
+  })
+
+  it('should return error when tenant lookup fails', async () => {
+    const payload = factory.syncTenantPayload.build()
+
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 500,
+      data: { error: 'Internal server error' },
+    })
+
+    const result = await tenfastAdapter.syncTenant(payload)
+
+    expect(result).toEqual({ ok: false, err: 'could-not-retrieve-tenant' })
+  })
+
+  it('should return error when update fails', async () => {
+    const payload = factory.syncTenantPayload.build()
+    const existingTenant = factory.tenfastTenant.build({
+      _id: 'existing-tenant-id',
+      externalId: payload.contactCode,
+    })
+
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: { records: [existingTenant] },
+    })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 500,
+      data: { error: 'Internal server error' },
+    })
+
+    const result = await tenfastAdapter.syncTenant(payload)
+
+    expect(result).toEqual({
+      ok: false,
+      err: 'could-not-update-tenant',
+    })
+  })
+})

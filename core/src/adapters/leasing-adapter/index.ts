@@ -16,11 +16,14 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
+import type { SyncContactToLeasingPayload } from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
+// Accept 2xx–4xx as resolved responses so adapters can inspect the status code directly.
+// 5xx falls outside this range and causes axios to throw, landing in catch blocks as 'unknown'.
 axios.defaults.validateStatus = function (status) {
-  return status >= 200 && status < 500 // override Axios throwing errors so that we can handle errors manually
+  return status >= 200 && status < 500
 }
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
@@ -38,7 +41,7 @@ const getLease = async (
   leaseId: string,
   includeContacts: string | string[] | undefined
 ): Promise<Lease> => {
-  const leaseResponse = await axios(
+  const leaseResponse = await axios.get(
     tenantsLeasesServiceUrl +
       '/leases/' +
       encodeURIComponent(leaseId) +
@@ -106,7 +109,7 @@ const getLeasesForContactCode = async (
   })
 
   const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/for/contactCode/${contactCode}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/by-contact-code/${contactCode}?${queryParams.toString()}`
   )
 
   return leasesResponse.data.content
@@ -125,8 +128,8 @@ const getLeasesForPropertyId = async (
       includeNonTenantContacts: options.includeNonTenantContacts.toString(),
     }),
   })
-  const leasesResponse = await axios(
-    `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
+  const leasesResponse = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`
   )
   return leasesResponse.data.content
 }
@@ -160,7 +163,7 @@ const getParkingSpaceTypes = async (): Promise<
 const getContactForPnr = async (
   nationalRegistrationNumber: string
 ): Promise<Contact> => {
-  const contactResponse = await axios(
+  const contactResponse = await axios.get(
     tenantsLeasesServiceUrl +
       '/contacts/by-national-registration-number/' +
       nationalRegistrationNumber
@@ -361,7 +364,7 @@ const getContactByPhoneNumber = async (
   phoneNumber: string
 ): Promise<Contact | undefined> => {
   try {
-    const contactResponse = await axios(
+    const contactResponse = await axios.get(
       tenantsLeasesServiceUrl + '/contacts/by-phone-number/' + phoneNumber
     )
     return contactResponse.data.content
@@ -373,7 +376,7 @@ const getContactByPhoneNumber = async (
 const getCreditInformation = async (
   nationalRegistrationNumber: string
 ): Promise<ConsumerReport> => {
-  const informationResponse = await axios(
+  const informationResponse = await axios.get(
     tenantsLeasesServiceUrl +
       '/cas/getConsumerReport/' +
       nationalRegistrationNumber
@@ -385,15 +388,9 @@ const addApplicantToWaitingList = async (
   contactCode: string,
   waitingListType: WaitingListType
 ) => {
-  const axiosOptions = {
-    method: 'POST',
-    data: {
-      waitingListType: waitingListType,
-    },
-  }
-  return await axios(
+  return await axios.post(
     tenantsLeasesServiceUrl + `/contacts/${contactCode}/waitingLists`,
-    axiosOptions
+    { waitingListType }
   )
 }
 
@@ -402,15 +399,9 @@ const resetWaitingList = async (
   waitingListType: WaitingListType
 ): Promise<AdapterResult<undefined, 'not-in-waiting-list' | 'unknown'>> => {
   try {
-    const axiosOptions = {
-      method: 'POST',
-      data: {
-        waitingListType: waitingListType,
-      },
-    }
-    const res = await axios(
+    const res = await axios.post(
       tenantsLeasesServiceUrl + `/contacts/${contactCode}/waitingLists/reset`,
-      axiosOptions
+      { waitingListType }
     )
 
     if (res.status == 200) return { ok: true, data: undefined }
@@ -751,9 +742,38 @@ const exportLeasesToExcel = async (
   }
 }
 
+const syncContactToLeasing = async (
+  payload: SyncContactToLeasingPayload
+): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/contacts/${payload.contactCode}/sync`,
+      payload
+    )
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: { skipped: response.data?.skipped === true } }
+    }
+
+    logger.error(response.data, 'leasing-adapter.syncContactToLeasing')
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      logger.error(
+        { status: err.response.status, data: err.response.data },
+        'leasing-adapter.syncContactToLeasing'
+      )
+      return { ok: false, err: 'sync-failed', statusCode: err.response.status }
+    }
+    logger.error({ err }, 'leasing-adapter.syncContactToLeasing')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   exportLeasesToExcel,
+  syncContactToLeasing,
   getContactsByFilters,
   getApplicationProfileByContactCode,
   getContactByContactCode,
@@ -805,6 +825,7 @@ export {
   getBuildingManagers,
   searchLeases,
   searchLeasesV2,
+  getHomeInsuranceExport,
 } from './leases'
 
 export {

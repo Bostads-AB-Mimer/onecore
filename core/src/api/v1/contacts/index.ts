@@ -30,16 +30,13 @@ export const routes = (router: OkapiRouter, config: Config) => {
     result: AdapterResult<any, any>,
     metadata: RouteMetadata
   ) => {
-    ctx.status =
-      result.statusCode == 404 || result.statusCode === 500
-        ? result.statusCode
-        : 500
+    ctx.status = !result.ok && result.err === 'not-found' ? 404 : 500
     ctx.body = { ...metadata }
   }
 
   const encodeSingleResponse = (
     ctx: ParameterizedContext,
-    result: AdapterResult<Contact, 'unknown'>
+    result: AdapterResult<Contact, 'not-found' | 'unknown'>
   ) => {
     const metadata = generateRouteMetadata(ctx)
     if (result.ok) {

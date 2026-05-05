@@ -97,3 +97,9 @@ export const GetContactsResponseBodySchema =
       contacts: z.array(ContactSchema),
     }),
   })
+
+export const SyncContactsResponseBodySchema = GetContactsResponseBodySchema
+
+export const ErrorResponseBodySchema = z.object({
+  error: z.string(),
+})

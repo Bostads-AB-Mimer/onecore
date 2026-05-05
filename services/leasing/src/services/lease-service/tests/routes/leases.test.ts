@@ -681,3 +681,42 @@ describe('GET /leases/search-v2', () => {
     expect(res.body.error).toBe('Failed to fetch leases from Tenfast')
   })
 })
+
+describe('GET /leases/lf-export', () => {
+  it('returns 200 with mapped rows on success', async () => {
+    const lease = factory.tenfastLease.build({
+      stage: 'active',
+      hyresgaster: [
+        factory.tenfastTenant.build({ idbeteckning: '199001011234' }),
+      ],
+      hyresobjekt: [factory.tenfastRentalObject.build()],
+      hyror: [
+        factory.tenfastInvoiceRow.build({
+          article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+          to: null,
+        }),
+      ],
+    })
+
+    jest
+      .spyOn(tenfastAdapter, 'getLeasesWithHomeInsurance')
+      .mockResolvedValueOnce({ ok: true, data: [lease] })
+
+    const res = await request(app.callback()).get('/leases/lf-export')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(1)
+    expect(res.body.content[0].leaseStatus).toBe('G')
+  })
+
+  it('returns 500 when adapter returns error', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeasesWithHomeInsurance')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback()).get('/leases/lf-export')
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('unknown')
+  })
+})

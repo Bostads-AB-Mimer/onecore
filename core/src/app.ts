@@ -66,6 +66,10 @@ app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/scan-receipt')) {
     return requireRole('scanner-upload')(ctx, next)
   }
+  // All routes under /leases/for-csc require csc:get or api-access
+  if (ctx.path.startsWith('/leases/for-csc') && ctx.method === 'GET') {
+    return requireRole(['csc:get', 'api-access'])(ctx, next)
+  }
   return requireRole('api-access')(ctx, next)
 })
 

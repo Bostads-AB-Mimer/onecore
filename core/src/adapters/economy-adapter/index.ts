@@ -6,6 +6,7 @@ import {
   Invoice,
   InvoicePaymentEvent,
   RentInvoiceRow,
+  SyncContactToEconomyPayload,
   XledgerContact,
   XledgerProject,
 } from '@onecore/types'
@@ -328,4 +329,32 @@ export async function getInvoiceChannels(
   }
 
   return { ok: true, data: response.data.content }
+}
+
+export async function syncContactToEconomy(
+  contactCode: string,
+  contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>
+): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
+  const payload: SyncContactToEconomyPayload = {
+    contactCode,
+    ...contactData,
+  }
+
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/contacts/${contactCode}/sync`,
+      payload
+    )
+    return { ok: true, data: { skipped: response.data?.skipped === true } }
+  } catch (err) {
+    logger.error(err, 'economy-adapter.syncContactToEconomy')
+    if (axios.isAxiosError(err) && err.response) {
+      return {
+        ok: false,
+        err: 'sync-failed',
+        statusCode: err.response.status,
+      }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
 }

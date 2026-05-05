@@ -13,6 +13,9 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+type HomeInsuranceExportRow = z.infer<
+  typeof schemas.v1.HomeInsuranceExportRowSchema
+>
 
 export const getLease = async (leaseId: string): Promise<Lease | null> => {
   const leaseResponse = await axios(
@@ -228,4 +231,38 @@ export const searchLeasesV2 = async (
   )
 
   return response.data
+}
+
+export const getHomeInsuranceExport = async (): Promise<
+  AdapterResult<HomeInsuranceExportRow[], 'schema-error' | 'unknown'>
+> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/lf-export`
+    )
+
+    if (response.status !== 200) {
+      logger.error(
+        { status: response.status, data: response.data },
+        'leases/lf-export returned unexpected status'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = schemas.v1.HomeInsuranceExportResponseSchema.safeParse(
+      response.data
+    )
+    if (!parsed.success) {
+      logger.error(
+        { err: parsed.error },
+        'leases/lf-export response failed schema validation'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: parsed.data.content }
+  } catch (err) {
+    logger.error({ err }, 'leases/lf-export failed')
+    return { ok: false, err: 'unknown' }
+  }
 }

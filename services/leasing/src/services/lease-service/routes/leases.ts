@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { leasing, schemas } from '@onecore/types'
+import { mapLeasesToLfExportRows } from '../services/lf-export'
 import { z } from 'zod'
 import { getParkingSpaceTypes } from '../adapters/xpand/lease-search-adapter'
 import {
@@ -1096,6 +1097,37 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
     }
   )
+
+  /**
+   * @swagger
+   * /leases/lf-export:
+   *   get:
+   *     summary: Export home insurance data for Länsförsäkringar
+   *     description: Returns leases with a home insurance rent row in states active, upcoming, preTermination, and terminationScheduled, with all fields needed for the daily LF export.
+   *     tags: [Leases]
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved home insurance export data.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/leases/lf-export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await tenfastAdapter.getLeasesWithHomeInsurance()
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
+    const rows = mapLeasesToLfExportRows(result.data, articleId)
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(rows, metadata)
+  })
 
   /**
    * @swagger
