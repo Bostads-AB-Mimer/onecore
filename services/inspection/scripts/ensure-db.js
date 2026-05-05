@@ -29,6 +29,11 @@ async function main() {
 
 main()
   .catch(err => {
+    // Error 1801: database already exists — another instance beat us to it, which is fine
+    if (err.number === 1801) {
+      console.log(`Database '${connection.database}' already exists.`)
+      return
+    }
     console.error('ensure-db failed:', err.message)
     process.exit(1)
   })

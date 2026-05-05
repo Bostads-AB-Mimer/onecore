@@ -103,13 +103,13 @@ Some services depend on databases and kibana/elastic-search for logging. These c
 docker compose up -d
 ```
 
-These services will apply schema migrations/updates as needed on startup, but they will not create the logical schema/database.
-
-Once the SQL container is running, you can create these by running:
+Once the SQL container is running, verify it is ready by running:
 
 ```sh
 pnpm run db:init
 ```
+
+Each service creates its own database automatically on first startup, so no manual database setup is required.
 
 ### Local development
 
