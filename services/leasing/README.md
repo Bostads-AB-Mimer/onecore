@@ -70,25 +70,19 @@ Start the development services from the monorepo root directory:
 
 This will start the required services inside a Docker container. This is a shared container used by all services, and it only needs to be started once.
 
-#### Setup database
+#### Configure services
 
-Initialize the database:
+Once Docker is running, verify SQL Server is ready:
 
 ```sh
 <monorepo root> $ pnpm run db:init
 ```
 
-#### Prepare database
-
-Create the database schema by applying the `knex` migrations:
-
-```sh
-$ pnpm run migrate:up
-```
+The database and schema are created automatically on first startup — no manual setup required.
 
 ### Running in Development Mode
 
-When all installation steps have been completed and downstreams services are running, a local development instance can be started using:
+When all installation steps have been completed and downstream services are running, a local development instance can be started using:
 
 ```sh
 $ pnpm run dev
@@ -96,11 +90,13 @@ $ pnpm run dev
 
 ### Testing
 
-The test suite requires a dedicated database for our database unit tests to run.
-If you've run the db:init pnpm script, this test db has already been created.
+Make a copy of `.env.test.template` called `.env.test` and supply the credentials to your database. Then run:
 
-Make a copy of `.env.test.template` called `.env.test` and supply
-the credentials to your database.
+```sh
+$ pnpm test
+```
+
+The test database is created automatically before the suite runs.
 
 ## License
 

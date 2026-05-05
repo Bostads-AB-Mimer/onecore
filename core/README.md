@@ -73,13 +73,13 @@ Start the development services from the monorepo root directory:
 
 This will start the required services inside a Docker container. This is a shared container used by all services, and it only needs to be started once.
 
-#### Setup database
-
-Initialize the databases for all services:
+#### Verify SQL Server is ready
 
 ```sh
 <monorepo root> $ pnpm run db:init
 ```
+
+Each service creates its own database automatically on first startup.
 
 ### Running in Development Mode
 
