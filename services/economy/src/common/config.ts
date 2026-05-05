@@ -39,8 +39,8 @@ export interface Config {
     baseUrl: string
     clientId: string
     clientSecret: string
-    retryBackoffMs?: number
-    maxRetries?: number
+    retryBackoffMs: number
+    maxRetries: number
   }
   procurementInvoices: {
     importDirectory: string

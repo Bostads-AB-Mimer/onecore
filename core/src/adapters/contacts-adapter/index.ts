@@ -1,5 +1,5 @@
 import { loggedAxios, PaginatedResponse } from '@onecore/utilities'
-import {
+import type {
   Contact,
   GetContactResponseBody,
   GetContactsResponseBody,

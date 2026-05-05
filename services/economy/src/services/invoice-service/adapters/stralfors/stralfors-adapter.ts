@@ -116,14 +116,14 @@ export async function postChannelLookup(nationalIdentityNumbers: string[]) {
     const result = await getChannelLookup(correlationId)
 
     if (!result) {
-      if (retryCount > (config.stralfors.maxRetries ?? 10)) {
+      if (retryCount > config.stralfors.maxRetries) {
         throw new Error(
           'Failed to get a response from Strålfors API after 10 retries'
         )
       }
 
       await new Promise((resolve) =>
-        setTimeout(resolve, config.stralfors.retryBackoffMs ?? 500)
+        setTimeout(resolve, config.stralfors.retryBackoffMs)
       )
       return pollGetChannelLookup(retryCount + 1)
     }

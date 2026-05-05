@@ -1054,18 +1054,5 @@ const enrichInvoiceRowsWithText = async (
 
 export const stralforsPostChannelLookup = async (contactCodes: string[]) => {
   const contacts = await getContacts(contactCodes)
-
-  // TODO We currently do not have any test contacts in the Strålfors test environment, so we cannot test with actual contacts
-  // const nationalIdentityNumbers = contacts.map((c) => c.nationalRegistrationNumber)
-  const nationalIdentityNumbers = [
-    '191212121212',
-    '198112172385',
-    '197102125866',
-    '197701032380',
-    '192112039223',
-    '198110292383',
-    '198903092388',
-  ]
-
-  return postChannelLookup(nationalIdentityNumbers)
+  return postChannelLookup(contacts.map((c) => c.nationalRegistrationNumber))
 }
