@@ -54,17 +54,26 @@ describe('economy-adapter', () => {
         .post('/invoice-channels', { contactCodes: ['P000111', 'P000222'] })
         .reply(200, { content: mockChannels })
 
-      const result = await economyAdapter.getInvoiceChannels(['P000111', 'P000222'])
+      const result = await economyAdapter.getInvoiceChannels([
+        'P000111',
+        'P000222',
+      ])
 
       expect(result).toEqual({ ok: true, data: mockChannels })
     })
 
     it('passes contact codes in request body', async () => {
       nock(config.economyService.url)
-        .post('/invoice-channels', { contactCodes: ['P000111', 'P000222', 'F111111'] })
+        .post('/invoice-channels', {
+          contactCodes: ['P000111', 'P000222', 'F111111'],
+        })
         .reply(200, { content: [] })
 
-      const result = await economyAdapter.getInvoiceChannels(['P000111', 'P000222', 'F111111'])
+      const result = await economyAdapter.getInvoiceChannels([
+        'P000111',
+        'P000222',
+        'F111111',
+      ])
 
       expect(result).toEqual({ ok: true, data: [] })
     })
