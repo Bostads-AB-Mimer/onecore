@@ -1,11 +1,10 @@
 #!/bin/bash
 
-# Waits for the local SQL Server container to be ready to accept connections.
-# Each service creates its own database on startup via its db:ensure script.
-
 set -e
 
 CONTAINER="onecore-sql"
+
+echo "Running database initialization..."
 
 if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
   echo "ERROR: Container '${CONTAINER}' is not running."
@@ -20,6 +19,8 @@ if [ -z "$SQLCMD_PATH" ]; then
   exit 1
 fi
 
+echo "Using sqlcmd at: $SQLCMD_PATH"
+
 echo "Waiting for SQL Server to be ready..."
 retries=30
 until docker exec "$CONTAINER" bash -c "$SQLCMD_PATH -S localhost -U SA -P \"\$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' > /dev/null 2>&1"; do
@@ -31,5 +32,16 @@ until docker exec "$CONTAINER" bash -c "$SQLCMD_PATH -S localhost -U SA -P \"\$M
   echo "  Not ready yet, retrying in 2 seconds... ($retries retries left)"
   sleep 2
 done
-
 echo "SQL Server is ready."
+
+echo "Creating databases..."
+docker exec -i "$CONTAINER" bash -c "$SQLCMD_PATH -S localhost -U SA -P \"\$MSSQL_SA_PASSWORD\" -C" <<-EOSQL
+  IF DB_ID(N'tenants-leases')        IS NULL CREATE DATABASE [tenants-leases];
+  IF DB_ID(N'tenants-leases-test')   IS NULL CREATE DATABASE [tenants-leases-test];
+  IF DB_ID(N'property-info')         IS NULL CREATE DATABASE [property-info];
+  IF DB_ID(N'economy')               IS NULL CREATE DATABASE [economy];
+  IF DB_ID(N'inspection')            IS NULL CREATE DATABASE [inspection];
+  IF DB_ID(N'keys-management')       IS NULL CREATE DATABASE [keys-management];
+EOSQL
+
+echo "Database initialization completed!"
