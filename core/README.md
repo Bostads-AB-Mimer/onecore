@@ -81,6 +81,8 @@ Initialize the databases for all services:
 <monorepo root> $ pnpm run db:init
 ```
 
+In the cluster, database creation is handled automatically by an init container in each service's pod spec.
+
 ### Running in Development Mode
 
 When all installation steps have been completed and downstreams services are running, a local development instance can be started using:
