@@ -42,7 +42,16 @@ describe('tenfast-rental-object-helpers', () => {
       const currentLease = factory.tenfastLease.build({
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-06-30'),
-        cancellation: { cancelled: false, doneAutomatically: false, receivedCancellationAt: null, notifiedAt: null, handledAt: null, handledBy: null, preferredMoveOutDate: null, cancelledByType: null },
+        cancellation: {
+          cancelled: false,
+          doneAutomatically: false,
+          receivedCancellationAt: null,
+          notifiedAt: null,
+          handledAt: null,
+          handledBy: null,
+          preferredMoveOutDate: null,
+          cancelledByType: null,
+        },
       })
       expect(getLatestActiveLeasesEndDate([currentLease])).toBeNull()
     })
@@ -51,7 +60,16 @@ describe('tenfast-rental-object-helpers', () => {
       const currentLease = factory.tenfastLease.build({
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-06-30'),
-        cancellation: { cancelled: true, doneAutomatically: false, receivedCancellationAt: null, notifiedAt: null, handledAt: null, handledBy: null, preferredMoveOutDate: null, cancelledByType: null },
+        cancellation: {
+          cancelled: true,
+          doneAutomatically: false,
+          receivedCancellationAt: null,
+          notifiedAt: null,
+          handledAt: null,
+          handledBy: null,
+          preferredMoveOutDate: null,
+          cancelledByType: null,
+        },
       })
       expect(getLatestActiveLeasesEndDate([currentLease])).toEqual(
         new Date('2026-06-30')
@@ -63,12 +81,30 @@ describe('tenfast-rental-object-helpers', () => {
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
           endDate: new Date('2026-06-30'),
-          cancellation: { cancelled: true, doneAutomatically: false, receivedCancellationAt: null, notifiedAt: null, handledAt: null, handledBy: null, preferredMoveOutDate: null, cancelledByType: null },
+          cancellation: {
+            cancelled: true,
+            doneAutomatically: false,
+            receivedCancellationAt: null,
+            notifiedAt: null,
+            handledAt: null,
+            handledBy: null,
+            preferredMoveOutDate: null,
+            cancelledByType: null,
+          },
         }),
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
           endDate: new Date('2026-12-31'),
-          cancellation: { cancelled: true, doneAutomatically: false, receivedCancellationAt: null, notifiedAt: null, handledAt: null, handledBy: null, preferredMoveOutDate: null, cancelledByType: null },
+          cancellation: {
+            cancelled: true,
+            doneAutomatically: false,
+            receivedCancellationAt: null,
+            notifiedAt: null,
+            handledAt: null,
+            handledBy: null,
+            preferredMoveOutDate: null,
+            cancelledByType: null,
+          },
         }),
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
@@ -86,12 +122,30 @@ describe('tenfast-rental-object-helpers', () => {
           startDate: new Date('2025-01-01'),
           endDate: new Date('2025-12-31'),
           stage: 'archived',
-          cancellation: { cancelled: true, doneAutomatically: false, receivedCancellationAt: null, notifiedAt: null, handledAt: null, handledBy: null, preferredMoveOutDate: null, cancelledByType: null },
+          cancellation: {
+            cancelled: true,
+            doneAutomatically: false,
+            receivedCancellationAt: null,
+            notifiedAt: null,
+            handledAt: null,
+            handledBy: null,
+            preferredMoveOutDate: null,
+            cancelledByType: null,
+          },
         }),
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
           endDate: new Date('2026-06-30'),
-          cancellation: { cancelled: true, doneAutomatically: false, receivedCancellationAt: null, notifiedAt: null, handledAt: null, handledBy: null, preferredMoveOutDate: null, cancelledByType: null },
+          cancellation: {
+            cancelled: true,
+            doneAutomatically: false,
+            receivedCancellationAt: null,
+            notifiedAt: null,
+            handledAt: null,
+            handledBy: null,
+            preferredMoveOutDate: null,
+            cancelledByType: null,
+          },
         }),
       ]
       expect(getLatestActiveLeasesEndDate(leases)).toEqual(
@@ -114,7 +168,16 @@ describe('tenfast-rental-object-helpers', () => {
       const lease = factory.tenfastLease.build({
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-06-30'),
-        cancellation: { cancelled: true, doneAutomatically: false, receivedCancellationAt: null, notifiedAt: null, handledAt: null, handledBy: null, preferredMoveOutDate: null, cancelledByType: null },
+        cancellation: {
+          cancelled: true,
+          doneAutomatically: false,
+          receivedCancellationAt: null,
+          notifiedAt: null,
+          handledAt: null,
+          handledBy: null,
+          preferredMoveOutDate: null,
+          cancelledByType: null,
+        },
       })
       const rentalObject = factory.tenfastRentalObject.build({ avtal: [lease] })
       const result = mapTenfastRentalObjectToAvailabilityInfo(
