@@ -72,7 +72,7 @@ This will start the required services inside a Docker container. This is a share
 
 #### Setup database
 
-Create the databases:
+Initialize the database:
 
 ```sh
 <monorepo root> $ pnpm run db:init
