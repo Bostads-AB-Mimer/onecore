@@ -1,6 +1,7 @@
 import {
   getLatestActiveLeasesEndDate,
   mapTenfastRentalObjectToAvailabilityInfo,
+  parseCategoryToRentalTag,
 } from '../../../adapters/tenfast/tenfast-rental-object-helpers'
 import * as factory from '../../factories'
 
@@ -149,6 +150,126 @@ describe('tenfast-rental-object-helpers', () => {
       )
       expect(result.rent.amount).toBe(1250)
       expect(result.rent.vat).toBe(250)
+    })
+  })
+
+  describe('parseCategoryToRentalTag', () => {
+    it('returns id and name as the same value for a single-word category', () => {
+      expect(parseCategoryToRentalTag('Bilplats')).toEqual({
+        id: 'Bilplats',
+        name: 'Bilplats',
+      })
+    })
+
+    it('splits a space-separated category into id and name', () => {
+      expect(parseCategoryToRentalTag('BP Bilplats')).toEqual({
+        id: 'BP',
+        name: 'Bilplats',
+      })
+    })
+  })
+
+  describe('rentalTags in mapTenfastRentalObjectToAvailabilityInfo', () => {
+    it('returns undefined rentalTags when rental object has no tags field', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: undefined,
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rentalTags).toBeUndefined()
+    })
+
+    it('returns empty array when rental object has empty tags', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: [],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rentalTags).toEqual([])
+    })
+
+    it('maps tag ids to name objects using tagsById', () => {
+      const tagsById = new Map([
+        ['tag-1', 'Ungdomslägenhet'],
+        ['tag-2', 'Rökfritt'],
+      ])
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: ['tag-1', 'tag-2'],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject,
+        tagsById
+      )
+      expect(result.rentalTags).toEqual([
+        { id: 'tag-1', name: 'Ungdomslägenhet' },
+        { id: 'tag-2', name: 'Rökfritt' },
+      ])
+    })
+
+    it('filters out tag ids not present in tagsById', () => {
+      const tagsById = new Map([['tag-1', 'Ungdomslägenhet']])
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: ['tag-1', 'tag-unknown'],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject,
+        tagsById
+      )
+      expect(result.rentalTags).toEqual([
+        { id: 'tag-1', name: 'Ungdomslägenhet' },
+      ])
+    })
+
+    it('returns empty array when no tag ids match tagsById', () => {
+      const tagsById = new Map([['tag-1', 'Ungdomslägenhet']])
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: ['tag-unknown'],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject,
+        tagsById
+      )
+      expect(result.rentalTags).toEqual([])
+    })
+
+    it('returns empty array when tagsById is empty', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: ['tag-1', 'tag-2'],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject,
+        new Map()
+      )
+      expect(result.rentalTags).toEqual([])
+    })
+
+    it('maps rentalTenureType from category', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        category: 'Bilplats',
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rentalTenureType).toEqual({
+        id: 'Bilplats',
+        name: 'Bilplats',
+      })
     })
   })
 })

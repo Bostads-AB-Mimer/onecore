@@ -1,4 +1,4 @@
-import { RentalObjectAvailabilityInfo } from '@onecore/types'
+import { RentalObjectAvailabilityInfo, RentalTag } from '@onecore/types'
 import currency from 'currency.js'
 import { TenfastLease, TenfastRentalObject } from './schemas'
 import { filterByStatus } from './filters'
@@ -23,9 +23,16 @@ export const getLatestActiveLeasesEndDate = (
   return new Date(endDates[0]) // Return the latest end date
 }
 
+// TODO: Remove when Tenfast API returns category as { id, name } object instead of a space-separated string
+export const parseCategoryToRentalTag = (category: string): RentalTag => {
+  const [id, name] = category.split(' ')
+  return name ? { id, name } : { id: category, name: category }
+}
+
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
-  tenfastRentalObject: TenfastRentalObject
+  tenfastRentalObject: TenfastRentalObject,
+  tagsById: Map<string, string> = new Map()
 ): RentalObjectAvailabilityInfo => {
   const lastDebitDate = getLatestActiveLeasesEndDate(
     tenfastRentalObject.avtal ?? []
@@ -46,6 +53,11 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
   return {
     rentalObjectCode: tenfastRentalObject.externalId,
     vacantFrom: vacantFrom,
+    rentalTenureType: parseCategoryToRentalTag(tenfastRentalObject.category),
+    rentalTags: tenfastRentalObject.tags?.flatMap((id): RentalTag[] => {
+      const name = tagsById.get(id)
+      return name ? [{ id, name }] : []
+    }),
     rent: {
       amount: includeVAT
         ? tenfastRentalObject.hyra

@@ -12,6 +12,7 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
+import { parseCategoryToRentalTag } from '../adapters/tenfast/tenfast-rental-object-helpers'
 
 /**
  * Map TenFAST rental object type to LeaseType enum.
@@ -72,6 +73,7 @@ const mapToOnecoreRentalObject = (
     address: rentalObject.postadress,
     availabilityInfo: {
       rentalObjectCode: rentalObject.externalId,
+      rentalTenureType: parseCategoryToRentalTag(rentalObject.category),
       rent: {
         amount: rentalObject.hyraExcludingVat,
         vat: rentalObject.hyraVat,
