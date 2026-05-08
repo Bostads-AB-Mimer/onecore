@@ -1,7 +1,17 @@
+import {
+  generateMaintenanceReturnReceiptBlob,
+  generateReturnReceiptBlob,
+} from '@/lib/pdf-receipts'
+import { mergePdfBlobs } from '@/lib/pdf-merge'
+
 import { keyLoanService } from './api/keyLoanService'
 import { receiptService } from './api/receiptService'
 import { keyService } from './api/keyService'
-import { generateAndUploadReturnReceipt } from './receiptHandlers'
+import {
+  assembleMaintenanceReturnReceipt,
+  assembleReturnReceipt,
+  generateAndUploadReturnReceipt,
+} from './receiptHandlers'
 import type {
   Card,
   CreateKeyLoanRequest,
@@ -266,6 +276,218 @@ export async function handleReturnKeys({
       success: false,
       title: 'Fel',
       message: err?.message || 'Kunde inte återlämna nycklar/droppar.',
+    }
+  }
+}
+
+export type PartialReturnParams = {
+  oldLoanId: string
+  selectedKeyIds: Set<string>
+  selectedCardIds: Set<string>
+  availableToNextTenantFrom?: string
+  // Tenant-only
+  lease?: Lease
+  comment?: string
+  // Maintenance-only
+  maintenanceContext?: {
+    contact: string
+    contactName: string
+    contactPerson: string | null
+    notes: string | null | undefined
+  }
+}
+
+export type PartialReturnResult = {
+  success: boolean
+  title: string
+  message?: string
+  newLoanId?: string
+  /** True when the old loan had no LOAN receipt to merge — new loan-receipt is the return PDF only. */
+  fellBackToReturnOnly?: boolean
+}
+
+/**
+ * Closes the old loan with a return receipt that lists only the selected keys/cards,
+ * then creates a continuation loan containing the unselected items. The continuation
+ * loan's LOAN receipt is the merger of the original signed loan receipt + the new
+ * return receipt, so the full paper trail follows the still-held keys.
+ *
+ * Disposed keys are never carried to the continuation loan — caller is responsible
+ * for excluding them from selectedKeyIds; they remain attached to the closed old loan.
+ *
+ * Per loan; the dialog fans out across affected loans.
+ */
+export async function handlePartialReturn(
+  params: PartialReturnParams
+): Promise<PartialReturnResult> {
+  const {
+    oldLoanId,
+    selectedKeyIds,
+    selectedCardIds,
+    availableToNextTenantFrom,
+    lease,
+    comment,
+    maintenanceContext,
+  } = params
+
+  try {
+    const now = new Date().toISOString()
+
+    const oldLoan = (await keyLoanService.get(oldLoanId, {
+      includeKeySystem: true,
+      includeCards: true,
+    })) as KeyLoanWithDetails
+
+    const allKeys = (oldLoan.keysArray ?? []) as KeyDetails[]
+    const allCards = (oldLoan.keyCardsArray ?? []) as Card[]
+
+    // Disposed keys stay with the closed old loan; never carry to continuation.
+    const unselectedKeyIds = allKeys
+      .filter((k) => !k.disposed && !selectedKeyIds.has(k.id))
+      .map((k) => k.id)
+    const unselectedCardIds = allCards
+      .filter((c) => !selectedCardIds.has(c.cardId))
+      .map((c) => c.cardId)
+
+    if (unselectedKeyIds.length === 0 && unselectedCardIds.length === 0) {
+      return {
+        success: false,
+        title: 'Fel',
+        message:
+          'Inga nycklar eller droppar kvar att överföra till nytt lån. Använd vanlig återlämning istället.',
+      }
+    }
+
+    // 1. Close the old loan
+    await keyLoanService.update(oldLoanId, {
+      returnedAt: now,
+      availableToNextTenantFrom: availableToNextTenantFrom ?? null,
+    } as UpdateKeyLoanRequest)
+
+    // 2. Create return-receipt row for old loan
+    const returnReceipt = await receiptService.create({
+      keyLoanId: oldLoanId,
+      receiptType: 'RETURN',
+      type: 'PHYSICAL',
+    })
+
+    // 3. Build the return-receipt PDF for old loan, listing only selected items.
+    //    We need the blob in-hand for step 6, so we don't use the
+    //    generate-and-upload helper here.
+    let returnBlob: Blob
+    if (oldLoan.loanType === 'MAINTENANCE') {
+      if (!maintenanceContext) {
+        throw new Error(
+          'maintenanceContext krävs för partiell retur av underhållslån'
+        )
+      }
+      const returnData = await assembleMaintenanceReturnReceipt(
+        maintenanceContext.contact,
+        maintenanceContext.contactName,
+        maintenanceContext.contactPerson,
+        maintenanceContext.notes,
+        allKeys,
+        selectedKeyIds,
+        allCards,
+        selectedCardIds,
+        true // partialReturn → unchecked items render as "kvar på lån"
+      )
+      const generated = await generateMaintenanceReturnReceiptBlob(returnData)
+      returnBlob = generated.blob
+    } else {
+      if (!lease) {
+        throw new Error('lease krävs för partiell retur av hyresgästlån')
+      }
+      const returnData = assembleReturnReceipt(
+        allKeys,
+        selectedKeyIds,
+        lease,
+        allCards,
+        selectedCardIds,
+        comment,
+        true // partialReturn → unchecked items render as "kvar på lån"
+      )
+      const generated = await generateReturnReceiptBlob(returnData)
+      returnBlob = generated.blob
+    }
+
+    // 4. Upload return PDF to old loan's return receipt
+    const returnFile = new File(
+      [returnBlob],
+      `return_${returnReceipt.id}.pdf`,
+      { type: 'application/pdf' }
+    )
+    await receiptService.uploadFile(returnReceipt.id, returnFile)
+
+    // 5. Create continuation loan with the unselected items
+    const newLoan = await keyLoanService.create({
+      loanType: oldLoan.loanType,
+      contact: oldLoan.contact ?? undefined,
+      contact2: oldLoan.contact2 ?? undefined,
+      contactPerson: oldLoan.contactPerson ?? undefined,
+      notes: oldLoan.notes ?? undefined,
+      pickedUpAt: now,
+      ...(unselectedKeyIds.length > 0 ? { keys: unselectedKeyIds } : {}),
+      ...(unselectedCardIds.length > 0 ? { keyCards: unselectedCardIds } : {}),
+      // createdBy is set by backend from authenticated user
+    } as CreateKeyLoanRequest)
+
+    // 6. Build the merged loan-receipt for the new loan: original signed loan
+    //    receipt followed by the return receipt we just generated. Falls back
+    //    to the return PDF alone if no original is available.
+    let combinedBlob: Blob = returnBlob
+    let fellBackToReturnOnly = true
+
+    try {
+      const oldReceipts = await receiptService.getByKeyLoan(oldLoanId)
+      const oldLoanReceipt = oldReceipts.find(
+        (r) => r.receiptType === 'LOAN' && r.fileId
+      )
+      if (oldLoanReceipt) {
+        const { url } = await receiptService.getDownloadUrl(oldLoanReceipt.id)
+        const resp = await fetch(url)
+        if (!resp.ok) {
+          throw new Error(
+            `Kunde inte hämta ursprunglig kvittens: ${resp.status}`
+          )
+        }
+        const originalBlob = await resp.blob()
+        combinedBlob = await mergePdfBlobs([originalBlob, returnBlob])
+        fellBackToReturnOnly = false
+      }
+    } catch (mergeErr) {
+      console.error(
+        'Failed to fetch/merge original loan receipt; falling back to return PDF only:',
+        mergeErr
+      )
+      combinedBlob = returnBlob
+      fellBackToReturnOnly = true
+    }
+
+    // 7. Create new loan's LOAN receipt with the combined PDF
+    const combinedFile = new File([combinedBlob], `loan_${newLoan.id}.pdf`, {
+      type: 'application/pdf',
+    })
+    await receiptService.createWithFile(
+      {
+        keyLoanId: newLoan.id,
+        receiptType: 'LOAN',
+        type: 'PHYSICAL',
+      },
+      combinedFile
+    )
+
+    return {
+      success: true,
+      title: 'Partiell retur klar',
+      newLoanId: newLoan.id,
+      fellBackToReturnOnly: fellBackToReturnOnly || undefined,
+    }
+  } catch (err: any) {
+    return {
+      success: false,
+      title: 'Fel',
+      message: err?.message || 'Kunde inte genomföra partiell retur.',
     }
   }
 }
