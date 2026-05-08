@@ -20,6 +20,7 @@ import { keyLoanService } from '@/services/api/keyLoanService'
 import { receiptService } from '@/services/api/receiptService'
 import { fetchContactByContactCode } from '@/services/api/contactService'
 import { generateAndUploadMaintenanceReturnReceipt } from '@/services/receiptHandlers'
+import { handlePartialReturn } from '@/services/loanHandlers'
 import { useToast } from '@/hooks/use-toast'
 import { CommentInput } from '@/components/shared/CommentInput'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
@@ -143,53 +144,47 @@ export function ReturnMaintenanceKeysDialog({
     setSelectedKeyIds(newSelected)
   }
 
+  // Closes a single maintenance loan with a return receipt that lists checked
+  // keys as returned and any unchecked as missing. Used for both "Retur med
+  // saknade nycklar" and for fully-selected loans in a partial-return click.
+  const closeLoanAsReturn = async (loanGroup: LoanGroup) => {
+    await keyLoanService.update(loanGroup.loanId, {
+      returnedAt: new Date().toISOString(),
+      notes: returnNote.trim() || undefined,
+    })
+    try {
+      const receipt = await receiptService.create({
+        keyLoanId: loanGroup.loanId,
+        receiptType: 'RETURN',
+        type: 'PHYSICAL',
+      })
+      const loanDetails = loanDetailsMap.get(loanGroup.loanId)
+      if (loanDetails && receipt.id) {
+        try {
+          const noteForPdf = addSignature(returnNote) || loanDetails.notes
+          await generateAndUploadMaintenanceReturnReceipt(
+            receipt.id,
+            loanDetails.contact,
+            loanDetails.contactName,
+            loanDetails.contactPerson,
+            noteForPdf,
+            loanGroup.keys,
+            selectedKeyIds
+          )
+        } catch (pdfErr) {
+          console.error('Failed to generate/upload PDF:', pdfErr)
+        }
+      }
+    } catch (receiptErr) {
+      console.error('Failed to create return receipt:', receiptErr)
+    }
+  }
+
   const handleAccept = async () => {
     setIsProcessing(true)
 
     try {
-      // Update all loans to mark them as returned and create return receipts
-      await Promise.all(
-        loanGroups.map(async (loanGroup) => {
-          // Update loan to mark as returned
-          await keyLoanService.update(loanGroup.loanId, {
-            returnedAt: new Date().toISOString(),
-            notes: returnNote.trim() || undefined,
-          })
-
-          // Create return receipt and generate PDF
-          try {
-            const receipt = await receiptService.create({
-              keyLoanId: loanGroup.loanId,
-              receiptType: 'RETURN',
-              type: 'PHYSICAL',
-            })
-
-            // Generate and upload return receipt PDF
-            const loanDetails = loanDetailsMap.get(loanGroup.loanId)
-            if (loanDetails && receipt.id) {
-              try {
-                // Use user-entered returnNote for the PDF (with signature), falls back to original description
-                const noteForPdf = addSignature(returnNote) || loanDetails.notes
-                await generateAndUploadMaintenanceReturnReceipt(
-                  receipt.id,
-                  loanDetails.contact,
-                  loanDetails.contactName,
-                  loanDetails.contactPerson,
-                  noteForPdf,
-                  loanGroup.keys,
-                  selectedKeyIds
-                )
-              } catch (pdfErr) {
-                console.error('Failed to generate/upload PDF:', pdfErr)
-                // Don't fail the return if PDF generation fails
-              }
-            }
-          } catch (receiptErr) {
-            console.error('Failed to create return receipt:', receiptErr)
-            // Don't fail the return if receipt creation fails
-          }
-        })
-      )
+      await Promise.all(loanGroups.map(closeLoanAsReturn))
 
       toast({
         title: 'Nycklar återlämnade',
@@ -208,6 +203,90 @@ export function ReturnMaintenanceKeysDialog({
       setIsProcessing(false)
     }
   }
+
+  // Partial-return accept: per loan, decide whether the selection covers every
+  // non-disposed key (full-return, runs the existing close path) or only some
+  // (partial-return, runs handlePartialReturn which creates a continuation loan
+  // for the unchecked keys).
+  const handlePartialAccept = async () => {
+    setIsProcessing(true)
+    try {
+      const failures: string[] = []
+      let warnings = 0
+
+      for (const loanGroup of loanGroups) {
+        const nonDisposed = loanGroup.keys.filter((k) => !k.disposed)
+        const selectedCount = nonDisposed.filter((k) =>
+          selectedKeyIds.has(k.id)
+        ).length
+
+        if (selectedCount === 0) continue
+
+        if (selectedCount === nonDisposed.length) {
+          await closeLoanAsReturn(loanGroup)
+        } else {
+          const details = loanDetailsMap.get(loanGroup.loanId)
+          if (!details) {
+            failures.push(`Lån ${loanGroup.loanId}: saknar låneuppgifter`)
+            continue
+          }
+          const result = await handlePartialReturn({
+            oldLoanId: loanGroup.loanId,
+            selectedKeyIds,
+            selectedCardIds: new Set(),
+            maintenanceContext: {
+              contact: details.contact,
+              contactName: details.contactName,
+              contactPerson: details.contactPerson,
+              notes: addSignature(returnNote) || details.notes,
+            },
+          })
+          if (!result.success) {
+            failures.push(result.message ?? 'Okänt fel')
+          } else if (result.fellBackToReturnOnly) {
+            warnings++
+          }
+        }
+      }
+
+      if (failures.length > 0) {
+        toast({
+          title: 'Partiell retur misslyckades för vissa lån',
+          description: failures.join('\n'),
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (warnings > 0) {
+        toast({
+          title: 'Partiell retur klar — varning',
+          description:
+            'Det fanns ingen ursprunglig låneblankett att kombinera; den nya låneblanketten innehåller bara återlämningskvittensen.',
+        })
+      } else {
+        toast({
+          title: 'Partiell retur klar',
+        })
+      }
+      onOpenChange(false)
+      onSuccess()
+    } catch (err: any) {
+      toast({
+        title: 'Fel',
+        description: err?.message || 'Kunde inte genomföra partiell retur.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const partialMode = loanGroups.some((g) => {
+    const nonDisposed = g.keys.filter((k) => !k.disposed)
+    const sel = nonDisposed.filter((k) => selectedKeyIds.has(k.id)).length
+    return sel > 0 && sel < nonDisposed.length
+  })
 
   // Right side content - return note
   const rightContent = (
@@ -234,11 +313,21 @@ export function ReturnMaintenanceKeysDialog({
       selectedKeyIds={selectedKeyIds}
       onToggleKey={handleToggleKey}
       rightContent={rightContent}
-      onAccept={handleAccept}
+      onAccept={partialMode ? handlePartialAccept : handleAccept}
       isProcessing={isProcessing}
-      acceptButtonText="Återlämna"
+      acceptButtonText={partialMode ? 'Partiell retur' : 'Återlämna'}
+      primaryLabel={partialMode ? 'Partiell retur' : 'Återlämna'}
       title="Återlämna nycklar"
       description="Markera lån som återlämnat och lägg till en valfri anteckning"
+      secondaryAction={
+        partialMode
+          ? {
+              label: 'Retur med saknade nycklar',
+              onClick: handleAccept,
+              variant: 'secondary',
+            }
+          : undefined
+      }
     />
   )
 }

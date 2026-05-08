@@ -129,7 +129,10 @@ export function assembleReturnReceipt(
   lease: Lease,
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set(),
-  comment?: string
+  comment?: string,
+  // When true, unchecked items aren't missing — they continue on a new
+  // continuation loan and get rendered in the "NYCKLAR KVAR PÅ LÅN" section.
+  partialReturn = false
 ): ReceiptData {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
@@ -146,10 +149,15 @@ export function assembleReturnReceipt(
     keys: returned,
     receiptType: 'RETURN',
     operationDate: new Date(),
-    missingKeys: missing.length > 0 ? missing : undefined,
+    missingKeys: !partialReturn && missing.length > 0 ? missing : undefined,
+    missingCards:
+      !partialReturn && missingCards.length > 0 ? missingCards : undefined,
+    remainingLoanKeys:
+      partialReturn && missing.length > 0 ? missing : undefined,
+    remainingLoanCards:
+      partialReturn && missingCards.length > 0 ? missingCards : undefined,
     disposedKeys: disposed.length > 0 ? disposed : undefined,
     cards: returnedCards.length > 0 ? returnedCards : undefined,
-    missingCards: missingCards.length > 0 ? missingCards : undefined,
     comment,
   }
 }
@@ -243,7 +251,8 @@ export async function assembleMaintenanceReturnReceipt(
   loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
   loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set()
+  selectedCardIds: Set<string> = new Set(),
+  partialReturn = false
 ): Promise<MaintenanceReceiptData> {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
@@ -267,10 +276,15 @@ export async function assembleMaintenanceReturnReceipt(
     scopeByKeyId,
     receiptType: 'RETURN',
     operationDate: new Date(),
-    missingKeys: missing.length > 0 ? missing : undefined,
+    missingKeys: !partialReturn && missing.length > 0 ? missing : undefined,
+    missingCards:
+      !partialReturn && missingCards.length > 0 ? missingCards : undefined,
+    remainingLoanKeys:
+      partialReturn && missing.length > 0 ? missing : undefined,
+    remainingLoanCards:
+      partialReturn && missingCards.length > 0 ? missingCards : undefined,
     disposedKeys: disposed.length > 0 ? disposed : undefined,
     cards: returnedCards.length > 0 ? returnedCards : undefined,
-    missingCards: missingCards.length > 0 ? missingCards : undefined,
   }
 }
 

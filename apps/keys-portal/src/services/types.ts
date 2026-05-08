@@ -255,6 +255,10 @@ export interface ReceiptData {
   disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
   missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
+  // For PARTIAL RETURN: unchecked items aren't missing — they continue on the
+  // new continuation loan. Rendered as its own "NYCKLAR KVAR PÅ LÅN" section.
+  remainingLoanKeys?: KeyDetails[]
+  remainingLoanCards?: Card[]
   comment?: string // Optional comment for the receipt (max 280 chars)
 }
 
@@ -272,4 +276,7 @@ export interface MaintenanceReceiptData {
   disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
   missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
+  // For PARTIAL RETURN (maintenance): unchecked items continue on a new loan.
+  remainingLoanKeys?: KeyDetails[]
+  remainingLoanCards?: Card[]
 }
