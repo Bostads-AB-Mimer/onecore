@@ -165,9 +165,7 @@ export const getResidenceByRentalId = async (rentalId: string) => {
               },
             },
             rentalBlocks: {
-              where: {
-                OR: [{ toDate: { gte: new Date() } }, { toDate: null }],
-              },
+              where: buildActiveFilter(true),
               include: {
                 blockReason: true,
               },
