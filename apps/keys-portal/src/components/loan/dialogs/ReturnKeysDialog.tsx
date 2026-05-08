@@ -16,17 +16,25 @@ import { cn } from '@/lib/utils'
 import { CommentInput } from '@/components/shared/CommentInput'
 import { AvailabilityDatePicker } from '@/components/shared/AvailabilityDatePicker'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+
+type KeyForReturn = KeyDetails & { isOrphan: boolean }
+type CardForReturn = CardDetails & { isOrphan: boolean }
 
 type KeysByLoan = {
   loanId: string
   contact: string | null
-  keys: KeyDetails[]
+  keys: KeyForReturn[]
 }
 
 type CardsByLoan = {
   loanId: string
   contact: string | null
-  cards: CardDetails[]
+  cards: CardForReturn[]
 }
 
 type Props = {
@@ -127,11 +135,18 @@ export function ReturnKeysDialog({
         const keysLoansMap = new Map<string, KeysByLoan>()
         const cardsLoansMap = new Map<string, CardsByLoan>()
 
+        const allKeysById = new Map(allKeys.map((k) => [k.id, k]))
+
         uniqueActiveLoans.forEach((enrichedLoan, loanId) => {
-          // Use keysArray from enriched loan, match against allKeys for consistent objects
-          const loanKeyIds = enrichedLoan.keysArray?.map((k) => k.id) || []
-          if (loanKeyIds.length > 0) {
-            const loanKeys = allKeys.filter((k) => loanKeyIds.includes(k.id))
+          const loanKeys: KeyForReturn[] = (enrichedLoan.keysArray ?? []).map(
+            (k) => {
+              const known = allKeysById.get(k.id)
+              return known
+                ? { ...known, isOrphan: false }
+                : { ...k, isOrphan: true }
+            }
+          )
+          if (loanKeys.length > 0) {
             keysLoansMap.set(loanId, {
               loanId,
               contact: enrichedLoan.contact || null,
@@ -139,13 +154,16 @@ export function ReturnKeysDialog({
             })
           }
 
-          // Use keyCardsArray from enriched loan
-          const loanCardIds =
-            enrichedLoan.keyCardsArray?.map((c) => c.cardId) || []
-          if (loanCardIds.length > 0) {
-            const loanCards = allCards.filter((c) =>
-              loanCardIds.includes(c.cardId)
-            )
+          const allCardsById = new Map(allCards.map((c) => [c.cardId, c]))
+          const loanCards: CardForReturn[] = (
+            enrichedLoan.keyCardsArray ?? []
+          ).map((c): CardForReturn => {
+            const known = allCardsById.get(c.cardId)
+            return known
+              ? { ...known, isOrphan: false }
+              : { ...c, isOrphan: true }
+          })
+          if (loanCards.length > 0) {
             cardsLoansMap.set(loanId, {
               loanId,
               contact: enrichedLoan.contact || null,
@@ -163,7 +181,7 @@ export function ReturnKeysDialog({
           loanInfo.keys
             .filter((k) => !k.disposed)
             .forEach((key) => {
-              if (keyIds.includes(key.id)) {
+              if (keyIds.includes(key.id) || key.isOrphan) {
                 initialSelectedKeys.add(key.id)
               }
             })
@@ -174,7 +192,7 @@ export function ReturnKeysDialog({
         const initialSelectedCards = new Set<string>()
         cardsLoansMap.forEach((loanInfo) => {
           loanInfo.cards.forEach((card) => {
-            if (cardIds.includes(card.cardId)) {
+            if (cardIds.includes(card.cardId) || card.isOrphan) {
               initialSelectedCards.add(card.cardId)
             }
           })
@@ -306,7 +324,19 @@ export function ReturnKeysDialog({
                           className="mt-0.5"
                         />
                         <div className="flex-1">
-                          <div className="font-medium">{key.keyName}</div>
+                          <div className="font-medium flex items-center gap-1">
+                            {key.keyName}
+                            {key.isOrphan && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Nyckeln är inte kopplad till hyresobjektet
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {KeyTypeLabels[key.keyType]}
                             {key.keySystem?.systemCode &&
@@ -334,8 +364,14 @@ export function ReturnKeysDialog({
                         key={key.id}
                         className="p-3 border rounded-lg bg-destructive/5 border-destructive/20 text-sm"
                       >
-                        <div className="font-medium text-destructive">
+                        <div className="font-medium text-destructive flex items-center gap-1">
                           {key.keyName}
+                          {key.isOrphan && (
+                            <AlertCircle
+                              className="h-3.5 w-3.5 text-destructive"
+                              aria-label="Nyckeln är inte kopplad till hyresobjektet"
+                            />
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {KeyTypeLabels[key.keyType]}
@@ -385,8 +421,18 @@ export function ReturnKeysDialog({
                     className="mt-0.5"
                   />
                   <div className="flex-1">
-                    <div className="font-medium">
+                    <div className="font-medium flex items-center gap-1">
                       {card.name || card.cardId}
+                      {card.isOrphan && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Droppen är inte kopplad till hyresobjektet
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
                 </div>
