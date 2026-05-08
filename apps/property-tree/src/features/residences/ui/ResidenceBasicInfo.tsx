@@ -42,15 +42,7 @@ const requiresSpecialHandling = (
 const requiresPestControl = (
   residence: components['schemas']['ResidenceDetails']
 ): boolean => {
-  // Where do we find pest control info?
-  // Note: rentalBlocks is available on propertyObject but not yet in generated types
-  const propertyObject = residence?.propertyObject as
-    | (typeof residence.propertyObject & {
-        rentalBlocks?: Array<{ blockReason: string }>
-      })
-    | undefined
-
-  const hasPestIssues = propertyObject?.rentalBlocks?.find(
+  const hasPestIssues = residence?.propertyObject?.rentalBlocks?.find(
     (b) => b.blockReason === 'SKADEDJUR'
   )
 
