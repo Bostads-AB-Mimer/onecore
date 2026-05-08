@@ -511,7 +511,10 @@ const renderItemsTable = (
 }
 
 /**
- * Renders items tables for return receipts (returned, missing, disposed sections)
+ * Renders items tables for return receipts (returned, missing, remaining-on-loan,
+ * disposed sections). missing and remaining-on-loan are mutually exclusive: a
+ * receipt is either a "missing keys" return (full loan close, items unaccounted
+ * for) or a partial return (items continue on a new loan), never both.
  */
 const renderReturnItemsTable = (
   doc: jsPDF,
@@ -520,24 +523,31 @@ const renderReturnItemsTable = (
   missingKeys: ReceiptData['keys'] | undefined,
   missingCards: Card[] | undefined,
   disposedKeys: ReceiptData['keys'] | undefined,
+  remainingLoanKeys: ReceiptData['keys'] | undefined,
+  remainingLoanCards: Card[] | undefined,
   y: number,
   scopeByKeyId?: Record<string, string>
 ): number => {
   const hasMissingKeys = missingKeys && missingKeys.length > 0
   const hasMissingCards = missingCards && missingCards.length > 0
   const hasMissing = hasMissingKeys || hasMissingCards
+  const hasRemainingKeys = remainingLoanKeys && remainingLoanKeys.length > 0
+  const hasRemainingCards = remainingLoanCards && remainingLoanCards.length > 0
+  const hasRemaining = hasRemainingKeys || hasRemainingCards
   const hasDisposed = disposedKeys && disposedKeys.length > 0
   const hasCards =
-    (returnedCards && returnedCards.length > 0) || hasMissingCards
+    (returnedCards && returnedCards.length > 0) ||
+    hasMissingCards ||
+    hasRemainingCards
 
   // Determine header text based on what sections exist
   let returnedHeader = 'NYCKLAR'
   if (hasCards) {
     returnedHeader =
-      hasMissing || hasDisposed
+      hasMissing || hasRemaining || hasDisposed
         ? 'INLÄMNADE NYCKLAR OCH DROPPAR'
         : 'NYCKLAR OCH DROPPAR'
-  } else if (hasMissing || hasDisposed) {
+  } else if (hasMissing || hasRemaining || hasDisposed) {
     returnedHeader = 'INLÄMNADE NYCKLAR'
   }
 
@@ -565,6 +575,23 @@ const renderReturnItemsTable = (
       y,
       missingHeader,
       RED,
+      scopeByKeyId
+    )
+  }
+
+  // Remaining-on-loan items (partial return) — blue, since this isn't a problem
+  if (hasRemaining) {
+    y += 4
+    const remainingHeader = hasRemainingCards
+      ? 'NYCKLAR OCH DROPPAR KVAR PÅ LÅN'
+      : 'NYCKLAR KVAR PÅ LÅN'
+    y = renderItemsTableSection(
+      doc,
+      remainingLoanKeys || [],
+      remainingLoanCards,
+      y,
+      remainingHeader,
+      BLUE,
       scopeByKeyId
     )
   }
@@ -681,7 +708,8 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
 const addMaintenanceReturnConfirmation = (
   doc: jsPDF,
   y: number,
-  hasMissingItems: boolean
+  hasMissingItems: boolean,
+  hasRemainingItems: boolean
 ): number => {
   const bottom = contentBottom(doc)
   const spaceNeeded = 35
@@ -704,14 +732,27 @@ const addMaintenanceReturnConfirmation = (
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
 
-  const confirmText = hasMissingItems
-    ? 'Ovanstående nycklar och droppar har återlämnats och kontrollerats. Observera att vissa nycklar eller droppar saknas (se lista ovan).'
-    : 'Ovanstående nycklar har återlämnats och kontrollerats.'
+  const paragraphs: string[] = [
+    'Ovanstående nycklar har återlämnats och kontrollerats.',
+  ]
+  if (hasMissingItems) {
+    paragraphs.push(
+      'Observera att vissa nycklar eller droppar saknas (se lista ovan).'
+    )
+  }
+  if (hasRemainingItems) {
+    paragraphs.push(
+      'Övriga nycklar och droppar är kvar på lån (se lista ovan).'
+    )
+  }
 
-  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
-  lines.forEach((line: string) => {
-    doc.text(line, MARGIN_X, y)
-    y += 5.5
+  paragraphs.forEach((paragraph, i) => {
+    if (i > 0) y += 3
+    const lines = doc.splitTextToSize(paragraph, PAGE_W - 2 * MARGIN_X)
+    lines.forEach((line: string) => {
+      doc.text(line, MARGIN_X, y)
+      y += 5.5
+    })
   })
 
   return y + 10
@@ -783,7 +824,8 @@ const addLoanConfirmation = (
 const addReturnConfirmation = (
   doc: jsPDF,
   y: number,
-  hasMissingItems: boolean
+  hasMissingItems: boolean,
+  hasRemainingItems: boolean
 ): number => {
   const bottom = contentBottom(doc)
   const spaceNeeded = 35
@@ -806,14 +848,27 @@ const addReturnConfirmation = (
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
 
-  const confirmText = hasMissingItems
-    ? 'Ovanstående nycklar och droppar har återlämnats och kontrollerats av Mimers personal. Observera att vissa nycklar eller droppar saknas (se lista ovan).'
-    : 'Ovanstående nycklar har återlämnats och kontrollerats av Mimers personal.'
+  const paragraphs: string[] = [
+    'Ovanstående nycklar har återlämnats och kontrollerats av Mimers personal.',
+  ]
+  if (hasMissingItems) {
+    paragraphs.push(
+      'Observera att vissa nycklar eller droppar saknas (se lista ovan).'
+    )
+  }
+  if (hasRemainingItems) {
+    paragraphs.push(
+      'Övriga nycklar och droppar är kvar på lån (se lista ovan).'
+    )
+  }
 
-  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
-  lines.forEach((line: string) => {
-    doc.text(line, MARGIN_X, y)
-    y += 5.5
+  paragraphs.forEach((paragraph, i) => {
+    if (i > 0) y += 3
+    const lines = doc.splitTextToSize(paragraph, PAGE_W - 2 * MARGIN_X)
+    lines.forEach((line: string) => {
+      doc.text(line, MARGIN_X, y)
+      y += 5.5
+    })
   })
 
   return y + 10
@@ -939,12 +994,16 @@ async function buildReturnDoc(data: ReceiptData) {
   y = addMeta(doc, y, 'return')
   y = await addTenantInfo(doc, data.tenants, data.lease, y)
 
-  // Check for missing items
+  // Check for missing / remaining items
   const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
   const hasMissingCards = data.missingCards && data.missingCards.length > 0
-  const hasMissingItems = hasMissingKeys || hasMissingCards
+  const hasMissingItems = Boolean(hasMissingKeys || hasMissingCards)
+  const hasRemainingItems = Boolean(
+    (data.remainingLoanKeys && data.remainingLoanKeys.length > 0) ||
+      (data.remainingLoanCards && data.remainingLoanCards.length > 0)
+  )
 
-  // Combined keys and cards table (returned, missing, disposed sections)
+  // Combined keys and cards table (returned, missing, remaining-on-loan, disposed)
   // Sort each category for consistent löpnummer ordering
   y = renderReturnItemsTable(
     doc,
@@ -953,10 +1012,12 @@ async function buildReturnDoc(data: ReceiptData) {
     data.missingKeys ? sortKeys(data.missingKeys) : undefined,
     data.missingCards,
     data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
+    data.remainingLoanKeys ? sortKeys(data.remainingLoanKeys) : undefined,
+    data.remainingLoanCards,
     y
   )
 
-  y = addReturnConfirmation(doc, y, hasMissingItems)
+  y = addReturnConfirmation(doc, y, hasMissingItems, hasRemainingItems)
   addComment(doc, y, data.comment)
   await addFooter(doc)
 
@@ -1012,12 +1073,16 @@ async function buildMaintenanceReturnDoc(data: MaintenanceReceiptData) {
   y = addMeta(doc, y, 'return')
   y = addMaintenanceInfo(doc, data, y)
 
-  // Check for missing items
+  // Check for missing / remaining items
   const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
   const hasMissingCards = data.missingCards && data.missingCards.length > 0
-  const hasMissingItems = hasMissingKeys || hasMissingCards
+  const hasMissingItems = Boolean(hasMissingKeys || hasMissingCards)
+  const hasRemainingItems = Boolean(
+    (data.remainingLoanKeys && data.remainingLoanKeys.length > 0) ||
+      (data.remainingLoanCards && data.remainingLoanCards.length > 0)
+  )
 
-  // Combined keys and cards table (returned, missing, disposed sections, sorted)
+  // Combined keys and cards table (returned, missing, remaining-on-loan, disposed)
   y = renderReturnItemsTable(
     doc,
     sortKeys(data.keys),
@@ -1025,11 +1090,18 @@ async function buildMaintenanceReturnDoc(data: MaintenanceReceiptData) {
     data.missingKeys ? sortKeys(data.missingKeys) : undefined,
     data.missingCards,
     data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
+    data.remainingLoanKeys ? sortKeys(data.remainingLoanKeys) : undefined,
+    data.remainingLoanCards,
     y,
     data.scopeByKeyId
   )
 
-  y = addMaintenanceReturnConfirmation(doc, y, hasMissingItems)
+  y = addMaintenanceReturnConfirmation(
+    doc,
+    y,
+    hasMissingItems,
+    hasRemainingItems
+  )
   addComment(doc, y, data.description ?? undefined)
   await addFooter(doc)
 

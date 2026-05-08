@@ -12,6 +12,12 @@ export type LoanGroup = {
   keys: KeyDetails[]
 }
 
+type SecondaryAction = {
+  label: string
+  onClick: () => void
+  variant?: 'default' | 'secondary' | 'outline' | 'destructive'
+}
+
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -25,6 +31,8 @@ type Props = {
   acceptButtonText: string
   title?: string
   description?: string
+  primaryLabel?: string
+  secondaryAction?: SecondaryAction
 }
 
 /**
@@ -45,11 +53,17 @@ export function ReturnKeysDialogBase({
   acceptButtonText,
   title = 'Återlämna nycklar',
   description = 'Välj vilka nycklar som ska visas på kvittensen',
+  primaryLabel,
+  secondaryAction,
 }: Props) {
   const totalKeys = loanGroups.reduce(
     (sum, loanInfo) => sum + loanInfo.keys.length,
     0
   )
+  // When a secondaryAction is set the primary button is the "Partiell retur"
+  // path; its count should reflect the items going through that path (the
+  // checked keys), not every key in the dialog.
+  const primaryCount = secondaryAction ? selectedKeyIds.size : totalKeys
 
   // Left side content - keys being returned grouped by loan
   const leftContent = loading ? (
@@ -153,7 +167,9 @@ export function ReturnKeysDialogBase({
       isProcessing={isProcessing}
       onAccept={onAccept}
       acceptButtonText={acceptButtonText}
-      totalCount={totalKeys}
+      totalCount={primaryCount}
+      primaryLabel={primaryLabel}
+      secondaryAction={secondaryAction}
     />
   )
 }

@@ -8,7 +8,7 @@ import type {
 } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { BeforeAfterDialogBase } from './BeforeAfterDialogBase'
-import { handleReturnKeys } from '@/services/loanHandlers'
+import { handlePartialReturn, handleReturnKeys } from '@/services/loanHandlers'
 import { useToast } from '@/hooks/use-toast'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -259,6 +259,125 @@ export function ReturnKeysDialog({
     }
   }
 
+  // Partial-return accept: closes each affected loan with a return receipt for
+  // selected items, then creates a continuation loan for whatever the user left
+  // unchecked. Mixed dialog with some loans fully selected + others partial is
+  // handled per-loan: full-selected loans go through the existing return path.
+  const handlePartialAccept = async () => {
+    setIsProcessing(true)
+    try {
+      const affectedLoanIds = Array.from(
+        new Set([
+          ...keysByLoan.map((k) => k.loanId),
+          ...cardsByLoan.map((c) => c.loanId),
+        ])
+      )
+
+      const failures: string[] = []
+      let warnings = 0
+      const signedComment = addSignature(comment)
+      const availableIso = availableDate?.toISOString()
+
+      for (const loanId of affectedLoanIds) {
+        const keys = keysByLoan.find((k) => k.loanId === loanId)?.keys ?? []
+        const cards = cardsByLoan.find((c) => c.loanId === loanId)?.cards ?? []
+        const nonDisposed = keys.filter((k) => !k.disposed)
+        const totalSelectable = nonDisposed.length + cards.length
+        const selKeys = nonDisposed
+          .filter((k) => selectedKeyIds.has(k.id))
+          .map((k) => k.id)
+        const selCards = cards
+          .filter((c) => selectedCardIds.has(c.cardId))
+          .map((c) => c.cardId)
+        const selectedCount = selKeys.length + selCards.length
+
+        if (selectedCount === 0) continue
+
+        if (selectedCount === totalSelectable) {
+          const result = await handleReturnKeys({
+            keyIds: keys.map((k) => k.id),
+            cardIds: cards.map((c) => c.cardId),
+            availableToNextTenantFrom: availableIso,
+            selectedForReceipt: selKeys,
+            selectedCardsForReceipt: selCards,
+            lease,
+            comment: signedComment,
+          })
+          if (!result.success) {
+            failures.push(result.message ?? 'Okänt fel')
+          }
+        } else {
+          const result = await handlePartialReturn({
+            oldLoanId: loanId,
+            selectedKeyIds: new Set(selKeys),
+            selectedCardIds: new Set(selCards),
+            availableToNextTenantFrom: availableIso,
+            lease,
+            comment: signedComment,
+          })
+          if (!result.success) {
+            failures.push(result.message ?? 'Okänt fel')
+          } else if (result.fellBackToReturnOnly) {
+            warnings++
+          }
+        }
+      }
+
+      if (failures.length > 0) {
+        toast({
+          title: 'Partiell retur misslyckades för vissa lån',
+          description: failures.join('\n'),
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (warnings > 0) {
+        toast({
+          title: 'Partiell retur klar — varning',
+          description:
+            'Det fanns ingen ursprunglig låneblankett att kombinera; den nya låneblanketten innehåller bara återlämningskvittensen.',
+        })
+      } else {
+        toast({
+          title: 'Partiell retur klar',
+          description: 'Valda nycklar/droppar är återlämnade.',
+        })
+      }
+      onOpenChange(false)
+      onSuccess()
+    } catch (err: any) {
+      toast({
+        title: 'Fel',
+        description: err?.message || 'Kunde inte genomföra partiell retur.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // Determine if any affected loan has a partial selection (some non-disposed
+  // keys + cards selected, but not all). Disposed keys are auto-included so
+  // they don't count toward the "selectable" total.
+  const partialMode = (() => {
+    const affectedLoanIds = new Set([
+      ...keysByLoan.map((k) => k.loanId),
+      ...cardsByLoan.map((c) => c.loanId),
+    ])
+    for (const loanId of affectedLoanIds) {
+      const keys = keysByLoan.find((k) => k.loanId === loanId)?.keys ?? []
+      const cards = cardsByLoan.find((c) => c.loanId === loanId)?.cards ?? []
+      const nonDisposed = keys.filter((k) => !k.disposed)
+      const total = nonDisposed.length + cards.length
+      const sel =
+        nonDisposed.filter((k) => selectedKeyIds.has(k.id)).length +
+        cards.filter((c) => selectedCardIds.has(c.cardId)).length
+      if (sel > 0 && sel < total) return true
+    }
+    return false
+  })()
+
   const totalKeys = keysByLoan.reduce(
     (sum, loanInfo) => sum + loanInfo.keys.length,
     0
@@ -485,9 +604,21 @@ export function ReturnKeysDialog({
       leftContent={leftContent}
       rightContent={rightContent}
       isProcessing={isProcessing}
-      onAccept={handleAccept}
-      acceptButtonText="Återlämna"
-      totalCount={totalItems}
+      onAccept={partialMode ? handlePartialAccept : handleAccept}
+      acceptButtonText={partialMode ? 'Partiell retur' : 'Återlämna'}
+      primaryLabel={partialMode ? 'Partiell retur' : 'Återlämna'}
+      totalCount={
+        partialMode ? selectedKeyIds.size + selectedCardIds.size : totalItems
+      }
+      secondaryAction={
+        partialMode
+          ? {
+              label: 'Retur med saknade nycklar',
+              onClick: handleAccept,
+              variant: 'secondary',
+            }
+          : undefined
+      }
     />
   )
 }
