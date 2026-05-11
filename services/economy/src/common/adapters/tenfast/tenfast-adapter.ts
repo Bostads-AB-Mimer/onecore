@@ -7,6 +7,7 @@ import {
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
   TenfastInvoicesByOcrResponseSchema,
+  TenfastInvoiceStateSchema,
   TenfastInvoice,
   TenfastInvoiceRow,
   TenfastRentArticleSchema,
@@ -24,6 +25,8 @@ import {
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
 const companyId = config.tenfast.companyId
+
+const TENFAST_INVOICE_STATES = TenfastInvoiceStateSchema.options
 
 const makeTenfastRequest = async (
   url: string,
@@ -144,19 +147,10 @@ export const getInvoiceByOcr = async (
   ocr: string
 ): Promise<AdapterResult<Invoice | null, string>> => {
   try {
-    const invoiceStates = [
-      'betald',
-      'ny',
-      'ej-avprickad',
-      'forsenad',
-      'delvis-betald',
-      'krediterad',
-      'anstand',
-    ]
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         'filter[ocrNumber]': ocr,
-        states: invoiceStates.join(','),
+        states: TENFAST_INVOICE_STATES.join(','),
       },
     })
     if (result.status !== 200) {
@@ -232,6 +226,65 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     // We should maybe add a unique id property to the Invoice type instead
     transactionTypeName: 'some random string',
     credit: null,
+  }
+}
+
+export const recordPaymentForInvoice = async (params: {
+  ocr: string
+  amount: number
+  dateTime: Date
+  // TODO: confirm valid method values with Tenfast (e.g. 'bank', 'bankgiro', 'autogiro')
+  method: string
+}): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
+  try {
+    const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
+      params: {
+        'filter[ocrNumber]': params.ocr,
+        states: TENFAST_INVOICE_STATES.join(','),
+      },
+    })
+
+    if (lookupResult.status !== 200) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = TenfastInvoicesByOcrResponseSchema.safeParse(lookupResult.data)
+    if (!parsed.success) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const invoice = parsed.data.records[0]
+    if (!invoice) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    const res = await makeTenfastRequest('/v1/hyresvard/transactions', {
+      method: 'POST',
+      params: { hyresvard: companyId },
+      data: {
+        type: 'hyra',
+        amount: params.amount,
+        dateTime: params.dateTime.toISOString(),
+        method: params.method,
+        hyra: invoice._id,
+      },
+    })
+
+    if (res.status === 200 || res.status === 201) {
+      return { ok: true, data: null }
+    }
+    if (res.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    logger.error(
+      { status: res.status, data: res.data },
+      'tenfast-adapter.recordPaymentForInvoice: unexpected status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    logger.error(err, 'tenfast-adapter.recordPaymentForInvoice')
+    return { ok: false, err: 'unknown' }
   }
 }
 

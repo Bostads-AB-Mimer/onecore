@@ -726,6 +726,75 @@ export async function getAllInvoicePaymentEvents(
   return events
 }
 
+export async function getPaymentsSince(since: Date): Promise<InvoicePaymentEvent[]> {
+  return fetchPaymentsSince(since)
+}
+
+// TODO: Confirm correct filter field name with Magnus at View
+// Likely postedDate_gte or transactionDate_gte on arTransactions
+async function fetchPaymentsSince(
+  since: Date,
+  cursor?: string
+): Promise<InvoicePaymentEvent[]> {
+  const query = {
+    query: gql`
+      query ($cursor: String, $since: String) {
+        arTransactions(
+          first: 1000
+          after: $cursor
+          filter: { postedDate_gte: $since }
+        ) {
+          edges {
+            cursor
+            node {
+              matchId
+              invoiceNumber
+              amount
+              text
+              paymentDate
+              transactionHeader {
+                postedDate
+                transactionSource {
+                  code
+                }
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+          }
+        }
+      }
+    `,
+    variables: {
+      since: since.toISOString(),
+      cursor: cursor ?? null,
+    },
+  }
+
+  const result = await makeXledgerRequest(query)
+
+  if (!result.data?.arTransactions) {
+    return []
+  }
+
+  const filtered = result.data.arTransactions.edges.filter(
+    (edge: any) =>
+      edge.node.transactionHeader.transactionSource.code !== 'AR' &&
+      edge.node.transactionHeader.transactionSource.code !== 'OS'
+  )
+
+  const events = filtered.map((e: any) => mapToInvoicePaymentEvent(e.node))
+
+  if (result.data.arTransactions.pageInfo.hasNextPage) {
+    const lastEdge = result.data.arTransactions.edges.at(-1)
+    const nextEvents = await fetchPaymentsSince(since, lastEdge.cursor)
+    events.push(...nextEvents)
+  }
+
+  return events
+}
+
 function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
   return {
     type: event.type,
