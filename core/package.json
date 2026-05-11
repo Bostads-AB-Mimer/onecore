@@ -33,7 +33,7 @@
     "script:bosociala": "node build/src/scripts/bosociala",
     "script:home-insurance-export": "node build/src/scripts/home-insurance-export",
     "script:sync-contacts": "node build/scripts/sync-contacts/index",
-    "script:sync-xledger-payments-to-tenfast": "node build/src/scripts/sync-xledger-payments-to-tenfast/index",
+    "script:sync-xledger-payments-to-tenfast": "node build/scripts/sync-xledger-payments-to-tenfast/index",
     "start": "node build/index.js",
     "test": "jest",
     "test:ci": "TZ=UTC jest --silent",

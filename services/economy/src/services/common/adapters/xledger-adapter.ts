@@ -769,7 +769,7 @@ async function fetchPaymentsSince(
       }
     `,
     variables: {
-      since: since.toISOString(),
+      since: dateToGraphQlDateString(since),
       cursor: cursor ?? null,
     },
   }

@@ -401,6 +401,29 @@ describe(adapter.getPaymentsSince, () => {
 
     expect(result[0].paymentDate).toEqual(new Date('2026-04-01'))
   })
+
+  it('sends since as YYYY-MM-DD date string, not ISO timestamp', async () => {
+    let capturedBody: any
+
+    nock(origin)
+      .post(pathname, (body) => {
+        capturedBody = body
+        return true
+      })
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    await adapter.getPaymentsSince(new Date('2026-04-01T12:00:00Z'))
+
+    expect(capturedBody.variables.since).toBe('2026-04-01')
+    expect(capturedBody.variables.since).not.toMatch(/T/)
+  })
 })
 
 describe(adapter.getInvoiceMatchId, () => {
