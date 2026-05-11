@@ -692,10 +692,17 @@ const getContacts = async (contactCodes: string[]) => {
       'cmctc.blockinfo as noAdvertising'
     )
     .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
-    .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
+    .leftJoin('cmeml', function () {
+      this.on('cmeml.keycmobj', '=', 'cmctc.keycmobj').andOn(
+        'cmeml.main',
+        '=',
+        xpandDb.raw('1')
+      )
+    })
     .leftJoin('cmtel', function () {
-      this.on('cmtel.keycmobj', 'cmctc.keycmobj').andOn(
+      this.on('cmtel.keycmobj', '=', 'cmctc.keycmobj').andOn(
         'cmtel.main',
+        '=',
         xpandDb.raw('1')
       )
     })
