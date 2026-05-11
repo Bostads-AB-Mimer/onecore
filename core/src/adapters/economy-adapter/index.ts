@@ -8,6 +8,7 @@ import {
   RentInvoiceRow,
   XledgerContact,
   XledgerProject,
+  schemas,
 } from '@onecore/types'
 
 import config from '../../common/config'
@@ -324,7 +325,10 @@ export async function getPaymentsSince(
     )
 
     if (response.status === 200) {
-      return { ok: true, data: response.data.content }
+      const parsed = schemas.v1.InvoicePaymentEventSchema.array().parse(
+        response.data.content
+      )
+      return { ok: true, data: parsed }
     }
 
     logger.error(response.data, 'economy-adapter.getPaymentsSince')
