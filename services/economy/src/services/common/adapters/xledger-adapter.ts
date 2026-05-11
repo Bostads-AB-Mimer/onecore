@@ -799,7 +799,7 @@ async function fetchPaymentsSince(
 
 function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
   return {
-    type: event.type,
+    type: event.transactionHeader.transactionSource.code,
     invoiceId: event.invoiceNumber,
     matchId: event.matchId,
     amount: parseFloat(event.amount),
