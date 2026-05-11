@@ -264,6 +264,135 @@ describe(adapter.getInvoicePaymentEvents, () => {
   })
 })
 
+describe(adapter.getPaymentsSince, () => {
+  const makeArTransactionEdge = (overrides?: {
+    sourceCode?: string
+    postedDate?: string
+  }) => ({
+    cursor: 'cursor-1',
+    node: {
+      matchId: 42,
+      invoiceNumber: '55123456',
+      amount: '1000.00',
+      text: 'Hyra',
+      paymentDate: '2026-04-01',
+      transactionHeader: {
+        postedDate: overrides?.postedDate ?? '2026-04-02',
+        transactionSource: {
+          code: overrides?.sourceCode ?? 'SO',
+        },
+      },
+    },
+  })
+
+  it('returns empty array when no transactions exist', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince(new Date('2026-04-01'))
+    expect(result).toEqual([])
+  })
+
+  it('returns payment events', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [makeArTransactionEdge()],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince(new Date('2026-04-01'))
+
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({
+      invoiceId: '55123456',
+      matchId: 42,
+      amount: 1000,
+      paymentDate: new Date('2026-04-02'),
+      transactionSourceCode: 'SO',
+    })
+  })
+
+  it('filters out AR and OS source codes', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              makeArTransactionEdge({ sourceCode: 'AR' }),
+              makeArTransactionEdge({ sourceCode: 'OS' }),
+              makeArTransactionEdge({ sourceCode: 'SO' }),
+            ],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince(new Date('2026-04-01'))
+
+    expect(result).toHaveLength(1)
+    expect(result[0].transactionSourceCode).toBe('SO')
+  })
+
+  it('paginates through multiple pages', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [{ ...makeArTransactionEdge(), cursor: 'page1-cursor' }],
+            pageInfo: { hasNextPage: true },
+          },
+        },
+      })
+
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [makeArTransactionEdge()],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince(new Date('2026-04-01'))
+
+    expect(result).toHaveLength(2)
+  })
+
+  it('falls back to paymentDate when postedDate is absent', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [makeArTransactionEdge({ postedDate: '' })],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince(new Date('2026-04-01'))
+
+    expect(result[0].paymentDate).toEqual(new Date('2026-04-01'))
+  })
+})
+
 describe(adapter.getInvoiceMatchId, () => {
   it('returns null when matchId is not found', async () => {
     nock(origin)
