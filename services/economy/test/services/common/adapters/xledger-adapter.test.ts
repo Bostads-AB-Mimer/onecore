@@ -268,22 +268,26 @@ describe(adapter.getPaymentsSince, () => {
   const makeArTransactionEdge = (overrides?: {
     sourceCode?: string
     postedDate?: string
-  }) => ({
-    cursor: 'cursor-1',
-    node: {
-      matchId: 42,
-      invoiceNumber: '55123456',
-      amount: '1000.00',
-      text: 'Hyra',
-      paymentDate: '2026-04-01',
-      transactionHeader: {
-        postedDate: overrides?.postedDate ?? '2026-04-02',
-        transactionSource: {
-          code: overrides?.sourceCode ?? 'SO',
+  }) => {
+    const sourceCode = overrides?.sourceCode ?? 'SO'
+    return {
+      cursor: 'cursor-1',
+      node: {
+        matchId: 42,
+        invoiceNumber: '55123456',
+        amount: '1000.00',
+        text: 'Hyra',
+        paymentDate: '2026-04-01',
+        type: sourceCode,
+        transactionHeader: {
+          postedDate: overrides?.postedDate ?? '2026-04-02',
+          transactionSource: {
+            code: sourceCode,
+          },
         },
       },
-    },
-  })
+    }
+  }
 
   it('returns empty array when no transactions exist', async () => {
     nock(origin)
@@ -323,6 +327,9 @@ describe(adapter.getPaymentsSince, () => {
       paymentDate: new Date('2026-04-02'),
       transactionSourceCode: 'SO',
     })
+    expect(() =>
+      schemas.v1.InvoicePaymentEventSchema.array().parse(result)
+    ).not.toThrow()
   })
 
   it('filters out AR and OS source codes', async () => {
@@ -345,6 +352,9 @@ describe(adapter.getPaymentsSince, () => {
 
     expect(result).toHaveLength(1)
     expect(result[0].transactionSourceCode).toBe('SO')
+    expect(() =>
+      schemas.v1.InvoicePaymentEventSchema.array().parse(result)
+    ).not.toThrow()
   })
 
   it('paginates through multiple pages', async () => {

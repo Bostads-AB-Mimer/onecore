@@ -29,9 +29,10 @@ async function saveLastTimestamp(ts: Date) {
   await fs.writeFile(STATE_FILE, ts.toISOString(), 'utf-8')
 }
 
-// Groups payment events by invoice ID so each unique invoice is looked up in
-// Tenfast only once — and if the invoice is not found, all its events are skipped
-// together rather than triggering a redundant lookup per event.
+// Groups payment events by invoice ID so that when an invoice is not found in
+// Tenfast all of its events can be skipped together without triggering a
+// separate lookup for each one. Invoices that are found still result in one
+// Tenfast call per payment event.
 function groupByInvoiceId(
   events: InvoicePaymentEvent[]
 ): Map<string, InvoicePaymentEvent[]> {
