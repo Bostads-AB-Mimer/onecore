@@ -75,7 +75,7 @@ describe('economy-adapter.getPaymentsSince', () => {
     expect(result).toMatchObject({ ok: true })
     expect(() =>
       schemas.v1.InvoicePaymentEventSchema.array().parse(
-        (result as { ok: true; data: unknown }).data
+        result.ok ? result.data : null
       )
     ).not.toThrow()
   })
