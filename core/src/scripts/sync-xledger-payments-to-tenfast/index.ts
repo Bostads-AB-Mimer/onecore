@@ -25,12 +25,8 @@ async function getLastTimestamp(): Promise<Date | null> {
   }
 }
 
-// Advances the saved timestamp to the next UTC day so that a same-day re-run
-// queries from tomorrow, avoiding re-processing payments already recorded.
 async function saveLastTimestamp(ts: Date) {
-  const next = new Date(ts)
-  next.setUTCDate(next.getUTCDate() + 1)
-  await fs.writeFile(STATE_FILE, next.toISOString().slice(0, 10), 'utf-8')
+  await fs.writeFile(STATE_FILE, ts.toISOString(), 'utf-8')
 }
 
 // Groups payment events by invoice ID so that when an invoice is not found in
