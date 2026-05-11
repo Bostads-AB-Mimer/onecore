@@ -21,8 +21,8 @@ import {
 import {
   searchLeases,
   getBuildingManagers,
-  getStatusLabel,
 } from '../adapters/xpand/lease-search-adapter'
+import { LeaseStatusLabel } from '@onecore/types'
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
@@ -476,19 +476,11 @@ export const routes = (router: KoaRouter) => {
       // Create Excel using streaming - fetches pages incrementally
       const buffer =
         await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
-          async (page: number, limit: number, totalCount?: number) => {
-            // Use a derived context with overridden query instead of mutating ctx.query
-            const paginationCtx = Object.create(ctx)
-            paginationCtx.query = {
-              ...ctx.query,
-              page: String(page),
-              limit: String(limit),
-            }
-
-            return await searchLeases(queryParams.data, paginationCtx, {
-              forExport: true,
-              totalCount,
-            })
+          async (page: number, limit: number) => {
+            return await tenfastLeaseSearchAdapter.searchLeases(
+              { ...queryParams.data, page, limit },
+              ctx
+            )
           },
           {
             sheetName: 'Hyreskontrakt',
@@ -522,7 +514,7 @@ export const routes = (router: KoaRouter) => {
               district: lease.districtName || '',
               startDate: formatDateForExcel(lease.startDate),
               endDate: formatDateForExcel(lease.lastDebitDate),
-              status: getStatusLabel(lease.status),
+              status: LeaseStatusLabel[lease.status] ?? String(lease.status),
             }),
             batchSize: 500,
           }
