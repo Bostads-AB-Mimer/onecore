@@ -56,12 +56,17 @@ async function syncPayments() {
   if (lastTimestamp) {
     logger.info({ since }, 'syncing Xledger payments since last timestamp')
   } else {
-    logger.info({ since }, `no saved timestamp, using ${FALLBACK_DAYS}-day fallback window`)
+    logger.info(
+      { since },
+      `no saved timestamp, using ${FALLBACK_DAYS}-day fallback window`
+    )
   }
 
   const paymentsResult = await getPaymentsSince(since)
   if (!paymentsResult.ok) {
-    throw new Error(`Failed to fetch payments from Xledger: ${paymentsResult.err}`)
+    throw new Error(
+      `Failed to fetch payments from Xledger: ${paymentsResult.err}`
+    )
   }
 
   const payments = paymentsResult.data
@@ -98,16 +103,25 @@ async function syncPayments() {
         )
       }
 
-      logger.info({ invoiceId, amount: event.amount }, 'payment recorded in Tenfast')
+      logger.info(
+        { invoiceId, amount: event.amount },
+        'payment recorded in Tenfast'
+      )
     }
 
     if (!invoiceNotFound) {
-      logger.info({ invoiceId, count: events.length }, 'all payments recorded for invoice')
+      logger.info(
+        { invoiceId, count: events.length },
+        'all payments recorded for invoice'
+      )
     }
   }
 
   await saveLastTimestamp(syncStart)
-  logger.info({ uniqueInvoices: byInvoice.size }, 'all invoices processed, timestamp advanced')
+  logger.info(
+    { uniqueInvoices: byInvoice.size },
+    'all invoices processed, timestamp advanced'
+  )
 }
 
 syncPayments().catch((err) => {

@@ -1,5 +1,9 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger, makeSuccessResponseBody } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { z } from 'zod'
 
 import { getPaymentsSince } from '../common/adapters/xledger-adapter'
@@ -22,7 +26,10 @@ export function routes(router: KoaRouter) {
     const queryParams = GetPaymentsSinceQuerySchema.safeParse(ctx.query)
     if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = { message: 'Missing or invalid "since" query parameter (ISO 8601 datetime required)' }
+      ctx.body = {
+        message:
+          'Missing or invalid "since" query parameter (ISO 8601 datetime required)',
+      }
       return
     }
 
@@ -45,7 +52,10 @@ export function routes(router: KoaRouter) {
     const body = RecordPaymentBodySchema.safeParse(ctx.request.body)
     if (!body.success) {
       ctx.status = 400
-      ctx.body = { message: 'Invalid request body: amount, dateTime and method are required' }
+      ctx.body = {
+        message:
+          'Invalid request body: amount, dateTime and method are required',
+      }
       return
     }
 
@@ -63,7 +73,9 @@ export function routes(router: KoaRouter) {
       if (!result.ok) {
         if (result.err === 'not-found') {
           ctx.status = 404
-          ctx.body = { message: `Invoice with OCR ${invoiceId} not found in Tenfast` }
+          ctx.body = {
+            message: `Invoice with OCR ${invoiceId} not found in Tenfast`,
+          }
           return
         }
         ctx.status = 500
@@ -74,7 +86,10 @@ export function routes(router: KoaRouter) {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(null, metadata)
     } catch (err: any) {
-      logger.error(err, 'payment-sync-service: POST /invoices/:invoiceId/payments')
+      logger.error(
+        err,
+        'payment-sync-service: POST /invoices/:invoiceId/payments'
+      )
       ctx.status = 500
       ctx.body = { message: err.message }
     }

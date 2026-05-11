@@ -30,7 +30,11 @@ describe('economy-adapter.recordInvoicePayment', () => {
 
     const result = await economyAdapter.recordInvoicePayment(invoiceId, payment)
 
-    expect(result).toMatchObject({ ok: false, err: 'not-found', statusCode: 404 })
+    expect(result).toMatchObject({
+      ok: false,
+      err: 'not-found',
+      statusCode: 404,
+    })
   })
 
   it('returns unknown on unexpected status', async () => {
@@ -59,7 +63,10 @@ describe('economy-adapter.recordInvoicePayment', () => {
       .post(`/invoices/${encodedId}/payments`)
       .reply(200, { content: null })
 
-    const result = await economyAdapter.recordInvoicePayment('55/123456', payment)
+    const result = await economyAdapter.recordInvoicePayment(
+      '55/123456',
+      payment
+    )
 
     expect(result).toEqual({ ok: true, data: null })
   })

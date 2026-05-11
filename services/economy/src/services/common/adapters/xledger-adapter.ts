@@ -726,7 +726,9 @@ export async function getAllInvoicePaymentEvents(
   return events
 }
 
-export async function getPaymentsSince(since: Date): Promise<InvoicePaymentEvent[]> {
+export async function getPaymentsSince(
+  since: Date
+): Promise<InvoicePaymentEvent[]> {
   return fetchPaymentsSince(since)
 }
 

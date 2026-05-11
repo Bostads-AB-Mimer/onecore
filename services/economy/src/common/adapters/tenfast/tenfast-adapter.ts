@@ -248,7 +248,9 @@ export const recordPaymentForInvoice = async (params: {
       return { ok: false, err: 'unknown' }
     }
 
-    const parsed = TenfastInvoicesByOcrResponseSchema.safeParse(lookupResult.data)
+    const parsed = TenfastInvoicesByOcrResponseSchema.safeParse(
+      lookupResult.data
+    )
     if (!parsed.success) {
       return { ok: false, err: 'unknown' }
     }
