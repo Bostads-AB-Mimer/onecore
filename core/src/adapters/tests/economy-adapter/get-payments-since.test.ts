@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import nock from 'nock'
 
 import config from '../../../common/config'
@@ -72,11 +73,9 @@ describe('economy-adapter.getPaymentsSince', () => {
 
     const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
 
-    expect(result).toMatchObject({ ok: true })
+    assert(result.ok)
     expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(
-        result.ok ? result.data : null
-      )
+      schemas.v1.InvoicePaymentEventSchema.array().parse(result.data)
     ).not.toThrow()
   })
 
