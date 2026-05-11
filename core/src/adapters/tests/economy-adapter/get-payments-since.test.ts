@@ -36,8 +36,10 @@ describe('economy-adapter.getPaymentsSince', () => {
 
     const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
 
-    expect(result).toMatchObject({ ok: true })
-    expect(result.ok && result.data).toHaveLength(1)
+    expect(result).toEqual({
+      ok: true,
+      data: [expect.objectContaining({ invoiceId: '55123456' })],
+    })
   })
 
   it('coerces paymentDate ISO string to a Date instance', async () => {
@@ -45,17 +47,21 @@ describe('economy-adapter.getPaymentsSince', () => {
       .get('/payments/since')
       .query(true)
       .reply(200, {
-        content: [makePaymentEvent({ paymentDate: '2026-04-01T00:00:00.000Z' })],
+        content: [
+          makePaymentEvent({ paymentDate: '2026-04-01T00:00:00.000Z' }),
+        ],
       })
 
     const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
 
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
-    expect(result.data[0].paymentDate).toBeInstanceOf(Date)
-    expect(result.data[0].paymentDate.toISOString()).toBe(
-      '2026-04-01T00:00:00.000Z'
-    )
+    expect(result).toEqual({
+      ok: true,
+      data: [
+        expect.objectContaining({
+          paymentDate: new Date('2026-04-01T00:00:00.000Z'),
+        }),
+      ],
+    })
   })
 
   it('satisfies InvoicePaymentEventSchema on 200', async () => {
@@ -66,10 +72,11 @@ describe('economy-adapter.getPaymentsSince', () => {
 
     const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
 
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
+    expect(result).toMatchObject({ ok: true })
     expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(result.data)
+      schemas.v1.InvoicePaymentEventSchema.array().parse(
+        (result as { ok: true; data: unknown }).data
+      )
     ).not.toThrow()
   })
 
