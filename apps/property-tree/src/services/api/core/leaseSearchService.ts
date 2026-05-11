@@ -33,7 +33,13 @@ export type LeaseSearchQueryParams = {
   areaCodes?: string[]
   districtNames?: string[]
   buildingManager?: string[]
-  sortBy?: 'leaseStartDate' | 'lastDebitDate' | 'leaseId'
+  sortBy?:
+    | 'leaseStartDate'
+    | 'lastDebitDate'
+    | 'leaseId'
+    | 'address'
+    | 'objectType'
+    | 'rentalObjectCode'
   sortOrder?: 'asc' | 'desc'
 }
 
@@ -110,7 +116,7 @@ async function getContactsByFilters(
 ): Promise<ContactInfo[]> {
   const { data, error } = await GET('/contacts/from-lease-search', {
     params: {
-      query: params,
+      query: params as any,
     },
   })
 
@@ -123,7 +129,7 @@ async function exportLeasesToExcel(
   params: LeaseSearchQueryParams
 ): Promise<Blob> {
   const { data, error } = await GET('/leases/export', {
-    params: { query: params },
+    params: { query: params as any },
     parseAs: 'blob',
   })
 

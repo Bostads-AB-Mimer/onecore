@@ -60,7 +60,10 @@ export const getStatusBadge = (status: Lease['status'] | number): ReactNode => {
       </Badge>
     )
   }
-  if (status === 'PreliminaryTerminated' || numericStatus === LeaseStatus.PreliminaryTerminated) {
+  if (
+    status === 'PreliminaryTerminated' ||
+    numericStatus === LeaseStatus.PreliminaryTerminated
+  ) {
     return (
       <Badge
         variant="outline"
@@ -70,7 +73,10 @@ export const getStatusBadge = (status: Lease['status'] | number): ReactNode => {
       </Badge>
     )
   }
-  if (status === 'PendingSignature' || numericStatus === LeaseStatus.PendingSignature) {
+  if (
+    status === 'PendingSignature' ||
+    numericStatus === LeaseStatus.PendingSignature
+  ) {
     return (
       <Badge
         variant="outline"

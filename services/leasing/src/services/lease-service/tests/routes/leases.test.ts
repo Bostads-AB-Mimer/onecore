@@ -640,7 +640,9 @@ describe('GET /leases/search-v2', () => {
           leaseId: 'test-lease-1',
           objectTypeCode: 'Bostad',
           leaseType: LeaseType.HousingContract,
-          contacts: [{ name: 'Test', contactCode: 'P123456', email: null, phone: null }],
+          contacts: [
+            { name: 'Test', contactCode: 'P123456', email: null, phone: null },
+          ],
           address: 'Testgatan 1',
           rentalObjectCode: '123-456-00-0001',
           postalCode: null,
