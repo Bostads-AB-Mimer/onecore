@@ -15,7 +15,7 @@ const FALLBACK_DAYS = 90
 // TODO: confirm valid method value with Tenfast (e.g. 'bank', 'bankgiro', 'autogiro')
 const DEFAULT_PAYMENT_METHOD = 'bank'
 
-async function getLastSyncDate(): Promise<Date | null> {
+async function getLastTimestamp(): Promise<Date | null> {
   try {
     const content = await fs.readFile(STATE_FILE, 'utf-8')
     const result = z.coerce.date().safeParse(content.trim())
@@ -25,11 +25,10 @@ async function getLastSyncDate(): Promise<Date | null> {
   }
 }
 
-// Saves the day after syncDate as the next since-boundary (UTC YYYY-MM-DD).
-// Advancing by one day means a same-day re-run queries from the next day,
-// avoiding re-processing payments already recorded in this run.
-async function saveNextSyncDate(syncDate: Date) {
-  const next = new Date(syncDate)
+// Advances the saved timestamp to the next UTC day so that a same-day re-run
+// queries from tomorrow, avoiding re-processing payments already recorded.
+async function saveLastTimestamp(ts: Date) {
+  const next = new Date(ts)
   next.setUTCDate(next.getUTCDate() + 1)
   await fs.writeFile(STATE_FILE, next.toISOString().slice(0, 10), 'utf-8')
 }
@@ -52,19 +51,19 @@ function groupByInvoiceId(
 
 async function syncPayments() {
   const syncStart = new Date()
-  const lastSyncDate = await getLastSyncDate()
+  const lastTimestamp = await getLastTimestamp()
 
   const fallbackSince = new Date(syncStart)
   fallbackSince.setUTCDate(fallbackSince.getUTCDate() - FALLBACK_DAYS)
 
-  const since = lastSyncDate ?? fallbackSince
+  const since = lastTimestamp ?? fallbackSince
 
-  if (lastSyncDate) {
-    logger.info({ since }, 'syncing Xledger payments since last sync date')
+  if (lastTimestamp) {
+    logger.info({ since }, 'syncing Xledger payments since last timestamp')
   } else {
     logger.info(
       { since },
-      `no saved sync date, using ${FALLBACK_DAYS}-day fallback window`
+      `no saved timestamp, using ${FALLBACK_DAYS}-day fallback window`
     )
   }
 
@@ -79,8 +78,8 @@ async function syncPayments() {
   logger.info({ count: payments.length }, 'payments fetched from Xledger')
 
   if (payments.length === 0) {
-    await saveNextSyncDate(syncStart)
-    logger.info('no new payments, sync date advanced')
+    await saveLastTimestamp(syncStart)
+    logger.info('no new payments, timestamp advanced')
     return
   }
 
@@ -123,10 +122,10 @@ async function syncPayments() {
     }
   }
 
-  await saveNextSyncDate(syncStart)
+  await saveLastTimestamp(syncStart)
   logger.info(
     { uniqueInvoices: byInvoice.size },
-    'all invoices processed, sync date advanced'
+    'all invoices processed, timestamp advanced'
   )
 }
 
