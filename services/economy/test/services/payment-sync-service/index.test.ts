@@ -16,8 +16,8 @@ routes(router)
 app.use(router.routes())
 
 describe('Payment Sync Service', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
+  afterEach(() => {
+    jest.restoreAllMocks()
   })
 
   describe('GET /payments/since', () => {
