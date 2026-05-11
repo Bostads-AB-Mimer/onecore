@@ -7,7 +7,7 @@ global:
   # Hostname för alla applikationer
   hostname: onecore.example.com
 
-  # Cluster domain för auth等服务
+  # Cluster domain för auth
   clusterDomain: dev.mimer.nu
 
   # Namespace där allt ska installeras
