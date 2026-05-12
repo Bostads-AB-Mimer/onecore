@@ -244,6 +244,11 @@ export const recordPaymentForInvoice = async (params: {
       },
     })
 
+    logger.info(
+      { ocr: params.ocr, status: lookupResult.status, data: lookupResult.data },
+      'tenfast-adapter.recordPaymentForInvoice: OCR lookup result'
+    )
+
     if (lookupResult.status !== 200) {
       return { ok: false, err: 'unknown' }
     }
@@ -252,10 +257,18 @@ export const recordPaymentForInvoice = async (params: {
       lookupResult.data
     )
     if (!parsed.success) {
+      logger.warn(
+        { ocr: params.ocr, errors: parsed.error.issues },
+        'tenfast-adapter.recordPaymentForInvoice: OCR lookup response failed schema validation'
+      )
       return { ok: false, err: 'unknown' }
     }
 
     const invoice = parsed.data.records[0]
+    logger.info(
+      { ocr: params.ocr, found: !!invoice, invoiceId: invoice?._id },
+      'tenfast-adapter.recordPaymentForInvoice: invoice lookup'
+    )
     if (!invoice) {
       return { ok: false, err: 'not-found' }
     }

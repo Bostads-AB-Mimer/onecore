@@ -26,7 +26,7 @@
     "dev:script:home-insurance-export": "tsx src/scripts/home-insurance-export.ts",
     "dev:script:home-insurance-export:local": "LOCAL_OUTPUT=. tsx src/scripts/home-insurance-export.ts",
     "dev:script:sync-contacts": "ts-node src/scripts/sync-contacts/index.ts",
-    "dev:script:sync-xledger-payments-to-tenfast": "ts-node src/scripts/sync-xledger-payments-to-tenfast/index.ts",
+    "dev:script:sync-xledger-payments-to-tenfast": "DATA_DIR=./data tsx src/scripts/sync-xledger-payments-to-tenfast/index.ts",
     "script:handle-expired-offers": "node build/src/scripts/handle-expired-offers",
     "script:start-offer-batches": "node build/src/scripts/start-offer-batches",
     "script:unpaid-invoice-payment-summaries": "node build/src/scripts/unpaid-invoice-payment-summaries",

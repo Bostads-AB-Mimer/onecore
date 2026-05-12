@@ -771,7 +771,18 @@ async function fetchPaymentsPage(params: {
 
   const result = await makeXledgerRequest(query)
 
-  if (!result.data?.arTransactions) {
+  logger.info(
+    {
+      after: params.after,
+      hasData: !!result.data?.arTransactions,
+      edgesNull: result.data?.arTransactions?.edges === null,
+      edgesCount: result.data?.arTransactions?.edges?.length ?? 0,
+      hasNextPage: result.data?.arTransactions?.pageInfo?.hasNextPage,
+    },
+    'xledger-adapter.fetchPaymentsPage: response'
+  )
+
+  if (!result.data?.arTransactions?.edges) {
     return { events: [], lastCursor: null }
   }
 
@@ -779,8 +790,11 @@ async function fetchPaymentsPage(params: {
   const lastCursor: string | null =
     edges.length > 0 ? edges.at(-1).cursor : null
 
-  const filtered = edges.filter((edge: any) =>
-    PAYMENT_SOURCE_CODES.has(edge.node.transactionHeader.transactionSource.code)
+  const filtered = edges.filter(
+    (edge: any) =>
+      PAYMENT_SOURCE_CODES.has(
+        edge.node.transactionHeader.transactionSource.code
+      ) && edge.node.invoiceNumber != null
   )
 
   const events = filtered.map((e: any) => mapToInvoicePaymentEvent(e.node))

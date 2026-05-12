@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import path from 'path'
 import { InvoicePaymentEvent } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import {
@@ -6,7 +7,10 @@ import {
   recordInvoicePayment,
 } from '../../adapters/economy-adapter'
 
-const STATE_FILE = '/data/last-xledger-payment-sync.txt'
+const STATE_FILE = path.join(
+  process.env.DATA_DIR ?? '/data',
+  'last-xledger-payment-sync.txt'
+)
 
 // Cursor of the last Xledger arTransaction record at the time of initial
 // deployment. Used on the very first run (no state file) to avoid replaying
@@ -24,6 +28,7 @@ async function getLastCursor(): Promise<string> {
 }
 
 async function saveLastCursor(cursor: string) {
+  await fs.mkdir(path.dirname(STATE_FILE), { recursive: true })
   await fs.writeFile(STATE_FILE, cursor, 'utf-8')
 }
 
@@ -57,11 +62,6 @@ async function syncPayments() {
 
   const { events: payments, lastCursor: newCursor } = paymentsResult.data
   logger.info({ count: payments.length }, 'payments fetched from Xledger')
-
-  if (newCursor) {
-    await saveLastCursor(newCursor)
-    logger.info({ newCursor }, 'cursor advanced')
-  }
 
   if (payments.length === 0) {
     logger.info('no new payments')
@@ -105,6 +105,11 @@ async function syncPayments() {
         'all payments recorded for invoice'
       )
     }
+  }
+
+  if (newCursor) {
+    await saveLastCursor(newCursor)
+    logger.info({ newCursor }, 'cursor advanced')
   }
 
   logger.info({ uniqueInvoices: byInvoice.size }, 'all invoices processed')
