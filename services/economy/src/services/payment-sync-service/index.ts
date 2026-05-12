@@ -10,7 +10,7 @@ import { getPaymentsSince } from '../common/adapters/xledger-adapter'
 import { recordPaymentForInvoice } from '../../common/adapters/tenfast/tenfast-adapter'
 
 const GetPaymentsSinceQuerySchema = z.object({
-  since: z.string().datetime(),
+  after: z.string().optional(),
 })
 
 const RecordPaymentBodySchema = z.object({
@@ -26,17 +26,15 @@ export function routes(router: KoaRouter) {
     const queryParams = GetPaymentsSinceQuerySchema.safeParse(ctx.query)
     if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = {
-        message:
-          'Missing or invalid "since" query parameter (ISO 8601 datetime required)',
-      }
+      ctx.body = { message: 'Invalid query parameters' }
       return
     }
 
     try {
-      const payments = await getPaymentsSince(new Date(queryParams.data.since))
+      const afterCursor = queryParams.data.after ?? null
+      const result = await getPaymentsSince(afterCursor)
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(payments, metadata)
+      ctx.body = makeSuccessResponseBody(result, metadata)
     } catch (err: any) {
       logger.error(err, 'payment-sync-service: GET /payments/since')
       ctx.status = 500

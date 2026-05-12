@@ -18,28 +18,39 @@ const makePaymentEvent = (
     transactionSourceCode: string
   }>
 ) => ({
-  type: 'SO',
+  type: 'OCR',
   invoiceId: '55123456',
   matchId: 42,
   amount: 1000,
   paymentDate: '2026-04-01T00:00:00.000Z',
   text: 'Hyra',
-  transactionSourceCode: 'SO',
+  transactionSourceCode: 'OCR',
+  ...overrides,
+})
+
+const makeResult = (
+  overrides?: Partial<{ lastCursor: string | null; events: object[] }>
+) => ({
+  events: [makePaymentEvent()],
+  lastCursor: 'cursor-abc',
   ...overrides,
 })
 
 describe('economy-adapter.getPaymentsSince', () => {
-  it('returns ok with parsed payment events on 200', async () => {
+  it('returns ok with parsed result on 200', async () => {
     nock(config.economyService.url)
       .get('/payments/since')
       .query(true)
-      .reply(200, { content: [makePaymentEvent()] })
+      .reply(200, { content: makeResult() })
 
-    const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
+    const result = await economyAdapter.getPaymentsSince(null)
 
     expect(result).toEqual({
       ok: true,
-      data: [expect.objectContaining({ invoiceId: '55123456' })],
+      data: {
+        lastCursor: 'cursor-abc',
+        events: [expect.objectContaining({ invoiceId: '55123456' })],
+      },
     })
   })
 
@@ -48,35 +59,71 @@ describe('economy-adapter.getPaymentsSince', () => {
       .get('/payments/since')
       .query(true)
       .reply(200, {
-        content: [
-          makePaymentEvent({ paymentDate: '2026-04-01T00:00:00.000Z' }),
-        ],
+        content: makeResult({
+          events: [
+            makePaymentEvent({ paymentDate: '2026-04-01T00:00:00.000Z' }),
+          ],
+        }),
       })
 
-    const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
+    const result = await economyAdapter.getPaymentsSince(null)
 
     expect(result).toEqual({
       ok: true,
-      data: [
-        expect.objectContaining({
-          paymentDate: new Date('2026-04-01T00:00:00.000Z'),
-        }),
-      ],
+      data: expect.objectContaining({
+        events: [
+          expect.objectContaining({
+            paymentDate: new Date('2026-04-01T00:00:00.000Z'),
+          }),
+        ],
+      }),
     })
   })
 
-  it('satisfies InvoicePaymentEventSchema on 200', async () => {
+  it('satisfies InvoicePaymentEventSchema for each event', async () => {
     nock(config.economyService.url)
       .get('/payments/since')
       .query(true)
-      .reply(200, { content: [makePaymentEvent()] })
+      .reply(200, { content: makeResult() })
 
-    const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
+    const result = await economyAdapter.getPaymentsSince(null)
 
     assert(result.ok)
     expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(result.data)
+      schemas.v1.InvoicePaymentEventSchema.array().parse(result.data.events)
     ).not.toThrow()
+  })
+
+  it('passes the cursor as the after query param', async () => {
+    let capturedQuery: any
+
+    nock(config.economyService.url)
+      .get('/payments/since')
+      .query((q) => {
+        capturedQuery = q
+        return true
+      })
+      .reply(200, { content: makeResult({ lastCursor: 'cursor-xyz' }) })
+
+    await economyAdapter.getPaymentsSince('cursor-abc')
+
+    expect(capturedQuery.after).toBe('cursor-abc')
+  })
+
+  it('sends no after param when cursor is null', async () => {
+    let capturedQuery: any
+
+    nock(config.economyService.url)
+      .get('/payments/since')
+      .query((q) => {
+        capturedQuery = q
+        return true
+      })
+      .reply(200, { content: makeResult({ lastCursor: null }) })
+
+    await economyAdapter.getPaymentsSince(null)
+
+    expect(capturedQuery.after).toBeUndefined()
   })
 
   it('returns ok: false with err unknown on non-200 status', async () => {
@@ -85,7 +132,7 @@ describe('economy-adapter.getPaymentsSince', () => {
       .query(true)
       .reply(500, { message: 'Internal Server Error' })
 
-    const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
+    const result = await economyAdapter.getPaymentsSince(null)
 
     expect(result).toMatchObject({ ok: false, err: 'unknown', statusCode: 500 })
   })
@@ -96,7 +143,7 @@ describe('economy-adapter.getPaymentsSince', () => {
       .query(true)
       .replyWithError('Connection refused')
 
-    const result = await economyAdapter.getPaymentsSince(new Date('2026-04-01'))
+    const result = await economyAdapter.getPaymentsSince(null)
 
     expect(result).toMatchObject({ ok: false, err: 'unknown' })
   })

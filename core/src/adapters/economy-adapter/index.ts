@@ -315,19 +315,25 @@ export async function processIMD(
   }
 }
 
+const PaymentsSinceResultSchema = z.object({
+  events: schemas.v1.InvoicePaymentEventSchema.array(),
+  lastCursor: z.string().nullable(),
+})
+
+export type PaymentsSinceResult = z.infer<typeof PaymentsSinceResultSchema>
+
 export async function getPaymentsSince(
-  since: Date
-): Promise<AdapterResult<InvoicePaymentEvent[], 'unknown'>> {
+  afterCursor: string | null
+): Promise<AdapterResult<PaymentsSinceResult, 'unknown'>> {
   try {
+    const params = afterCursor !== null ? { after: afterCursor } : {}
     const response = await axios.get(
       `${config.economyService.url}/payments/since`,
-      { params: { since: since.toISOString() } }
+      { params }
     )
 
     if (response.status === 200) {
-      const parsed = schemas.v1.InvoicePaymentEventSchema.array().parse(
-        response.data.content
-      )
+      const parsed = PaymentsSinceResultSchema.parse(response.data.content)
       return { ok: true, data: parsed }
     }
 

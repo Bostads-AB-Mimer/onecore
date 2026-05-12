@@ -21,41 +21,50 @@ describe('Payment Sync Service', () => {
   })
 
   describe('GET /payments/since', () => {
-    it('responds with 400 when since param is missing', async () => {
-      const res = await request(app.callback()).get('/payments/since')
-      expect(res.status).toBe(400)
-    })
-
-    it('responds with 400 when since param is not a valid datetime', async () => {
-      const res = await request(app.callback()).get(
-        '/payments/since?since=not-a-date'
-      )
-      expect(res.status).toBe(400)
-    })
-
-    it('responds with payment events', async () => {
+    it('responds with payment events and lastCursor when no cursor given', async () => {
       const events = factory.invoicePaymentEvent.buildList(2)
-      jest
-        .spyOn(xledgerAdapter, 'getPaymentsSince')
-        .mockResolvedValueOnce(events)
+      jest.spyOn(xledgerAdapter, 'getPaymentsSince').mockResolvedValueOnce({
+        events,
+        lastCursor: 'cursor-abc',
+      })
 
-      const res = await request(app.callback()).get(
-        '/payments/since?since=2026-04-01T00:00:00.000Z'
-      )
+      const res = await request(app.callback()).get('/payments/since')
 
       expect(res.status).toBe(200)
-      expect(res.body.content).toHaveLength(2)
+      expect(res.body.content.events).toHaveLength(2)
+      expect(res.body.content.lastCursor).toBe('cursor-abc')
     })
 
-    it('responds with empty array when no new payments', async () => {
-      jest.spyOn(xledgerAdapter, 'getPaymentsSince').mockResolvedValueOnce([])
+    it('passes the after cursor to the adapter', async () => {
+      const spy = jest
+        .spyOn(xledgerAdapter, 'getPaymentsSince')
+        .mockResolvedValueOnce({ events: [], lastCursor: 'cursor-xyz' })
 
-      const res = await request(app.callback()).get(
-        '/payments/since?since=2026-04-01T00:00:00.000Z'
-      )
+      await request(app.callback()).get('/payments/since?after=cursor-abc')
+
+      expect(spy).toHaveBeenCalledWith('cursor-abc')
+    })
+
+    it('passes null to the adapter when no after param', async () => {
+      const spy = jest
+        .spyOn(xledgerAdapter, 'getPaymentsSince')
+        .mockResolvedValueOnce({ events: [], lastCursor: null })
+
+      await request(app.callback()).get('/payments/since')
+
+      expect(spy).toHaveBeenCalledWith(null)
+    })
+
+    it('responds with empty events when no new payments', async () => {
+      jest.spyOn(xledgerAdapter, 'getPaymentsSince').mockResolvedValueOnce({
+        events: [],
+        lastCursor: null,
+      })
+
+      const res = await request(app.callback()).get('/payments/since')
 
       expect(res.status).toBe(200)
-      expect(res.body.content).toEqual([])
+      expect(res.body.content.events).toEqual([])
     })
 
     it('responds with 500 when adapter throws', async () => {
@@ -63,9 +72,7 @@ describe('Payment Sync Service', () => {
         .spyOn(xledgerAdapter, 'getPaymentsSince')
         .mockRejectedValueOnce(new Error('Xledger unavailable'))
 
-      const res = await request(app.callback()).get(
-        '/payments/since?since=2026-04-01T00:00:00.000Z'
-      )
+      const res = await request(app.callback()).get('/payments/since')
 
       expect(res.status).toBe(500)
     })

@@ -1,5 +1,4 @@
 import fs from 'fs/promises'
-import { z } from 'zod'
 import { InvoicePaymentEvent } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import {
@@ -9,24 +8,24 @@ import {
 
 const STATE_FILE = '/data/last-xledger-payment-sync.txt'
 
-// Fallback window used on the very first run when no state file exists
+// Fallback window used on the very first run when no cursor is saved
 const FALLBACK_DAYS = 90
 
 // TODO: confirm valid method value with Tenfast (e.g. 'bank', 'bankgiro', 'autogiro')
 const DEFAULT_PAYMENT_METHOD = 'bank'
 
-async function getLastTimestamp(): Promise<Date | null> {
+async function getLastCursor(): Promise<string | null> {
   try {
     const content = await fs.readFile(STATE_FILE, 'utf-8')
-    const result = z.coerce.date().safeParse(content.trim())
-    return result.success ? result.data : null
+    const cursor = content.trim()
+    return cursor.length > 0 ? cursor : null
   } catch {
     return null
   }
 }
 
-async function saveLastTimestamp(ts: Date) {
-  await fs.writeFile(STATE_FILE, ts.toISOString(), 'utf-8')
+async function saveLastCursor(cursor: string) {
+  await fs.writeFile(STATE_FILE, cursor, 'utf-8')
 }
 
 // Groups payment events by invoice ID so that when an invoice is not found in
@@ -46,36 +45,34 @@ function groupByInvoiceId(
 }
 
 async function syncPayments() {
-  const syncStart = new Date()
-  const lastTimestamp = await getLastTimestamp()
+  const lastCursor = await getLastCursor()
 
-  const fallbackSince = new Date(syncStart)
-  fallbackSince.setUTCDate(fallbackSince.getUTCDate() - FALLBACK_DAYS)
-
-  const since = lastTimestamp ?? fallbackSince
-
-  if (lastTimestamp) {
-    logger.info({ since }, 'syncing Xledger payments since last timestamp')
+  if (lastCursor) {
+    logger.info({ lastCursor }, 'syncing Xledger payments after cursor')
   } else {
     logger.info(
-      { since },
-      `no saved timestamp, using ${FALLBACK_DAYS}-day fallback window`
+      {},
+      `no saved cursor, using ${FALLBACK_DAYS}-day date fallback for first run`
     )
   }
 
-  const paymentsResult = await getPaymentsSince(since)
+  const paymentsResult = await getPaymentsSince(lastCursor)
   if (!paymentsResult.ok) {
     throw new Error(
       `Failed to fetch payments from Xledger: ${paymentsResult.err}`
     )
   }
 
-  const payments = paymentsResult.data
+  const { events: payments, lastCursor: newCursor } = paymentsResult.data
   logger.info({ count: payments.length }, 'payments fetched from Xledger')
 
+  if (newCursor) {
+    await saveLastCursor(newCursor)
+    logger.info({ newCursor }, 'cursor advanced')
+  }
+
   if (payments.length === 0) {
-    await saveLastTimestamp(syncStart)
-    logger.info('no new payments, timestamp advanced')
+    logger.info('no new payments')
     return
   }
 
@@ -118,11 +115,7 @@ async function syncPayments() {
     }
   }
 
-  await saveLastTimestamp(syncStart)
-  logger.info(
-    { uniqueInvoices: byInvoice.size },
-    'all invoices processed, timestamp advanced'
-  )
+  logger.info({ uniqueInvoices: byInvoice.size }, 'all invoices processed')
 }
 
 syncPayments().catch((err) => {
