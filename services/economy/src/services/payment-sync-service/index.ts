@@ -26,7 +26,10 @@ export function routes(router: KoaRouter) {
     const queryParams = GetPaymentsSinceQuerySchema.safeParse(ctx.query)
     if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = { message: 'Missing or invalid "after" query parameter (cursor string required)' }
+      ctx.body = {
+        message:
+          'Missing or invalid "after" query parameter (cursor string required)',
+      }
       return
     }
 
