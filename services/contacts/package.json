@@ -78,7 +78,7 @@
     "@types/pino-multi-stream": "^5.1.6",
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/typescript-estree": "^8.6.0",
-    "axios": "^1.9.0",
+    "axios": "^1.15.2",
     "eslint": "^9.31.0",
     "globals": "^15.9.0",
     "jest": "^29.7.0",
