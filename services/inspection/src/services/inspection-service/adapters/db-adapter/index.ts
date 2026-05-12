@@ -22,6 +22,9 @@ function mapDbRemarkToResponse(r: DbInspectionRemark) {
     remarkGrade: r.remarkGrade,
     remarkStatus: r.remarkStatus,
     cost: r.cost,
+    // Xpand-sourced remarks have no responsibility concept; the PDF generator
+    // detects this and falls back to a single SUMMA row.
+    costResponsibility: null,
     invoice: r.invoice,
     quantity: r.quantity,
     isMissing: r.isMissing,

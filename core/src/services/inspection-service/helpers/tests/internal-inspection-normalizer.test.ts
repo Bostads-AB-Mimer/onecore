@@ -416,4 +416,86 @@ describe('mapInternalRoomsToProtocolRooms', () => {
       expect(out.room).toBe('Vardagsrum')
     })
   })
+
+  describe('costResponsibility propagation', () => {
+    it('carries tenant/landlord/null through from components[]', () => {
+      const room = baseRoom({
+        components: [
+          {
+            componentId: 'c1',
+            label: 'Spis',
+            condition: 'Skadad',
+            action: [],
+            note: '',
+            photos: [],
+            cost: 100,
+            costResponsibility: 'tenant',
+          },
+          {
+            componentId: 'c2',
+            label: 'Kyl',
+            condition: 'Skadad',
+            action: [],
+            note: '',
+            photos: [],
+            cost: 200,
+            costResponsibility: 'landlord',
+          },
+          {
+            componentId: 'c3',
+            label: 'Diskmaskin',
+            condition: 'Skadad',
+            action: [],
+            note: '',
+            photos: [],
+            cost: 300,
+            costResponsibility: null,
+          },
+        ],
+      })
+
+      const [out] = mapInternalRoomsToProtocolRooms([room], [])
+      const byLabel = Object.fromEntries(
+        out.remarks.map((r) => [r.buildingComponent, r.costResponsibility])
+      )
+      expect(byLabel).toEqual({
+        Spis: 'tenant',
+        Kyl: 'landlord',
+        Diskmaskin: null,
+      })
+    })
+
+    it('carries tenant/landlord/null through from componentCostResponsibilities for surface keys', () => {
+      const room = baseRoom({
+        componentCosts: {
+          wall1: 100,
+          wall2: 200,
+          wall3: 300,
+          wall4: 0,
+          floor: 0,
+          ceiling: 0,
+          details: 0,
+        },
+        componentCostResponsibilities: {
+          wall1: 'tenant',
+          wall2: 'landlord',
+          wall3: null,
+          wall4: null,
+          floor: null,
+          ceiling: null,
+          details: null,
+        },
+      })
+
+      const [out] = mapInternalRoomsToProtocolRooms([room], [])
+      const byLabel = Object.fromEntries(
+        out.remarks.map((r) => [r.buildingComponent, r.costResponsibility])
+      )
+      expect(byLabel).toEqual({
+        'Vägg 1': 'tenant',
+        'Vägg 2': 'landlord',
+        'Vägg 3': null,
+      })
+    })
+  })
 })

@@ -25,6 +25,11 @@ export const DetailedXpandInspectionRemarkSchema = z.object({
   remarkGrade: z.number(),
   remarkStatus: z.string().nullable(),
   cost: z.number(),
+  // Set on internal inspections from `InspectionComponent.costResponsibility`
+  // or `InspectionRoom.componentCostResponsibilities`. Always null for xpand
+  // remarks — the PDF generator falls back to a single SUMMA when every
+  // remark in the inspection is null.
+  costResponsibility: z.enum(['tenant', 'landlord']).nullable().default(null),
   invoice: z.boolean(),
   quantity: z.number(),
   isMissing: z.boolean(),
