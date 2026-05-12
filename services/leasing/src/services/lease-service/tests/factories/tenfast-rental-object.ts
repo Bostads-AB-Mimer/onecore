@@ -19,7 +19,7 @@ export const TenfastRentalObjectByRentalObjectCodeResponseFactory =
           externalId: `externalId-${sequence}`,
           contractTemplate: 'template-001',
           avtal: [],
-          category: 'Bilplats',
+          category: { code: 'Bilplats', label: 'Bilplats' },
           tags: [],
         },
       ],
@@ -38,7 +38,7 @@ export const TenfastRentalObjectFactory = Factory.define<TenfastRentalObject>(
     hyror: [TenfastInvoiceRowFactory.build()],
     externalId: 'externalId-1',
     contractTemplate: 'template-001',
-    category: 'Bilplats',
+    category: { code: 'Bilplats', label: 'Bilplats' },
     tags: [],
     avtal: [],
   })

@@ -23,12 +23,6 @@ export const getLatestActiveLeasesEndDate = (
   return new Date(endDates[0]) // Return the latest end date
 }
 
-// TODO: Remove when Tenfast API returns category as { id, name } object instead of a space-separated string
-export const parseCategoryToRentalTag = (category: string): RentalTag => {
-  const [id, name] = category.split(' ')
-  return name ? { id, name } : { id: category, name: category }
-}
-
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
   tenfastRentalObject: TenfastRentalObject,
@@ -53,7 +47,10 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
   return {
     rentalObjectCode: tenfastRentalObject.externalId,
     vacantFrom: vacantFrom,
-    rentalTenureType: parseCategoryToRentalTag(tenfastRentalObject.category),
+    rentalTenureType: {
+      id: tenfastRentalObject.category.code,
+      name: tenfastRentalObject.category.label,
+    },
     rentalTags: tenfastRentalObject.tags?.flatMap((id): RentalTag[] => {
       const name = tagsById.get(id)
       return name ? [{ id, name }] : []

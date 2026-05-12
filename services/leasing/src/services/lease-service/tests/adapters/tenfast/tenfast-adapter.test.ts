@@ -437,7 +437,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     it('includes rentalTenureType and rentalTags in availability info', async () => {
       const rentalObject = factory.tenfastRentalObject.build({
         externalId: 'R1001',
-        category: 'BP Bilplats',
+        category: { code: 'BP', label: 'Bilplats' },
         tags: ['tag-1'],
         avtal: [],
       })
@@ -1391,7 +1391,7 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
     it('includes rentalTenureType and rentalTags in returned availability info', async () => {
       const rentalObject = factory.tenfastRentalObject.build({
         externalId: 'R1001',
-        category: 'BP Bilplats',
+        category: { code: 'BP', label: 'Bilplats' },
         tags: ['tag-1'],
       })
       jest
@@ -1659,7 +1659,7 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
     it('includes rentalTenureType derived from category', async () => {
       const rentalObject = factory.tenfastRentalObject.build({
         externalId: 'R1001',
-        category: 'BP Bilplats',
+        category: { code: 'BP', label: 'Bilplats' },
         tags: [],
       })
       ;(request as jest.Mock)
@@ -1731,12 +1731,12 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
     it('includes rentalTenureType and rentalTags across multiple objects in batch', async () => {
       const r1 = factory.tenfastRentalObject.build({
         externalId: 'R1001',
-        category: 'BP Bilplats',
+        category: { code: 'BP', label: 'Bilplats' },
         tags: ['tag-1'],
       })
       const r2 = factory.tenfastRentalObject.build({
         externalId: 'R1002',
-        category: 'LGH Lägenhet',
+        category: { code: 'LGH', label: 'Lägenhet' },
         tags: [],
       })
       ;(request as jest.Mock)

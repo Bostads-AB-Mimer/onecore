@@ -1,7 +1,6 @@
 import {
   getLatestActiveLeasesEndDate,
   mapTenfastRentalObjectToAvailabilityInfo,
-  parseCategoryToRentalTag,
 } from '../../../adapters/tenfast/tenfast-rental-object-helpers'
 import * as factory from '../../factories'
 
@@ -153,22 +152,6 @@ describe('tenfast-rental-object-helpers', () => {
     })
   })
 
-  describe('parseCategoryToRentalTag', () => {
-    it('returns id and name as the same value for a single-word category', () => {
-      expect(parseCategoryToRentalTag('Bilplats')).toEqual({
-        id: 'Bilplats',
-        name: 'Bilplats',
-      })
-    })
-
-    it('splits a space-separated category into id and name', () => {
-      expect(parseCategoryToRentalTag('BP Bilplats')).toEqual({
-        id: 'BP',
-        name: 'Bilplats',
-      })
-    })
-  })
-
   describe('rentalTags in mapTenfastRentalObjectToAvailabilityInfo', () => {
     it('returns undefined rentalTags when rental object has no tags field', () => {
       const rentalObject = factory.tenfastRentalObject.build({
@@ -259,7 +242,7 @@ describe('tenfast-rental-object-helpers', () => {
 
     it('maps rentalTenureType from category', () => {
       const rentalObject = factory.tenfastRentalObject.build({
-        category: 'Bilplats',
+        category: { code: 'Bilplats', label: 'Bilplats' },
         avtal: [],
       })
       const result = mapTenfastRentalObjectToAvailabilityInfo(

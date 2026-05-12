@@ -57,7 +57,10 @@ export const TenfastRentalObjectSchema = z.object({
   stadsdel: z.string().nullish(),
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
-  category: z.string(),
+  category: z.object({
+    code: z.string(),
+    label: z.string(),
+  }),
   tags: z.array(z.string()).optional(),
   kvm: z.number().nullish(),
   roomCount: z.number().nullish(),
