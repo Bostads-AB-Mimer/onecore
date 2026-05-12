@@ -38,6 +38,7 @@ type RemarkSeed = {
   buildingComponent: string
   notes: string
   cost: number
+  costResponsibility: 'tenant' | 'landlord' | null
   condition: string
   actions: string[]
 }
@@ -72,6 +73,7 @@ const seedToRemark = (seed: RemarkSeed): DetailedXpandInspectionRemark => {
     // explicit action still surface their state.
     remarkStatus: actionText || seed.condition,
     cost: seed.cost,
+    costResponsibility: seed.costResponsibility,
     invoice: false,
     quantity: 1,
     isMissing: false,
@@ -89,6 +91,7 @@ const componentToSeed = (
   buildingComponent: component.label,
   notes: component.note,
   cost: component.cost ?? 0,
+  costResponsibility: component.costResponsibility ?? null,
   condition: component.condition,
   actions: component.action,
 })
@@ -102,6 +105,7 @@ const fixedKeyToSeed = (
   buildingComponent: FIXED_KEY_LABELS[key],
   notes: room.componentNotes[key] ?? '',
   cost: room.componentCosts[key] ?? 0,
+  costResponsibility: room.componentCostResponsibilities?.[key] ?? null,
   condition: room.conditions[key] ?? '',
   actions: room.actions[key] ?? [],
 })

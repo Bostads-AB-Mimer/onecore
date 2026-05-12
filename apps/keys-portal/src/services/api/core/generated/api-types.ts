@@ -11882,6 +11882,11 @@ export interface components {
               remarkGrade: number;
               remarkStatus: string | null;
               cost: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
               invoice: boolean;
               quantity: number;
               isMissing: boolean;
@@ -12145,6 +12150,11 @@ export interface components {
           remarkGrade: number;
           remarkStatus: string | null;
           cost: number;
+          /**
+           * @default null
+           * @enum {string|null}
+           */
+          costResponsibility?: "tenant" | "landlord" | null;
           invoice: boolean;
           quantity: number;
           isMissing: boolean;
@@ -12162,6 +12172,11 @@ export interface components {
       remarkGrade: number;
       remarkStatus: string | null;
       cost: number;
+      /**
+       * @default null
+       * @enum {string|null}
+       */
+      costResponsibility?: "tenant" | "landlord" | null;
       invoice: boolean;
       quantity: number;
       isMissing: boolean;
@@ -12232,6 +12247,11 @@ export interface components {
               remarkGrade: number;
               remarkStatus: string | null;
               cost: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
               invoice: boolean;
               quantity: number;
               isMissing: boolean;

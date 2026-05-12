@@ -135,6 +135,7 @@ export const DetailedXpandInspectionRemarkFactory =
     remarkGrade: 2,
     remarkStatus: 'Open',
     cost: 500,
+    costResponsibility: null,
     invoice: true,
     quantity: 1,
     isMissing: false,

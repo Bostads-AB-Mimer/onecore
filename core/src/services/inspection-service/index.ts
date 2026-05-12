@@ -811,25 +811,9 @@ export const routes = (router: KoaRouter) => {
       if (result.ok) {
         const inspection = result.data
 
-        let protocol
-        try {
-          protocol = await generateInspectionProtocolPdf(inspection, {
-            includeCosts,
-          })
-        } catch (pdfError) {
-          logger.error(
-            {
-              pdfError,
-              errorMessage:
-                pdfError instanceof Error ? pdfError.message : String(pdfError),
-              errorStack:
-                pdfError instanceof Error ? pdfError.stack : undefined,
-              inspectionId,
-            },
-            'Error generating PDF protocol'
-          )
-          throw pdfError
-        }
+        const protocol = await generateInspectionProtocolPdf(inspection, {
+          includeCosts,
+        })
 
         ctx.status = 200
         ctx.body = {
@@ -850,10 +834,10 @@ export const routes = (router: KoaRouter) => {
         ctx.status = result.statusCode || 500
         ctx.body = { error: result.err, ...metadata }
       }
-    } catch (error) {
+    } catch (err) {
       logger.error(
-        { error, inspectionId },
-        'Error generating PDF protocol for inspection'
+        { err, inspectionId },
+        'Error generating PDF protocol for xpand inspection'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -1003,25 +987,9 @@ export const routes = (router: KoaRouter) => {
       if (result.ok) {
         const inspection = result.data
 
-        let protocol
-        try {
-          protocol = await generateInspectionProtocolPdf(inspection, {
-            includeCosts,
-          })
-        } catch (pdfError) {
-          logger.error(
-            {
-              pdfError,
-              errorMessage:
-                pdfError instanceof Error ? pdfError.message : String(pdfError),
-              errorStack:
-                pdfError instanceof Error ? pdfError.stack : undefined,
-              inspectionId,
-            },
-            'Error generating PDF protocol for internal inspection'
-          )
-          throw pdfError
-        }
+        const protocol = await generateInspectionProtocolPdf(inspection, {
+          includeCosts,
+        })
 
         ctx.status = 200
         ctx.body = {
@@ -1038,9 +1006,9 @@ export const routes = (router: KoaRouter) => {
         ctx.status = result.statusCode || 500
         ctx.body = { error: result.err, ...metadata }
       }
-    } catch (error) {
+    } catch (err) {
       logger.error(
-        { error, inspectionId },
+        { err, inspectionId },
         'Error generating PDF protocol for internal inspection'
       )
       ctx.status = 500
