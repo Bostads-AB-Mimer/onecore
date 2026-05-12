@@ -334,6 +334,5 @@ describe('mapInternalRoomsToProtocolRooms', () => {
         Diskmaskin: null,
       })
     })
-
   })
 })
