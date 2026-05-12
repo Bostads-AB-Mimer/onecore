@@ -1,7 +1,5 @@
 import type { components } from '@/services/api/core/generated/api-types'
 
-import { mergeComponentsWithDefaults } from '../constants/components'
-
 type InspectionRoom = components['schemas']['InspectionRoom']
 type InspectionComponent = NonNullable<InspectionRoom['components']>[number]
 type FetchedComponent = components['schemas']['Component']
@@ -31,25 +29,16 @@ export function deriveRoomIsHandled(
   room: InspectionRoom,
   fetched: readonly FetchedComponent[]
 ): boolean {
-  const rows = mergeComponentsWithDefaults(fetched)
-  const defaultRows = rows.filter((r) => r.isDefault)
-  const equipmentRows = rows.filter((r) => !r.isDefault)
-
-  if (defaultRows.length === 0 && equipmentRows.length === 0) return false
+  // No components = nothing to handle
+  if (fetched.length === 0) return false
 
   const componentsById = new Map(
     (room.components ?? []).map((c) => [c.componentId, c])
   )
 
-  const surfacesDone = defaultRows.every((row) => {
-    const key = row.key as keyof InspectionRoom['conditions']
-    return room.conditions[key]?.trim() !== ''
+  // Every fetched component must have a non‑empty condition on the room
+  return fetched.every((comp) => {
+    const stored = componentsById.get(comp.id)
+    return stored?.condition?.trim() !== ''
   })
-  const equipmentDone = equipmentRows.every((row) => {
-    const id = row.componentId
-    if (!id) return false
-    return componentsById.get(id)?.condition?.trim() !== ''
-  })
-
-  return surfacesDone && equipmentDone
 }

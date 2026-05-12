@@ -19,11 +19,7 @@ import {
   TableRow,
 } from '@/shared/ui/Table'
 
-import {
-  type ComponentDefinition,
-  getComponentLabel,
-  ROOM_COMPONENTS,
-} from '../constants/components'
+import { SURFACE_TYPES, getTypeName } from '../constants/components'
 import { CONDITION_TYPE, getConditionConfig } from '../constants/conditions'
 import {
   COST_RESPONSIBILITY,
@@ -50,17 +46,6 @@ function isReportable(condition: string | undefined): boolean {
     condition === CONDITION_TYPE.ACCEPTABLE ||
     condition === CONDITION_TYPE.DAMAGED
   )
-}
-
-function getSurfaceRemarks(roomData: InspectionRoom | undefined): Remark[] {
-  if (!roomData) return []
-  return ROOM_COMPONENTS.filter((component: ComponentDefinition) =>
-    isReportable(roomData.conditions[component.key])
-  ).map((component) => ({
-    key: `surface-${component.key}`,
-    label: getComponentLabel(component.key),
-    condition: roomData.conditions[component.key],
-  }))
 }
 
 function getComponentRemarks(roomData: InspectionRoom | undefined): Remark[] {
@@ -151,10 +136,7 @@ function RoomSummarySection({
   onComponentCostResponsibilityUpdate,
   onComponentCostResponsibilityByIdUpdate,
 }: RoomSectionProps) {
-  const remarks = [
-    ...getSurfaceRemarks(roomData),
-    ...getComponentRemarks(roomData),
-  ]
+  const remarks = getComponentRemarks(roomData)
 
   if (remarks.length === 0) return null
 
@@ -301,13 +283,10 @@ export function InspectionSummary({
 }: InspectionSummaryProps) {
   const perRoom = rooms.map((room) => {
     const roomData = inspectionData[room.id]
-    const surfaceCount = ROOM_COMPONENTS.filter((c) =>
-      isReportable(roomData?.conditions[c.key])
-    ).length
-    const componentCount = (roomData?.components ?? []).filter((c) =>
+    const totalCount = (roomData?.components ?? []).filter((c) =>
       isReportable(c.condition)
     ).length
-    return { room, roomData, total: surfaceCount + componentCount }
+    return { room, roomData, total: totalCount }
   })
 
   const roomsWithRemarks = perRoom.filter((r) => r.total > 0)

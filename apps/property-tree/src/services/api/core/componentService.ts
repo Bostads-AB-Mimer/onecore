@@ -1,4 +1,4 @@
-import { Component } from '../../types'
+import { Component, ComponentModel } from '../../types'
 import { GET, POST, PUT } from './baseApi'
 
 export const componentService = {
@@ -224,5 +224,11 @@ export const componentService = {
       throw new Error('Failed to update component instance')
 
     return response.content as Component
+  },
+
+  async getSurfaceModels(): Promise<ComponentModel[]> {
+    const { data, error } = await GET('/component-models/surface', {})
+    if (error) throw error
+    return data?.content ?? []
   },
 }

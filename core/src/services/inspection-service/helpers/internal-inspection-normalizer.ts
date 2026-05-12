@@ -11,27 +11,6 @@ type PropertyBaseRoom = propertyBaseComponents['schemas']['Room']
 // Display labels for the legacy fixed-key data model. These match the labels
 // the frontend uses (apps/property-tree/src/features/inspections/constants/components.ts)
 // so the protocol reads identically across the two surfaces.
-const FIXED_KEY_LABELS: Record<FixedKey, string> = {
-  wall1: 'Vägg 1',
-  wall2: 'Vägg 2',
-  wall3: 'Vägg 3',
-  wall4: 'Vägg 4',
-  floor: 'Golv',
-  ceiling: 'Tak',
-  details: 'Övrigt',
-}
-
-const FIXED_KEYS = [
-  'wall1',
-  'wall2',
-  'wall3',
-  'wall4',
-  'floor',
-  'ceiling',
-  'details',
-] as const
-
-type FixedKey = (typeof FIXED_KEYS)[number]
 
 type RemarkSeed = {
   remarkId: string
@@ -96,20 +75,6 @@ const componentToSeed = (
   actions: component.action,
 })
 
-const fixedKeyToSeed = (
-  roomId: string,
-  key: FixedKey,
-  room: InspectionRoom
-): RemarkSeed => ({
-  remarkId: `${roomId}:${key}`,
-  buildingComponent: FIXED_KEY_LABELS[key],
-  notes: room.componentNotes[key] ?? '',
-  cost: room.componentCosts[key] ?? 0,
-  costResponsibility: room.componentCostResponsibilities?.[key] ?? null,
-  condition: room.conditions[key] ?? '',
-  actions: room.actions[key] ?? [],
-})
-
 const resolveRoomLabel = (
   room: InspectionRoom,
   propertyBaseRoomsById: Map<string, PropertyBaseRoom>
@@ -123,13 +88,11 @@ const resolveRoomLabel = (
 }
 
 /**
- * Flattens the two parallel data models inside an internal `InspectionRoom`
- * (legacy `wall1..wall4`/`floor`/`ceiling`/`details` fixed keys, plus the
- * extensible `components[]` array) into the flat `DetailedXpandInspectionRoom`
- * shape the PDF renderer already understands.
+ * Flattens the components[] array inside an internal `InspectionRoom` into the
+ * flat `DetailedXpandInspectionRoom` shape the PDF renderer already understands.
  *
  * Filters to surviving entries — those with a cost, an action, or a non-OK
- * condition — so the protocol doesn't degenerate into a list of OK walls.
+ * condition — so the protocol doesn't degenerate into a list of OK components.
  *
  * Rooms with zero surviving entries still emit, but with an empty `remarks`
  * array; the renderer renders these as "Utan anmärkning" rows.
@@ -144,7 +107,6 @@ export const mapInternalRoomsToProtocolRooms = (
     const components: InspectionComponent[] = room.components ?? []
     const seeds: RemarkSeed[] = [
       ...components.map((c) => componentToSeed(room.roomId, c)),
-      ...FIXED_KEYS.map((k) => fixedKeyToSeed(room.roomId, k, room)),
     ]
 
     const remarks = seeds.filter(shouldKeep).map(seedToRemark)

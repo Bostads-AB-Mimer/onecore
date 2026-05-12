@@ -9,57 +9,21 @@ type PropertyBaseRoom = propertyBaseComponents['schemas']['Room']
 const baseRoom = (overrides: Partial<InspectionRoom> = {}): InspectionRoom => ({
   roomId: 'room-1',
   conditions: {
-    wall1: 'OK',
-    wall2: 'OK',
-    wall3: 'OK',
-    wall4: 'OK',
-    floor: 'OK',
-    ceiling: 'OK',
     details: 'OK',
   },
   actions: {
-    wall1: [],
-    wall2: [],
-    wall3: [],
-    wall4: [],
-    floor: [],
-    ceiling: [],
     details: [],
   },
   componentNotes: {
-    wall1: '',
-    wall2: '',
-    wall3: '',
-    wall4: '',
-    floor: '',
-    ceiling: '',
     details: '',
   },
   componentCosts: {
-    wall1: 0,
-    wall2: 0,
-    wall3: 0,
-    wall4: 0,
-    floor: 0,
-    ceiling: 0,
     details: 0,
   },
   componentPhotos: {
-    wall1: [],
-    wall2: [],
-    wall3: [],
-    wall4: [],
-    floor: [],
-    ceiling: [],
     details: [],
   },
   componentCostResponsibilities: {
-    wall1: null,
-    wall2: null,
-    wall3: null,
-    wall4: null,
-    floor: null,
-    ceiling: null,
     details: null,
   },
   photos: [],
@@ -260,103 +224,9 @@ describe('mapInternalRoomsToProtocolRooms', () => {
     })
   })
 
-  describe('legacy fixed-key data model', () => {
-    it('keeps wall2 when only wall2 has a cost', () => {
-      const room = baseRoom({
-        componentCosts: {
-          wall1: 0,
-          wall2: 1200,
-          wall3: 0,
-          wall4: 0,
-          floor: 0,
-          ceiling: 0,
-          details: 0,
-        },
-      })
-
-      const [out] = mapInternalRoomsToProtocolRooms([room], [])
-      expect(out.remarks).toHaveLength(1)
-      expect(out.remarks[0].buildingComponent).toBe('Vägg 2')
-      expect(out.remarks[0].cost).toBe(1200)
-    })
-
-    it('joins multiple actions into the action column text', () => {
-      const room = baseRoom({
-        actions: {
-          wall1: ['Måla', 'Spackla'],
-          wall2: [],
-          wall3: [],
-          wall4: [],
-          floor: [],
-          ceiling: [],
-          details: [],
-        },
-      })
-
-      const [out] = mapInternalRoomsToProtocolRooms([room], [])
-      expect(out.remarks).toHaveLength(1)
-      expect(out.remarks[0].remarkStatus).toBe('Måla, Spackla')
-    })
-
-    it('keeps a fixed-key wall with only a note', () => {
-      const room = baseRoom({
-        componentNotes: {
-          wall1: 'Markering vid dörr',
-          wall2: '',
-          wall3: '',
-          wall4: '',
-          floor: '',
-          ceiling: '',
-          details: '',
-        },
-      })
-
-      const [out] = mapInternalRoomsToProtocolRooms([room], [])
-      expect(out.remarks).toHaveLength(1)
-      expect(out.remarks[0].buildingComponent).toBe('Vägg 1')
-      expect(out.remarks[0].notes).toBe('Markering vid dörr')
-    })
-
-    it('passes component notes through to the description column', () => {
-      const room = baseRoom({
-        conditions: {
-          wall1: 'Skadad',
-          wall2: 'God',
-          wall3: 'God',
-          wall4: 'God',
-          floor: 'God',
-          ceiling: 'God',
-          details: 'God',
-        },
-        componentNotes: {
-          wall1: 'Repor vid fönster',
-          wall2: '',
-          wall3: '',
-          wall4: '',
-          floor: '',
-          ceiling: '',
-          details: '',
-        },
-      })
-
-      const [out] = mapInternalRoomsToProtocolRooms([room], [])
-      expect(out.remarks[0].notes).toBe('Repor vid fönster')
-      expect(out.remarks[0].remarkStatus).toBe('Skadad')
-    })
-  })
-
   describe('mixed data models', () => {
-    it('emits both component and fixed-key remarks for the same room', () => {
+    it('emits only component-sourced remarks even when fixed-key fields are present on input', () => {
       const room = baseRoom({
-        conditions: {
-          wall1: 'God',
-          wall2: 'God',
-          wall3: 'God',
-          wall4: 'God',
-          floor: 'Skadad',
-          ceiling: 'God',
-          details: 'God',
-        },
         components: [
           {
             componentId: 'c1',
@@ -371,8 +241,8 @@ describe('mapInternalRoomsToProtocolRooms', () => {
       })
 
       const [out] = mapInternalRoomsToProtocolRooms([room], [])
-      const labels = out.remarks.map((r) => r.buildingComponent)
-      expect(labels).toEqual(['Spis', 'Golv'])
+      expect(out.remarks).toHaveLength(1)
+      expect(out.remarks[0].buildingComponent).toBe('Spis')
     })
   })
 
@@ -465,37 +335,5 @@ describe('mapInternalRoomsToProtocolRooms', () => {
       })
     })
 
-    it('carries tenant/landlord/null through from componentCostResponsibilities for surface keys', () => {
-      const room = baseRoom({
-        componentCosts: {
-          wall1: 100,
-          wall2: 200,
-          wall3: 300,
-          wall4: 0,
-          floor: 0,
-          ceiling: 0,
-          details: 0,
-        },
-        componentCostResponsibilities: {
-          wall1: 'tenant',
-          wall2: 'landlord',
-          wall3: null,
-          wall4: null,
-          floor: null,
-          ceiling: null,
-          details: null,
-        },
-      })
-
-      const [out] = mapInternalRoomsToProtocolRooms([room], [])
-      const byLabel = Object.fromEntries(
-        out.remarks.map((r) => [r.buildingComponent, r.costResponsibility])
-      )
-      expect(byLabel).toEqual({
-        'Vägg 1': 'tenant',
-        'Vägg 2': 'landlord',
-        'Vägg 3': null,
-      })
-    })
   })
 })

@@ -893,6 +893,7 @@ export {
   createComponentModel,
   updateComponentModel,
   deleteComponentModel,
+  getSurfaceModels,
   // Components
   getComponents,
   getComponentById,

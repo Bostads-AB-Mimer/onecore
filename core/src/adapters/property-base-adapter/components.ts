@@ -535,6 +535,23 @@ async function deleteComponentModel(
   }
 }
 
+async function getSurfaceModels(): Promise<
+  AdapterResult<GetComponentModelsResponse, 'unknown'>
+> {
+  try {
+    const { data } = await client().GET('/component-models/surface', {})
+
+    if (data?.content) {
+      return { ok: true, data: data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'componentsAdapter.getSurfaceModels')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 type GetComponentsResponse = components['schemas']['Component'][]
@@ -1283,6 +1300,7 @@ export {
   createComponentModel,
   updateComponentModel,
   deleteComponentModel,
+  getSurfaceModels,
   // Components
   getComponents,
   getComponentById,

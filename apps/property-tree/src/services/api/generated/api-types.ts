@@ -441,6 +441,28 @@ export interface paths {
       };
     };
   };
+  "/component-models/surface": {
+    /**
+     * Get surface component models (Ytskikt hierarchy)
+     * @description Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+     */
+    get: {
+      responses: {
+        /** @description List of surface component models */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/component-models/by-name/{modelName}": {
     /**
      * Find component model by exact name
