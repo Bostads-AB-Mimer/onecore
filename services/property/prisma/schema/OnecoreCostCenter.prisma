@@ -1,0 +1,14 @@
+model OnecoreCostCenter {
+  id                   String   @id @default(uuid()) @db.UniqueIdentifier
+  code                 String   @unique @db.NVarChar(30)
+  name                 String   @db.NVarChar(255)
+  leadKeycloakUserId   String?  @map("lead_keycloak_user_id") @db.NVarChar(255)
+  deputyKeycloakUserId String?  @map("deputy_keycloak_user_id") @db.NVarChar(255)
+  createdAt            DateTime @default(now()) @map("created_at") @db.DateTime
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+  updatedBy            String?  @map("updated_by") @db.NVarChar(255)
+
+  kvvAreas OnecoreKvvArea[]
+
+  @@map("onecore_cost_center")
+}
