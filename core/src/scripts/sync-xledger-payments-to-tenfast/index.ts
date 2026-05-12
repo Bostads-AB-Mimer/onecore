@@ -11,8 +11,6 @@ const STATE_FILE = '/data/last-xledger-payment-sync.txt'
 // Fallback window used on the very first run when no cursor is saved
 const FALLBACK_DAYS = 90
 
-// TODO: confirm valid method value with Tenfast (e.g. 'bank', 'bankgiro', 'autogiro')
-const DEFAULT_PAYMENT_METHOD = 'bank'
 
 async function getLastCursor(): Promise<string | null> {
   try {
@@ -86,7 +84,7 @@ async function syncPayments() {
       const result = await recordInvoicePayment(invoiceId, {
         amount: event.amount,
         dateTime: event.paymentDate,
-        method: DEFAULT_PAYMENT_METHOD,
+        method: event.transactionSourceCode,
       })
 
       if (!result.ok) {
