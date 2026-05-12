@@ -43,7 +43,7 @@ describe('economy-adapter.getPaymentsSince', () => {
       .query(true)
       .reply(200, { content: makeResult() })
 
-    const result = await economyAdapter.getPaymentsSince(null)
+    const result = await economyAdapter.getPaymentsSince('cursor-abc')
 
     expect(result).toEqual({
       ok: true,
@@ -66,7 +66,7 @@ describe('economy-adapter.getPaymentsSince', () => {
         }),
       })
 
-    const result = await economyAdapter.getPaymentsSince(null)
+    const result = await economyAdapter.getPaymentsSince('cursor-abc')
 
     expect(result).toEqual({
       ok: true,
@@ -86,7 +86,7 @@ describe('economy-adapter.getPaymentsSince', () => {
       .query(true)
       .reply(200, { content: makeResult() })
 
-    const result = await economyAdapter.getPaymentsSince(null)
+    const result = await economyAdapter.getPaymentsSince('cursor-abc')
 
     assert(result.ok)
     expect(() =>
@@ -110,7 +110,7 @@ describe('economy-adapter.getPaymentsSince', () => {
     expect(capturedQuery.after).toBe('cursor-abc')
   })
 
-  it('sends no after param when cursor is null', async () => {
+  it('always sends the cursor as the after query param', async () => {
     let capturedQuery: any
 
     nock(config.economyService.url)
@@ -121,9 +121,9 @@ describe('economy-adapter.getPaymentsSince', () => {
       })
       .reply(200, { content: makeResult({ lastCursor: null }) })
 
-    await economyAdapter.getPaymentsSince(null)
+    await economyAdapter.getPaymentsSince('cursor-seed')
 
-    expect(capturedQuery.after).toBeUndefined()
+    expect(capturedQuery.after).toBe('cursor-seed')
   })
 
   it('returns ok: false with err unknown on non-200 status', async () => {
@@ -132,7 +132,7 @@ describe('economy-adapter.getPaymentsSince', () => {
       .query(true)
       .reply(500, { message: 'Internal Server Error' })
 
-    const result = await economyAdapter.getPaymentsSince(null)
+    const result = await economyAdapter.getPaymentsSince('cursor-abc')
 
     expect(result).toMatchObject({ ok: false, err: 'unknown', statusCode: 500 })
   })
@@ -143,7 +143,7 @@ describe('economy-adapter.getPaymentsSince', () => {
       .query(true)
       .replyWithError('Connection refused')
 
-    const result = await economyAdapter.getPaymentsSince(null)
+    const result = await economyAdapter.getPaymentsSince('cursor-abc')
 
     expect(result).toMatchObject({ ok: false, err: 'unknown' })
   })

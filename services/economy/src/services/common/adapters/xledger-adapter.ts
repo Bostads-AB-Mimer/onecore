@@ -731,88 +731,43 @@ export interface PaymentsSinceResult {
   lastCursor: string | null
 }
 
-// Fetches payment events since the given cursor position.
-// If afterCursor is null (first run), falls back to a date filter using fallbackSince
-// to avoid pulling the entire ledger history.
 export async function getPaymentsSince(
-  afterCursor: string | null,
-  fallbackSince?: Date
+  afterCursor: string
 ): Promise<PaymentsSinceResult> {
-  if (afterCursor !== null) {
-    return fetchPaymentsPage({ after: afterCursor, since: null })
-  }
-  const since = fallbackSince ?? new Date()
-  return fetchPaymentsPage({
-    after: null,
-    since: dateToGraphQlDateString(since),
-  })
+  return fetchPaymentsPage({ after: afterCursor })
 }
 
 async function fetchPaymentsPage(params: {
-  after: string | null
-  since: string | null
+  after: string
 }): Promise<PaymentsSinceResult> {
-  const query = params.since
-    ? {
-        query: gql`
-          query ($after: String, $since: String) {
-            arTransactions(
-              first: 1000
-              after: $after
-              filter: { postedDate_gte: $since }
-            ) {
-              edges {
-                cursor
-                node {
-                  matchId
-                  invoiceNumber
-                  amount
-                  text
-                  paymentDate
-                  transactionHeader {
-                    postedDate
-                    transactionSource {
-                      code
-                    }
-                  }
+  const query = {
+    query: gql`
+      query ($after: String) {
+        arTransactions(first: 1000, after: $after, filter: {}) {
+          edges {
+            cursor
+            node {
+              matchId
+              invoiceNumber
+              amount
+              text
+              paymentDate
+              transactionHeader {
+                postedDate
+                transactionSource {
+                  code
                 }
-              }
-              pageInfo {
-                hasNextPage
               }
             }
           }
-        `,
-        variables: { after: params.after, since: params.since },
-      }
-    : {
-        query: gql`
-          query ($after: String) {
-            arTransactions(first: 1000, after: $after, filter: {}) {
-              edges {
-                cursor
-                node {
-                  matchId
-                  invoiceNumber
-                  amount
-                  text
-                  paymentDate
-                  transactionHeader {
-                    postedDate
-                    transactionSource {
-                      code
-                    }
-                  }
-                }
-              }
-              pageInfo {
-                hasNextPage
-              }
-            }
+          pageInfo {
+            hasNextPage
           }
-        `,
-        variables: { after: params.after },
+        }
       }
+    `,
+    variables: { after: params.after },
+  }
 
   const result = await makeXledgerRequest(query)
 
@@ -831,8 +786,7 @@ async function fetchPaymentsPage(params: {
   const events = filtered.map((e: any) => mapToInvoicePaymentEvent(e.node))
 
   if (result.data.arTransactions.pageInfo.hasNextPage && lastCursor) {
-    // Subsequent pages always use cursor-based pagination
-    const next = await fetchPaymentsPage({ after: lastCursor, since: null })
+    const next = await fetchPaymentsPage({ after: lastCursor })
     return { events: [...events, ...next.events], lastCursor: next.lastCursor }
   }
 

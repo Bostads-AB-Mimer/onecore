@@ -8,17 +8,18 @@ import {
 
 const STATE_FILE = '/data/last-xledger-payment-sync.txt'
 
-// Fallback window used on the very first run when no cursor is saved
-const FALLBACK_DAYS = 90
+// Cursor of the last Xledger arTransaction record at the time of initial
+// deployment. Used on the very first run (no state file) to avoid replaying
+// the full ledger history. Obtained from Magnus at View on 2026-05-12.
+const BOOTSTRAP_CURSOR = '298329024'
 
-
-async function getLastCursor(): Promise<string | null> {
+async function getLastCursor(): Promise<string> {
   try {
     const content = await fs.readFile(STATE_FILE, 'utf-8')
     const cursor = content.trim()
-    return cursor.length > 0 ? cursor : null
+    return cursor.length > 0 ? cursor : BOOTSTRAP_CURSOR
   } catch {
-    return null
+    return BOOTSTRAP_CURSOR
   }
 }
 
@@ -45,14 +46,7 @@ function groupByInvoiceId(
 async function syncPayments() {
   const lastCursor = await getLastCursor()
 
-  if (lastCursor) {
-    logger.info({ lastCursor }, 'syncing Xledger payments after cursor')
-  } else {
-    logger.info(
-      {},
-      `no saved cursor, using ${FALLBACK_DAYS}-day date fallback for first run`
-    )
-  }
+  logger.info({ lastCursor }, 'syncing Xledger payments after cursor')
 
   const paymentsResult = await getPaymentsSince(lastCursor)
   if (!paymentsResult.ok) {

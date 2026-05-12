@@ -323,13 +323,12 @@ const PaymentsSinceResultSchema = z.object({
 export type PaymentsSinceResult = z.infer<typeof PaymentsSinceResultSchema>
 
 export async function getPaymentsSince(
-  afterCursor: string | null
+  afterCursor: string
 ): Promise<AdapterResult<PaymentsSinceResult, 'unknown'>> {
   try {
-    const params = afterCursor !== null ? { after: afterCursor } : {}
     const response = await axios.get(
       `${config.economyService.url}/payments/since`,
-      { params }
+      { params: { after: afterCursor } }
     )
 
     if (response.status === 200) {

@@ -10,7 +10,7 @@ import { getPaymentsSince } from '../common/adapters/xledger-adapter'
 import { recordPaymentForInvoice } from '../../common/adapters/tenfast/tenfast-adapter'
 
 const GetPaymentsSinceQuerySchema = z.object({
-  after: z.string().optional(),
+  after: z.string(),
 })
 
 const RecordPaymentBodySchema = z.object({
@@ -26,13 +26,12 @@ export function routes(router: KoaRouter) {
     const queryParams = GetPaymentsSinceQuerySchema.safeParse(ctx.query)
     if (!queryParams.success) {
       ctx.status = 400
-      ctx.body = { message: 'Invalid query parameters' }
+      ctx.body = { message: 'Missing or invalid "after" query parameter (cursor string required)' }
       return
     }
 
     try {
-      const afterCursor = queryParams.data.after ?? null
-      const result = await getPaymentsSince(afterCursor)
+      const result = await getPaymentsSince(queryParams.data.after)
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(result, metadata)
     } catch (err: any) {

@@ -21,14 +21,16 @@ describe('Payment Sync Service', () => {
   })
 
   describe('GET /payments/since', () => {
-    it('responds with payment events and lastCursor when no cursor given', async () => {
+    it('responds with payment events and lastCursor', async () => {
       const events = factory.invoicePaymentEvent.buildList(2)
       jest.spyOn(xledgerAdapter, 'getPaymentsSince').mockResolvedValueOnce({
         events,
         lastCursor: 'cursor-abc',
       })
 
-      const res = await request(app.callback()).get('/payments/since')
+      const res = await request(app.callback()).get(
+        '/payments/since?after=cursor-abc'
+      )
 
       expect(res.status).toBe(200)
       expect(res.body.content.events).toHaveLength(2)
@@ -45,14 +47,10 @@ describe('Payment Sync Service', () => {
       expect(spy).toHaveBeenCalledWith('cursor-abc')
     })
 
-    it('passes null to the adapter when no after param', async () => {
-      const spy = jest
-        .spyOn(xledgerAdapter, 'getPaymentsSince')
-        .mockResolvedValueOnce({ events: [], lastCursor: null })
+    it('responds with 400 when after param is missing', async () => {
+      const res = await request(app.callback()).get('/payments/since')
 
-      await request(app.callback()).get('/payments/since')
-
-      expect(spy).toHaveBeenCalledWith(null)
+      expect(res.status).toBe(400)
     })
 
     it('responds with empty events when no new payments', async () => {
@@ -61,7 +59,9 @@ describe('Payment Sync Service', () => {
         lastCursor: null,
       })
 
-      const res = await request(app.callback()).get('/payments/since')
+      const res = await request(app.callback()).get(
+        '/payments/since?after=cursor-abc'
+      )
 
       expect(res.status).toBe(200)
       expect(res.body.content.events).toEqual([])
@@ -72,7 +72,9 @@ describe('Payment Sync Service', () => {
         .spyOn(xledgerAdapter, 'getPaymentsSince')
         .mockRejectedValueOnce(new Error('Xledger unavailable'))
 
-      const res = await request(app.callback()).get('/payments/since')
+      const res = await request(app.callback()).get(
+        '/payments/since?after=cursor-abc'
+      )
 
       expect(res.status).toBe(500)
     })
