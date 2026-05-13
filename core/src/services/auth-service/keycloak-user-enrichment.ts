@@ -65,7 +65,6 @@ function toEnrichedUser(raw: RawKeycloakUser): EnrichedKeycloakUser {
     id: raw.id,
     name: fullName || raw.username || raw.id,
     phone: firstAttr(raw.attributes, 'mobilePhone'), // is called mobilePhone in Entra
-    signature: firstAttr(raw.attributes, 'signature'),
   }
 }
 

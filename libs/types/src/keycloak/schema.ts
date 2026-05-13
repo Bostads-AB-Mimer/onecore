@@ -7,5 +7,4 @@ export const EnrichedKeycloakUserSchema = z.object({
   id: z.string(),
   name: z.string(),
   phone: z.string().nullable(),
-  signature: z.string().nullable(),
 })

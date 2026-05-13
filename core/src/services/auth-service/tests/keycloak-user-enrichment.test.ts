@@ -22,7 +22,7 @@ const enabledUser = (overrides: Record<string, unknown> = {}) => ({
   firstName: 'Alice',
   lastName: 'Andersson',
   enabled: true,
-  attributes: { phone: ['070-1234567'], signature: ['AA'] },
+  attributes: { mobilePhone: ['070-1234567'] },
   ...overrides,
 })
 
@@ -104,7 +104,6 @@ describe('keycloak-user-enrichment', () => {
       id: 'u1',
       name: 'Alice Andersson',
       phone: '070-1234567',
-      signature: 'AA',
     })
   })
 
@@ -123,7 +122,7 @@ describe('keycloak-user-enrichment', () => {
     expect(result.get('u1')?.name).toBe('alice')
   })
 
-  it('returns null phone/signature when attributes are missing', async () => {
+  it('returns null phone when attributes are missing', async () => {
     mockServer.use(
       tokenHandler(),
       http.get(userUrl('u1'), () =>
@@ -134,7 +133,6 @@ describe('keycloak-user-enrichment', () => {
     const result = await enrichKeycloakUsers(['u1'])
 
     expect(result.get('u1')?.phone).toBeNull()
-    expect(result.get('u1')?.signature).toBeNull()
   })
 
   it('deduplicates ids and fetches each unique id once', async () => {
