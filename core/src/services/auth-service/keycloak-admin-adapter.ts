@@ -36,7 +36,7 @@ async function fetchNewToken(): Promise<string> {
   return cachedToken.value
 }
 
-async function getAdminToken(): Promise<string> {
+export async function getAdminToken(): Promise<string> {
   // Serve from cache if the token is still valid with 30 s to spare
   if (cachedToken && Date.now() < cachedToken.expiresAt - 30_000) {
     return cachedToken.value
@@ -46,6 +46,12 @@ async function getAdminToken(): Promise<string> {
     tokenPromise = fetchNewToken().finally(() => (tokenPromise = null))
   }
   return tokenPromise
+}
+
+// Clears the cached admin token. Call after a 401 from the admin API so the next
+// getAdminToken() call fetches a fresh token instead of returning the revoked one.
+export function invalidateAdminTokenCache(): void {
+  cachedToken = null
 }
 
 // Returns users with the role directly assigned (not via group).
@@ -120,7 +126,7 @@ export async function getUsersByRole(
     } catch (error) {
       // Token may have been revoked — clear cache and retry once with a fresh token
       if (error instanceof AxiosError && error.response?.status === 401) {
-        cachedToken = null
+        invalidateAdminTokenCache()
         const freshToken = await getAdminToken()
         const data = await fetchUsersByRoleViaGroups(roleName, freshToken)
         return { ok: true, data }
