@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
@@ -22,7 +22,6 @@ import {
   MultiSelectFilterDropdown,
   MultiSelectSearchFilterDropdown,
   SearchFilterDropdown,
-  type SearchFilterOption,
 } from '@/shared/ui/filters'
 import { ObjectTypeFilter } from '@/shared/ui/filters/ObjectTypeFilter'
 import { ViewLayout } from '@/shared/ui/layout'
@@ -36,17 +35,18 @@ const objectTypeOptions = [
   { label: 'Lokal', value: 'lokal' },
 ] as const
 
-const leaseTypeOptions = [
-  { label: 'Bostadskontrakt', value: 'Bostadskontrakt' },
-  { label: 'Campuskontrakt', value: 'Campuskontrakt' },
-  { label: 'Garagekontrakt', value: 'Garagekontrakt' },
-  { label: 'Kooperativ hyresrätt', value: 'Kooperativ hyresrätt' },
-  { label: 'Korttidsuthyrning', value: 'Korttidsuthyrning' },
-  { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
-  { label: 'Omförhandlingskontrakt', value: 'Omförhandlingskontrakt' },
-  { label: 'Övrigt', value: 'Övrigt' },
-  { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
-] as const
+// TODO: Enable when leaseType filtering is supported by the search API
+// const leaseTypeOptions = [
+//   { label: 'Bostadskontrakt', value: 'Bostadskontrakt' },
+//   { label: 'Campuskontrakt', value: 'Campuskontrakt' },
+//   { label: 'Garagekontrakt', value: 'Garagekontrakt' },
+//   { label: 'Kooperativ hyresrätt', value: 'Kooperativ hyresrätt' },
+//   { label: 'Korttidsuthyrning', value: 'Korttidsuthyrning' },
+//   { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
+//   { label: 'Omförhandlingskontrakt', value: 'Omförhandlingskontrakt' },
+//   { label: 'Övrigt', value: 'Övrigt' },
+//   { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
+// ] as const
 
 const statusOptions = [
   { label: 'Gällande', value: 'current' },
@@ -72,17 +72,16 @@ const LeasesPage = () => {
   const filters = useLeaseFilters()
   const searchProperties = usePropertySearch()
 
-  // Client-side search over the static leaseTypeOptions list for the
-  // MultiSelectSearchFilterDropdown pattern (no backend call needed)
-  const searchLeaseTypes = useCallback(
-    async (query: string): Promise<SearchFilterOption[]> => {
-      const q = query.toLowerCase()
-      return leaseTypeOptions
-        .filter((opt) => opt.label.toLowerCase().includes(q))
-        .map((opt) => ({ label: opt.label, value: opt.value }))
-    },
-    []
-  )
+  // TODO: Enable when leaseType filtering is supported by the search API
+  // const searchLeaseTypes = useCallback(
+  //   async (query: string): Promise<SearchFilterOption[]> => {
+  //     const q = query.toLowerCase()
+  //     return leaseTypeOptions
+  //       .filter((opt) => opt.label.toLowerCase().includes(q))
+  //       .map((opt) => ({ label: opt.label, value: opt.value }))
+  //   },
+  //   []
+  // )
 
   const handlePageChange = (newPage: number) => {
     filters.setPage(newPage)
@@ -225,12 +224,6 @@ const LeasesPage = () => {
                 onObjectTypeChange={(vals) =>
                   filters.setFilterValues('objectType', vals)
                 }
-                parkingOptionValue="parkering"
-                loadParkingSpaceTypes={filters.loadParkingSpaceTypes}
-                selectedParkingSpaceTypes={filters.selectedParkingSpaceTypes}
-                onParkingSpaceTypeChange={(vals) =>
-                  filters.setFilterValues('parkingSpaceType', vals)
-                }
                 placeholder="Objekttyp"
               />
 
@@ -261,6 +254,7 @@ const LeasesPage = () => {
                 searchPlaceholder="Sök hyresgästnamn"
               />
 
+              {/* TODO: Enable when leaseType filtering is supported by the search API
               <MultiSelectSearchFilterDropdown
                 searchFn={searchLeaseTypes}
                 minSearchLength={0}
@@ -271,6 +265,7 @@ const LeasesPage = () => {
                 placeholder="Kontraktstyp"
                 searchPlaceholder="Sök kontraktstyp"
               />
+              */}
 
               <MultiSelectSearchFilterDropdown
                 searchFn={searchProperties}

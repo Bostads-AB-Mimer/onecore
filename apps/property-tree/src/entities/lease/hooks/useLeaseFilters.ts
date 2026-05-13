@@ -92,6 +92,9 @@ export function useLeaseFilters() {
         | 'upcoming'
         | 'abouttoend'
         | 'ended'
+        | 'preliminaryterminated'
+        | 'pendingsignature'
+        | 'notsent'
       )[],
     [urlSearchParams]
   )

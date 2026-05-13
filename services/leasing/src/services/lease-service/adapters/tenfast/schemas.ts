@@ -279,8 +279,8 @@ export const TenfastLeaseSchema = z.object({
     })
   ),
   versions: z.unknown().optional(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
+  createdAt: optionalDateField,
+  updatedAt: optionalDateField,
   startInvoicingFrom: optionalDateField,
   signedAt: optionalDateField, // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
   stage: z.string(),

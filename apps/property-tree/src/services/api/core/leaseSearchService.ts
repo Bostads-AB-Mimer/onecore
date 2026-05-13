@@ -24,6 +24,8 @@ export type LeaseSearchQueryParams = {
     | 'pendingsignature'
     | 'notsent'
   )[]
+  leaseType?: string[]
+  parkingSpaceType?: string[]
   startDateFrom?: string
   startDateTo?: string
   endDateFrom?: string

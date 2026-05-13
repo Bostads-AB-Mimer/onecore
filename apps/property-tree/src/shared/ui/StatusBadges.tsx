@@ -44,7 +44,7 @@ export const ObjectTypeBadge = ({ type }: { type: string | null }) => {
     default:
       return type ? (
         <Badge variant="outline" className={badgeClass}>
-          Övrigt
+          {type}
         </Badge>
       ) : (
         <span className="text-muted-foreground">-</span>
