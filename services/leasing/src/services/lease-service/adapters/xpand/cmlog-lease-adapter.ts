@@ -7,7 +7,21 @@ export interface LeaseChange {
   leaseId: string
   contactCode: string
   rentalObjectId: string
+  action: 'create' | 'terminate' | 'void'
 }
+
+const UNDERTECKNAT_CREATE_PATTERN =
+  /Värdet i fältet 'Undertecknat' ändrat från '' till '\d{4}-\d{2}-\d{2}'/
+
+const UPPSAGT_PATCH_PATTERN =
+  /Värdet i fältet 'Uppsagt datum' ändrat från '' till '\d{4}-\d{2}-\d{2}'/
+
+const MAKULERAT_PATCH_PATTERN =
+  /Värdet i fältet 'Makulerat datum' ändrat från '' till '\d{4}-\d{2}-\d{2}'/
+
+// Extracts the pre-M original leaseId from the rename line present in Makulerat logmemos.
+const KONTRAKTSNUMMER_RENAME_PATTERN =
+  /Värdet i fältet 'Kontraktsnummer' ändrat från '(\S+)' till '\S+'/
 
 const RELEVANT_CONTRACT_TYPES = [
   'Bostadskontrakt',
@@ -38,12 +52,20 @@ export const cmlogLeaseChanges = (
 /**
  * Parses cmlog rows into deduplicated LeaseChange entries.
  *
- * Extracts leaseId from the first token after "Hyreskontrakt ",
- * contact code (P-prefixed or other known prefixes), and derives
- * rentalObjectId by stripping the /XX suffix from the leaseId.
+ * Extracts leaseId from the first token after "Hyreskontrakt ", contact code
+ * (P-prefixed or other known prefixes), and derives rentalObjectId by stripping
+ * the /XX suffix from the leaseId.
  *
- * Only rows containing Bostadskontrakt, Lokalkontrakt, or
- * Garagekontrakt are included.
+ * Classifies action as:
+ * - 'create'    — Undertecknat field set from empty to a date
+ * - 'terminate' — Uppsagt datum field set from empty to a date
+ * - 'void'      — Makulerat datum field set from empty to a date; the emitted
+ *                 leaseId is overridden with the pre-M original parsed from the
+ *                 Kontraktsnummer rename line in the same memo. Rows missing
+ *                 the rename line are skipped with a warning.
+ *
+ * Only rows containing Bostadskontrakt, Lokalkontrakt, or Garagekontrakt are
+ * included.
  */
 export const parseLeaseChanges = (
   rows: { logmemo: string; logtime: Date }[]
@@ -62,18 +84,44 @@ export const parseLeaseChanges = (
     if (!leaseIdMatch) continue
     const leaseId = leaseIdMatch[1]
 
-    if (seen.has(leaseId)) continue
-    seen.add(leaseId)
-
     const contactCodeMatch = firstLine.match(/,\s*([A-ZÖ]\d+),/)
     if (!contactCodeMatch) continue
     const contactCode = contactCodeMatch[1]
 
-    const slashIndex = leaseId.lastIndexOf('/')
-    const rentalObjectId =
-      slashIndex !== -1 ? leaseId.substring(0, slashIndex) : leaseId
+    let action: 'create' | 'terminate' | 'void'
+    if (UNDERTECKNAT_CREATE_PATTERN.test(row.logmemo)) action = 'create'
+    else if (UPPSAGT_PATCH_PATTERN.test(row.logmemo)) action = 'terminate'
+    else if (MAKULERAT_PATCH_PATTERN.test(row.logmemo)) action = 'void'
+    else continue
 
-    results.push({ leaseId, contactCode, rentalObjectId })
+    let effectiveLeaseId = leaseId
+    if (action === 'void') {
+      const renameMatch = row.logmemo.match(KONTRAKTSNUMMER_RENAME_PATTERN)
+      if (!renameMatch) {
+        logger.warn(
+          { leaseId, logmemo: row.logmemo },
+          'parseLeaseChanges: Makulerat row missing Kontraktsnummer rename line, skipping'
+        )
+        continue
+      }
+      effectiveLeaseId = renameMatch[1]
+    }
+
+    if (seen.has(effectiveLeaseId)) continue
+    seen.add(effectiveLeaseId)
+
+    const slashIndex = effectiveLeaseId.lastIndexOf('/')
+    const rentalObjectId =
+      slashIndex !== -1
+        ? effectiveLeaseId.substring(0, slashIndex)
+        : effectiveLeaseId
+
+    results.push({
+      leaseId: effectiveLeaseId,
+      contactCode,
+      rentalObjectId,
+      action,
+    })
   }
 
   return results
