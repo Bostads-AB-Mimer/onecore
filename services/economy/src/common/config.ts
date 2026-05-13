@@ -65,6 +65,13 @@ export interface Config {
     baseUrl: string
     apiKey: string
   }
+  companies: [
+    {
+      name: string
+      xpandId: string
+      tenfastId: string
+    },
+  ]
   health: {
     xledger: {
       systemName: string
@@ -184,5 +191,6 @@ export default {
   ),
   infobip: config.get('infobip'),
   tenfast: config.get('tenfast'),
+  companies: JSON.parse(config.get('companies')),
   health: config.get('health'),
 } as Config
