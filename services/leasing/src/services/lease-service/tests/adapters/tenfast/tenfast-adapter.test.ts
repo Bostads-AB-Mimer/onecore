@@ -1723,3 +1723,186 @@ describe(tenfastAdapter.syncTenant, () => {
     })
   })
 })
+
+describe('terminateLease', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('returns ok:true with action:terminated on successful POST /terminate', async () => {
+    const lease = factory.tenfastLease.build({ externalId: '211-021-09-0101/08' })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200, data: {} })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      new Date('2026-04-30T00:00:00.000Z')
+    )
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'terminated', leaseId: lease.externalId },
+    })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'post',
+        url: expect.stringContaining(`/avtal/${lease._id}/terminate`),
+        data: { endDate: '2026-04-30' },
+      })
+    )
+  })
+
+  it('returns ok:false err:lease-not-found when getLeaseByExternalId returns not-found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await tenfastAdapter.terminateLease(
+      '999/01',
+      new Date('2026-04-30T00:00:00.000Z')
+    )
+
+    expect(result).toEqual({ ok: false, err: 'lease-not-found' })
+  })
+
+  it('returns ok:true with action:skipped when Tenfast returns 400 already-terminated', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Avtalet kan inte sägas upp' },
+    })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      new Date('2026-04-30T00:00:00.000Z')
+    )
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'skipped', leaseId: lease.externalId },
+    })
+  })
+
+  it('returns ok:false err:terminate-failed on unexpected 4xx response', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Something else went wrong' },
+    })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      new Date('2026-04-30T00:00:00.000Z')
+    )
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.err).toBe('terminate-failed')
+  })
+
+  it('returns ok:false err:unknown on network error', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      new Date('2026-04-30T00:00:00.000Z')
+    )
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.err).toBe('unknown')
+  })
+})
+
+describe('voidLease', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('returns ok:true with action:voided on successful PATCH /void', async () => {
+    const lease = factory.tenfastLease.build({ externalId: '104-013-01-0106/10' })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200, data: {} })
+
+    const result = await tenfastAdapter.voidLease(lease.externalId)
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'voided', leaseId: lease.externalId },
+    })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'patch',
+        url: expect.stringContaining(`/avtal/${lease._id}/void`),
+      })
+    )
+  })
+
+  it('returns ok:false err:lease-not-found when getLeaseByExternalId returns not-found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await tenfastAdapter.voidLease('999/01')
+
+    expect(result).toEqual({ ok: false, err: 'lease-not-found' })
+  })
+
+  it('returns ok:false err:lease-signed when Tenfast returns 400 signed-error', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Avtalet kan bara makuleras innan det är signerat.' },
+    })
+
+    const result = await tenfastAdapter.voidLease(lease.externalId)
+
+    expect(result).toEqual({ ok: false, err: 'lease-signed' })
+  })
+
+  it('returns ok:false err:void-failed on unexpected 4xx response', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Something else went wrong' },
+    })
+
+    const result = await tenfastAdapter.voidLease(lease.externalId)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.err).toBe('void-failed')
+  })
+
+  it('returns ok:false err:unknown on network error', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await tenfastAdapter.voidLease(lease.externalId)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.err).toBe('unknown')
+  })
+})

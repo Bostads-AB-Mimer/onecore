@@ -1065,9 +1065,9 @@ export async function getLeaseByLeaseId(
   }
 }
 
-export async function getLeaseByExternalId(
+export const getLeaseByExternalId = async (
   externalId: string
-): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
+): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> => {
   try {
     const res = await tenfastApi.request({
       method: 'get',
@@ -1158,6 +1158,103 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     return { ok: true, data: records }
   } catch (err: any) {
     return handleTenfastError(err, 'unknown')
+  }
+}
+
+export const terminateLease = async (
+  leaseId: string,
+  endDate: Date
+): Promise<
+  AdapterResult<
+    { action: 'terminated' | 'skipped'; leaseId: string },
+    'lease-not-found' | 'terminate-failed' | 'unknown'
+  >
+> => {
+  const existing = await getLeaseByExternalId(leaseId)
+  if (!existing.ok) {
+    if (existing.err === 'not-found') {
+      return { ok: false, err: 'lease-not-found' }
+    }
+    return { ok: false, err: 'unknown' }
+  }
+
+  try {
+    const endDateString = endDate.toISOString().split('T')[0]
+    const response = await tenfastApi.request({
+      method: 'post',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existing.data._id}/terminate?hyresvard=${tenfastCompanyId}`,
+      data: { endDate: endDateString },
+    })
+
+    if (response.status === 200) {
+      return { ok: true, data: { action: 'terminated', leaseId } }
+    }
+
+    if (
+      response.status === 400 &&
+      response.data?.error === 'Avtalet kan inte sägas upp'
+    ) {
+      return { ok: true, data: { action: 'skipped', leaseId } }
+    }
+
+    logger.error(
+      { status: response.status, error: response.data },
+      'tenfast-adapter.terminateLease'
+    )
+    return { ok: false, err: 'terminate-failed' }
+  } catch (err) {
+    logger.error({ err }, 'tenfast-adapter.terminateLease')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const voidLease = async (
+  leaseId: string
+): Promise<
+  AdapterResult<
+    { action: 'voided'; leaseId: string },
+    'lease-not-found' | 'lease-signed' | 'void-failed' | 'unknown'
+  >
+> => {
+  const existing = await getLeaseByExternalId(leaseId)
+  if (!existing.ok) {
+    if (existing.err === 'not-found') {
+      return { ok: false, err: 'lease-not-found' }
+    }
+    return { ok: false, err: 'unknown' }
+  }
+
+  try {
+    const response = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existing.data._id}/void?hyresvard=${tenfastCompanyId}`,
+      data: {},
+    })
+
+    if (response.status === 200) {
+      return { ok: true, data: { action: 'voided', leaseId } }
+    }
+
+    if (
+      response.status === 400 &&
+      response.data?.error ===
+        'Avtalet kan bara makuleras innan det är signerat.'
+    ) {
+      logger.error(
+        { leaseId },
+        'tenfast-adapter.voidLease: lease is signed, manual handling required'
+      )
+      return { ok: false, err: 'lease-signed' }
+    }
+
+    logger.error(
+      { status: response.status, error: response.data },
+      'tenfast-adapter.voidLease'
+    )
+    return { ok: false, err: 'void-failed' }
+  } catch (err) {
+    logger.error({ err }, 'tenfast-adapter.voidLease')
+    return { ok: false, err: 'unknown' }
   }
 }
 
