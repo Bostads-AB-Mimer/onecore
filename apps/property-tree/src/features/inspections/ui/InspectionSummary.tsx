@@ -19,7 +19,6 @@ import {
   TableRow,
 } from '@/shared/ui/Table'
 
-import { SURFACE_TYPES, getTypeName } from '../constants/components'
 import { CONDITION_TYPE, getConditionConfig } from '../constants/conditions'
 import {
   COST_RESPONSIBILITY,
@@ -37,7 +36,7 @@ interface Remark {
   key: string
   label: string
   condition: string
-  componentId?: string
+  componentId: string
   rawLabel?: string
 }
 
@@ -61,12 +60,6 @@ function getComponentRemarks(roomData: InspectionRoom | undefined): Remark[] {
       componentId: c.componentId,
       condition: c.condition,
     }))
-}
-
-function surfaceKeyFromRemarkKey(
-  key: string
-): keyof InspectionRoom['componentCosts'] {
-  return key.replace(/^surface-/, '') as keyof InspectionRoom['componentCosts']
 }
 
 function CostResponsibilitySelect({
@@ -104,21 +97,11 @@ function CostResponsibilitySelect({
 interface RoomSectionProps {
   room: Room
   roomData: InspectionRoom | undefined
-  onComponentCostUpdate: (
-    roomId: string,
-    field: keyof InspectionRoom['componentCosts'],
-    cost: number
-  ) => void
   onComponentCostByIdUpdate: (
     roomId: string,
     componentId: string,
     label: string,
     cost: number
-  ) => void
-  onComponentCostResponsibilityUpdate: (
-    roomId: string,
-    field: keyof InspectionRoom['componentCostResponsibilities'],
-    value: CostResponsibility
   ) => void
   onComponentCostResponsibilityByIdUpdate: (
     roomId: string,
@@ -131,9 +114,7 @@ interface RoomSectionProps {
 function RoomSummarySection({
   room,
   roomData,
-  onComponentCostUpdate,
   onComponentCostByIdUpdate,
-  onComponentCostResponsibilityUpdate,
   onComponentCostResponsibilityByIdUpdate,
 }: RoomSectionProps) {
   const remarks = getComponentRemarks(roomData)
@@ -155,21 +136,11 @@ function RoomSummarySection({
         <TableBody>
           {remarks.map((remark) => {
             const conditionConfig = getConditionConfig(remark.condition)
-            const isSurface = remark.key.startsWith('surface-')
-            const surfaceKey = isSurface
-              ? surfaceKeyFromRemarkKey(remark.key)
-              : null
-            const component = !isSurface
-              ? roomData?.components?.find(
-                  (c) => c.componentId === remark.componentId
-                )
-              : null
-            const costValue = isSurface
-              ? (roomData?.componentCosts?.[surfaceKey!] ?? 0)
-              : (component?.cost ?? 0)
-            const costResponsibility = isSurface
-              ? (roomData?.componentCostResponsibilities?.[surfaceKey!] ?? null)
-              : (component?.costResponsibility ?? null)
+            const component = roomData?.components?.find(
+              (c) => c.componentId === remark.componentId
+            )
+            const costValue = component?.cost ?? 0
+            const costResponsibility = component?.costResponsibility ?? null
 
             return (
               <TableRow key={remark.key}>
@@ -201,16 +172,12 @@ function RoomSummarySection({
                         raw === ''
                           ? 0
                           : Math.max(0, Math.trunc(Number(raw) || 0))
-                      if (isSurface) {
-                        onComponentCostUpdate(room.id, surfaceKey!, cost)
-                      } else if (remark.componentId) {
-                        onComponentCostByIdUpdate(
-                          room.id,
-                          remark.componentId,
-                          remark.rawLabel ?? remark.label,
-                          cost
-                        )
-                      }
+                      onComponentCostByIdUpdate(
+                        room.id,
+                        remark.componentId,
+                        remark.rawLabel ?? remark.label,
+                        cost
+                      )
                     }}
                     aria-label={`Kostnad för ${remark.label}`}
                   />
@@ -219,20 +186,12 @@ function RoomSummarySection({
                   <CostResponsibilitySelect
                     value={costResponsibility}
                     onChange={(value) => {
-                      if (isSurface) {
-                        onComponentCostResponsibilityUpdate(
-                          room.id,
-                          surfaceKey!,
-                          value
-                        )
-                      } else if (remark.componentId) {
-                        onComponentCostResponsibilityByIdUpdate(
-                          room.id,
-                          remark.componentId,
-                          remark.rawLabel ?? remark.label,
-                          value
-                        )
-                      }
+                      onComponentCostResponsibilityByIdUpdate(
+                        room.id,
+                        remark.componentId,
+                        remark.rawLabel ?? remark.label,
+                        value
+                      )
                     }}
                     ariaLabel={`Kostnadsansvar för ${remark.label}`}
                   />
@@ -249,21 +208,11 @@ function RoomSummarySection({
 interface InspectionSummaryProps {
   inspectionData: Record<string, InspectionRoom>
   rooms: Room[]
-  onComponentCostUpdate: (
-    roomId: string,
-    field: keyof InspectionRoom['componentCosts'],
-    cost: number
-  ) => void
   onComponentCostByIdUpdate: (
     roomId: string,
     componentId: string,
     label: string,
     cost: number
-  ) => void
-  onComponentCostResponsibilityUpdate: (
-    roomId: string,
-    field: keyof InspectionRoom['componentCostResponsibilities'],
-    value: CostResponsibility
   ) => void
   onComponentCostResponsibilityByIdUpdate: (
     roomId: string,
@@ -276,9 +225,7 @@ interface InspectionSummaryProps {
 export function InspectionSummary({
   inspectionData,
   rooms,
-  onComponentCostUpdate,
   onComponentCostByIdUpdate,
-  onComponentCostResponsibilityUpdate,
   onComponentCostResponsibilityByIdUpdate,
 }: InspectionSummaryProps) {
   const perRoom = rooms.map((room) => {
@@ -313,11 +260,7 @@ export function InspectionSummary({
           key={room.id}
           room={room}
           roomData={roomData}
-          onComponentCostUpdate={onComponentCostUpdate}
           onComponentCostByIdUpdate={onComponentCostByIdUpdate}
-          onComponentCostResponsibilityUpdate={
-            onComponentCostResponsibilityUpdate
-          }
           onComponentCostResponsibilityByIdUpdate={
             onComponentCostResponsibilityByIdUpdate
           }

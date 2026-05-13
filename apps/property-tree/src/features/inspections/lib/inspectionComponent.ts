@@ -19,11 +19,7 @@ export function emptyInspectionComponent(
 }
 
 /**
- * A room is handled when every visible row has a condition set.
- *
- * Visible rows are surface defaults (wall1–4, floor, ceiling) minus the ones
- * superseded by fetched components, plus the fetched components themselves.
- * Detail components (manual entries) are not counted.
+ * A room is handled when every fetched component has a non-empty `condition`.
  */
 export function deriveRoomIsHandled(
   room: InspectionRoom,

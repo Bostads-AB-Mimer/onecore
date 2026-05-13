@@ -72,7 +72,6 @@ export function InspectionForm({
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
-    handleComponentCostUpdate,
     handleComponentPhotoAdd,
     handleComponentPhotoRemove,
     handleComponentCostResponsibilityUpdate,
@@ -315,11 +314,7 @@ export function InspectionForm({
             <InspectionSummary
               inspectionData={inspectionData}
               rooms={rooms}
-              onComponentCostUpdate={handleComponentCostUpdate}
               onComponentCostByIdUpdate={handleComponentCostUpdateById}
-              onComponentCostResponsibilityUpdate={
-                handleComponentCostResponsibilityUpdate
-              }
               onComponentCostResponsibilityByIdUpdate={
                 handleComponentCostResponsibilityUpdateById
               }

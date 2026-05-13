@@ -3,7 +3,9 @@ import { components } from '@onecore/types'
 
 const prisma = new PrismaClient()
 const { SURFACE_CATEGORY_NAME } = components
-//Removing this seed for prod, will just create the compponents manually!!
+// Seeds the Ytskikt hierarchy for dev/test environments.
+// Production environments populate this via the admin UI or the
+// component-import script (separate work in progress).
 // Deterministic UUIDs so re-running the seed is a no-op via upsert.
 const ID = {
   category: {
