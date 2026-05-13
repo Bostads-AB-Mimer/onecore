@@ -381,7 +381,8 @@ const enrichInvoiceRowsWithAccounting = async (
 }
 
 export const getInvoicesNotExported = async (
-  maxCount: number
+  maxCount: number,
+  landlordId: string
 ): Promise<
   AdapterResult<
     {
@@ -399,7 +400,7 @@ export const getInvoicesNotExported = async (
         isManuallyExported: 'false',
         status: 'issued',
         limit: maxCount,
-        hyresvard: '6344b398b63ff59d5bde8257',
+        hyresvard: landlordId,
         /*paginate:
           'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
         ocrNumber: '552605001109212',

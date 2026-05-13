@@ -24,8 +24,9 @@ import {
   getInvoicesNotExported,
   markInvoicesAsExported,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
+import config from '@src/common/config'
 
-/**
+/*
  *
  */
 export const exportRentalInvoicesAccounting = async (
@@ -38,7 +39,18 @@ export const exportRentalInvoicesAccounting = async (
     const errors: { invoiceNumber: string; error: string }[] = []
     const CHUNK_SIZE = 100 // 100
 
-    const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE)
+    const company = config.companies.find(
+      (company) => company.xpandId.localeCompare(companyId) === 0
+    )
+
+    if (!company) {
+      throw new Error('Could not find company ' + companyId)
+    }
+
+    const invoicesResult = await getInvoicesNotExported(
+      CHUNK_SIZE,
+      company.tenfastId
+    )
     if (!invoicesResult.ok) {
       logger.error(
         { error: invoicesResult.err },
@@ -116,7 +128,7 @@ export const exportRentalInvoicesAccounting = async (
       errors,
     }
   } catch (error: any) {
-    logger.error(error, 'Error importing invoices - batch could not be created')
+    logger.error(error, 'Error importing invoices')
 
     throw error
   }

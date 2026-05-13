@@ -20,9 +20,11 @@ import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-ada
 import { createAccounting, exportRentalInvoicesAccounting } from './servicev2'
 
 export const routes = (router: KoaRouter) => {
-  router.get('(.*)/invoices/import', async (ctx) => {
+  router.get('(.*)/invoices/import/{:companyId}', async (ctx) => {
     try {
-      const invoicesResult = await exportRentalInvoicesAccounting('001')
+      const invoicesResult = await exportRentalInvoicesAccounting(
+        ctx.params.companyId
+      )
       const exportInvoiceRows = await createAccounting(invoicesResult.invoices)
 
       ctx.status = 200

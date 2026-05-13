@@ -11,7 +11,6 @@ type SftpConfig = {
   glDirectory?: string
   arDirectory?: string
   useSshDss?: boolean
-  hostFingerprint?: string
 }
 
 export interface Config {
@@ -35,13 +34,6 @@ export interface Config {
     url: string
     apiToken: string
     sftp: SftpConfig
-  }
-  stralfors: {
-    baseUrl: string
-    clientId: string
-    clientSecret: string
-    retryBackoffMs: number
-    maxRetries: number
   }
   procurementInvoices: {
     importDirectory: string
@@ -72,12 +64,14 @@ export interface Config {
   tenfast: {
     baseUrl: string
     apiKey: string
-    companyId: string
   }
-  stralforsExport: {
-    sftp: SftpConfig
-    notificationEmail: string
-  }
+  companies: [
+    {
+      name: string
+      xpandId: string
+      tenfastId: string
+    },
+  ]
   health: {
     xledger: {
       systemName: string
@@ -136,10 +130,6 @@ const config = configPackage({
     economyDatabase: {
       port: 1438,
     },
-    stralfors: {
-      retryBackoffMs: 500,
-      maxRetries: 10,
-    },
     procurementInvoices: {
       importDirectory: './procurement-invoices/invoices',
       exportDirectory: './procurement-invoices/export',
@@ -170,7 +160,6 @@ const config = configPackage({
     tenfast: {
       baseUrl: '',
       apiKey: '',
-      companyId: '',
     },
     health: {
       xledger: {
@@ -186,17 +175,6 @@ const config = configPackage({
         minimumMinutesBetweenRequests: 5,
       },
     },
-    stralforsExport: {
-      sftp: {
-        host: '',
-        username: '',
-        password: '',
-        port: 22,
-        directory: 'TEST',
-        hostFingerprint: '',
-      },
-      notificationEmail: '',
-    },
   },
 })
 
@@ -205,7 +183,6 @@ export default {
   xpandDatabase: config.get('xpandDatabase'),
   economyDatabase: config.get('economyDatabase'),
   xledger: config.get('xledger'),
-  stralfors: config.get('stralfors'),
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
   debtCollection: config.get('debtCollection'),
@@ -214,6 +191,6 @@ export default {
   ),
   infobip: config.get('infobip'),
   tenfast: config.get('tenfast'),
-  stralforsExport: config.get('stralforsExport'),
+  companies: JSON.parse(config.get('companies')),
   health: config.get('health'),
 } as Config
