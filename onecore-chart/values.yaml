@@ -6,14 +6,18 @@ global:
   clusterDomain: dev.mimer.nu
   namespace: onecore
   imagePullSecret: regcred
-  namespace: onecore
-  imagePullSecret: regcred
 
 # Ingress-konfiguration (global för Traefik)
 ingress:
   enabled: true
   className: traefik
   certManagerClusterIssuer: letsencrypt
+  middlewares:
+    cors:
+      enabled: true
+    basicAuth:
+      enabled: false
+      secretName: basic-auth
 
 # Komponenter med all konfiguration på ett ställe
 components:
@@ -71,6 +75,8 @@ components:
         enabled: true
         schedule: '0 2 * * *'
         command: ['npm', 'run', 'script:expire-listings']
+        env:
+          NODE_ENV: production
 
   property:
     enabled: true
@@ -252,6 +258,7 @@ components:
       enabled: true
       host: keys-portal.${global.hostname}
 
+  # internalPortal med separata frontend och backend
   internalPortal:
     enabled: false
     frontend:

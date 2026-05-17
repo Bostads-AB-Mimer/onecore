@@ -43,15 +43,20 @@ components:
     ingress:
       enabled: true
       host: api.${global.hostname}
-
-  propertyTree:
-    enabled: true
-    image: ghcr.io/bostads-ab-mimer/onecore-property-tree:latest
-    env:
-      VITE_API_URL: https://api.${global.hostname}
-    ingress:
+    cronJobs:
+      expire-listings:
+        enabled: true
+        schedule: '0 2 * * *'
+        command: ['npm', 'run', 'script:expire-listings']
+    autoscaling:
       enabled: true
-      host: property-tree.${global.hostname}
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+    serviceAccount:
+      create: true
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/onecore-core
 ```
 
 ### Struktur per komponent
@@ -67,6 +72,8 @@ Varje komponent stödjer:
 - `ingress` - Exponera via Traefik
 - `health` - Liveness/readiness probes
 - `cronJobs` - Schemalagda jobb
+- `autoscaling` - Horizontal Pod Autoscaler
+- `serviceAccount` - Kubernetes Service Account
 
 ## Global konfiguration
 
@@ -80,6 +87,12 @@ ingress:
   enabled: true
   className: traefik
   certManagerClusterIssuer: letsencrypt
+  middlewares:
+    cors:
+      enabled: true
+    basicAuth:
+      enabled: false
+      secretName: basic-auth
 ```
 
 ## Komponenter
@@ -102,6 +115,19 @@ ingress:
 - **keysPortal** - Nyckelportal
 - **internalPortal** - Intern portal (frontend/backend)
 
+## Generated Resources
+
+| Resource | Count | Beskrivning |
+|----------|-------|-------------|
+| Deployment | 11 | Alla backend + frontend |
+| Service | 11 | ClusterIP per komponent |
+| ConfigMap | 11 | Env-variabler per komponent |
+| Ingress | 3 | Traefik med SSL |
+| Secret | 5 | Hemliga värden |
+| CronJob | 1 | Schemalagda jobb |
+| Middleware | 1 | CORS etc |
+| **Total** | **43** | |
+
 ## Tips
 
 ```bash
@@ -113,4 +139,7 @@ helm lint ./onecore-chart
 
 # Visa alla values
 helm show values ./onecore-chart
+
+# Rendera endast specifik komponent
+helm template onecore ./onecore-chart --set components.core.enabled=true --set components.propertyTree.enabled=false
 ```
