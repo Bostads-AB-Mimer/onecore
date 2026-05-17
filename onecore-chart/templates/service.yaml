@@ -1,0 +1,28 @@
+{{/*
+Copyright Bostads AB Mimer.
+SPDX-License-Identifier: AGPL-3.0-only
+*/}}
+
+{{- range $name, $config := $.Values.components }}
+{{- if and (kindIs "map" $config) ($config.enabled) }}
+{{- $componentName := include "onecore.componentName" (dict "root" $ "name" $name) }}
+{{- $port := int (include "onecore.envPort" (dict "env" $config.env)) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $componentName }}
+  namespace: {{ $.Values.global.namespace | default $.Release.Namespace }}
+  labels:
+{{ include "onecore.labels" (dict "root" $ "name" $name) | indent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+{{ include "onecore.selectorLabels" (dict "root" $ "name" $name) | indent 4 }}
+  ports:
+    - port: {{ $port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+{{- end }}
+{{- end }}

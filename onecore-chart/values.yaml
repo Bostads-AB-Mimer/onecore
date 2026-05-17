@@ -1,330 +1,286 @@
 # ONECore Helm Chart - Values Configuration
 
 global:
-  # Miljönamn (används i resource names)
   environment: dev
-
-  # Hostname för alla applikationer
   hostname: onecore.example.com
-
-  # Cluster domain för auth
   clusterDomain: dev.mimer.nu
-
-  # Namespace där allt ska installeras
   namespace: onecore
-
-  # Image pull secret för GHCR
+  imagePullSecret: regcred
+  namespace: onecore
   imagePullSecret: regcred
 
-  # Bitnami common library
-  common:
-    enabled: true
+# Ingress-konfiguration (global för Traefik)
+ingress:
+  enabled: true
+  className: traefik
+  certManagerClusterIssuer: letsencrypt
 
-  # Common labels för alla resurser
-  labels:
-    app: onecore
-    environment: dev
-
-# Aktivera/inaktivera komponenter
+# Komponenter med all konfiguration på ett ställe
 components:
-  # Backend services
   core:
     enabled: true
     replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore/onecore-core
-      tag: latest
-      pullPolicy: IfNotPresent
-
-  communication:
-    enabled: true
-    replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore/onecore-communication
-      tag: latest
-      pullPolicy: IfNotPresent
-
-  contacts:
-    enabled: true
-    replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-contacts
-      tag: latest
-      pullPolicy: IfNotPresent
-
-  economy:
-    enabled: true
-    replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-onecore-economy
-      tag: latest
-      pullPolicy: IfNotPresent
-
-  fileStorage:
-    enabled: false
-    replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-file-storage
-      tag: latest
-      pullPolicy: IfNotPresent
-
-  inspection:
-    enabled: false
-    replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-inspection
-      tag: latest
-      pullPolicy: IfNotPresent
-
-  keys:
-    enabled: true
-    replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-keys
-      tag: latest
-      pullPolicy: IfNotPresent
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-core:latest
+    env:
+      APPLICATION_NAME: core
+      PORT: '80'
+      SERVICE_URL__LEASING: http://leasing
+      SERVICE_URL__PROPERTY: http://property
+      SERVICE_URL__COMMUNICATION: http://communication
+      SERVICE_URL__KEYS: http://keys
+      SERVICE_URL__WORK_ORDER: http://work-order
+      SERVICE_URL__ECONOMY: http://economy
+      KEYCLOAK_URL: https://auth.${global.clusterDomain}
+    secrets:
+      - name: db-url
+        envName: DATABASE_URL
+      - name: odoo-api-token
+    resources:
+      limits:
+        memory: 512Mi
+        cpu: 500m
+      requests:
+        memory: 256Mi
+        cpu: 200m
+    health:
+      path: /health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    ingress:
+      enabled: true
+      host: api.${global.hostname}
 
   leasing:
     enabled: true
     replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-leasing
-      tag: latest
-      pullPolicy: IfNotPresent
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-leasing:latest
+    env:
+      APPLICATION_NAME: leasing
+      PORT: '80'
+    secrets:
+      - name: tenfast-api-key
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+    cronJobs:
+      expire-listings:
+        enabled: true
+        schedule: '0 2 * * *'
+        command: ['npm', 'run', 'script:expire-listings']
 
   property:
     enabled: true
     replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-property
-      tag: latest
-      pullPolicy: IfNotPresent
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-property:latest
+    env:
+      APPLICATION_NAME: property
+      PORT: '80'
+    secrets:
+      - name: db-url
+        envName: DATABASE_URL
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+
+  communication:
+    enabled: true
+    replicas: 1
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-communication:latest
+    env:
+      APPLICATION_NAME: communication
+      PORT: '80'
+    secrets:
+      - name: infobip-api-key
+        envName: INFOBIP_API_KEY
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+
+  economy:
+    enabled: true
+    replicas: 1
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-economy:latest
+    env:
+      APPLICATION_NAME: economy
+      PORT: '80'
+    secrets:
+      - name: economy-db-url
+        envName: ECONOMY_DATABASE_URL
+      - name: xledger-api-token
+        envName: XLEDGER_API_TOKEN
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+
+  contacts:
+    enabled: true
+    replicas: 1
+    image: ghcr.io/bostads-ab-mimer/onecore-contacts:latest
+    env:
+      APPLICATION_NAME: contacts
+      PORT: '80'
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+
+  keys:
+    enabled: true
+    replicas: 1
+    image: ghcr.io/bostads-ab-mimer/onecore-keys:latest
+    env:
+      APPLICATION_NAME: keys
+      PORT: '80'
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
 
   propertyManagement:
     enabled: true
     replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-property-management
-      tag: latest
-      pullPolicy: IfNotPresent
+    image: ghcr.io/bostads-ab-mimer/onecore-property-management:latest
+    env:
+      APPLICATION_NAME: property-management
+      PORT: '80'
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
 
   workOrder:
     enabled: true
     replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-work-order
-      tag: latest
-      pullPolicy: IfNotPresent
+    image: ghcr.io/bostads-ab-mimer/onecore-work-order:latest
+    env:
+      APPLICATION_NAME: work-order
+      PORT: '80'
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
 
-  # Frontend applications
+  fileStorage:
+    enabled: false
+    replicas: 1
+    image: ghcr.io/bostads-ab-mimer/onecore-file-storage:latest
+    env:
+      APPLICATION_NAME: file-storage
+      PORT: '80'
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+
+  inspection:
+    enabled: false
+    replicas: 1
+    image: ghcr.io/bostads-ab-mimer/onecore-inspection:latest
+    env:
+      APPLICATION_NAME: inspection
+      PORT: '80'
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+
   propertyTree:
     enabled: true
     replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/property-tree
-      tag: latest
-      pullPolicy: IfNotPresent
+    image: ghcr.io/bostads-ab-mimer/onecore-property-tree:latest
+    env:
+      VITE_API_URL: https://api.${global.hostname}
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+    ingress:
+      enabled: true
+      host: property-tree.${global.hostname}
 
   keysPortal:
     enabled: true
     replicas: 1
-    image:
-      repository: ghcr.io/bostads-ab-mimer/onecore-keys-portal
-      tag: latest
-      pullPolicy: IfNotPresent
+    image: ghcr.io/bostads-ab-mimer/onecore-keys-portal:latest
+    env:
+      VITE_API_URL: https://api.${global.hostname}
+    resources:
+      limits:
+        memory: 256Mi
+        cpu: 200m
+      requests:
+        memory: 128Mi
+        cpu: 100m
+    ingress:
+      enabled: true
+      host: keys-portal.${global.hostname}
 
   internalPortal:
     enabled: false
     frontend:
       enabled: false
       replicas: 1
-      image:
-        repository: ghcr.io/bostads-ab-mimer/onecore/internal-portal-frontend
-        tag: latest
-        pullPolicy: IfNotPresent
+      image: ghcr.io/bostads-ab-mimer/onecore-internal-portal-frontend:latest
+      env:
+        VITE_API_URL: https://api.${global.hostname}
+      resources:
+        limits:
+          memory: 256Mi
+          cpu: 200m
+        requests:
+          memory: 128Mi
+          cpu: 100m
+      ingress:
+        enabled: true
+        host: internal-portal.${global.hostname}
     backend:
       enabled: false
       replicas: 1
-      image:
-        repository: ghcr.io/bostads-ab-mimer/onecore/internal-portal-backend
-        tag: latest
-        pullPolicy: IfNotPresent
-
-# Advanced configuration för varje komponent (Bitnami common features)
-advancedConfigs:
-  core:
-    extraEnv: []
-    extraVolumes: []
-    extraVolumeMounts: []
-    sidecars: []
-    initContainers: []
-    podSecurityContext:
-      fsGroup: 1001
-      runAsNonRoot: true
-    containerSecurityContext:
-      allowPrivilegeEscalation: false
-      readOnlyRootFilesystem: true
-    livenessProbe:
-      httpGet:
-        path: /health
-        port: 80
-      initialDelaySeconds: 30
-      periodSeconds: 10
-    readinessProbe:
-      httpGet:
-        path: /ready
-        port: 80
-      initialDelaySeconds: 10
-      periodSeconds: 5
-    startupProbe:
-      httpGet:
-        path: /ready
-        port: 80
-      failureThreshold: 30
-      periodSeconds: 10
-    affinity: {}
-    tolerations: []
-    nodeSelector: {}
-    serviceAccount:
-      create: false
-      name: ''
-      annotations: {}
-    podLabels: {}
-    podAnnotations: {}
-    extraContainerPorts: []
-
-# Databaser och externt beroenden
-infrastructure:
-  mssql:
-    enabled: true
-    host: mssql
-    port: 1433
-    databasePrefix: ''
-    secrets:
-      username: sa
-      password: ''
-
-  elasticsearch:
-    enabled: true
-    host: elasticsearch.logging.svc.cluster.local
-    port: 9200
-
-  keycloak:
-    enabled: true
-    url: https://auth.dev.mimer.nu
-    realm: onecore
-    clientId: onecore
-
-  minio:
-    enabled: true
-    host: minio
-    port: 9000
-    accessKey: ''
-    secretKey: ''
-
-# Ingress inställningar
-ingress:
-  enabled: true
-  className: traefik
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
-
-  hosts:
-    core: api.$(global.hostname)
-    propertyTree: property-tree.$(global.hostname)
-    keysPortal: keys-portal.$(global.hostname)
-    internalPortal: internal-portal.$(global.hostname)
-
-# Secrets
-secrets:
-  core:
-    auth:
-      jwtSecret: ''
-      keycloakClientSecret: ''
-
-  communication:
-    infobipApiKey: ''
-
-  economy:
-    database:
-      user: ''
-      password: ''
-    xledger:
-      apiToken: ''
-      url: ''
-      sftp:
-        host: ''
-        username: ''
-        password: ''
-
-  leasing:
-    database:
-      url: ''
-    xpand:
-      url: ''
-      apiKey: ''
-
-  property:
-    database:
-      url: ''
-
-# CronJobs
-cronJobs:
-  leasing:
-    expireListings:
-      enabled: true
-      schedule: '0 2 * * *'
-      image:
-        repository: ghcr.io/bostads-ab-mimer/onecore/onecore-leasing
-        tag: latest
-
-# Resources
-resources:
-  defaults:
-    requests:
-      memory: 128Mi
-      cpu: 100m
-    limits:
-      memory: 256Mi
-      cpu: 200m
-
-  core:
-    requests:
-      memory: 256Mi
-      cpu: 200m
-    limits:
-      memory: 512Mi
-      cpu: 500m
-
-# Service configuration
-services:
-  core:
-    type: ClusterIP
-    port: 80
-    targetPort: 80
-    annotations: {}
-
-  propertyTree:
-    type: ClusterIP
-    port: 80
-    targetPort: 80
-    annotations: {}
-
-# Autoscaling
-autoscaling:
-  core:
-    enabled: false
-    minReplicas: 2
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 80
-
-# NetworkPolicy
-networkPolicy:
-  enabled: false
-  policyTypes:
-    - Ingress
-    - Egress
-
-# Extra manifests
-extraManifests: ''
+      image: ghcr.io/bostads-ab-mimer/onecore-internal-portal-backend:latest
+      env:
+        APPLICATION_NAME: internal-portal-backend
+        PORT: '80'
+      resources:
+        limits:
+          memory: 256Mi
+          cpu: 200m
+        requests:
+          memory: 128Mi
+          cpu: 100m
