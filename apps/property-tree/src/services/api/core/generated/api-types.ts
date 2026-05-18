@@ -5471,6 +5471,54 @@ export interface paths {
       };
     };
   };
+  "/apartments/{objectNumber}/temperatures": {
+    /**
+     * Get indoor temperatures for an apartment
+     * @description Fetches indoor temperature time series for an apartment by its object
+     * number, sourced from the EcoGuard "Curves" platform. Each series entry
+     * corresponds to one sub-node (sensor) under the apartment node, with
+     * avg/min/max merged per time bucket. Defaults to the last 24 hours at
+     * hourly intervals.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Unix timestamp (seconds) for range start. Defaults to `to - 86400`. */
+          from?: number;
+          /** @description Unix timestamp (seconds) for range end. Defaults to now. */
+          to?: number;
+          /** @description Aggregation bucket size. Defaults to "H" (hourly). */
+          interval?: "H" | "D";
+        };
+        path: {
+          /** @description Apartment object number (e.g. "806-032-01-0101"). */
+          objectNumber: string;
+        };
+      };
+      responses: {
+        /** @description Temperature series successfully retrieved. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ApartmentTemperaturesResponse"];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description No apartment node found for the given object number. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -10431,6 +10479,41 @@ export interface components {
       ncsCode: string | null;
       additionalInformation: string | null;
       confidence: number;
+    };
+    ApartmentTemperaturePoint: {
+      time: number;
+      avg: number | null;
+      min: number | null;
+      max: number | null;
+    };
+    ApartmentTemperatureSeries: {
+      subNodeId: number;
+      subNodeName: string;
+      points: ({
+          time: number;
+          avg: number | null;
+          min: number | null;
+          max: number | null;
+        })[];
+    };
+    ApartmentTemperaturesResponse: {
+      objectNumber: string;
+      nodeId: number;
+      from: number;
+      to: number;
+      /** @enum {string} */
+      interval: "H" | "D";
+      unit: string;
+      series: ({
+          subNodeId: number;
+          subNodeName: string;
+          points: ({
+              time: number;
+              avg: number | null;
+              min: number | null;
+              max: number | null;
+            })[];
+        })[];
     };
     Key: {
       /** Format: uuid */

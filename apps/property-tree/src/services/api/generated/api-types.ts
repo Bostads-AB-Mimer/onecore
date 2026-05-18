@@ -2152,6 +2152,53 @@ export interface paths {
       };
     };
   };
+  "/apartments/{objectNumber}/temperatures": {
+    /**
+     * Get indoor temperatures for an apartment
+     * @description Fetches indoor temperature time series for an apartment by its
+     * object number, sourced from the EcoGuard "Curves" platform.
+     * Aggregates per-sensor (sub-node) data into avg/min/max points
+     * per time bucket. Defaults to the last 24 hours at hourly intervals.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Unix timestamp (seconds) for range start. Defaults to `to - 86400`. */
+          from?: number;
+          /** @description Unix timestamp (seconds) for range end. Defaults to now. */
+          to?: number;
+          /** @description Aggregation bucket size. Defaults to "H" (hourly). */
+          interval?: "H" | "D";
+        };
+        path: {
+          /** @description Apartment object number (e.g. "806-032-01-0101"). */
+          objectNumber: string;
+        };
+      };
+      responses: {
+        /** @description Temperature series successfully retrieved. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ApartmentTemperaturesResponse"];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description No apartment node found for the given object number. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
@@ -3696,6 +3743,40 @@ export interface components {
       ncsCode: string | null;
       additionalInformation: string | null;
       confidence: number;
+    };
+    ApartmentTemperaturePoint: {
+      /** @description Unix timestamp (seconds) at the start of the aggregation bucket. */
+      time?: number;
+      /** @description Average temperature for the bucket. */
+      avg?: number | null;
+      /** @description Minimum temperature for the bucket. */
+      min?: number | null;
+      /** @description Maximum temperature for the bucket. */
+      max?: number | null;
+    };
+    ApartmentTemperatureSeries: {
+      /** @description EcoGuard sub-node id (one per physical sensor under the apartment node). */
+      subNodeId?: number;
+      /** @description EcoGuard sub-node name. */
+      subNodeName?: string;
+      points?: components["schemas"]["ApartmentTemperaturePoint"][];
+    };
+    ApartmentTemperaturesResponse: {
+      objectNumber?: string;
+      /** @description EcoGuard apartment node id. */
+      nodeId?: number;
+      /** @description Unix timestamp (seconds) — inclusive start of the requested range. */
+      from?: number;
+      /** @description Unix timestamp (seconds) — inclusive end of the requested range. */
+      to?: number;
+      /**
+       * @description Aggregation bucket size (hourly or daily).
+       * @enum {string}
+       */
+      interval?: "H" | "D";
+      /** @description Temperature unit reported by EcoGuard (e.g. "cel"). */
+      unit?: string;
+      series?: components["schemas"]["ApartmentTemperatureSeries"][];
     };
   };
   responses: never;
