@@ -12,6 +12,7 @@ describe('leasing-adapter.getUpdatedLeases', () => {
         leaseId: '101-002-03-0201/07',
         contactCode: 'P174965',
         rentalObjectId: '101-002-03-0201',
+        action: 'create',
       },
     ]
 
@@ -31,6 +32,7 @@ describe('leasing-adapter.getUpdatedLeases', () => {
         leaseId: '101-002-03-0201/07',
         contactCode: 'P174965',
         rentalObjectId: '101-002-03-0201',
+        action: 'create',
       },
     ]
 
@@ -81,13 +83,30 @@ describe('leasing-adapter.syncLease', () => {
     const contact = factory.contact.build()
     const leaseId = '101-002-03-0201/07'
     // Normalize contact so nock body-match sees the same JSON axios will send
-    const serialized = JSON.parse(JSON.stringify({ leaseId, contact }))
+    const serialized = JSON.parse(JSON.stringify({ leaseId, contact, action: 'create' }))
 
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', serialized)
       .reply(200, { content: { action: 'created', leaseId } })
 
-    const result = await leasingAdapter.syncLease(leaseId, contact)
+    const result = await leasingAdapter.syncLease(leaseId, contact, 'create')
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'created', leaseId },
+    })
+  })
+
+  it('returns { ok: true, data: { action, leaseId } } on 201 response', async () => {
+    const contact = factory.contact.build()
+    const leaseId = '101-002-03-0201/07'
+    const serialized = JSON.parse(JSON.stringify({ leaseId, contact, action: 'create' }))
+
+    nock(config.tenantsLeasesService.url)
+      .post('/leases/sync', serialized)
+      .reply(201, { content: { action: 'created', leaseId } })
+
+    const result = await leasingAdapter.syncLease(leaseId, contact, 'create')
 
     expect(result).toEqual({
       ok: true,
@@ -98,13 +117,13 @@ describe('leasing-adapter.syncLease', () => {
   it('returns { ok: false, err: "sync-failed" } on non-200 response', async () => {
     const contact = factory.contact.build()
     const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(JSON.stringify({ leaseId, contact }))
+    const serialized = JSON.parse(JSON.stringify({ leaseId, contact, action: 'terminate' }))
 
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', serialized)
       .reply(400, { error: 'Bad request' })
 
-    const result = await leasingAdapter.syncLease(leaseId, contact)
+    const result = await leasingAdapter.syncLease(leaseId, contact, 'terminate')
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
@@ -115,17 +134,35 @@ describe('leasing-adapter.syncLease', () => {
   it('returns { ok: false, err: "unknown" } on network error', async () => {
     const contact = factory.contact.build()
     const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(JSON.stringify({ leaseId, contact }))
+    const serialized = JSON.parse(JSON.stringify({ leaseId, contact, action: 'terminate' }))
 
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', serialized)
       .replyWithError('Connection refused')
 
-    const result = await leasingAdapter.syncLease(leaseId, contact)
+    const result = await leasingAdapter.syncLease(leaseId, contact, 'terminate')
 
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.err).toBe('unknown')
     }
+  })
+
+  it('serializes body without contact when contact is undefined', async () => {
+    const leaseId = '101-002-03-0201/07'
+    const serialized = JSON.parse(
+      JSON.stringify({ leaseId, action: 'terminate' })
+    )
+
+    nock(config.tenantsLeasesService.url)
+      .post('/leases/sync', serialized)
+      .reply(200, { content: { action: 'terminated', leaseId } })
+
+    const result = await leasingAdapter.syncLease(leaseId, undefined, 'terminate')
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'terminated', leaseId },
+    })
   })
 })

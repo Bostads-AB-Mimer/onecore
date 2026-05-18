@@ -71,6 +71,7 @@ const syncLeases = async () => {
       )
       continue
     }
+    // logger.info(propertyInfo.data)
 
     if (!isResidenceOrStorage(propertyInfo.data)) {
       logger.info(
@@ -83,25 +84,25 @@ const syncLeases = async () => {
       continue
     }
 
-    // Step 2: Get full contact from contacts service
-    const contactResult = await contactsAdapter.getByContactCode(
-      lease.contactCode
-    )
-
-    if (!contactResult.ok) {
-      throw new Error(
-        `Failed to get contact ${lease.contactCode} for lease ${lease.leaseId}: ${contactResult.err}`
+    // Step 2: Get full contact from contacts service (only needed for create)
+    let contact: Contact | undefined = undefined
+    if (lease.action === 'create') {
+      const contactResult = await contactsAdapter.getByContactCode(
+        lease.contactCode
       )
+
+      if (!contactResult.ok) {
+        throw new Error(
+          `Failed to get contact ${lease.contactCode} for lease ${lease.leaseId}: ${contactResult.err}`
+        )
+      }
+
+      contact = contactResult.data as unknown as Contact
     }
 
-    // Step 3: Sync lease + contact to Tenfast via leasing service
-    // Cast contact to @onecore/types Contact — the data is sent as JSON over
-    // HTTP so the structural difference between the two Contact types is
-    // irrelevant at runtime.
-    const syncResult = await syncLease(
-      lease.leaseId,
-      contactResult.data as unknown as Contact
-    )
+    // Step 3: Sync lease to Tenfast via leasing service
+    logger.info({ leaseId: lease.leaseId, action: lease.action }, 'syncing lease')
+    const syncResult = await syncLease(lease.leaseId, contact, lease.action)
 
     if (!syncResult.ok) {
       throw new Error(

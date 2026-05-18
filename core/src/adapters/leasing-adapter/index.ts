@@ -774,6 +774,7 @@ interface LeaseChange {
   leaseId: string
   contactCode: string
   rentalObjectId: string
+  action: 'create' | 'terminate' | 'void'
 }
 
 const getUpdatedLeases = async (
@@ -799,15 +800,24 @@ const getUpdatedLeases = async (
 
 const syncLease = async (
   leaseId: string,
-  contact: Contact
-): Promise<AdapterResult<{ action: string; leaseId: string }, 'sync-failed' | 'unknown'>> => {
+  contact: Contact | undefined,
+  action: 'create' | 'terminate' | 'void'
+): Promise<
+  AdapterResult<
+    {
+      action: 'created' | 'terminated' | 'voided' | 'skipped'
+      leaseId: string
+    },
+    'sync-failed' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/leases/sync`,
-      { leaseId, contact }
+      { leaseId, contact, action }
     )
 
-    if (response.status === 200) {
+    if (response.status === 200 || response.status === 201) {
       return { ok: true, data: response.data.content }
     }
 
