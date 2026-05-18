@@ -191,27 +191,6 @@ export const getBuildingManagers = async (): Promise<
   return response.data.content
 }
 
-export const searchLeases = async (
-  queryParams: Record<string, string | string[] | undefined>
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const params = new URLSearchParams()
-
-  Object.entries(queryParams).forEach(([key, value]) => {
-    if (value === undefined) return
-    if (Array.isArray(value)) {
-      value.forEach((v) => params.append(key, v))
-    } else {
-      params.append(key, value)
-    }
-  })
-
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/search?${params.toString()}`
-  )
-
-  return response.data
-}
-
 export const searchLeasesV2 = async (
   queryParams: leasing.v1.LeaseSearchQueryParamsInput
 ): Promise<PaginatedResponse<Lease>> => {

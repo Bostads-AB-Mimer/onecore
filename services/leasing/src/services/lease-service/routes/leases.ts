@@ -7,7 +7,7 @@ import {
   logger,
   generateRouteMetadata,
   setExcelDownloadHeaders,
-  createExcelFromPaginated,
+  createExcelExport,
   joinField,
   formatDateForExcel,
   makeSuccessResponseBody,
@@ -38,199 +38,7 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
  */
 
 export const routes = (router: KoaRouter) => {
-  /**
-   * @swagger
-   * /leases/search:
-   *   get:
-   *     summary: Search and filter leases
-   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
-   *     tags: [Leases]
-   *     parameters:
-   *       - in: query
-   *         name: q
-   *         schema:
-   *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
-   *       - in: query
-   *         name: objectType
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Object type codes (balgh, babps, balok)
-   *       - in: query
-   *         name: status
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *             enum: [current, upcoming, aboutToEnd, ended, "0", "1", "2", "3"]
-   *         description: "Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)"
-   *       - in: query
-   *         name: startDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: startDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum last debit date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum last debit date (YYYY-MM-DD)
-   *       - in: query
-   *         name: property
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Property/estate names
-   *       - in: query
-   *         name: buildingCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building codes
-   *       - in: query
-   *         name: areaCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Area codes (Område)
-   *       - in: query
-   *         name: districtNames
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: District names
-   *       - in: query
-   *         name: buildingManager
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building manager names (Kvartersvärd)
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *         description: Page number
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           default: 20
-   *           maximum: 100
-   *         description: Items per page
-   *       - in: query
-   *         name: includeEnded
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Include Upphört (ended) contracts. Excluded by default for performance.
-   *       - in: query
-   *         name: sortBy
-   *         schema:
-   *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
-   *         description: Sort field
-   *       - in: query
-   *         name: sortOrder
-   *         schema:
-   *           type: string
-   *           enum: [asc, desc]
-   *           default: desc
-   *         description: Sort direction
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved lease search results with pagination
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       leaseId:
-   *                         type: string
-   *                       objectTypeCode:
-   *                         type: string
-   *                       leaseType:
-   *                         type: string
-   *                         enum: ['Bostadskontrakt', 'Campuskontrakt', 'Förrådskontrakt', 'Garagekontrakt', 'Kooperativ hyresrätt', 'Lokalkontrakt', 'Omförhandlingskontrakt', 'Övrigt', 'P-Platskontrakt']
-   *                       contacts:
-   *                         type: array
-   *                         items:
-   *                           type: object
-   *                           properties:
-   *                             name:
-   *                               type: string
-   *                             contactCode:
-   *                               type: string
-   *                             email:
-   *                               type: string
-   *                               nullable: true
-   *                             phone:
-   *                               type: string
-   *                               nullable: true
-   *                       rentalObjectCode:
-   *                         type: string
-   *                         nullable: true
-   *                       address:
-   *                         type: string
-   *                         nullable: true
-   *                       startDate:
-   *                         type: string
-   *                         format: date
-   *                         nullable: true
-   *                       lastDebitDate:
-   *                         type: string
-   *                         format: date
-   *                         nullable: true
-   *                       status:
-   *                         type: integer
-   *                         enum: [0, 1, 2, 3]
-   *                         description: "LeaseStatus: 0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended"
-   *                 _meta:
-   *                   type: object
-   *                   properties:
-   *                     totalRecords:
-   *                       type: integer
-   *                     page:
-   *                       type: integer
-   *                     limit:
-   *                       type: integer
-   *                     count:
-   *                       type: integer
-   *                 _links:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *       400:
-   *         description: Invalid query parameters
-   *       500:
-   *         description: Internal server error
-   */
-  // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
+  // TODO: Move to new microservice governing organization. For now here just to make it available for the filter in /leases
   router.get('/leases/building-managers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -251,33 +59,6 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  /**
-   * @swagger
-   * /leases/parking-space-types:
-   *   get:
-   *     summary: Get all parking space types
-   *     tags: [Leases]
-   *     description: Returns a list of all parking space types (P-platstyper) from the babpt table.
-   *     responses:
-   *       '200':
-   *         description: List of parking space types
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       code:
-   *                         type: string
-   *                       caption:
-   *                         type: string
-   *       '500':
-   *         description: Internal server error
-   */
   router.get('(.*)/leases/parking-space-types', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -294,66 +75,6 @@ export const routes = (router: KoaRouter) => {
             ? error.message
             : 'Unknown error occurred fetching parking space types',
         ...metadata,
-      }
-    }
-  })
-
-  router.get('(.*)/leases/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'q',
-      'objectType',
-      'status',
-      'leaseType',
-      'startDateFrom',
-      'startDateTo',
-      'endDateFrom',
-      'endDateTo',
-      'property',
-      'buildingCodes',
-      'areaCodes',
-      'districtNames',
-      'buildingManager',
-      'parkingSpaceType',
-      'page',
-      'limit',
-      'sortBy',
-      'sortOrder',
-    ])
-
-    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
-      ctx.query
-    )
-
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Invalid query parameters',
-        details: queryParams.error.issues,
-        ...metadata,
-      }
-      return
-    }
-
-    try {
-      const result = await searchLeases(queryParams.data, ctx)
-
-      ctx.status = 200
-      ctx.body = result
-    } catch (error: unknown) {
-      ctx.status = 500
-
-      if (error instanceof Error) {
-        logger.error({ error, metadata }, 'Unknown error during lease search')
-        ctx.body = {
-          error: error.message,
-          ...metadata,
-        }
-      } else {
-        logger.error({ error, metadata }, 'Unknown error during lease search')
-        ctx.body = {
-          error: 'Unknown error occurred during lease search',
-          ...metadata,
-        }
       }
     }
   })
@@ -473,52 +194,50 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      // Create Excel using streaming - fetches pages incrementally
-      const buffer =
-        await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
-          async (page: number, limit: number) => {
-            return await tenfastLeaseSearchAdapter.searchLeases(
-              { ...queryParams.data, page, limit },
-              ctx
-            )
-          },
-          {
-            sheetName: 'Hyreskontrakt',
-            columns: [
-              { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-              { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
-              { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-              { header: 'Kundnummer', key: 'contactCode', width: 18 },
-              { header: 'E-post', key: 'email', width: 30 },
-              { header: 'Telefon', key: 'phone', width: 15 },
-              { header: 'Objekttyp', key: 'objectType', width: 12 },
-              { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-              { header: 'Adress', key: 'address', width: 35 },
-              { header: 'Fastighet', key: 'property', width: 20 },
-              { header: 'Distrikt', key: 'district', width: 15 },
-              { header: 'Startdatum', key: 'startDate', width: 12 },
-              { header: 'Slutdatum', key: 'endDate', width: 12 },
-              { header: 'Status', key: 'status', width: 15 },
-            ],
-            rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
-              leaseId: lease.leaseId,
-              rentalObjectCode: lease.rentalObjectCode || '',
-              tenantName: joinField(lease.contacts, (c) => c.name),
-              contactCode: joinField(lease.contacts, (c) => c.contactCode),
-              email: joinField(lease.contacts, (c) => c.email),
-              phone: joinField(lease.contacts, (c) => c.phone),
-              objectType: lease.parkingSpaceType || lease.objectTypeCode,
-              leaseType: lease.leaseType,
-              address: lease.address || '',
-              property: lease.property || '',
-              district: lease.districtName || '',
-              startDate: formatDateForExcel(lease.startDate),
-              endDate: formatDateForExcel(lease.lastDebitDate),
-              status: LeaseStatusLabel[lease.status] ?? String(lease.status),
-            }),
-            batchSize: 500,
-          }
+      // Fetch all matching leases using cursor-based pagination (O(n) API calls)
+      const allLeases =
+        await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+          queryParams.data,
+          ctx
         )
+
+      // Create Excel from the complete dataset
+      const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
+        sheetName: 'Hyreskontrakt',
+        columns: [
+          { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+          { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
+          { header: 'Hyresgäst', key: 'tenantName', width: 30 },
+          { header: 'Kundnummer', key: 'contactCode', width: 18 },
+          { header: 'E-post', key: 'email', width: 30 },
+          { header: 'Telefon', key: 'phone', width: 15 },
+          { header: 'Objekttyp', key: 'objectType', width: 12 },
+          { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
+          { header: 'Adress', key: 'address', width: 35 },
+          { header: 'Fastighet', key: 'property', width: 20 },
+          { header: 'Distrikt', key: 'district', width: 15 },
+          { header: 'Startdatum', key: 'startDate', width: 12 },
+          { header: 'Slutdatum', key: 'endDate', width: 12 },
+          { header: 'Status', key: 'status', width: 15 },
+        ],
+        data: allLeases,
+        rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
+          leaseId: lease.leaseId,
+          rentalObjectCode: lease.rentalObjectCode || '',
+          tenantName: joinField(lease.contacts, (c) => c.name),
+          contactCode: joinField(lease.contacts, (c) => c.contactCode),
+          email: joinField(lease.contacts, (c) => c.email),
+          phone: joinField(lease.contacts, (c) => c.phone),
+          objectType: lease.parkingSpaceType || lease.objectTypeCode,
+          leaseType: lease.leaseType,
+          address: lease.address || '',
+          property: lease.property || '',
+          district: lease.districtName || '',
+          startDate: formatDateForExcel(lease.startDate),
+          endDate: formatDateForExcel(lease.lastDebitDate),
+          status: LeaseStatusLabel[lease.status] ?? String(lease.status),
+        }),
+      })
 
       // 3. Set headers and return
       setExcelDownloadHeaders(ctx, 'hyreskontrakt')

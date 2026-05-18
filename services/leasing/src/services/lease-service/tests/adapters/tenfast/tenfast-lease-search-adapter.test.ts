@@ -91,13 +91,24 @@ describe('tenfast-lease-search-adapter', () => {
       ])
     })
 
-    it('should detect personnummer with dash (≥6 digits)', () => {
+    it('should detect personnummer with dash (YYMMDD-XXXX)', () => {
       const result =
         tenfastLeaseSearchAdapter.analyzeSearchTermForApi('850101-1234')
       expect(result).toEqual([
         {
           filterKey: 'filter[hyresgaster][idbeteckning]',
           filterValue: '850101-1234',
+        },
+      ])
+    })
+
+    it('should detect personnummer with dash (YYYYMMDD-XXXX)', () => {
+      const result =
+        tenfastLeaseSearchAdapter.analyzeSearchTermForApi('19850101-1234')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[hyresgaster][idbeteckning]',
+          filterValue: '19850101-1234',
         },
       ])
     })
@@ -113,12 +124,32 @@ describe('tenfast-lease-search-adapter', () => {
       ])
     })
 
-    it('should detect short digit strings as idbeteckning', () => {
+    it('should detect 4+ digit strings as personnummer', () => {
       const result = tenfastLeaseSearchAdapter.analyzeSearchTermForApi('0022')
       expect(result).toEqual([
         {
           filterKey: 'filter[hyresgaster][idbeteckning]',
           filterValue: '0022',
+        },
+      ])
+    })
+
+    it('should detect 1-3 digit strings as contract number prefix', () => {
+      const result = tenfastLeaseSearchAdapter.analyzeSearchTermForApi('922')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[externalId]',
+          filterValue: '922',
+        },
+      ])
+    })
+
+    it('should detect dash-separated digits as contract number prefix', () => {
+      const result = tenfastLeaseSearchAdapter.analyzeSearchTermForApi('924-7')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[externalId]',
+          filterValue: '924-7',
         },
       ])
     })
