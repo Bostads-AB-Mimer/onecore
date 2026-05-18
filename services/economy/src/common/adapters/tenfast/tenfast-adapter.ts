@@ -230,6 +230,10 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
   }
 }
 
+const OcrLookupResponseSchema = z.object({
+  records: z.array(z.object({ _id: z.string() }).passthrough()),
+})
+
 export const recordPaymentForInvoice = async (params: {
   ocr: string
   amount: number
@@ -245,18 +249,9 @@ export const recordPaymentForInvoice = async (params: {
       },
     })
 
-    logger.info(
-      { ocr: params.ocr, status: lookupResult.status, data: lookupResult.data },
-      'tenfast-adapter.recordPaymentForInvoice: OCR lookup result'
-    )
-
     if (lookupResult.status !== 200) {
       return { ok: false, err: 'unknown' }
     }
-
-    const OcrLookupResponseSchema = z.object({
-      records: z.array(z.object({ _id: z.string() }).passthrough()),
-    })
 
     const parsed = OcrLookupResponseSchema.safeParse(lookupResult.data)
     if (!parsed.success) {
