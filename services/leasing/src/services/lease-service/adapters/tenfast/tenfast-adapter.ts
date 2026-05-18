@@ -114,7 +114,10 @@ export const createLease = async (
   const rentalObjectResponse = await getRentalObject(rentalObjectCode)
   if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
     return { ok: false, err: 'could-not-find-rental-object' }
-  if (rentalObjectResponse.data.hyror.length === 0)
+  if (
+    !rentalObjectResponse.data.hyror ||
+    rentalObjectResponse.data.hyror.length === 0
+  )
     return { ok: false, err: 'rent-article-is-missing' }
   if (!rentalObjectResponse.data.contractTemplate)
     return { ok: false, err: 'rental-object-has-no-template' }
@@ -813,7 +816,7 @@ function buildLeaseRequestData(
     hyresgaster: [tenant?._id],
     hyresobjekt: [rentalObject._id],
     avtalsbyggare: true,
-    hyror: rentalObject.hyror.map((hyra) => {
+    hyror: (rentalObject.hyror ?? []).map((hyra) => {
       hyra.vat = vat //set vat according to includeVAT for all rent articles
       return hyra
     }),

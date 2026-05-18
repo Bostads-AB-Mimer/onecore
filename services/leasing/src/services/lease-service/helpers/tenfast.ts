@@ -80,9 +80,9 @@ const mapToOnecoreRentalObject = (
         name: rentalObject.category.label,
       },
       rent: {
-        amount: rentalObject.hyraExcludingVat,
-        vat: rentalObject.hyraVat,
-        rows: rentalObject.hyror.map((row) => ({
+        amount: rentalObject.hyraExcludingVat ?? 0,
+        vat: rentalObject.hyraVat ?? 0,
+        rows: (rentalObject.hyror ?? []).map((row) => ({
           code: row.article ?? '',
           description: row.label ?? '',
           amount: row.amount,

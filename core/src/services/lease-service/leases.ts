@@ -828,6 +828,11 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Excel file download
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
    *       500:
    *         description: Internal server error
    *     security:

@@ -1,5 +1,3 @@
-import { resolve } from '@/shared/lib/env'
-
 import { GET } from './baseApi'
 import type { components } from './generated/api-types'
 
@@ -132,37 +130,16 @@ async function getContactsByFilters(
 async function exportLeasesToExcel(
   params: LeaseSearchQueryParams
 ): Promise<Blob> {
-  const baseUrl = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
-  const queryParams = new URLSearchParams()
-
-  if (params.q) queryParams.set('q', params.q)
-  if (params.sortBy) queryParams.set('sortBy', params.sortBy)
-  if (params.sortOrder) queryParams.set('sortOrder', params.sortOrder)
-  if (params.startDateFrom)
-    queryParams.set('startDateFrom', params.startDateFrom)
-  if (params.startDateTo) queryParams.set('startDateTo', params.startDateTo)
-  if (params.endDateFrom) queryParams.set('endDateFrom', params.endDateFrom)
-  if (params.endDateTo) queryParams.set('endDateTo', params.endDateTo)
-  for (const v of params.objectType ?? []) queryParams.append('objectType', v)
-  for (const v of params.status ?? []) queryParams.append('status', v)
-  for (const v of params.property ?? []) queryParams.append('property', v)
-  for (const v of params.buildingCodes ?? [])
-    queryParams.append('buildingCodes', v)
-  for (const v of params.areaCodes ?? []) queryParams.append('areaCodes', v)
-  for (const v of params.districtNames ?? [])
-    queryParams.append('districtNames', v)
-  for (const v of params.buildingManager ?? [])
-    queryParams.append('buildingManager', v)
-
-  const response = await fetch(`${baseUrl}/leases/export?${queryParams}`, {
-    credentials: 'include',
+  const { data, error } = await GET('/leases/export', {
+    params: {
+      query: params as Record<string, unknown>,
+    },
+    parseAs: 'blob',
   })
 
-  if (!response.ok) {
-    throw new Error(`Export failed: ${response.status}`)
-  }
+  if (error) throw error
 
-  return response.blob()
+  return data as unknown as Blob
 }
 
 export const leaseSearchService = {

@@ -573,11 +573,6 @@ export async function fetchAllLeasesForExport(
     .replace(/%2C/gi, ',')
   const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${queryString}`
 
-  logger.info(
-    { params, queryString, baseUrl },
-    'fetchAllLeasesForExport: starting export via search API'
-  )
-
   let cursor = ''
   const allLeases: TenfastLease[] = []
   const MAX_PAGES = 50 // safety limit: 50 * 500 = 25,000 max
@@ -709,10 +704,7 @@ async function fetchAllLeasesForExportViaBatchGet(
         seenLeaseIds.add(leaseId)
 
         const od = raw.originalData as Record<string, unknown> | undefined
-        const tenants = (od?.hyresgaster ?? []) as Array<
-          Record<string, unknown>
-        >
-        const rentalObjectsData = (od?.hyresobjekt ?? []) as Array<
+        const tenants = (od?.hyresgaster ?? raw.hyresgaster ?? []) as Array<
           Record<string, unknown>
         >
 
@@ -752,21 +744,23 @@ async function fetchAllLeasesForExportViaBatchGet(
             name: t.name as { first: string; last: string } | undefined,
             idbeteckning: (t.idbeteckning as string) ?? '',
           })),
-          rentalObjects: rentalObjectsData.map((o) => ({
-            externalId: (o.externalId as string) ?? '',
-            typ: (o.typ as string) ?? undefined,
-            postadress: (o.postadress as string) ?? undefined,
-            stadsdel: (o.stadsdel as string) ?? undefined,
-            fastighet:
-              typeof o.fastighet === 'object' && o.fastighet
-                ? {
-                    fastighetsbeteckning:
-                      (o.fastighet as any).fastighetsbeteckning ?? '',
-                    stadsdel: (o.fastighet as any).stadsdel,
-                  }
-                : undefined,
-            kvm: (o.kvm as number) ?? undefined,
-          })),
+          rentalObjects: [
+            {
+              externalId: (ro.externalId as string) ?? '',
+              typ: (ro.typ as string) ?? undefined,
+              postadress: (ro.postadress as string) ?? undefined,
+              stadsdel: (ro.stadsdel as string) ?? undefined,
+              fastighet:
+                typeof ro.fastighet === 'object' && ro.fastighet
+                  ? {
+                      fastighetsbeteckning:
+                        (ro.fastighet as any).fastighetsbeteckning ?? '',
+                      stadsdel: (ro.fastighet as any).stadsdel,
+                    }
+                  : undefined,
+              kvm: (ro.kvm as number) ?? undefined,
+            },
+          ],
         })
       }
     }
@@ -1051,10 +1045,7 @@ export const searchLeases = async (
           seenLeaseIds.add(leaseId)
 
           const od = raw.originalData as Record<string, unknown> | undefined
-          const tenants = (od?.hyresgaster ?? []) as Array<
-            Record<string, unknown>
-          >
-          const rentalObjectsData = (od?.hyresobjekt ?? []) as Array<
+          const tenants = (od?.hyresgaster ?? raw.hyresgaster ?? []) as Array<
             Record<string, unknown>
           >
 
@@ -1096,21 +1087,23 @@ export const searchLeases = async (
               name: t.name as { first: string; last: string } | undefined,
               idbeteckning: (t.idbeteckning as string) ?? '',
             })),
-            rentalObjects: rentalObjectsData.map((o) => ({
-              externalId: (o.externalId as string) ?? '',
-              typ: (o.typ as string) ?? undefined,
-              postadress: (o.postadress as string) ?? undefined,
-              stadsdel: (o.stadsdel as string) ?? undefined,
-              fastighet:
-                typeof o.fastighet === 'object' && o.fastighet
-                  ? {
-                      fastighetsbeteckning:
-                        (o.fastighet as any).fastighetsbeteckning ?? '',
-                      stadsdel: (o.fastighet as any).stadsdel,
-                    }
-                  : undefined,
-              kvm: (o.kvm as number) ?? undefined,
-            })),
+            rentalObjects: [
+              {
+                externalId: (ro.externalId as string) ?? '',
+                typ: (ro.typ as string) ?? undefined,
+                postadress: (ro.postadress as string) ?? undefined,
+                stadsdel: (ro.stadsdel as string) ?? undefined,
+                fastighet:
+                  typeof ro.fastighet === 'object' && ro.fastighet
+                    ? {
+                        fastighetsbeteckning:
+                          (ro.fastighet as any).fastighetsbeteckning ?? '',
+                        stadsdel: (ro.fastighet as any).stadsdel,
+                      }
+                    : undefined,
+                kvm: (ro.kvm as number) ?? undefined,
+              },
+            ],
           })
         }
       }

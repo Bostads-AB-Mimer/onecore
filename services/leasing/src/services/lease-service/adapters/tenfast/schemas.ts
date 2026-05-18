@@ -48,10 +48,10 @@ export const TenfastTenantSchema = z.object({
 export const TenfastRentalObjectSchema = z.object({
   _id: z.string(),
   externalId: z.string(),
-  hyra: z.number(), //total hyra inklusive moms
-  hyraVat: z.number(), // total moms pa hyran
-  hyraExcludingVat: z.number(), // hyran exklusive moms
-  hyror: z.array(TenfastInvoiceRowSchema),
+  hyra: z.number().optional(), //total hyra inklusive moms
+  hyraVat: z.number().optional(), // total moms pa hyran
+  hyraExcludingVat: z.number().optional(), // hyran exklusive moms
+  hyror: z.array(TenfastInvoiceRowSchema).optional(),
   contractTemplate: z.string().optional().nullable(),
   postadress: z.string().nullish(),
   stadsdel: z.string().nullish(),
