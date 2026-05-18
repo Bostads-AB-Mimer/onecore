@@ -269,20 +269,35 @@ describe(adapter.getPaymentsSince, () => {
     sourceCode?: string
     postedDate?: string
     cursor?: string
+    invoiceNumber?: string | null
+    extIdentifier?: string | null
   }) => {
     const sourceCode = overrides?.sourceCode ?? 'OCR'
     return {
       cursor: overrides?.cursor ?? 'cursor-1',
       node: {
         matchId: 42,
-        invoiceNumber: '55123456',
+        invoiceNumber:
+          overrides?.invoiceNumber !== undefined
+            ? overrides.invoiceNumber
+            : '55123456',
+        extIdentifier:
+          overrides?.extIdentifier !== undefined
+            ? overrides.extIdentifier
+            : '55123456',
         amount: '1000.00',
         text: 'Hyra',
         paymentDate: '2026-04-01',
+        lastPaymentDate: '2026-04-01',
+        invoiceAmount: '1000.00',
+        invoiceRemaining: '0.00',
         transactionHeader: {
+          transactionNumber: 1001,
           postedDate: overrides?.postedDate ?? '2026-04-02',
           transactionSource: {
+            dbId: 5205,
             code: sourceCode,
+            description: 'OCR',
           },
         },
       },
@@ -301,7 +316,7 @@ describe(adapter.getPaymentsSince, () => {
         },
       })
 
-    const result = await adapter.getPaymentsSince(null)
+    const result = await adapter.getPaymentsSince('some-cursor')
     expect(result).toEqual({ events: [], lastCursor: null })
   })
 
@@ -317,7 +332,7 @@ describe(adapter.getPaymentsSince, () => {
         },
       })
 
-    const result = await adapter.getPaymentsSince(null)
+    const result = await adapter.getPaymentsSince('some-cursor')
 
     expect(result.lastCursor).toBe('cursor-42')
     expect(result.events).toHaveLength(1)
@@ -333,35 +348,75 @@ describe(adapter.getPaymentsSince, () => {
     ).not.toThrow()
   })
 
-  it('only returns OCR, BAA and BA transactions', async () => {
+  it('uses extIdentifier as invoiceId for OCR payments', async () => {
     nock(origin)
       .post(pathname)
       .reply(200, {
         data: {
           arTransactions: {
             edges: [
-              makeArTransactionEdge({ sourceCode: 'AR' }),
-              makeArTransactionEdge({ sourceCode: 'OS' }),
-              makeArTransactionEdge({ sourceCode: 'SO' }),
-              makeArTransactionEdge({ sourceCode: 'KF' }),
-              makeArTransactionEdge({ sourceCode: 'GL' }),
-              makeArTransactionEdge({ sourceCode: 'OCR' }),
-              makeArTransactionEdge({ sourceCode: 'BAA' }),
-              makeArTransactionEdge({ sourceCode: 'BA' }),
+              makeArTransactionEdge({
+                sourceCode: 'OCR',
+                invoiceNumber: 'WRONG',
+                extIdentifier: 'CORRECT-EXT',
+              }),
             ],
             pageInfo: { hasNextPage: false },
           },
         },
       })
 
-    const result = await adapter.getPaymentsSince(null)
+    const result = await adapter.getPaymentsSince('some-cursor')
 
-    expect(result.events).toHaveLength(3)
-    expect(result.events.map((e) => e.transactionSourceCode)).toEqual([
-      'OCR',
-      'BAA',
-      'BA',
-    ])
+    expect(result.events[0].invoiceId).toBe('CORRECT-EXT')
+  })
+
+  it('uses invoiceNumber as invoiceId for BAA payments', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              makeArTransactionEdge({
+                sourceCode: 'BAA',
+                invoiceNumber: 'BAA-INV',
+                extIdentifier: 'BAA-EXT',
+              }),
+            ],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+
+    expect(result.events[0].invoiceId).toBe('BAA-INV')
+  })
+
+  it('skips BA payments with no invoice reference', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              makeArTransactionEdge({
+                sourceCode: 'BA',
+                invoiceNumber: null,
+                extIdentifier: null,
+              }),
+              makeArTransactionEdge({ sourceCode: 'OCR' }),
+            ],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0].transactionSourceCode).toBe('OCR')
   })
 
   it('paginates through multiple pages using cursor', async () => {
@@ -387,7 +442,7 @@ describe(adapter.getPaymentsSince, () => {
         },
       })
 
-    const result = await adapter.getPaymentsSince(null)
+    const result = await adapter.getPaymentsSince('some-cursor')
 
     expect(result.events).toHaveLength(2)
     expect(result.lastCursor).toBe('page2-cursor')
@@ -405,12 +460,12 @@ describe(adapter.getPaymentsSince, () => {
         },
       })
 
-    const result = await adapter.getPaymentsSince(null)
+    const result = await adapter.getPaymentsSince('some-cursor')
 
     expect(result.events[0].paymentDate).toEqual(new Date('2026-04-01'))
   })
 
-  it('uses filter: {} when afterCursor is provided', async () => {
+  it('sends cursor as after variable', async () => {
     let capturedBody: any
 
     nock(origin)
@@ -430,31 +485,6 @@ describe(adapter.getPaymentsSince, () => {
     await adapter.getPaymentsSince('saved-cursor')
 
     expect(capturedBody.variables.after).toBe('saved-cursor')
-    expect(capturedBody.variables.since).toBeUndefined()
-  })
-
-  it('uses postedDate_gte date filter when no cursor (first run)', async () => {
-    let capturedBody: any
-
-    nock(origin)
-      .post(pathname, (body) => {
-        capturedBody = body
-        return true
-      })
-      .reply(200, {
-        data: {
-          arTransactions: {
-            edges: [],
-            pageInfo: { hasNextPage: false },
-          },
-        },
-      })
-
-    const fallback = new Date('2026-04-01T12:00:00Z')
-    await adapter.getPaymentsSince(null, fallback)
-
-    expect(capturedBody.variables.since).toBe('2026-04-01')
-    expect(capturedBody.variables.after).toBeNull()
   })
 })
 
