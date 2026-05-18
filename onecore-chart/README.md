@@ -6,7 +6,7 @@ Helm chart för att installera hela ONECore-plattformen i ett Kubernetes-kluster
 
 ```bash
 # Installera dependencies
-cd onecore-chart && HELM_EXPERIMENTAL_OCI=1 helm dependency update
+cd onecore-chart && helm dependency update
 
 # Installera med default värden
 helm install onecore ./onecore-chart
@@ -42,7 +42,7 @@ components:
         memory: 512Mi
     ingress:
       enabled: true
-      host: api.${global.hostname}
+      host: api.onecore.example.com
     cronJobs:
       expire-listings:
         enabled: true

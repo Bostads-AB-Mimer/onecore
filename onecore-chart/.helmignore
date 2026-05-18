@@ -27,16 +27,11 @@
 .kubeconfig
 # Helm configuration files
 .gitlab-ci.yml
-# Documentation files
-README.md
-LICENSE
-CHANGELOG.md
 # Test files
 *.test
 tests/
 # CI/CD
 .github/
-.gitlab-ci.yml
 # Build artifacts
 dist/
 build/
@@ -58,7 +53,5 @@ AGENTS.md
 opencode.json
 *.aider*
 tui.json
-.DS_Store
 # Local development
-.aider*
 helm-project-overview.md

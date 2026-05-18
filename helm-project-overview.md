@@ -68,7 +68,7 @@ helm install onecore ./onecore-chart -f values.yaml
 helm install onecore ./onecore-chart \
   --set components.core.enabled=true \
   --set components.propertyTree.enabled=true \
-  --set hostname=onecore.example.com
+  --set global.hostname=onecore.example.com
 ```
 
 ### Uppdatera installation

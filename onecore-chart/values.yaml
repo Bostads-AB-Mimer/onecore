@@ -34,7 +34,7 @@ components:
       SERVICE_URL__KEYS: http://keys
       SERVICE_URL__WORK_ORDER: http://work-order
       SERVICE_URL__ECONOMY: http://economy
-      KEYCLOAK_URL: https://auth.${global.clusterDomain}
+      KEYCLOAK_URL: https://auth.dev.mimer.nu
     secrets:
       - name: db-url
         envName: DATABASE_URL
@@ -52,7 +52,7 @@ components:
       periodSeconds: 10
     ingress:
       enabled: true
-      host: api.${global.hostname}
+      host: api.onecore.example.com
 
   leasing:
     enabled: true
@@ -81,7 +81,7 @@ components:
   property:
     enabled: true
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore/onecore-property:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/property-base:latest
     env:
       APPLICATION_NAME: property
       PORT: '80'
@@ -137,7 +137,7 @@ components:
   contacts:
     enabled: true
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore-contacts:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-contacts:latest
     env:
       APPLICATION_NAME: contacts
       PORT: '80'
@@ -152,7 +152,7 @@ components:
   keys:
     enabled: true
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore-keys:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-keys:latest
     env:
       APPLICATION_NAME: keys
       PORT: '80'
@@ -167,7 +167,7 @@ components:
   propertyManagement:
     enabled: true
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore-property-management:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-property-management:latest
     env:
       APPLICATION_NAME: property-management
       PORT: '80'
@@ -182,7 +182,7 @@ components:
   workOrder:
     enabled: true
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore-work-order:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-work-order:latest
     env:
       APPLICATION_NAME: work-order
       PORT: '80'
@@ -197,7 +197,7 @@ components:
   fileStorage:
     enabled: false
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore-file-storage:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-file-storage:latest
     env:
       APPLICATION_NAME: file-storage
       PORT: '80'
@@ -212,7 +212,7 @@ components:
   inspection:
     enabled: false
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore-inspection:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-inspection:latest
     env:
       APPLICATION_NAME: inspection
       PORT: '80'
@@ -227,7 +227,7 @@ components:
   propertyTree:
     enabled: true
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore-property-tree:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/property-tree:latest
     env:
       VITE_API_URL: https://api.${global.hostname}
     resources:
@@ -244,7 +244,7 @@ components:
   keysPortal:
     enabled: true
     replicas: 1
-    image: ghcr.io/bostads-ab-mimer/onecore-keys-portal:latest
+    image: ghcr.io/bostads-ab-mimer/onecore/onecore-keys-portal:latest
     env:
       VITE_API_URL: https://api.${global.hostname}
     resources:
@@ -264,9 +264,9 @@ components:
     frontend:
       enabled: false
       replicas: 1
-      image: ghcr.io/bostads-ab-mimer/onecore-internal-portal-frontend:latest
-      env:
-        VITE_API_URL: https://api.${global.hostname}
+      image: ghcr.io/bostads-ab-mimer/onecore/onecore-internal-portal-frontend:latest
+    env:
+      VITE_API_URL: https://api.onecore.example.com
       resources:
         limits:
           memory: 256Mi
