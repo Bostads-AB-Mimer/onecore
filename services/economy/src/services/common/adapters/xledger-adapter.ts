@@ -813,8 +813,6 @@ async function fetchPaymentsPage(params: {
   return { events, lastCursor }
 }
 
-// Original mapper used by getInvoicePaymentEvents and getAllInvoicePaymentEvents.
-// Uses invoiceNumber as-is — do not modify this function.
 function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
   return {
     type: event.transactionHeader.transactionSource.code,
