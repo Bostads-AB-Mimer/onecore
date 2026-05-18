@@ -59,7 +59,7 @@ async function search(
   page = 1,
   limit = 50
 ): Promise<PaginatedResponse<LeaseSearchResult>> {
-  const { data, error } = await GET('/leases/search-v2', {
+  const { data, error } = await GET('/leases/search', {
     params: {
       query: {
         ...params,

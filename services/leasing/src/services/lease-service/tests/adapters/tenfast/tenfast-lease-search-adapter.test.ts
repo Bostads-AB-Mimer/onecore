@@ -602,7 +602,7 @@ describe('tenfast-lease-search-adapter', () => {
     const mockCtx = {
       query: { page: '1', limit: '20' },
       request: {
-        URL: new URL('http://localhost:5020/api/leases/search-v2'),
+        URL: new URL('http://localhost:5020/api/leases/search'),
       },
     } as any
 

@@ -254,7 +254,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/search-v2:
+   * /leases/search:
    *   get:
    *     summary: Search and filter leases
    *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges.
@@ -386,7 +386,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/leases/search-v2', async (ctx) => {
+  router.get('(.*)/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
       'name',

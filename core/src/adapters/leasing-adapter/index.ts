@@ -897,7 +897,7 @@ export {
   getLeaseHomeInsurance,
   cancelLeaseHomeInsurance,
   getBuildingManagers,
-  searchLeasesV2,
+  searchLeases,
   getHomeInsuranceExport,
 } from './leases'
 

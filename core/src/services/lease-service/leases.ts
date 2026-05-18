@@ -122,7 +122,7 @@ export const routes = (router: KoaRouter) => {
       if (Number(leaseSearchParams.limit) > 500) leaseSearchParams.limit = '500'
 
       const leaseSearchResult =
-        await leasingAdapter.searchLeasesV2(leaseSearchParams)
+        await leasingAdapter.searchLeases(leaseSearchParams)
 
       if (
         !leaseSearchResult.content ||
@@ -303,7 +303,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/search-v2:
+   * /leases/search:
    *   get:
    *     summary: Search and filter leases
    *     tags:
@@ -399,7 +399,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leases/search-v2', async (ctx) => {
+  router.get('/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const parsed = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(ctx.query)
@@ -415,7 +415,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.searchLeasesV2(ctx.query)
+      const result = await leasingAdapter.searchLeases(ctx.query)
 
       ctx.status = 200
       ctx.body = result

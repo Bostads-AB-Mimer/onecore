@@ -614,7 +614,9 @@ export async function fetchAllLeasesForExport(
 
   // Fetch contacts in batches to avoid SQL parameter limit (~2100)
   const allContactCodes = [
-    ...new Set(allLeases.flatMap((l) => l.hyresgaster.map((t) => t.externalId))),
+    ...new Set(
+      allLeases.flatMap((l) => l.hyresgaster.map((t) => t.externalId))
+    ),
   ]
   const contactMap = new Map<string, leasing.v1.ContactInfo>()
   const CONTACT_BATCH_SIZE = 1000
@@ -707,23 +709,31 @@ async function fetchAllLeasesForExportViaBatchGet(
         seenLeaseIds.add(leaseId)
 
         const od = raw.originalData as Record<string, unknown> | undefined
-        const tenants = (od?.hyresgaster ?? []) as Array<Record<string, unknown>>
-        const rentalObjectsData = (od?.hyresobjekt ?? []) as Array<Record<string, unknown>>
+        const tenants = (od?.hyresgaster ?? []) as Array<
+          Record<string, unknown>
+        >
+        const rentalObjectsData = (od?.hyresobjekt ?? []) as Array<
+          Record<string, unknown>
+        >
 
         batchLeases.push({
           externalId: leaseId,
-          startDate: raw.startDate ? new Date(raw.startDate as string) : new Date(),
+          startDate: raw.startDate
+            ? new Date(raw.startDate as string)
+            : new Date(),
           endDate: raw.endDate ? new Date(raw.endDate as string) : undefined,
           stage: (raw.stage as string) ?? 'active',
           signedAt: raw.signedAt ? new Date(raw.signedAt as string) : undefined,
           uppsagningstid: (raw.uppsagningstid as string) ?? '',
           cancellation: {
             cancelled: (raw.cancellation as any)?.cancelled ?? false,
-            cancelledByType: (raw.cancellation as any)?.cancelledByType ?? undefined,
+            cancelledByType:
+              (raw.cancellation as any)?.cancelledByType ?? undefined,
             handledAt: (raw.cancellation as any)?.handledAt
               ? new Date((raw.cancellation as any).handledAt)
               : undefined,
-            preferredMoveOutDate: (raw.cancellation as any)?.preferredMoveOutDate
+            preferredMoveOutDate: (raw.cancellation as any)
+              ?.preferredMoveOutDate
               ? new Date((raw.cancellation as any).preferredMoveOutDate)
               : undefined,
           },
@@ -750,7 +760,8 @@ async function fetchAllLeasesForExportViaBatchGet(
             fastighet:
               typeof o.fastighet === 'object' && o.fastighet
                 ? {
-                    fastighetsbeteckning: (o.fastighet as any).fastighetsbeteckning ?? '',
+                    fastighetsbeteckning:
+                      (o.fastighet as any).fastighetsbeteckning ?? '',
                     stadsdel: (o.fastighet as any).stadsdel,
                   }
                 : undefined,
