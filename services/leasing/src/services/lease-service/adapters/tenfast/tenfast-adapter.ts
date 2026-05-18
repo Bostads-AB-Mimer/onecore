@@ -1,7 +1,6 @@
 import { logger } from '@onecore/utilities'
 import {
   Contact,
-  Lease,
   RentalObjectAvailabilityInfo,
   SyncContactToLeasingPayload,
 } from '@onecore/types'

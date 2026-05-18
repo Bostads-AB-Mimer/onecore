@@ -282,6 +282,37 @@ describe('POST /leases/sync', () => {
       })
     })
 
+    it('returns 200 action "skipped" when adapter returns already-terminated success', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeases')
+        .mockResolvedValueOnce([
+          factory.lease.build({
+            leaseId: '123-456/01',
+            lastDebitDate: new Date('2026-04-30'),
+          }),
+        ])
+      jest
+        .spyOn(tenfastAdapter, 'terminateLease')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { action: 'skipped', leaseId: '123-456/01' },
+        })
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'terminate',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        action: 'skipped',
+        leaseId: '123-456/01',
+      })
+    })
+
     it('returns 500 when terminate fails with non-idempotent error', async () => {
       jest
         .spyOn(tenantLeaseAdapter, 'getLeases')
@@ -382,6 +413,23 @@ describe('POST /leases/sync', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('lease-signed')
+    })
+
+    it('returns 500 when void fails with non-signed error', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'voidLease')
+        .mockResolvedValueOnce({ ok: false, err: 'void-failed' })
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'void',
+        })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('void-failed')
     })
   })
 })
