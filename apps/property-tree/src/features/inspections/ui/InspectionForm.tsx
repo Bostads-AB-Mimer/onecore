@@ -72,7 +72,6 @@ export function InspectionForm({
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
-    handleComponentCostUpdate,
     handleComponentPhotoAdd,
     handleComponentPhotoRemove,
     handleComponentCostResponsibilityUpdate,
@@ -184,28 +183,6 @@ export function InspectionForm({
                       room={room}
                       inspectionData={roomData}
                       inspectionId={existingInspection?.id}
-                      onConditionUpdate={(field, value) =>
-                        handleConditionUpdate(room.id, field, value)
-                      }
-                      onActionUpdate={(field, action) =>
-                        handleActionUpdate(room.id, field, action)
-                      }
-                      onComponentNoteUpdate={(field, note) =>
-                        handleComponentNoteUpdate(room.id, field, note)
-                      }
-                      onComponentPhotoAdd={(field, photoPath) =>
-                        handleComponentPhotoAdd(room.id, field, photoPath)
-                      }
-                      onComponentPhotoRemove={(field, index) =>
-                        handleComponentPhotoRemove(room.id, field, index)
-                      }
-                      onComponentCostResponsibilityUpdate={(field, value) =>
-                        handleComponentCostResponsibilityUpdate(
-                          room.id,
-                          field,
-                          value
-                        )
-                      }
                       onDetailComponentAdd={(component) =>
                         handleDetailComponentAdd(room.id, component)
                       }
@@ -315,11 +292,7 @@ export function InspectionForm({
             <InspectionSummary
               inspectionData={inspectionData}
               rooms={rooms}
-              onComponentCostUpdate={handleComponentCostUpdate}
               onComponentCostByIdUpdate={handleComponentCostUpdateById}
-              onComponentCostResponsibilityUpdate={
-                handleComponentCostResponsibilityUpdate
-              }
               onComponentCostResponsibilityByIdUpdate={
                 handleComponentCostResponsibilityUpdateById
               }

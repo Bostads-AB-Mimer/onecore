@@ -3757,6 +3757,28 @@ export interface paths {
       };
     };
   };
+  "/component-models/surface": {
+    /**
+     * Get surface component models (Ytskikt hierarchy)
+     * @description Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+     */
+    get: {
+      responses: {
+        /** @description List of surface component models */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/components": {
     /**
      * Get all components
@@ -11602,88 +11624,22 @@ export interface components {
           roomId: string;
           name?: string;
           conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           componentCosts: {
             /** @default 0 */
-            wall1?: number;
-            /** @default 0 */
-            wall2?: number;
-            /** @default 0 */
-            wall3?: number;
-            /** @default 0 */
-            wall4?: number;
-            /** @default 0 */
-            floor?: number;
-            /** @default 0 */
-            ceiling?: number;
-            /** @default 0 */
             details?: number;
           };
           componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentCostResponsibilities: {
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall1?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall2?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall3?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall4?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            floor?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            ceiling?: "tenant" | "landlord" | null;
             /**
              * @default null
              * @enum {string|null}
@@ -11735,88 +11691,22 @@ export interface components {
       roomId: string;
       name?: string;
       conditions: {
-        wall1: string;
-        wall2: string;
-        wall3: string;
-        wall4: string;
-        floor: string;
-        ceiling: string;
         details: string;
       };
       actions: {
-        wall1: string[];
-        wall2: string[];
-        wall3: string[];
-        wall4: string[];
-        floor: string[];
-        ceiling: string[];
         details: string[];
       };
       componentNotes: {
-        wall1: string;
-        wall2: string;
-        wall3: string;
-        wall4: string;
-        floor: string;
-        ceiling: string;
         details: string;
       };
       componentCosts: {
         /** @default 0 */
-        wall1?: number;
-        /** @default 0 */
-        wall2?: number;
-        /** @default 0 */
-        wall3?: number;
-        /** @default 0 */
-        wall4?: number;
-        /** @default 0 */
-        floor?: number;
-        /** @default 0 */
-        ceiling?: number;
-        /** @default 0 */
         details?: number;
       };
       componentPhotos: {
-        wall1: string[];
-        wall2: string[];
-        wall3: string[];
-        wall4: string[];
-        floor: string[];
-        ceiling: string[];
         details: string[];
       };
       componentCostResponsibilities: {
-        /**
-         * @default null
-         * @enum {string|null}
-         */
-        wall1?: "tenant" | "landlord" | null;
-        /**
-         * @default null
-         * @enum {string|null}
-         */
-        wall2?: "tenant" | "landlord" | null;
-        /**
-         * @default null
-         * @enum {string|null}
-         */
-        wall3?: "tenant" | "landlord" | null;
-        /**
-         * @default null
-         * @enum {string|null}
-         */
-        wall4?: "tenant" | "landlord" | null;
-        /**
-         * @default null
-         * @enum {string|null}
-         */
-        floor?: "tenant" | "landlord" | null;
-        /**
-         * @default null
-         * @enum {string|null}
-         */
-        ceiling?: "tenant" | "landlord" | null;
         /**
          * @default null
          * @enum {string|null}
@@ -12412,88 +12302,22 @@ export interface components {
           roomId: string;
           name?: string;
           conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           componentCosts: {
             /** @default 0 */
-            wall1?: number;
-            /** @default 0 */
-            wall2?: number;
-            /** @default 0 */
-            wall3?: number;
-            /** @default 0 */
-            wall4?: number;
-            /** @default 0 */
-            floor?: number;
-            /** @default 0 */
-            ceiling?: number;
-            /** @default 0 */
             details?: number;
           };
           componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentCostResponsibilities: {
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall1?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall2?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall3?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall4?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            floor?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            ceiling?: "tenant" | "landlord" | null;
             /**
              * @default null
              * @enum {string|null}
@@ -12533,88 +12357,22 @@ export interface components {
           roomId: string;
           name?: string;
           conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           componentCosts: {
             /** @default 0 */
-            wall1?: number;
-            /** @default 0 */
-            wall2?: number;
-            /** @default 0 */
-            wall3?: number;
-            /** @default 0 */
-            wall4?: number;
-            /** @default 0 */
-            floor?: number;
-            /** @default 0 */
-            ceiling?: number;
-            /** @default 0 */
             details?: number;
           };
           componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentCostResponsibilities: {
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall1?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall2?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall3?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            wall4?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            floor?: "tenant" | "landlord" | null;
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            ceiling?: "tenant" | "landlord" | null;
             /**
              * @default null
              * @enum {string|null}

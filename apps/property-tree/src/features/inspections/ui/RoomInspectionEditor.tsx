@@ -9,53 +9,29 @@ import { Skeleton } from '@/shared/ui/Skeleton'
 
 import {
   type CostResponsibility,
-  mergeComponentsWithDefaults,
+  SURFACE_TYPES,
+  getTypeName,
 } from '../constants'
 import { useRoomComponents } from '../hooks/useRoomComponents'
 import {
   deriveRoomIsHandled,
   emptyInspectionComponent,
 } from '../lib/inspectionComponent'
+import { AddSurfaceComponentMenu } from './AddSurfaceComponentMenu'
 import { ComponentDetailSheet } from './ComponentDetailSheet'
 import { ComponentInspectionCard } from './ComponentInspectionCard'
 import { DetailComponentsSection } from './DetailComponentsSection'
+import type { ComponentType } from '../constants/actions'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 type InspectionComponent = NonNullable<InspectionRoom['components']>[number]
 
-type OpenDetail =
-  | { kind: 'surface'; key: keyof InspectionRoom['conditions'] }
-  | { kind: 'component'; id: string }
-  | null
+type OpenDetail = { kind: 'component'; id: string } | null
 
 interface RoomInspectionEditorProps {
   room: Room
   inspectionData: InspectionRoom
   inspectionId: string
-  onConditionUpdate: (
-    field: keyof InspectionRoom['conditions'],
-    value: string
-  ) => void
-  onActionUpdate: (
-    field: keyof InspectionRoom['actions'],
-    action: string
-  ) => void
-  onComponentNoteUpdate: (
-    field: keyof InspectionRoom['componentNotes'],
-    note: string
-  ) => void
-  onComponentPhotoAdd: (
-    field: keyof InspectionRoom['componentPhotos'],
-    photoPath: string
-  ) => void
-  onComponentPhotoRemove: (
-    field: keyof InspectionRoom['componentPhotos'],
-    index: number
-  ) => void
-  onComponentCostResponsibilityUpdate: (
-    field: keyof InspectionRoom['componentCostResponsibilities'],
-    value: CostResponsibility
-  ) => void
   onDetailComponentAdd: (component: { type: string; label: string }) => void
   onDetailComponentRemove: (componentId: string) => void
   onDetailComponentNoteUpdate: (componentId: string, note: string) => void
@@ -96,12 +72,6 @@ export function RoomInspectionEditor({
   room,
   inspectionData,
   inspectionId,
-  onConditionUpdate,
-  onActionUpdate,
-  onComponentNoteUpdate,
-  onComponentPhotoAdd,
-  onComponentPhotoRemove,
-  onComponentCostResponsibilityUpdate,
   onDetailComponentAdd,
   onDetailComponentRemove,
   onDetailComponentNoteUpdate,
@@ -121,13 +91,13 @@ export function RoomInspectionEditor({
     isError,
   } = useRoomComponents(room.propertyObjectId)
 
-  const rows = useMemo(
-    () => mergeComponentsWithDefaults(fetchedComponents ?? []),
+  const missingSurfaces = useMemo(
+    () =>
+      SURFACE_TYPES.filter(
+        (t) => !(fetchedComponents ?? []).some((c) => getTypeName(c) === t)
+      ),
     [fetchedComponents]
   )
-
-  const defaultRows = rows.filter((r) => r.isDefault)
-  const equipmentRows = rows.filter((r) => !r.isDefault)
 
   const componentsByIdMemo = useMemo(() => {
     const map = new Map<string, InspectionComponent>()
@@ -144,9 +114,16 @@ export function RoomInspectionEditor({
     componentsByIdMemo.get(componentId) ??
     emptyInspectionComponent(componentId, label)
 
-  // A room is handled when every visible row has a condition set. Derived
-  // here because the set of visible rows depends on fetched components, which
-  // the data hook cannot see. See deriveRoomIsHandled for the rule.
+  const getActionComponentType = (
+    typeName: string | undefined
+  ): ComponentType => {
+    if (!typeName) return 'details'
+    if (typeName === 'Vägg') return 'walls'
+    if (typeName === 'Golv') return 'floor'
+    if (typeName === 'Tak') return 'ceiling'
+    return 'details'
+  }
+
   const derivedIsHandled = useMemo(
     () => deriveRoomIsHandled(inspectionData, fetchedComponents ?? []),
     [inspectionData, fetchedComponents]
@@ -174,81 +151,43 @@ export function RoomInspectionEditor({
 
         {isError && (
           <p className="text-sm text-destructive py-2">
-            Kunde inte hämta komponenter för rummet. Visar endast standardytor.
+            Kunde inte hämta komponenter för rummet.
           </p>
         )}
 
         <div>
-          {defaultRows.map((row) => {
-            const surfaceKey = row.key as keyof InspectionRoom['conditions']
+          {(fetchedComponents ?? []).map((component) => {
+            const componentId = component.id
+            const label =
+              component.model?.subtype?.subTypeName ||
+              component.model?.modelName ||
+              component.id
+            const state = getComponentState(componentId, label)
             return (
               <ComponentInspectionCard
-                key={row.key}
-                componentKey={row.key}
-                label={row.label}
-                condition={inspectionData.conditions[surfaceKey]}
-                note={inspectionData.componentNotes[surfaceKey]}
-                photoCount={inspectionData.componentPhotos[surfaceKey].length}
-                actions={inspectionData.actions[surfaceKey]}
-                costResponsibility={
-                  inspectionData.componentCostResponsibilities[surfaceKey] ??
-                  null
-                }
-                onConditionChange={(value) =>
-                  onConditionUpdate(surfaceKey, value)
-                }
-                onNoteChange={(note) => onComponentNoteUpdate(surfaceKey, note)}
-                onCostResponsibilityChange={(value) =>
-                  onComponentCostResponsibilityUpdate(surfaceKey, value)
-                }
-                onPhotoCaptured={(path) =>
-                  onComponentPhotoAdd(surfaceKey, path)
-                }
-                uploadContext={{
-                  inspectionId,
-                  roomId: room.id,
-                  target: { kind: 'surface', surfaceKey },
-                }}
-                onOpenDetail={() =>
-                  setOpenDetail({ kind: 'surface', key: surfaceKey })
-                }
-              />
-            )
-          })}
-
-          {equipmentRows.map((row) => {
-            const componentId = row.componentId
-            if (!componentId) return null
-            const state = getComponentState(componentId, row.label)
-            return (
-              <ComponentInspectionCard
-                key={row.key}
-                componentKey={row.key}
-                label={row.label}
+                key={componentId}
+                componentKey={componentId}
+                label={label}
                 condition={state.condition}
                 note={state.note}
                 photoCount={state.photos.length}
                 actions={state.action}
                 costResponsibility={state.costResponsibility ?? null}
                 onConditionChange={(value) =>
-                  onFetchedComponentConditionUpdate(
-                    componentId,
-                    row.label,
-                    value
-                  )
+                  onFetchedComponentConditionUpdate(componentId, label, value)
                 }
                 onNoteChange={(note) =>
-                  onFetchedComponentNoteUpdate(componentId, row.label, note)
+                  onFetchedComponentNoteUpdate(componentId, label, note)
                 }
                 onCostResponsibilityChange={(value) =>
                   onFetchedComponentCostResponsibilityUpdate(
                     componentId,
-                    row.label,
+                    label,
                     value
                   )
                 }
                 onPhotoCaptured={(path) =>
-                  onFetchedComponentPhotoAdd(componentId, row.label, path)
+                  onFetchedComponentPhotoAdd(componentId, label, path)
                 }
                 uploadContext={{
                   inspectionId,
@@ -263,6 +202,11 @@ export function RoomInspectionEditor({
           })}
         </div>
 
+        <AddSurfaceComponentMenu
+          propertyObjectId={room.propertyObjectId}
+          missingSurfaces={missingSurfaces}
+        />
+
         <Separator className="my-4" />
 
         <DetailComponentsSection
@@ -272,66 +216,38 @@ export function RoomInspectionEditor({
           onNoteUpdate={onDetailComponentNoteUpdate}
         />
 
-        {defaultRows.map((row) => {
-          const surfaceKey = row.key as keyof InspectionRoom['conditions']
-          const isOpen =
-            openDetail?.kind === 'surface' && openDetail.key === surfaceKey
-          return (
-            <ComponentDetailSheet
-              key={`detail-${row.key}`}
-              isOpen={isOpen}
-              onClose={() => setOpenDetail(null)}
-              componentKey={row.key}
-              label={row.label}
-              condition={inspectionData.conditions[surfaceKey]}
-              note={inspectionData.componentNotes[surfaceKey]}
-              photos={inspectionData.componentPhotos[surfaceKey]}
-              actions={inspectionData.actions[surfaceKey]}
-              componentType={row.type}
-              onNoteChange={(note) => onComponentNoteUpdate(surfaceKey, note)}
-              onPhotoAdd={(path) => onComponentPhotoAdd(surfaceKey, path)}
-              onPhotoRemove={(index) =>
-                onComponentPhotoRemove(surfaceKey, index)
-              }
-              onActionToggle={(action) => onActionUpdate(surfaceKey, action)}
-              uploadContext={{
-                inspectionId,
-                roomId: room.id,
-                target: { kind: 'surface', surfaceKey },
-              }}
-            />
-          )
-        })}
-
-        {equipmentRows.map((row) => {
-          const componentId = row.componentId
-          if (!componentId) return null
-          const state = getComponentState(componentId, row.label)
+        {(fetchedComponents ?? []).map((component) => {
+          const componentId = component.id
+          const label =
+            component.model?.subtype?.subTypeName ||
+            component.model?.modelName ||
+            component.id
+          const state = getComponentState(componentId, label)
           const isOpen =
             openDetail?.kind === 'component' && openDetail.id === componentId
           return (
             <ComponentDetailSheet
-              key={`detail-${row.key}`}
+              key={`detail-${componentId}`}
               isOpen={isOpen}
               onClose={() => setOpenDetail(null)}
-              componentKey={row.key}
-              label={row.label}
+              componentKey={componentId}
+              label={label}
               condition={state.condition}
               note={state.note}
               photos={state.photos}
               actions={state.action}
-              componentType={row.type}
+              componentType={getActionComponentType(getTypeName(component))}
               onNoteChange={(note) =>
-                onFetchedComponentNoteUpdate(componentId, row.label, note)
+                onFetchedComponentNoteUpdate(componentId, label, note)
               }
               onPhotoAdd={(path) =>
-                onFetchedComponentPhotoAdd(componentId, row.label, path)
+                onFetchedComponentPhotoAdd(componentId, label, path)
               }
               onPhotoRemove={(index) =>
-                onFetchedComponentPhotoRemove(componentId, row.label, index)
+                onFetchedComponentPhotoRemove(componentId, label, index)
               }
               onActionToggle={(action) =>
-                onFetchedComponentActionUpdate(componentId, row.label, action)
+                onFetchedComponentActionUpdate(componentId, label, action)
               }
               uploadContext={{
                 inspectionId,

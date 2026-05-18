@@ -224,42 +224,18 @@ export const CreateInspectionParamsFactory =
   }))
 
 const emptyConditions = {
-  wall1: '',
-  wall2: '',
-  wall3: '',
-  wall4: '',
-  floor: '',
-  ceiling: '',
   details: '',
 }
 
 const emptyActions = {
-  wall1: [],
-  wall2: [],
-  wall3: [],
-  wall4: [],
-  floor: [],
-  ceiling: [],
   details: [],
 }
 
 const emptyCosts = {
-  wall1: 0,
-  wall2: 0,
-  wall3: 0,
-  wall4: 0,
-  floor: 0,
-  ceiling: 0,
   details: 0,
 }
 
 const emptyCostResponsibilities = {
-  wall1: null,
-  wall2: null,
-  wall3: null,
-  wall4: null,
-  floor: null,
-  ceiling: null,
   details: null,
 }
 

@@ -2208,6 +2208,9 @@ importers:
       '@koa/router':
         specifier: ^12.0.1
         version: 12.0.2
+      '@onecore/types':
+        specifier: workspace:*
+        version: link:../../libs/types
       '@onecore/utilities':
         specifier: workspace:*
         version: link:../../libs/utilities
