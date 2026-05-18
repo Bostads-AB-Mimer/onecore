@@ -7,6 +7,7 @@ import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
 import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
+import { Lease, LeaseStatus, LeaseType } from '@onecore/types'
 
 describe(tenfastAdapter.getLeaseTemplate, () => {
   it('should return template when response is valid and status is 200', async () => {
