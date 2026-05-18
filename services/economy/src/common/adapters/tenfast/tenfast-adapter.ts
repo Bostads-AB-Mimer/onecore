@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { z } from 'zod'
 import config from '../../config'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
@@ -253,9 +254,11 @@ export const recordPaymentForInvoice = async (params: {
       return { ok: false, err: 'unknown' }
     }
 
-    const parsed = TenfastInvoicesByOcrResponseSchema.safeParse(
-      lookupResult.data
-    )
+    const OcrLookupResponseSchema = z.object({
+      records: z.array(z.object({ _id: z.string() }).passthrough()),
+    })
+
+    const parsed = OcrLookupResponseSchema.safeParse(lookupResult.data)
     if (!parsed.success) {
       logger.warn(
         { ocr: params.ocr, errors: parsed.error.issues },
