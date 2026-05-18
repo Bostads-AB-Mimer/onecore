@@ -195,11 +195,10 @@ export const routes = (router: KoaRouter) => {
 
     try {
       // Fetch all matching leases using cursor-based pagination (O(n) API calls)
-      const allLeases =
-        await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
-          queryParams.data,
-          ctx
-        )
+      const allLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        queryParams.data,
+        ctx
+      )
 
       // Create Excel from the complete dataset
       const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({

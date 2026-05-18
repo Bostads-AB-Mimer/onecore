@@ -136,7 +136,7 @@ export function ObjectTypeFilter({
     if (checked) {
       onParkingSpaceTypeChange([...selectedParkingSpaceTypes, code])
       // Checking a specific subtype clears the "all parking" parent selection
-      if (selectedObjectTypes.includes(parkingOptionValue)) {
+      if (parkingOptionValue && selectedObjectTypes.includes(parkingOptionValue)) {
         onObjectTypeChange(
           selectedObjectTypes.filter((v) => v !== parkingOptionValue)
         )
