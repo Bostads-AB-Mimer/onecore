@@ -6,10 +6,15 @@ import bodyParser from 'koa-bodyparser'
 import { routes } from '../../routes/lease-sync'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as cmlogLeaseAdapter from '../../adapters/xpand/cmlog-lease-adapter'
+import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as factory from '../factories'
 
 jest.mock('../../adapters/xpand/xpandDb', () => ({
   xpandDb: {},
+}))
+
+jest.mock('../../adapters/xpand/tenant-lease-adapter', () => ({
+  getLeases: jest.fn(),
 }))
 
 const app = new Koa()
@@ -29,6 +34,7 @@ describe('GET /leases/sync', () => {
         leaseId: '123-456/01',
         contactCode: 'P12345',
         rentalObjectId: '123-456',
+        action: 'create' as const,
       },
     ]
 
@@ -50,6 +56,7 @@ describe('GET /leases/sync', () => {
         leaseId: '789-012/02',
         contactCode: 'P67890',
         rentalObjectId: '789-012',
+        action: 'terminate' as const,
       },
     ]
 
@@ -80,104 +87,301 @@ describe('POST /leases/sync', () => {
   it('returns 400 when leaseId is missing', async () => {
     const res = await request(app.callback())
       .post('/leases/sync')
-      .send({ contact: factory.contact.build() })
+      .send({ contact: factory.contact.build(), action: 'create' })
 
     expect(res.status).toBe(400)
   })
 
-  it('returns 500 when contact is missing (passes schema but fails at runtime)', async () => {
-    jest
-      .spyOn(tenfastAdapter, 'getOrCreateAndUpdateTenant')
-      .mockRejectedValueOnce(new Error('Cannot read contact'))
-
+  it('returns 400 when action is missing', async () => {
     const res = await request(app.callback())
       .post('/leases/sync')
-      .send({ leaseId: '123-456/01' })
+      .send({ leaseId: '123-456/01', contact: factory.contact.build() })
 
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(400)
   })
 
-  it('returns 201 with action "created" on successful create', async () => {
-    const contact = factory.contact.build()
-    const mockTenant = factory.tenfastTenant.build()
-
-    jest
-      .spyOn(tenfastAdapter, 'getOrCreateAndUpdateTenant')
-      .mockResolvedValueOnce({ ok: true, data: mockTenant })
-
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
-
-    jest
-      .spyOn(tenfastAdapter, 'createLease')
-      .mockResolvedValueOnce({ ok: true, data: undefined })
-
+  it('returns 400 when action is not in the enum', async () => {
     const res = await request(app.callback())
       .post('/leases/sync')
-      .send({ leaseId: '123-456/01', contact })
+      .send({
+        leaseId: '123-456/01',
+        contact: factory.contact.build(),
+        action: 'patch',
+      })
 
-    expect(res.status).toBe(201)
-    expect(res.body.action).toBe('created')
+    expect(res.status).toBe(400)
   })
 
-  it('returns 200 with action "skipped" when lease already exists', async () => {
-    const contact = factory.contact.build()
-    const mockTenant = factory.tenfastTenant.build()
-    const mockLease = factory.tenfastLease.build()
+  describe('action: create', () => {
+    it('returns 400 when contact is missing for create', async () => {
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({ leaseId: '123-456/01', action: 'create' })
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('contact is required for action "create"')
+    })
 
-    jest
-      .spyOn(tenfastAdapter, 'getOrCreateAndUpdateTenant')
-      .mockResolvedValueOnce({ ok: true, data: mockTenant })
+    it('returns 201 with action "created" on successful create', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'createLease')
+        .mockResolvedValueOnce({ ok: true, data: undefined })
 
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: true, data: mockLease })
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'create',
+        })
 
-    const res = await request(app.callback())
-      .post('/leases/sync')
-      .send({ leaseId: '123-456/01', contact })
+      expect(res.status).toBe(201)
+      expect(res.body.content).toEqual({
+        action: 'created',
+        leaseId: '123-456/01',
+      })
+    })
 
-    expect(res.status).toBe(200)
-    expect(res.body.action).toBe('skipped')
+    it('returns 500 when createLease fails', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'createLease')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'lease-could-not-be-created',
+        })
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'create',
+        })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('lease-could-not-be-created')
+    })
   })
 
-  it('returns 500 when tenant sync fails', async () => {
-    const contact = factory.contact.build()
+  describe('action: terminate', () => {
+    it('does not require contact for terminate', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeases')
+        .mockResolvedValueOnce([
+          factory.lease.build({
+            leaseId: '123-456/01',
+            lastDebitDate: new Date('2026-04-30'),
+          }),
+        ])
+      jest
+        .spyOn(tenfastAdapter, 'terminateLease')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { action: 'terminated', leaseId: '123-456/01' },
+        })
 
-    jest
-      .spyOn(tenfastAdapter, 'getOrCreateAndUpdateTenant')
-      .mockResolvedValueOnce({ ok: false, err: 'could-not-retrieve-tenant' })
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({ leaseId: '123-456/01', action: 'terminate' })
 
-    const res = await request(app.callback())
-      .post('/leases/sync')
-      .send({ leaseId: '123-456/01', contact })
+      expect(res.status).toBe(200)
+    })
 
-    expect(res.status).toBe(500)
-    expect(res.body.error).toBe('could-not-retrieve-tenant')
+    it('returns 200 with action "terminated" on success', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeases')
+        .mockResolvedValueOnce([
+          factory.lease.build({
+            leaseId: '123-456/01',
+            lastDebitDate: new Date('2026-04-30'),
+          }),
+        ])
+      jest
+        .spyOn(tenfastAdapter, 'terminateLease')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { action: 'terminated', leaseId: '123-456/01' },
+        })
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'terminate',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        action: 'terminated',
+        leaseId: '123-456/01',
+      })
+    })
+
+    it('returns 404 when xpand lease not found', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'getLeases').mockResolvedValueOnce([])
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'terminate',
+        })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Lease not found in xpand')
+    })
+
+    it('returns 400 when xpand lease has no lastDebitDate', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeases')
+        .mockResolvedValueOnce([
+          factory.lease.build({
+            leaseId: '123-456/01',
+            lastDebitDate: undefined,
+          }),
+        ])
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'terminate',
+        })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('xpand lease has no lastDebitDate')
+    })
+
+    it('returns 200 action "skipped" when tenfast lease not found', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeases')
+        .mockResolvedValueOnce([
+          factory.lease.build({
+            leaseId: '123-456/01',
+            lastDebitDate: new Date('2026-04-30'),
+          }),
+        ])
+      jest
+        .spyOn(tenfastAdapter, 'terminateLease')
+        .mockResolvedValueOnce({ ok: false, err: 'lease-not-found' })
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'terminate',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        action: 'skipped',
+        leaseId: '123-456/01',
+      })
+    })
+
+    it('returns 500 when terminate fails with non-idempotent error', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeases')
+        .mockResolvedValueOnce([
+          factory.lease.build({
+            leaseId: '123-456/01',
+            lastDebitDate: new Date('2026-04-30'),
+          }),
+        ])
+      jest
+        .spyOn(tenfastAdapter, 'terminateLease')
+        .mockResolvedValueOnce({ ok: false, err: 'terminate-failed' })
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'terminate',
+        })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('terminate-failed')
+    })
   })
 
-  it('returns 500 when lease creation fails', async () => {
-    const contact = factory.contact.build()
-    const mockTenant = factory.tenfastTenant.build()
+  describe('action: void', () => {
+    it('does not require contact for void', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'voidLease')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { action: 'voided', leaseId: '123-456/01' },
+        })
 
-    jest
-      .spyOn(tenfastAdapter, 'getOrCreateAndUpdateTenant')
-      .mockResolvedValueOnce({ ok: true, data: mockTenant })
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({ leaseId: '123-456/01', action: 'void' })
 
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+      expect(res.status).toBe(200)
+    })
 
-    jest
-      .spyOn(tenfastAdapter, 'createLease')
-      .mockResolvedValueOnce({ ok: false, err: 'lease-could-not-be-created' })
+    it('returns 200 with action "voided" on success', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'voidLease')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { action: 'voided', leaseId: '123-456/01' },
+        })
 
-    const res = await request(app.callback())
-      .post('/leases/sync')
-      .send({ leaseId: '123-456/01', contact })
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'void',
+        })
 
-    expect(res.status).toBe(500)
-    expect(res.body.error).toBe('lease-could-not-be-created')
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        action: 'voided',
+        leaseId: '123-456/01',
+      })
+    })
+
+    it('returns 200 action "skipped" when tenfast lease not found', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'voidLease')
+        .mockResolvedValueOnce({ ok: false, err: 'lease-not-found' })
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'void',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        action: 'skipped',
+        leaseId: '123-456/01',
+      })
+    })
+
+    it('returns 500 when lease is signed (hard-fail)', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'voidLease')
+        .mockResolvedValueOnce({ ok: false, err: 'lease-signed' })
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'void',
+        })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('lease-signed')
+    })
   })
 })

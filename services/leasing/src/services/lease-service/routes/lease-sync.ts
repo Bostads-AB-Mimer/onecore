@@ -3,13 +3,15 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { Contact } from '@onecore/types'
 
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
+import { getLeases } from '../adapters/xpand/tenant-lease-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { z } from 'zod'
 
 const SyncLeaseRequestSchema = z.object({
   leaseId: z.string(),
-  contact: z.custom<Contact>(),
+  contact: z.custom<Contact>().optional(),
+  action: z.enum(['create', 'terminate', 'void']),
 })
 
 export const routes = (router: KoaRouter) => {
@@ -49,71 +51,118 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(SyncLeaseRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
+      const { leaseId, contact, action } = ctx.request.body
 
       try {
-        const { leaseId, contact } = ctx.request.body
+        if (action === 'create') {
+          if (!contact) {
+            ctx.status = 400
+            ctx.body = { error: 'contact is required for action "create"', ...metadata }
+            return
+          }
+          const slashIndex = leaseId.lastIndexOf('/')
+          const rentalObjectCode =
+            slashIndex !== -1 ? leaseId.substring(0, slashIndex) : leaseId
 
-        const slashIndex = leaseId.lastIndexOf('/')
-        const rentalObjectCode =
-          slashIndex !== -1 ? leaseId.substring(0, slashIndex) : leaseId
-
-        const existingLease =
-          await tenfastAdapter.getLeaseByExternalId(leaseId)
-
-        if (existingLease.ok) {
-          // Lease exists — update it
-          const updateResult = await tenfastAdapter.syncExistingLease(
-            existingLease.data,
-            rentalObjectCode
+          const createResult = await tenfastAdapter.createLease(
+            contact,
+            rentalObjectCode,
+            new Date(),
+            false
           )
 
-          if (!updateResult.ok) {
+          if (!createResult.ok) {
             logger.error(
-              { error: updateResult.err, leaseId },
-              'Failed to update lease in Tenfast'
+              { error: createResult.err, leaseId },
+              'Failed to create lease in Tenfast'
             )
             ctx.status = 500
-            ctx.body = { error: updateResult.err, ...metadata }
+            ctx.body = { error: createResult.err, ...metadata }
             return
           }
 
-          logger.info({ leaseId }, 'Lease updated in Tenfast')
+          logger.info({ leaseId }, 'Lease created in Tenfast')
+          ctx.status = 201
+          ctx.body = {
+            content: { action: 'created', leaseId },
+            ...metadata,
+          }
+          return
+        }
+
+        if (action === 'terminate') {
+          const xpandLeases = await getLeases([leaseId])
+          if (!xpandLeases.length) {
+            ctx.status = 404
+            ctx.body = { error: 'Lease not found in xpand', ...metadata }
+            return
+          }
+
+          const endDate = xpandLeases[0].lastDebitDate
+          if (!endDate) {
+            ctx.status = 400
+            ctx.body = {
+              error: 'xpand lease has no lastDebitDate',
+              ...metadata,
+            }
+            return
+          }
+
+          const result = await tenfastAdapter.terminateLease(
+            leaseId,
+            new Date(endDate)
+          )
+
+          if (!result.ok) {
+            if (result.err === 'lease-not-found') {
+              ctx.status = 200
+              ctx.body = {
+                content: { action: 'skipped', leaseId },
+                ...metadata,
+              }
+              return
+            }
+            logger.error(
+              { action, error: result.err, leaseId },
+              'Failed to terminate lease in Tenfast'
+            )
+            ctx.status = 500
+            ctx.body = { error: result.err, ...metadata }
+            return
+          }
+
+          logger.info({ leaseId }, 'Lease terminated in Tenfast')
           ctx.status = 200
-          ctx.body = { content: { action: 'updated', leaseId }, ...metadata }
+          ctx.body = { content: result.data, ...metadata }
           return
         }
 
-        if (existingLease.err !== 'not-found') {
-          logger.error(
-            { error: existingLease.err, leaseId },
-            'Failed to check existing lease in Tenfast'
-          )
-          ctx.status = 500
-          ctx.body = { error: existingLease.err, ...metadata }
+        if (action === 'void') {
+          const result = await tenfastAdapter.voidLease(leaseId)
+
+          if (!result.ok) {
+            if (result.err === 'lease-not-found') {
+              ctx.status = 200
+              ctx.body = {
+                content: { action: 'skipped', leaseId },
+                ...metadata,
+              }
+              return
+            }
+            logger.error(
+              { action, error: result.err, leaseId },
+              'Failed to void lease in Tenfast'
+            )
+            ctx.status = 500
+            ctx.body = { error: result.err, ...metadata }
+            return
+          }
+
+          logger.info({ leaseId }, 'Lease voided in Tenfast')
+          ctx.status = 200
+          ctx.body = { content: result.data, ...metadata }
           return
         }
-
-        // Lease does not exist — create it
-        const createResult = await tenfastAdapter.createLease(
-          contact,
-          rentalObjectCode,
-          new Date(),
-          false
-        )
-
-        if (!createResult.ok) {
-          logger.error(
-            { error: createResult.err, leaseId },
-            'Failed to create lease in Tenfast'
-          )
-          ctx.status = 500
-          ctx.body = { error: createResult.err, ...metadata }
-          return
-        }
-
-        logger.info({ leaseId }, 'Lease created in Tenfast')
-        ctx.status = 201
-        ctx.body = { content: { action: 'created', leaseId }, ...metadata }
       } catch (error: unknown) {
         logger.error({ error, metadata }, 'Error syncing lease to Tenfast')
         ctx.status = 500
