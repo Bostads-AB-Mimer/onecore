@@ -729,6 +729,27 @@ export async function getAllInvoicePaymentEvents(
 // headerTransactionSourceDbId values for payment types (used in GraphQL filter):
 // OCR = 5205, BAA = 49334581, BA = 611
 
+export async function getLatestPaymentCursor(): Promise<string | null> {
+  const query = {
+    query: gql`
+      query {
+        arTransactions(
+          last: 1
+          filter: { headerTransactionSourceDbId_in: [5205, 49334581, 611] }
+        ) {
+          edges {
+            cursor
+          }
+        }
+      }
+    `,
+  }
+
+  const result = await makeXledgerRequest(query)
+  const edges = result.data?.arTransactions?.edges
+  return edges?.length > 0 ? edges[0].cursor : null
+}
+
 export interface PaymentsSinceResult {
   events: InvoicePaymentEvent[]
   lastCursor: string | null

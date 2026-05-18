@@ -322,6 +322,26 @@ const PaymentsSinceResultSchema = z.object({
 
 export type PaymentsSinceResult = z.infer<typeof PaymentsSinceResultSchema>
 
+export async function getLatestPaymentCursor(): Promise<
+  AdapterResult<string | null, 'unknown'>
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/payments/latest-cursor`
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.getLatestPaymentCursor')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getLatestPaymentCursor')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export async function getPaymentsSince(
   afterCursor: string
 ): Promise<AdapterResult<PaymentsSinceResult, 'unknown'>> {

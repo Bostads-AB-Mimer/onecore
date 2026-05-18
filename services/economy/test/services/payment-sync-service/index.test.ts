@@ -20,6 +20,40 @@ describe('Payment Sync Service', () => {
     jest.restoreAllMocks()
   })
 
+  describe('GET /payments/latest-cursor', () => {
+    it('responds with the latest cursor', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getLatestPaymentCursor')
+        .mockResolvedValueOnce('cursor-999')
+
+      const res = await request(app.callback()).get('/payments/latest-cursor')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toBe('cursor-999')
+    })
+
+    it('responds with null when no transactions exist', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getLatestPaymentCursor')
+        .mockResolvedValueOnce(null)
+
+      const res = await request(app.callback()).get('/payments/latest-cursor')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toBeNull()
+    })
+
+    it('responds with 500 when adapter throws', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getLatestPaymentCursor')
+        .mockRejectedValueOnce(new Error('Xledger unavailable'))
+
+      const res = await request(app.callback()).get('/payments/latest-cursor')
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   describe('GET /payments/since', () => {
     it('responds with payment events and lastCursor', async () => {
       const events = factory.invoicePaymentEvent.buildList(2)

@@ -488,6 +488,38 @@ describe(adapter.getPaymentsSince, () => {
   })
 })
 
+describe(adapter.getLatestPaymentCursor, () => {
+  it('returns the cursor of the latest payment transaction', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [{ cursor: 'latest-cursor-123' }],
+          },
+        },
+      })
+
+    const result = await adapter.getLatestPaymentCursor()
+    expect(result).toBe('latest-cursor-123')
+  })
+
+  it('returns null when there are no payment transactions', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [],
+          },
+        },
+      })
+
+    const result = await adapter.getLatestPaymentCursor()
+    expect(result).toBeNull()
+  })
+})
+
 describe(adapter.getInvoiceMatchId, () => {
   it('returns null when matchId is not found', async () => {
     nock(origin)

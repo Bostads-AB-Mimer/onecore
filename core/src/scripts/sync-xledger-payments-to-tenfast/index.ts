@@ -3,6 +3,7 @@ import path from 'path'
 import { InvoicePaymentEvent } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import {
+  getLatestPaymentCursor,
   getPaymentsSince,
   recordInvoicePayment,
 } from '../../adapters/economy-adapter'
@@ -12,18 +13,13 @@ const STATE_FILE = path.join(
   'last-xledger-payment-sync.txt'
 )
 
-// Cursor of the last Xledger arTransaction record at the time of initial
-// deployment. Used on the very first run (no state file) to avoid replaying
-// the full ledger history. Obtained from Magnus at View on 2026-05-12.
-const BOOTSTRAP_CURSOR = '298329024'
-
-async function getLastCursor(): Promise<string> {
+async function getLastCursor(): Promise<string | null> {
   try {
     const content = await fs.readFile(STATE_FILE, 'utf-8')
     const cursor = content.trim()
-    return cursor.length > 0 ? cursor : BOOTSTRAP_CURSOR
+    return cursor.length > 0 ? cursor : null
   } catch {
-    return BOOTSTRAP_CURSOR
+    return null
   }
 }
 
@@ -49,7 +45,25 @@ function groupByInvoiceId(
 }
 
 async function syncPayments() {
-  const lastCursor = await getLastCursor()
+  let lastCursor = await getLastCursor()
+
+  if (!lastCursor) {
+    logger.info('no saved cursor, fetching latest cursor from Xledger')
+    const latestResult = await getLatestPaymentCursor()
+    if (!latestResult.ok) {
+      throw new Error('Failed to fetch latest cursor from Xledger')
+    }
+    if (!latestResult.data) {
+      throw new Error('No cursor found in Xledger — ledger may be empty')
+    }
+    lastCursor = latestResult.data
+    await saveLastCursor(lastCursor)
+    logger.info(
+      { lastCursor },
+      'latest cursor saved, starting from here on next run'
+    )
+    return
+  }
 
   logger.info({ lastCursor }, 'syncing Xledger payments after cursor')
 

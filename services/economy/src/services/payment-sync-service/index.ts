@@ -6,7 +6,10 @@ import {
 } from '@onecore/utilities'
 import { z } from 'zod'
 
-import { getPaymentsSince } from '../common/adapters/xledger-adapter'
+import {
+  getLatestPaymentCursor,
+  getPaymentsSince,
+} from '../common/adapters/xledger-adapter'
 import { recordPaymentForInvoice } from '../../common/adapters/tenfast/tenfast-adapter'
 
 const GetPaymentsSinceQuerySchema = z.object({
@@ -39,6 +42,19 @@ export function routes(router: KoaRouter) {
       ctx.body = makeSuccessResponseBody(result, metadata)
     } catch (err: any) {
       logger.error(err, 'payment-sync-service: GET /payments/since')
+      ctx.status = 500
+      ctx.body = { message: err.message }
+    }
+  })
+
+  router.get('(.*)/payments/latest-cursor', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const cursor = await getLatestPaymentCursor()
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(cursor, metadata)
+    } catch (err: any) {
+      logger.error(err, 'payment-sync-service: GET /payments/latest-cursor')
       ctx.status = 500
       ctx.body = { message: err.message }
     }
