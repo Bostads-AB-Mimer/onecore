@@ -722,9 +722,8 @@ export async function getAllInvoicePaymentEvents(
   return events
 }
 
-// Transaction source codes that represent actual payments received.
-// AR/SO are invoice/credit-invoice postings; KF is bad debt; GL is manual booking.
-const PAYMENT_SOURCE_CODES = new Set(['OCR', 'BAA', 'BA'])
+// headerTransactionSourceDbId values for payment types (used in GraphQL filter):
+// OCR = 5205, BAA = 49334581, BA = 611
 
 export interface PaymentsSinceResult {
   events: InvoicePaymentEvent[]
@@ -743,19 +742,30 @@ async function fetchPaymentsPage(params: {
   const query = {
     query: gql`
       query ($after: String) {
-        arTransactions(first: 1000, after: $after, filter: {}) {
+        arTransactions(
+          first: 1000
+          after: $after
+          filter: { headerTransactionSourceDbId_in: [5205, 49334581, 611] }
+        ) {
           edges {
             cursor
             node {
               matchId
               invoiceNumber
+              extIdentifier
               amount
               text
               paymentDate
+              lastPaymentDate
+              invoiceAmount
+              invoiceRemaining
               transactionHeader {
+                transactionNumber
                 postedDate
                 transactionSource {
+                  dbId
                   code
+                  description
                 }
               }
             }
@@ -775,7 +785,6 @@ async function fetchPaymentsPage(params: {
     {
       after: params.after,
       hasData: !!result.data?.arTransactions,
-      edgesNull: result.data?.arTransactions?.edges === null,
       edgesCount: result.data?.arTransactions?.edges?.length ?? 0,
       hasNextPage: result.data?.arTransactions?.pageInfo?.hasNextPage,
     },
@@ -790,14 +799,11 @@ async function fetchPaymentsPage(params: {
   const lastCursor: string | null =
     edges.length > 0 ? edges.at(-1).cursor : null
 
-  const filtered = edges.filter(
-    (edge: any) =>
-      PAYMENT_SOURCE_CODES.has(
-        edge.node.transactionHeader.transactionSource.code
-      ) && edge.node.invoiceNumber != null
-  )
-
-  const events = filtered.map((e: any) => mapToInvoicePaymentEvent(e.node))
+  const events = edges
+    .map((e: any) => mapToInvoicePaymentEvent(e.node))
+    .filter(
+      (e: InvoicePaymentEvent | null): e is InvoicePaymentEvent => e !== null
+    )
 
   if (result.data.arTransactions.pageInfo.hasNextPage && lastCursor) {
     const next = await fetchPaymentsPage({ after: lastCursor })
@@ -807,10 +813,34 @@ async function fetchPaymentsPage(params: {
   return { events, lastCursor }
 }
 
-function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
+// Resolves the invoice ID from an arTransaction node based on source type:
+// - OCR: original invoice is in extIdentifier
+// - BAA: original invoice is in invoiceNumber (extIdentifier also works)
+// - BA: may lack invoice reference entirely — returns null so the caller can skip or handle separately
+function resolveInvoiceId(event: any): string | null {
+  const code: string = event.transactionHeader.transactionSource.code
+  if (code === 'OCR') return event.extIdentifier ?? null
+  if (code === 'BAA') return event.invoiceNumber ?? event.extIdentifier ?? null
+  // BA: manual handling, invoice reference may be absent
+  return event.invoiceNumber ?? event.extIdentifier ?? null
+}
+
+function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent | null {
+  const invoiceId = resolveInvoiceId(event)
+  if (!invoiceId) {
+    logger.info(
+      {
+        matchId: event.matchId,
+        code: event.transactionHeader.transactionSource.code,
+      },
+      'xledger-adapter: skipping payment with no resolvable invoice reference'
+    )
+    return null
+  }
+
   return {
     type: event.transactionHeader.transactionSource.code,
-    invoiceId: event.invoiceNumber,
+    invoiceId,
     matchId: event.matchId,
     amount: parseFloat(event.amount),
     paymentDate: event.transactionHeader.postedDate
