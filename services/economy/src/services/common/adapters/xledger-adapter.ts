@@ -800,7 +800,7 @@ async function fetchPaymentsPage(params: {
     edges.length > 0 ? edges.at(-1).cursor : null
 
   const events = edges
-    .map((e: any) => mapToInvoicePaymentEvent(e.node))
+    .map((e: any) => mapToPaymentSyncEvent(e.node))
     .filter(
       (e: InvoicePaymentEvent | null): e is InvoicePaymentEvent => e !== null
     )
@@ -813,20 +813,35 @@ async function fetchPaymentsPage(params: {
   return { events, lastCursor }
 }
 
-// Resolves the invoice ID from an arTransaction node based on source type:
+// Original mapper used by getInvoicePaymentEvents and getAllInvoicePaymentEvents.
+// Uses invoiceNumber as-is — do not modify this function.
+function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
+  return {
+    type: event.transactionHeader.transactionSource.code,
+    invoiceId: event.invoiceNumber,
+    matchId: event.matchId,
+    amount: parseFloat(event.amount),
+    paymentDate: event.transactionHeader.postedDate
+      ? new Date(event.transactionHeader.postedDate)
+      : new Date(event.paymentDate),
+    text: event.text,
+    transactionSourceCode: event.transactionHeader.transactionSource.code,
+  }
+}
+
+// Resolves the invoice ID for payment sync based on source type per Magnus at View:
 // - OCR: original invoice is in extIdentifier
 // - BAA: original invoice is in invoiceNumber (extIdentifier also works)
-// - BA: may lack invoice reference entirely — returns null so the caller can skip or handle separately
-function resolveInvoiceId(event: any): string | null {
+// - BA: may lack invoice reference — returns null so the event can be skipped
+function resolvePaymentSyncInvoiceId(event: any): string | null {
   const code: string = event.transactionHeader.transactionSource.code
   if (code === 'OCR') return event.extIdentifier ?? null
   if (code === 'BAA') return event.invoiceNumber ?? event.extIdentifier ?? null
-  // BA: manual handling, invoice reference may be absent
   return event.invoiceNumber ?? event.extIdentifier ?? null
 }
 
-function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent | null {
-  const invoiceId = resolveInvoiceId(event)
+function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
+  const invoiceId = resolvePaymentSyncInvoiceId(event)
   if (!invoiceId) {
     logger.info(
       {
