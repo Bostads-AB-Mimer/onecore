@@ -536,16 +536,20 @@ async function deleteComponentModel(
 }
 
 async function getSurfaceModels(): Promise<
-  AdapterResult<GetComponentModelsResponse, 'unknown'>
+  AdapterResult<GetComponentModelsResponse, 'unknown' | 'empty_data'>
 > {
   try {
-    const { data } = await client().GET('/component-models/surface', {})
+    const response = await client().GET('/component-models/surface', {})
 
-    if (data?.content) {
-      return { ok: true, data: data.content }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    if (response.response.status >= 400) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: false, err: 'empty_data' }
   } catch (err) {
     logger.error({ err }, 'componentsAdapter.getSurfaceModels')
     return { ok: false, err: 'unknown' }

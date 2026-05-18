@@ -267,28 +267,6 @@ export function MobileInspectionForm({
               room={currentRoom}
               inspectionData={inspectionData[currentRoom.id]}
               inspectionId={existingInspection.id}
-              onConditionUpdate={(field, value) =>
-                handleConditionUpdate(currentRoom.id, field, value)
-              }
-              onActionUpdate={(field, action) =>
-                handleActionUpdate(currentRoom.id, field, action)
-              }
-              onComponentNoteUpdate={(field, note) =>
-                handleComponentNoteUpdate(currentRoom.id, field, note)
-              }
-              onComponentPhotoAdd={(field, photoPath) =>
-                handleComponentPhotoAdd(currentRoom.id, field, photoPath)
-              }
-              onComponentPhotoRemove={(field, index) =>
-                handleComponentPhotoRemove(currentRoom.id, field, index)
-              }
-              onComponentCostResponsibilityUpdate={(field, value) =>
-                handleComponentCostResponsibilityUpdate(
-                  currentRoom.id,
-                  field,
-                  value
-                )
-              }
               onDetailComponentAdd={(component) =>
                 handleDetailComponentAdd(currentRoom.id, component)
               }

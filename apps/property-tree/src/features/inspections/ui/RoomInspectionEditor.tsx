@@ -32,30 +32,6 @@ interface RoomInspectionEditorProps {
   room: Room
   inspectionData: InspectionRoom
   inspectionId: string
-  onConditionUpdate: (
-    field: keyof InspectionRoom['conditions'],
-    value: string
-  ) => void
-  onActionUpdate: (
-    field: keyof InspectionRoom['actions'],
-    action: string
-  ) => void
-  onComponentNoteUpdate: (
-    field: keyof InspectionRoom['componentNotes'],
-    note: string
-  ) => void
-  onComponentPhotoAdd: (
-    field: keyof InspectionRoom['componentPhotos'],
-    photoPath: string
-  ) => void
-  onComponentPhotoRemove: (
-    field: keyof InspectionRoom['componentPhotos'],
-    index: number
-  ) => void
-  onComponentCostResponsibilityUpdate: (
-    field: keyof InspectionRoom['componentCostResponsibilities'],
-    value: CostResponsibility
-  ) => void
   onDetailComponentAdd: (component: { type: string; label: string }) => void
   onDetailComponentRemove: (componentId: string) => void
   onDetailComponentNoteUpdate: (componentId: string, note: string) => void
@@ -96,12 +72,6 @@ export function RoomInspectionEditor({
   room,
   inspectionData,
   inspectionId,
-  onConditionUpdate,
-  onActionUpdate,
-  onComponentNoteUpdate,
-  onComponentPhotoAdd,
-  onComponentPhotoRemove,
-  onComponentCostResponsibilityUpdate,
   onDetailComponentAdd,
   onDetailComponentRemove,
   onDetailComponentNoteUpdate,
