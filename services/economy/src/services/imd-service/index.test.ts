@@ -218,6 +218,40 @@ describe(imdService.enrichIMDRows, () => {
     )
   })
 
+  it('tags row as unsupported-unit when unit has no mapping', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'ELEC',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'kWh',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          reason: 'unsupported-unit',
+        }),
+      ])
+    )
+  })
+
   it('tags row as tenant-moved when lease ended before today', async () => {
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
@@ -469,7 +503,11 @@ describe(imdService.toTenfastCsv, () => {
 
 const makeUnprocessedRow = (
   rentalObjectCode: string,
-  reason: 'no-rental-object' | 'no-active-lease' | 'amount-too-low',
+  reason:
+    | 'no-rental-object'
+    | 'no-active-lease'
+    | 'amount-too-low'
+    | 'unsupported-unit',
   { cost = 100, unit = 'VV', measurementUnit = 'm3' } = {}
 ) => ({
   rentalObjectCode,
@@ -519,6 +557,17 @@ describe(imdService.toUnprocessedCsv, () => {
 
     const cols = parseRow(csv.split('\n')[1])
     expect(cols[7]).toBe('Belopp under 15 kr')
+  })
+
+  it('uses correct reason for unsupported-unit', () => {
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('306-008-01-0201', 'unsupported-unit', {
+        unit: 'ELEC',
+      }),
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[7]).toBe('Enhet stöds ej: ELEC')
   })
 
   it('outputs multiple rows', () => {
