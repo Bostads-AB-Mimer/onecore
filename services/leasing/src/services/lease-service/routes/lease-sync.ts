@@ -19,13 +19,14 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['since'])
 
     try {
-      const since = ctx.query.since
-        ? new Date(ctx.query.since as string)
-        : null
+      const since = ctx.query.since ? new Date(ctx.query.since as string) : null
 
       if (since && isNaN(since.getTime())) {
         ctx.status = 400
-        ctx.body = { error: 'Invalid since parameter, expected ISO 8601 date', ...metadata }
+        ctx.body = {
+          error: 'Invalid since parameter, expected ISO 8601 date',
+          ...metadata,
+        }
         return
       }
 
@@ -34,7 +35,10 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { content: changes, ...metadata }
     } catch (error: unknown) {
-      logger.error({ error, metadata }, 'Error fetching lease changes from cmlog')
+      logger.error(
+        { error, metadata },
+        'Error fetching lease changes from cmlog'
+      )
       ctx.status = 500
       ctx.body = {
         error:
@@ -57,7 +61,10 @@ export const routes = (router: KoaRouter) => {
         if (action === 'create') {
           if (!contact) {
             ctx.status = 400
-            ctx.body = { error: 'contact is required for action "create"', ...metadata }
+            ctx.body = {
+              error: 'contact is required for action "create"',
+              ...metadata,
+            }
             return
           }
           const slashIndex = leaseId.lastIndexOf('/')
@@ -108,10 +115,15 @@ export const routes = (router: KoaRouter) => {
             return
           }
 
-          const result = await tenfastAdapter.terminateLease(
-            leaseId,
-            new Date(endDate)
-          )
+          logger.info({ leaseId, endDate }, 'LEASE TO BE TERMINATED')
+
+          const result = await tenfastAdapter.terminateLease(leaseId, {
+            endDate: new Date(endDate),
+            reason: 'Synced from xpand',
+            notifyHg: false,
+            supplementaryAgreements: false,
+            handled: true,
+          })
 
           if (!result.ok) {
             if (result.err === 'lease-not-found') {

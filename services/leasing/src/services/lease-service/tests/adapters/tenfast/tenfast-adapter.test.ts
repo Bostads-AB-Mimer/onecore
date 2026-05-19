@@ -1726,6 +1726,14 @@ describe(tenfastAdapter.syncTenant, () => {
 })
 
 describe('terminateLease', () => {
+  const terminateBody: tenfastAdapter.TerminateLeaseBody = {
+    endDate: new Date('2026-04-30T00:00:00.000Z'),
+    reason: 'Synced from xpand',
+    notifyHg: false,
+    supplementaryAgreements: true,
+    handled: true,
+  }
+
   beforeEach(() => {
     jest.restoreAllMocks()
     ;(request as jest.Mock).mockReset()
@@ -1740,7 +1748,7 @@ describe('terminateLease', () => {
 
     const result = await tenfastAdapter.terminateLease(
       lease.externalId,
-      new Date('2026-04-30T00:00:00.000Z')
+      terminateBody
     )
 
     expect(result).toEqual({
@@ -1751,7 +1759,13 @@ describe('terminateLease', () => {
       expect.objectContaining({
         method: 'post',
         url: expect.stringContaining(`/avtal/${lease._id}/terminate`),
-        data: { endDate: '2026-04-30' },
+        data: {
+          endDate: '2026-04-30',
+          reason: 'Synced from xpand',
+          notifyHg: false,
+          supplementaryAgreements: true,
+          handled: true,
+        },
       })
     )
   })
@@ -1761,10 +1775,7 @@ describe('terminateLease', () => {
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
-    const result = await tenfastAdapter.terminateLease(
-      '999/01',
-      new Date('2026-04-30T00:00:00.000Z')
-    )
+    const result = await tenfastAdapter.terminateLease('999/01', terminateBody)
 
     expect(result).toEqual({ ok: false, err: 'lease-not-found' })
   })
@@ -1781,7 +1792,7 @@ describe('terminateLease', () => {
 
     const result = await tenfastAdapter.terminateLease(
       lease.externalId,
-      new Date('2026-04-30T00:00:00.000Z')
+      terminateBody
     )
 
     expect(result).toEqual({
@@ -1802,7 +1813,7 @@ describe('terminateLease', () => {
 
     const result = await tenfastAdapter.terminateLease(
       lease.externalId,
-      new Date('2026-04-30T00:00:00.000Z')
+      terminateBody
     )
 
     expect(result.ok).toBe(false)
@@ -1818,7 +1829,7 @@ describe('terminateLease', () => {
 
     const result = await tenfastAdapter.terminateLease(
       lease.externalId,
-      new Date('2026-04-30T00:00:00.000Z')
+      terminateBody
     )
 
     expect(result.ok).toBe(false)

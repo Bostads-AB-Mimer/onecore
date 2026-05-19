@@ -10,11 +10,13 @@ const STATE_FILE = './last-timestamp-leases.txt'
 // const STATE_FILE = '/data/last-timestamp-leases.txt'
 
 const isResidenceOrStorage = (info: RentalPropertyInfo): boolean => {
-  if (info.type === 'Lägenhet') return true
+  logger.info(info.type)
+  logger.info(info.property)
+  if (info.type.toLowerCase() === 'lägenhet') return true
   if (
-    info.type === 'Lokal' &&
+    info.type.toLowerCase() === 'lokal' &&
     'type' in info.property &&
-    info.property.type === 'Förråd'
+    info.property.type.toLowerCase() === 'förråd'
   )
     return true
   return false
@@ -101,7 +103,10 @@ const syncLeases = async () => {
     }
 
     // Step 3: Sync lease to Tenfast via leasing service
-    logger.info({ leaseId: lease.leaseId, action: lease.action }, 'syncing lease')
+    logger.info(
+      { leaseId: lease.leaseId, action: lease.action },
+      'syncing lease'
+    )
     const syncResult = await syncLease(lease.leaseId, contact, lease.action)
 
     if (!syncResult.ok) {

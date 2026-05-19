@@ -42,7 +42,7 @@ export const cmlogLeaseChanges = (
   const base = db
     .from('cmlog')
     .whereLike('logmemo', 'Hyreskontrakt %')
-    .orderBy('logtime', 'desc')
+    .orderBy('logtime', 'asc')
 
   return since
     ? base.andWhere('logtime', '>', since)
@@ -65,13 +65,13 @@ export const cmlogLeaseChanges = (
  *                 the rename line are skipped with a warning.
  *
  * Only rows containing Bostadskontrakt, Lokalkontrakt, or Garagekontrakt are
- * included.
+ * included. Expects rows in chronological order (oldest first); when the same
+ * leaseId has multiple events, the latest is kept.
  */
 export const parseLeaseChanges = (
   rows: { logmemo: string; logtime: Date }[]
 ): LeaseChange[] => {
-  const seen = new Set<string>()
-  const results: LeaseChange[] = []
+  const byLeaseId = new Map<string, LeaseChange>()
 
   for (const row of rows) {
     const firstLine = row.logmemo.split('\n')[0]
@@ -107,16 +107,13 @@ export const parseLeaseChanges = (
       effectiveLeaseId = renameMatch[1]
     }
 
-    if (seen.has(effectiveLeaseId)) continue
-    seen.add(effectiveLeaseId)
-
     const slashIndex = effectiveLeaseId.lastIndexOf('/')
     const rentalObjectId =
       slashIndex !== -1
         ? effectiveLeaseId.substring(0, slashIndex)
         : effectiveLeaseId
 
-    results.push({
+    byLeaseId.set(effectiveLeaseId, {
       leaseId: effectiveLeaseId,
       contactCode,
       rentalObjectId,
@@ -124,7 +121,7 @@ export const parseLeaseChanges = (
     })
   }
 
-  return results
+  return Array.from(byLeaseId.values())
 }
 
 /**

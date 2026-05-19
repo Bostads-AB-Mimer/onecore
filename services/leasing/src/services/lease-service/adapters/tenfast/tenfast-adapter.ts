@@ -677,10 +677,11 @@ function buildTenantRequestData(contact: Contact) {
       last: contact.lastName ?? '',
     },
     email: contact.emailAddress ?? '',
-    phone: contact.phoneNumbers?.find(
-      (p: { isMainNumber: any }) => p.isMainNumber
-    )?.phoneNumber ?? '',
-    postadress: `${contact.address?.street ?? ''} ${contact.address?.number ?? ''}`.trim(),
+    phone:
+      contact.phoneNumbers?.find((p: { isMainNumber: any }) => p.isMainNumber)
+        ?.phoneNumber ?? '',
+    postadress:
+      `${contact.address?.street ?? ''} ${contact.address?.number ?? ''}`.trim(),
     postnummer: contact.address?.postalCode ?? '',
     stad: contact.address?.city ?? '',
   }
@@ -1015,7 +1016,9 @@ export async function getLeaseByLeaseId(
 
 export const getLeaseByExternalId = async (
   externalId: string
-): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> => {
+): Promise<
+  AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>
+> => {
   try {
     const res = await tenfastApi.request({
       method: 'get',
@@ -1109,9 +1112,17 @@ export const getLeasesWithHomeInsurance = async (): Promise<
   }
 }
 
+export type TerminateLeaseBody = {
+  endDate: Date
+  reason: string
+  notifyHg: boolean
+  supplementaryAgreements: boolean
+  handled: boolean
+}
+
 export const terminateLease = async (
   leaseId: string,
-  endDate: Date
+  body: TerminateLeaseBody
 ): Promise<
   AdapterResult<
     { action: 'terminated' | 'skipped'; leaseId: string },
@@ -1127,11 +1138,13 @@ export const terminateLease = async (
   }
 
   try {
-    const endDateString = endDate.toISOString().split('T')[0]
     const response = await tenfastApi.request({
       method: 'post',
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existing.data._id}/terminate?hyresvard=${tenfastCompanyId}`,
-      data: { endDate: endDateString },
+      data: {
+        ...body,
+        endDate: body.endDate.toISOString().split('T')[0],
+      },
     })
 
     if (response.status === 200) {
