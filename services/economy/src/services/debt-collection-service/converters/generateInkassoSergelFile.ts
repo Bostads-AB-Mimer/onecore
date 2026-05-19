@@ -1,5 +1,8 @@
-import { Contact, RentInvoiceRow } from '@onecore/types'
-import { EnrichedXledgerRentCase, Invoice } from '../../common/types'
+import { Contact, InvoiceRow } from '@onecore/types'
+import {
+  EnrichedXledgerRentCase,
+  DebtCollectionInvoice,
+} from '../../common/types'
 import {
   formatNumber,
   getDateString,
@@ -13,7 +16,7 @@ const MimerCustomerId = '1681340'
 
 type DebtorSection = {
   contact: Contact
-  invoices: Invoice[]
+  invoices: DebtCollectionInvoice[]
 }
 
 export default (
@@ -53,7 +56,7 @@ const getContactPhoneNumber = (contact: Contact) => {
   return contact.phoneNumbers[0].phoneNumber
 }
 
-const createInvoiceSumRow = (invoice: Invoice): string => {
+const createInvoiceSumRow = (invoice: DebtCollectionInvoice): string => {
   return joinStrings([
     '130',
     getDateString(invoice.invoiceDate),
@@ -68,7 +71,10 @@ const createInvoiceSumRow = (invoice: Invoice): string => {
   ])
 }
 
-const createInvoiceRow = (invoice: Invoice, row: RentInvoiceRow): string => {
+const createInvoiceRow = (
+  invoice: DebtCollectionInvoice,
+  row: InvoiceRow
+): string => {
   const {
     reference = '',
     invoiceDate,
@@ -97,7 +103,7 @@ const createInvoiceRow = (invoice: Invoice, row: RentInvoiceRow): string => {
       ' '
     ),
     '  ',
-    `Avser: ${row.text}`,
+    `Avser: ${row.invoiceRowText}`,
   ])
 }
 

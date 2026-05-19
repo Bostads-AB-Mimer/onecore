@@ -13,12 +13,21 @@ import {
   TenfastRentArticle,
   TenfastBatchGetRentalObjectsResponseSchema,
   type TenfastBatchGetLease,
+  TenfastLease,
+  TenfastRentalPropertySearchResponseSchema,
+  TenfastRentalProperty,
+  TenfastLeaseSearchResponseSchema,
 } from './schemas'
 import {
+  Contact,
   Invoice,
   InvoiceRow,
   InvoiceTransactionType,
+  Lease,
+  LeaseStatus,
+  LeaseType,
   PaymentStatus,
+  RentalProperty,
 } from '@onecore/types'
 
 const baseUrl = config.tenfast.baseUrl
@@ -66,6 +75,7 @@ export const getTenantByContactCode = async (
       tenantResponse.data
     )
     if (!parsedResponse.success) {
+      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
       return { ok: false, err: 'schema-error' }
     }
 
@@ -76,6 +86,51 @@ export const getTenantByContactCode = async (
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
+  }
+}
+
+export const getContactByContactCode = async (
+  contactCode: string
+): Promise<AdapterResult<Contact, string>> => {
+  const tenfastTenantResult = await getTenantByContactCode(contactCode)
+  if (!tenfastTenantResult.ok) {
+    return { ok: false, err: tenfastTenantResult.err }
+  }
+  if (!tenfastTenantResult.data) {
+    return { ok: false, err: 'not-found' }
+  }
+
+  const contact = transformTenfastTenantToContact(tenfastTenantResult.data)
+
+  return { ok: true, data: contact }
+}
+
+const transformTenfastTenantToContact = (
+  tenfastTenant: TenfastTenant
+): Contact => {
+  return {
+    contactCode: tenfastTenant.externalId,
+    contactKey: tenfastTenant._id,
+    firstName: tenfastTenant.name.first,
+    lastName: tenfastTenant.name.last,
+    fullName: tenfastTenant.displayName,
+    nationalRegistrationNumber: tenfastTenant.idbeteckning,
+    birthDate: new Date(0), // not available in Tenfast tenant data
+    address: {
+      street: tenfastTenant.postadress,
+      number: '', // Tenfast stores full address in postadress, no separate house number
+      postalCode: tenfastTenant.postnummer,
+      city: tenfastTenant.stad,
+    },
+    phoneNumbers: tenfastTenant.phone
+      ? [{ phoneNumber: tenfastTenant.phone, type: 'main', isMainNumber: true }]
+      : undefined,
+    isTenant: true,
+    careOf: tenfastTenant.careOfAddress,
+    protectedIdentity: false, // not available in Tenfast tenant data
+    deceased: false, // not available in Tenfast tenant data
+    emigrated: false, // not available in Tenfast tenant data
+    noAdvertising: false, // not available in Tenfast tenant data
   }
 }
 
@@ -140,6 +195,171 @@ export const getInvoicesByContactCode = async (
   return invoicesResult.data
 }
 
+export const getRentalProperty = async (
+  rentalPropertyCode: string
+): Promise<AdapterResult<RentalProperty | null, string>> => {
+  try {
+    const result = await makeTenfastRequest(
+      '/v1/hyresvard/hyresobjekt/search',
+      {
+        params: {
+          'filter[externalId]': rentalPropertyCode,
+        },
+      }
+    )
+    if (result.status !== 200) {
+      return { ok: false, err: result.statusText }
+    }
+
+    const parsedResponse = TenfastRentalPropertySearchResponseSchema.safeParse(
+      result.data
+    )
+    if (!parsedResponse.success) {
+      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return {
+      ok: true,
+      data: parsedResponse.data.records[0]
+        ? transformToRentalProperty(parsedResponse.data.records[0])
+        : null,
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}
+
+const transformToRentalProperty = (
+  tenfastRentalProperty: TenfastRentalProperty
+): RentalProperty => {
+  return {
+    rentalPropertyId: tenfastRentalProperty.externalId,
+    apartmentNumber: tenfastRentalProperty.skvNummer ?? 0, // ?
+    size: tenfastRentalProperty.kvm,
+    type: tenfastRentalProperty.typ,
+    rentalPropertyType: tenfastRentalProperty.typ, // ?
+    address: {
+      street: tenfastRentalProperty.postadress,
+      number: tenfastRentalProperty.nummer,
+      postalCode: tenfastRentalProperty.postnummer,
+      city: tenfastRentalProperty.stad,
+    },
+    additionsIncludedInRent: '',
+    otherInfo: tenfastRentalProperty.description,
+    roomTypes: undefined, // TenfastRentalProperty has roomCount but no room type details
+    lastUpdated: new Date(tenfastRentalProperty.updatedAt),
+  }
+}
+
+export const getLease = async (
+  leaseId: string
+): Promise<AdapterResult<Lease | null, string>> => {
+  try {
+    const result = await makeTenfastRequest('/v1/hyresvard/avtal/search', {
+      params: {
+        'filter[externalId]': leaseId,
+        populate: 'hyresobjekt,hyresgaster',
+      },
+    })
+    if (result.status !== 200) {
+      return { ok: false, err: result.statusText }
+    }
+
+    const parsedResponse = TenfastLeaseSearchResponseSchema.safeParse(
+      result.data
+    )
+    if (!parsedResponse.success) {
+      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return {
+      ok: true,
+      data: parsedResponse.data.records[0]
+        ? transformToLease(parsedResponse.data.records[0])
+        : null,
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}
+
+const stageToLeaseStatus = (stage: TenfastLease['stage']): LeaseStatus => {
+  switch (stage) {
+    case 'active':
+      return LeaseStatus.Current
+    case 'upcoming':
+      return LeaseStatus.Upcoming
+    case 'terminationScheduled':
+      return LeaseStatus.AboutToEnd
+    case 'preTermination':
+      return LeaseStatus.PreliminaryTerminated
+    case 'signingInProgress':
+      return LeaseStatus.PendingSignature
+    case 'terminated':
+    case 'archived':
+    case 'voided':
+      return LeaseStatus.Ended
+    case 'draft':
+      return LeaseStatus.NotSent
+  }
+}
+
+const transformToLease = (tenfastLease: TenfastLease): Lease => {
+  let lastDebitDate: Date | undefined
+
+  if (
+    ['preTermination', 'terminationScheduled', 'terminated'].includes(
+      tenfastLease.stage
+    )
+  ) {
+    if (!tenfastLease.endDate) {
+      throw new Error(
+        `Lease ${tenfastLease.externalId} is terminated but does not have an endDate`
+      )
+    }
+
+    lastDebitDate = tenfastLease.endDate
+  }
+
+  const rentalProperty = tenfastLease.hyresobjekt[0]
+
+  const LeaseTypeFromTenfastTyp: Record<string, LeaseType> = {
+    bostad: LeaseType.HousingContract,
+    parkering: LeaseType.ParkingSpaceContract,
+    lokal: LeaseType.CommercialTenantContract,
+    garage: LeaseType.GarageContract,
+    forrad: LeaseType.StorageContract,
+    ovrigt: LeaseType.OtherContract,
+  }
+
+  return {
+    leaseId: tenfastLease.externalId,
+    leaseNumber: tenfastLease.reference.toString(),
+    leaseStartDate: tenfastLease.startDate,
+    leaseEndDate: tenfastLease.endDate ?? undefined,
+    status: stageToLeaseStatus(tenfastLease.stage),
+    tenantContactIds: undefined,
+    tenants: undefined,
+    rentalPropertyId: rentalProperty.externalId,
+    rentalObject: undefined,
+    type: LeaseTypeFromTenfastTyp[rentalProperty.typ],
+    lastDebitDate: lastDebitDate,
+    noticeGivenBy: undefined,
+    noticeDate: undefined,
+    noticeTimeTenant: undefined,
+    preferredMoveOutDate: undefined,
+    terminationDate: undefined,
+    contractDate: undefined,
+    approvalDate: undefined,
+    residentialArea: undefined,
+    rentRows: [], // not in TenfastLease, requires separate fetch
+  }
+}
+
 export const getInvoiceByOcr = async (
   ocr: string
 ): Promise<AdapterResult<Invoice | null, string>> => {
@@ -153,7 +373,7 @@ export const getInvoiceByOcr = async (
       'krediterad',
       'anstand',
     ]
-    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+    const result = await makeTenfastRequest('/v1/hyresvard/hyror/search', {
       params: {
         'filter[ocrNumber]': ocr,
         states: invoiceStates.join(','),
@@ -167,6 +387,7 @@ export const getInvoiceByOcr = async (
       result.data
     )
     if (!parsedResponse.success) {
+      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
       return { ok: false, err: 'schema-error' }
     }
 
@@ -220,7 +441,7 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     paidAmount: tenfastInvoice.amountPaid,
     remainingAmount,
     invoiceId: tenfastInvoice.ocrNumber,
-    leaseId: '',
+    leaseIds: tenfastInvoice.avtal.map((a) => a.externalId),
     paymentStatus:
       remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
     type: 'Regular',
@@ -389,9 +610,9 @@ const transformToInvoiceRow = (
     fromDate: tenfastInvoiceRow.from ?? '',
     toDate: tenfastInvoiceRow.to ?? '',
     vat: tenfastInvoiceRow.vat,
-    totalAmount: tenfastInvoiceRow.amount + tenfastInvoiceRow.vat,
+    totalAmount: tenfastInvoiceRow.amount * (1 + tenfastInvoiceRow.vat),
     printGroup: tenfastInvoiceRow.consolidationLabel ?? null,
-    invoiceRowText: null, // Set later from related article
+    invoiceRowText: tenfastInvoiceRow.label,
     // We do not have the fields below in tenfast at the moment
     deduction: 0,
     roundoff: 0,
