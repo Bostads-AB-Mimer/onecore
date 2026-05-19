@@ -340,6 +340,9 @@ const groupAggregateRows = (
   invoiceRows: ExportedInvoiceRow[],
   voucherNumber: string
 ): AggregatedRow[] => {
+  console.log('groupAggregateRows')
+  console.table(invoiceRows)
+
   const groupedRows = [
     ...invoiceRows
       .reduce((r, o) => {
