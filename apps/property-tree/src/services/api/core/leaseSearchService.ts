@@ -11,19 +11,20 @@ export type PaginatedResponse<T> = {
   _links: PaginationLinks[]
 }
 
+export type LeaseStatusFilter =
+  | 'current'
+  | 'upcoming'
+  | 'abouttoend'
+  | 'ended'
+  | 'preliminaryterminated'
+  | 'pendingsignature'
+  | 'notsent'
+
 export type LeaseSearchQueryParams = {
   q?: string
   name?: string
   objectType?: string[]
-  status?: (
-    | 'current'
-    | 'upcoming'
-    | 'abouttoend'
-    | 'ended'
-    | 'preliminaryterminated'
-    | 'pendingsignature'
-    | 'notsent'
-  )[]
+  status?: LeaseStatusFilter[]
   leaseType?: string[]
   parkingSpaceType?: string[]
   startDateFrom?: string

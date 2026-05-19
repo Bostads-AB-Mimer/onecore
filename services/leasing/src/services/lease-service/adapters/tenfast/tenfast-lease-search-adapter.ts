@@ -74,7 +74,7 @@ interface BatchGetLease {
 }
 
 /** Map a batch-get lease to a onecore Lease */
-function mapBatchGetLeaseToOncoreLease(lease: BatchGetLease): Lease {
+function mapBatchGetLeaseToOnecoreLease(lease: BatchGetLease): Lease {
   const ro = lease.rentalObjects[0]
   const stadsdel = ro?.stadsdel ?? ro?.fastighet?.stadsdel
 
@@ -326,7 +326,7 @@ function applyLocalFilters(
           .map((s) => STATUS_PARAM_TO_LEASE_STATUS[s.toLowerCase()])
           .filter((s) => s !== undefined)
       )
-      if (!allowedStatuses.has(lease.status as LeaseStatus)) return false
+      if (!allowedStatuses.has(lease.status)) return false
     }
 
     // Object type filter
@@ -589,10 +589,7 @@ export async function fetchAllLeasesForExport(
       break
     }
 
-    const isWrapped = !Array.isArray(res.data) && res.data?.records
-    const records = isWrapped ? res.data.records : res.data
-
-    const parsed = TenfastLeaseSchema.array().safeParse(records)
+    const parsed = TenfastLeaseSchema.array().safeParse(res.data.records)
     if (!parsed.success) {
       logger.error(
         { error: parsed.error.issues.slice(0, 3) },
@@ -602,7 +599,7 @@ export async function fetchAllLeasesForExport(
     }
 
     allLeases.push(...parsed.data)
-    cursor = isWrapped ? (res.data.next ?? '') : ''
+    cursor = res.data.next ?? ''
 
     if (!cursor || parsed.data.length === 0) break
   }
@@ -767,7 +764,7 @@ async function fetchAllLeasesForExportViaBatchGet(
   }
 
   // Apply local filters (status, objectType, etc.)
-  let leases = batchLeases.map(mapBatchGetLeaseToOncoreLease)
+  let leases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
   leases = applyLocalFilters(leases, batchLeases, params)
 
   // Fetch contacts in batches
@@ -836,15 +833,13 @@ export async function fetchLeases(
         return { ok: false, err: 'unknown' }
       }
 
-      // Tenfast wraps results in { records: [...], prev, next, totalCount }
-      const isWrapped = !Array.isArray(res.data) && res.data?.records
-      records = isWrapped ? res.data.records : res.data
+      records = res.data.records
 
       if (currentPage === 1) {
-        totalCount = isWrapped ? (res.data.totalCount ?? 0) : 0
+        totalCount = res.data.totalCount ?? 0
       }
 
-      cursor = isWrapped ? (res.data.next ?? '') : ''
+      cursor = res.data.next ?? ''
 
       // If there are no more pages and we haven't reached the target yet,
       // the requested page is beyond the available data.
@@ -1109,7 +1104,7 @@ export const searchLeases = async (
       }
 
       // Apply local filters to check if we have enough results
-      const currentLeases = batchLeases.map(mapBatchGetLeaseToOncoreLease)
+      const currentLeases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
       const filtered = applyLocalFilters(currentLeases, batchLeases, params)
 
       // Stop fetching if we have enough to fill the requested page
@@ -1118,7 +1113,7 @@ export const searchLeases = async (
       }
     }
 
-    let leases = batchLeases.map(mapBatchGetLeaseToOncoreLease)
+    let leases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
     leases = applyLocalFilters(leases, batchLeases, params)
 
     // Estimate total count based on hit rate from fetched batches

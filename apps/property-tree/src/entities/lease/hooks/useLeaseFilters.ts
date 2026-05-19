@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from 'react'
 
 import {
   type BuildingManager,
+  type LeaseStatusFilter,
   leaseSearchService,
   type ParkingSpaceType,
 } from '@/services/api/core/leaseSearchService'
@@ -41,6 +42,18 @@ const VALID_SORT_KEYS = [
 type ValidSortKey = (typeof VALID_SORT_KEYS)[number]
 const isValidSortKey = (v: string | null): v is ValidSortKey =>
   VALID_SORT_KEYS.includes(v as ValidSortKey)
+
+const LEASE_STATUS_VALUES: LeaseStatusFilter[] = [
+  'current',
+  'upcoming',
+  'abouttoend',
+  'ended',
+  'preliminaryterminated',
+  'pendingsignature',
+  'notsent',
+]
+const isLeaseStatusFilter = (v: string): v is LeaseStatusFilter =>
+  (LEASE_STATUS_VALUES as string[]).includes(v)
 
 // These filters only allow a single value at a time
 const SINGLE_SELECT_FILTERS = [
@@ -86,16 +99,7 @@ export function useLeaseFilters() {
     [urlSearchParams]
   )
   const selectedStatuses = useMemo(
-    () =>
-      urlSearchParams.getAll('status') as (
-        | 'current'
-        | 'upcoming'
-        | 'abouttoend'
-        | 'ended'
-        | 'preliminaryterminated'
-        | 'pendingsignature'
-        | 'notsent'
-      )[],
+    () => urlSearchParams.getAll('status').filter(isLeaseStatusFilter),
     [urlSearchParams]
   )
   const selectedLeaseTypes = useMemo(
