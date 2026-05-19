@@ -593,7 +593,20 @@ async function getOrCreateTenant(
 }
 
 function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
-  logger.error({ err: JSON.stringify(errorObj) }, errorLiteral)
+  if (isAxiosError(errorObj)) {
+    logger.error(
+      {
+        message: errorObj.message,
+        status: errorObj.response?.status,
+        data: errorObj.response?.data,
+        url: errorObj.config?.url,
+        method: errorObj.config?.method,
+      },
+      errorLiteral
+    )
+  } else {
+    logger.error({ err: JSON.stringify(errorObj) }, errorLiteral)
+  }
   return { ok: false, err: errorLiteral } as const
 }
 
