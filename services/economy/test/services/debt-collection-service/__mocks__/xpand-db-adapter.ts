@@ -1,5 +1,11 @@
-import { Contact, RentInvoiceRow } from '@onecore/types'
-import { RentInvoice, RentalProperty } from '@src/services/common/types'
+import {
+  Contact,
+  Invoice,
+  InvoiceRow,
+  InvoiceTransactionType,
+  PaymentStatus,
+  RentalProperty,
+} from '@onecore/types'
 
 // Mock data factories
 export const createMockContact = (
@@ -31,49 +37,60 @@ export const createMockContact = (
 })
 
 export const createMockRentInvoice = (
-  overrides: Partial<RentInvoice> = {}
-): RentInvoice => ({
-  invoiceNumber: 'INV001',
+  overrides: Partial<Invoice> = {}
+): Invoice => ({
+  invoiceId: 'INV001',
+  leaseIds: [],
+  amount: 5000,
   reference: 'RENTAL001/2023',
-  roundoff: 0,
   fromDate: new Date('2023-01-01'),
   toDate: new Date('2023-01-31'),
   invoiceDate: new Date('2023-01-01'),
-  expiryDate: new Date('2023-01-31'),
-  lastDebitDate: undefined,
-  careOf: undefined,
+  expirationDate: new Date('2023-01-31'),
+  debitStatus: 0,
+  paymentStatus: PaymentStatus.Unpaid,
+  transactionType: InvoiceTransactionType.Rent,
+  transactionTypeName: 'Hyra',
+  type: 'Regular',
+  source: 'legacy',
+  invoiceRows: [],
+  credit: null,
   ...overrides,
 })
 
 export const createMockRentalProperty = (
   overrides: Partial<RentalProperty> = {}
 ): RentalProperty => ({
-  rentalId: 'REN-TAL-00-1001',
-  code: 'R001',
-  address: 'Test Property Address 1',
-  postalCode: '12345',
-  city: 'Test City',
+  rentalPropertyId: 'REN-TAL-00-1001',
+  apartmentNumber: 1001,
+  size: 50.5,
   type: 'Apartment',
-  areaSize: 50.5,
-  rentalPropertyType: 'Residence' as const,
+  address: undefined,
+  rentalPropertyType: 'Residence',
+  additionsIncludedInRent: '',
+  otherInfo: undefined,
+  roomTypes: undefined,
+  lastUpdated: undefined,
   ...overrides,
 })
 
 export const createMockRentInvoiceRow = (
-  overrides: Partial<RentInvoiceRow> = {}
-): RentInvoiceRow => ({
+  overrides: Partial<InvoiceRow> = {}
+): InvoiceRow => ({
   invoiceNumber: 'INV001',
-  type: 'Rent' as const,
-  text: 'Rent payment',
-  rentType: 'Hyra bostad',
+  invoiceRowText: 'Rent payment',
   amount: 5000,
-  reduction: 0,
+  deduction: 0,
   vat: 0,
   printGroup: 'N',
-  code: '',
   rowType: 0,
-  fromDate: new Date(),
-  toDate: new Date(),
+  fromDate: '2023-01-01',
+  invoiceDate: '2023-01-01',
+  invoiceDueDate: '2023-01-31',
+  rentArticle: null,
+  roundoff: 0,
+  toDate: '2023-01-31',
+  totalAmount: 5000,
   ...overrides,
 })
 
@@ -92,15 +109,13 @@ export const setupDefaultMocks = () => {
     // Header row with lease ID
     createMockRentInvoiceRow({
       rowType: 3,
-      text: 'REN-TAL-00-1001/01',
+      invoiceRowText: 'REN-TAL-00-1001/01',
       printGroup: null,
     }),
     // Rent row
     createMockRentInvoiceRow({
       printGroup: 'N',
-      text: 'Hyra bostad',
-      rentType: 'Hyra bostad',
-      type: 'Rent',
+      invoiceRowText: 'Hyra bostad',
     }),
   ])
 }

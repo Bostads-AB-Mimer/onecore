@@ -114,7 +114,7 @@ describe('Tenfast Adapter', () => {
         paidAmount: 0,
         remainingAmount: 1000,
         invoiceId: '55123456',
-        leaseId: '',
+        leaseIds: expect.arrayContaining([expect.any(String)]),
         paymentStatus: PaymentStatus.Unpaid,
         reference: '55123456',
         source: 'next',

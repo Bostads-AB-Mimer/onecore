@@ -8,6 +8,7 @@ import {
   TenfastRentArticle,
   TenfastTenantByContactCodeResponse,
   TenfastInvoicesByTenantIdResponse,
+  TenfastInvoicesByOcrResponse,
 } from '@src/common/adapters/tenfast/schemas'
 
 export const TenfastTenantFactory = Factory.define<TenfastTenant>(
@@ -66,7 +67,39 @@ export const TenfastInvoiceFactory = Factory.define<TenfastInvoice>(
     expectedInvoiceDate: '2024-01-15T10:00:00Z',
     due: '2024-02-15T10:00:00Z',
     hyresvard: 'hyresvard-123',
-    avtal: ['lease-123'],
+    avtal: [
+      {
+        _id: 'lease-123',
+        id: 'lease-123',
+        externalId: `306-008-01-0${sequence.toString().padStart(3, '0')}/01`,
+        hyresobjekt: [
+          {
+            _id: `obj-${sequence}`,
+            nummer: '123',
+            skvNummer: null,
+            postadress: 'Test Street 123',
+            externalId: 'prop-123',
+            displayName: 'Test Property',
+            subType: 'apartment',
+            states: [],
+          },
+        ],
+        hyresgaster: [
+          {
+            name: { first: 'Test', last: 'Persson' },
+            _id: `tenant-${sequence}`,
+            externalId: `P${sequence}`,
+            company: '',
+            isCompany: false,
+            displayName: 'Test Persson',
+          },
+        ],
+        reference: 123456,
+        stage: 'active',
+        canDelete: false,
+        canVoid: false,
+      },
+    ],
     vatEnabled: false,
     propertyTax: false,
     simpleHyra: true,
@@ -109,13 +142,35 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     ],
     hyresobjekt: [
       {
-        _id: `property-${sequence}`,
         nummer: '123',
         postadress: 'Test Street 123',
         skvNummer: null,
         displayName: 'Test Property',
-        subType: 'apartment',
         states: [],
+        externalId: `306-008-01-0${sequence.toString().padStart(3, '0')}`,
+        hyresvard: 'hyresvard-123',
+        hyra: 5000,
+        hyraExcludingVat: 5000,
+        hyraVat: 0,
+        hyror: [],
+        postnummer: '12345',
+        stad: 'Test City',
+        stadsdel: 'Test District',
+        typ: 'apartment',
+        kvm: 50,
+        roomCount: 2,
+        bostadType: 'apartment',
+        parkeringType: null,
+        lokalType: null,
+        category: null,
+        images: [],
+        files: [],
+        comments: [],
+        tags: [],
+        useCounter: 0,
+        avtalStates: [],
+        lastStateChanged: '2024-01-01T10:00:00Z',
+        updatedAt: new Date('2024-01-01'),
       },
     ],
     reference: 123456,
@@ -151,14 +206,14 @@ export const TenfastInvoicesByTenantIdResponseFactory =
     }),
   ])
 
-export const TenfastInvoicesByOcrResponseFactory = Factory.define<any>(() => ({
-  records: [
-    {
-      ...TenfastInvoiceFactory.build({
-        amountPaid: 500,
-        hyror: [TenfastInvoiceRowFactory.build()],
-      }),
-      avtal: [TenfastLeaseFactory.build()],
-    },
-  ],
-}))
+export const TenfastInvoicesByOcrResponseFactory =
+  Factory.define<TenfastInvoicesByOcrResponse>(() => ({
+    records: [
+      {
+        ...TenfastInvoiceFactory.build({
+          amountPaid: 500,
+          hyror: [TenfastInvoiceRowFactory.build()],
+        }),
+      },
+    ],
+  }))

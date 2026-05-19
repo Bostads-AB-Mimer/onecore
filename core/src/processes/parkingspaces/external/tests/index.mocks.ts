@@ -140,7 +140,7 @@ export const mockedLease: Lease = {
 
 export const mockedPaidInvoice: Invoice = {
   invoiceId: 'INV-001',
-  leaseId: '123-456-789/0',
+  leaseIds: ['123-456-789/0'],
   amount: 1000,
   reference: 'REF-001',
   fromDate: new Date(),
@@ -163,7 +163,7 @@ export const mockedPaidInvoice: Invoice = {
 
 export const mockedUnpaidInvoice: Invoice = {
   invoiceId: 'INV-002',
-  leaseId: '123-456-789/0',
+  leaseIds: ['123-456-789/0'],
   amount: 1000,
   reference: 'REF-001',
   fromDate: new Date(),

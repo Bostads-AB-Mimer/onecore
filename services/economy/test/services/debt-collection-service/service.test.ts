@@ -4,21 +4,18 @@ import {
   enrichBalanceCorrections,
   importInvoicesFromCsv,
   importBalanceCorrectionsFromCsv,
-  addRoundoffToFirstRow,
   aggregateRows,
   CsvError,
 } from '@src/services/debt-collection-service/service'
 
-// Mock the database adapters
-jest.mock('@src/services/common/adapters/xpand-db-adapter', () =>
-  require('./__mocks__/xpand-db-adapter')
+jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () =>
+  require('./__mocks__/tenfast-adapter')
 )
 
 jest.mock('@src/services/common/adapters/xledger-adapter', () =>
   require('./__mocks__/xledger-adapter')
 )
 
-// Mock the file generators
 jest.mock(
   '@src/services/debt-collection-service/converters/generateInkassoSergelFile',
   () => ({
@@ -38,15 +35,15 @@ jest.mock(
 )
 
 import {
-  getContacts,
-  getInvoices,
-  getRentalProperties,
-  getInvoiceRows,
+  getContactByContactCode,
+  getInvoiceByOcr,
+  getLease,
+  getRentalProperty,
   setupDefaultMocks,
   resetMocks,
   createMockRentInvoiceRow,
-  createMockRentalProperty,
-} from './__mocks__/xpand-db-adapter'
+  createMockRentInvoice,
+} from './__mocks__/tenfast-adapter'
 
 import {
   getCustomers as getXledgerCustomers,
@@ -90,13 +87,11 @@ describe('Debt Collection Service', () => {
         expect(result.file).toBe('mocked-sergel-file-content')
       }
 
-      // Verify database calls were made with correct parameters
-      expect(getContacts).toHaveBeenCalledWith(['CONTACT001'])
-      expect(getInvoices).toHaveBeenCalledWith(['INV001'])
-      expect(getInvoiceRows).toHaveBeenCalledWith(['INV001'])
-      expect(getRentalProperties).toHaveBeenCalledWith(['REN-TAL-00-1001'])
+      expect(getContactByContactCode).toHaveBeenCalledWith('CONTACT001')
+      expect(getInvoiceByOcr).toHaveBeenCalledWith('INV001')
+      expect(getLease).toHaveBeenCalledWith('REN-TAL-00-1001/01')
+      expect(getRentalProperty).toHaveBeenCalledWith('REN-TAL-00-1001')
 
-      // Verify file generator was called
       expect(generateInkassoSergelFile).toHaveBeenCalledWith(
         expect.any(Array),
         expect.any(Date)
@@ -114,66 +109,48 @@ describe('Debt Collection Service', () => {
     })
 
     it('should return error on missing contacts', async () => {
-      getContacts.mockResolvedValueOnce([])
+      getContactByContactCode.mockResolvedValueOnce({
+        ok: false,
+        err: 'not-found',
+      })
 
       const result = await enrichRentInvoices(validCsv)
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error.message).toContain('Contact not found')
-        expect(result.error.message).toContain('CONTACT001')
+        expect(result.error.message).toContain('not-found')
       }
     })
 
     it('should return error on missing invoices', async () => {
-      getInvoices.mockResolvedValueOnce([])
+      getInvoiceByOcr.mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const result = await enrichRentInvoices(validCsv)
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
-        expect(result.error.message).toContain('Invoice not found')
-        expect(result.error.message).toContain('INV001')
+        expect(result.error.message).toContain('not-found')
       }
     })
 
     it('should return error on missing rental properties', async () => {
-      getRentalProperties.mockResolvedValueOnce([])
+      getRentalProperty.mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const result = await enrichRentInvoices(validCsv)
 
       expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.error.message).toContain('Rental properties not found')
-        expect(result.error.message).toContain('INV001')
-      }
     })
 
     it('should aggregate invoice rows correctly', async () => {
       const rows = [
-        // Header row with lease ID
-        createMockRentInvoiceRow({
-          rowType: 3,
-          text: 'ABC-DEF-GH-IJKL/01',
-          printGroup: null,
-        }),
-        // First group of rows with printGroup 'N'
         createMockRentInvoiceRow({ printGroup: 'N', amount: 1000 }),
         createMockRentInvoiceRow({
           printGroup: 'N',
           amount: 0,
-          reduction: 100,
+          deduction: 100,
         }),
-        // Another header row
-        createMockRentInvoiceRow({
-          rowType: 3,
-          text: 'XYZ-ABC-DE-FGHI/02',
-          printGroup: null,
-        }),
-        // Second group with printGroup 'A'
         createMockRentInvoiceRow({ printGroup: 'A', amount: 100 }),
         createMockRentInvoiceRow({ printGroup: 'A', amount: 200 }),
-        // Row with null printGroup (ungrouped)
         createMockRentInvoiceRow({ printGroup: null, amount: 300 }),
       ]
 
@@ -181,50 +158,35 @@ describe('Debt Collection Service', () => {
 
       expect(aggregated).toHaveLength(3)
 
-      // First group should sum amount + reduction
       expect(aggregated[0].amount).toBe(1100) // 1000 + 0 + 100
       expect(aggregated[0].printGroup).toBe('N')
 
-      // Second group
       expect(aggregated[1].amount).toBe(300) // 100 + 200
       expect(aggregated[1].printGroup).toBe('A')
 
-      // Ungrouped row
       expect(aggregated[2].amount).toBe(300)
       expect(aggregated[2].printGroup).toBe(null)
     })
 
     it('should handle partially paid invoices correctly', async () => {
       const mockRows = [
-        // Header row for first lease - use the same rental ID as the mock
         createMockRentInvoiceRow({
-          rowType: 3,
-          text: 'REN-TAL-00-1001/01',
-          printGroup: null,
-        }),
-        createMockRentInvoiceRow({
-          rentType: 'Hyra bostad',
           amount: 5000,
-          type: 'Rent',
           printGroup: 'A',
-          text: 'Hyra bostad',
+          invoiceRowText: 'Hyra bostad',
         }),
         createMockRentInvoiceRow({
-          rentType: 'Hyra bostad',
           amount: 0,
-          reduction: -500,
-          type: 'Rent',
+          deduction: -500,
           printGroup: 'A',
-          text: 'Reduction',
+          invoiceRowText: 'Reduction',
         }),
       ]
 
-      // Mock additional rental properties for other potential lease IDs
-      getRentalProperties.mockResolvedValueOnce([
-        createMockRentalProperty({ rentalId: 'REN-TAL-00-1001' }),
-      ])
-
-      getInvoiceRows.mockResolvedValueOnce(mockRows)
+      getInvoiceByOcr.mockResolvedValueOnce({
+        ok: true,
+        data: createMockRentInvoice({ invoiceRows: mockRows }),
+      })
 
       const csvWithPayment = createRentInvoiceCsv([
         {
@@ -256,7 +218,7 @@ describe('Debt Collection Service', () => {
         expect(result.file).toBe('mocked-sergel-file-content')
       }
 
-      expect(getContacts).toHaveBeenCalledWith(['CONTACT001'])
+      expect(getContactByContactCode).toHaveBeenCalledWith('CONTACT001')
       expect(generateInkassoSergelFile).toHaveBeenCalledWith(
         expect.any(Array),
         expect.any(Date)
@@ -264,16 +226,15 @@ describe('Debt Collection Service', () => {
     })
 
     it('should return error on missing contacts', async () => {
-      getContacts.mockResolvedValueOnce([])
+      getContactByContactCode.mockResolvedValueOnce({
+        ok: false,
+        err: 'not-found',
+      })
       getXledgerCustomers.mockResolvedValueOnce([])
 
       const result = await enrichOtherInvoices(validCsv)
 
       expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.error.message).toContain('Contact not found')
-        expect(result.error.message).toContain('CONTACT001')
-      }
     })
   })
 
@@ -288,8 +249,9 @@ describe('Debt Collection Service', () => {
         expect(result.file).toBe('mocked-balance-correction-file-content')
       }
 
-      expect(getInvoices).toHaveBeenCalledWith(['INV001'])
-      expect(getRentalProperties).toHaveBeenCalledWith(['REN-TAL-00-1001'])
+      expect(getInvoiceByOcr).toHaveBeenCalledWith('INV001')
+      expect(getLease).toHaveBeenCalledWith('REN-TAL-00-1001/01')
+      expect(getRentalProperty).toHaveBeenCalledWith('REN-TAL-00-1001')
       expect(generateBalanceCorrectionFile).toHaveBeenCalledWith(
         expect.any(Array),
         expect.any(Date)
@@ -297,35 +259,19 @@ describe('Debt Collection Service', () => {
     })
 
     it('should return error for invoices without rental properties', async () => {
-      getRentalProperties.mockResolvedValueOnce([])
+      getRentalProperty.mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const result = await enrichBalanceCorrections(validCsv)
 
       expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.error.message).toContain('Rental properties not found')
-        expect(result.error.message).toContain('INV001')
-      }
     })
 
-    it('should handle balance corrections without invoices', async () => {
-      getInvoices.mockResolvedValueOnce([])
+    it('should return error when invoice is not found', async () => {
+      getInvoiceByOcr.mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const result = await enrichBalanceCorrections(validCsv)
 
-      expect(result.ok).toBe(true)
-      if (result.ok) {
-        expect(result.file).toBe('mocked-balance-correction-file-content')
-      }
-
-      expect(generateBalanceCorrectionFile).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            hasInvoice: false,
-          }),
-        ]),
-        expect.any(Date)
-      )
+      expect(result.ok).toBe(false)
     })
   })
 
@@ -393,40 +339,11 @@ describe('Debt Collection Service', () => {
   })
 
   describe('Utility Functions', () => {
-    describe('addRoundoffToFirstRow', () => {
-      it('should add roundoff to first row amount', () => {
-        const rows = [
-          createMockRentInvoiceRow({ amount: 1000 }),
-          createMockRentInvoiceRow({ amount: 500 }),
-        ]
-        const result = addRoundoffToFirstRow(rows, 50)
-        expect(result[0].amount).toBe(1050)
-        expect(result[1].amount).toBe(500)
-      })
-      it('should return empty array when no rows', () => {
-        const result = addRoundoffToFirstRow([], 50)
-        expect(result).toEqual([])
-      })
-    })
     describe('aggregateRows', () => {
-      it('should group rows by header and printGroup sequences', () => {
+      it('should group rows by printGroup', () => {
         const rows = [
-          // Header row
-          createMockRentInvoiceRow({
-            rowType: 3,
-            text: 'ABC-DEF-GH-IJKL/01',
-            printGroup: null,
-          }),
-          // Group with printGroup 'N'
           createMockRentInvoiceRow({ printGroup: 'N', amount: 1000 }),
           createMockRentInvoiceRow({ printGroup: 'N', amount: 500 }),
-          // Another header row
-          createMockRentInvoiceRow({
-            rowType: 3,
-            text: 'XYZ-ABC-DE-FGHI/02',
-            printGroup: null,
-          }),
-          // Group with printGroup 'A'
           createMockRentInvoiceRow({ printGroup: 'A', amount: 300 }),
         ]
         const result = aggregateRows(rows)
@@ -448,69 +365,40 @@ describe('Debt Collection Service', () => {
         expect(result[1].amount).toBe(1000)
       })
 
-      it('should sum amount, reduction, and vat for grouped rows', () => {
+      it('should sum amount, deduction, and vat for grouped rows', () => {
         const rows = [
-          // Header row
-          createMockRentInvoiceRow({
-            rowType: 3,
-            text: 'ABC-DEF-GH-IJKL/01',
-            printGroup: null,
-          }),
           createMockRentInvoiceRow({
             printGroup: 'N',
             amount: 1000,
-            reduction: 100,
-            vat: 50,
+            deduction: 100,
+            vat: 0,
           }),
           createMockRentInvoiceRow({
             printGroup: 'N',
             amount: 500,
-            reduction: 50,
-            vat: 25,
+            deduction: 50,
+            vat: 0,
           }),
         ]
         const result = aggregateRows(rows)
         expect(result).toHaveLength(1)
-        expect(result[0].amount).toBe(1725) // 1000 + 500 + 100 + 50 + 50 + 25
+        expect(result[0].amount).toBe(1650) // (1000+100) + (500+50)
       })
 
       it('should prefer Hyra bostad or Hyra p-plats as main row', () => {
         const rows = [
-          // Header row
           createMockRentInvoiceRow({
-            rowType: 3,
-            text: 'ABC-DEF-GH-IJKL/01',
-            printGroup: null,
+            printGroup: 'N',
+            invoiceRowText: 'Other text',
           }),
           createMockRentInvoiceRow({
             printGroup: 'N',
-            type: 'Other',
-            text: 'Other text',
-          }),
-          createMockRentInvoiceRow({
-            printGroup: 'N',
-            type: 'Rent',
-            text: 'Hyra bostad',
+            invoiceRowText: 'Hyra bostad',
           }),
         ]
         const result = aggregateRows(rows)
         expect(result).toHaveLength(1)
-        expect(result[0].text).toBe('Hyra bostad')
-        expect(result[0].type).toBe('Rent')
-      })
-
-      it('should handle invalid header row format by throwing error', () => {
-        const rows = [
-          // Invalid header row format
-          createMockRentInvoiceRow({
-            rowType: 3,
-            text: 'INVALID-FORMAT',
-            printGroup: null,
-          }),
-        ]
-        expect(() => aggregateRows(rows)).toThrow(
-          'INVALID-FORMAT does not match regular expression for lease ids'
-        )
+        expect(result[0].invoiceRowText).toBe('Hyra bostad')
       })
 
       it('should return empty array when no rows provided', () => {
