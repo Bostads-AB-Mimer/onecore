@@ -80,6 +80,7 @@ type UnprocessedReason =
   | 'amount-too-low'
   | 'tenant-moved'
   | 'multiple-leases'
+  | 'unsupported-unit'
 
 type UnprocessedIMDRow = IMDRow & {
   reason: UnprocessedReason
@@ -154,6 +155,8 @@ async function enrichIMDRows(
         })
       } else if (hasTenantMoved(lookup, today)) {
         unprocessed.push({ ...row, reason: 'tenant-moved' })
+      } else if (!UNIT_CONFIG[row.unit]) {
+        unprocessed.push({ ...row, reason: 'unsupported-unit' })
       } else {
         enriched.push({ ...row, leaseId: lookup.leaseId })
       }
@@ -258,9 +261,9 @@ const UNPROCESSED_CSV_HEADER = csvRow([
   'Orsak',
 ])
 
-// 'multiple-leases' is handled dynamically in getReasonLabel (includes lease IDs)
+// 'multiple-leases' and 'unsupported-unit' are handled dynamically in getReasonLabel
 const REASON_LABELS: Record<
-  Exclude<UnprocessedReason, 'multiple-leases'>,
+  Exclude<UnprocessedReason, 'multiple-leases' | 'unsupported-unit'>,
   string
 > = {
   'no-rental-object': 'Hyresobjekt saknas i Tenfast',
@@ -273,6 +276,9 @@ function getReasonLabel(row: UnprocessedIMDRow): string {
   if (row.reason === 'multiple-leases') {
     const ids = row.leaseIds?.join(', ') ?? ''
     return `Flera kontrakt matchar perioden: ${ids}`
+  }
+  if (row.reason === 'unsupported-unit') {
+    return `Enhet stöds ej: ${row.unit}`
   }
   return REASON_LABELS[row.reason]
 }
@@ -294,6 +300,24 @@ function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {
   })
 
   return [UNPROCESSED_CSV_HEADER, ...lines].join('\n')
+}
+
+function generateCsvOutput(
+  enriched: Array<EnrichedIMDRow>,
+  unprocessed: Array<UnprocessedIMDRow>
+): Result<{ enrichedCsv: string; unprocessedCsv: string }> {
+  try {
+    return {
+      ok: true,
+      data: {
+        enrichedCsv: toTenfastCsv(enriched),
+        unprocessedCsv: toUnprocessedCsv(unprocessed),
+      },
+    }
+  } catch (err) {
+    logger.error(err, 'IMD: Failed to generate CSV output')
+    return { ok: false, reason: 'processing-failed' }
+  }
 }
 
 type ProcessResult = {
@@ -325,8 +349,11 @@ async function processIMD(csv: string): Promise<Result<ProcessResult>> {
     `IMD: Enrichment complete — ${enriched.length} matched, ${unprocessed.length} unprocessed`
   )
 
-  const enrichedCsv = toTenfastCsv(enriched)
-  const unprocessedCsv = toUnprocessedCsv(unprocessed)
+  const csvResult = generateCsvOutput(enriched, unprocessed)
+  if (!csvResult.ok) {
+    return csvResult
+  }
+  const { enrichedCsv, unprocessedCsv } = csvResult.data
 
   logger.info(
     {
