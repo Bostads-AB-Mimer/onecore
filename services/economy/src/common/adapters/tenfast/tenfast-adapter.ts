@@ -336,6 +336,7 @@ const enrichInvoiceRowsWithAccounting = async (
 
       if (articleResult.ok) {
         const article = articleResult.data
+        console.log(article)
         invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
         if (article.accountConfigurations?.length) {
           const accountConfiguration = article.accountConfigurations.find(
@@ -347,6 +348,18 @@ const enrichInvoiceRowsWithAccounting = async (
           if (accountConfiguration) {
             invoiceRowWithAccounting.account =
               accountConfiguration.accountNr.toString()
+            invoiceRowWithAccounting.costCode =
+              accountConfiguration.costCenter &&
+              accountConfiguration.costCenter !== ''
+                ? accountConfiguration.costCenter
+                : undefined
+            invoiceRowWithAccounting.property =
+              accountConfiguration.property &&
+              accountConfiguration.property !== ''
+                ? accountConfiguration.property
+                : undefined
+
+            invoiceRowWithAccounting.freeCode = accountConfiguration.freeText
           } else {
             logger.error(
               { article },
@@ -403,7 +416,7 @@ export const getInvoicesNotExported = async (
         hyresvard: landlordId,
         /*paginate:
           'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
-        ocrNumber: '552605001109212',
+        /*ocrNumber: '552606001449921',*/
       },
     })
 
@@ -455,9 +468,7 @@ export const getInvoicesNotExported = async (
     return {
       ok: true,
       data: {
-        invoices /*: invoices.filter(
-          (invoice) => invoice.invoiceId === '552605001202918'
-        )*/,
+        invoices,
         errors,
       },
     }

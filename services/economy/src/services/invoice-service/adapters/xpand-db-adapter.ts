@@ -57,6 +57,8 @@ export const closeDb = () => {
 export const enrichInvoiceWithAccounting = async (
   invoice: InvoiceWithAccounting
 ): Promise<InvoiceWithAccounting> => {
+  console.log('invoices', invoice)
+
   const year = invoice.invoiceDate.getFullYear()
   const rentalIds = invoice.invoiceRows.map(
     (invoiceRow: InvoiceRowWithAccounting) => invoiceRow.rentalObject as string
@@ -83,9 +85,9 @@ export const enrichInvoiceWithAccounting = async (
       )
     }
     invoiceRow.projectCode = rentalSpecificRule?.projectCode
-    invoiceRow.costCode = rentalSpecificRule?.costCode
-    invoiceRow.property = rentalSpecificRule?.property
-    invoiceRow.freeCode = rentalSpecificRule?.freeCode
+    invoiceRow.costCode = invoiceRow.costCode ?? rentalSpecificRule?.costCode
+    invoiceRow.property = invoiceRow.property ?? rentalSpecificRule?.property
+    invoiceRow.freeCode = invoiceRow.freeCode ?? rentalSpecificRule?.freeCode
   }
 
   return invoice
