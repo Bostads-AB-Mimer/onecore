@@ -10,6 +10,15 @@ import {
 
 const DEFAULT_INTERVAL: ApartmentTemperaturesInterval = 'H'
 const ONE_DAY_SECONDS = 24 * 60 * 60
+const ONE_HOUR_SECONDS = 60 * 60
+
+// EcoGuard's /data endpoint returns 400 unless `from` and `to` are aligned
+// to the bucket size implied by `interval` (hour for 'H', day for 'D').
+const bucketSeconds = (interval: ApartmentTemperaturesInterval) =>
+  interval === 'H' ? ONE_HOUR_SECONDS : ONE_DAY_SECONDS
+
+const alignDown = (unixSeconds: number, bucket: number) =>
+  Math.floor(unixSeconds / bucket) * bucket
 
 export class ApartmentNodeNotFoundError extends Error {
   constructor(objectNumber: string) {
@@ -52,9 +61,15 @@ export const getApartmentTemperatures = async (
   }
 ): Promise<ApartmentTemperaturesResponse> => {
   const nowSeconds = Math.floor(Date.now() / 1000)
-  const to = query.to ?? nowSeconds
-  const from = query.from ?? to - ONE_DAY_SECONDS
   const interval = query.interval ?? DEFAULT_INTERVAL
+  const bucket = bucketSeconds(interval)
+
+  const rawTo = query.to ?? nowSeconds
+  const rawFrom = query.from ?? rawTo - ONE_DAY_SECONDS
+
+  let to = alignDown(rawTo, bucket)
+  const from = alignDown(rawFrom, bucket)
+  if (to <= from) to = from + bucket
 
   const node = await getApartmentNode(objectNumber)
   if (!node) throw new ApartmentNodeNotFoundError(objectNumber)

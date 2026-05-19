@@ -115,7 +115,7 @@ describe('GET /apartments/:objectNumber/temperatures', () => {
     expect(res.status).toBe(400)
   })
 
-  it('applies default range (last 24h, hourly) when no query params given', async () => {
+  it('applies default range (last 24h, hourly) and aligns to hour boundaries', async () => {
     const nodeSpy = jest
       .spyOn(curvesAdapter, 'getApartmentNode')
       .mockResolvedValueOnce(apartmentNode)
@@ -123,11 +123,11 @@ describe('GET /apartments/:objectNumber/temperatures', () => {
       .spyOn(curvesAdapter, 'getNodeTemperatureSeries')
       .mockResolvedValueOnce([])
 
-    const before = Math.floor(Date.now() / 1000)
+    const beforeHour = Math.floor(Math.floor(Date.now() / 1000) / 3600) * 3600
     const res = await request(app.callback()).get(
       '/apartments/806-032-01-0101/temperatures'
     )
-    const after = Math.floor(Date.now() / 1000)
+    const afterHour = Math.floor(Math.floor(Date.now() / 1000) / 3600) * 3600
 
     expect(res.status).toBe(200)
     expect(nodeSpy).toHaveBeenCalledWith('806-032-01-0101')
@@ -135,8 +135,10 @@ describe('GET /apartments/:objectNumber/temperatures', () => {
     const [nodeIdArg, fromArg, toArg, intervalArg] = seriesSpy.mock.calls[0]
     expect(nodeIdArg).toBe(3748)
     expect(intervalArg).toBe('H')
-    expect(toArg).toBeGreaterThanOrEqual(before)
-    expect(toArg).toBeLessThanOrEqual(after)
+    expect(fromArg % 3600).toBe(0)
+    expect(toArg % 3600).toBe(0)
+    expect(toArg).toBeGreaterThanOrEqual(beforeHour)
+    expect(toArg).toBeLessThanOrEqual(afterHour)
     expect(toArg - fromArg).toBe(24 * 60 * 60)
   })
 
