@@ -6,6 +6,7 @@ import {
   getInvoiceByOcr,
   getInvoiceArticle,
   getActiveLeasesByRentalObjectCodes,
+  recordPaymentForInvoice,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
@@ -441,5 +442,126 @@ describe('Tenfast Adapter', () => {
         leaseEndDate,
       })
     })
+  })
+})
+
+describe(recordPaymentForInvoice, () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  const payment = {
+    ocr: '55123456',
+    amount: 1000,
+    dateTime: new Date('2026-04-02T10:00:00Z'),
+    method: 'bank',
+  }
+
+  it('returns not-found when OCR lookup returns no records', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [] },
+    })
+
+    const result = await recordPaymentForInvoice(payment)
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('returns unknown when OCR lookup returns non-200', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 500,
+      statusText: 'Server Error',
+    })
+
+    const result = await recordPaymentForInvoice(payment)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown when OCR lookup response fails schema parse', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { unexpected: true },
+    })
+
+    const result = await recordPaymentForInvoice(payment)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('records the payment and returns ok', async () => {
+    const invoice = TenfastInvoiceFactory.build()
+
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [{ ...invoice, avtal: [] }] },
+      })
+      .mockResolvedValueOnce({
+        status: 201,
+        data: {},
+      })
+
+    const result = await recordPaymentForInvoice(payment)
+
+    expect(result).toEqual({ ok: true, data: null })
+    expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    expect(mockAxios.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining('/v1/hyresvard/transactions'),
+        method: 'POST',
+        data: expect.objectContaining({
+          type: 'hyra',
+          amount: 1000,
+          method: 'bank',
+          hyra: invoice._id,
+        }),
+      })
+    )
+  })
+
+  it('returns not-found when transaction POST returns 404', async () => {
+    const invoice = TenfastInvoiceFactory.build()
+
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [{ ...invoice, avtal: [] }] },
+      })
+      .mockResolvedValueOnce({
+        status: 404,
+        data: {},
+      })
+
+    const result = await recordPaymentForInvoice(payment)
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('returns unknown when transaction POST returns unexpected status', async () => {
+    const invoice = TenfastInvoiceFactory.build()
+
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [{ ...invoice, avtal: [] }] },
+      })
+      .mockResolvedValueOnce({
+        status: 500,
+        data: {},
+      })
+
+    const result = await recordPaymentForInvoice(payment)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown on thrown error', async () => {
+    mockAxios.request.mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await recordPaymentForInvoice(payment)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })
