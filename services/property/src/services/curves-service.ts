@@ -1,12 +1,13 @@
+import { property } from '@onecore/types'
+
 import {
   getApartmentNode,
   getNodeTemperatureSeries,
 } from '../adapters/curves-adapter'
-import {
-  ApartmentTemperaturesInterval,
-  ApartmentTemperaturesResponse,
-  EcoGuardDataResponse,
-} from '../types/curves'
+import { EcoGuardDataResponse } from '../types/curves'
+
+type ApartmentTemperaturesInterval = property.ApartmentTemperaturesInterval
+type ApartmentTemperaturesResponse = property.ApartmentTemperaturesResponse
 
 const DEFAULT_INTERVAL: ApartmentTemperaturesInterval = 'H'
 const ONE_DAY_SECONDS = 24 * 60 * 60

@@ -1,12 +1,12 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { property } from '@onecore/types'
 
 import { parseRequest } from '../middleware/parse-request'
 import {
   ApartmentNodeNotFoundError,
   getApartmentTemperatures,
 } from '../services/curves-service'
-import { ApartmentTemperaturesQuerySchema } from '../types/curves'
 
 /**
  * @swagger
@@ -131,7 +131,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get(
     '(.*)/apartments/:objectNumber/temperatures',
-    parseRequest({ query: ApartmentTemperaturesQuerySchema }),
+    parseRequest({ query: property.ApartmentTemperaturesQuerySchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { objectNumber } = ctx.params

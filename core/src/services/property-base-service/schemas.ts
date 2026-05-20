@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { property } from '@onecore/types'
 
 // Xpand ID validation - variable length IDs (max 15 chars) from legacy system
 const xpandIdSchema = z.string().max(15)
@@ -1134,43 +1135,20 @@ export type AddComponentRequest = z.infer<typeof AddComponentRequestSchema>
 export type AddComponentResponse = z.infer<typeof AddComponentResponseSchema>
 
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
+// Re-exported from @onecore/types (single source of truth shared with the
+// property service). Keep the local export names so consumers / swagger
+// registration are unaffected.
 
-export const ApartmentTemperaturesIntervalSchema = z.enum(['H', 'D'])
+export const ApartmentTemperaturesIntervalSchema =
+  property.ApartmentTemperaturesIntervalSchema
+export const ApartmentTemperaturesQueryParamsSchema =
+  property.ApartmentTemperaturesQuerySchema
+export const ApartmentTemperaturePointSchema =
+  property.ApartmentTemperaturePointSchema
+export const ApartmentTemperatureSeriesSchema =
+  property.ApartmentTemperatureSeriesSchema
+export const ApartmentTemperaturesResponseSchema =
+  property.ApartmentTemperaturesResponseSchema
 
-export const ApartmentTemperaturesQueryParamsSchema = z
-  .object({
-    from: z.coerce.number().int().positive().optional(),
-    to: z.coerce.number().int().positive().optional(),
-    interval: ApartmentTemperaturesIntervalSchema.optional(),
-  })
-  .refine((q) => q.from === undefined || q.to === undefined || q.to > q.from, {
-    message: '`to` must be greater than `from`',
-    path: ['to'],
-  })
-
-export const ApartmentTemperaturePointSchema = z.object({
-  time: z.number(),
-  avg: z.number().nullable(),
-  min: z.number().nullable(),
-  max: z.number().nullable(),
-})
-
-export const ApartmentTemperatureSeriesSchema = z.object({
-  subNodeId: z.number(),
-  subNodeName: z.string(),
-  points: z.array(ApartmentTemperaturePointSchema),
-})
-
-export const ApartmentTemperaturesResponseSchema = z.object({
-  objectNumber: z.string(),
-  nodeId: z.number(),
-  from: z.number(),
-  to: z.number(),
-  interval: ApartmentTemperaturesIntervalSchema,
-  unit: z.string(),
-  series: z.array(ApartmentTemperatureSeriesSchema),
-})
-
-export type ApartmentTemperaturesResponse = z.infer<
-  typeof ApartmentTemperaturesResponseSchema
->
+export type ApartmentTemperaturesResponse =
+  property.ApartmentTemperaturesResponse
