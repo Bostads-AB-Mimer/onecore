@@ -294,6 +294,74 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
+  /**
+   * @swagger
+   * /invoice-channels:
+   *   post:
+   *     tags:
+   *       - Economy service
+   *     summary: Look up invoice channels for contact codes
+   *     description: Returns the invoice delivery channel for each provided contact code.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - contactCodes
+   *             properties:
+   *               contactCodes:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: List of contact codes to look up
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved invoice channels.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - content
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     required:
+   *                       - channel
+   *                       - matchedCandidates
+   *                       - error
+   *                     properties:
+   *                       channel:
+   *                         type: string
+   *                         enum:
+   *                           - Kivra
+   *                           - Billo
+   *                           - eInvoiceB2C
+   *                           - eInvoiceB2B
+   *                       matchedCandidates:
+   *                         type: array
+   *                         items:
+   *                           type: string
+   *                         nullable: true
+   *                       error:
+   *                         type: string
+   *                         nullable: true
+   *       '400':
+   *         description: Invalid request body.
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   */
   router.post(
     '/invoice-channels',
     parseRequestBody(economy.ChannelLookupRequestBodySchema),
