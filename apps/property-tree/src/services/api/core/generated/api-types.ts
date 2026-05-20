@@ -12817,11 +12817,23 @@ export interface components {
       totalInvalid: number;
     };
     KeycloakUser: {
-      id?: string;
-      username?: string;
+      id: string;
+      username: string;
       firstName?: string;
       lastName?: string;
       email?: string;
+      emailVerified?: boolean;
+      /** @description Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings. */
+      attributes?: {
+        [key: string]: string[];
+      };
+      /** Format: int64 */
+      createdTimestamp?: number;
+      enabled?: boolean;
+      totp?: boolean;
+      disableableCredentialTypes?: string[];
+      requiredActions?: string[];
+      notBefore?: number;
     };
     RentalPropertyResponse: {
       content?: {
