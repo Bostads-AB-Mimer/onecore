@@ -73,6 +73,10 @@ export const ApartmentTemperature = ({
       <div className="flex items-center gap-2">
         {isLoading ? (
           <p className="font-medium text-muted-foreground">Hämtar…</p>
+        ) : isError ? (
+          <p className="font-medium text-destructive">
+            Kunde inte hämta temperatur
+          </p>
         ) : reading ? (
           <p className="font-medium">
             {reading.avg.toLocaleString('sv-SE', {

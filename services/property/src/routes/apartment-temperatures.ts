@@ -154,9 +154,7 @@ export const routes = (router: KoaRouter) => {
         }
 
         ctx.status = 500
-        const errorMessage =
-          err instanceof Error ? err.message : 'unknown error'
-        ctx.body = { error: errorMessage, ...metadata }
+        ctx.body = { error: 'temperature-fetch-failed', ...metadata }
       }
     }
   )
