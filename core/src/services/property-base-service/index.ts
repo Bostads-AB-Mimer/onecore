@@ -117,6 +117,18 @@ export const routes = (router: KoaRouter) => {
     schemas.AnalyzeComponentImageRequestSchema
   )
   registerSchema('AIComponentAnalysis', schemas.AIComponentAnalysisSchema)
+  registerSchema(
+    'ApartmentTemperaturePoint',
+    schemas.ApartmentTemperaturePointSchema
+  )
+  registerSchema(
+    'ApartmentTemperatureSeries',
+    schemas.ApartmentTemperatureSeriesSchema
+  )
+  registerSchema(
+    'ApartmentTemperaturesResponse',
+    schemas.ApartmentTemperaturesResponseSchema
+  )
 
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)
@@ -2795,6 +2807,104 @@ export const routes = (router: KoaRouter) => {
         content: result.data satisfies Array<schemas.ParkingSpaceSearchResult>,
         ...metadata,
       }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /apartments/{objectNumber}/temperatures:
+   *   get:
+   *     summary: Get indoor temperatures for an apartment
+   *     description: |
+   *       Fetches indoor temperature time series for an apartment by its object
+   *       number, sourced from the EcoGuard "Curves" platform. Each series entry
+   *       corresponds to one sub-node (sensor) under the apartment node, with
+   *       avg/min/max merged per time bucket. Defaults to the last 24 hours at
+   *       hourly intervals.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: objectNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Apartment object number (e.g. "806-032-01-0101").
+   *       - in: query
+   *         name: from
+   *         required: false
+   *         schema:
+   *           type: integer
+   *         description: Unix timestamp (seconds) for range start. Defaults to `to - 86400`.
+   *       - in: query
+   *         name: to
+   *         required: false
+   *         schema:
+   *           type: integer
+   *         description: Unix timestamp (seconds) for range end. Defaults to now.
+   *       - in: query
+   *         name: interval
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [H, D]
+   *         description: Aggregation bucket size. Defaults to "H" (hourly).
+   *     responses:
+   *       200:
+   *         description: Temperature series successfully retrieved.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ApartmentTemperaturesResponse'
+   *       400:
+   *         description: Invalid query parameters.
+   *       404:
+   *         description: No apartment node found for the given object number.
+   *       500:
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/apartments/:objectNumber/temperatures', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ApartmentTemperaturesQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getApartmentTemperatures(
+        ctx.params.objectNumber,
+        params.data
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'apartment-node-not-found', ...metadata }
+          return
+        }
+        logger.error(
+          { err: result.err, metadata },
+          'Error fetching apartment temperatures from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = { content: result.data, ...metadata }
     } catch (error) {
       logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500

@@ -886,6 +886,10 @@ export async function getBlockReasons(): Promise<
   }
 }
 
+// ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
+
+export { getApartmentTemperatures } from './apartment-temperatures'
+
 // ==================== COMPONENTS ====================
 
 export {

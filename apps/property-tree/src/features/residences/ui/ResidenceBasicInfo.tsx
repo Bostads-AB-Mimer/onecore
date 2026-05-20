@@ -12,6 +12,8 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
 
+import { ApartmentTemperature } from './ApartmentTemperature'
+
 interface ResidenceBasicInfoProps {
   residence: components['schemas']['ResidenceDetails']
   building?: components['schemas']['Building']
@@ -174,6 +176,9 @@ export const ResidenceBasicInfo = ({
           <CopyableField
             label="Anläggnings ID Mälarenergi"
             value={residence.malarEnergiFacilityId || undefined}
+          />
+          <ApartmentTemperature
+            objectNumber={residence.propertyObject.rentalId ?? undefined}
           />
           <CopyableField
             label="Hyra"
