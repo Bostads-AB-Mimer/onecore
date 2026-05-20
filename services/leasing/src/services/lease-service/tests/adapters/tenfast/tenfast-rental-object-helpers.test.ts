@@ -179,8 +179,8 @@ describe('tenfast-rental-object-helpers', () => {
 
     it('maps tag ids to name objects using tagsById', () => {
       const tagsById = new Map([
-        ['tag-1', 'Ungdomslägenhet'],
-        ['tag-2', 'Rökfritt'],
+        ['tag-1', { _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+        ['tag-2', { _id: 'tag-2', code: 'ROKFRITT', name: 'Rökfritt' }],
       ])
       const rentalObject = factory.tenfastRentalObject.build({
         tags: ['tag-1', 'tag-2'],
@@ -192,13 +192,15 @@ describe('tenfast-rental-object-helpers', () => {
         tagsById
       )
       expect(result.rentalTags).toEqual([
-        { id: 'tag-1', name: 'Ungdomslägenhet' },
-        { id: 'tag-2', name: 'Rökfritt' },
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
+        { id: 'ROKFRITT', name: 'Rökfritt' },
       ])
     })
 
     it('filters out tag ids not present in tagsById', () => {
-      const tagsById = new Map([['tag-1', 'Ungdomslägenhet']])
+      const tagsById = new Map([
+        ['tag-1', { _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+      ])
       const rentalObject = factory.tenfastRentalObject.build({
         tags: ['tag-1', 'tag-unknown'],
         avtal: [],
@@ -209,12 +211,14 @@ describe('tenfast-rental-object-helpers', () => {
         tagsById
       )
       expect(result.rentalTags).toEqual([
-        { id: 'tag-1', name: 'Ungdomslägenhet' },
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
       ])
     })
 
     it('returns empty array when no tag ids match tagsById', () => {
-      const tagsById = new Map([['tag-1', 'Ungdomslägenhet']])
+      const tagsById = new Map([
+        ['tag-1', { _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+      ])
       const rentalObject = factory.tenfastRentalObject.build({
         tags: ['tag-unknown'],
         avtal: [],

@@ -444,7 +444,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
       ;(request as jest.Mock)
         .mockResolvedValueOnce({
           status: 200,
-          data: [{ _id: 'tag-1', name: 'Ungdomslägenhet' }],
+          data: [{ _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
         })
         .mockResolvedValueOnce({
           status: 200,
@@ -466,7 +466,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
         name: 'Bilplats',
       })
       expect(result.data![0].rentalTags).toEqual([
-        { id: 'tag-1', name: 'Ungdomslägenhet' },
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
       ])
     })
   })
@@ -1399,7 +1399,7 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
         .mockResolvedValueOnce({ ok: true, data: rentalObject })
       ;(request as jest.Mock).mockResolvedValueOnce({
         status: 200,
-        data: [{ _id: 'tag-1', name: 'Ungdomslägenhet' }],
+        data: [{ _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
       }) // tags
 
       const result = await tenfastAdapter.getAvailabilityForRentalObject(
@@ -1413,7 +1413,7 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
         name: 'Bilplats',
       })
       expect(result.data.rentalTags).toEqual([
-        { id: 'tag-1', name: 'Ungdomslägenhet' },
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
       ])
     })
   })
@@ -1687,8 +1687,8 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
         .mockResolvedValueOnce({
           status: 200,
           data: [
-            { _id: 'tag-1', name: 'Ungdomslägenhet' },
-            { _id: 'tag-2', name: 'Seniorlägenhet' },
+            { _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' },
+            { _id: 'tag-2', code: 'SENIOR', name: 'Seniorlägenhet' },
           ],
         }) // tags
         .mockResolvedValueOnce({ status: 200, data: [rentalObject] }) // batch-get
@@ -1700,8 +1700,8 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
 
       assert(result.ok)
       expect(result.data[0].rentalTags).toEqual([
-        { id: 'tag-1', name: 'Ungdomslägenhet' },
-        { id: 'tag-2', name: 'Seniorlägenhet' },
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
+        { id: 'SENIOR', name: 'Seniorlägenhet' },
       ])
     })
 
@@ -1713,7 +1713,7 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
       ;(request as jest.Mock)
         .mockResolvedValueOnce({
           status: 200,
-          data: [{ _id: 'tag-known', name: 'Känd tagg' }],
+          data: [{ _id: 'tag-known', code: 'KNOWN', name: 'Känd tagg' }],
         }) // tags
         .mockResolvedValueOnce({ status: 200, data: [rentalObject] }) // batch-get
 
@@ -1724,7 +1724,7 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
 
       assert(result.ok)
       expect(result.data[0].rentalTags).toEqual([
-        { id: 'tag-known', name: 'Känd tagg' },
+        { id: 'KNOWN', name: 'Känd tagg' },
       ])
     })
 
@@ -1742,7 +1742,7 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
       ;(request as jest.Mock)
         .mockResolvedValueOnce({
           status: 200,
-          data: [{ _id: 'tag-1', name: 'Ungdomslägenhet' }],
+          data: [{ _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
         }) // tags
         .mockResolvedValueOnce({ status: 200, data: [r1, r2] }) // batch-get
 
@@ -1757,7 +1757,7 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
         name: 'Bilplats',
       })
       expect(result.data[0].rentalTags).toEqual([
-        { id: 'tag-1', name: 'Ungdomslägenhet' },
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
       ])
       expect(result.data[1].rentalTenureType).toEqual({
         id: 'LGH',

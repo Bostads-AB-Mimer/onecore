@@ -23,6 +23,7 @@ import {
   TenfastLeaseTemplateResponseSchema,
   TenfastLeasesByArticleResponseSchema,
   TenfastTagSchema,
+  TenfastTag,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -249,10 +250,10 @@ export enum RentalObjectType {
 }
 
 const TAGS_CACHE_TTL_MS = 5 * 60 * 1000
-let tagsCache: Promise<Map<string, string>> | null = null
+let tagsCache: Promise<Map<string, TenfastTag>> | null = null
 let tagsCachedAt = 0
 
-const getTags = (): Promise<Map<string, string>> => {
+const getTags = (): Promise<Map<string, TenfastTag>> => {
   if (tagsCache && Date.now() - tagsCachedAt < TAGS_CACHE_TTL_MS) {
     return tagsCache
   }
@@ -266,7 +267,7 @@ const getTags = (): Promise<Map<string, string>> => {
       if (res.status !== 200) return new Map()
       const tags = z.array(TenfastTagSchema).safeParse(res.data)
       if (!tags.success) return new Map()
-      return new Map(tags.data.map((t) => [t._id, t.name]))
+      return new Map(tags.data.map((t) => [t._id, t]))
     } catch {
       tagsCache = null
       return new Map()
@@ -982,8 +983,8 @@ export async function getLeaseByLeaseId(
 ): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
   try {
     const res = await tenfastApi.request({
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(leaseId)}?hyresvard=${tenfastCompanyId}&populate=hyresobjekt,hyresgaster`,
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${leaseId}?populate=hyresobjekt`,
     })
 
     if (res.status !== 200) {

@@ -106,6 +106,7 @@ export type TenfastTenantByContactCodeResponse = z.infer<
 >
 export const TenfastTagSchema = z.object({
   _id: z.string(),
+  code: z.string(),
   name: z.string(),
 })
 
