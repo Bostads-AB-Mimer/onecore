@@ -233,7 +233,7 @@ describe(imdService.enrichIMDRows, () => {
         rentalObjectCode: '306-008-01-0201',
         from: new Date('2026-01-01'),
         to: new Date('2026-01-31'),
-        unit: 'ELEC',
+        unit: 'UNKNOWN',
         volume: 7.58,
         cost: 621.68,
         measurementUnit: 'kWh',
@@ -443,6 +443,16 @@ describe(imdService.toTenfastCsv, () => {
     expect(cols[4]).toBe('2026-01-31')
     expect(cols[5]).toBe('7460,16')
     expect(cols[6]).toBe('')
+  })
+
+  it('maps ELEC to IMDELM article and builds Avitext with El', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500, unit: 'ELEC' }),
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[1]).toBe('IMDELM')
+    expect(cols[2]).toBe('El januari,7,58,m3(25% moms tillkommer)')
   })
 
   it('maps VMM to VÄRMEENERGIM article and builds Avitext with Värmeenergi', () => {
