@@ -10,6 +10,26 @@ type GetUsersByRoleError =
   | 'role_not_found'
   | 'unknown'
 
+// Shape of a user object returned by Keycloak's admin REST API
+// (e.g. GET /admin/realms/{realm}/groups/{id}/members). `attributes` is an
+// open-ended map of custom user attributes — each value is an array of strings
+// in Keycloak, and the set of keys is realm-configurable.
+export type KeycloakUser = {
+  id: string
+  username: string
+  firstName?: string
+  lastName?: string
+  email?: string
+  emailVerified?: boolean
+  attributes?: Record<string, string[]>
+  createdTimestamp?: number
+  enabled?: boolean
+  totp?: boolean
+  disableableCredentialTypes?: string[]
+  requiredActions?: string[]
+  notBefore?: number
+}
+
 // client_credentials grant does not issue a refresh token — the client authenticates
 // directly with its own credentials, so re-requesting a new token is the only option.
 let cachedToken: { value: string; expiresAt: number } | null = null
@@ -74,7 +94,7 @@ async function fetchGroupMembers(groupId: string, token: string) {
   return loggedAxios.get(
     `${url}/admin/realms/${realm}/groups/${encodeURIComponent(groupId)}/members`,
     {
-      params: { max: 1000 },
+      params: { max: 1000, briefRepresentation: false },
       headers: { Authorization: `Bearer ${token}` },
       validateStatus: (status) => status >= 200 && status < 300,
     }
@@ -94,10 +114,10 @@ async function fetchUsersByRoleViaGroups(roleName: string, token: string) {
   )
 
   const seen = new Set<string>()
-  const uniqueUsers: unknown[] = []
+  const uniqueUsers: KeycloakUser[] = []
 
   for (const res of memberResults) {
-    const members = Array.isArray(res.data) ? res.data : []
+    const members: KeycloakUser[] = Array.isArray(res.data) ? res.data : []
     for (const user of members) {
       if (!seen.has(user.id)) {
         seen.add(user.id)
@@ -111,7 +131,7 @@ async function fetchUsersByRoleViaGroups(roleName: string, token: string) {
 
 export async function getUsersByRole(
   roleName: string
-): Promise<AdapterResult<unknown[], GetUsersByRoleError>> {
+): Promise<AdapterResult<KeycloakUser[], GetUsersByRoleError>> {
   try {
     const token = await getAdminToken()
     try {
