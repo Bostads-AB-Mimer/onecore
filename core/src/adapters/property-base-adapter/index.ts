@@ -888,59 +888,28 @@ export async function getBlockReasons(): Promise<
 
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
 
-type ApartmentTemperaturesResponse = {
-  objectNumber: string
-  nodeId: number
-  from: number
-  to: number
-  interval: 'H' | 'D'
-  unit: string
-  series: Array<{
-    subNodeId: number
-    subNodeName: string
-    points: Array<{
-      time: number
-      avg: number | null
-      min: number | null
-      max: number | null
-    }>
-  }>
-}
-
 export async function getApartmentTemperatures(
   objectNumber: string,
   query: { from?: number; to?: number; interval?: 'H' | 'D' }
 ): Promise<
-  AdapterResult<ApartmentTemperaturesResponse, 'not-found' | 'unknown'>
+  AdapterResult<
+    components['schemas']['ApartmentTemperaturesResponse'],
+    'not-found' | 'unknown'
+  >
 > {
   try {
-    const response = await axios.get(
-      `${config.propertyBaseService.url}/apartments/${encodeURIComponent(
-        objectNumber
-      )}/temperatures`,
+    const response = await client().GET(
+      '/apartments/{objectNumber}/temperatures',
       {
-        params: {
-          from: query.from,
-          to: query.to,
-          interval: query.interval,
-        },
-        validateStatus: (status) => status < 500,
+        params: { path: { objectNumber }, query },
       }
     )
 
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
-
-    if (
-      response.status >= 200 &&
-      response.status < 300 &&
-      response.data?.content
-    ) {
-      return {
-        ok: true,
-        data: response.data.content as ApartmentTemperaturesResponse,
-      }
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not-found' }
     }
 
     return { ok: false, err: 'unknown' }
