@@ -105,7 +105,7 @@ export async function postChannelLookup(nationalIdentityNumbers: string[]) {
   )
 
   if (response.error) {
-    throw new Error()
+    throw response.error
   }
 
   const correlationId = StralforsPostChannelLookupResponseSchema.parse(
