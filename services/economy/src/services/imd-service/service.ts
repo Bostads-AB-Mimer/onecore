@@ -1,3 +1,4 @@
+import { match } from 'ts-pattern'
 import { logger } from '@onecore/utilities'
 import { economy } from '@onecore/types'
 
@@ -83,8 +84,6 @@ type UnprocessedIMDRow = IMDRow &
     | { reason: 'multiple-leases'; leaseIds: string[] }
     | { reason: 'unsupported-unit' }
   )
-
-type UnprocessedReason = UnprocessedIMDRow['reason']
 
 const MIN_COST = 15
 
@@ -267,25 +266,28 @@ const UNPROCESSED_CSV_HEADER = csvRow([
   'Orsak',
 ])
 
-// 'multiple-leases' and 'unsupported-unit' are handled dynamically in getReasonLabel
-const REASON_LABELS: Record<
-  Exclude<UnprocessedReason, 'multiple-leases' | 'unsupported-unit'>,
-  string
-> = {
-  'no-rental-object': 'Hyresobjekt saknas i Tenfast',
-  'no-active-lease': 'Inget aktivt kontrakt i perioden',
-  'amount-too-low': 'Belopp under 15 kr',
-  'tenant-moved': 'Hyresgästen har avslutat kontrakt efter perioden',
-}
-
 function getReasonLabel(row: UnprocessedIMDRow): string {
-  if (row.reason === 'multiple-leases') {
-    return `Flera kontrakt matchar perioden: ${row.leaseIds.join(', ')}`
-  }
-  if (row.reason === 'unsupported-unit') {
-    return `Enhet stöds ej: ${row.unit}`
-  }
-  return REASON_LABELS[row.reason]
+  return match(row)
+    .with({ reason: 'no-rental-object' }, () => 'Hyresobjekt saknas i Tenfast')
+    .with(
+      { reason: 'no-active-lease' },
+      () => 'Inget aktivt kontrakt i perioden'
+    )
+    .with({ reason: 'amount-too-low' }, () => 'Belopp under 15 kr')
+    .with(
+      { reason: 'tenant-moved' },
+      () => 'Hyresgästen har avslutat kontrakt efter perioden'
+    )
+    .with(
+      { reason: 'multiple-leases' },
+      ({ leaseIds }) =>
+        `Flera kontrakt matchar perioden: ${leaseIds.join(', ')}`
+    )
+    .with(
+      { reason: 'unsupported-unit' },
+      ({ unit }) => `Enhet stöds ej: ${unit}`
+    )
+    .exhaustive()
 }
 
 function toUnprocessedCsv(rows: Array<UnprocessedIMDRow>): string {
