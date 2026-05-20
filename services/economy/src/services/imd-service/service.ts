@@ -103,6 +103,41 @@ type EnrichResult = {
   unprocessed: Array<UnprocessedIMDRow>
 }
 
+function classifyRows(
+  rows: Array<IMDRow>,
+  leaseMap: Map<string, LeaseMatch | MultipleLeaseMatch | null>,
+  today: Date
+): EnrichResult {
+  return rows.reduce<EnrichResult>(
+    (acc, row) => {
+      if (row.cost < MIN_COST) {
+        acc.unprocessed.push({ ...row, reason: 'amount-too-low' })
+        return acc
+      }
+      const lookup = leaseMap.get(row.rentalObjectCode)
+      if (lookup === undefined) {
+        acc.unprocessed.push({ ...row, reason: 'no-rental-object' })
+      } else if (lookup === null) {
+        acc.unprocessed.push({ ...row, reason: 'no-active-lease' })
+      } else if (isMultipleLeaseMatch(lookup)) {
+        acc.unprocessed.push({
+          ...row,
+          reason: 'multiple-leases',
+          leaseIds: lookup.leaseIds,
+        })
+      } else if (hasTenantMoved(lookup, today)) {
+        acc.unprocessed.push({ ...row, reason: 'tenant-moved' })
+      } else if (!UNIT_CONFIG[row.unit]) {
+        acc.unprocessed.push({ ...row, reason: 'unsupported-unit' })
+      } else {
+        acc.enriched.push({ ...row, leaseId: lookup.leaseId })
+      }
+      return acc
+    },
+    { enriched: [], unprocessed: [] }
+  )
+}
+
 async function enrichIMDRows(
   imdRows: Array<IMDRow>
 ): Promise<Result<EnrichResult>> {
@@ -111,55 +146,26 @@ async function enrichIMDRows(
       return { ok: false, reason: 'invalid-csv' }
     }
 
-    const enriched: Array<EnrichedIMDRow> = []
-    const unprocessed: Array<UnprocessedIMDRow> = []
+    const period = { start: imdRows[0].from, end: imdRows[0].to }
 
-    const eligible: Array<IMDRow> = []
-    for (const row of imdRows) {
-      if (row.cost < MIN_COST) {
-        unprocessed.push({ ...row, reason: 'amount-too-low' })
-      } else {
-        eligible.push(row)
-      }
-    }
-
-    const period = {
-      start: imdRows[0].from,
-      end: imdRows[0].to,
-    }
-
-    const uniqueCodes = [
-      ...new Set(eligible.map((row) => row.rentalObjectCode)),
+    const eligibleCodes = [
+      ...new Set(
+        imdRows
+          .filter((row) => row.cost >= MIN_COST)
+          .map((row) => row.rentalObjectCode)
+      ),
     ]
     const leaseMap = await getActiveLeasesByRentalObjectCodes({
-      rentalObjectCodes: uniqueCodes,
+      rentalObjectCodes: eligibleCodes,
       periodStart: period.start,
       periodEnd: period.end,
     })
 
-    const today = new Date()
-
-    for (const row of eligible) {
-      const lookup = leaseMap.get(row.rentalObjectCode)
-
-      if (lookup === undefined) {
-        unprocessed.push({ ...row, reason: 'no-rental-object' })
-      } else if (lookup === null) {
-        unprocessed.push({ ...row, reason: 'no-active-lease' })
-      } else if (isMultipleLeaseMatch(lookup)) {
-        unprocessed.push({
-          ...row,
-          reason: 'multiple-leases',
-          leaseIds: lookup.leaseIds,
-        })
-      } else if (hasTenantMoved(lookup, today)) {
-        unprocessed.push({ ...row, reason: 'tenant-moved' })
-      } else if (!UNIT_CONFIG[row.unit]) {
-        unprocessed.push({ ...row, reason: 'unsupported-unit' })
-      } else {
-        enriched.push({ ...row, leaseId: lookup.leaseId })
-      }
-    }
+    const { enriched, unprocessed } = classifyRows(
+      imdRows,
+      leaseMap,
+      new Date()
+    )
 
     return { ok: true, data: { enriched, unprocessed } }
   } catch (err) {
