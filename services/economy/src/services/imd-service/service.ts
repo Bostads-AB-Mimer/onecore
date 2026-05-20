@@ -74,18 +74,17 @@ type EnrichedIMDRow = IMDRow & {
   leaseId: string
 }
 
-type UnprocessedReason =
-  | 'no-rental-object'
-  | 'no-active-lease'
-  | 'amount-too-low'
-  | 'tenant-moved'
-  | 'multiple-leases'
-  | 'unsupported-unit'
+type UnprocessedIMDRow = IMDRow &
+  (
+    | { reason: 'no-rental-object' }
+    | { reason: 'no-active-lease' }
+    | { reason: 'amount-too-low' }
+    | { reason: 'tenant-moved' }
+    | { reason: 'multiple-leases'; leaseIds: string[] }
+    | { reason: 'unsupported-unit' }
+  )
 
-type UnprocessedIMDRow = IMDRow & {
-  reason: UnprocessedReason
-  leaseIds?: string[] // populated when reason is 'multiple-leases'
-}
+type UnprocessedReason = UnprocessedIMDRow['reason']
 
 const MIN_COST = 15
 
@@ -274,8 +273,7 @@ const REASON_LABELS: Record<
 
 function getReasonLabel(row: UnprocessedIMDRow): string {
   if (row.reason === 'multiple-leases') {
-    const ids = row.leaseIds?.join(', ') ?? ''
-    return `Flera kontrakt matchar perioden: ${ids}`
+    return `Flera kontrakt matchar perioden: ${row.leaseIds.join(', ')}`
   }
   if (row.reason === 'unsupported-unit') {
     return `Enhet stöds ej: ${row.unit}`
