@@ -22,7 +22,6 @@ import {
   getRentalInvoices,
   getInvoiceRows as getXpandInvoiceRows,
   getBatchTotalAmount as getXpandBatchTotalAmount,
-  getContacts,
 } from './adapters/xpand-db-adapter'
 import {
   CounterPartCustomers,
@@ -57,6 +56,7 @@ import {
   getInvoicesByContactCode as getTenfastInvoicesByContactCode,
   getInvoicesForTenant,
   getTenantByContactCode,
+  getContactByContactCode,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
 
@@ -1052,8 +1052,25 @@ const enrichInvoiceRowsWithText = async (
   })
 }
 
+const getTenfastContacts = async (
+  contactCodes: string[]
+): Promise<Contact[]> => {
+  const contacts: Contact[] = []
+
+  for (const contactCode of contactCodes) {
+    const contactResult = await getContactByContactCode(contactCode)
+    if (!contactResult.ok || !contactResult.data) {
+      throw new Error(JSON.stringify(contactResult))
+    }
+
+    contacts.push(contactResult.data)
+  }
+
+  return contacts
+}
+
 export const stralforsPostChannelLookup = async (contactCodes: string[]) => {
-  const contacts = await getContacts(contactCodes)
+  const contacts = await getTenfastContacts(contactCodes)
   const contactCodeByNationalRegistrationNumber = new Map(
     contacts.map((c) => [c.nationalRegistrationNumber, c.contactCode] as const)
   )

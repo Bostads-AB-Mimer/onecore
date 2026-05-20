@@ -15,6 +15,7 @@ import {
   type TenfastBatchGetLease,
 } from './schemas'
 import {
+  Contact,
   Invoice,
   InvoiceRow,
   InvoiceTransactionType,
@@ -76,6 +77,50 @@ export const getTenantByContactCode = async (
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
+  }
+}
+
+export const getContactByContactCode = async (
+  contactCode: string
+): Promise<AdapterResult<Contact, string>> => {
+  const tenfastTenantResult = await getTenantByContactCode(contactCode)
+  if (!tenfastTenantResult.ok) {
+    return { ok: false, err: tenfastTenantResult.err }
+  }
+  if (!tenfastTenantResult.data) {
+    return { ok: false, err: 'not-found' }
+  }
+
+  const contact = transformTenfastTenantToContact(tenfastTenantResult.data)
+
+  return { ok: true, data: contact }
+}
+
+const transformTenfastTenantToContact = (
+  tenfastTenant: TenfastTenant
+): Contact => {
+  return {
+    contactCode: tenfastTenant.externalId,
+    contactKey: tenfastTenant._id,
+    firstName: tenfastTenant.name.first,
+    lastName: tenfastTenant.name.last,
+    fullName: tenfastTenant.displayName,
+    nationalRegistrationNumber: tenfastTenant.idbeteckning,
+    birthDate: new Date(0), // not available in Tenfast tenant data
+    address: {
+      street: tenfastTenant.postadress,
+      number: '', // Tenfast stores full address in postadress, no separate house number
+      postalCode: tenfastTenant.postnummer,
+      city: tenfastTenant.stad,
+    },
+    phoneNumbers: tenfastTenant.phone
+      ? [{ phoneNumber: tenfastTenant.phone, type: 'main', isMainNumber: true }]
+      : undefined,
+    isTenant: true,
+    protectedIdentity: false, // not available in Tenfast tenant data
+    deceased: false, // not available in Tenfast tenant data
+    emigrated: false, // not available in Tenfast tenant data
+    noAdvertising: false, // not available in Tenfast tenant data
   }
 }
 
