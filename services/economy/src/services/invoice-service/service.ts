@@ -1061,13 +1061,12 @@ export const stralforsPostChannelLookup = async (contactCodes: string[]) => {
     contacts.map((c) => c.nationalRegistrationNumber)
   )
 
-  return {
-    ...response,
-    matchedCandidates: Array.isArray(response.matchedCandidates)
-      ? response.matchedCandidates.map(
-          (candidate) =>
-            contactCodeByNationalRegistrationNumber.get(candidate) ?? candidate
-        )
-      : response.matchedCandidates,
-  }
+  return response.map((channel) => ({
+    ...channel,
+    matchedCandidates:
+      channel.matchedCandidates?.map(
+        (candidate) =>
+          contactCodeByNationalRegistrationNumber.get(candidate) ?? candidate
+      ) ?? null,
+  }))
 }
