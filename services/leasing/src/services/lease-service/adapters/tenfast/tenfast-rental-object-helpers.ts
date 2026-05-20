@@ -3,8 +3,6 @@ import currency from 'currency.js'
 import { TenfastLease, TenfastRentalObject } from './schemas'
 import { filterByStatus } from './filters'
 
-// TODO: Säkerställ med expand att den här logiken håller för korttidskontrakt.
-// Ev behöver vi kolla på någon till egenskap förutom endDate
 export const getLatestActiveLeasesEndDate = (
   leases: TenfastLease[]
 ): Date | null => {
@@ -14,6 +12,7 @@ export const getLatestActiveLeasesEndDate = (
     'about-to-end',
     'upcoming',
   ])
+    .filter((lease) => lease.cancellation.cancelled)
     .map((lease) => lease.endDate)
     .filter((date): date is Date => date != null)
     .sort((a, b) => b.getTime() - a.getTime()) // Sort descending to get the latest date first
