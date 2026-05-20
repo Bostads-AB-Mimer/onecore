@@ -467,6 +467,82 @@ export const GetRoomsQueryParamsSchema = z.object({
   roomCode: z.string().optional(),
 })
 
+// Curated room type/caption catalog. Duplicated from
+// services/property/src/data/room-caption-templates.ts so core can validate
+// the create-room request body server-side without an extra hop. Keep in
+// sync; promote to a shared package when a third caller appears.
+const ROOM_CAPTION_OPTIONS = {
+  BAD: ['BADRUM'],
+  BAL: ['BALKONG', 'BALKONG (Inglasad)'],
+  BRS: ['SÄKERHETSUTRUSTNING'],
+  DUSCH: ['DUSCHRUM', 'DUSCH'],
+  FÖR: ['FÖRRÅD'],
+  GROV: ['GROVKÖK'],
+  HALL: ['HALL', 'HALL LITEN'],
+  KLÄD: ['KLÄDKAMMARE'],
+  KLÄD2: ['KLÄDKAMMARE 2'],
+  KÖK: ['KÖK'],
+  KOV: ['KÖK/VARDAGSRUM'],
+  KV: ['KOKVRÅ'],
+  MAT: ['MATPLATS'],
+  PA: ['PASSAGE'],
+  RUM: ['RUM'],
+  TRAPP: ['TRAPP', 'TRAPP MED VINDFÅNG'],
+  UP: ['UTEPLATS', 'UTEPLATS (ALTAN)'],
+  VARD: ['VARDAGSRUM'],
+  WC: ['WC'],
+  'WC/DU1': ['WC/DUSCH'],
+} as const
+
+type RoomTypeCode = keyof typeof ROOM_CAPTION_OPTIONS
+
+const ROOM_TYPE_CODES = Object.keys(ROOM_CAPTION_OPTIONS) as [
+  RoomTypeCode,
+  ...RoomTypeCode[],
+]
+
+export const CreateRoomRequestSchema = z
+  .object({
+    rentalId: z.string().min(1, { message: 'rentalId is required.' }),
+    roomTypeCode: z.enum(ROOM_TYPE_CODES, {
+      errorMap: () => ({
+        message: `roomTypeCode must be one of: ${ROOM_TYPE_CODES.join(', ')}`,
+      }),
+    }),
+    code: z.string().min(1).max(30).optional(),
+    caption: z.string().min(1).max(30).optional(),
+    features: z
+      .object({
+        hasToilet: z.boolean().optional(),
+        isHeated: z.boolean().optional(),
+        hasThermostatValve: z.boolean().optional(),
+        orientation: z.number().int().min(0).max(255).optional(),
+      })
+      .optional(),
+    usage: z
+      .object({
+        shared: z.boolean().optional(),
+        allowPeriodicWorks: z.boolean().optional(),
+        spaceType: z.number().int().min(0).max(255).optional(),
+      })
+      .optional(),
+    sortingOrder: z.number().int().min(0).max(255).optional(),
+  })
+  .superRefine((val, ctx) => {
+    const options = ROOM_CAPTION_OPTIONS[val.roomTypeCode] as
+      | readonly string[]
+      | undefined
+    if (val.caption !== undefined && !options?.includes(val.caption)) {
+      ctx.addIssue({
+        path: ['caption'],
+        code: z.ZodIssueCode.custom,
+        message: `caption "${val.caption}" is not a valid option for roomTypeCode "${val.roomTypeCode}"`,
+      })
+    }
+  })
+
+export type CreateRoomRequest = z.infer<typeof CreateRoomRequestSchema>
+
 export const GetBuildingsQueryParamsSchema = z.object({
   propertyCode: z.string().min(1, { message: 'propertyCode is required.' }),
 })
