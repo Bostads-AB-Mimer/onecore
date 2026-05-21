@@ -2087,6 +2087,28 @@ export interface paths {
       };
     };
   };
+  "/cost-centers": {
+    /**
+     * List all cost centers
+     * @description Returns a minimal list of all OneCore cost centers, sorted by code. Used to populate select lists.
+     */
+    get: {
+      responses: {
+        /** @description List of cost centers */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterSummary"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/cost-centers/{id}/tree": {
     /**
      * Get the management tree for a cost center
@@ -3761,6 +3783,12 @@ export interface components {
               };
             })[];
         })[];
+    };
+    CostCenterSummary: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
     };
   };
   responses: never;
