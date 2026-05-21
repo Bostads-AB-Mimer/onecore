@@ -6,7 +6,11 @@ import {
   getUsersByRole,
   KeycloakUser,
 } from '../auth-service/keycloak-admin-adapter'
-import { CostCenterTreeSchema, type CostCenterTree } from './schemas'
+import {
+  CostCenterSummarySchema,
+  CostCenterTreeSchema,
+  type CostCenterTree,
+} from './schemas'
 
 const PROPERTY_MANAGER_ROLE = 'property-manager'
 
@@ -28,6 +32,45 @@ function toUserSummary(user: KeycloakUser) {
  *     description: Cost center (förvaltningsområde) tree
  */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /cost-centers:
+   *   get:
+   *     summary: List all cost centers
+   *     description: Returns all OneCore cost centers in a minimal shape suitable for select lists.
+   *     tags:
+   *       - Cost Centers
+   *     responses:
+   *       200:
+   *         description: List of cost centers
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/CostCenterSummary'
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/cost-centers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await propertyBaseAdapter.listCostCenters()
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { reason: 'Internal server error', ...metadata }
+      return
+    }
+    ctx.body = {
+      content: result.data.map((r) => CostCenterSummarySchema.parse(r)),
+      ...metadata,
+    }
+  })
+
   /**
    * @swagger
    * /cost-centers/{id}/tree:

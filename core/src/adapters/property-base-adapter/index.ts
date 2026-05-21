@@ -886,6 +886,25 @@ export async function getBlockReasons(): Promise<
   }
 }
 
+type ListCostCentersResponse = components['schemas']['CostCenterSummary'][]
+
+export async function listCostCenters(): Promise<
+  AdapterResult<ListCostCentersResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/cost-centers')
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.listCostCenters')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetCostCenterTreeResponse = components['schemas']['CostCenterTree']
 
 export async function getCostCenterTreeById(

@@ -1179,3 +1179,11 @@ export const CostCenterTreeSchema = z.object({
 })
 
 export type CostCenterTree = z.infer<typeof CostCenterTreeSchema>
+
+export const CostCenterSummarySchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+})
+
+export type CostCenterSummary = z.infer<typeof CostCenterSummarySchema>

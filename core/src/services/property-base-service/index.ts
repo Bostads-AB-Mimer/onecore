@@ -128,6 +128,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CostCenterTreeProperty', schemas.CostCenterTreePropertySchema)
   registerSchema('CostCenterTreeKvvArea', schemas.CostCenterTreeKvvAreaSchema)
   registerSchema('CostCenterTree', schemas.CostCenterTreeSchema)
+  registerSchema('CostCenterSummary', schemas.CostCenterSummarySchema)
 
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)
