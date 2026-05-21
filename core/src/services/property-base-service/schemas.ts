@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ALL_VALID_TYPE_CODES, isValidCaptionForType } from '@onecore/types'
 
 // Xpand ID validation - variable length IDs (max 15 chars) from legacy system
 const xpandIdSchema = z.string().max(15)
@@ -467,46 +468,14 @@ export const GetRoomsQueryParamsSchema = z.object({
   roomCode: z.string().optional(),
 })
 
-// Curated room type/caption catalog. Duplicated from
-// services/property/src/data/room-caption-templates.ts so core can validate
-// the create-room request body server-side without an extra hop. Keep in
-// sync; promote to a shared package when a third caller appears.
-const ROOM_CAPTION_OPTIONS = {
-  BAD: ['BADRUM'],
-  BAL: ['BALKONG', 'BALKONG (Inglasad)'],
-  BRS: ['SÄKERHETSUTRUSTNING'],
-  DUSCH: ['DUSCHRUM', 'DUSCH'],
-  FÖR: ['FÖRRÅD'],
-  GROV: ['GROVKÖK'],
-  HALL: ['HALL', 'HALL LITEN'],
-  KLÄD: ['KLÄDKAMMARE'],
-  KLÄD2: ['KLÄDKAMMARE 2'],
-  KÖK: ['KÖK'],
-  KOV: ['KÖK/VARDAGSRUM'],
-  KV: ['KOKVRÅ'],
-  MAT: ['MATPLATS'],
-  PA: ['PASSAGE'],
-  RUM: ['RUM'],
-  TRAPP: ['TRAPP', 'TRAPP MED VINDFÅNG'],
-  UP: ['UTEPLATS', 'UTEPLATS (ALTAN)'],
-  VARD: ['VARDAGSRUM'],
-  WC: ['WC'],
-  'WC/DU1': ['WC/DUSCH'],
-} as const
-
-type RoomTypeCode = keyof typeof ROOM_CAPTION_OPTIONS
-
-const ROOM_TYPE_CODES = Object.keys(ROOM_CAPTION_OPTIONS) as [
-  RoomTypeCode,
-  ...RoomTypeCode[],
-]
-
+// Room type/caption catalog lives in @onecore/types so the property service,
+// core (here), and the property-tree frontend share one source of truth.
 export const CreateRoomRequestSchema = z
   .object({
     rentalId: z.string().min(1, { message: 'rentalId is required.' }),
-    roomTypeCode: z.enum(ROOM_TYPE_CODES, {
+    roomTypeCode: z.enum(ALL_VALID_TYPE_CODES, {
       errorMap: () => ({
-        message: `roomTypeCode must be one of: ${ROOM_TYPE_CODES.join(', ')}`,
+        message: `roomTypeCode must be one of: ${ALL_VALID_TYPE_CODES.join(', ')}`,
       }),
     }),
     code: z.string().min(1).max(30).optional(),
@@ -528,10 +497,10 @@ export const CreateRoomRequestSchema = z
       .optional(),
   })
   .superRefine((val, ctx) => {
-    const options = ROOM_CAPTION_OPTIONS[val.roomTypeCode] as
-      | readonly string[]
-      | undefined
-    if (val.caption !== undefined && !options?.includes(val.caption)) {
+    if (
+      val.caption !== undefined &&
+      !isValidCaptionForType(val.roomTypeCode, val.caption)
+    ) {
       ctx.addIssue({
         path: ['caption'],
         code: z.ZodIssueCode.custom,

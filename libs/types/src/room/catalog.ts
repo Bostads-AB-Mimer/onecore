@@ -73,12 +73,6 @@ export const ROOM_CAPTION_TEMPLATES: readonly RoomCaptionTemplate[] = [
     alwaysNumber: false,
   },
   {
-    typeCode: 'KLÄD2',
-    typeLabel: 'Klädkammare 2',
-    captionOptions: ['KLÄDKAMMARE 2'],
-    alwaysNumber: false,
-  },
-  {
     typeCode: 'KÖK',
     typeLabel: 'Kök',
     captionOptions: ['KÖK'],
@@ -155,7 +149,6 @@ export const ALL_VALID_TYPE_CODES = [
   'GROV',
   'HALL',
   'KLÄD',
-  'KLÄD2',
   'KÖK',
   'KOV',
   'KV',

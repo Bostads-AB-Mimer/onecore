@@ -315,6 +315,44 @@ export const saveInspectionDraft = async (
   }
 }
 
+export const addRoomToInspection = async (
+  inspectionId: string,
+  xpandRoomId: string
+): Promise<AdapterResult<void, 'inspection-not-found' | 'unknown'>> => {
+  try {
+    const fetchResponse = await client().POST(
+      '/inspections/internal/{inspectionId}/added-rooms',
+      {
+        params: { path: { inspectionId } },
+        body: { xpandRoomId },
+      }
+    )
+
+    if (fetchResponse.response.status === 201) {
+      return { ok: true, data: undefined }
+    }
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'inspection-not-found' }
+    }
+
+    logger.error(
+      {
+        status: fetchResponse.response.status,
+        inspectionId,
+        xpandRoomId,
+      },
+      'inspection-adapter.addRoomToInspection unexpected status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error(
+      { error, inspectionId, xpandRoomId },
+      'inspection-adapter.addRoomToInspection'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const updateInspectionStatus = async (
   inspectionId: string,
   body: components['schemas']['UpdateInspectionStatus']

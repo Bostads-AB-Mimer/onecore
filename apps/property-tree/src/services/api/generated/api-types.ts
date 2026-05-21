@@ -1724,6 +1724,42 @@ export interface paths {
         };
       };
     };
+    /**
+     * Create a new room in Xpand for a residence.
+     * @description Performs a transactional 3-table write (cmobj, barum, babuf) in the
+     * Xpand DB. Returns the created room in the same shape as GET /rooms.
+     * The caller provides the parent rentalId and a curated roomTypeCode;
+     * code and caption default to auto-derived values if omitted.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateRoomRequest"];
+        };
+      };
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Room"];
+            };
+          };
+        };
+        /** @description Validation failure (unknown roomTypeCode, invalid caption, etc.). */
+        400: {
+          content: never;
+        };
+        /** @description Residence not found for the supplied rentalId. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
   };
   "/rooms/by-facility-id/{facilityId}": {
     /**
@@ -2612,6 +2648,24 @@ export interface components {
         timestamp: string;
       }) | null;
       area?: number;
+    };
+    CreateRoomRequest: {
+      rentalId: string;
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KLÄD2" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      code?: string;
+      caption?: string;
+      features?: {
+        hasToilet?: boolean;
+        isHeated?: boolean;
+        hasThermostatValve?: boolean;
+        orientation?: number;
+      };
+      usage?: {
+        shared?: boolean;
+        allowPeriodicWorks?: boolean;
+        spaceType?: number;
+      };
     };
     Company: {
       id: string;

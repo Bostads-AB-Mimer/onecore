@@ -444,6 +444,41 @@ export interface paths {
       }
     }
   }
+  '/inspections/internal/{inspectionId}/added-rooms': {
+    /** Record a room added during the current inspection. */
+    post: {
+      parameters: {
+        path: {
+          inspectionId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            xpandRoomId: string
+          }
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: never
+        }
+        /** @description Invalid input */
+        400: {
+          content: never
+        }
+        /** @description Inspection not found */
+        404: {
+          content: never
+        }
+        /** @description Internal error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
@@ -640,6 +675,8 @@ export interface components {
         /** @default null */
         costResponsibility?: ('tenant' | 'landlord') | null
       }[]
+      /** @default false */
+      isAddedInThisInspection?: boolean
     }
     InternalInspection: {
       id: string
@@ -708,6 +745,8 @@ export interface components {
               /** @default null */
               costResponsibility?: ('tenant' | 'landlord') | null
             }[]
+            /** @default false */
+            isAddedInThisInspection?: boolean
           }[]
         | null
     }
@@ -758,6 +797,8 @@ export interface components {
           /** @default null */
           costResponsibility?: ('tenant' | 'landlord') | null
         }[]
+        /** @default false */
+        isAddedInThisInspection?: boolean
       }[]
       isFurnished: boolean
     }

@@ -4,6 +4,7 @@ import { inspection as inspectionTypes } from '@onecore/types'
 import { db } from '../db'
 import { AdapterResult } from '../../types'
 import {
+  AddRoomToInspectionParams,
   CreateInspectionParams,
   INSPECTION_STATUS,
   InspectionStatus,
@@ -466,6 +467,61 @@ export async function saveInspectionDraft(
   }
 }
 
+/**
+ * Records that the inspector added a room (already created in Xpand by the
+ * property service) during the current inspection. The UNIQUE constraint on
+ * (inspectionId, xpandRoomId) means a duplicate call is harmless — we catch
+ * the constraint violation and return ok.
+ */
+export async function addRoomToInspection(
+  dbConnection: Knex = db,
+  params: AddRoomToInspectionParams
+): Promise<
+  AdapterResult<
+    { inspectionId: number; xpandRoomId: string },
+    'inspection-not-found' | 'unknown'
+  >
+> {
+  try {
+    const inspection = await dbConnection('inspection')
+      .where('id', params.inspectionId)
+      .first('id')
+    if (!inspection) {
+      return { ok: false, err: 'inspection-not-found' }
+    }
+
+    try {
+      await dbConnection('inspection_added_room').insert({
+        inspectionId: params.inspectionId,
+        xpandRoomId: params.xpandRoomId,
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!/uq_inspection_added_room|UNIQUE/i.test(msg)) {
+        throw err
+      }
+    }
+
+    return {
+      ok: true,
+      data: {
+        inspectionId: params.inspectionId,
+        xpandRoomId: params.xpandRoomId,
+      },
+    }
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        inspectionId: params.inspectionId,
+        xpandRoomId: params.xpandRoomId,
+      },
+      'db-adapter.addRoomToInspection'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function getInspectionById(
   dbConnection: Knex = db,
   inspectionId: string
@@ -504,6 +560,20 @@ export async function getInspectionById(
     }
 
     const rooms = parseDraftRooms(inspectionId, inspection.draftRooms)
+
+    // Decorate rooms with isAddedInThisInspection by joining the tracking table.
+    if (rooms && rooms.length > 0) {
+      const addedRows = await dbConnection('inspection_added_room')
+        .where('inspectionId', inspection.id)
+        .select('xpandRoomId')
+      const addedSet = new Set<string>(
+        addedRows.map((r: { xpandRoomId: string }) => r.xpandRoomId)
+      )
+      rooms = rooms.map((room) => ({
+        ...room,
+        isAddedInThisInspection: addedSet.has(room.roomId),
+      }))
+    }
 
     return {
       ok: true,

@@ -4,7 +4,6 @@ import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
 import {
-  createAdHocRoom,
   EMPTY_COMPONENT_COST_RESPONSIBILITIES,
   initializeInspectionData,
   initialRoomData,
@@ -19,7 +18,7 @@ export interface UseInspectionFormStateReturn {
   setInspectionData: React.Dispatch<
     React.SetStateAction<Record<string, InspectionRoom>>
   >
-  addAdHocRoom: (name: string) => Room
+  addServerRoom: (room: Room) => void
   completedRooms: number
   totalRooms: number
   isAllRoomsComplete: boolean
@@ -29,17 +28,10 @@ export function useInspectionFormState(
   initialRooms: Room[],
   existingInspection?: Inspection
 ): UseInspectionFormStateReturn {
-  // Rooms list is stateful so the inspector can append ad-hoc rooms via
-  // InspectionMoreMenu. Rehydration also appends any ad-hoc rooms from the
-  // persisted draft that aren't in the Xpand-sourced `initialRooms`.
-  const [rooms, setRooms] = useState<Room[]>(() => {
-    if (!existingInspection?.rooms?.length) return initialRooms
-    const knownIds = new Set(initialRooms.map((r) => r.id))
-    const adHocRooms = existingInspection.rooms
-      .filter((r) => !knownIds.has(r.roomId))
-      .map((r) => createAdHocRoom(r.name ?? 'Okänt rum', r.roomId))
-    return [...initialRooms, ...adHocRooms]
-  })
+  // Rooms list is stateful so the inspector can append new rooms (created
+  // server-side via POST /inspections/internal/:id/rooms) via
+  // InspectionMoreMenu without a page reload.
+  const [rooms, setRooms] = useState<Room[]>(initialRooms)
 
   const [inspectionData, setInspectionData] = useState<
     Record<string, InspectionRoom>
@@ -72,18 +64,25 @@ export function useInspectionFormState(
     return initializeInspectionData(initialRooms)
   })
 
-  const addAdHocRoom = useCallback((name: string): Room => {
-    const newRoom = createAdHocRoom(name)
-    setRooms((prev) => [...prev, newRoom])
-    setInspectionData((prev) => ({
-      ...prev,
-      [newRoom.id]: {
-        ...initialRoomData,
-        roomId: newRoom.id,
-        name,
-      },
-    }))
-    return newRoom
+  // Append a server-issued Room (created via POST
+  // /inspections/internal/:id/rooms) to local state. Idempotent: a duplicate
+  // call is silently dropped — the room is already in the list.
+  const addServerRoom = useCallback((room: Room): void => {
+    setRooms((prev) =>
+      prev.some((r) => r.id === room.id) ? prev : [...prev, room]
+    )
+    setInspectionData((prev) => {
+      if (prev[room.id]) return prev
+      return {
+        ...prev,
+        [room.id]: {
+          ...initialRoomData,
+          roomId: room.id,
+          name: room.name ?? undefined,
+          isAddedInThisInspection: true,
+        },
+      }
+    })
   }, [])
 
   // Calculate completion metrics
@@ -98,7 +97,7 @@ export function useInspectionFormState(
     rooms,
     inspectionData,
     setInspectionData,
-    addAdHocRoom,
+    addServerRoom,
     completedRooms,
     totalRooms,
     isAllRoomsComplete,

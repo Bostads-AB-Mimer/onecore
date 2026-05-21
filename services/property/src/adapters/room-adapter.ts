@@ -6,9 +6,7 @@ import { logger } from '@onecore/utilities'
 import { CreateRoomRequest, Room } from '@src/types/room'
 import { trimStrings } from '@src/utils/data-conversion'
 import { generateXpandId } from '@src/utils/generate-xpand-id'
-import { room } from '@onecore/types'
-
-const { alwaysNumberFor, getDefaultCaption } = room
+import { alwaysNumberFor, getDefaultCaption } from '@onecore/types'
 
 import { prisma } from './db'
 

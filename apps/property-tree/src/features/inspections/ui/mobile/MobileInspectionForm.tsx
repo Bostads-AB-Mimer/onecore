@@ -91,12 +91,12 @@ export function MobileInspectionForm({
     handleRoomHandledSet,
   } = useInspectionForm(initialRooms, existingInspection)
 
-  // After adding an ad-hoc room, jump to it so the inspector can start
-  // filling it in immediately. The new room is always appended, so its
-  // index is the current length (before the state update completes, that
-  // length equals the new room's index).
-  const handleAddRoomAndNavigate = (name: string) => {
-    handleAddRoom(name)
+  // After adding a server-issued room, jump to it so the inspector can start
+  // filling it in immediately. The new room is always appended, so its index
+  // is the current length (before the state update completes, that length
+  // equals the new room's index).
+  const handleAddRoomAndNavigate = (room: import('@/services/types').Room) => {
+    handleAddRoom(room)
     setCurrentRoomIndex(rooms.length)
   }
 
@@ -355,7 +355,8 @@ export function MobileInspectionForm({
 
           <InspectionMoreMenu
             rentalId={rentalId}
-            onAddRoom={handleAddRoomAndNavigate}
+            inspectionId={existingInspection?.id}
+            onRoomAdded={handleAddRoomAndNavigate}
           />
 
           <Button

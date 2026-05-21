@@ -1903,7 +1903,10 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
-  router.post('(.*)/rooms', async (ctx) => {
+  // Note: literal '/rooms' rather than '(.*)/rooms' — the wildcard prefix
+  // (used elsewhere in this file) would also match e.g.
+  // /inspections/internal/:id/rooms and intercept that route's POST.
+  router.post('/rooms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const parsed = schemas.CreateRoomRequestSchema.safeParse(ctx.request.body)
     if (!parsed.success) {

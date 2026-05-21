@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 
 import * as inspectionAdapter from '../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as schemas from './schemas'
 import { inspection } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
@@ -66,6 +67,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema(
     'ComponentWriteBackError',
     inspection.ComponentWriteBackErrorSchema
+  )
+  registerSchema(
+    'AddInspectionRoomRequest',
+    schemas.AddInspectionRoomRequestSchema
   )
 
   /**
@@ -1726,6 +1731,186 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/rooms:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Add a room to a residence during an inspection.
+   *     description: |
+   *       Creates a new room in Xpand (via property-base) for the residence
+   *       associated with the inspection, then records the xpand-issued room id
+   *       in the inspection's tracking table so the inspector sees the room as
+   *       'added during this inspection'.
+   *
+   *       If the property write fails, no inspection state is touched. If the
+   *       property write succeeds but the inspection-tracking write fails, the
+   *       room exists in Xpand and is returned to the caller; the caller is
+   *       expected to refresh the inspection to pick it up.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/AddInspectionRoomRequest'
+   *     responses:
+   *       '201':
+   *         description: Room created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     room:
+   *                       $ref: '#/components/schemas/Room'
+   *       '400':
+   *         description: Invalid request body or no residence linked to the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '404':
+   *         description: Inspection or residence not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/inspections/internal/:inspectionId/rooms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    const parsed = schemas.AddInspectionRoomRequestSchema.safeParse(
+      ctx.request.body
+    )
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = { errors: parsed.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const inspectionResult =
+        await inspectionAdapter.getInternalInspectionById(inspectionId)
+      if (!inspectionResult.ok) {
+        if (inspectionResult.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Inspection not found', ...metadata }
+          return
+        }
+        logger.error(
+          { err: inspectionResult.err, inspectionId, metadata },
+          'Failed to load inspection'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      const rentalId = inspectionResult.data.residenceId
+      if (!rentalId) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Inspection has no associated residence',
+          ...metadata,
+        }
+        return
+      }
+
+      const createResult = await propertyBaseAdapter.createRoom({
+        rentalId,
+        ...parsed.data,
+      })
+      if (!createResult.ok) {
+        if (createResult.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Residence not found for inspection',
+            ...metadata,
+          }
+          return
+        }
+        if (createResult.err === 'validation') {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Validation error from property service',
+            ...metadata,
+          }
+          return
+        }
+        logger.error(
+          { err: createResult.err, inspectionId, metadata },
+          'Failed to create room'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      const createdRoom = createResult.data
+
+      // Partial-success: if tracking insert fails after the Xpand write
+      // succeeded, the room still exists and we return it. The flag just
+      // won't show up; refreshing the inspection picks the room up via
+      // draftRooms once the FE saves the draft.
+      const trackResult = await inspectionAdapter.addRoomToInspection(
+        inspectionId,
+        createdRoom.id
+      )
+      if (!trackResult.ok) {
+        logger.error(
+          {
+            err: trackResult.err,
+            inspectionId,
+            xpandRoomId: createdRoom.id,
+            metadata,
+          },
+          'createRoom succeeded but addRoomToInspection failed — partial success'
+        )
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: { room: createdRoom },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error orchestrating inspection room creation'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
   router.patch('/inspections/internal/:inspectionId/draft', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params

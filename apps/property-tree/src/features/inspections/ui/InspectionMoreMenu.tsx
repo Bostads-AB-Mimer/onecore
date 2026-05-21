@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { FileImage, MoreHorizontal, Plus } from 'lucide-react'
 
+import type { Room } from '@/services/types'
+
 import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
@@ -16,12 +17,16 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
 import { FloorplanImage } from '@/shared/ui/FloorplanImage'
-import { Input } from '@/shared/ui/Input'
-import { Label } from '@/shared/ui/Label'
+
+import { AddInspectionRoomDialog } from './AddInspectionRoomDialog'
 
 interface InspectionMoreMenuProps {
   rentalId?: string
-  onAddRoom?: (name: string) => void
+  // Inspection id is required for the "Lägg till rum/utrymme" action — without
+  // it the button is hidden (caller is in a flow that doesn't have an
+  // inspection yet, e.g. create dialog).
+  inspectionId?: string
+  onRoomAdded?: (room: Room) => void
   // `menu` renders a single icon trigger with a dropdown — used on mobile
   // where the bottom bar is tight. `buttons` renders each action as its own
   // labeled button, used on desktop where there is room for captions.
@@ -30,20 +35,14 @@ interface InspectionMoreMenuProps {
 
 export function InspectionMoreMenu({
   rentalId,
-  onAddRoom,
+  inspectionId,
+  onRoomAdded,
   variant = 'menu',
 }: InspectionMoreMenuProps) {
   const [showFloorplan, setShowFloorplan] = useState(false)
   const [showAddRoom, setShowAddRoom] = useState(false)
-  const [newRoomName, setNewRoomName] = useState('')
 
-  const handleAddRoom = () => {
-    if (newRoomName.trim()) {
-      onAddRoom?.(newRoomName.trim())
-      setNewRoomName('')
-      setShowAddRoom(false)
-    }
-  }
+  const canAddRoom = Boolean(inspectionId && onRoomAdded)
 
   return (
     <>
@@ -53,7 +52,7 @@ export function InspectionMoreMenu({
             <FileImage className="h-4 w-4" />
             Se planritning
           </Button>
-          {onAddRoom && (
+          {canAddRoom && (
             <Button variant="outline" onClick={() => setShowAddRoom(true)}>
               <Plus className="h-4 w-4" />
               Lägg till rum/utrymme
@@ -68,14 +67,18 @@ export function InspectionMoreMenu({
               <span className="sr-only">Fler alternativ</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start">
+          <DropdownMenuContent
+            side="top"
+            align="start"
+            className="z-[100]"
+          >
             <DropdownMenuItem
               onSelect={() => setShowFloorplan(true)}
               className="py-3 text-base"
             >
               Se planritning
             </DropdownMenuItem>
-            {onAddRoom && (
+            {canAddRoom && (
               <DropdownMenuItem
                 onSelect={() => setShowAddRoom(true)}
                 className="py-3 text-base"
@@ -87,9 +90,8 @@ export function InspectionMoreMenu({
         </DropdownMenu>
       )}
 
-      {/* Floorplan Dialog */}
       <Dialog open={showFloorplan} onOpenChange={setShowFloorplan}>
-        <DialogContent className="max-w-3xl max-h-[90vh] p-2 sm:p-4">
+        <DialogContent className="max-w-3xl max-h-[90vh] p-2 sm:p-4 z-[100]">
           <DialogHeader>
             <DialogTitle>Planritning</DialogTitle>
           </DialogHeader>
@@ -100,36 +102,13 @@ export function InspectionMoreMenu({
         </DialogContent>
       </Dialog>
 
-      {/* Add Room Dialog */}
-      {onAddRoom && (
-        <Dialog open={showAddRoom} onOpenChange={setShowAddRoom}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Lägg till rum/utrymme</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-2 py-2">
-              <Label htmlFor="new-room-name">Namn</Label>
-              <Input
-                id="new-room-name"
-                placeholder="t.ex. Klädkammare, Entré..."
-                value={newRoomName}
-                onChange={(e) => setNewRoomName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddRoom()
-                }}
-                autoFocus
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddRoom(false)}>
-                Avbryt
-              </Button>
-              <Button onClick={handleAddRoom} disabled={!newRoomName.trim()}>
-                Lägg till
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      {canAddRoom && inspectionId && onRoomAdded && (
+        <AddInspectionRoomDialog
+          inspectionId={inspectionId}
+          open={showAddRoom}
+          onOpenChange={setShowAddRoom}
+          onRoomAdded={onRoomAdded}
+        />
       )}
     </>
   )

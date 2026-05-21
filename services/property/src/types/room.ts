@@ -1,7 +1,5 @@
 import { z } from 'zod'
-import { room } from '@onecore/types'
-
-const { ALL_VALID_TYPE_CODES, isValidCaptionForType } = room
+import { ALL_VALID_TYPE_CODES, isValidCaptionForType } from '@onecore/types'
 
 export const roomsQueryParamsSchema = z.object({
   rentalId: z.string().min(1, { message: 'rentalId is required.' }),
