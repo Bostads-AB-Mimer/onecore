@@ -141,3 +141,36 @@ describe('GET /cost-centers/:id/tree', () => {
     expect(res.body.content.kvvAreas[0].responsible).toBeNull()
   })
 })
+
+describe('GET /cost-centers', () => {
+  it('returns 200 with the list of cost centers', async () => {
+    const data = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        code: '61110',
+        name: 'Mimer Mitt',
+      },
+      {
+        id: '22222222-2222-2222-2222-222222222222',
+        code: '61120',
+        name: 'Mimer Väst',
+      },
+    ]
+    jest
+      .spyOn(propertyBaseAdapter, 'listCostCenters')
+      .mockResolvedValueOnce({ ok: true, data })
+
+    const res = await request(app.callback()).get('/cost-centers')
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(data)
+  })
+
+  it('returns 500 when the adapter fails', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'listCostCenters')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback()).get('/cost-centers')
+    expect(res.status).toBe(500)
+  })
+})
