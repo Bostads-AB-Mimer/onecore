@@ -11,6 +11,22 @@ export const minioClient = new Client({
 })
 
 const BUCKET_NAME = minioConfig.bucketName
+const PUBLIC_BUCKET_NAME = minioConfig.publicBucketName
+
+// Anonymous read policy applied to the public bucket — grants s3:GetObject to
+// any principal so plain <img src=".../<bucket>/<key>"> works without auth.
+// No list, write, or delete permissions are exposed anonymously.
+const publicReadPolicy = (bucketName: string) => ({
+  Version: '2012-10-17',
+  Statement: [
+    {
+      Effect: 'Allow',
+      Principal: { AWS: ['*'] },
+      Action: ['s3:GetObject'],
+      Resource: [`arn:aws:s3:::${bucketName}/*`],
+    },
+  ],
+})
 
 /**
  * Ensure the bucket exists, create if it doesn't
@@ -26,6 +42,37 @@ export const initializeBucket = async (): Promise<void> => {
     }
   } catch (error) {
     console.error(`Failed to ensure bucket '${BUCKET_NAME}' exists:`, error)
+    throw error
+  }
+}
+
+/**
+ * Ensure the public bucket exists with an anonymous-read policy applied.
+ * Policy is re-applied on every startup so dev environments stay consistent
+ * even if someone has tweaked it via the MinIO console.
+ */
+export const initializePublicBucket = async (): Promise<void> => {
+  try {
+    const exists = await minioClient.bucketExists(PUBLIC_BUCKET_NAME)
+    if (!exists) {
+      await minioClient.makeBucket(PUBLIC_BUCKET_NAME, 'us-east-1')
+      console.log(`MinIO bucket '${PUBLIC_BUCKET_NAME}' created successfully`)
+    } else {
+      console.log(`MinIO bucket '${PUBLIC_BUCKET_NAME}' already exists`)
+    }
+
+    await minioClient.setBucketPolicy(
+      PUBLIC_BUCKET_NAME,
+      JSON.stringify(publicReadPolicy(PUBLIC_BUCKET_NAME))
+    )
+    console.log(
+      `MinIO bucket '${PUBLIC_BUCKET_NAME}' anonymous read policy applied`
+    )
+  } catch (error) {
+    console.error(
+      `Failed to ensure public bucket '${PUBLIC_BUCKET_NAME}' exists:`,
+      error
+    )
     throw error
   }
 }
@@ -187,4 +234,72 @@ export const listFiles = async (prefix: string): Promise<BucketItem[]> => {
     console.error(`Failed to list files with prefix '${prefix}':`, error)
     throw error
   }
+}
+
+/**
+ * Upload a file to the public bucket with long-lived cache headers.
+ * Objects in this bucket are world-readable via the bucket policy applied
+ * in initializePublicBucket — do not put anything sensitive here.
+ * @param key - The object key (path inside the public bucket)
+ * @param fileBuffer - The file buffer to upload
+ * @param contentType - MIME type of the file
+ * @returns The key stored in MinIO
+ */
+export const uploadPublicFile = async (
+  key: string,
+  fileBuffer: Buffer,
+  contentType: string
+): Promise<string> => {
+  try {
+    const metadata = {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000',
+    }
+
+    await minioClient.putObject(
+      PUBLIC_BUCKET_NAME,
+      key,
+      fileBuffer,
+      fileBuffer.length,
+      metadata
+    )
+
+    console.log(
+      `File '${key}' uploaded successfully to bucket '${PUBLIC_BUCKET_NAME}'`
+    )
+    return key
+  } catch (error) {
+    console.error(`Failed to upload public file '${key}':`, error)
+    throw error
+  }
+}
+
+/**
+ * Check if an object exists in the public bucket.
+ * @param key - The object key
+ */
+export const publicFileExists = async (key: string): Promise<boolean> => {
+  try {
+    await minioClient.statObject(PUBLIC_BUCKET_NAME, key)
+    return true
+  } catch (_error) {
+    return false
+  }
+}
+
+/**
+ * Build the anonymous-access URL for an object in the public bucket.
+ * Omits the port when it matches the protocol default (80/443).
+ * @param key - The object key (path inside the public bucket)
+ */
+export const getPublicFileUrl = (key: string): string => {
+  const protocol = minioConfig.useSSL ? 'https' : 'http'
+  const port = minioConfig.port
+  const isDefaultPort =
+    (minioConfig.useSSL && port === 443) || (!minioConfig.useSSL && port === 80)
+  const host = isDefaultPort
+    ? minioConfig.endpoint
+    : `${minioConfig.endpoint}:${port}`
+  const encodedKey = key.split('/').map(encodeURIComponent).join('/')
+  return `${protocol}://${host}/${PUBLIC_BUCKET_NAME}/${encodedKey}`
 }
