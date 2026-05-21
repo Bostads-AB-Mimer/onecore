@@ -21,14 +21,14 @@ interface Steward {
 interface StewardAdminMobileProps {
   kvvAreas: KvvAreaInfo[]
   propertiesByKvvArea: Map<string, PropertyForAdmin[]>
-  allStewards: Steward[]
-  onReassignArea: (kvvArea: string, toStewardRefNr: string) => void
+  allStewards?: Steward[]
+  onReassignArea?: (kvvArea: string, toStewardRefNr: string) => void
 }
 
 export function StewardAdminMobile({
   kvvAreas,
   propertiesByKvvArea,
-  allStewards,
+  allStewards = [],
   onReassignArea,
 }: StewardAdminMobileProps) {
   const [showAssignDialog, setShowAssignDialog] = useState(false)
@@ -42,7 +42,7 @@ export function StewardAdminMobile({
   }
 
   const handleAssign = (newStewardRefNr: string) => {
-    if (selectedKvvArea) {
+    if (selectedKvvArea && onReassignArea) {
       onReassignArea(selectedKvvArea.kvvArea, newStewardRefNr)
     }
   }
@@ -57,17 +57,19 @@ export function StewardAdminMobile({
           <span>
             {kvvArea.kvvArea} - {kvvArea.stewardName} ({properties.length})
           </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleOpenAssignDialog(kvvArea)
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
+          {onReassignArea && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOpenAssignDialog(kvvArea)
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       ),
       content: (

@@ -49,10 +49,10 @@ export function PropertyCard({ property, kvvArea }: PropertyCardProps) {
         <GripVertical className="h-4 w-4" />
       </button>
       <div className="min-w-0 flex-1">
-        <div className="font-medium text-sm truncate">
+        <div className="font-medium text-sm break-words">
           {property.propertyName}
         </div>
-        <div className="text-xs text-muted-foreground truncate">
+        <div className="text-xs text-muted-foreground break-words">
           {property.address}
         </div>
         <BuildingTypeBadge type={property.buildingType} className="mt-1" />

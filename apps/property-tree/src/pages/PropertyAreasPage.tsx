@@ -1,27 +1,20 @@
-import React, { useEffect, useState } from 'react'
-import {
-  closestCorners,
-  DndContext,
-  DragEndEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Building2, Car, DoorOpen, Home } from 'lucide-react'
 
+import { useCostCenters } from '@/features/property-areas/hooks/useCostCenters'
+import { useCostCenterTree } from '@/features/property-areas/hooks/useCostCenterTree'
 import {
-  getCostCenterName,
-  getDistrictManagers,
-  getUniqueCostCenters,
-} from '@/features/property-areas'
-import { useStewardAdmin } from '@/features/property-areas/hooks/useStewardAdmin'
+  KvvAreaInfo,
+  PropertyForAdmin,
+} from '@/features/property-areas/types/adminTypes'
 import {
   StewardAdminMobile,
   StewardColumn,
 } from '@/features/property-areas/ui/admin'
 
+import type { CostCenterTree, CostCenterTreeKvvArea } from '@/services/types'
+
 import { useIsMobile } from '@/shared/hooks/useMobile'
-import { useToast } from '@/shared/hooks/useToast'
 import { Card, CardContent } from '@/shared/ui/Card'
 import { ViewLayout } from '@/shared/ui/layout'
 import { ScrollArea, ScrollBar } from '@/shared/ui/ScrollArea'
@@ -33,77 +26,109 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 
-export function PropertyAreasPage() {
-  const isMobile = useIsMobile()
-  const { toast } = useToast()
+function formatUserName(user: CostCenterTree['lead']): {
+  name: string
+  subtitle?: string
+} {
+  if (!user) return { name: '—' }
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
+  return {
+    name: fullName || user.username,
+    subtitle: user.email,
+  }
+}
 
-  const costCenters = getUniqueCostCenters()
-  const [selectedCostCenter, setSelectedCostCenter] = useState<string>('all')
-  const district =
-    selectedCostCenter === 'all'
-      ? undefined
-      : getDistrictManagers(selectedCostCenter)
-
-  const {
-    kvvAreaList,
-    propertiesByKvvArea,
-    allStewards,
-    reassignArea,
-    reassignProperty,
-  } = useStewardAdmin(selectedCostCenter)
-
-  // Local order of KVV columns (per cost center)
-  const [orderedIds, setOrderedIds] = useState<string[]>([])
-  const kvvAreaKey = kvvAreaList.map((k) => k.kvvArea).join('|')
-  useEffect(() => {
-    setOrderedIds(kvvAreaKey ? kvvAreaKey.split('|') : [])
-  }, [kvvAreaKey])
-
-  const orderedAreas = orderedIds
-    .map((id) => kvvAreaList.find((k) => k.kvvArea === id))
-    .filter(Boolean) as typeof kvvAreaList
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+function mapKvvArea(area: CostCenterTreeKvvArea): KvvAreaInfo {
+  const aggregates = area.properties.reduce(
+    (acc, p) => ({
+      propertyCount: acc.propertyCount + 1,
+      residenceCount: acc.residenceCount + p.aggregates.residenceCount,
+      parkingCount: acc.parkingCount + p.aggregates.parkingCount,
+      entranceCount: acc.entranceCount + p.aggregates.entranceCount,
+    }),
+    { propertyCount: 0, residenceCount: 0, parkingCount: 0, entranceCount: 0 }
   )
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+  const stewardName = area.responsible
+    ? formatUserName(area.responsible).name
+    : area.name || area.code
 
-    const activeType = active.data.current?.type
+  return {
+    kvvArea: area.code,
+    stewardRefNr: area.responsible?.username ?? '',
+    stewardName,
+    stewardPhone: undefined,
+    propertyCount: aggregates.propertyCount,
+    residenceCount: aggregates.residenceCount,
+    parkingCount: aggregates.parkingCount,
+    entranceCount: aggregates.entranceCount,
+  }
+}
 
-    // Property card dragged → reassign to target column's KVV area
-    if (activeType === 'property') {
-      const fromKvv = active.data.current?.kvvArea as string | undefined
-      const overData = over.data.current as
-        | { type?: string; kvvArea?: string }
-        | undefined
-      const toKvv = overData?.kvvArea
-      if (!toKvv || toKvv === fromKvv) return
+function mapProperties(area: CostCenterTreeKvvArea): PropertyForAdmin[] {
+  return area.properties.map((property) => ({
+    id: `${area.code}-${property.code}`,
+    propertyCode: property.code,
+    propertyName: property.designation || property.tract || property.code,
+    address: property.addresses
+      .map((a) => a.address)
+      .filter(Boolean)
+      .join(', '),
+    kvvArea: area.code,
+    stewardRefNr: area.responsible?.username ?? '',
+    costCenter: '',
+    residenceCount: property.aggregates.residenceCount,
+    parkingCount: property.aggregates.parkingCount,
+    entranceCount: property.aggregates.entranceCount,
+  }))
+}
 
-      reassignProperty(String(active.id), toKvv)
+export function PropertyAreasPage() {
+  const isMobile = useIsMobile()
 
-      const targetArea = kvvAreaList.find((k) => k.kvvArea === toKvv)
-      const property = propertiesByKvvArea
-        .get(fromKvv ?? '')
-        ?.find((p) => p.id === active.id)
-      toast({
-        title: 'Fastighet flyttad',
-        description: `${property?.propertyName ?? 'Fastigheten'} flyttades till ${toKvv}${targetArea ? ` (${targetArea.stewardName})` : ''}.`,
-      })
-      return
+  const { data: costCenters = [], isLoading: costCentersLoading } =
+    useCostCenters()
+
+  const [selectedCostCenterId, setSelectedCostCenterId] = useState<string>('')
+
+  useEffect(() => {
+    if (!selectedCostCenterId && costCenters.length > 0) {
+      setSelectedCostCenterId(costCenters[0].id)
     }
-  }
+  }, [costCenters, selectedCostCenterId])
 
-  const handleReassign = (kvvArea: string, toStewardRefNr: string) => {
-    reassignArea(kvvArea, toStewardRefNr)
-    const newSteward = allStewards.find((s) => s.refNr === toStewardRefNr)
-    toast({
-      title: 'Ansvarig uppdaterad',
-      description: `${kvvArea} tilldelades ${newSteward?.name ?? toStewardRefNr}.`,
+  const { data: tree, isLoading: treeLoading } = useCostCenterTree(
+    selectedCostCenterId || undefined
+  )
+
+  const kvvAreaList = useMemo<KvvAreaInfo[]>(() => {
+    if (!tree) return []
+    return tree.kvvAreas
+      .map(mapKvvArea)
+      .sort((a, b) => a.kvvArea.localeCompare(b.kvvArea))
+  }, [tree])
+
+  const propertiesByKvvArea = useMemo(() => {
+    const grouped = new Map<string, PropertyForAdmin[]>()
+    if (!tree) return grouped
+    tree.kvvAreas.forEach((area) => {
+      grouped.set(area.code, mapProperties(area))
     })
-  }
+    return grouped
+  }, [tree])
+
+  const lead = tree ? formatUserName(tree.lead) : undefined
+  const deputy = tree ? formatUserName(tree.deputy) : undefined
+
+  const totals = kvvAreaList.reduce(
+    (acc, k) => ({
+      properties: acc.properties + k.propertyCount,
+      entrances: acc.entrances + k.entranceCount,
+      residences: acc.residences + k.residenceCount,
+      parking: acc.parking + k.parkingCount,
+    }),
+    { properties: 0, entrances: 0, residences: 0, parking: 0 }
+  )
 
   return (
     <ViewLayout>
@@ -125,31 +150,35 @@ export function PropertyAreasPage() {
                   Kostnadsställe/distrikt:
                 </span>
                 <Select
-                  value={selectedCostCenter}
-                  onValueChange={setSelectedCostCenter}
+                  value={selectedCostCenterId}
+                  onValueChange={setSelectedCostCenterId}
+                  disabled={costCentersLoading || costCenters.length === 0}
                 >
                   <SelectTrigger className="w-[240px]">
-                    <SelectValue />
+                    <SelectValue
+                      placeholder={
+                        costCentersLoading ? 'Laddar...' : 'Välj kostnadsställe'
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Alla kostnadsställen</SelectItem>
                     {costCenters.map((cc) => (
-                      <SelectItem key={cc} value={cc}>
-                        {cc} - {getCostCenterName(cc)}
+                      <SelectItem key={cc.id} value={cc.id}>
+                        {cc.code} - {cc.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {district && (
+              {tree && (
                 <>
                   <div className="flex flex-col">
                     <span className="text-xs text-muted-foreground">
                       Distriktschef
                     </span>
                     <span className="text-sm font-medium">
-                      {district.districtManager}
+                      {lead?.name ?? '—'}
                     </span>
                   </div>
                   <div className="flex flex-col">
@@ -157,96 +186,77 @@ export function PropertyAreasPage() {
                       Biträdande distriktschef
                     </span>
                     <span className="text-sm font-medium">
-                      {district.deputyDistrictManager}
+                      {deputy?.name ?? '—'}
                     </span>
                   </div>
                 </>
               )}
 
-              {(() => {
-                const totals = kvvAreaList.reduce(
-                  (acc, k) => ({
-                    properties: acc.properties + k.propertyCount,
-                    entrances: acc.entrances + k.entranceCount,
-                    residences: acc.residences + k.residenceCount,
-                    parking: acc.parking + k.parkingCount,
-                  }),
-                  { properties: 0, entrances: 0, residences: 0, parking: 0 }
-                )
-                return (
-                  <div className="flex flex-col sm:ml-auto">
-                    <span className="text-xs text-muted-foreground">
-                      {selectedCostCenter === 'all'
-                        ? 'Totalt'
-                        : 'Distriktet totalt'}
+              {tree && (
+                <div className="flex flex-col sm:ml-auto">
+                  <span className="text-xs text-muted-foreground">
+                    Distriktet totalt
+                  </span>
+                  <div className="flex items-center gap-4 text-sm font-medium mt-0.5">
+                    <span
+                      className="flex items-center gap-1.5"
+                      title="Fastigheter"
+                    >
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      {totals.properties}
                     </span>
-                    <div className="flex items-center gap-4 text-sm font-medium mt-0.5">
-                      <span
-                        className="flex items-center gap-1.5"
-                        title="Fastigheter"
-                      >
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {totals.properties}
-                      </span>
-                      <span
-                        className="flex items-center gap-1.5"
-                        title="Uppgångar"
-                      >
-                        <Home className="h-4 w-4 text-muted-foreground" />
-                        {totals.entrances}
-                      </span>
-                      <span
-                        className="flex items-center gap-1.5"
-                        title="Bostäder"
-                      >
-                        <DoorOpen className="h-4 w-4 text-muted-foreground" />
-                        {totals.residences}
-                      </span>
-                      <span
-                        className="flex items-center gap-1.5"
-                        title="Bilplatser"
-                      >
-                        <Car className="h-4 w-4 text-muted-foreground" />
-                        {totals.parking}
-                      </span>
-                    </div>
+                    <span
+                      className="flex items-center gap-1.5"
+                      title="Uppgångar"
+                    >
+                      <Home className="h-4 w-4 text-muted-foreground" />
+                      {totals.entrances}
+                    </span>
+                    <span
+                      className="flex items-center gap-1.5"
+                      title="Bostäder"
+                    >
+                      <DoorOpen className="h-4 w-4 text-muted-foreground" />
+                      {totals.residences}
+                    </span>
+                    <span
+                      className="flex items-center gap-1.5"
+                      title="Bilplatser"
+                    >
+                      <Car className="h-4 w-4 text-muted-foreground" />
+                      {totals.parking}
+                    </span>
                   </div>
-                )
-              })()}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Main content */}
-        {isMobile ? (
+        {treeLoading ? (
+          <div className="text-sm text-muted-foreground">Laddar...</div>
+        ) : !tree ? (
+          <div className="text-sm text-muted-foreground">
+            Välj ett kostnadsställe för att visa områden.
+          </div>
+        ) : isMobile ? (
           <StewardAdminMobile
-            kvvAreas={orderedAreas}
+            kvvAreas={kvvAreaList}
             propertiesByKvvArea={propertiesByKvvArea}
-            allStewards={allStewards}
-            onReassignArea={handleReassign}
           />
         ) : (
           <div className="grid grid-cols-[minmax(0,1fr)] flex-1 min-h-0">
             <ScrollArea className="h-full w-full">
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCorners}
-                onDragEnd={handleDragEnd}
-              >
-                <div className="flex gap-4 p-1 min-h-[500px]">
-                  {orderedAreas.map((kvvArea) => (
-                    <StewardColumn
-                      key={kvvArea.kvvArea}
-                      kvvArea={kvvArea}
-                      properties={
-                        propertiesByKvvArea.get(kvvArea.kvvArea) || []
-                      }
-                      allStewards={allStewards}
-                      onReassignArea={handleReassign}
-                    />
-                  ))}
-                </div>
-              </DndContext>
+              <div className="flex gap-4 p-1 min-h-[500px]">
+                {kvvAreaList.map((kvvArea) => (
+                  <StewardColumn
+                    key={kvvArea.kvvArea}
+                    kvvArea={kvvArea}
+                    properties={propertiesByKvvArea.get(kvvArea.kvvArea) || []}
+                  />
+                ))}
+              </div>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </div>
