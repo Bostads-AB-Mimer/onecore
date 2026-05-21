@@ -3697,6 +3697,36 @@ export interface components {
       additionalInformation: string | null;
       confidence: number;
     };
+    CostCenterTree: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+      leadKeycloakUserId: string | null;
+      deputyKeycloakUserId: string | null;
+      kvvAreas: ({
+          /** Format: uuid */
+          id: string;
+          code: string;
+          name: string | null;
+          responsibleKeycloakUserId: string | null;
+          properties: ({
+              code: string;
+              designation: string | null;
+              tract: string | null;
+              addresses: ({
+                  buildingCode: string;
+                  buildingName: string | null;
+                  address: string | null;
+                })[];
+              aggregates: {
+                residenceCount: number;
+                parkingCount: number;
+                entranceCount: number;
+              };
+            })[];
+        })[];
+    };
   };
   responses: never;
   parameters: never;
