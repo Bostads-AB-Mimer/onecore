@@ -1,9 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ROOM_CAPTION_TEMPLATES,
-  ALL_VALID_TYPE_CODES,
-} from '@onecore/types'
+import { ROOM_CAPTION_TEMPLATES, ALL_VALID_TYPE_CODES } from '@onecore/types'
 
 import { Button } from '@/shared/ui/Button'
 import {
