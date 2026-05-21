@@ -686,6 +686,52 @@ export interface paths {
       };
     };
   };
+  "/components/{id}/inspection-state": {
+    /**
+     * Update component inspection state
+     * @description Updates component condition and last inspection date
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            condition?: "GOOD" | "FAIR" | "DAMAGED";
+            /** Format: date-time */
+            lastInspectionDate?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Component inspection state updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/components/by-room/{roomId}": {
     /**
      * Get components installed in a specific room
@@ -3328,6 +3374,7 @@ export interface components {
       status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
       /** @enum {string|null} */
       condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+      lastInspectionDate?: string | null;
       quantity: number;
       economicLifespan: number;
       createdAt: string;
@@ -3447,6 +3494,7 @@ export interface components {
         status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
         /** @enum {string|null} */
         condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+        lastInspectionDate?: string | null;
         quantity: number;
         economicLifespan: number;
         createdAt: string;

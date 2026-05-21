@@ -2015,6 +2015,106 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /components/{id}/inspection-state:
+   *   put:
+   *     summary: Update component inspection state
+   *     description: Updates component condition and last inspection date
+   *     tags:
+   *       - Property-base/Components
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Component instance ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               condition:
+   *                 type: string
+   *                 enum: [GOOD, FAIR, DAMAGED]
+   *               lastInspectionDate:
+   *                 type: string
+   *                 format: date-time
+   *     responses:
+   *       '200':
+   *         description: Component inspection state updated
+   *       '400':
+   *         description: Invalid request
+   *       '404':
+   *         description: Component not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put('(.*)/components/:id/inspection-state', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    const idValidation = z.string().uuid().safeParse(id)
+    if (!idValidation.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+
+    const body = z
+      .object({
+        condition: z.enum(['GOOD', 'FAIR', 'DAMAGED']),
+        lastInspectionDate: z.string().datetime(),
+      })
+      .safeParse(ctx.request.body)
+
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.updateComponentInspectionState(
+        id,
+        body.data
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not_found') {
+          ctx.status = 404
+          ctx.body = { error: 'Component not found', ...metadata }
+          return
+        }
+
+        logger.error(
+          { err: result.err, metadata },
+          'Failed to update component inspection state'
+        )
+        ctx.status = 502
+        ctx.body = {
+          error: 'Failed to update component inspection state',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: result.data satisfies schemas.Component,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
   // ==================== COMPONENT INSTALLATIONS ====================
 
   /**

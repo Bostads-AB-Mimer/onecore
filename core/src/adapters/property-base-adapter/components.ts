@@ -688,6 +688,34 @@ async function deleteComponent(
   }
 }
 
+async function updateComponentInspectionState(
+  componentId: string,
+  data: { condition: 'GOOD' | 'FAIR' | 'DAMAGED'; lastInspectionDate: string }
+): Promise<AdapterResult<GetComponentResponse, 'not_found' | 'update-failed'>> {
+  try {
+    const response = await client().PUT('/components/{id}/inspection-state', {
+      params: { path: { id: componentId } },
+      body: data,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'update-failed' }
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-base-adapter.updateComponentInspectionState'
+    )
+    return { ok: false, err: 'update-failed' }
+  }
+}
+
 // ==================== COMPONENT INSTALLATIONS ====================
 
 type GetComponentInstallationsResponse =
@@ -1311,6 +1339,7 @@ export {
   createComponent,
   updateComponent,
   deleteComponent,
+  updateComponentInspectionState,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

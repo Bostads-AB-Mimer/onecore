@@ -64,6 +64,15 @@ export const DetailedXpandInspectionSchema = z.object({
   totalCost: z.number().nullable(),
   remarkCount: z.number(),
   rooms: DetailedXpandInspectionRoomSchema.array(),
+  componentWriteBackErrors: z
+    .array(
+      z.object({
+        componentId: z.string(),
+        error: z.string(),
+      })
+    )
+    .optional()
+    .default([]),
 })
 
 export const GetInspectionsFromXpandQuerySchema = z.object({
@@ -165,6 +174,15 @@ export const InternalInspectionSchema = XpandInspectionSchema.extend({
   totalCost: z.number().nullable(),
   remarkCount: z.number(),
   rooms: z.array(InspectionRoomSchema).nullable(),
+  componentWriteBackErrors: z
+    .array(
+      z.object({
+        componentId: z.string(),
+        error: z.string(),
+      })
+    )
+    .optional()
+    .default([]),
 })
 
 export const SaveInspectionDraftRequestSchema = z.object({

@@ -8,10 +8,11 @@ import * as xpandAdapter from '../adapters/xpand-adapter'
 import * as dbAdapter from '../adapters/db-adapter'
 import {
   XpandInspectionFactory,
+  InternalInspectionFactory,
   DetailedXpandInspectionFactory,
   InspectionRoomFactory,
   SaveInspectionDraftParamsFactory,
-} from './factories'
+} from './factories/index'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -226,7 +227,7 @@ describe('inspection-service', () => {
   describe('PATCH /inspections/internal/:inspectionId', () => {
     it('updates inspection status successfully', async () => {
       const inspectionId = '1'
-      const mockInspection = DetailedXpandInspectionFactory.build({
+      const mockInspection = InternalInspectionFactory.build({
         id: inspectionId,
         status: 'Påbörjad',
       })
@@ -246,7 +247,7 @@ describe('inspection-service', () => {
 
     it('updates inspector successfully', async () => {
       const inspectionId = '1'
-      const mockInspection = DetailedXpandInspectionFactory.build({
+      const mockInspection = InternalInspectionFactory.build({
         id: inspectionId,
         inspector: 'New Inspector',
       })
@@ -267,7 +268,7 @@ describe('inspection-service', () => {
 
     it('updates both status and inspector', async () => {
       const inspectionId = '1'
-      const mockInspection = DetailedXpandInspectionFactory.build({
+      const mockInspection = InternalInspectionFactory.build({
         id: inspectionId,
         status: 'Påbörjad',
         inspector: 'New Inspector',
@@ -413,6 +414,7 @@ describe('inspection-service', () => {
         totalCost: null,
         remarkCount: 0,
         rooms: [InspectionRoomFactory.build({ isHandled: true })],
+        componentWriteBackErrors: [],
       }
       jest
         .spyOn(dbAdapter, 'getInspectionById')

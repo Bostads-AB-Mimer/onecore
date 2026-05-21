@@ -1,4 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { ToastAction } from '@/shared/ui/Toast'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/shared/ui/Dialog'
 
 import { roomService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
@@ -39,6 +48,10 @@ export function InspectionConductDialog({
 }: InspectionConductDialogProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const [componentWriteBackErrors, setComponentWriteBackErrors] =
+    useState<Array<{ componentId: string; error: string }> | null>(null)
+  const [writeBackErrorDialogOpen, setWriteBackErrorDialogOpen] =
+    useState(false)
 
   const { data: internalInspection, isLoading: isLoadingInternal } =
     useQuery<InternalInspection>({
@@ -75,60 +88,122 @@ export function InspectionConductDialog({
   }
 
   return (
-    <InspectionFormDialog
-      isOpen={isOpen}
-      onClose={onClose}
-      rentalId={resolvedRentalId}
-      onSubmit={async (
-        inspectorName,
-        inspectionRooms,
-        status,
-        additionalData
-      ) => {
-        try {
-          await inspectionService.saveInspectionDraft(inspectionId, {
-            inspectorName,
-            rooms: Object.values(inspectionRooms),
-            isFurnished: additionalData.isFurnished,
-          })
+    <>
+      <InspectionFormDialog
+        isOpen={isOpen}
+        onClose={onClose}
+        rentalId={resolvedRentalId}
+        onSubmit={async (
+          inspectorName,
+          inspectionRooms,
+          status,
+          additionalData
+        ) => {
+          try {
+            await inspectionService.saveInspectionDraft(inspectionId, {
+              inspectorName,
+              rooms: Object.values(inspectionRooms),
+              isFurnished: additionalData.isFurnished,
+            })
 
-          if (status === 'completed') {
-            await inspectionService.updateInspectionStatus(
-              inspectionId,
-              'Genomförd'
-            )
+            // Component write-back happens inside the inspection-service when
+            // the status transitions to "Genomförd". Errors are attached to the
+            // PATCH response and are not persisted, so we must read them from
+            // the call below — re-fetching via GET would lose them.
+            let writeBackErrors: Array<{ componentId: string; error: string }> =
+              []
+            if (status === 'completed') {
+              const updatedInspection =
+                await inspectionService.updateInspectionStatus(
+                  inspectionId,
+                  'Genomförd'
+                )
+              writeBackErrors = updatedInspection.componentWriteBackErrors ?? []
+              if (writeBackErrors.length > 0) {
+                setComponentWriteBackErrors(writeBackErrors)
+              }
+            }
+
+            await queryClient.invalidateQueries({ queryKey: ['inspections'] })
+            await queryClient.invalidateQueries({
+              queryKey: ['inspections-internal', inspectionId],
+            })
+
+            toast({
+              title:
+                status === 'completed'
+                  ? 'Besiktning slutförd'
+                  : 'Utkast sparat',
+              description:
+                status === 'completed'
+                  ? 'Besiktningen har markerats som genomförd.'
+                  : 'Besiktningen har sparats som utkast.',
+            })
+
+            // If any components failed to write back, keep this dialog mounted
+            // so the toast's "Visa" action can open the error dialog. Closing
+            // the error dialog later (or the parent form via Esc/X) calls
+            // onClose. Without errors, dismiss immediately.
+            if (writeBackErrors.length > 0) {
+              toast({
+                title: 'Fel vid komponentuppdatering',
+                description: `${writeBackErrors.length} komponent(er) kunde inte uppdateras.`,
+                variant: 'destructive',
+                action: (
+                  <ToastAction
+                    altText="Visa fel"
+                    onClick={() => setWriteBackErrorDialogOpen(true)}
+                  >
+                    Visa
+                  </ToastAction>
+                ),
+              })
+            } else {
+              onClose()
+            }
+          } catch {
+            toast({
+              title: 'Fel',
+              description:
+                status === 'completed'
+                  ? 'Kunde inte slutföra besiktningen.'
+                  : 'Kunde inte spara utkast.',
+              variant: 'destructive',
+            })
           }
-
-          await queryClient.invalidateQueries({ queryKey: ['inspections'] })
-          await queryClient.invalidateQueries({
-            queryKey: ['inspections-internal', inspectionId],
-          })
-
-          toast({
-            title:
-              status === 'completed' ? 'Besiktning slutförd' : 'Utkast sparat',
-            description:
-              status === 'completed'
-                ? 'Besiktningen har markerats som genomförd.'
-                : 'Besiktningen har sparats som utkast.',
-          })
-          onClose()
-        } catch {
-          toast({
-            title: 'Fel',
-            description:
-              status === 'completed'
-                ? 'Kunde inte slutföra besiktningen.'
-                : 'Kunde inte spara utkast.',
-            variant: 'destructive',
-          })
-        }
-      }}
-      rooms={resolvedRooms}
-      tenant={tenantInfo}
-      address={internalInspection?.address}
-      apartmentCode={internalInspection?.apartmentCode}
-      existingInspection={internalInspection}
-    />
+        }}
+        rooms={resolvedRooms}
+        tenant={tenantInfo}
+        address={internalInspection?.address}
+        apartmentCode={internalInspection?.apartmentCode}
+        existingInspection={internalInspection}
+      />
+      {/* Phase 6 – dialog for component write‑back errors */}
+      <Dialog
+        open={writeBackErrorDialogOpen}
+        onOpenChange={(open: boolean) => {
+          setWriteBackErrorDialogOpen(open)
+          // Closing the error dialog also dismisses the parent form so the
+          // user doesn't have to dismiss it separately after reviewing.
+          if (!open) onClose()
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader className="space-y-1">
+            <DialogTitle>Fel vid komponentuppdatering</DialogTitle>
+            <DialogDescription>
+              Följande komponenter kunde inte uppdateras:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="mt-4 space-y-2">
+            {componentWriteBackErrors?.map((err) => (
+              <li key={err.componentId} className="text-sm">
+                <strong>{err.componentId}:</strong> {err.error}
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

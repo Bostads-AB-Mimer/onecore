@@ -10,6 +10,7 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { generateInspectionProtocolPdf } from './helpers/pdf-generator'
 import { fetchEnrichedInspection } from './helpers/inspection-fetcher'
 import { fetchEnrichedInternalInspection } from './helpers/internal-inspection-fetcher'
+import { writeBackComponentInspectionStates } from './helpers/component-write-back'
 import { sendProtocolForInspection } from './helpers/protocol-sender'
 import { buildTenantContactsResponse } from './helpers/tenant-contacts-builder'
 import {
@@ -1534,17 +1535,36 @@ export const routes = (router: KoaRouter) => {
         ctx.request.body
       )
 
-      if (result.ok) {
-        ctx.status = 200
-        ctx.body = {
-          content: {
-            inspection: result.data,
-          },
-          ...metadata,
-        }
-      } else {
+      if (!result.ok) {
         ctx.status = result.statusCode || 500
         ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      // On transition to "Genomförd" (completed), write each component's
+      // condition + lastInspectionDate back to property-base. Best-effort:
+      // per-component failures are aggregated and returned in the response
+      // for the UI to surface, the inspection itself still completes.
+      const body = ctx.request.body as { status?: string }
+      if (body?.status === 'Genomförd') {
+        const writeBackErrors = await writeBackComponentInspectionStates(
+          result.data
+        )
+        if (writeBackErrors.length > 0) {
+          logger.warn(
+            { inspectionId, errors: writeBackErrors },
+            'Some component inspection states failed to write back'
+          )
+        }
+        result.data.componentWriteBackErrors = writeBackErrors
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspection: result.data,
+        },
+        ...metadata,
       }
     } catch (error) {
       logger.error({ error, inspectionId }, 'Error updating inspection status')

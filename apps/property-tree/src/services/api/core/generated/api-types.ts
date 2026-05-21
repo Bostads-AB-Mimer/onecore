@@ -3913,6 +3913,48 @@ export interface paths {
       };
     };
   };
+  "/components/{id}/inspection-state": {
+    /**
+     * Update component inspection state
+     * @description Updates component condition and last inspection date
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            condition?: "GOOD" | "FAIR" | "DAMAGED";
+            /** Format: date-time */
+            lastInspectionDate?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Component inspection state updated */
+        200: {
+          content: never;
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/component-installations": {
     /**
      * Get all component installations
@@ -10119,6 +10161,7 @@ export interface components {
       status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
       /** @enum {string|null} */
       condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+      lastInspectionDate?: string | null;
       quantity: number;
       economicLifespan: number;
       createdAt: string;
@@ -10349,6 +10392,7 @@ export interface components {
         status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
         /** @enum {string|null} */
         condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+        lastInspectionDate?: string | null;
         quantity: number;
         economicLifespan: number;
         createdAt: string;
@@ -11786,6 +11830,11 @@ export interface components {
               workOrderStatus: number | null;
             })[];
         })[];
+      /** @default [] */
+      componentWriteBackErrors?: {
+          componentId: string;
+          error: string;
+        }[];
       lease: ({
         leaseId: string;
         leaseNumber: string;
@@ -12151,6 +12200,11 @@ export interface components {
               workOrderStatus: number | null;
             })[];
         })[];
+      /** @default [] */
+      componentWriteBackErrors?: {
+          componentId: string;
+          error: string;
+        }[];
     };
     UpdateInspectionStatusRequest: {
       /** @enum {string} */
@@ -12350,6 +12404,11 @@ export interface components {
               costResponsibility?: "tenant" | "landlord" | null;
             })[];
         })[]) | null;
+      /** @default [] */
+      componentWriteBackErrors?: {
+          componentId: string;
+          error: string;
+        }[];
     };
     SaveInspectionDraftRequest: {
       inspectorName: string;

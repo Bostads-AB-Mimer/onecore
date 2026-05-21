@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -7,6 +7,7 @@ import {
   ComponentSchema,
   CreateComponentSchema,
   UpdateComponentSchema,
+  UpdateComponentInspectionStateSchema,
 } from '../types/component'
 import {
   getComponents,
@@ -14,6 +15,7 @@ import {
   createComponent,
   updateComponent,
   deleteComponent,
+  updateComponentInspectionState,
   getComponentsByRoomId,
 } from '../adapters/component-adapter'
 
@@ -298,6 +300,74 @@ export const routes = (router: KoaRouter) => {
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
         ctx.body = { error: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /components/{id}/inspection-state:
+   *   put:
+   *     summary: Update component inspection state
+   *     description: Updates component condition and last inspection date
+   *     tags: [Component Instances]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Component instance ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               condition:
+   *                 type: string
+   *                 enum: [GOOD, FAIR, DAMAGED]
+   *               lastInspectionDate:
+   *                 type: string
+   *                 format: date-time
+   *     responses:
+   *       200:
+   *         description: Component inspection state updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Component'
+   *       '400':
+   *         description: Invalid request
+   *       '404':
+   *         description: Component not found
+   *       '500':
+   *         description: Internal server error
+   */
+  router.put(
+    '(.*)/components/:id/inspection-state',
+    parseRequest({ body: UpdateComponentInspectionStateSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { id } = ctx.params
+      const body = ctx.request.parsedBody as z.infer<
+        typeof UpdateComponentInspectionStateSchema
+      >
+
+      try {
+        const component = await updateComponentInspectionState(id, body)
+        ctx.body = {
+          content: ComponentSchema.parse(component),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error({ err }, 'componentRoutes.updateInspectionState')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
       }
     }
   )

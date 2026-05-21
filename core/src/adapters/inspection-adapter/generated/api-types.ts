@@ -360,7 +360,7 @@ export interface paths {
           content: {
             'application/json': {
               content?: {
-                inspection?: components['schemas']['DetailedXpandInspection']
+                inspection?: components['schemas']['InternalInspection']
               }
               /** @description Route metadata */
               metadata?: Record<string, never>
@@ -493,6 +493,8 @@ export interface components {
           remarkGrade: number
           remarkStatus: string | null
           cost: number
+          /** @default null */
+          costResponsibility?: ('tenant' | 'landlord') | null
           invoice: boolean
           quantity: number
           isMissing: boolean
@@ -500,6 +502,11 @@ export interface components {
           workOrderCreated: boolean
           workOrderStatus: number | null
         }[]
+      }[]
+      /** @default [] */
+      componentWriteBackErrors?: {
+        componentId: string
+        error: string
       }[]
     }
     DetailedXpandInspectionRoom: {
@@ -512,6 +519,8 @@ export interface components {
         remarkGrade: number
         remarkStatus: string | null
         cost: number
+        /** @default null */
+        costResponsibility?: ('tenant' | 'landlord') | null
         invoice: boolean
         quantity: number
         isMissing: boolean
@@ -528,6 +537,8 @@ export interface components {
       remarkGrade: number
       remarkStatus: string | null
       cost: number
+      /** @default null */
+      costResponsibility?: ('tenant' | 'landlord') | null
       invoice: boolean
       quantity: number
       isMissing: boolean
@@ -704,6 +715,11 @@ export interface components {
             }[]
           }[]
         | null
+      /** @default [] */
+      componentWriteBackErrors?: {
+        componentId: string
+        error: string
+      }[]
     }
     SaveInspectionDraftRequest: {
       inspectorName: string

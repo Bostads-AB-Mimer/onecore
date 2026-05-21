@@ -900,6 +900,7 @@ export {
   createComponent,
   updateComponent,
   deleteComponent,
+  updateComponentInspectionState,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

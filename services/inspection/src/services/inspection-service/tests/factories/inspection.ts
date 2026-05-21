@@ -60,6 +60,31 @@ export const XpandDbDetailedInspectionFactory =
     totalCost: 1500,
   }))
 
+export const InternalInspectionFactory =
+  Factory.define<inspection.InternalInspection>(() => ({
+    id: 'INSPECTION001',
+    status: 'Genomförd',
+    date: new Date('2023-01-01T10:00:00Z'),
+    startedAt: new Date('2023-01-01T10:15:00Z'),
+    endedAt: new Date('2023-01-01T11:00:00Z'),
+    inspector: 'INSPECTOR001',
+    type: 'Type A',
+    residenceId: 'RESIDENCE001',
+    address: '123 Main St',
+    apartmentCode: 'APT001',
+    isFurnished: false,
+    leaseId: 'LEASE001',
+    isTenantPresent: true,
+    isNewTenantPresent: false,
+    masterKeyAccess: 'Huvudnyckel',
+    hasRemarks: true,
+    notes: 'Some notes about the inspection.',
+    totalCost: 1500,
+    remarkCount: 2,
+    rooms: [InspectionRoomFactory.build()],
+    componentWriteBackErrors: [],
+  }))
+
 export const DetailedXpandInspectionFactory =
   Factory.define<inspection.DetailedXpandInspection>(() => ({
     id: 'INSPECTION001',
@@ -101,6 +126,7 @@ export const DetailedXpandInspectionFactory =
         ],
       },
     ],
+    componentWriteBackErrors: [],
   }))
 
 export const DetailedXpandInspectionRoomFactory =

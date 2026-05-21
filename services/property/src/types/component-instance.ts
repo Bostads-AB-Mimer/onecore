@@ -103,6 +103,11 @@ export const ComponentSchema = z.object({
   ncsCode: z.string().nullable().optional(),
   status: ComponentStatusEnum,
   condition: ComponentConditionEnum.nullable().optional(),
+  lastInspectionDate: z
+    .union([z.string(), z.date()])
+    .nullable()
+    .optional()
+    .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   quantity: z.number().min(0),
   economicLifespan: z.number().min(0),
   createdAt: z
@@ -160,6 +165,17 @@ export const UpdateComponentSchema = z.object({
 export type Component = z.infer<typeof ComponentSchema>
 export type CreateComponent = z.infer<typeof CreateComponentSchema>
 export type UpdateComponent = z.infer<typeof UpdateComponentSchema>
+
+// ==================== INSPECTION STATE ====================
+
+export const UpdateComponentInspectionStateSchema = z.object({
+  condition: z.enum(['GOOD', 'FAIR', 'DAMAGED']),
+  lastInspectionDate: z.string().datetime(),
+})
+
+export type UpdateComponentInspectionState = z.infer<
+  typeof UpdateComponentInspectionStateSchema
+>
 
 // ==================== FILE SCHEMAS ====================
 

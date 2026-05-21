@@ -55,6 +55,7 @@ function mapDbInspectionToResponse(
     isNewTenantPresent: inspection.isNewTenantPresent,
     masterKeyAccess: inspection.masterKeyAccess,
     hasRemarks: inspection.hasRemarks,
+    componentWriteBackErrors: [],
     notes: inspection.notes,
     totalCost: inspection.totalCost,
     remarkCount: inspection.remarkCount,
@@ -165,7 +166,7 @@ export async function updateInternalInspection(
   params: UpdateInternalInspectionParams
 ): Promise<
   AdapterResult<
-    inspectionTypes.DetailedXpandInspection,
+    inspectionTypes.InternalInspection,
     'not-found' | 'invalid-status-transition' | 'unknown'
   >
 > {
@@ -207,27 +208,46 @@ export async function updateInternalInspection(
         .where('id', inspectionId)
         .returning<DbInspection[]>('*')
 
-      const dbRooms = await trx
-        .select('*')
-        .from<DbInspectionRoom>('inspection_room')
-        .where('inspectionId', updated.id)
-
-      const rooms = []
-      for (const dbRoom of dbRooms) {
-        const dbRemarks = await trx
-          .select('*')
-          .from<DbInspectionRemark>('inspection_remark')
-          .where('roomId', dbRoom.id)
-
-        rooms.push({
-          room: dbRoom.roomName,
-          remarks: dbRemarks.map(mapDbRemarkToResponse),
-        })
+      let rooms: inspectionTypes.InspectionRoom[] | null = null
+      if (updated.draftRooms) {
+        try {
+          rooms = JSON.parse(
+            updated.draftRooms
+          ) as inspectionTypes.InspectionRoom[]
+        } catch {
+          logger.error(
+            { inspectionId },
+            'Failed to parse draftRooms JSON for inspection'
+          )
+        }
       }
 
       return {
         ok: true as const,
-        data: mapDbInspectionToResponse(updated, rooms),
+        data: {
+          id: String(updated.id),
+          status: updated.status,
+          date: updated.date,
+          startedAt: updated.startedAt,
+          endedAt: updated.endedAt,
+          inspector: updated.inspector,
+          type: updated.type,
+          residenceId: updated.residenceId,
+          address: updated.address,
+          apartmentCode: updated.apartmentCode,
+          isFurnished: updated.isFurnished,
+          leaseId: updated.leaseId,
+          isTenantPresent: updated.isTenantPresent,
+          isNewTenantPresent: updated.isNewTenantPresent,
+          masterKeyAccess: updated.masterKeyAccess,
+          hasRemarks: updated.hasRemarks,
+          notes: updated.notes,
+          totalCost: updated.totalCost,
+          remarkCount: updated.remarkCount,
+          rooms,
+          componentWriteBackErrors:
+            [] as inspectionTypes.InternalInspection['componentWriteBackErrors'],
+        },
       }
     })
 
@@ -244,7 +264,7 @@ export async function updateInspectionStatus(
   newStatus: InspectionStatus
 ): Promise<
   AdapterResult<
-    inspectionTypes.DetailedXpandInspection,
+    inspectionTypes.InternalInspection,
     'not-found' | 'invalid-status-transition' | 'unknown'
   >
 > {
@@ -521,6 +541,7 @@ export async function getInspectionById(
         totalCost: inspection.totalCost,
         remarkCount: inspection.remarkCount,
         rooms,
+        componentWriteBackErrors: [],
       },
     }
   } catch (error) {
