@@ -1,7 +1,7 @@
 import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
-import type { CostCenterTree } from '@src/types/cost-center'
+import type { CostCenterSummary, CostCenterTree } from '@src/types/cost-center'
 
 import { prisma } from './db'
 
@@ -144,6 +144,21 @@ export const getCostCenterTreeById = async (
     }
   } catch (err) {
     logger.error({ err, id }, 'cost-center-adapter.getCostCenterTreeById')
+    throw err
+  }
+}
+
+export const listCostCenters = async (): Promise<CostCenterSummary[]> => {
+  try {
+    const rows = await prisma.onecoreCostCenter
+      .findMany({
+        select: { id: true, code: true, name: true },
+        orderBy: { code: 'asc' },
+      })
+      .then(trimStrings)
+    return rows
+  } catch (err) {
+    logger.error({ err }, 'cost-center-adapter.listCostCenters')
     throw err
   }
 }

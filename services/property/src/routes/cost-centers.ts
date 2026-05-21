@@ -2,8 +2,14 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
-import { getCostCenterTreeById } from '../adapters/cost-center-adapter'
-import { CostCenterTreeSchema } from '../types/cost-center'
+import {
+  getCostCenterTreeById,
+  listCostCenters,
+} from '../adapters/cost-center-adapter'
+import {
+  CostCenterSummarySchema,
+  CostCenterTreeSchema,
+} from '../types/cost-center'
 
 const PathParamsSchema = z.object({ id: z.string().uuid() })
 
@@ -15,6 +21,44 @@ const PathParamsSchema = z.object({ id: z.string().uuid() })
  *     description: Operations related to OneCore-owned cost centers (förvaltningsområden)
  */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /cost-centers:
+   *   get:
+   *     summary: List all cost centers
+   *     description: Returns a minimal list of all OneCore cost centers, sorted by code. Used to populate select lists.
+   *     tags:
+   *       - Cost Centers
+   *     responses:
+   *       200:
+   *         description: List of cost centers
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/CostCenterSummary'
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/cost-centers', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const rows = await listCostCenters()
+      ctx.body = {
+        content: rows.map((r) => CostCenterSummarySchema.parse(r)),
+        ...metadata,
+      }
+    } catch (err) {
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
   /**
    * @swagger
    * /cost-centers/{id}/tree:
