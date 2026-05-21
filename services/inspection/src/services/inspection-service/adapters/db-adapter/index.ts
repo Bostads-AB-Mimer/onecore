@@ -564,8 +564,8 @@ export async function getInspectionById(
     // Decorate rooms with isAddedInThisInspection by joining the tracking table.
     if (rooms && rooms.length > 0) {
       const addedRows = await dbConnection('inspection_added_room')
-        .where('inspectionId', inspection.id)
         .select('xpandRoomId')
+        .where('inspectionId', inspection.id)
       const addedSet = new Set<string>(
         addedRows.map((r: { xpandRoomId: string }) => r.xpandRoomId)
       )
