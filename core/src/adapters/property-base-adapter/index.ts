@@ -886,6 +886,31 @@ export async function getBlockReasons(): Promise<
   }
 }
 
+type GetCostCenterTreeResponse = components['schemas']['CostCenterTree']
+
+export async function getCostCenterTreeById(
+  id: string
+): Promise<AdapterResult<GetCostCenterTreeResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/cost-centers/{id}/tree', {
+      params: { path: { id } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getCostCenterTreeById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {
