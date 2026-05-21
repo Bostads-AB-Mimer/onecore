@@ -2084,19 +2084,12 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        if (result.err === 'not_found') {
-          ctx.status = 404
-          ctx.body = { error: 'Component not found', ...metadata }
-          return
-        }
-
-        logger.error(
-          { err: result.err, metadata },
-          'Failed to update component inspection state'
-        )
-        ctx.status = 502
+        ctx.status = result.err === 'not_found' ? 404 : 500
         ctx.body = {
-          error: 'Failed to update component inspection state',
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
           ...metadata,
         }
         return

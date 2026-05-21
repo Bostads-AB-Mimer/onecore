@@ -401,20 +401,11 @@ describe('inspection-service', () => {
   describe('GET /inspections/internal/:inspectionId', () => {
     it('returns inspection with draft rooms', async () => {
       const inspectionId = '1'
-      const mockInspection = {
-        ...XpandInspectionFactory.build({ id: inspectionId }),
-        residenceId: 'RES001',
+      const mockInspection = InternalInspectionFactory.build({
+        id: inspectionId,
         isFurnished: true,
-        startedAt: null,
-        endedAt: null,
-        isTenantPresent: true,
-        isNewTenantPresent: false,
-        hasRemarks: false,
-        notes: null,
-        totalCost: null,
-        remarkCount: 0,
         rooms: [InspectionRoomFactory.build({ isHandled: true })],
-      }
+      })
       jest
         .spyOn(dbAdapter, 'getInspectionById')
         .mockResolvedValueOnce({ ok: true, data: mockInspection })

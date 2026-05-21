@@ -503,44 +503,11 @@ export async function getInspectionById(
       return { ok: false, err: 'not-found' }
     }
 
-    let rooms: inspectionTypes.InspectionRoom[] | null = null
-    if (inspection.draftRooms) {
-      try {
-        rooms = JSON.parse(
-          inspection.draftRooms
-        ) as inspectionTypes.InspectionRoom[]
-      } catch {
-        logger.error(
-          { inspectionId },
-          'Failed to parse draftRooms JSON for inspection'
-        )
-      }
-    }
+    const rooms = parseDraftRooms(inspectionId, inspection.draftRooms)
 
     return {
       ok: true,
-      data: {
-        id: String(inspection.id),
-        status: inspection.status,
-        date: inspection.date,
-        startedAt: inspection.startedAt,
-        endedAt: inspection.endedAt,
-        inspector: inspection.inspector,
-        type: inspection.type,
-        residenceId: inspection.residenceId,
-        address: inspection.address,
-        apartmentCode: inspection.apartmentCode,
-        isFurnished: inspection.isFurnished,
-        leaseId: inspection.leaseId,
-        isTenantPresent: inspection.isTenantPresent,
-        isNewTenantPresent: inspection.isNewTenantPresent,
-        masterKeyAccess: inspection.masterKeyAccess,
-        hasRemarks: inspection.hasRemarks,
-        notes: inspection.notes,
-        totalCost: inspection.totalCost,
-        remarkCount: inspection.remarkCount,
-        rooms,
-      },
+      data: mapDbInspectionToResponse(inspection, rooms),
     }
   } catch (error) {
     logger.error({ error }, `Error fetching inspection by ID: ${inspectionId}`)

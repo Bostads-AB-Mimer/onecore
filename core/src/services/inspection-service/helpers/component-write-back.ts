@@ -13,9 +13,9 @@ const CONDITION_MAPPING: Record<string, 'GOOD' | 'FAIR' | 'DAMAGED'> = {
 
 // User-facing Swedish messages for adapter error codes. The internal codes
 // stay in logs (componentId is included); the UI renders only `message`.
-const ERROR_MESSAGES: Record<'not_found' | 'update-failed', string> = {
+const ERROR_MESSAGES: Record<'unknown' | 'not_found', string> = {
   not_found: 'Komponenten hittades inte',
-  'update-failed': 'Kunde inte uppdatera komponenten',
+  unknown: 'Kunde inte uppdatera komponenten',
 }
 
 export type ComponentWriteBackError = {

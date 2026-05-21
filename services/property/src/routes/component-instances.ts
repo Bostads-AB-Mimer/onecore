@@ -309,7 +309,7 @@ export const routes = (router: KoaRouter) => {
    * /components/{id}/inspection-state:
    *   put:
    *     summary: Update component inspection state
-   *     description: Updates component condition and last inspection date
+   *     description: Updates component condition and last inspection date. Only accepts the three condition values written back from inspections.
    *     tags: [Component Instances]
    *     parameters:
    *       - in: path
@@ -317,6 +317,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
+   *           format: uuid
    *         description: Component instance ID
    *     requestBody:
    *       required: true
@@ -341,11 +342,11 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Component'
-   *       '400':
+   *       400:
    *         description: Invalid request
-   *       '404':
+   *       404:
    *         description: Component not found
-   *       '500':
+   *       500:
    *         description: Internal server error
    */
   router.put(
@@ -353,11 +354,25 @@ export const routes = (router: KoaRouter) => {
     parseRequest({ body: components.UpdateComponentInspectionStateSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { id } = ctx.params
+
+      const idResult = z.string().uuid().safeParse(ctx.params.id)
+      if (!idResult.success) {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid UUID format', ...metadata }
+        return
+      }
+      const id = idResult.data
       const body = ctx.request
         .parsedBody as components.UpdateComponentInspectionState
 
       try {
+        const existing = await getComponentById(id)
+        if (!existing) {
+          ctx.status = 404
+          ctx.body = { error: 'Component not found', ...metadata }
+          return
+        }
+
         const component = await updateComponentInspectionState(id, body)
         ctx.body = {
           content: ComponentSchema.parse(component),
@@ -366,7 +381,9 @@ export const routes = (router: KoaRouter) => {
       } catch (err) {
         logger.error({ err }, 'componentRoutes.updateInspectionState')
         ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error'
+        ctx.body = { error: errorMessage, ...metadata }
       }
     }
   )

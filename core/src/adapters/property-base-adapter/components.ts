@@ -691,7 +691,7 @@ async function deleteComponent(
 async function updateComponentInspectionState(
   componentId: string,
   data: { condition: 'GOOD' | 'FAIR' | 'DAMAGED'; lastInspectionDate: string }
-): Promise<AdapterResult<GetComponentResponse, 'not_found' | 'update-failed'>> {
+): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
   try {
     const response = await client().PUT('/components/{id}/inspection-state', {
       params: { path: { id: componentId } },
@@ -706,13 +706,13 @@ async function updateComponentInspectionState(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'update-failed' }
+    return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error(
       { err },
       'property-base-adapter.updateComponentInspectionState'
     )
-    return { ok: false, err: 'update-failed' }
+    return { ok: false, err: 'unknown' }
   }
 }
 

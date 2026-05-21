@@ -1543,10 +1543,24 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 
+    const bodyResult = schemas.UpdateInspectionStatusRequestSchema.safeParse(
+      ctx.request.body
+    )
+    if (!bodyResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: bodyResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+    const body = bodyResult.data
+
     try {
       const result = await inspectionAdapter.updateInspectionStatus(
         inspectionId,
-        ctx.request.body
+        body
       )
 
       if (!result.ok) {
@@ -1560,9 +1574,8 @@ export const routes = (router: KoaRouter) => {
       // per-component failures are aggregated and returned alongside the
       // inspection so the UI can surface them — the inspection itself still
       // completes.
-      const body = ctx.request.body as { status?: string }
       const componentWriteBackErrors =
-        body?.status === 'Genomförd'
+        body.status === 'Genomförd'
           ? await writeBackComponentInspectionStates(result.data)
           : []
       if (componentWriteBackErrors.length > 0) {
