@@ -526,7 +526,6 @@ export const CreateRoomRequestSchema = z
         spaceType: z.number().int().min(0).max(255).optional(),
       })
       .optional(),
-    sortingOrder: z.number().int().min(0).max(255).optional(),
   })
   .superRefine((val, ctx) => {
     const options = ROOM_CAPTION_OPTIONS[val.roomTypeCode] as

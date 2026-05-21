@@ -1,9 +1,7 @@
 import { z } from 'zod'
+import { room } from '@onecore/types'
 
-import {
-  ALL_VALID_TYPE_CODES,
-  isValidCaptionForType,
-} from '@src/data/room-caption-templates'
+const { ALL_VALID_TYPE_CODES, isValidCaptionForType } = room
 
 export const roomsQueryParamsSchema = z.object({
   rentalId: z.string().min(1, { message: 'rentalId is required.' }),
@@ -60,7 +58,7 @@ export type Room = z.infer<typeof RoomSchema>
 export const CreateRoomRequestSchema = z
   .object({
     rentalId: z.string().min(1, { message: 'rentalId is required.' }),
-    roomTypeCode: z.enum(ALL_VALID_TYPE_CODES as [string, ...string[]], {
+    roomTypeCode: z.enum(ALL_VALID_TYPE_CODES, {
       errorMap: () => ({
         message: `roomTypeCode must be one of: ${ALL_VALID_TYPE_CODES.join(', ')}`,
       }),
@@ -82,7 +80,6 @@ export const CreateRoomRequestSchema = z
         spaceType: z.number().int().min(0).max(255).optional(),
       })
       .optional(),
-    sortingOrder: z.number().int().min(0).max(255).optional(),
   })
   .superRefine((val, ctx) => {
     if (

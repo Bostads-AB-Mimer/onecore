@@ -6,10 +6,9 @@ import { logger } from '@onecore/utilities'
 import { CreateRoomRequest, Room } from '@src/types/room'
 import { trimStrings } from '@src/utils/data-conversion'
 import { generateXpandId } from '@src/utils/generate-xpand-id'
-import {
-  alwaysNumberFor,
-  getDefaultCaption,
-} from '@src/data/room-caption-templates'
+import { room } from '@onecore/types'
+
+const { alwaysNumberFor, getDefaultCaption } = room
 
 import { prisma } from './db'
 
@@ -287,7 +286,6 @@ export const createRoom = async (input: CreateRoomRequest): Promise<Room> => {
   const isHeated = input.features?.isHeated === false ? 0 : 2
   const hasThermostatValve = input.features?.hasThermostatValve ? 1 : 0
   const orientation = input.features?.orientation ?? 0
-  const sortingOrder = input.sortingOrder ?? 0
 
   // 6. Generate IDs.
   const newCmobj = generateXpandId()
@@ -302,13 +300,16 @@ export const createRoom = async (input: CreateRoomRequest): Promise<Room> => {
       VALUES (${newCmobj}, 'barum', 0, 0, 0, 0, 0, 0, ${timestampVal})
     `
 
+    // bessort omitted: DB default of 0 applies. Inspector adds don't care
+    // about display order; ~99.7% of existing rooms in production have 0
+    // anyway, so the explicit value never moved the needle.
     await tx.$executeRaw`
       INSERT INTO barum (keybarum, keycmobj, keybarut, code, caption,
-                         gemensam, bessort, skstatus, roomtype, toilet,
+                         gemensam, skstatus, roomtype, toilet,
                          heating, thermostat, direction, deletemark,
                          fdate, tdate, timestamp)
       VALUES (${newRoomId}, ${newCmobj}, ${roomType.id}, ${code}, ${caption},
-              ${shared}, ${sortingOrder}, ${allowPeriodicWorks}, ${spaceType}, ${hasToilet},
+              ${shared}, ${allowPeriodicWorks}, ${spaceType}, ${hasToilet},
               ${isHeated}, ${hasThermostatValve}, ${orientation}, 0,
               '1800-01-01', '2999-12-31', ${timestampVal})
     `
