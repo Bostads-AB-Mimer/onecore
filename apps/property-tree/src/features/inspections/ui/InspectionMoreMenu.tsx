@@ -67,11 +67,7 @@ export function InspectionMoreMenu({
               <span className="sr-only">Fler alternativ</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="top"
-            align="start"
-            className="z-[100]"
-          >
+          <DropdownMenuContent side="top" align="start">
             <DropdownMenuItem
               onSelect={() => setShowFloorplan(true)}
               className="py-3 text-base"
@@ -91,7 +87,7 @@ export function InspectionMoreMenu({
       )}
 
       <Dialog open={showFloorplan} onOpenChange={setShowFloorplan}>
-        <DialogContent className="max-w-3xl max-h-[90vh] p-2 sm:p-4 z-[100]">
+        <DialogContent className="max-w-3xl max-h-[90vh] p-2 sm:p-4">
           <DialogHeader>
             <DialogTitle>Planritning</DialogTitle>
           </DialogHeader>

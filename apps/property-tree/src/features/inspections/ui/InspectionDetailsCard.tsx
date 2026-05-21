@@ -52,7 +52,7 @@ export function InspectionDetailsCard({
                 )}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent className="z-[90]">
+            <SelectContent>
               {inspectors?.map((user) => {
                 const name = `${user.firstName} ${user.lastName}`
                 return (

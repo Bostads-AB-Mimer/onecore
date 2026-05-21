@@ -32,13 +32,6 @@ interface AddInspectionRoomDialogProps {
   onRoomAdded: (room: Room) => void
 }
 
-// Renders above the parent InspectionFormDialog (default z-[90]).
-// The shared DialogOverlay is z-[90] too — since this portal mounts after
-// the parent's portal, its overlay still paints over the parent's content
-// via DOM order; the bumped z on DialogContent ensures the form itself
-// sits above everything.
-const NESTED_DIALOG_Z = 'z-[100]'
-
 export function AddInspectionRoomDialog({
   inspectionId,
   open,
@@ -104,7 +97,7 @@ export function AddInspectionRoomDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={`max-w-sm ${NESTED_DIALOG_Z}`}>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Lägg till rum/utrymme</DialogTitle>
         </DialogHeader>
@@ -122,7 +115,7 @@ export function AddInspectionRoomDialog({
               <SelectTrigger id="room-type">
                 <SelectValue placeholder="Välj typ..." />
               </SelectTrigger>
-              <SelectContent className="z-[110]">
+              <SelectContent>
                 {[...ROOM_CAPTION_TEMPLATES]
                   .sort((a, b) => a.typeLabel.localeCompare(b.typeLabel, 'sv'))
                   .map((t) => (
@@ -145,7 +138,7 @@ export function AddInspectionRoomDialog({
                 <SelectTrigger id="room-caption">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="z-[110]">
+                <SelectContent>
                   {captionOptions.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
