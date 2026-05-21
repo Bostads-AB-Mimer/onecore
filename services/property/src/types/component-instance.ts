@@ -166,17 +166,6 @@ export type Component = z.infer<typeof ComponentSchema>
 export type CreateComponent = z.infer<typeof CreateComponentSchema>
 export type UpdateComponent = z.infer<typeof UpdateComponentSchema>
 
-// ==================== INSPECTION STATE ====================
-
-export const UpdateComponentInspectionStateSchema = z.object({
-  condition: z.enum(['GOOD', 'FAIR', 'DAMAGED']),
-  lastInspectionDate: z.string().datetime(),
-})
-
-export type UpdateComponentInspectionState = z.infer<
-  typeof UpdateComponentInspectionStateSchema
->
-
 // ==================== FILE SCHEMAS ====================
 
 // Schema for component files (images)

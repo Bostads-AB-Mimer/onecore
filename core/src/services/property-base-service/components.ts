@@ -4,6 +4,7 @@ import { z } from 'zod'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { components } from '@onecore/types'
 import * as schemas from './schemas'
 import { addComponent } from '../../processes/components'
 import { ProcessStatus } from '../../common/types'
@@ -2066,12 +2067,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const body = z
-      .object({
-        condition: z.enum(['GOOD', 'FAIR', 'DAMAGED']),
-        lastInspectionDate: z.string().datetime(),
-      })
-      .safeParse(ctx.request.body)
+    const body = components.UpdateComponentInspectionStateSchema.safeParse(
+      ctx.request.body
+    )
 
     if (!body.success) {
       ctx.status = 400

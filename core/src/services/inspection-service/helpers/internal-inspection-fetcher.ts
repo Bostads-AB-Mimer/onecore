@@ -124,7 +124,6 @@ export const fetchEnrichedInternalInspection = async (
     rooms,
     lease,
     residence,
-    componentWriteBackErrors: [],
   }
 
   return { ok: true, data: enrichedInspection }

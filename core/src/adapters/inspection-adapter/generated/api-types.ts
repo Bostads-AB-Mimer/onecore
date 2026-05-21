@@ -503,11 +503,6 @@ export interface components {
           workOrderStatus: number | null
         }[]
       }[]
-      /** @default [] */
-      componentWriteBackErrors?: {
-        componentId: string
-        error: string
-      }[]
     }
     DetailedXpandInspectionRoom: {
       room: string
@@ -715,11 +710,6 @@ export interface components {
             }[]
           }[]
         | null
-      /** @default [] */
-      componentWriteBackErrors?: {
-        componentId: string
-        error: string
-      }[]
     }
     SaveInspectionDraftRequest: {
       inspectorName: string

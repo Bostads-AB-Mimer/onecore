@@ -414,7 +414,6 @@ describe('inspection-service', () => {
         totalCost: null,
         remarkCount: 0,
         rooms: [InspectionRoomFactory.build({ isHandled: true })],
-        componentWriteBackErrors: [],
       }
       jest
         .spyOn(dbAdapter, 'getInspectionById')

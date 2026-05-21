@@ -11,9 +11,17 @@ const CONDITION_MAPPING: Record<string, 'GOOD' | 'FAIR' | 'DAMAGED'> = {
   Skadad: 'DAMAGED',
 }
 
+// User-facing Swedish messages for adapter error codes. The internal codes
+// stay in logs (componentId is included); the UI renders only `message`.
+const ERROR_MESSAGES: Record<'not_found' | 'update-failed', string> = {
+  not_found: 'Komponenten hittades inte',
+  'update-failed': 'Kunde inte uppdatera komponenten',
+}
+
 export type ComponentWriteBackError = {
   componentId: string
-  error: string
+  componentLabel: string
+  message: string
 }
 
 /**
@@ -59,7 +67,8 @@ export const writeBackComponentInspectionStates = async (
       if (!result.ok) {
         errors.push({
           componentId: component.componentId,
-          error: result.err,
+          componentLabel: component.label,
+          message: ERROR_MESSAGES[result.err],
         })
       }
     }

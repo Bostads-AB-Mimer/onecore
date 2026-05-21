@@ -6250,7 +6250,14 @@ export interface paths {
           content: {
             "application/json": {
               content?: {
-                inspection?: components["schemas"]["DetailedInspection"];
+                inspection?: components["schemas"]["InternalInspection"];
+                /** @description Per-component write-back errors recorded when transitioning to "Genomförd". Empty for other status transitions. */
+                componentWriteBackErrors?: {
+                    componentId: string;
+                    componentLabel: string;
+                    /** @description User-facing Swedish error message. */
+                    message: string;
+                  }[];
               };
             };
           };
@@ -11830,11 +11837,6 @@ export interface components {
               workOrderStatus: number | null;
             })[];
         })[];
-      /** @default [] */
-      componentWriteBackErrors?: {
-          componentId: string;
-          error: string;
-        }[];
       lease: ({
         leaseId: string;
         leaseNumber: string;
@@ -12200,11 +12202,6 @@ export interface components {
               workOrderStatus: number | null;
             })[];
         })[];
-      /** @default [] */
-      componentWriteBackErrors?: {
-          componentId: string;
-          error: string;
-        }[];
     };
     UpdateInspectionStatusRequest: {
       /** @enum {string} */
@@ -12404,11 +12401,6 @@ export interface components {
               costResponsibility?: "tenant" | "landlord" | null;
             })[];
         })[]) | null;
-      /** @default [] */
-      componentWriteBackErrors?: {
-          componentId: string;
-          error: string;
-        }[];
     };
     SaveInspectionDraftRequest: {
       inspectorName: string;

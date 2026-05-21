@@ -179,7 +179,6 @@ export const InstancesTable = ({
       ),
     },
     {
-      // Phase 5 – show the most recent inspection date for a component
       key: 'lastInspectionDate',
       label: 'Senaste inspektion',
       render: (item) => (

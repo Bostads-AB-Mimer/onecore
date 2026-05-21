@@ -143,7 +143,7 @@ export const inspectionService = {
   async updateInternalInspection(
     inspectionId: string,
     body: components['schemas']['UpdateInspectionStatusRequest']
-  ): Promise<DetailedInspection> {
+  ): Promise<InternalInspection> {
     const response = await PATCH('/inspections/internal/{inspectionId}', {
       params: { path: { inspectionId } },
       body,
@@ -177,7 +177,14 @@ export const inspectionService = {
   async updateInspectionStatus(
     inspectionId: string,
     status: UpdateInspectionStatusRequest['status']
-  ): Promise<DetailedInspection> {
+  ): Promise<{
+    inspection: InternalInspection
+    componentWriteBackErrors: {
+      componentId: string
+      componentLabel: string
+      message: string
+    }[]
+  }> {
     const response = await PATCH('/inspections/internal/{inspectionId}', {
       params: { path: { inspectionId } },
       body: { status },
@@ -186,7 +193,11 @@ export const inspectionService = {
     if (!response.data.content?.inspection)
       throw new Error('Failed to update inspection status')
 
-    return response.data.content.inspection
+    return {
+      inspection: response.data.content.inspection,
+      componentWriteBackErrors:
+        response.data.content.componentWriteBackErrors ?? [],
+    }
   },
 
   async getInternalInspectionById(

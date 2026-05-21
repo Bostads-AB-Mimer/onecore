@@ -1494,7 +1494,21 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   properties:
    *                     inspection:
-   *                       $ref: '#/components/schemas/DetailedInspection'
+   *                       $ref: '#/components/schemas/InternalInspection'
+   *                     componentWriteBackErrors:
+   *                       type: array
+   *                       description: Per-component write-back errors recorded when transitioning to "Genomförd". Empty for other status transitions.
+   *                       items:
+   *                         type: object
+   *                         required: [componentId, componentLabel, message]
+   *                         properties:
+   *                           componentId:
+   *                             type: string
+   *                           componentLabel:
+   *                             type: string
+   *                           message:
+   *                             type: string
+   *                             description: User-facing Swedish error message.
    *       '400':
    *         description: Invalid request body or invalid status transition
    *         content:
@@ -1543,26 +1557,26 @@ export const routes = (router: KoaRouter) => {
 
       // On transition to "Genomförd" (completed), write each component's
       // condition + lastInspectionDate back to property-base. Best-effort:
-      // per-component failures are aggregated and returned in the response
-      // for the UI to surface, the inspection itself still completes.
+      // per-component failures are aggregated and returned alongside the
+      // inspection so the UI can surface them — the inspection itself still
+      // completes.
       const body = ctx.request.body as { status?: string }
-      if (body?.status === 'Genomförd') {
-        const writeBackErrors = await writeBackComponentInspectionStates(
-          result.data
+      const componentWriteBackErrors =
+        body?.status === 'Genomförd'
+          ? await writeBackComponentInspectionStates(result.data)
+          : []
+      if (componentWriteBackErrors.length > 0) {
+        logger.warn(
+          { inspectionId, errors: componentWriteBackErrors },
+          'Some component inspection states failed to write back'
         )
-        if (writeBackErrors.length > 0) {
-          logger.warn(
-            { inspectionId, errors: writeBackErrors },
-            'Some component inspection states failed to write back'
-          )
-        }
-        result.data.componentWriteBackErrors = writeBackErrors
       }
 
       ctx.status = 200
       ctx.body = {
         content: {
           inspection: result.data,
+          componentWriteBackErrors,
         },
         ...metadata,
       }

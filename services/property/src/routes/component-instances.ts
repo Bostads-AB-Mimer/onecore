@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { components } from '@onecore/types'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -7,7 +8,6 @@ import {
   ComponentSchema,
   CreateComponentSchema,
   UpdateComponentSchema,
-  UpdateComponentInspectionStateSchema,
 } from '../types/component'
 import {
   getComponents,
@@ -350,13 +350,12 @@ export const routes = (router: KoaRouter) => {
    */
   router.put(
     '(.*)/components/:id/inspection-state',
-    parseRequest({ body: UpdateComponentInspectionStateSchema }),
+    parseRequest({ body: components.UpdateComponentInspectionStateSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { id } = ctx.params
-      const body = ctx.request.parsedBody as z.infer<
-        typeof UpdateComponentInspectionStateSchema
-      >
+      const body = ctx.request
+        .parsedBody as components.UpdateComponentInspectionState
 
       try {
         const component = await updateComponentInspectionState(id, body)

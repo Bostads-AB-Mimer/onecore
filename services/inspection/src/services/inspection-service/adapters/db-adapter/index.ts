@@ -34,10 +34,13 @@ function mapDbRemarkToResponse(r: DbInspectionRemark) {
   }
 }
 
-function mapDbInspectionToResponse(
+// Base mapper shared by DetailedXpandInspection and InternalInspection responses
+// — both share every field except `rooms`, which differs by shape (xpand remarks
+// vs. internal room/component data) and nullability.
+function mapDbInspectionToResponse<R>(
   inspection: DbInspection,
-  rooms: inspectionTypes.DetailedXpandInspection['rooms']
-): inspectionTypes.DetailedXpandInspection {
+  rooms: R
+): Omit<inspectionTypes.DetailedXpandInspection, 'rooms'> & { rooms: R } {
   return {
     id: String(inspection.id),
     status: inspection.status,
@@ -55,12 +58,43 @@ function mapDbInspectionToResponse(
     isNewTenantPresent: inspection.isNewTenantPresent,
     masterKeyAccess: inspection.masterKeyAccess,
     hasRemarks: inspection.hasRemarks,
-    componentWriteBackErrors: [],
     notes: inspection.notes,
     totalCost: inspection.totalCost,
     remarkCount: inspection.remarkCount,
     rooms,
   }
+}
+
+// Parses the JSON-encoded draftRooms column with the InspectionRoom schema.
+// Returns null for missing or malformed payloads so callers can still respond
+// (failing here would deny status updates on inspections with corrupt drafts).
+function parseDraftRooms(
+  inspectionId: string,
+  draftRooms: string | null | undefined
+): inspectionTypes.InspectionRoom[] | null {
+  if (!draftRooms) return null
+
+  let raw: unknown
+  try {
+    raw = JSON.parse(draftRooms)
+  } catch {
+    logger.error(
+      { inspectionId },
+      'Failed to parse draftRooms JSON for inspection'
+    )
+    return null
+  }
+
+  const parsed = inspectionTypes.InspectionRoomSchema.array().safeParse(raw)
+  if (!parsed.success) {
+    logger.error(
+      { inspectionId, errors: parsed.error.errors },
+      'draftRooms payload does not match InspectionRoom schema'
+    )
+    return null
+  }
+
+  return parsed.data
 }
 
 export async function createInspection(
@@ -208,46 +242,11 @@ export async function updateInternalInspection(
         .where('id', inspectionId)
         .returning<DbInspection[]>('*')
 
-      let rooms: inspectionTypes.InspectionRoom[] | null = null
-      if (updated.draftRooms) {
-        try {
-          rooms = JSON.parse(
-            updated.draftRooms
-          ) as inspectionTypes.InspectionRoom[]
-        } catch {
-          logger.error(
-            { inspectionId },
-            'Failed to parse draftRooms JSON for inspection'
-          )
-        }
-      }
+      const rooms = parseDraftRooms(inspectionId, updated.draftRooms)
 
       return {
         ok: true as const,
-        data: {
-          id: String(updated.id),
-          status: updated.status,
-          date: updated.date,
-          startedAt: updated.startedAt,
-          endedAt: updated.endedAt,
-          inspector: updated.inspector,
-          type: updated.type,
-          residenceId: updated.residenceId,
-          address: updated.address,
-          apartmentCode: updated.apartmentCode,
-          isFurnished: updated.isFurnished,
-          leaseId: updated.leaseId,
-          isTenantPresent: updated.isTenantPresent,
-          isNewTenantPresent: updated.isNewTenantPresent,
-          masterKeyAccess: updated.masterKeyAccess,
-          hasRemarks: updated.hasRemarks,
-          notes: updated.notes,
-          totalCost: updated.totalCost,
-          remarkCount: updated.remarkCount,
-          rooms,
-          componentWriteBackErrors:
-            [] as inspectionTypes.InternalInspection['componentWriteBackErrors'],
-        },
+        data: mapDbInspectionToResponse(updated, rooms),
       }
     })
 
@@ -541,7 +540,6 @@ export async function getInspectionById(
         totalCost: inspection.totalCost,
         remarkCount: inspection.remarkCount,
         rooms,
-        componentWriteBackErrors: [],
       },
     }
   } catch (error) {

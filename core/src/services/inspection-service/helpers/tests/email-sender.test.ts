@@ -518,7 +518,6 @@ describe('sendProtocolToTenants', () => {
     rooms: [],
     lease: null,
     residence: null,
-    componentWriteBackErrors: [],
   }
 
   const mockContact: Contact = {

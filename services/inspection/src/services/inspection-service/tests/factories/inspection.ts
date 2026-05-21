@@ -82,7 +82,6 @@ export const InternalInspectionFactory =
     totalCost: 1500,
     remarkCount: 2,
     rooms: [InspectionRoomFactory.build()],
-    componentWriteBackErrors: [],
   }))
 
 export const DetailedXpandInspectionFactory =
@@ -126,7 +125,6 @@ export const DetailedXpandInspectionFactory =
         ],
       },
     ],
-    componentWriteBackErrors: [],
   }))
 
 export const DetailedXpandInspectionRoomFactory =

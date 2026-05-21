@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { ToastAction } from '@/shared/ui/Toast'
 import {
   Dialog,
   DialogContent,
@@ -49,7 +48,11 @@ export function InspectionConductDialog({
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [componentWriteBackErrors, setComponentWriteBackErrors] =
-    useState<Array<{ componentId: string; error: string }> | null>(null)
+    useState<Array<{
+      componentId: string
+      componentLabel: string
+      message: string
+    }> | null>(null)
   const [writeBackErrorDialogOpen, setWriteBackErrorDialogOpen] =
     useState(false)
 
@@ -107,21 +110,20 @@ export function InspectionConductDialog({
             })
 
             // Component write-back happens inside the inspection-service when
-            // the status transitions to "Genomförd". Errors are attached to the
-            // PATCH response and are not persisted, so we must read them from
-            // the call below — re-fetching via GET would lose them.
-            let writeBackErrors: Array<{ componentId: string; error: string }> =
-              []
+            // the status transitions to "Genomförd". Errors come back in the
+            // PATCH response envelope and are not persisted — re-fetching via
+            // GET would lose them.
+            let writeBackErrors: Array<{
+              componentId: string
+              componentLabel: string
+              message: string
+            }> = []
             if (status === 'completed') {
-              const updatedInspection =
-                await inspectionService.updateInspectionStatus(
-                  inspectionId,
-                  'Genomförd'
-                )
-              writeBackErrors = updatedInspection.componentWriteBackErrors ?? []
-              if (writeBackErrors.length > 0) {
-                setComponentWriteBackErrors(writeBackErrors)
-              }
+              const result = await inspectionService.updateInspectionStatus(
+                inspectionId,
+                'Genomförd'
+              )
+              writeBackErrors = result.componentWriteBackErrors
             }
 
             await queryClient.invalidateQueries({ queryKey: ['inspections'] })
@@ -129,36 +131,22 @@ export function InspectionConductDialog({
               queryKey: ['inspections-internal', inspectionId],
             })
 
-            toast({
-              title:
-                status === 'completed'
-                  ? 'Besiktning slutförd'
-                  : 'Utkast sparat',
-              description:
-                status === 'completed'
-                  ? 'Besiktningen har markerats som genomförd.'
-                  : 'Besiktningen har sparats som utkast.',
-            })
-
-            // If any components failed to write back, keep this dialog mounted
-            // so the toast's "Visa" action can open the error dialog. Closing
-            // the error dialog later (or the parent form via Esc/X) calls
-            // onClose. Without errors, dismiss immediately.
             if (writeBackErrors.length > 0) {
-              toast({
-                title: 'Fel vid komponentuppdatering',
-                description: `${writeBackErrors.length} komponent(er) kunde inte uppdateras.`,
-                variant: 'destructive',
-                action: (
-                  <ToastAction
-                    altText="Visa fel"
-                    onClick={() => setWriteBackErrorDialogOpen(true)}
-                  >
-                    Visa
-                  </ToastAction>
-                ),
-              })
+              // Open the error dialog directly instead of a success toast +
+              // action — toasts can auto-dismiss before the user notices.
+              setComponentWriteBackErrors(writeBackErrors)
+              setWriteBackErrorDialogOpen(true)
             } else {
+              toast({
+                title:
+                  status === 'completed'
+                    ? 'Besiktning slutförd'
+                    : 'Utkast sparat',
+                description:
+                  status === 'completed'
+                    ? 'Besiktningen har markerats som genomförd.'
+                    : 'Besiktningen har sparats som utkast.',
+              })
               onClose()
             }
           } catch {
@@ -178,7 +166,6 @@ export function InspectionConductDialog({
         apartmentCode={internalInspection?.apartmentCode}
         existingInspection={internalInspection}
       />
-      {/* Phase 6 – dialog for component write‑back errors */}
       <Dialog
         open={writeBackErrorDialogOpen}
         onOpenChange={(open: boolean) => {
@@ -198,7 +185,7 @@ export function InspectionConductDialog({
           <ul className="mt-4 space-y-2">
             {componentWriteBackErrors?.map((err) => (
               <li key={err.componentId} className="text-sm">
-                <strong>{err.componentId}:</strong> {err.error}
+                <strong>{err.componentLabel}:</strong> {err.message}
               </li>
             ))}
           </ul>
