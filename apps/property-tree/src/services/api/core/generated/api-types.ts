@@ -9218,6 +9218,38 @@ export interface paths {
       };
     };
   };
+  "/v1/contacts/by-codes": {
+    /**
+     * Get multiple contacts by their contact codes
+     * @description Fetch a batch of contacts by providing a comma-separated list of contact codes.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Comma-separated list of contact codes */
+          codes: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              content: components["schemas"]["ContactV1"][];
+            };
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
   "/v1/contacts/{contactCode}": {
     /** Get a single contact by canonical id (contact code) */
     get: {
@@ -13411,35 +13443,6 @@ export interface components {
         name: string;
       };
     });
-    CustomerScoreCardInfoSchema: {
-      object_ref_nr: string;
-      division_1011: string;
-      object_real_estate?: string;
-      object_real_estate_year_construction?: number;
-      object_real_estate_year_reconstruction?: number;
-      real_estate_type: string;
-      division_1048: string;
-      division_1242: string;
-      division_1140: string;
-      object_type: string;
-      object_street_1: string;
-      object_zip: string;
-      object_city: string;
-      division_1501: string;
-      respondent_name_first: string;
-      respondent_name_last: string;
-      respondent_email: string;
-      respondent_phone: string;
-      postal_street_1: string;
-      postal_street_2?: string;
-      postal_zip: string;
-      postal_city: string;
-      division_1038: string;
-      division_1037?: string;
-      contract_start_date: string;
-      contract_end_date?: string;
-      contract_type: string;
-    };
   };
   responses: never;
   parameters: never;

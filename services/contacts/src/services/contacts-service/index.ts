@@ -140,6 +140,60 @@ export const routes = (
   )
 
   router.get(
+    '/contacts/by-codes',
+    {
+      summary: 'Get multiple contacts by their contact codes',
+      description:
+        'Fetch a batch of contacts by providing a comma-separated list of contact codes.',
+      tags: ['Contacts'],
+      query: {
+        codes: {
+          description: 'Comma-separated list of contact codes',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactsResponseBodySchema,
+        400: ErrorResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const codesParam = ctx.query.codes as string | undefined
+
+      if (!codesParam) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Missing required query parameter: codes',
+          ...metadata,
+        }
+        return
+      }
+
+      const codes = codesParam
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean)
+      if (codes.length === 0) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'No valid contact codes provided',
+          ...metadata,
+        }
+        return
+      }
+
+      const contacts = await contactsRepository.getByContactCodes(codes)
+
+      ctx.status = 200
+      ctx.body = {
+        content: { contacts },
+        ...metadata,
+      }
+    }
+  )
+
+  router.get(
     '/contacts/:contactCode',
     {
       summary: 'Get a single contact by their canonical ID.',
