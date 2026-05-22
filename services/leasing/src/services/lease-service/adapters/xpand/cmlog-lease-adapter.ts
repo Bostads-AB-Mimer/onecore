@@ -34,6 +34,12 @@ const RELEVANT_CONTRACT_TYPES = [
  *
  * Only rows whose logmemo starts with "Hyreskontrakt " are returned.
  * If no timestamp is provided, returns all matching rows.
+ *
+ * Note: cmlog.logtime is a naive SQL Server `datetime` populated by xpand
+ * with Swedish local time. Knex/mssql passes our JS Date as UTC; the driver
+ * converts to the SQL Server session's local time for comparison. On a
+ * machine running in Sweden this matches the column's wall clock, so the
+ * `since` threshold lands where it reads.
  */
 export const cmlogLeaseChanges = (
   db: Knex,
@@ -44,9 +50,7 @@ export const cmlogLeaseChanges = (
     .whereLike('logmemo', 'Hyreskontrakt %')
     .orderBy('logtime', 'asc')
 
-  return since
-    ? base.andWhere('logtime', '>', since)
-    : base
+  return since ? base.andWhere('logtime', '>', since) : base
 }
 
 /**

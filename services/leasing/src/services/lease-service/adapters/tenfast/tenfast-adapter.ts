@@ -4,7 +4,8 @@ import {
   RentalObjectAvailabilityInfo,
   SyncContactToLeasingPayload,
 } from '@onecore/types'
-import { isAxiosError } from 'axios'
+import axios, { isAxiosError } from 'axios'
+import FormData from 'form-data'
 import z from 'zod'
 
 import {
@@ -148,7 +149,150 @@ export const createLease = async (
     //TODO: create schema for response and convert to onecore lease type here later
     return { ok: true, data: undefined }
   } catch (err) {
+    const responseData = isAxiosError(err) ? err.response?.data : undefined
+    logger.error(
+      { err, responseData },
+      'tenfast-adapter.createLease: caught exception'
+    )
     return handleTenfastError(err, 'lease-could-not-be-created')
+  }
+}
+
+/**
+ * Creates a Tenfast lease as an externally-signed import — no template, no
+ * generated PDF, no rent rows. The lease is linked to a Tenfast rental
+ * object and tenant; Tenfast derives rent from the rental object's own
+ * configuration. Used by the xpand → Tenfast sync flow on `Undertecknat`
+ * cmlog events. The signed PDF from xpand should be attached separately via
+ * `POST /v1/hyresvard/avtal/{id}/upload-file`.
+ */
+export const importLease = async (
+  leaseId: string,
+  contact: Contact,
+  rentalObjectCode: string,
+  fromDate: Date
+): Promise<
+  AdapterResult<
+    { _id: string },
+    | 'could-not-retrieve-tenant'
+    | 'could-not-create-tenant'
+    | 'could-not-find-rental-object'
+    | 'lease-could-not-be-created'
+    | 'unknown'
+  >
+> => {
+  try {
+    logger.info(
+      { leaseId, contactCode: contact.contactCode, rentalObjectCode },
+      'tenfast-adapter.importLease: starting import'
+    )
+    const tenantResult = await getOrCreateTenant(contact)
+    if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
+    if (!tenantResult.data)
+      return { ok: false, err: 'could-not-retrieve-tenant' }
+
+    const rentalObjectResponse = await getRentalObject(rentalObjectCode)
+    if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
+      return { ok: false, err: 'could-not-find-rental-object' }
+    const rentalObject = rentalObjectResponse.data
+    const body = {
+      // Tenfast auto-generates `externalId` as <rentalObjectCode>/<tenfast-count>
+      // on create — it does not accept the value we'd send. We store the xpand
+      // leaseId in `ownReference` instead so the link back to xpand is
+      // preserved. Downstream getLeaseByExternalId lookups (used by
+      // terminate/void) won't find sync-created leases via xpand's leaseId —
+      // those paths will eventually need a search-by-ownReference lookup.
+      ownReference: leaseId,
+      hyresgaster: [tenantResult.data._id],
+      hyresobjekt: [rentalObject._id],
+      startDate: fromDate.toISOString(),
+      avtalsbyggare: false,
+      aviseringsFrekvens: '1m',
+      forskottAvisering: '2v',
+      betalningsOffset: '1d',
+      betalasForskott: true,
+      // this might be changed later to just pass entire rentalObject.hyror
+      hyror: rentalObject.hyror.map(({ _id, ...rest }) => ({
+        ...rest,
+        hyresobjekt: rentalObject._id,
+      })),
+      method: 'import',
+      signed: true,
+    }
+
+    const response = await tenfastApi.request({
+      method: 'post',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}`,
+      data: body,
+    })
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: { _id: response.data?._id } }
+    }
+
+    logger.error(
+      { status: response.status, error: response.data },
+      'tenfast-adapter.importLease'
+    )
+    return { ok: false, err: 'lease-could-not-be-created' }
+  } catch (err) {
+    const responseData = isAxiosError(err) ? err.response?.data : undefined
+    const requestUrl = isAxiosError(err) ? err.config?.url : undefined
+    logger.error(
+      { err, requestUrl, responseData },
+      'tenfast-adapter.importLease: caught exception'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Uploads a PDF as the main contract document for an existing Tenfast lease.
+ *
+ * Posts multipart/form-data to POST /v1/hyresvard/avtal/{id}/upload-file. The
+ * `tenfastApi.request` wrapper doesn't handle multipart, so we go through
+ * axios directly here, replicating the api-token header.
+ */
+export const uploadLeaseFile = async (
+  tenfastLeaseId: string,
+  content: Buffer,
+  filename: string
+): Promise<AdapterResult<undefined, 'upload-failed' | 'unknown'>> => {
+  try {
+    const form = new FormData()
+    form.append('file', content, {
+      filename,
+      contentType: 'application/pdf',
+    })
+
+    const response = await axios.post(
+      `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-file?hyresvard=${tenfastCompanyId}`,
+      form,
+      {
+        headers: {
+          ...form.getHeaders(),
+          'api-token': config.tenfast.apiKey,
+        },
+        validateStatus: (status) => status >= 200 && status < 500,
+      }
+    )
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: undefined }
+    }
+
+    logger.error(
+      { status: response.status, error: response.data, tenfastLeaseId },
+      'tenfast-adapter.uploadLeaseFile'
+    )
+    return { ok: false, err: 'upload-failed' }
+  } catch (err) {
+    const responseData = isAxiosError(err) ? err.response?.data : undefined
+    logger.error(
+      { err, responseData, tenfastLeaseId },
+      'tenfast-adapter.uploadLeaseFile: caught exception'
+    )
+    return { ok: false, err: 'unknown' }
   }
 }
 

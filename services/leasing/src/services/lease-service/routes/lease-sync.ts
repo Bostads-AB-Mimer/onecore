@@ -4,6 +4,7 @@ import { Contact } from '@onecore/types'
 
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
 import { getLeases } from '../adapters/xpand/tenant-lease-adapter'
+import { getSignedContractPdf } from '../adapters/xpand/lease-document-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { z } from 'zod'
@@ -71,11 +72,28 @@ export const routes = (router: KoaRouter) => {
           const rentalObjectCode =
             slashIndex !== -1 ? leaseId.substring(0, slashIndex) : leaseId
 
-          const createResult = await tenfastAdapter.createLease(
+          const xpandLeases = await getLeases([leaseId])
+          if (!xpandLeases.length) {
+            ctx.status = 404
+            ctx.body = { error: 'Lease not found in xpand', ...metadata }
+            return
+          }
+
+          const startDate = xpandLeases[0].leaseStartDate
+          if (!startDate) {
+            ctx.status = 400
+            ctx.body = {
+              error: 'xpand lease has no leaseStartDate',
+              ...metadata,
+            }
+            return
+          }
+
+          const createResult = await tenfastAdapter.importLease(
+            leaseId,
             contact,
             rentalObjectCode,
-            new Date(),
-            false
+            new Date(startDate)
           )
 
           if (!createResult.ok) {
@@ -89,6 +107,35 @@ export const routes = (router: KoaRouter) => {
           }
 
           logger.info({ leaseId }, 'Lease created in Tenfast')
+
+          // Best-effort attach the signed PDF from xpand. A missing PDF or
+          // failed upload is logged but does not fail the create — the lease
+          // already exists in Tenfast either way.
+          const pdf = await getSignedContractPdf(leaseId)
+          if (pdf) {
+            const uploadResult = await tenfastAdapter.uploadLeaseFile(
+              createResult.data._id,
+              pdf.content,
+              pdf.filename
+            )
+            if (uploadResult.ok) {
+              logger.info(
+                { leaseId, filename: pdf.filename },
+                'Attached signed PDF to Tenfast lease'
+              )
+            } else {
+              logger.warn(
+                { leaseId, error: uploadResult.err },
+                'Tenfast lease created but PDF upload failed'
+              )
+            }
+          } else {
+            logger.warn(
+              { leaseId },
+              'Tenfast lease created but no signed PDF found in xpand'
+            )
+          }
+
           ctx.status = 201
           ctx.body = {
             content: { action: 'created', leaseId },
@@ -115,7 +162,7 @@ export const routes = (router: KoaRouter) => {
             return
           }
 
-          logger.info({ leaseId, endDate }, 'LEASE TO BE TERMINATED')
+          logger.info({ leaseId, endDate }, 'terminating lease in Tenfast')
 
           const result = await tenfastAdapter.terminateLease(leaseId, {
             endDate: new Date(endDate),

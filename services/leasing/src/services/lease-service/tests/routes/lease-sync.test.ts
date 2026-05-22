@@ -17,6 +17,10 @@ jest.mock('../../adapters/xpand/tenant-lease-adapter', () => ({
   getLeases: jest.fn(),
 }))
 
+jest.mock('../../adapters/xpand/lease-document-adapter', () => ({
+  getSignedContractPdf: jest.fn().mockResolvedValue(null),
+}))
+
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
@@ -122,9 +126,15 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 201 with action "created" on successful create', async () => {
+      ;(tenantLeaseAdapter.getLeases as jest.Mock).mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: new Date('2026-01-01'),
+        }),
+      ])
       jest
-        .spyOn(tenfastAdapter, 'createLease')
-        .mockResolvedValueOnce({ ok: true, data: undefined })
+        .spyOn(tenfastAdapter, 'importLease')
+        .mockResolvedValueOnce({ ok: true, data: { _id: 'tenfast-id' } })
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -141,9 +151,50 @@ describe('POST /leases/sync', () => {
       })
     })
 
-    it('returns 500 when createLease fails', async () => {
+    it('returns 404 when xpand lease not found on create', async () => {
+      ;(tenantLeaseAdapter.getLeases as jest.Mock).mockResolvedValueOnce([])
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'create',
+        })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Lease not found in xpand')
+    })
+
+    it('returns 400 when xpand lease has no leaseStartDate', async () => {
+      ;(tenantLeaseAdapter.getLeases as jest.Mock).mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: undefined as unknown as Date,
+        }),
+      ])
+
+      const res = await request(app.callback())
+        .post('/leases/sync')
+        .send({
+          leaseId: '123-456/01',
+          contact: factory.contact.build(),
+          action: 'create',
+        })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('xpand lease has no leaseStartDate')
+    })
+
+    it('returns 500 when importLease fails', async () => {
+      ;(tenantLeaseAdapter.getLeases as jest.Mock).mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: new Date('2026-01-01'),
+        }),
+      ])
       jest
-        .spyOn(tenfastAdapter, 'createLease')
+        .spyOn(tenfastAdapter, 'importLease')
         .mockResolvedValueOnce({
           ok: false,
           err: 'lease-could-not-be-created',
