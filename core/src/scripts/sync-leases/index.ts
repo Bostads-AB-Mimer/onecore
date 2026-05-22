@@ -6,8 +6,7 @@ import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { getUpdatedLeases, syncLease } from '../../adapters/leasing-adapter'
 import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
 
-const STATE_FILE = './last-timestamp-leases.txt'
-// const STATE_FILE = '/data/last-timestamp-leases.txt'
+const STATE_FILE = '/data/last-timestamp-leases.txt'
 
 const isResidenceOrStorage = (info: RentalPropertyInfo): boolean => {
   logger.info(info.type)
