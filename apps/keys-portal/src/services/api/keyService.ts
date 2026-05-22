@@ -7,6 +7,7 @@ import type {
   CreateKeySystemRequest,
   UpdateKeySystemRequest,
   PaginatedResponse,
+  ContactV1,
 } from '@/services/types'
 import { querySerializer } from '@/utils/querySerializer'
 
@@ -31,13 +32,26 @@ export const keyService = {
   async getAllKeys(
     page: number = 1,
     limit: number = 60,
-    includeKeySystem: boolean = false
-  ): Promise<PaginatedResponse<KeyDetails>> {
+    includeKeySystem: boolean = false,
+    options?: { includeContacts?: boolean }
+  ): Promise<
+    PaginatedResponse<KeyDetails> & { contacts?: Record<string, ContactV1> }
+  > {
     const { data, error } = await GET('/keys', {
-      params: { query: { page, limit, includeKeySystem } },
+      params: {
+        query: {
+          page,
+          limit,
+          includeKeySystem,
+          ...(options?.includeContacts ? { includeContacts: true } : {}),
+        },
+      },
     })
     if (error) throw error
-    return ensurePaginatedResponse<KeyDetails>(data)
+    return {
+      ...ensurePaginatedResponse<KeyDetails>(data),
+      contacts: data?.contacts,
+    }
   },
 
   async getKey(id: string): Promise<Key> {
@@ -78,14 +92,28 @@ export const keyService = {
     searchParams: Record<string, string | number | string[] | undefined>,
     page: number = 1,
     limit: number = 60,
-    includeKeySystem: boolean = false
-  ): Promise<PaginatedResponse<KeyDetails>> {
+    includeKeySystem: boolean = false,
+    options?: { includeContacts?: boolean }
+  ): Promise<
+    PaginatedResponse<KeyDetails> & { contacts?: Record<string, ContactV1> }
+  > {
     const { data, error } = await GET('/keys/search', {
-      params: { query: { ...searchParams, page, limit, includeKeySystem } },
+      params: {
+        query: {
+          ...searchParams,
+          page,
+          limit,
+          includeKeySystem,
+          ...(options?.includeContacts ? { includeContacts: true } : {}),
+        },
+      },
       querySerializer,
     })
     if (error) throw error
-    return ensurePaginatedResponse<KeyDetails>(data)
+    return {
+      ...ensurePaginatedResponse<KeyDetails>(data),
+      contacts: data?.contacts,
+    }
   },
 
   async getKeysByRentalObjectCode(

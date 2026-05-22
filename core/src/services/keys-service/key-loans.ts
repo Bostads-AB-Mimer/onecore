@@ -1,9 +1,7 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { KeyLoansApi } from '../../adapters/keys-adapter'
-import { contactsAdapter } from '../../adapters/contacts-adapter'
-import { transformContacts } from '../../api/v1/contacts/transform'
-import { getUserName, createLogEntry } from './helpers'
+import { getUserName, createLogEntry, enrichWithContacts } from './helpers'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -222,41 +220,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    // Optional contact enrichment: batch-fetch contacts referenced by the loans
-    // and attach as a sidecar map. Soft-fail — if contacts can't be loaded the
-    // loans still ship; the FE falls back to rendering the raw contact code.
-    let contactsByCode:
-      | Record<string, ReturnType<typeof transformContacts>[number]>
-      | undefined
-    if (wantContacts && result.data.content.length > 0) {
-      const codes = Array.from(
-        new Set(
-          result.data.content.flatMap((l) =>
-            [l.contact, l.contact2].filter(
-              (c): c is string => typeof c === 'string' && c.length > 0
-            )
-          )
+    const contactsByCode = wantContacts
+      ? await enrichWithContacts(
+          result.data.content.flatMap((l) => [l.contact, l.contact2]),
+          metadata
         )
-      )
-
-      if (codes.length > 0) {
-        const contactsResult =
-          await contactsAdapter.getByContactCodeBatch(codes)
-        if (contactsResult.ok) {
-          contactsByCode = Object.fromEntries(
-            transformContacts(contactsResult.data).map((c) => [
-              c.contactCode,
-              c,
-            ])
-          )
-        } else {
-          logger.error(
-            { err: contactsResult.err, codeCount: codes.length, metadata },
-            'Failed to enrich key-loans with contacts — returning loans without sidecar'
-          )
-        }
-      }
-    }
+      : undefined
 
     ctx.status = 200
     ctx.body = {

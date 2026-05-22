@@ -11,6 +11,7 @@ import {
   TableEmptyState,
 } from '@/components/ui/table'
 import {
+  ContactV1,
   KeyDetails,
   KeyLoan,
   KeyBundle,
@@ -54,6 +55,7 @@ interface ExpandedKeyData {
 
 interface KeysTableProps {
   keys: KeyDetails[]
+  contactsByCode: Record<string, ContactV1>
   keySystemMap: Record<string, string>
   onEdit: (key: KeyDetails) => void
   onDelete: (keyId: string) => void
@@ -66,6 +68,7 @@ interface KeysTableProps {
 
 export function KeysTable({
   keys,
+  contactsByCode,
   keySystemMap,
   onEdit,
   onDelete,
@@ -119,48 +122,6 @@ export function KeysTable({
       return { loans: sortedLoans, bundles: sortedBundles, contactData }
     },
   })
-
-  const [contactData, setContactData] = React.useState<
-    Record<string, { fullName: string }>
-  >({})
-
-  React.useEffect(() => {
-    const fetchContactNames = async () => {
-      const uniqueContactCodes = new Set<string>()
-      keys.forEach((key) => {
-        if (key.activeLoanContact) uniqueContactCodes.add(key.activeLoanContact)
-      })
-
-      if (uniqueContactCodes.size === 0) {
-        setContactData({})
-        return
-      }
-
-      const codes = Array.from(uniqueContactCodes)
-      const data: Record<string, { fullName: string }> = {}
-
-      try {
-        const contacts = await fetchContactsByContactCodeBatch(codes)
-        for (const contact of contacts) {
-          data[contact.contactCode] = {
-            fullName: getContactFullName(contact),
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch contacts batch:', error)
-      }
-
-      for (const code of codes) {
-        if (!data[code]) {
-          data[code] = { fullName: code }
-        }
-      }
-
-      setContactData(data)
-    }
-
-    fetchContactNames()
-  }, [keys])
 
   // Column count for expanded rows (base 11 + 1 if selection enabled)
   const columnCount = selection ? 12 : 11
@@ -287,8 +248,11 @@ export function KeysTable({
                     </TableCell>
                     <TableCellMuted>
                       {key.activeLoanContact
-                        ? (contactData[key.activeLoanContact]?.fullName ??
-                          key.activeLoanContact)
+                        ? contactsByCode[key.activeLoanContact]
+                          ? getContactFullName(
+                              contactsByCode[key.activeLoanContact]
+                            )
+                          : key.activeLoanContact
                         : '-'}
                     </TableCellMuted>
                     <TableCell>
