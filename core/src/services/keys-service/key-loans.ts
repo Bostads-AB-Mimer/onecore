@@ -1,6 +1,8 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { KeyLoansApi } from '../../adapters/keys-adapter'
+import { contactsAdapter } from '../../adapters/contacts-adapter'
+import { transformContacts } from '../../api/v1/contacts/transform'
 import { getUserName, createLogEntry } from './helpers'
 
 export const routes = (router: KoaRouter) => {
@@ -147,6 +149,16 @@ export const routes = (router: KoaRouter) => {
    *         name: updatedAt
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the loans and
+   *           attaches them as a `contacts` sidecar keyed by contactCode. Soft
+   *           fails — if the contacts service errors, loans are still returned
+   *           without the sidecar.
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -159,6 +171,11 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/KeyLoan'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       400:
    *         description: Bad request
    *         content:
@@ -183,9 +200,15 @@ export const routes = (router: KoaRouter) => {
       'maxKeys',
       'hasPickedUp',
       'hasReturned',
+      'includeContacts',
     ])
 
-    const result = await KeyLoansApi.search(ctx.query)
+    // Strip orchestration-only flags before forwarding to the keys microservice
+    // search call (it does not know about `includeContacts`).
+    const { includeContacts, ...searchQuery } = ctx.query
+    const wantContacts = includeContacts === 'true'
+
+    const result = await KeyLoansApi.search(searchQuery)
 
     if (!result.ok) {
       if (result.err === 'bad-request') {
@@ -199,8 +222,48 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // Optional contact enrichment: batch-fetch contacts referenced by the loans
+    // and attach as a sidecar map. Soft-fail — if contacts can't be loaded the
+    // loans still ship; the FE falls back to rendering the raw contact code.
+    let contactsByCode:
+      | Record<string, ReturnType<typeof transformContacts>[number]>
+      | undefined
+    if (wantContacts && result.data.content.length > 0) {
+      const codes = Array.from(
+        new Set(
+          result.data.content.flatMap((l) =>
+            [l.contact, l.contact2].filter(
+              (c): c is string => typeof c === 'string' && c.length > 0
+            )
+          )
+        )
+      )
+
+      if (codes.length > 0) {
+        const contactsResult =
+          await contactsAdapter.getByContactCodeBatch(codes)
+        if (contactsResult.ok) {
+          contactsByCode = Object.fromEntries(
+            transformContacts(contactsResult.data).map((c) => [
+              c.contactCode,
+              c,
+            ])
+          )
+        } else {
+          logger.error(
+            { err: contactsResult.err, codeCount: codes.length, metadata },
+            'Failed to enrich key-loans with contacts — returning loans without sidecar'
+          )
+        }
+      }
+    }
+
     ctx.status = 200
-    ctx.body = { ...metadata, ...result.data }
+    ctx.body = {
+      ...metadata,
+      ...result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**

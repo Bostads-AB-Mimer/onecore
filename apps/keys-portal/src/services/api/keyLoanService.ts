@@ -5,6 +5,7 @@ import type {
   CreateKeyLoanRequest,
   UpdateKeyLoanRequest,
   PaginatedResponse,
+  ContactV1,
 } from '@/services/types'
 import { querySerializer } from '@/utils/querySerializer'
 
@@ -40,14 +41,28 @@ export const keyLoanService = {
   async search(
     searchParams: Record<string, string | number | string[] | undefined>,
     page: number = 1,
-    limit: number = 60
-  ): Promise<PaginatedResponse<KeyLoan>> {
+    limit: number = 60,
+    options?: { includeContacts?: boolean }
+  ): Promise<
+    PaginatedResponse<KeyLoan> & { contacts?: Record<string, ContactV1> }
+  > {
+    const includeContacts = options?.includeContacts
     const { data, error } = await GET('/key-loans/search', {
-      params: { query: { ...searchParams, page, limit } as any },
+      params: {
+        query: {
+          ...searchParams,
+          page,
+          limit,
+          ...(includeContacts ? { includeContacts: true } : {}),
+        } as any,
+      },
       querySerializer,
     })
     if (error) throw error
-    return ensurePaginatedResponse<KeyLoan>(data)
+    return {
+      ...ensurePaginatedResponse<KeyLoan>(data),
+      contacts: data?.contacts,
+    }
   },
 
   async get(

@@ -7,6 +7,7 @@ import type {
 
 import { AdapterResult } from '@/adapters/types'
 import { AxiosResponse } from 'axios'
+import config from '../../common/config'
 
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
@@ -123,3 +124,10 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
     },
   }
 }
+
+/**
+ * Singleton contacts adapter wired to the configured contacts service URL.
+ * Use this anywhere in core that needs to call the contacts microservice
+ * without re-instantiating the adapter. Mirrors the leasingAdapter pattern.
+ */
+export const contactsAdapter = makeContactsAdapter(config.contactsService.url)

@@ -6993,6 +6993,13 @@ export interface paths {
           pickedUpAt?: string;
           createdAt?: string;
           updatedAt?: string;
+          /**
+           * @description When true, batch-fetches contacts referenced by the loans and
+           * attaches them as a `contacts` sidecar keyed by contactCode. Soft
+           * fails — if the contacts service errors, loans are still returned
+           * without the sidecar.
+           */
+          includeContacts?: boolean;
         };
       };
       responses: {
@@ -7001,6 +7008,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoan"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
