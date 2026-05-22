@@ -14,6 +14,13 @@ import {
 } from './schema'
 import { paginatedResponseSchema } from '@onecore/types'
 
+// TODO: Remove this helper once we have a request-validation middleware that
+// runs route Zod schemas against ctx.query and coerces string "true"/"false"
+// to real booleans. OkapiRouter today only uses schemas for OpenAPI docs, so
+// boolean query params arrive as raw strings — and `Boolean("false") === true`
+// would otherwise silently enable the include even when the caller said no.
+const isTrue = (v: unknown): boolean => v === true || v === 'true'
+
 export const routes = (
   router: OkapiRouter,
   { contactsRepository }: { contactsRepository: ContactsRepository }
@@ -125,9 +132,9 @@ export const routes = (
       }
 
       const contacts = await contactsRepository.getByContactCodeBatch(codes, {
-        includePhone: ctx.query.includePhone,
-        includeEmail: ctx.query.includeEmail,
-        includeAddress: ctx.query.includeAddress,
+        includePhone: isTrue(ctx.query.includePhone),
+        includeEmail: isTrue(ctx.query.includeEmail),
+        includeAddress: isTrue(ctx.query.includeAddress),
       })
 
       ctx.status = 200

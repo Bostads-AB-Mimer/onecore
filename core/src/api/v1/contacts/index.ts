@@ -4,6 +4,7 @@ import { OkapiRouter } from 'koa-okapi-router'
 import {
   ContactSchema,
   GetContactResponseBodySchema,
+  GetContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
 } from './schema'
 import {
@@ -122,6 +123,63 @@ export const routes = (router: OkapiRouter, config: Config) => {
         }
       } else {
         const metadata = generateRouteMetadata(ctx)
+        encodeError(ctx, response, metadata)
+      }
+    }
+  )
+
+  router.get(
+    '/v1/contacts/batch',
+    {
+      summary: 'Batch lookup of contacts by contact code',
+      description:
+        'Lean by default — returns base contact fields with empty phone/' +
+        'email/address arrays. Set `includePhone`, `includeEmail`, or ' +
+        '`includeAddress` to include those joins. Missing contact codes are ' +
+        'simply absent from the response.',
+      tags: ['Contacts'],
+      query: {
+        code: {
+          description:
+            'Contact code(s) to look up. Repeat the parameter for multiple ' +
+            'codes, e.g. ?code=P123&code=P456.',
+          schema: z.array(z.string()).min(1),
+        },
+        includePhone: {
+          description: 'Include phone numbers in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeEmail: {
+          description: 'Include email addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeAddress: {
+          description: 'Include addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+      },
+      response: {
+        200: GetContactsResponseBodySchema,
+        500: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { code, includePhone, includeEmail, includeAddress } = ctx.query
+      const metadata = generateRouteMetadata(ctx)
+
+      const response = await contactsAdapter.getByContactCodeBatch(code, {
+        includePhone,
+        includeEmail,
+        includeAddress,
+      })
+
+      if (response.ok) {
+        ctx.status = 200
+        ctx.body = {
+          ...metadata,
+          content: { contacts: transformContacts(response.data) },
+        }
+      } else {
         encodeError(ctx, response, metadata)
       }
     }
