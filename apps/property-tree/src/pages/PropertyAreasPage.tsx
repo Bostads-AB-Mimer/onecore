@@ -55,9 +55,9 @@ function mapKvvArea(area: CostCenterTreeKvvArea): KvvAreaInfo {
 
   return {
     kvvArea: area.code,
-    stewardRefNr: area.responsible?.username ?? '',
+    stewardRefNr: area.responsible?.employeeId ?? '',
     stewardName,
-    stewardPhone: undefined,
+    stewardPhone: area.responsible?.mobilePhone,
     propertyCount: aggregates.propertyCount,
     residenceCount: aggregates.residenceCount,
     parkingCount: aggregates.parkingCount,

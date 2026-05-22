@@ -13,6 +13,8 @@ import {
 } from './schemas'
 
 const PROPERTY_MANAGER_ROLE = 'property-manager'
+const DISTRICT_MANAGER_ROLE = 'district-manager'
+const DEPUTY_DISTRICT_MANAGER_ROLE = 'deputy-district-manager'
 
 function toUserSummary(user: KeycloakUser) {
   return {
@@ -21,6 +23,8 @@ function toUserSummary(user: KeycloakUser) {
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
+    mobilePhone: user.attributes?.mobilePhone?.[0],
+    employeeId: user.attributes?.employeeId?.[0],
   }
 }
 
@@ -124,20 +128,53 @@ export const routes = (router: KoaRouter) => {
 
     const raw = treeResult.data
 
-    const usersResult = await getUsersByRole(PROPERTY_MANAGER_ROLE)
-    const userById = new Map<string, KeycloakUser>()
-    if (usersResult.ok) {
-      for (const u of usersResult.data) userById.set(u.id, u)
-    } else {
+    const [responsibleResult, leadResult, deputyResult] = await Promise.all([
+      getUsersByRole(PROPERTY_MANAGER_ROLE),
+      getUsersByRole(DISTRICT_MANAGER_ROLE),
+      getUsersByRole(DEPUTY_DISTRICT_MANAGER_ROLE),
+    ])
+
+    const buildUserMap = (users: KeycloakUser[]) => {
+      const map = new Map<string, KeycloakUser>()
+      for (const u of users) map.set(u.id, u)
+      return map
+    }
+
+    const responsibleById = responsibleResult.ok
+      ? buildUserMap(responsibleResult.data)
+      : new Map<string, KeycloakUser>()
+    const leadById = leadResult.ok
+      ? buildUserMap(leadResult.data)
+      : new Map<string, KeycloakUser>()
+    const deputyById = deputyResult.ok
+      ? buildUserMap(deputyResult.data)
+      : new Map<string, KeycloakUser>()
+
+    if (!responsibleResult.ok) {
       logger.error(
-        { err: usersResult.err },
-        'cost-centers.route: keycloak getUsersByRole failed — returning tree with null users'
+        { err: responsibleResult.err, role: PROPERTY_MANAGER_ROLE },
+        'cost-centers.route: keycloak getUsersByRole failed — responsible users will be null'
+      )
+    }
+    if (!leadResult.ok) {
+      logger.error(
+        { err: leadResult.err, role: DISTRICT_MANAGER_ROLE },
+        'cost-centers.route: keycloak getUsersByRole failed — lead will be null'
+      )
+    }
+    if (!deputyResult.ok) {
+      logger.error(
+        { err: deputyResult.err, role: DEPUTY_DISTRICT_MANAGER_ROLE },
+        'cost-centers.route: keycloak getUsersByRole failed — deputy will be null'
       )
     }
 
-    const lookup = (userId: string | null) => {
+    const lookup = (
+      userId: string | null,
+      source: Map<string, KeycloakUser>
+    ) => {
       if (!userId) return null
-      const u = userById.get(userId)
+      const u = source.get(userId)
       return u ? toUserSummary(u) : null
     }
 
@@ -145,13 +182,13 @@ export const routes = (router: KoaRouter) => {
       id: raw.id,
       code: raw.code,
       name: raw.name,
-      lead: lookup(raw.leadKeycloakUserId),
-      deputy: lookup(raw.deputyKeycloakUserId),
+      lead: lookup(raw.leadKeycloakUserId, leadById),
+      deputy: lookup(raw.deputyKeycloakUserId, deputyById),
       kvvAreas: raw.kvvAreas.map((area) => ({
         id: area.id,
         code: area.code,
         name: area.name,
-        responsible: lookup(area.responsibleKeycloakUserId),
+        responsible: lookup(area.responsibleKeycloakUserId, responsibleById),
         properties: area.properties,
       })),
     }

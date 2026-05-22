@@ -10493,6 +10493,8 @@ export interface components {
       firstName?: string;
       lastName?: string;
       email?: string;
+      mobilePhone?: string;
+      employeeId?: string;
     };
     CostCenterTreeAddress: {
       buildingCode: string;
@@ -10530,6 +10532,8 @@ export interface components {
         firstName?: string;
         lastName?: string;
         email?: string;
+        mobilePhone?: string;
+        employeeId?: string;
       } | null;
       properties: ({
           code: string;
@@ -10558,6 +10562,8 @@ export interface components {
         firstName?: string;
         lastName?: string;
         email?: string;
+        mobilePhone?: string;
+        employeeId?: string;
       } | null;
       deputy: components["schemas"]["CostCenterTree"]["lead"] | null;
       kvvAreas: ({

@@ -79,14 +79,27 @@ describe('GET /cost-centers/:id/tree', () => {
       .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
       .mockResolvedValueOnce({ ok: true, data: baseTree })
 
-    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValueOnce({
-      ok: true,
-      data: [
-        { id: LEAD_ID, username: 'lead', firstName: 'L', lastName: 'Ead' },
-        { id: DEPUTY_ID, username: 'deputy' },
-        { id: RESP_ID, username: 'resp' },
-      ],
-    })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockImplementation(async (role) => {
+        if (role === 'property-manager')
+          return { ok: true, data: [{ id: RESP_ID, username: 'resp' }] }
+        if (role === 'district-manager')
+          return {
+            ok: true,
+            data: [
+              {
+                id: LEAD_ID,
+                username: 'lead',
+                firstName: 'L',
+                lastName: 'Ead',
+              },
+            ],
+          }
+        if (role === 'deputy-district-manager')
+          return { ok: true, data: [{ id: DEPUTY_ID, username: 'deputy' }] }
+        return { ok: true, data: [] }
+      })
 
     const res = await request(app.callback()).get(
       `/cost-centers/${TREE_ID}/tree`
@@ -107,7 +120,7 @@ describe('GET /cost-centers/:id/tree', () => {
       .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
       .mockResolvedValueOnce({ ok: true, data: baseTree })
 
-    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValueOnce({
+    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValue({
       ok: false,
       err: 'keycloak_unreachable',
       statusCode: 502,
@@ -122,15 +135,18 @@ describe('GET /cost-centers/:id/tree', () => {
     expect(res.body.content.kvvAreas[0].responsible).toBeNull()
   })
 
-  it('returns null users for ids not found in the role list', async () => {
+  it('returns null users for ids not found in the role lists', async () => {
     jest
       .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
       .mockResolvedValueOnce({ ok: true, data: baseTree })
 
-    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValueOnce({
-      ok: true,
-      data: [{ id: LEAD_ID, username: 'lead' }],
-    })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockImplementation(async (role) => {
+        if (role === 'district-manager')
+          return { ok: true, data: [{ id: LEAD_ID, username: 'lead' }] }
+        return { ok: true, data: [] }
+      })
 
     const res = await request(app.callback()).get(
       `/cost-centers/${TREE_ID}/tree`
@@ -139,6 +155,37 @@ describe('GET /cost-centers/:id/tree', () => {
     expect(res.body.content.lead).not.toBeNull()
     expect(res.body.content.deputy).toBeNull()
     expect(res.body.content.kvvAreas[0].responsible).toBeNull()
+  })
+
+  it('hydrates lead/deputy/responsible from their respective roles only', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+
+    // LEAD_ID only appears in property-manager — should NOT resolve as lead
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockImplementation(async (role) => {
+        if (role === 'property-manager')
+          return {
+            ok: true,
+            data: [
+              { id: RESP_ID, username: 'resp' },
+              { id: LEAD_ID, username: 'lead-in-wrong-role' },
+            ],
+          }
+        return { ok: true, data: [] }
+      })
+
+    const res = await request(app.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.content.lead).toBeNull()
+    expect(res.body.content.deputy).toBeNull()
+    expect(res.body.content.kvvAreas[0].responsible).toMatchObject({
+      id: RESP_ID,
+    })
   })
 })
 

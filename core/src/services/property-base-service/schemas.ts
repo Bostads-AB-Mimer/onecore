@@ -1139,6 +1139,8 @@ export const KeycloakUserSummarySchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   email: z.string().optional(),
+  mobilePhone: z.string().optional(),
+  employeeId: z.string().optional(),
 })
 
 export const CostCenterTreeAddressSchema = z.object({

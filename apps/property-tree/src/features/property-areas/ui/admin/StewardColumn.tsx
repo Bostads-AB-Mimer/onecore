@@ -53,13 +53,9 @@ export function StewardColumn({
           </div>
           <div className="font-medium text-sm">{kvvArea.stewardName}</div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{kvvArea.stewardRefNr}</span>
-            {kvvArea.stewardPhone && (
-              <>
-                <span>•</span>
-                <span>{kvvArea.stewardPhone}</span>
-              </>
-            )}
+            {kvvArea.stewardRefNr && <span>{kvvArea.stewardRefNr}</span>}
+            {kvvArea.stewardRefNr && kvvArea.stewardPhone && <span>•</span>}
+            {kvvArea.stewardPhone && <span>{kvvArea.stewardPhone}</span>}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
             <span className="flex items-center gap-1" title="Fastigheter">
