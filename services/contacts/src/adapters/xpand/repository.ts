@@ -90,11 +90,7 @@ export const xpandContactsRepository = (
     ) => {
       if (contactCodes.length === 0) return []
 
-      const rows = await contactsByCodesQuery(
-        db.get(),
-        contactCodes,
-        options
-      )
+      const rows = await contactsByCodesQuery(db.get(), contactCodes, options)
       return transformDbContactRows(rows)
     },
 

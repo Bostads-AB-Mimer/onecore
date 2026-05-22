@@ -71,9 +71,7 @@ export function getContactFullName(contact: ContactV1): string {
   if (contact.type === 'organisation') {
     return contact.organisation.name || contact.contactCode
   }
-  throw new Error(
-    `Unknown contact type: ${(contact as { type: string }).type}`
-  )
+  throw new Error(`Unknown contact type: ${(contact as { type: string }).type}`)
 }
 
 /**
@@ -89,9 +87,7 @@ export function getContactRegistrationNumber(
   if (contact.type === 'organisation') {
     return contact.organisation.organisationNumber || undefined
   }
-  throw new Error(
-    `Unknown contact type: ${(contact as { type: string }).type}`
-  )
+  throw new Error(`Unknown contact type: ${(contact as { type: string }).type}`)
 }
 
 /**

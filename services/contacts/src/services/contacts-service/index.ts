@@ -118,9 +118,9 @@ export const routes = (
       const metadata = generateRouteMetadata(ctx)
 
       const rawCode = ctx.query.code
-      const codes = (
-        Array.isArray(rawCode) ? rawCode : [rawCode]
-      ).filter((c): c is string => typeof c === 'string' && c.length > 0)
+      const codes = (Array.isArray(rawCode) ? rawCode : [rawCode]).filter(
+        (c): c is string => typeof c === 'string' && c.length > 0
+      )
 
       if (codes.length === 0) {
         ctx.status = 400
