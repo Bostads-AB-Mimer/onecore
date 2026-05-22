@@ -73,6 +73,72 @@ export const routes = (
   )
 
   router.get(
+    '/contacts/batch',
+    {
+      summary: 'Batch lookup of contacts by contact code.',
+      description:
+        'Lean by default — returns base contact fields with empty phone/' +
+        'email/address arrays. Pass any combination of `includePhone`, ' +
+        '`includeEmail`, `includeAddress` to include those joins. Missing ' +
+        'contact codes are simply absent from the response.',
+      tags: ['Contacts'],
+      query: {
+        code: {
+          description:
+            'Contact code(s) to look up. Repeat the parameter for multiple ' +
+            'codes, e.g. ?code=P123&code=P456.',
+          schema: z.array(z.string()).min(1),
+        },
+        includePhone: {
+          description: 'Include phone numbers in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeEmail: {
+          description: 'Include email addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeAddress: {
+          description: 'Include addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+      },
+      response: {
+        200: GetContactsResponseBodySchema,
+        400: ONECoreHateOASResponseBodySchema.extend({ error: z.string() }),
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const rawCode = ctx.query.code
+      const codes = (
+        Array.isArray(rawCode) ? rawCode : [rawCode]
+      ).filter((c): c is string => typeof c === 'string' && c.length > 0)
+
+      if (codes.length === 0) {
+        ctx.status = 400
+        ctx.body = {
+          ...metadata,
+          error: 'At least one `code` query parameter is required.',
+        }
+        return
+      }
+
+      const contacts = await contactsRepository.getByContactCodeBatch(codes, {
+        includePhone: ctx.query.includePhone,
+        includeEmail: ctx.query.includeEmail,
+        includeAddress: ctx.query.includeAddress,
+      })
+
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+        content: { contacts },
+      }
+    }
+  )
+
+  router.get(
     '/contacts/:contactCode',
     {
       summary: 'Get a single contact by their canonical ID.',

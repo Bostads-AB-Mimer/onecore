@@ -15,6 +15,7 @@ import {
   contactObjectKeysForPhoneNumber,
   contactsQuery,
 } from './query'
+import { contactsByCodesQuery, ContactIncludeOptions } from './batch-query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
 
@@ -76,6 +77,25 @@ export const xpandContactsRepository = (
         .getOne(db.get())
 
       return transformDbContactRows(dbContactRows)[0]
+    },
+
+    /**
+     * Batch lookup of contacts by their contact codes. Uses the lean
+     * `contactsByCodesQuery` which omits phone/email/address joins by
+     * default — only base `cmctc` columns plus the trustee self-join.
+     */
+    getByContactCodeBatch: async (
+      contactCodes: ContactCode[],
+      options?: ContactIncludeOptions
+    ) => {
+      if (contactCodes.length === 0) return []
+
+      const rows = await contactsByCodesQuery(
+        db.get(),
+        contactCodes,
+        options
+      )
+      return transformDbContactRows(rows)
     },
 
     /**
