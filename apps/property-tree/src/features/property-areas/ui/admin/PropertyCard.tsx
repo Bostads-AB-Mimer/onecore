@@ -1,53 +1,20 @@
-import React from 'react'
-import { GripVertical, Home, DoorOpen, Car } from 'lucide-react'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { Car, DoorOpen, Home } from 'lucide-react'
+
 import { PropertyForAdmin } from '../../types/adminTypes'
 import { BuildingTypeBadge } from '../BuildingTypeBadge'
 
 interface PropertyCardProps {
   property: PropertyForAdmin
-  kvvArea: string
 }
 
-export function PropertyCard({ property, kvvArea }: PropertyCardProps) {
+export function PropertyCard({ property }: PropertyCardProps) {
   const hasCounts =
     (property.residenceCount ?? 0) > 0 ||
     (property.parkingCount ?? 0) > 0 ||
     (property.entranceCount ?? 0) > 0
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: property.id,
-    data: { type: 'property', kvvArea },
-  })
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  }
-
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="p-3 rounded-md border bg-card flex gap-2"
-    >
-      <button
-        {...attributes}
-        {...listeners}
-        className="text-muted-foreground/60 hover:text-foreground cursor-grab active:cursor-grabbing flex-shrink-0 mt-0.5"
-        aria-label="Dra för att flytta fastigheten"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
+    <div className="p-3 rounded-md border bg-card">
       <div className="min-w-0 flex-1">
         <div className="font-medium text-sm break-words">
           {property.propertyName}

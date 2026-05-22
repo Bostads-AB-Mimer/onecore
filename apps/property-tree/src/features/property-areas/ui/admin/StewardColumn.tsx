@@ -1,9 +1,6 @@
 import React, { useState } from 'react'
-import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Building2, Car, DoorOpen, Home, Pencil } from 'lucide-react'
 
-import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader } from '@/shared/ui/Card'
 import { ScrollArea } from '@/shared/ui/ScrollArea'
@@ -33,23 +30,13 @@ export function StewardColumn({
 }: StewardColumnProps) {
   const [showAssignDialog, setShowAssignDialog] = useState(false)
 
-  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-    id: `col-${kvvArea.kvvArea}`,
-    data: { type: 'column', kvvArea: kvvArea.kvvArea },
-  })
-
   const handleAssign = (newStewardRefNr: string) => {
     onReassignArea?.(kvvArea.kvvArea, newStewardRefNr)
   }
 
   return (
     <>
-      <Card
-        className={cn(
-          'flex-shrink-0 w-[280px] flex flex-col h-full transition-shadow',
-          isOver && 'ring-2 ring-primary/50'
-        )}
-      >
+      <Card className="flex-shrink-0 w-[280px] flex flex-col h-full">
         <CardHeader className="pb-3 space-y-1">
           <div className="flex items-start justify-between">
             <div className="font-bold text-lg">{kvvArea.kvvArea}</div>
@@ -100,27 +87,13 @@ export function StewardColumn({
 
         <CardContent className="flex-1 p-0 overflow-hidden">
           <ScrollArea className="h-full px-4 pb-4">
-            <div ref={setDroppableRef} className="space-y-2 min-h-[120px]">
-              <SortableContext
-                items={properties.map((p) => p.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {properties.map((property) => (
-                  <PropertyCard
-                    key={property.id}
-                    property={property}
-                    kvvArea={kvvArea.kvvArea}
-                  />
-                ))}
-              </SortableContext>
+            <div className="space-y-2 min-h-[120px]">
+              {properties.map((property) => (
+                <PropertyCard key={property.id} property={property} />
+              ))}
               {properties.length === 0 && (
-                <div
-                  className={cn(
-                    'text-center py-8 text-muted-foreground text-sm rounded-md border border-dashed',
-                    isOver && 'border-primary/50 bg-primary/5'
-                  )}
-                >
-                  {isOver ? 'Släpp här' : 'Inga fastigheter'}
+                <div className="text-center py-8 text-muted-foreground text-sm rounded-md border border-dashed">
+                  Inga fastigheter
                 </div>
               )}
             </div>
