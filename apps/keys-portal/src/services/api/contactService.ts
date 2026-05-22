@@ -1,4 +1,4 @@
-import type { Contact } from '@/services/types'
+import type { Contact, ContactV1 } from '@/services/types'
 
 import { GET } from './core/base-api'
 
@@ -21,6 +21,77 @@ export async function fetchContactByContactCode(
   // The API wraps the contact in a 'content' field
   const response = data as any
   return response?.content ?? null
+}
+
+/**
+ * Batch lookup of contacts by contact code through the v1 contacts API.
+ * Lean by default — pass include flags to opt in to phone/email/address joins.
+ *
+ * Missing contact codes are simply absent from the response — the caller
+ * should treat a missing entry as "not found" rather than an error.
+ */
+export async function fetchContactsByContactCodeBatch(
+  contactCodes: string[],
+  options?: {
+    includePhone?: boolean
+    includeEmail?: boolean
+    includeAddress?: boolean
+  }
+): Promise<ContactV1[]> {
+  if (contactCodes.length === 0) return []
+
+  const normalized = contactCodes.map((c) => c.trim().toUpperCase())
+
+  const { data, error } = await GET('/v1/contacts/batch', {
+    params: {
+      query: {
+        code: normalized,
+        ...(options?.includePhone ? { includePhone: true } : {}),
+        ...(options?.includeEmail ? { includeEmail: true } : {}),
+        ...(options?.includeAddress ? { includeAddress: true } : {}),
+      },
+    },
+  })
+
+  if (error || !data) return []
+
+  // The API wraps the result in { content: { contacts: [...] } }
+  return data?.content?.contacts ?? []
+}
+
+/**
+ * Display name for a v1 Contact (discriminated union by `type`).
+ * Reads from `personal.fullName` for individuals, `organisation.name` for
+ * organisations. Falls back to the contact code if the name is empty.
+ */
+export function getContactFullName(contact: ContactV1): string {
+  if (contact.type === 'individual') {
+    return contact.personal.fullName || contact.contactCode
+  }
+  if (contact.type === 'organisation') {
+    return contact.organisation.name || contact.contactCode
+  }
+  throw new Error(
+    `Unknown contact type: ${(contact as { type: string }).type}`
+  )
+}
+
+/**
+ * National registration number for an individual contact, or organisation
+ * number for an organisation. Returns undefined when the value is empty.
+ */
+export function getContactRegistrationNumber(
+  contact: ContactV1
+): string | undefined {
+  if (contact.type === 'individual') {
+    return contact.personal.nationalRegistrationNumber || undefined
+  }
+  if (contact.type === 'organisation') {
+    return contact.organisation.organisationNumber || undefined
+  }
+  throw new Error(
+    `Unknown contact type: ${(contact as { type: string }).type}`
+  )
 }
 
 /**

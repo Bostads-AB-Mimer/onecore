@@ -40,6 +40,9 @@ export type TenantAddress = NonNullable<
 // Contact type from registered Contact schema in OpenAPI
 export type Contact = components['schemas']['Contact']
 
+// v1 Contact (discriminated union by `type`) returned by the /v1/contacts/* routes
+export type ContactV1 = components['schemas']['ContactV1']
+
 // Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
 export type UpdateKeyRequest = components['schemas']['UpdateKeyRequest']

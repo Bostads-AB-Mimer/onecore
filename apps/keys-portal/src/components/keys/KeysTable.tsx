@@ -21,7 +21,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import type { UseItemSelectionReturn } from '@/hooks/useItemSelection'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyBundlesByKeyId } from '@/services/api/keyBundleService'
-import { fetchContactByContactCode } from '@/services/api/contactService'
+import {
+  fetchContactsByContactCodeBatch,
+  getContactFullName,
+  getContactRegistrationNumber,
+} from '@/services/api/contactService'
 import { useExpandableRows } from '@/hooks/useExpandableRows'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
@@ -90,25 +94,27 @@ export function KeysTable({
         if (loan.contact2) uniqueContactCodes.add(loan.contact2)
       })
 
+      const codes = Array.from(uniqueContactCodes)
       const contactData: ExpandedKeyData['contactData'] = {}
-      await Promise.all(
-        Array.from(uniqueContactCodes).map(async (contactCode) => {
-          try {
-            const contact = await fetchContactByContactCode(contactCode)
-            if (contact) {
-              contactData[contactCode] = {
-                fullName: contact.fullName ?? contactCode,
-                contactCode,
-                nationalRegistrationNumber:
-                  contact.nationalRegistrationNumber || undefined,
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch contact ${contactCode}:`, error)
-            contactData[contactCode] = { fullName: contactCode, contactCode }
+
+      try {
+        const contacts = await fetchContactsByContactCodeBatch(codes)
+        for (const contact of contacts) {
+          contactData[contact.contactCode] = {
+            fullName: getContactFullName(contact),
+            contactCode: contact.contactCode,
+            nationalRegistrationNumber: getContactRegistrationNumber(contact),
           }
-        })
-      )
+        }
+      } catch (error) {
+        console.error('Failed to fetch contacts batch:', error)
+      }
+
+      for (const code of codes) {
+        if (!contactData[code]) {
+          contactData[code] = { fullName: code, contactCode: code }
+        }
+      }
 
       return { loans: sortedLoans, bundles: sortedBundles, contactData }
     },
@@ -130,22 +136,25 @@ export function KeysTable({
         return
       }
 
+      const codes = Array.from(uniqueContactCodes)
       const data: Record<string, { fullName: string }> = {}
-      await Promise.all(
-        Array.from(uniqueContactCodes).map(async (contactCode) => {
-          try {
-            const contact = await fetchContactByContactCode(contactCode)
-            if (contact) {
-              data[contactCode] = {
-                fullName: contact.fullName ?? contactCode,
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch contact ${contactCode}:`, error)
-            data[contactCode] = { fullName: contactCode }
+
+      try {
+        const contacts = await fetchContactsByContactCodeBatch(codes)
+        for (const contact of contacts) {
+          data[contact.contactCode] = {
+            fullName: getContactFullName(contact),
           }
-        })
-      )
+        }
+      } catch (error) {
+        console.error('Failed to fetch contacts batch:', error)
+      }
+
+      for (const code of codes) {
+        if (!data[code]) {
+          data[code] = { fullName: code }
+        }
+      }
 
       setContactData(data)
     }

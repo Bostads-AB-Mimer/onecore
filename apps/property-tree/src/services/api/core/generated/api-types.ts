@@ -8931,6 +8931,47 @@ export interface paths {
       };
     };
   };
+  "/v1/contacts/batch": {
+    /**
+     * Batch lookup of contacts by contact code
+     * @description Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, or `includeAddress` to include those joins. Missing contact codes are simply absent from the response.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Contact code(s) to look up. Repeat the parameter for multiple codes, e.g. ?code=P123&code=P456. */
+          code: string[];
+          /** @description Include phone numbers in the response. */
+          includePhone?: boolean;
+          /** @description Include email addresses in the response. */
+          includeEmail?: boolean;
+          /** @description Include addresses in the response. */
+          includeAddress?: boolean;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+              content: {
+                contacts: components["schemas"]["ContactV1"][];
+              };
+            };
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
   "/v1/contacts/{contactCode}": {
     /** Get a single contact by canonical id (contact code) */
     get: {
