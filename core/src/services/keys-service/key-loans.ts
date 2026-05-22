@@ -249,6 +249,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The key ID to fetch loans for
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the loans and
+   *           attaches them as a `contacts` sidecar keyed by contactCode. Soft
+   *           fails — if the contacts service errors, loans are still returned
+   *           without the sidecar.
    *     responses:
    *       200:
    *         description: Array of loans for this key
@@ -261,6 +271,11 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/KeyLoan'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       500:
    *         description: Internal server error
    *         content:
@@ -271,7 +286,8 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-loans/by-key/:keyId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, ['includeContacts'])
+    const wantContacts = ctx.query.includeContacts === 'true'
 
     const result = await KeyLoansApi.getByKey(ctx.params.keyId)
 
@@ -285,8 +301,19 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode = wantContacts
+      ? await enrichWithContacts(
+          result.data.flatMap((l) => [l.contact, l.contact2]),
+          metadata
+        )
+      : undefined
+
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = {
+      ...metadata,
+      content: result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**

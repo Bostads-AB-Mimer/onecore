@@ -90,6 +90,24 @@ export const keyLoanService = {
     return data?.content ?? []
   },
 
+  /**
+   * Variant of `getByKeyId` that also asks the server to include the
+   * referenced contacts as a sidecar map. Use this in flows that need
+   * to render contact names alongside loans (e.g. row expansion).
+   */
+  async getByKeyIdWithContacts(
+    keyId: string
+  ): Promise<{ loans: KeyLoan[]; contacts: Record<string, ContactV1> }> {
+    const { data, error } = await GET('/key-loans/by-key/{keyId}', {
+      params: { path: { keyId }, query: { includeContacts: true } },
+    })
+    if (error) throw error
+    return {
+      loans: data?.content ?? [],
+      contacts: data?.contacts ?? {},
+    }
+  },
+
   async getByCardId(cardId: string): Promise<KeyLoan[]> {
     const { data, error } = await GET('/key-loans/by-card/{cardId}', {
       params: { path: { cardId } },

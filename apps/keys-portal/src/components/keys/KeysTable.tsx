@@ -23,7 +23,6 @@ import type { UseItemSelectionReturn } from '@/hooks/useItemSelection'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyBundlesByKeyId } from '@/services/api/keyBundleService'
 import {
-  fetchContactsByContactCodeBatch,
   getContactFullName,
   getContactRegistrationNumber,
 } from '@/services/api/contactService'
@@ -80,42 +79,26 @@ export function KeysTable({
 }: KeysTableProps) {
   const expansion = useExpandableRows<ExpandedKeyData>({
     onExpand: async (keyId) => {
-      const [loans, bundles] = await Promise.all([
-        keyLoanService.getByKeyId(keyId),
+      const [loansWithContacts, bundles] = await Promise.all([
+        keyLoanService.getByKeyIdWithContacts(keyId),
         getKeyBundlesByKeyId(keyId),
       ])
 
-      const sortedLoans = loans.sort(
+      const sortedLoans = loansWithContacts.loans.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
       const sortedBundles = bundles.sort((a, b) => a.name.localeCompare(b.name))
 
-      const uniqueContactCodes = new Set<string>()
-      loans.forEach((loan) => {
-        if (loan.contact) uniqueContactCodes.add(loan.contact)
-        if (loan.contact2) uniqueContactCodes.add(loan.contact2)
-      })
-
-      const codes = Array.from(uniqueContactCodes)
+      // Flatten the v1 Contact union into the compact shape KeyLoansList
+      // expects. Missing entries are simply absent — KeyLoansList falls back
+      // to rendering the raw code.
       const contactData: ExpandedKeyData['contactData'] = {}
-
-      try {
-        const contacts = await fetchContactsByContactCodeBatch(codes)
-        for (const contact of contacts) {
-          contactData[contact.contactCode] = {
-            fullName: getContactFullName(contact),
-            contactCode: contact.contactCode,
-            nationalRegistrationNumber: getContactRegistrationNumber(contact),
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch contacts batch:', error)
-      }
-
-      for (const code of codes) {
-        if (!contactData[code]) {
-          contactData[code] = { fullName: code, contactCode: code }
+      for (const contact of Object.values(loansWithContacts.contacts)) {
+        contactData[contact.contactCode] = {
+          fullName: getContactFullName(contact),
+          contactCode: contact.contactCode,
+          nationalRegistrationNumber: getContactRegistrationNumber(contact),
         }
       }
 
