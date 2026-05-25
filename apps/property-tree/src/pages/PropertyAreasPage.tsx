@@ -65,14 +65,30 @@ function mapKvvArea(area: CostCenterTreeKvvArea): KvvAreaInfo {
   }
 }
 
+function splitAddress(address: string): { name: string; number: number } {
+  const m = address.match(/^(.*?)(\d+)/)
+  if (!m) return { name: address.trim(), number: 0 }
+  return { name: m[1].trim(), number: parseInt(m[2], 10) }
+}
+
+function sortAddresses(addresses: string[]): string[] {
+  return Array.from(new Set(addresses)).sort((a, b) => {
+    const sa = splitAddress(a)
+    const sb = splitAddress(b)
+    const nameCmp = sa.name.localeCompare(sb.name, 'sv')
+    if (nameCmp !== 0) return nameCmp
+    return sa.number - sb.number
+  })
+}
+
 function mapProperties(area: CostCenterTreeKvvArea): PropertyForAdmin[] {
   return area.properties.map((property) => ({
     id: `${area.code}-${property.code}`,
     propertyCode: property.code,
     propertyName: property.designation || property.tract || property.code,
-    addresses: property.addresses
-      .map((a) => a.address)
-      .filter((v): v is string => !!v),
+    addresses: sortAddresses(
+      property.addresses.map((a) => a.address).filter((v): v is string => !!v)
+    ),
     buildingType:
       property.addresses.find((a) => a.buildingType)?.buildingType ?? null,
     kvvArea: area.code,
