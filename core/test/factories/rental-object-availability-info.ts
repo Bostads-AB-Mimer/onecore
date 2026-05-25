@@ -7,4 +7,6 @@ export const RentalObjectAvailabilityInfoFactory =
     rentalObjectCode: `R${sequence + 1000}`,
     rent: RentalObjectRentFactory.build(),
     vacantFrom: new Date(),
+    rentalTenureType: { id: 'Standard', name: 'Standard' },
+    rentalTags: [],
   }))

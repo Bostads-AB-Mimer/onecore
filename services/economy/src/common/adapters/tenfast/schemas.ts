@@ -105,6 +105,17 @@ export const TenfastLeaseSchema = z.object({
   canDelete: z.boolean(),
   depositState: z.array(z.any()),
 })
+export const TenfastInvoiceStateSchema = z.enum([
+  'betald',
+  'ny',
+  'ej-avprickad',
+  'forsenad',
+  'delvis-betald',
+  'krediterad',
+  'anstand',
+])
+
+export type TenfastInvoiceState = z.infer<typeof TenfastInvoiceStateSchema>
 
 export const TenfastInvoiceSchema = z.object({
   interval: z.object({
@@ -175,7 +186,7 @@ export const TenfastInvoiceSchema = z.object({
   updatedAt: z.string(),
   ocrNumber: z.string(),
   late: z.boolean(),
-  state: z.string(),
+  state: TenfastInvoiceStateSchema,
 })
 
 export const TenfastRentalPropertySearchResponseSchema = z.object({

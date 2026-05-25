@@ -380,11 +380,18 @@ interface RentalObject {
   isSpecialProperty?: boolean
 }
 
+interface RentalTag {
+  id: string
+  name: string
+}
+
 // This type is used as the return type of the function that parses the availability info of a rental object.
 interface RentalObjectAvailabilityInfo {
   rentalObjectCode: string
   vacantFrom?: Date
   rent: RentalObjectRent
+  rentalTenureType: RentalTag
+  rentalTags?: RentalTag[]
 }
 
 interface RentalObjectRent {
@@ -451,6 +458,7 @@ export type {
   XledgerContact,
   XledgerProject,
   RentalObject,
+  RentalTag,
   RentalObjectAvailabilityInfo,
   RentalObjectRent,
   RentalObjectRentRow as RentRow,

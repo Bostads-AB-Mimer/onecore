@@ -26,7 +26,7 @@ export const InvoicePaymentEventSchema = z.object({
   type: z.string(),
   invoiceId: z.string(),
   matchId: z.number(),
-  amount: z.number().min(0),
+  amount: z.number(),
   paymentDate: z.coerce.date(),
   text: z.string().nullable(),
   // TODO: type these when we know what they are

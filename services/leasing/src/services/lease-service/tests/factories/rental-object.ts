@@ -11,6 +11,8 @@ export const RentalObjectFactory = Factory.define<RentalObject>(
       rentalObjectCode: `R${sequence + 1000}`,
       rent: RentalObjectRentFactory.build(),
       vacantFrom: new Date(),
+      rentalTenureType: { id: 'STD', name: 'Standard' },
+      rentalTags: [{ id: 'ROKFRITT', name: 'Rökfritt' }],
     }),
     districtCaption: 'Malmaberg',
     districtCode: 'MAL',
