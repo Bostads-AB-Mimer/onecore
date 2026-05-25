@@ -24,42 +24,6 @@ export async function fetchContactByContactCode(
 }
 
 /**
- * Batch lookup of contacts by contact code through the v1 contacts API.
- * Lean by default — pass include flags to opt in to phone/email/address joins.
- *
- * Missing contact codes are simply absent from the response — the caller
- * should treat a missing entry as "not found" rather than an error.
- */
-export async function fetchContactsByContactCodeBatch(
-  contactCodes: string[],
-  options?: {
-    includePhone?: boolean
-    includeEmail?: boolean
-    includeAddress?: boolean
-  }
-): Promise<ContactV1[]> {
-  if (contactCodes.length === 0) return []
-
-  const normalized = contactCodes.map((c) => c.trim().toUpperCase())
-
-  const { data, error } = await GET('/v1/contacts/batch', {
-    params: {
-      query: {
-        code: normalized,
-        ...(options?.includePhone ? { includePhone: true } : {}),
-        ...(options?.includeEmail ? { includeEmail: true } : {}),
-        ...(options?.includeAddress ? { includeAddress: true } : {}),
-      },
-    },
-  })
-
-  if (error || !data) return []
-
-  // The API wraps the result in { content: ContactV1[], _links }
-  return data?.content ?? []
-}
-
-/**
  * Display name for a v1 Contact (discriminated union by `type`).
  * Reads from `personal.fullName` for individuals, `organisation.name` for
  * organisations. Falls back to the contact code if the name is empty.
