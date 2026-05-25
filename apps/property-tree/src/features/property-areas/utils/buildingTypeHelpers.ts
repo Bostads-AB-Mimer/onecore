@@ -1,57 +1,82 @@
-import { BUILDING_TYPES } from '../types'
-
-export const getBuildingTypeName = (buildingType: string): string =>
-  BUILDING_TYPES[buildingType] ?? 'Ospecifierad'
-
 export interface BuildingTypeStyle {
   bg: string
   text: string
   label: string
 }
 
-// Mimer's official color coding for building types
-// Based on their customer-facing branding
+const RESIDENTIAL_STYLE: BuildingTypeStyle = {
+  bg: 'bg-slate-100',
+  text: 'text-slate-800',
+  label: 'Bostad',
+}
+
+const PARKING_STYLE: BuildingTypeStyle = {
+  bg: 'bg-amber-100',
+  text: 'text-amber-900',
+  label: 'Parkering',
+}
+
+const COMMERCIAL_STYLE: BuildingTypeStyle = {
+  bg: 'bg-blue-100',
+  text: 'text-blue-900',
+  label: 'Lokal',
+}
+
+const EDUCATION_STYLE: BuildingTypeStyle = {
+  bg: 'bg-green-100',
+  text: 'text-green-900',
+  label: 'Skola',
+}
+
+const UTILITY_STYLE: BuildingTypeStyle = {
+  bg: 'bg-zinc-100',
+  text: 'text-zinc-700',
+  label: 'Teknik',
+}
+
+const COMMUNITY_STYLE: BuildingTypeStyle = {
+  bg: 'bg-purple-100',
+  text: 'text-purple-900',
+  label: 'Gemensamt',
+}
+
+// Codes from Xpand babyt table. Categories drive color; the displayed label
+// comes from the API-returned buildingType.name.
 export const BUILDING_TYPE_STYLES: Record<string, BuildingTypeStyle> = {
-  STD: {
-    bg: 'bg-slate-100',
-    text: 'text-slate-800',
-    label: 'Standard',
-  },
-  BLOCK: {
-    bg: 'bg-slate-200',
-    text: 'text-slate-800',
-    label: 'Block',
-  },
-  '55PLUS': {
-    bg: 'bg-purple-100',
-    text: 'text-purple-800',
-    label: '55+',
-  },
-  STUD: {
-    bg: 'bg-amber-400',
-    text: 'text-black',
-    label: 'Student',
-  },
-  TRYGG: {
-    bg: 'bg-teal-400',
-    text: 'text-black',
-    label: 'Trygghetsboende',
-  },
-  'CO-LIVING': {
-    bg: 'bg-rose-200',
-    text: 'text-rose-900',
-    label: 'Co-living',
-  },
-  KOOPERATIV: {
-    bg: 'bg-rose-200',
-    text: 'text-rose-900',
-    label: 'Kooperativ',
-  },
-  POANGFRITT: {
-    bg: 'bg-orange-400',
-    text: 'text-black',
-    label: 'Poängfri',
-  },
+  // Residential
+  FLER: RESIDENTIAL_STYLE,
+  RADHUS: RESIDENTIAL_STYLE,
+  VILLA: RESIDENTIAL_STYLE,
+  PARHUS: RESIDENTIAL_STYLE,
+  TVÅFAM: RESIDENTIAL_STYLE,
+  STUD: RESIDENTIAL_STYLE,
+  SERV: RESIDENTIAL_STYLE,
+  // Parking
+  'P-OMR': PARKING_STYLE,
+  'P-HUS': PARKING_STYLE,
+  GARAGE: PARKING_STYLE,
+  'C-GARA': PARKING_STYLE,
+  CARPOR: PARKING_STYLE,
+  'MC-GAR': PARKING_STYLE,
+  // Commercial
+  BUTIK: COMMERCIAL_STYLE,
+  KONTOR: COMMERCIAL_STYLE,
+  KIOSK: COMMERCIAL_STYLE,
+  REKLAM: COMMERCIAL_STYLE,
+  // Education / care
+  FÖRSKO: EDUCATION_STYLE,
+  SKOL: EDUCATION_STYLE,
+  BARN: EDUCATION_STYLE,
+  // Utility / infrastructure
+  TRANSF: UTILITY_STYLE,
+  VERKST: UTILITY_STYLE,
+  TVÄTT: UTILITY_STYLE,
+  BRUKSM: UTILITY_STYLE,
+  // Community / misc
+  CENTR: COMMUNITY_STYLE,
+  KULTUR: COMMUNITY_STYLE,
+  GEMEN: COMMUNITY_STYLE,
+  // Storage / land — fall back to muted via getBuildingTypeStyle: TOMTM, FÖRRÅD, MILJÖ
 }
 
 export function getBuildingTypeStyle(

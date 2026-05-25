@@ -74,6 +74,8 @@ function mapProperties(area: CostCenterTreeKvvArea): PropertyForAdmin[] {
       .map((a) => a.address)
       .filter(Boolean)
       .join(', '),
+    buildingType:
+      property.addresses.find((a) => a.buildingType)?.buildingType ?? null,
     kvvArea: area.code,
     stewardRefNr: area.responsible?.username ?? '',
     costCenter: '',

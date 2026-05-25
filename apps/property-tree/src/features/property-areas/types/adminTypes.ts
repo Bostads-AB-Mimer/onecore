@@ -37,7 +37,7 @@ export interface PropertyForAdmin {
   propertyCode: string
   propertyName: string
   address: string
-  buildingType?: string
+  buildingType?: { code: string | null; name: string | null } | null
   kvvArea?: string
   stewardRefNr: string
   costCenter: string

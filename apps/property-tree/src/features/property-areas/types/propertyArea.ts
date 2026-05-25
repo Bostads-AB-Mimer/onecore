@@ -39,14 +39,3 @@ export interface DistrictManagers {
   districtManager: string
   deputyDistrictManager: string
 }
-
-export const BUILDING_TYPES: Record<string, string> = {
-  STD: 'Standard',
-  BLOCK: 'Block',
-  '55PLUS': '55+',
-  STUD: 'Student',
-  TRYGG: 'Trygghetsboende',
-  'CO-LIVING': 'Co-living',
-  POANGFRITT: 'Poängfri',
-  KOOPERATIV: 'Kooperativ',
-}

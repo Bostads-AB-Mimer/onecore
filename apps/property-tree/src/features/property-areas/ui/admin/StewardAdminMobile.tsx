@@ -9,7 +9,6 @@ import {
 } from '@/shared/ui/MobileAccordion'
 
 import { KvvAreaInfo, PropertyForAdmin } from '../../types/adminTypes'
-import { getBuildingTypeName } from '../../utils/buildingTypeHelpers'
 import { StewardAssignmentDialog } from './StewardAssignmentDialog'
 
 interface Steward {
@@ -97,9 +96,9 @@ export function StewardAdminMobile({
                   <div className="text-xs text-muted-foreground">
                     {property.address}
                   </div>
-                  {property.buildingType && (
+                  {property.buildingType?.name && (
                     <Badge variant="secondary" className="mt-1 text-xs">
-                      {getBuildingTypeName(property.buildingType)}
+                      {property.buildingType.name}
                     </Badge>
                   )}
                 </div>

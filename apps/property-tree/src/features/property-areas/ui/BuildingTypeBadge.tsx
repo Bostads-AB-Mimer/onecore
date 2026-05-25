@@ -1,24 +1,21 @@
 import { Tag } from '@/shared/ui/Tag'
 
-import {
-  getBuildingTypeName,
-  getBuildingTypeStyle,
-} from '../utils/buildingTypeHelpers'
+import { getBuildingTypeStyle } from '../utils/buildingTypeHelpers'
 
 interface BuildingTypeBadgeProps {
-  type: string | undefined
+  type: { code: string | null; name: string | null } | null | undefined
   className?: string
 }
 
 export function BuildingTypeBadge({ type, className }: BuildingTypeBadgeProps) {
-  if (!type) return null
+  if (!type?.code) return null
 
-  const style = getBuildingTypeStyle(type)
+  const style = getBuildingTypeStyle(type.code)
   if (!style) return null
 
   return (
     <Tag bg={style.bg} color={style.text} className={className}>
-      {getBuildingTypeName(type)}
+      {type.name ?? style.label}
     </Tag>
   )
 }
