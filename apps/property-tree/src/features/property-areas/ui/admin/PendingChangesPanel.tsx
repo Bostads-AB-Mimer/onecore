@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { ArrowRight, ChevronDown, ChevronUp, Undo2 } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/Badge'

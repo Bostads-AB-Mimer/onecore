@@ -1,5 +1,7 @@
-// Mimer's official color coding for building types
-// Based on their customer-facing branding
+import { BUILDING_TYPES } from '../types'
+
+export const getBuildingTypeName = (buildingType: string): string =>
+  BUILDING_TYPES[buildingType] ?? 'Ospecifierad'
 
 export interface BuildingTypeStyle {
   bg: string
@@ -7,6 +9,8 @@ export interface BuildingTypeStyle {
   label: string
 }
 
+// Mimer's official color coding for building types
+// Based on their customer-facing branding
 export const BUILDING_TYPE_STYLES: Record<string, BuildingTypeStyle> = {
   STD: {
     bg: 'bg-slate-100',

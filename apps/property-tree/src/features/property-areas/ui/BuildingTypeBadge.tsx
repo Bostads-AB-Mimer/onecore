@@ -1,9 +1,9 @@
-import React from 'react'
-
 import { Tag } from '@/shared/ui/Tag'
 
-import { getBuildingTypeName } from '../data'
-import { getBuildingTypeStyle } from '../utils/buildingTypeColors'
+import {
+  getBuildingTypeName,
+  getBuildingTypeStyle,
+} from '../utils/buildingTypeHelpers'
 
 interface BuildingTypeBadgeProps {
   type: string | undefined

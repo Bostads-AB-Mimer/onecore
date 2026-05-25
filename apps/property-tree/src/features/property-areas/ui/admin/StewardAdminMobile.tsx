@@ -8,8 +8,8 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
-import { getBuildingTypeName } from '../../data'
 import { KvvAreaInfo, PropertyForAdmin } from '../../types/adminTypes'
+import { getBuildingTypeName } from '../../utils/buildingTypeHelpers'
 import { StewardAssignmentDialog } from './StewardAssignmentDialog'
 
 interface Steward {
