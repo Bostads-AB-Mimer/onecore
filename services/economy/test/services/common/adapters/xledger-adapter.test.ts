@@ -192,7 +192,7 @@ describe(adapter.getInvoicePaymentEvents, () => {
       data: null,
     })
 
-    const result = await adapter.getInvoicePaymentEvents(1)
+    const result = await adapter.getInvoicePaymentEvents('1')
     expect(result).toEqual([])
   })
 
@@ -268,7 +268,7 @@ describe(adapter.getInvoicePaymentEvents, () => {
         },
       })
 
-    const result = await adapter.getInvoicePaymentEvents(1)
+    const result = await adapter.getInvoicePaymentEvents('1')
 
     expect(result).toEqual([
       expect.objectContaining({
