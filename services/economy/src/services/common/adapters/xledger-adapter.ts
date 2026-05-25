@@ -628,6 +628,9 @@ export async function getInvoicePaymentEvents(
             amount
             text
             paymentDate
+            slTransactionType {
+              name
+            }
             transactionHeader {
               postedDate
               transactionSource {
@@ -647,8 +650,10 @@ export async function getInvoicePaymentEvents(
 
   const filtered = result.data.arTransactions.edges.filter(
     (edge: any) =>
-      edge.node.transactionHeader.transactionSource.code !== 'AR' &&
-      edge.node.transactionHeader.transactionSource.code !== 'OS'
+      (edge.node.transactionHeader.transactionSource.code !== 'AR' &&
+        edge.node.transactionHeader.transactionSource.code !== 'OS') ||
+      (edge.node.transactionHeader.transactionSource.code === 'AR' &&
+        edge.node.slTransactionType?.name === 'CREDIT_MEMO')
   )
 
   return filtered
@@ -679,6 +684,9 @@ export async function getAllInvoicePaymentEvents(
               amount
               text
               paymentDate
+              slTransactionType {
+                name
+              }
               transactionHeader {
                 postedDate
                 transactionSource {
@@ -706,8 +714,10 @@ export async function getAllInvoicePaymentEvents(
   }
   const filtered = result.data.arTransactions.edges.filter(
     (edge: any) =>
-      edge.node.transactionHeader.transactionSource.code !== 'AR' &&
-      edge.node.transactionHeader.transactionSource.code !== 'OS'
+      (edge.node.transactionHeader.transactionSource.code !== 'AR' &&
+        edge.node.transactionHeader.transactionSource.code !== 'OS') ||
+      (edge.node.transactionHeader.transactionSource.code === 'AR' &&
+        edge.node.slTransactionType?.name === 'CREDIT_MEMO')
   )
 
   const events = filtered.map((e: any) => mapToInvoicePaymentEvent(e.node))
@@ -725,6 +735,9 @@ export async function getAllInvoicePaymentEvents(
 }
 
 function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
+  // TODO: consider passing slTransactionType (INVOICE, CREDIT_MEMO,
+  // ELECTRONIC_PAYMENT, ...) through to the frontend so the UI can label each
+  // event by its semantic type instead of just the source code.
   return {
     type: event.type,
     invoiceId: event.invoiceNumber,
