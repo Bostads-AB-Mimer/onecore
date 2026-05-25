@@ -426,10 +426,18 @@ export interface paths {
         query?: {
           /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
           q?: string;
+          /** @description Search by tenant name */
+          name?: string;
+          /** @description Search by rental object address */
+          address?: string;
           /** @description Object types (e.g., residence, parking) */
           objectType?: string[];
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ("0" | "1" | "2" | "3")[];
+          /** @description Contract status filter */
+          status?: ("current" | "active" | "upcoming" | "abouttoend" | "ended" | "pendingsignature" | "preliminaryterminated" | "notsent")[];
+          /** @description Lease type filter */
+          leaseType?: string[];
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[];
           /** @description Minimum start date (YYYY-MM-DD) */
           startDateFrom?: string;
           /** @description Maximum start date (YYYY-MM-DD) */
@@ -448,6 +456,10 @@ export interface paths {
           districtNames?: string[];
           /** @description Building manager names (Kvartersvärd) */
           buildingManager?: string[];
+          /** @description Sort field */
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
+          /** @description Sort direction */
+          sortOrder?: "asc" | "desc";
         };
       };
       responses: {
@@ -1498,6 +1510,10 @@ export interface paths {
           objectType?: string[];
           /** @description Contract status filter */
           status?: ("current" | "active" | "upcoming" | "abouttoend" | "ended" | "pendingsignature" | "preliminaryterminated" | "notsent")[];
+          /** @description Lease type filter */
+          leaseType?: string[];
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[];
           /** @description Minimum start date (YYYY-MM-DD) */
           startDateFrom?: string;
           /** @description Maximum start date (YYYY-MM-DD) */
@@ -1506,6 +1522,16 @@ export interface paths {
           endDateFrom?: string;
           /** @description Maximum end date (YYYY-MM-DD) */
           endDateTo?: string;
+          /** @description Property/estate names */
+          property?: string[];
+          /** @description Building codes */
+          buildingCodes?: string[];
+          /** @description Area codes (Område) */
+          areaCodes?: string[];
+          /** @description District names */
+          districtNames?: string[];
+          /** @description Building manager names (Kvartersvärd) */
+          buildingManager?: string[];
           /** @description Page number */
           page?: number;
           /** @description Items per page */
@@ -1519,7 +1545,13 @@ export interface paths {
       responses: {
         /** @description Successfully retrieved lease search results with pagination */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: components["schemas"]["LeaseSearchResult"][];
+              _meta?: components["schemas"]["PaginationMeta"];
+              _links?: components["schemas"]["PaginationLinks"][];
+            };
+          };
         };
         /** @description Invalid query parameters */
         400: {
@@ -1638,10 +1670,18 @@ export interface paths {
         query?: {
           /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
           q?: string;
+          /** @description Search by tenant name */
+          name?: string;
+          /** @description Search by rental object address */
+          address?: string;
           /** @description Object types (e.g., residence, parking) */
           objectType?: string[];
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          /** @description Contract status filter */
           status?: string[];
+          /** @description Lease type filter */
+          leaseType?: string[];
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[];
           /** @description Minimum start date (YYYY-MM-DD) */
           startDateFrom?: string;
           /** @description Maximum start date (YYYY-MM-DD) */
@@ -1660,6 +1700,10 @@ export interface paths {
           districtNames?: string[];
           /** @description Building manager names (Kvartersvärd) */
           buildingManager?: string[];
+          /** @description Sort field */
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
+          /** @description Sort direction */
+          sortOrder?: "asc" | "desc";
         };
       };
       responses: {

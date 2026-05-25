@@ -64,22 +64,16 @@ async function search(
         ...params,
         page,
         limit,
-      } as Record<string, unknown>,
+      },
     },
   })
 
   if (error) throw error
 
-  const response = data as {
-    content?: LeaseSearchResult[]
-    _meta?: PaginationMeta
-    _links?: PaginationLinks[]
-  }
-
   return {
-    content: response.content ?? [],
-    _meta: response._meta!,
-    _links: response._links ?? [],
+    content: data.content ?? [],
+    _meta: data._meta!,
+    _links: data._links ?? [],
   }
 }
 
@@ -94,8 +88,11 @@ async function getBuildingManagers(): Promise<BuildingManager[]> {
 
   if (error) throw error
 
-  const response = data as { content?: BuildingManager[] }
-  return response.content ?? []
+  return (data.content ?? []).map((bm) => ({
+    code: bm.code ?? '',
+    name: bm.name ?? '',
+    district: bm.district ?? '',
+  }))
 }
 
 export type ParkingSpaceType = {
@@ -119,7 +116,7 @@ async function getContactsByFilters(
 ): Promise<ContactInfo[]> {
   const { data, error } = await GET('/contacts/from-lease-search', {
     params: {
-      query: params as any,
+      query: params,
     },
   })
 
@@ -133,14 +130,14 @@ async function exportLeasesToExcel(
 ): Promise<Blob> {
   const { data, error } = await GET('/leases/export', {
     params: {
-      query: params as Record<string, unknown>,
+      query: params,
     },
     parseAs: 'blob',
   })
 
   if (error) throw error
 
-  return data as unknown as Blob
+  return data
 }
 
 async function getContactsByCodes(codes: string[]): Promise<ContactInfo[]> {

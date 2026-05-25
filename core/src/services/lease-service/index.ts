@@ -133,6 +133,16 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
    *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Search by tenant name
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Search by rental object address
+   *       - in: query
    *         name: objectType
    *         schema:
    *           type: array
@@ -145,8 +155,22 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *             enum: ['0', '1', '2', '3']
-   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
+   *             enum: [current, active, upcoming, abouttoend, ended, pendingsignature, preliminaryterminated, notsent]
+   *         description: Contract status filter
+   *       - in: query
+   *         name: leaseType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Lease type filter
+   *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking space type filter
    *       - in: query
    *         name: startDateFrom
    *         schema:
@@ -206,6 +230,18 @@ export const routes = (router: KoaRouter) => {
    *           items:
    *             type: string
    *         description: Building manager names (Kvartersvärd)
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *         description: Sort direction
    *     responses:
    *       '200':
    *         description: Successful response with contact information
