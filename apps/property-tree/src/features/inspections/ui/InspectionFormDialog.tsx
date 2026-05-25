@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/shared/ui/Dialog'
 
+import { initialRoomData } from '../lib/initialFormData'
 import { InspectionForm } from './InspectionForm'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
 type InspectionRoom = components['schemas']['InspectionRoom']
@@ -106,12 +107,26 @@ export function InspectionFormDialog({
   }
 
   // Determine which inspection data to use based on user choice.
-  // When starting fresh, preserve the existing inspection metadata (e.g.
-  // inspector, isFurnished as captured at create time) but clear rooms so the
-  // form starts blank.
+  // When starting fresh, wipe user-entered fields but rebuild the rooms list
+  // from the *current* property-base rooms — so concurrent additions or
+  // deletions in Xpand are reflected. Overlay `isAddedInThisInspection` from
+  // the inspection's snapshot (sourced from the inspection_added_room join)
+  // so the "Tillagt" badge survives the reset.
+  const addedRoomIds = new Set(
+    existingInspection?.rooms
+      ?.filter((r) => r.isAddedInThisInspection)
+      .map((r) => r.roomId) ?? []
+  )
   const inspectionToUse =
     userChoice === 'fresh'
-      ? { ...existingInspection, rooms: null }
+      ? {
+          ...existingInspection,
+          rooms: rooms.map((r) => ({
+            ...initialRoomData,
+            roomId: r.id,
+            isAddedInThisInspection: addedRoomIds.has(r.id),
+          })),
+        }
       : existingInspection
 
   // Show choice dialog if there's saved data and user hasn't chosen yet

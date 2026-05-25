@@ -79,7 +79,6 @@ export function useInspectionFormState(
           ...initialRoomData,
           roomId: room.id,
           name: room.name ?? undefined,
-          isAddedInThisInspection: true,
         },
       }
     })
