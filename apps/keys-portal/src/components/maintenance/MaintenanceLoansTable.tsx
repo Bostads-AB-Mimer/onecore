@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import {
@@ -22,10 +22,18 @@ import {
   getLatestActiveEvent,
 } from '@/components/shared/tables/StatusBadges'
 import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
-import { fetchContactByContactCode } from '@/services/api/contactService'
+import {
+  getContactFullName,
+  getContactRegistrationNumber,
+} from '@/services/api/contactService'
 import { extractCardOwnerId, getCardOwnerLink } from '@/utils/externalLinks'
 import { sortKeys } from '@/utils/sortKeys'
-import type { KeyLoanWithDetails, KeyDetails, Card } from '@/services/types'
+import type {
+  ContactV1,
+  KeyLoanWithDetails,
+  KeyDetails,
+  Card,
+} from '@/services/types'
 
 const COLUMN_COUNT = 10
 
@@ -35,6 +43,7 @@ type MaintenanceLoanItem =
 
 interface MaintenanceLoansTableProps {
   loans: KeyLoanWithDetails[]
+  contactsByCode: Record<string, ContactV1>
   keySystemMap: Record<string, string>
   emptyMessage?: string
   onLoanReturned?: (loanId: string) => void
@@ -43,60 +52,12 @@ interface MaintenanceLoansTableProps {
 
 export function MaintenanceLoansTable({
   loans,
+  contactsByCode,
   keySystemMap,
   emptyMessage = 'Inga lån',
   onLoanReturned,
   onLoanUpdated,
 }: MaintenanceLoansTableProps) {
-  const [contactData, setContactData] = useState<
-    Record<
-      string,
-      {
-        fullName: string
-        contactCode: string
-        nationalRegistrationNumber?: string
-      }
-    >
-  >({})
-
-  // Fetch contact names for all loans
-  useEffect(() => {
-    const fetchContactNames = async () => {
-      const uniqueContactCodes = new Set<string>()
-
-      loans.forEach((loan) => {
-        if (loan.contact) uniqueContactCodes.add(loan.contact)
-        if (loan.contact2) uniqueContactCodes.add(loan.contact2)
-      })
-
-      const data: typeof contactData = {}
-      await Promise.all(
-        Array.from(uniqueContactCodes).map(async (contactCode) => {
-          try {
-            const contact = await fetchContactByContactCode(contactCode)
-            if (contact) {
-              data[contactCode] = {
-                fullName: contact.fullName ?? contactCode,
-                contactCode,
-                nationalRegistrationNumber:
-                  contact.nationalRegistrationNumber || undefined,
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch contact ${contactCode}:`, error)
-            data[contactCode] = { fullName: contactCode, contactCode }
-          }
-        })
-      )
-
-      setContactData(data)
-    }
-
-    if (loans.length > 0) {
-      fetchContactNames()
-    }
-  }, [loans])
-
   const formatDate = (date: string | null | undefined) => {
     if (!date) return '-'
     return format(new Date(date), 'd MMM yyyy', { locale: sv })
@@ -140,11 +101,13 @@ export function MaintenanceLoansTable({
     if (codes.length === 0) return null
 
     return codes.map((code) => {
-      const data = contactData[code]
+      const contact = contactsByCode[code]
       return {
-        fullName: data?.fullName || code,
-        contactCode: data?.contactCode || code,
-        nationalRegistrationNumber: data?.nationalRegistrationNumber,
+        fullName: contact ? getContactFullName(contact) : code,
+        contactCode: contact?.contactCode ?? code,
+        nationalRegistrationNumber: contact
+          ? getContactRegistrationNumber(contact)
+          : undefined,
       }
     })
   }

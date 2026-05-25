@@ -204,7 +204,6 @@ export const routes = (router: KoaRouter) => {
     // Strip orchestration-only flags before forwarding to the keys microservice
     // search call (it does not know about `includeContacts`).
     const { includeContacts, ...searchQuery } = ctx.query
-    const wantContacts = includeContacts === 'true'
 
     const result = await KeyLoansApi.search(searchQuery)
 
@@ -220,12 +219,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const contactsByCode = wantContacts
-      ? await enrichWithContacts(
-          result.data.content.flatMap((l) => [l.contact, l.contact2]),
-          metadata
-        )
-      : undefined
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.content.flatMap((l) => [l.contact, l.contact2]),
+            metadata
+          )
+        : undefined
 
     ctx.status = 200
     ctx.body = {
@@ -287,7 +287,6 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/key-loans/by-key/:keyId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['includeContacts'])
-    const wantContacts = ctx.query.includeContacts === 'true'
 
     const result = await KeyLoansApi.getByKey(ctx.params.keyId)
 
@@ -301,12 +300,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const contactsByCode = wantContacts
-      ? await enrichWithContacts(
-          result.data.flatMap((l) => [l.contact, l.contact2]),
-          metadata
-        )
-      : undefined
+    const contactsByCode =
+      ctx.query.includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.flatMap((l) => [l.contact, l.contact2]),
+            metadata
+          )
+        : undefined
 
     ctx.status = 200
     ctx.body = {
@@ -479,6 +479,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Filter by return status (true = returned, false = not returned)
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the loans and
+   *           attaches them as a `contacts` sidecar keyed by contactCode. Soft
+   *           fails — if the contacts service errors, loans are still returned
+   *           without the sidecar.
    *     responses:
    *       200:
    *         description: Array of key loans with full key details
@@ -491,6 +501,11 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       500:
    *         description: Internal server error
    *         content:
@@ -501,11 +516,16 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-loans/by-contact/:contact/with-keys', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+    const metadata = generateRouteMetadata(ctx, [
+      'loanType',
+      'returned',
+      'includeContacts',
+    ])
+    const { includeContacts, ...adapterQuery } = ctx.query
 
     const result = await KeyLoansApi.getByContactWithKeys(
       ctx.params.contact,
-      ctx.query
+      adapterQuery
     )
 
     if (!result.ok) {
@@ -518,8 +538,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.flatMap((l) => [l.contact, l.contact2]),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = {
+      ...metadata,
+      content: result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**
@@ -549,6 +581,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Filter by return status (true = returned, false = not returned)
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the loans and
+   *           attaches them as a `contacts` sidecar keyed by contactCode. Soft
+   *           fails — if the contacts service errors, loans are still returned
+   *           without the sidecar.
    *     responses:
    *       200:
    *         description: Array of key loans with full key details
@@ -561,6 +603,11 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       500:
    *         description: Internal server error
    *         content:
@@ -571,11 +618,16 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-loans/by-bundle/:bundleId/with-keys', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+    const metadata = generateRouteMetadata(ctx, [
+      'loanType',
+      'returned',
+      'includeContacts',
+    ])
+    const { includeContacts, ...adapterQuery } = ctx.query
 
     const result = await KeyLoansApi.getByBundleWithKeys(
       ctx.params.bundleId,
-      ctx.query
+      adapterQuery
     )
 
     if (!result.ok) {
@@ -588,8 +640,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.flatMap((l) => [l.contact, l.contact2]),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = {
+      ...metadata,
+      content: result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**

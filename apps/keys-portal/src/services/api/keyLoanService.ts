@@ -159,8 +159,12 @@ export const keyLoanService = {
   async getByContactWithKeys(
     contact: string,
     loanType?: 'TENANT' | 'MAINTENANCE',
-    returned?: boolean
-  ): Promise<KeyLoanWithDetails[]> {
+    returned?: boolean,
+    options?: { includeContacts?: boolean }
+  ): Promise<{
+    loans: KeyLoanWithDetails[]
+    contacts: Record<string, ContactV1>
+  }> {
     const { data, error } = await GET(
       '/key-loans/by-contact/{contact}/with-keys',
       {
@@ -169,12 +173,16 @@ export const keyLoanService = {
           query: {
             ...(loanType !== undefined ? { loanType } : {}),
             ...(returned !== undefined ? { returned } : {}),
+            ...(options?.includeContacts ? { includeContacts: true } : {}),
           },
         },
       }
     )
     if (error) throw error
-    return data?.content ?? []
+    return {
+      loans: data?.content ?? [],
+      contacts: data?.contacts ?? {},
+    }
   },
 
   /**
@@ -187,8 +195,12 @@ export const keyLoanService = {
   async getByBundleWithKeys(
     bundleId: string,
     loanType?: 'TENANT' | 'MAINTENANCE',
-    returned?: boolean
-  ): Promise<KeyLoanWithDetails[]> {
+    returned?: boolean,
+    options?: { includeContacts?: boolean }
+  ): Promise<{
+    loans: KeyLoanWithDetails[]
+    contacts: Record<string, ContactV1>
+  }> {
     const { data, error } = await GET(
       '/key-loans/by-bundle/{bundleId}/with-keys',
       {
@@ -197,12 +209,16 @@ export const keyLoanService = {
           query: {
             ...(loanType !== undefined ? { loanType } : {}),
             ...(returned !== undefined ? { returned } : {}),
+            ...(options?.includeContacts ? { includeContacts: true } : {}),
           },
         },
       }
     )
     if (error) throw error
-    return data?.content ?? []
+    return {
+      loans: data?.content ?? [],
+      contacts: data?.contacts ?? {},
+    }
   },
 
   /**

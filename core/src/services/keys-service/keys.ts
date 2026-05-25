@@ -67,7 +67,6 @@ export const routes = (router: KoaRouter) => {
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { includeContacts, ...listQuery } = ctx.query
-    const wantContacts = includeContacts === 'true'
 
     const result = await KeysApi.list(listQuery)
 
@@ -78,12 +77,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const contactsByCode = wantContacts
-      ? await enrichWithContacts(
-          result.data.content.map((k) => k.activeLoanContact),
-          metadata
-        )
-      : undefined
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.content.map((k) => k.activeLoanContact),
+            metadata
+          )
+        : undefined
 
     ctx.status = 200
     ctx.body = {
@@ -220,7 +220,6 @@ export const routes = (router: KoaRouter) => {
     ])
 
     const { includeContacts, ...searchQuery } = ctx.query
-    const wantContacts = includeContacts === 'true'
 
     const result = await KeysApi.search(searchQuery)
 
@@ -236,12 +235,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const contactsByCode = wantContacts
-      ? await enrichWithContacts(
-          result.data.content.map((k) => k.activeLoanContact),
-          metadata
-        )
-      : undefined
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.content.map((k) => k.activeLoanContact),
+            metadata
+          )
+        : undefined
 
     ctx.status = 200
     ctx.body = {

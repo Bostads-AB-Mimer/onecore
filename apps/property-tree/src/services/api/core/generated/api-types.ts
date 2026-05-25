@@ -6662,6 +6662,15 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys' loans
+           * and attaches them as a `contacts` sidecar keyed by contactCode.
+           * Soft fails — if the contacts service errors, the response is
+           * returned without the sidecar.
+           */
+          includeContacts?: boolean;
+        };
         path: {
           /** @description The key bundle ID */
           id: string;
@@ -6673,6 +6682,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyBundleDetailsResponse"];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7037,6 +7050,15 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /**
+           * @description When true, batch-fetches contacts referenced by the loans and
+           * attaches them as a `contacts` sidecar keyed by contactCode. Soft
+           * fails — if the contacts service errors, loans are still returned
+           * without the sidecar.
+           */
+          includeContacts?: boolean;
+        };
         path: {
           /** @description The key ID to fetch loans for */
           keyId: string;
@@ -7048,6 +7070,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoan"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7142,6 +7168,13 @@ export interface paths {
           loanType?: "TENANT" | "MAINTENANCE";
           /** @description Filter by return status (true = returned, false = not returned) */
           returned?: boolean;
+          /**
+           * @description When true, batch-fetches contacts referenced by the loans and
+           * attaches them as a `contacts` sidecar keyed by contactCode. Soft
+           * fails — if the contacts service errors, loans are still returned
+           * without the sidecar.
+           */
+          includeContacts?: boolean;
         };
         path: {
           /** @description The contact identifier to search for */
@@ -7154,6 +7187,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoanWithDetails"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7178,6 +7215,13 @@ export interface paths {
           loanType?: "TENANT" | "MAINTENANCE";
           /** @description Filter by return status (true = returned, false = not returned) */
           returned?: boolean;
+          /**
+           * @description When true, batch-fetches contacts referenced by the loans and
+           * attaches them as a `contacts` sidecar keyed by contactCode. Soft
+           * fails — if the contacts service errors, loans are still returned
+           * without the sidecar.
+           */
+          includeContacts?: boolean;
         };
         path: {
           /** @description The bundle ID to search for */
@@ -7190,6 +7234,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoanWithDetails"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7825,6 +7873,13 @@ export interface paths {
           page?: number;
           /** @description Number of records per page */
           limit?: number;
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys'
+           * `activeLoanContact` field and attaches them as a `contacts`
+           * sidecar keyed by contactCode. Soft fails — if the contacts
+           * service errors, keys are still returned without the sidecar.
+           */
+          includeContacts?: boolean;
         };
       };
       responses: {
@@ -7833,6 +7888,10 @@ export interface paths {
           content: {
             "application/json": components["schemas"]["PaginatedResponse"] & {
               content?: components["schemas"]["KeyDetails"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7903,6 +7962,13 @@ export interface paths {
           keySystemId?: string;
           createdAt?: string;
           updatedAt?: string;
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys'
+           * `activeLoanContact` field and attaches them as a `contacts`
+           * sidecar keyed by contactCode. Soft fails — if the contacts
+           * service errors, keys are still returned without the sidecar.
+           */
+          includeContacts?: boolean;
         };
       };
       responses: {
@@ -7911,6 +7977,10 @@ export interface paths {
           content: {
             "application/json": components["schemas"]["PaginatedResponse"] & {
               content?: components["schemas"]["KeyDetails"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
