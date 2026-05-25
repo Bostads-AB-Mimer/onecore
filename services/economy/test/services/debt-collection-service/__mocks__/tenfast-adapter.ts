@@ -117,7 +117,7 @@ export const createMockRentalProperty = (
   size: 50.5,
   type: 'Apartment',
   address: undefined,
-  rentalPropertyType: 'Residence',
+  rentalPropertyType: 'bostad',
   additionsIncludedInRent: '',
   otherInfo: undefined,
   roomTypes: undefined,

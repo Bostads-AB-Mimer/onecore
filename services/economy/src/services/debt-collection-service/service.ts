@@ -602,7 +602,7 @@ const createRentInvoiceComment = (
       20,
       ' '
     ),
-    rentalProperty.rentalPropertyType === 'Residence'
+    rentalProperty.rentalPropertyType === 'bostad'
       ? 'Vid ev avhysning, måste förråd tömmas!'
       : '',
   ])
