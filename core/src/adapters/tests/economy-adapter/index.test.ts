@@ -39,40 +39,46 @@ describe('economy-adapter', () => {
     const mockChannels = [
       {
         channel: 'Kivra',
-        matchedCandidates: ['P000111'],
+        matchedCandidates: ['191212121212'],
         error: null,
       },
       {
         channel: 'eInvoiceB2C',
-        matchedCandidates: ['P000222'],
+        matchedCandidates: ['198112172385'],
         error: null,
       },
     ]
 
     it('returns invoice channels for given contact codes', async () => {
       nock(config.economyService.url)
-        .post('/invoice-channels', { contactCodes: ['P000111', 'P000222'] })
+        .post('/invoice-channels', {
+          nationalRegistrationNumbers: ['191212121212', '198112172385'],
+        })
         .reply(200, { content: mockChannels })
 
       const result = await economyAdapter.getInvoiceChannels([
-        'P000111',
-        'P000222',
+        '191212121212',
+        '198112172385',
       ])
 
       expect(result).toEqual({ ok: true, data: mockChannels })
     })
 
-    it('passes contact codes in request body', async () => {
+    it('passes national registration numbers in request body', async () => {
       nock(config.economyService.url)
         .post('/invoice-channels', {
-          contactCodes: ['P000111', 'P000222', 'F111111'],
+          nationalRegistrationNumbers: [
+            '191212121212',
+            '198112172385',
+            '197102125866',
+          ],
         })
         .reply(200, { content: [] })
 
       const result = await economyAdapter.getInvoiceChannels([
-        'P000111',
-        'P000222',
-        'F111111',
+        '191212121212',
+        '198112172385',
+        '197102125866',
       ])
 
       expect(result).toEqual({ ok: true, data: [] })
@@ -80,7 +86,7 @@ describe('economy-adapter', () => {
 
     it('returns empty array when no channels found', async () => {
       nock(config.economyService.url)
-        .post('/invoice-channels', { contactCodes: [] })
+        .post('/invoice-channels', { nationalRegistrationNumbers: [] })
         .reply(200, { content: [] })
 
       const result = await economyAdapter.getInvoiceChannels([])
@@ -98,10 +104,12 @@ describe('economy-adapter', () => {
       ]
 
       nock(config.economyService.url)
-        .post('/invoice-channels', { contactCodes: ['P000111'] })
+        .post('/invoice-channels', {
+          nationalRegistrationNumbers: ['191212121212'],
+        })
         .reply(200, { content: channelsWithError })
 
-      const result = await economyAdapter.getInvoiceChannels(['P000111'])
+      const result = await economyAdapter.getInvoiceChannels(['191212121212'])
 
       expect(result).toEqual({ ok: true, data: channelsWithError })
     })

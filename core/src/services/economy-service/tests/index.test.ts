@@ -140,7 +140,7 @@ describe('economy-service routes', () => {
 
       const res = await request(app.callback())
         .post('/invoice-channels')
-        .send({ contactCodes: ['P000111', 'P000222'] })
+        .send({ nationalRegistrationNumbers: ['P000111', 'P000222'] })
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(mockData)
@@ -150,7 +150,7 @@ describe('economy-service routes', () => {
       ])
     })
 
-    it('returns 400 when contactCodes is missing', async () => {
+    it('returns 400 when nationalRegistrationNumbers is missing', async () => {
       const res = await request(app.callback())
         .post('/invoice-channels')
         .send({})
@@ -166,7 +166,7 @@ describe('economy-service routes', () => {
 
       const res = await request(app.callback())
         .post('/invoice-channels')
-        .send({ contactCodes: ['P000111'] })
+        .send({ nationalRegistrationNumbers: ['P000111'] })
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('unknown')
