@@ -74,17 +74,16 @@ export function PhotoGallery({
         </div>
       </div>
 
-      {/* Fullscreen photo viewer. Composed from radix primitives directly so
-          we can pin overlay + content to z-[120]; the shared Dialog defaults
-          to z-[90], which would render behind a parent Sheet (z-[100]) like
-          ComponentDetailSheet or MobileInspectionSheet. */}
+      {/* Fullscreen photo viewer. Composed from radix primitives directly
+          for finer control over sizing/padding; relies on portal DOM order
+          to paint above any parent Sheet/Dialog (all at z-50). */}
       <Dialog
         open={fullscreenPhotoIndex !== null}
         onOpenChange={() => setFullscreenPhotoIndex(null)}
       >
         <DialogPortal>
-          <DialogOverlay className="z-[120]" />
-          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-[120] grid w-full max-w-[95vw] max-h-[95vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-0 shadow-lg sm:rounded-lg">
+          <DialogOverlay />
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] max-h-[95vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-0 shadow-lg sm:rounded-lg">
             {fullscreenPhotoIndex !== null && (
               <div className="relative">
                 <InspectionPhoto

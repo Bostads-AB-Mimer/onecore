@@ -151,6 +151,10 @@ export const InspectionRoomSchema = z.object({
   isHandled: z.boolean(),
   detailComponents: z.array(DetailComponentSchema).optional().default([]),
   components: z.array(InspectionComponentSchema).optional().default([]),
+  // True when this room was added during the current inspection (vs. coming
+  // from the property record). Populated by the inspection service via the
+  // inspection_added_room tracking table.
+  isAddedInThisInspection: z.boolean().optional().default(false),
 })
 
 export const InternalInspectionSchema = XpandInspectionSchema.extend({

@@ -31,6 +31,7 @@ const baseRoom = (overrides: Partial<InspectionRoom> = {}): InspectionRoom => ({
   isHandled: false,
   detailComponents: [],
   components: [],
+  isAddedInThisInspection: false,
   ...overrides,
 })
 

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { inspection } from '@onecore/types'
+import { inspection, ALL_VALID_TYPE_CODES } from '@onecore/types'
 import { Lease } from '../lease-service/schemas/lease'
 import { ResidenceDetailsSchema } from '../property-base-service/schemas'
 
@@ -101,6 +101,23 @@ export const UpdateInspectionStatusRequestSchema = z
 
 export type UpdateInspectionStatusRequest = z.infer<
   typeof UpdateInspectionStatusRequestSchema
+>
+
+// Body for POST /inspections/internal/:inspectionId/rooms. rentalId is
+// looked up server-side from the inspection's residenceId. Type-specific
+// defaults (features, usage, code) are handled by the property service —
+// the inspector flow has no input for them.
+export const AddInspectionRoomRequestSchema = z.object({
+  roomTypeCode: z.enum(ALL_VALID_TYPE_CODES, {
+    errorMap: () => ({
+      message: `roomTypeCode must be one of: ${ALL_VALID_TYPE_CODES.join(', ')}`,
+    }),
+  }),
+  caption: z.string().min(1).max(30).optional(),
+})
+
+export type AddInspectionRoomRequest = z.infer<
+  typeof AddInspectionRoomRequestSchema
 >
 
 export type TenantContact = z.infer<typeof TenantContactSchema>

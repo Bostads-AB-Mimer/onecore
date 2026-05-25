@@ -5144,6 +5144,41 @@ export interface paths {
         };
       };
     };
+    /**
+     * Create a room for a residence.
+     * @description Forwards to property-base-service which performs a transactional
+     * 3-table Xpand write (cmobj, barum, babuf). Returns the created
+     * Room in the same shape as GET /rooms.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateRoomRequest"];
+        };
+      };
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Room"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Residence not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
   };
   "/rooms/by-facility-id/{facilityId}": {
     /**
@@ -6319,6 +6354,68 @@ export interface paths {
           };
         };
         /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/rooms": {
+    /**
+     * Add a room to a residence during an inspection.
+     * @description Creates a new room in Xpand (via property-base) for the residence
+     * associated with the inspection, then records the xpand-issued room id
+     * in the inspection's tracking table so the inspector sees the room as
+     * 'added during this inspection'.
+     *
+     * If the property write fails, no inspection state is touched. If the
+     * property write succeeds but the inspection-tracking write fails, the
+     * room exists in Xpand and is returned to the caller; the caller is
+     * expected to refresh the inspection to pick it up.
+     */
+    post: {
+      parameters: {
+        path: {
+          inspectionId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["AddInspectionRoomRequest"];
+        };
+      };
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            "application/json": {
+              content?: {
+                room?: components["schemas"]["Room"];
+              };
+            };
+          };
+        };
+        /** @description Invalid request body or no residence linked to the inspection. */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Inspection or residence not found. */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. */
         500: {
           content: {
             "application/json": {
@@ -9965,6 +10062,24 @@ export interface components {
       }) | null;
       area?: number;
     };
+    CreateRoomRequest: {
+      rentalId: string;
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      code?: string;
+      caption?: string;
+      features?: {
+        hasToilet?: boolean;
+        isHeated?: boolean;
+        hasThermostatValve?: boolean;
+        orientation?: number;
+      };
+      usage?: {
+        shared?: boolean;
+        allowPeriodicWorks?: boolean;
+        spaceType?: number;
+      };
+    };
     ParkingSpace: {
       rentalId: string;
       companyCode: string;
@@ -11717,6 +11832,8 @@ export interface components {
                */
               costResponsibility?: "tenant" | "landlord" | null;
             })[];
+          /** @default false */
+          isAddedInThisInspection?: boolean;
         })[]) | null;
     };
     InspectionComponent: {
@@ -11784,6 +11901,8 @@ export interface components {
            */
           costResponsibility?: "tenant" | "landlord" | null;
         })[];
+      /** @default false */
+      isAddedInThisInspection?: boolean;
     };
     DetailedInspection: {
       id: string;
@@ -12395,6 +12514,8 @@ export interface components {
                */
               costResponsibility?: "tenant" | "landlord" | null;
             })[];
+          /** @default false */
+          isAddedInThisInspection?: boolean;
         })[]) | null;
     };
     SaveInspectionDraftRequest: {
@@ -12450,6 +12571,8 @@ export interface components {
                */
               costResponsibility?: "tenant" | "landlord" | null;
             })[];
+          /** @default false */
+          isAddedInThisInspection?: boolean;
         })[];
       isFurnished: boolean;
     };
@@ -12457,6 +12580,11 @@ export interface components {
       componentId: string;
       componentLabel: string;
       message: string;
+    };
+    AddInspectionRoomRequest: {
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      caption?: string;
     };
     FileListItem: {
       /** @description Full file path/name */

@@ -277,6 +277,7 @@ export const InspectionRoomFactory = Factory.define<inspection.InspectionRoom>(
     isHandled: false,
     detailComponents: [],
     components: [],
+    isAddedInThisInspection: false,
   })
 )
 

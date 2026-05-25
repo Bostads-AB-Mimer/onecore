@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, ChevronLeft } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, Plus } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
@@ -169,6 +169,12 @@ export function InspectionForm({
                         <span className="font-medium uppercase">
                           {room.name}
                         </span>
+                        {roomData?.isAddedInThisInspection && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Plus className="h-3 w-3" />
+                            Tillagt
+                          </Badge>
+                        )}
                       </div>
                       {isCompleted && (
                         <Badge variant="default" className="gap-1">
@@ -334,8 +340,9 @@ export function InspectionForm({
       <div className="shrink-0 flex gap-3 justify-between pt-4 border-t">
         <InspectionMoreMenu
           rentalId={rentalId}
+          inspectionId={existingInspection?.id}
           variant="buttons"
-          onAddRoom={handleAddRoom}
+          onRoomAdded={handleAddRoom}
         />
         <div className="flex gap-3">
           <Button variant="outline" onClick={onCancel}>

@@ -119,3 +119,8 @@ export type SaveInspectionDraftParams = {
   rooms: InspectionRoom[]
   isFurnished: boolean
 }
+
+export type AddRoomToInspectionParams = {
+  inspectionId: number
+  xpandRoomId: string
+}

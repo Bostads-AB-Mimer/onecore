@@ -1,7 +1,6 @@
 import { z } from 'zod'
 
-// Xpand ID validation - variable length IDs (max 15 chars) from legacy system
-const xpandIdSchema = z.string().max(15)
+export { CreateRoomRequestSchema, type CreateRoomRequest } from '@onecore/types'
 
 export const BuildingSchema = z.object({
   id: z.string(),

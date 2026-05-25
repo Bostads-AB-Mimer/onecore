@@ -49,6 +49,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ResidenceSummary', schemas.ResidenceSummarySchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
   registerSchema('Room', schemas.RoomSchema)
+  registerSchema('CreateRoomRequest', schemas.CreateRoomRequestSchema)
   registerSchema('ParkingSpace', schemas.ParkingSpaceSchema)
   registerSchema('MaintenanceUnit', schemas.MaintenanceUnitSchema)
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
@@ -1859,6 +1860,86 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies Array<schemas.Room>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /rooms:
+   *   post:
+   *     summary: Create a room for a residence.
+   *     description: |
+   *       Forwards to property-base-service which performs a transactional
+   *       3-table Xpand write (cmobj, barum, babuf). Returns the created
+   *       Room in the same shape as GET /rooms.
+   *     tags:
+   *       - Property base Service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateRoomRequest'
+   *     responses:
+   *       201:
+   *         description: Room created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Room'
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: Residence not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  // Note: literal '/rooms' rather than '(.*)/rooms' — the wildcard prefix
+  // (used elsewhere in this file) would also match e.g.
+  // /inspections/internal/:id/rooms and intercept that route's POST.
+  router.post('/rooms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsed = schemas.CreateRoomRequestSchema.safeParse(ctx.request.body)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = { errors: parsed.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createRoom(parsed.data)
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Residence not found', ...metadata }
+          return
+        }
+        if (result.err === 'validation') {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Validation error from property service',
+            ...metadata,
+          }
+          return
+        }
+        logger.error({ err: result.err, metadata }, 'Error creating room')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: result.data satisfies schemas.Room,
         ...metadata,
       }
     } catch (error) {

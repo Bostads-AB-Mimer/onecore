@@ -14,6 +14,9 @@ type UpdateInspectionStatusRequest =
   components['schemas']['UpdateInspectionStatusRequest']
 type SaveInspectionDraftRequest =
   components['schemas']['SaveInspectionDraftRequest']
+type AddInspectionRoomRequest =
+  components['schemas']['AddInspectionRoomRequest']
+type Room = components['schemas']['Room']
 
 export interface PaginatedInspectionsResponse {
   content: InspectionWithSource[]
@@ -218,5 +221,19 @@ export const inspectionService = {
       body,
     })
     if (response.error) throw response.error
+  },
+
+  async addInspectionRoom(
+    inspectionId: string,
+    body: AddInspectionRoomRequest
+  ): Promise<Room> {
+    const response = await POST('/inspections/internal/{inspectionId}/rooms', {
+      params: { path: { inspectionId } },
+      body,
+    })
+    if (response.error) throw response.error
+    const room = response.data?.content?.room
+    if (!room) throw new Error('Failed to add inspection room')
+    return room
   },
 }

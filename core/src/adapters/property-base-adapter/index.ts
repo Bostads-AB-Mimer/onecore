@@ -865,6 +865,38 @@ export async function getBlockReasons(): Promise<
   }
 }
 
+type Room = components['schemas']['Room']
+type CreateRoomBody = components['schemas']['CreateRoomRequest']
+
+export async function createRoom(
+  body: CreateRoomBody
+): Promise<AdapterResult<Room, 'not-found' | 'validation' | 'unknown'>> {
+  try {
+    const response = await client().POST('/rooms', { body })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    const status = response.response?.status
+    if (status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (status === 400) {
+      return { ok: false, err: 'validation' }
+    }
+
+    logger.error(
+      { status, error: response.error },
+      'property-base-adapter.createRoom unexpected response'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createRoom')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {

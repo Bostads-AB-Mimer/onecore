@@ -61,9 +61,11 @@ export function useInspectionForm(
     totalRooms: formState.totalRooms,
     isAllRoomsComplete: formState.isAllRoomsComplete,
 
-    // Ad-hoc room creation (returns the newly-created Room so callers can
-    // navigate to it — e.g. mobile auto-focuses the new room card)
-    handleAddRoom: formState.addAdHocRoom,
+    // Append a server-issued room to the local state. The room has already
+    // been created in Xpand by POST /inspections/internal/:id/rooms; this
+    // callback only updates the in-memory inspection form so the inspector
+    // can immediately fill it in.
+    handleAddRoom: formState.addServerRoom,
 
     // Room operations
     expandedRoomIds: roomOps.expandedRoomIds,
