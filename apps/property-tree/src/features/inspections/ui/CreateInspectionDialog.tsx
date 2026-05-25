@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
+import { LeaseStatusBadge } from '@/entities/lease'
+
+import type { Lease } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 
 import { Button } from '@/shared/ui/Button'
@@ -45,8 +48,41 @@ interface CreateInspectionDialogProps {
   rentalId: string
   address: string
   apartmentCode: string | null
-  leaseId: string
+  leases: Lease[]
   roomNames: string[]
+}
+
+const NO_LEASE_VALUE = '__none__'
+
+interface LeaseOption {
+  value: string
+  lease: Lease | null // null = "Inget kontrakt" sentinel
+}
+
+// At most three options: the active (Current/AboutToEnd) lease if one exists,
+// the most recent Ended lease if one exists, and the "no contract" sentinel.
+// The first entry is the default selection.
+function buildLeaseOptions(leases: Lease[]): LeaseOption[] {
+  const activeLease = leases.find(
+    (l) => l.status === 'Current' || l.status === 'AboutToEnd'
+  )
+  const latestEndedLease = leases
+    .filter((l) => l.status === 'Ended')
+    .sort(
+      (a, b) =>
+        new Date(b.leaseStartDate).getTime() -
+        new Date(a.leaseStartDate).getTime()
+    )[0]
+
+  const options: LeaseOption[] = []
+  if (activeLease) {
+    options.push({ value: activeLease.leaseId, lease: activeLease })
+  }
+  if (latestEndedLease) {
+    options.push({ value: latestEndedLease.leaseId, lease: latestEndedLease })
+  }
+  options.push({ value: NO_LEASE_VALUE, lease: null })
+  return options
 }
 
 export function CreateInspectionDialog({
@@ -57,11 +93,19 @@ export function CreateInspectionDialog({
   rentalId,
   address,
   apartmentCode,
-  leaseId,
+  leases,
   roomNames,
 }: CreateInspectionDialogProps) {
   const createInspection = useCreateInspection({ rentalId })
   const { data: inspectors, isLoading: isLoadingInspectors } = useInspectors()
+
+  // Per product (David / MIM-829): default to "the contract that exists" and
+  // offer at most two alternatives — the most recent ended lease and
+  // "Inget kontrakt". Anything beyond that is overengineering for the
+  // 1% case of selecting an older terminated tenant.
+  const leaseOptions = useMemo(() => buildLeaseOptions(leases), [leases])
+  const defaultLeaseValue = leaseOptions[0]?.value ?? NO_LEASE_VALUE
+
   const [inspector, setInspector] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   // Default to "avflytt" — the most common case at inspection time.
@@ -70,11 +114,17 @@ export function CreateInspectionDialog({
   const [isNewTenantPresent, setIsNewTenantPresent] = useState(false)
   const [masterKeyAccess, setMasterKeyAccess] = useState('')
   const [notes, setNotes] = useState('')
+  const [leaseValue, setLeaseValue] = useState<string>(defaultLeaseValue)
 
   const canSubmit = inspector.trim() && type && date
 
   const handleSubmit = () => {
     if (!canSubmit) return
+
+    // Empty string is the established "no lease" sentinel — the inspection
+    // service stores it as-is and the protocol pipeline treats it as
+    // "no recipient" rather than erroring on lookup.
+    const submittedLeaseId = leaseValue === NO_LEASE_VALUE ? '' : leaseValue
 
     const body: CreateInspectionRequest = {
       status: INSPECTION_STATUS.REGISTERED,
@@ -91,7 +141,7 @@ export function CreateInspectionDialog({
       // furnished at inspection time in ~99% of cases; the conduct toggle is
       // the source of truth.
       isFurnished: true,
-      leaseId,
+      leaseId: submittedLeaseId,
       isTenantPresent,
       isNewTenantPresent,
       masterKeyAccess: masterKeyAccess.trim() || null,
@@ -118,6 +168,7 @@ export function CreateInspectionDialog({
     setIsNewTenantPresent(false)
     setMasterKeyAccess('')
     setNotes('')
+    setLeaseValue(defaultLeaseValue)
   }
 
   const handleClose = () => {
@@ -142,6 +193,33 @@ export function CreateInspectionDialog({
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label htmlFor="lease">Hyreskontrakt</Label>
+            <Select value={leaseValue} onValueChange={setLeaseValue}>
+              <SelectTrigger id="lease">
+                <SelectValue placeholder="Välj hyreskontrakt" />
+              </SelectTrigger>
+              <SelectContent>
+                {leaseOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.lease ? (
+                      <span className="flex items-center gap-2">
+                        <span>
+                          Kontrakt {option.lease.leaseNumber} –{' '}
+                          {option.lease.tenants?.[0]?.fullName ??
+                            'Okänd hyresgäst'}
+                        </span>
+                        <LeaseStatusBadge status={option.lease.status} />
+                      </span>
+                    ) : (
+                      'Inget kontrakt'
+                    )}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="inspector">Besiktningsman</Label>

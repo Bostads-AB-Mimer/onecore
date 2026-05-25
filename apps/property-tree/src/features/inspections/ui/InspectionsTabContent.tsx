@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 
+import { useLeasesByRentalProperty } from '@/entities/lease'
+
 import { inspectionService, roomService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 import type { ResidenceDetails } from '@/services/types'
@@ -21,7 +23,6 @@ type InspectionWithSource = components['schemas']['InspectionWithSource']
 
 interface InspectionsTabContentProps {
   rentalId: string | undefined
-  leaseId: string | undefined
   residence?: ResidenceDetails
 }
 
@@ -29,7 +30,6 @@ const INITIAL_DISPLAY_COUNT = 5
 
 export function InspectionsTabContent({
   rentalId,
-  leaseId,
   residence,
 }: InspectionsTabContentProps) {
   const [showAll, setShowAll] = useState(false)
@@ -40,6 +40,8 @@ export function InspectionsTabContent({
   const { toast } = useToast()
 
   const { startInspection } = useUpdateInspectionStatus({ rentalId })
+
+  const { data: leases } = useLeasesByRentalProperty(rentalId)
 
   const inspectionsQuery = useQuery({
     queryKey: ['inspections', rentalId],
@@ -87,7 +89,7 @@ export function InspectionsTabContent({
         <Button
           size="sm"
           onClick={() => setIsCreateDialogOpen(true)}
-          disabled={!leaseId}
+          disabled={!rentalId}
           className="flex items-center gap-1"
         >
           <Plus className="h-4 w-4" /> Skapa ny
@@ -147,7 +149,7 @@ export function InspectionsTabContent({
         </TabsContent>
       </Tabs>
 
-      {leaseId && rentalId && (
+      {rentalId && (
         <CreateInspectionDialog
           isOpen={isCreateDialogOpen}
           onClose={() => setIsCreateDialogOpen(false)}
@@ -173,7 +175,7 @@ export function InspectionsTabContent({
           rentalId={rentalId}
           address={address}
           apartmentCode={apartmentCode}
-          leaseId={leaseId}
+          leases={leases ?? []}
           roomNames={(roomsQuery.data ?? []).map((r) => r.name ?? r.code)}
         />
       )}
