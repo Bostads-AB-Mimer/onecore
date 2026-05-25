@@ -10065,7 +10065,7 @@ export interface components {
     CreateRoomRequest: {
       rentalId: string;
       /** @enum {string} */
-      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KLÄD2" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
       code?: string;
       caption?: string;
       features?: {
@@ -12580,6 +12580,11 @@ export interface components {
       componentId: string;
       componentLabel: string;
       message: string;
+    };
+    AddInspectionRoomRequest: {
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      caption?: string;
     };
     FileListItem: {
       /** @description Full file path/name */
