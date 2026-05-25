@@ -1,6 +1,7 @@
 import { Car, DoorOpen, Home } from 'lucide-react'
 
 import { PropertyForAdmin } from '../../types/adminTypes'
+import { AddressList } from '../AddressList'
 import { BuildingTypeBadge } from '../BuildingTypeBadge'
 
 interface PropertyCardProps {
@@ -19,9 +20,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
         <div className="font-medium text-sm break-words">
           {property.propertyName}
         </div>
-        <div className="text-xs text-muted-foreground break-words">
-          {property.address}
-        </div>
+        <AddressList addresses={property.addresses} />
         <BuildingTypeBadge type={property.buildingType} className="mt-1" />
         {hasCounts && (
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1.5">

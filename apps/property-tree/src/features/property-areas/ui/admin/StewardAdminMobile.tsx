@@ -9,6 +9,7 @@ import {
 } from '@/shared/ui/MobileAccordion'
 
 import { KvvAreaInfo, PropertyForAdmin } from '../../types/adminTypes'
+import { AddressList } from '../AddressList'
 import { StewardAssignmentDialog } from './StewardAssignmentDialog'
 
 interface Steward {
@@ -93,9 +94,7 @@ export function StewardAdminMobile({
                   <div className="font-medium text-sm">
                     {property.propertyName}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {property.address}
-                  </div>
+                  <AddressList addresses={property.addresses} />
                   {property.buildingType?.name && (
                     <Badge variant="secondary" className="mt-1 text-xs">
                       {property.buildingType.name}

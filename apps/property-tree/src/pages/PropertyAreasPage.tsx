@@ -70,10 +70,9 @@ function mapProperties(area: CostCenterTreeKvvArea): PropertyForAdmin[] {
     id: `${area.code}-${property.code}`,
     propertyCode: property.code,
     propertyName: property.designation || property.tract || property.code,
-    address: property.addresses
+    addresses: property.addresses
       .map((a) => a.address)
-      .filter(Boolean)
-      .join(', '),
+      .filter((v): v is string => !!v),
     buildingType:
       property.addresses.find((a) => a.buildingType)?.buildingType ?? null,
     kvvArea: area.code,
