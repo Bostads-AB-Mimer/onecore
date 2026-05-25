@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
 import { useStaleGuard } from '@/hooks/useStaleGuard'
 import { useItemSelection } from '@/hooks/useItemSelection'
-import { Key, KeyDetails, KeySystem } from '@/services/types'
+import { ContactV1, Key, KeyDetails, KeySystem } from '@/services/types'
 import { keyService } from '@/services/api/keyService'
 import { keyEventService } from '@/services/api/keyEventService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
@@ -23,6 +23,9 @@ import { Pencil, Trash2, KeyRound } from 'lucide-react'
 const Index = () => {
   const pagination = useUrlPagination()
   const [keys, setKeys] = useState<KeyDetails[]>([])
+  const [contactsByCode, setContactsByCode] = useState<
+    Record<string, ContactV1>
+  >({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
@@ -115,12 +118,17 @@ const Index = () => {
         // Include key system data in single request to avoid N+1 queries
         const hasFilters = Object.keys(searchParams).length > 0
         const response = hasFilters
-          ? await keyService.searchKeys(searchParams, page, limit, true)
-          : await keyService.getAllKeys(page, limit, true)
+          ? await keyService.searchKeys(searchParams, page, limit, true, {
+              includeContacts: true,
+            })
+          : await keyService.getAllKeys(page, limit, true, {
+              includeContacts: true,
+            })
 
         if (isStale()) return
 
         setKeys(response.content)
+        setContactsByCode(response.contacts ?? {})
         pagination.setPaginationMeta(response._meta)
 
         // Build key system map from included key system data (no additional API calls needed!)
@@ -719,6 +727,7 @@ const Index = () => {
 
       <KeysTable
         keys={keys}
+        contactsByCode={contactsByCode}
         keySystemMap={keySystemMap}
         onEdit={handleEdit}
         onDelete={handleDelete}

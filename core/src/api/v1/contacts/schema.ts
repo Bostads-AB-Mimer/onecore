@@ -95,9 +95,7 @@ export const GetContactResponseBodySchema =
     content: ContactSchema,
   })
 
-export const GetContactsResponseBodySchema =
+export const GetContactsListResponseBodySchema =
   ONECoreHateOASResponseBodySchema.extend({
-    content: z.object({
-      contacts: z.array(ContactSchema),
-    }),
+    content: z.array(ContactSchema),
   })

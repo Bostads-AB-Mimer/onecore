@@ -1,7 +1,10 @@
-import { useMemo, useEffect, useState } from 'react'
-import type { KeyDetails, KeyLoanWithDetails } from '@/services/types'
-import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
-import { fetchContactByContactCode } from '@/services/api/contactService'
+import { useMemo, useState } from 'react'
+import type {
+  ContactV1,
+  KeyDetails,
+  KeyLoanWithDetails,
+} from '@/services/types'
+import { getActiveLoan } from '@/utils/loanHelpers'
 import { useItemSelection } from '@/hooks/useItemSelection'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
 import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
@@ -17,17 +20,18 @@ import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 
 interface KeyBundleKeysTableProps {
   keys: KeyDetails[]
+  contactsByCode: Record<string, ContactV1>
   bundleId: string
   onRefresh: () => void
 }
 
 export function KeyBundleKeysTable({
   keys,
+  contactsByCode,
   bundleId,
   onRefresh,
 }: KeyBundleKeysTableProps) {
   const { toast } = useToast()
-  const [companyNames, setCompanyNames] = useState<Record<string, string>>({})
   const keySelection = useItemSelection()
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -71,41 +75,6 @@ export function KeyBundleKeysTable({
     setPendingReturnKeyIds(keyIds)
     setShowReturnDialog(true)
   }
-
-  // Fetch company names for all unique company codes
-  useEffect(() => {
-    const fetchCompanyNames = async () => {
-      const uniqueCompanyCodes = new Set<string>()
-
-      // Collect all unique contact codes from keys with any loan (active or previous)
-      keys.forEach((key) => {
-        const latestLoan = getLatestLoan(key)
-        if (latestLoan?.contact) {
-          uniqueCompanyCodes.add(latestLoan.contact)
-        }
-      })
-
-      // Fetch contact info for each company code
-      const names: Record<string, string> = {}
-      await Promise.all(
-        Array.from(uniqueCompanyCodes).map(async (companyCode) => {
-          const contact = await fetchContactByContactCode(companyCode)
-          if (contact) {
-            // Format: Name · Code · NationalRegistrationNumber
-            const parts = [contact.fullName, companyCode]
-            if (contact.nationalRegistrationNumber) {
-              parts.push(contact.nationalRegistrationNumber)
-            }
-            names[companyCode] = parts.join(' · ')
-          }
-        })
-      )
-
-      setCompanyNames(names)
-    }
-
-    fetchCompanyNames()
-  }, [keys])
 
   if (keys.length === 0) {
     return (
@@ -254,7 +223,7 @@ export function KeyBundleKeysTable({
             </h3>
             <KeyBundleKeysList
               keys={nonDisposedKeys}
-              companyNames={companyNames}
+              contactsByCode={contactsByCode}
               selectable={true}
               selectedKeys={keySelection.selectedIds}
               onKeySelectionChange={(keyId, checked) => {
@@ -279,7 +248,7 @@ export function KeyBundleKeysTable({
             </h3>
             <KeyBundleKeysList
               keys={disposedKeys}
-              companyNames={companyNames}
+              contactsByCode={contactsByCode}
               selectable={true}
               selectedKeys={keySelection.selectedIds}
               onKeySelectionChange={(keyId, checked) => {

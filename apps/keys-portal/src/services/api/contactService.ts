@@ -1,4 +1,4 @@
-import type { Contact } from '@/services/types'
+import type { Contact, ContactV1 } from '@/services/types'
 
 import { GET } from './core/base-api'
 
@@ -21,6 +21,37 @@ export async function fetchContactByContactCode(
   // The API wraps the contact in a 'content' field
   const response = data as any
   return response?.content ?? null
+}
+
+/**
+ * Display name for a v1 Contact (discriminated union by `type`).
+ * Reads from `personal.fullName` for individuals, `organisation.name` for
+ * organisations. Falls back to the contact code if the name is empty.
+ */
+export function getContactFullName(contact: ContactV1): string {
+  if (contact.type === 'individual') {
+    return contact.personal.fullName || contact.contactCode
+  }
+  if (contact.type === 'organisation') {
+    return contact.organisation.name || contact.contactCode
+  }
+  throw new Error(`Unknown contact type: ${(contact as { type: string }).type}`)
+}
+
+/**
+ * National registration number for an individual contact, or organisation
+ * number for an organisation. Returns undefined when the value is empty.
+ */
+export function getContactRegistrationNumber(
+  contact: ContactV1
+): string | undefined {
+  if (contact.type === 'individual') {
+    return contact.personal.nationalRegistrationNumber || undefined
+  }
+  if (contact.type === 'organisation') {
+    return contact.organisation.organisationNumber || undefined
+  }
+  throw new Error(`Unknown contact type: ${(contact as { type: string }).type}`)
 }
 
 /**

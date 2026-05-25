@@ -11,8 +11,11 @@ import {
   TableLink,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { KeyLoan, KeyLoanWithDetails } from '@/services/types'
-import { fetchContactByContactCode } from '@/services/api/contactService'
+import { ContactV1, KeyLoan, KeyLoanWithDetails } from '@/services/types'
+import {
+  getContactFullName,
+  getContactRegistrationNumber,
+} from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { LoanItemsTable } from '@/components/key-loans/LoanItemsTable'
 import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
@@ -40,6 +43,7 @@ interface LoanExpandedData {
 
 interface KeyLoansTableProps {
   keyLoans: KeyLoan[]
+  contactsByCode: Record<string, ContactV1>
   isLoading: boolean
   onRefresh?: () => void
   onEdit?: (loan: KeyLoan) => void
@@ -81,6 +85,7 @@ interface KeyLoansTableProps {
 
 export function KeyLoansTable({
   keyLoans,
+  contactsByCode,
   isLoading,
   onRefresh,
   onEdit,
@@ -98,16 +103,6 @@ export function KeyLoansTable({
   onReturnedDateChange,
   autoExpandLoanId,
 }: KeyLoansTableProps) {
-  const [contactData, setContactData] = useState<
-    Record<
-      string,
-      {
-        fullName: string
-        contactCode: string
-        nationalRegistrationNumber?: string
-      }
-    >
-  >({})
   const [returnLoan, setReturnLoan] = useState<KeyLoanWithDetails | null>(null)
 
   const expansion = useExpandableRows<LoanExpandedData>({
@@ -136,44 +131,6 @@ export function KeyLoansTable({
     }
   }, [autoExpandLoanId, keyLoans])
 
-  // Fetch contact names for all loans
-  useEffect(() => {
-    const fetchContactNames = async () => {
-      const uniqueContactCodes = new Set<string>()
-
-      keyLoans.forEach((loan) => {
-        if (loan.contact) uniqueContactCodes.add(loan.contact)
-        if (loan.contact2) uniqueContactCodes.add(loan.contact2)
-      })
-
-      const data: typeof contactData = {}
-      await Promise.all(
-        Array.from(uniqueContactCodes).map(async (contactCode) => {
-          try {
-            const contact = await fetchContactByContactCode(contactCode)
-            if (contact) {
-              data[contactCode] = {
-                fullName: contact.fullName ?? contactCode,
-                contactCode,
-                nationalRegistrationNumber:
-                  contact.nationalRegistrationNumber || undefined,
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch contact ${contactCode}:`, error)
-            data[contactCode] = { fullName: contactCode, contactCode }
-          }
-        })
-      )
-
-      setContactData(data)
-    }
-
-    if (keyLoans.length > 0) {
-      fetchContactNames()
-    }
-  }, [keyLoans])
-
   const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return '-'
     const d = typeof date === 'string' ? new Date(date) : date
@@ -188,9 +145,11 @@ export function KeyLoansTable({
     if (codes.length === 0) return '-'
 
     const values = codes.map((code) => {
-      const data = contactData[code]
-      if (!data) return field === 'contactCode' ? code : '-'
-      return data[field] ?? '-'
+      const contact = contactsByCode[code]
+      if (!contact) return field === 'contactCode' ? code : '-'
+      if (field === 'contactCode') return contact.contactCode
+      if (field === 'fullName') return getContactFullName(contact)
+      return getContactRegistrationNumber(contact) ?? '-'
     })
 
     if (values.length === 1) return values[0]
@@ -343,7 +302,7 @@ export function KeyLoansTable({
 
                           const renderLink = (code: string) => {
                             const displayCode =
-                              contactData[code]?.contactCode ?? code
+                              contactsByCode[code]?.contactCode ?? code
                             const to =
                               loan.loanType === 'MAINTENANCE'
                                 ? `/maintenance-keys?contact=${displayCode}`
