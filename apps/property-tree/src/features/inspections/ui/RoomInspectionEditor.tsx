@@ -124,10 +124,10 @@ export function RoomInspectionEditor({
     return 'details'
   }
 
-  const derivedIsHandled = useMemo(
-    () => deriveRoomIsHandled(inspectionData, fetchedComponents ?? []),
-    [inspectionData, fetchedComponents]
-  )
+  const derivedIsHandled = useMemo(() => {
+    if (isLoading || isError) return inspectionData.isHandled
+    return deriveRoomIsHandled(inspectionData, fetchedComponents ?? [])
+  }, [inspectionData, fetchedComponents, isLoading, isError])
 
   useEffect(() => {
     if (derivedIsHandled !== inspectionData.isHandled) {

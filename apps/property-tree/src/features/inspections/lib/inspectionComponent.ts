@@ -25,8 +25,8 @@ export function deriveRoomIsHandled(
   room: InspectionRoom,
   fetched: readonly FetchedComponent[]
 ): boolean {
-  // No components = nothing to handle
-  if (fetched.length === 0) return false
+  // No components to inspect (uteplats, balkong, etc) = nothing to handle, room is done
+  if (fetched.length === 0) return true
 
   const componentsById = new Map(
     (room.components ?? []).map((c) => [c.componentId, c])
