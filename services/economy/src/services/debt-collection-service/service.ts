@@ -248,10 +248,16 @@ export const enrichRentInvoices = async (
           `Invoice not found for invoice number '${row.invoiceNumber}'`
         )
       }
+      if (!invoice.expirationDate) {
+        throw new Error(
+          `Invoice ${invoice.invoiceId} does not have an expiration date`
+        )
+      }
 
       const leasesForInvoice = leases.filter((l) =>
         invoice.leaseIds.includes(l.leaseId)
       )
+
       const rentalPropertiesForInvoice = rentalProperties.filter((r) =>
         leasesForInvoice.some((l) => l.rentalPropertyId === r.rentalPropertyId)
       )
@@ -268,7 +274,7 @@ export const enrichRentInvoices = async (
             fromDate: new Date(invoice.fromDate),
             toDate: new Date(invoice.toDate),
             invoiceDate: new Date(invoice.invoiceDate),
-            expiryDate: invoice.expirationDate!, // TODO
+            expiryDate: invoice.expirationDate,
             lastDebitDate: mainLease.lastDebitDate,
             careOf: contact.careOf ?? undefined,
           },
