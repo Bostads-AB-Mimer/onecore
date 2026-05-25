@@ -172,3 +172,12 @@ export const SaveInspectionDraftRequestSchema = z.object({
   rooms: z.array(InspectionRoomSchema),
   isFurnished: z.boolean(),
 })
+
+// Per-component result attached to the inspection PATCH response when an
+// inspection transitions to "Genomförd". `message` is a Swedish UI-ready
+// string, not an internal error code — the internal code lives in core logs.
+export const ComponentWriteBackErrorSchema = z.object({
+  componentId: z.string(),
+  componentLabel: z.string(),
+  message: z.string(),
+})

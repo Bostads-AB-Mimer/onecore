@@ -1205,7 +1205,7 @@ describe('Component File Uploads', () => {
     it('returns 500 when upload fails', async () => {
       jest
         .spyOn(propertyBaseAdapter, 'uploadComponentFile')
-        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+        .mockResolvedValueOnce({ ok: false, err: 'upstream_error' })
 
       const res = await request(app.callback())
         .post('/components/00000000-0000-0000-0000-000000000001/upload')

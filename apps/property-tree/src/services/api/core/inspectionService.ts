@@ -179,11 +179,7 @@ export const inspectionService = {
     status: UpdateInspectionStatusRequest['status']
   ): Promise<{
     inspection: InternalInspection
-    componentWriteBackErrors: {
-      componentId: string
-      componentLabel: string
-      message: string
-    }[]
+    componentWriteBackErrors: components['schemas']['ComponentWriteBackError'][]
   }> {
     const response = await PATCH('/inspections/internal/{inspectionId}', {
       params: { path: { inspectionId } },

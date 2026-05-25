@@ -63,6 +63,10 @@ export const routes = (router: KoaRouter) => {
     'SaveInspectionDraftRequest',
     inspection.SaveInspectionDraftRequestSchema
   )
+  registerSchema(
+    'ComponentWriteBackError',
+    inspection.ComponentWriteBackErrorSchema
+  )
 
   /**
    * @swagger
@@ -1499,16 +1503,7 @@ export const routes = (router: KoaRouter) => {
    *                       type: array
    *                       description: Per-component write-back errors recorded when transitioning to "Genomförd". Empty for other status transitions.
    *                       items:
-   *                         type: object
-   *                         required: [componentId, componentLabel, message]
-   *                         properties:
-   *                           componentId:
-   *                             type: string
-   *                           componentLabel:
-   *                             type: string
-   *                           message:
-   *                             type: string
-   *                             description: User-facing Swedish error message.
+   *                         $ref: '#/components/schemas/ComponentWriteBackError'
    *       '400':
    *         description: Invalid request body or invalid status transition
    *         content:

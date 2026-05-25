@@ -1,5 +1,5 @@
 import { trimStrings } from '@src/utils/data-conversion'
-import { components } from '@onecore/types'
+import { property } from '@onecore/types'
 import { prisma } from './db'
 import type {
   CreateComponentModel,
@@ -142,7 +142,7 @@ export const getSurfaceModels = async () => {
     where: {
       subtype: {
         componentType: {
-          category: { categoryName: components.SURFACE_CATEGORY_NAME },
+          category: { categoryName: property.SURFACE_CATEGORY_NAME },
         },
       },
     },

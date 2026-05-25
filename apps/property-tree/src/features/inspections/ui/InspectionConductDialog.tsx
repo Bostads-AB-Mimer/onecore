@@ -19,6 +19,7 @@ import { useTenantInfo } from '../hooks/useTenantInfo'
 import { InspectionFormDialog } from './InspectionFormDialog'
 
 type InternalInspection = components['schemas']['InternalInspection']
+type ComponentWriteBackError = components['schemas']['ComponentWriteBackError']
 
 interface InspectionConductDialogProps {
   inspectionId: string
@@ -47,12 +48,9 @@ export function InspectionConductDialog({
 }: InspectionConductDialogProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const [componentWriteBackErrors, setComponentWriteBackErrors] =
-    useState<Array<{
-      componentId: string
-      componentLabel: string
-      message: string
-    }> | null>(null)
+  const [componentWriteBackErrors, setComponentWriteBackErrors] = useState<
+    ComponentWriteBackError[] | null
+  >(null)
   const [writeBackErrorDialogOpen, setWriteBackErrorDialogOpen] =
     useState(false)
 
@@ -113,11 +111,7 @@ export function InspectionConductDialog({
             // the status transitions to "Genomförd". Errors come back in the
             // PATCH response envelope and are not persisted — re-fetching via
             // GET would lose them.
-            let writeBackErrors: Array<{
-              componentId: string
-              componentLabel: string
-              message: string
-            }> = []
+            let writeBackErrors: ComponentWriteBackError[] = []
             if (status === 'completed') {
               const result = await inspectionService.updateInspectionStatus(
                 inspectionId,

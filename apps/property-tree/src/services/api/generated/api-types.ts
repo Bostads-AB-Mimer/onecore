@@ -689,7 +689,7 @@ export interface paths {
   "/components/{id}/inspection-state": {
     /**
      * Update component inspection state
-     * @description Updates component condition and last inspection date
+     * @description Updates component condition and last inspection date. Only accepts the three condition values written back from inspections.
      */
     put: {
       parameters: {
@@ -702,9 +702,9 @@ export interface paths {
         content: {
           "application/json": {
             /** @enum {string} */
-            condition?: "GOOD" | "FAIR" | "DAMAGED";
+            condition: "GOOD" | "FAIR" | "DAMAGED";
             /** Format: date-time */
-            lastInspectionDate?: string;
+            lastInspectionDate: string;
           };
         };
       };

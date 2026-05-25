@@ -3929,9 +3929,9 @@ export interface paths {
         content: {
           "application/json": {
             /** @enum {string} */
-            condition?: "GOOD" | "FAIR" | "DAMAGED";
+            condition: "GOOD" | "FAIR" | "DAMAGED";
             /** Format: date-time */
-            lastInspectionDate?: string;
+            lastInspectionDate: string;
           };
         };
       };
@@ -6252,12 +6252,7 @@ export interface paths {
               content?: {
                 inspection?: components["schemas"]["InternalInspection"];
                 /** @description Per-component write-back errors recorded when transitioning to "Genomförd". Empty for other status transitions. */
-                componentWriteBackErrors?: {
-                    componentId: string;
-                    componentLabel: string;
-                    /** @description User-facing Swedish error message. */
-                    message: string;
-                  }[];
+                componentWriteBackErrors?: components["schemas"]["ComponentWriteBackError"][];
               };
             };
           };
@@ -12457,6 +12452,11 @@ export interface components {
             })[];
         })[];
       isFurnished: boolean;
+    };
+    ComponentWriteBackError: {
+      componentId: string;
+      componentLabel: string;
+      message: string;
     };
     FileListItem: {
       /** @description Full file path/name */

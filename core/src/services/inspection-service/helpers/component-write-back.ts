@@ -1,4 +1,6 @@
 import { logger } from '@onecore/utilities'
+import type { z } from 'zod'
+import { inspection } from '@onecore/types'
 
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import type { InternalInspection } from '../../../adapters/inspection-adapter'
@@ -13,33 +15,38 @@ const CONDITION_MAPPING: Record<string, 'GOOD' | 'FAIR' | 'DAMAGED'> = {
 
 // User-facing Swedish messages for adapter error codes. The internal codes
 // stay in logs (componentId is included); the UI renders only `message`.
-const ERROR_MESSAGES: Record<'unknown' | 'not_found', string> = {
+const ERROR_MESSAGES: Record<'upstream_error' | 'not_found', string> = {
   not_found: 'Komponenten hittades inte',
-  unknown: 'Kunde inte uppdatera komponenten',
+  upstream_error: 'Kunde inte uppdatera komponenten',
 }
 
-export type ComponentWriteBackError = {
+export type ComponentWriteBackError = z.infer<
+  typeof inspection.ComponentWriteBackErrorSchema
+>
+
+type WriteBackTask = {
   componentId: string
   componentLabel: string
-  message: string
+  mappedCondition: 'GOOD' | 'FAIR' | 'DAMAGED'
 }
 
 /**
  * Best-effort write-back of component condition + lastInspectionDate to
  * property-base for every component in a freshly-completed inspection.
- * Continues on per-component failures and returns the aggregated error list,
- * which core's PATCH route attaches to the response so the UI can surface it.
+ * Per-component PUTs run in parallel via Promise.allSettled — latency is
+ * ~1 RTT regardless of component count, instead of N × RTT. Continues on
+ * individual failures and returns the aggregated error list, which core's
+ * PATCH route attaches to the response so the UI can surface it.
  */
 export const writeBackComponentInspectionStates = async (
   inspection: InternalInspection
 ): Promise<ComponentWriteBackError[]> => {
-  const errors: ComponentWriteBackError[] = []
-
   if (!inspection.rooms || inspection.endedAt === null) {
-    return errors
+    return []
   }
 
   const lastInspectionDate = inspection.endedAt
+  const tasks: WriteBackTask[] = []
 
   for (const room of inspection.rooms) {
     if (!room.components) continue
@@ -59,20 +66,49 @@ export const writeBackComponentInspectionStates = async (
         continue
       }
 
-      const result = await propertyBaseAdapter.updateComponentInspectionState(
-        component.componentId,
-        { condition: mappedCondition, lastInspectionDate }
-      )
-
-      if (!result.ok) {
-        errors.push({
-          componentId: component.componentId,
-          componentLabel: component.label,
-          message: ERROR_MESSAGES[result.err],
-        })
-      }
+      tasks.push({
+        componentId: component.componentId,
+        componentLabel: component.label,
+        mappedCondition,
+      })
     }
   }
+
+  const settled = await Promise.allSettled(
+    tasks.map((task) =>
+      propertyBaseAdapter.updateComponentInspectionState(task.componentId, {
+        condition: task.mappedCondition,
+        lastInspectionDate,
+      })
+    )
+  )
+
+  const errors: ComponentWriteBackError[] = []
+  settled.forEach((outcome, index) => {
+    const task = tasks[index]
+    if (outcome.status === 'rejected') {
+      // The adapter catches its own errors and returns `{ ok: false, err }`,
+      // so a rejected promise here means an unexpected throw — log it and
+      // surface as 'unknown' rather than crashing the whole PATCH.
+      logger.error(
+        { err: outcome.reason, componentId: task.componentId },
+        'updateComponentInspectionState threw unexpectedly'
+      )
+      errors.push({
+        componentId: task.componentId,
+        componentLabel: task.componentLabel,
+        message: ERROR_MESSAGES.upstream_error,
+      })
+      return
+    }
+    if (!outcome.value.ok) {
+      errors.push({
+        componentId: task.componentId,
+        componentLabel: task.componentLabel,
+        message: ERROR_MESSAGES[outcome.value.err],
+      })
+    }
+  })
 
   return errors
 }

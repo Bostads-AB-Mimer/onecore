@@ -1,11 +1,11 @@
-import { components } from '@onecore/types'
+import { property } from '@onecore/types'
 
 import type { components as apiTypes } from '@/services/api/core/generated/api-types'
 
 type FetchedComponent = apiTypes['schemas']['Component']
 
-export const SURFACE_TYPES = components.SURFACE_TYPES
-export type SurfaceType = components.SurfaceType
+export const SURFACE_TYPES = property.SURFACE_TYPES
+export type SurfaceType = property.SurfaceType
 
 // Returns the upstream Type name (e.g. 'Vägg', 'Golv', 'Tak') for a fetched
 // component instance. Used by the inspection picker to detect missing surfaces.

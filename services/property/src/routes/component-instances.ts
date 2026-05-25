@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { components } from '@onecore/types'
+import { property } from '@onecore/types'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -325,6 +325,7 @@ export const routes = (router: KoaRouter) => {
    *         application/json:
    *           schema:
    *             type: object
+   *             required: [condition, lastInspectionDate]
    *             properties:
    *               condition:
    *                 type: string
@@ -351,7 +352,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.put(
     '(.*)/components/:id/inspection-state',
-    parseRequest({ body: components.UpdateComponentInspectionStateSchema }),
+    parseRequest({ body: property.UpdateComponentInspectionStateSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
@@ -363,7 +364,7 @@ export const routes = (router: KoaRouter) => {
       }
       const id = idResult.data
       const body = ctx.request
-        .parsedBody as components.UpdateComponentInspectionState
+        .parsedBody as property.UpdateComponentInspectionState
 
       try {
         const existing = await getComponentById(id)

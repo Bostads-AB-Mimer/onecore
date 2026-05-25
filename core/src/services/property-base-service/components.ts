@@ -4,7 +4,7 @@ import { z } from 'zod'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
-import { components } from '@onecore/types'
+import { property } from '@onecore/types'
 import * as schemas from './schemas'
 import { addComponent } from '../../processes/components'
 import { ProcessStatus } from '../../common/types'
@@ -83,7 +83,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component[],
+        content: schemas.ComponentSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -153,7 +153,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentCategory[],
+        content: schemas.ComponentCategorySchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -218,7 +218,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentCategory,
+        content: schemas.ComponentCategorySchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -278,7 +278,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentCategory,
+        content: schemas.ComponentCategorySchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -359,7 +359,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentCategory,
+        content: schemas.ComponentCategorySchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -499,7 +499,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentType[],
+        content: schemas.ComponentTypeSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -564,7 +564,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentType,
+        content: schemas.ComponentTypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -620,7 +620,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentType,
+        content: schemas.ComponentTypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -699,7 +699,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentType,
+        content: schemas.ComponentTypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -861,7 +861,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentSubtype[],
+        content: schemas.ComponentSubtypeSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -926,7 +926,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentSubtype,
+        content: schemas.ComponentSubtypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -984,7 +984,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentSubtype,
+        content: schemas.ComponentSubtypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1067,7 +1067,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentSubtype,
+        content: schemas.ComponentSubtypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1239,7 +1239,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel[],
+        content: schemas.ComponentModelSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1389,7 +1389,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel[],
+        content: schemas.ComponentModelSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1424,7 +1424,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel,
+        content: schemas.ComponentModelSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1480,7 +1480,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel,
+        content: schemas.ComponentModelSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1561,7 +1561,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel,
+        content: schemas.ComponentModelSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1723,7 +1723,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component[],
+        content: schemas.ComponentSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1788,7 +1788,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component,
+        content: schemas.ComponentSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1847,7 +1847,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component,
+        content: schemas.ComponentSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1933,7 +1933,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component,
+        content: schemas.ComponentSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2037,6 +2037,7 @@ export const routes = (router: KoaRouter) => {
    *         application/json:
    *           schema:
    *             type: object
+   *             required: [condition, lastInspectionDate]
    *             properties:
    *               condition:
    *                 type: string
@@ -2067,7 +2068,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const body = components.UpdateComponentInspectionStateSchema.safeParse(
+    const body = property.UpdateComponentInspectionStateSchema.safeParse(
       ctx.request.body
     )
 
@@ -2096,7 +2097,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component,
+        content: schemas.ComponentSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2195,7 +2196,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentInstallation[],
+        content: schemas.ComponentInstallationSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2262,7 +2263,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentInstallation,
+        content: schemas.ComponentInstallationSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2343,7 +2344,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentInstallation,
+        content: schemas.ComponentInstallationSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2431,7 +2432,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentInstallation,
+        content: schemas.ComponentInstallationSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2889,7 +2890,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.AIComponentAnalysis,
+        content: schemas.AIComponentAnalysisSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
