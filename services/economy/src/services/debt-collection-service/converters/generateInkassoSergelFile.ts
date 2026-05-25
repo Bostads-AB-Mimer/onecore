@@ -103,7 +103,7 @@ const createInvoiceRow = (
       ' '
     ),
     '  ',
-    `Avser: ${row.invoiceRowText}`,
+    row.invoiceRowText ? `Avser: ${row.invoiceRowText}` : '',
   ])
 }
 
