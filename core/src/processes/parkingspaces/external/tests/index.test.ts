@@ -103,6 +103,7 @@ describe('parkingspaces', () => {
                 rows: [],
               },
               rentalObjectCode: '705-808-00-0006',
+              rentalTenureType: { id: 'Bilplats', name: 'Bilplats' },
             },
             objectTypeCaption: 'Bilplats',
             objectTypeCode: 'BP',

@@ -22,6 +22,8 @@ import {
   TenfastRentalObjectSchema,
   TenfastLeaseTemplateResponseSchema,
   TenfastLeasesByArticleResponseSchema,
+  TenfastTagSchema,
+  TenfastTag,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -247,6 +249,46 @@ export enum RentalObjectType {
   Storage = 'förråd',
 }
 
+const TAGS_CACHE_TTL_MS = 5 * 60 * 1000
+let tagsCache: Promise<Map<string, TenfastTag>> | null = null
+let tagsCachedAt = 0
+
+const getTags = (): Promise<Map<string, TenfastTag>> => {
+  if (tagsCache && Date.now() - tagsCachedAt < TAGS_CACHE_TTL_MS) {
+    return tagsCache
+  }
+  tagsCachedAt = Date.now()
+  tagsCache = (async () => {
+    try {
+      const res = await tenfastApi.request({
+        method: 'get',
+        url: `${tenfastBaseUrl}/v1/hyresvard/tags?hyresvard=${tenfastCompanyId}`,
+      })
+      if (res.status !== 200) {
+        tagsCache = null
+        tagsCachedAt = 0
+        return new Map()
+      }
+      const tags = z.array(TenfastTagSchema).safeParse(res.data)
+      if (!tags.success) {
+        tagsCache = null
+        tagsCachedAt = 0
+        return new Map()
+      }
+      return new Map(tags.data.map((t) => [t._id, t]))
+    } catch (err) {
+      logger.error(
+        { err: JSON.stringify(err) },
+        'Failed to fetch tags from Tenfast '
+      )
+      tagsCache = null
+      tagsCachedAt = 0
+      return new Map()
+    }
+  })()
+  return tagsCache
+}
+
 export const getAvailabilityForVacantRentalObjects = async (
   type: RentalObjectType
 ): Promise<
@@ -258,6 +300,8 @@ export const getAvailabilityForVacantRentalObjects = async (
   >
 > => {
   try {
+    const tagsById = await getTags()
+
     let page = ''
     let allRecords: any[] = []
     let totalCount = 0
@@ -310,7 +354,7 @@ export const getAvailabilityForVacantRentalObjects = async (
     return {
       ok: true,
       data: recordsWithoutUpcomingLeases.map((record) =>
-        mapTenfastRentalObjectToAvailabilityInfo(false, record)
+        mapTenfastRentalObjectToAvailabilityInfo(false, record, tagsById)
       ),
     }
   } catch (err: any) {
@@ -329,7 +373,10 @@ export const getAvailabilityForRentalObject = async (
     | 'get-rental-object-bad-request'
   >
 > => {
-  const rentalObjectResult = await getRentalObject(rentalObjectCode)
+  const [rentalObjectResult, tagsById] = await Promise.all([
+    getRentalObject(rentalObjectCode),
+    getTags(),
+  ])
 
   if (!rentalObjectResult.ok) {
     return {
@@ -348,7 +395,8 @@ export const getAvailabilityForRentalObject = async (
   const availability: RentalObjectAvailabilityInfo =
     mapTenfastRentalObjectToAvailabilityInfo(
       includeVAT,
-      rentalObjectResult.data
+      rentalObjectResult.data,
+      tagsById
     )
 
   return {
@@ -370,6 +418,8 @@ export const getRentalObjectAvailabilityInfo = async (
   >
 > => {
   try {
+    const tagsById = await getTags()
+
     const batchSize = 500
     const batches: Array<Array<string>> = []
     for (let i = 0; i < rentalObjectCodes.length; i += batchSize) {
@@ -412,7 +462,8 @@ export const getRentalObjectAvailabilityInfo = async (
 
           return mapTenfastRentalObjectToAvailabilityInfo(
             includeVAT,
-            parsedRentalObject.data
+            parsedRentalObject.data,
+            tagsById
           )
         }
       )
@@ -958,8 +1009,8 @@ export async function getLeaseByLeaseId(
 ): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
   try {
     const res = await tenfastApi.request({
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/${encodeURIComponent(leaseId)}?hyresvard=${tenfastCompanyId}&populate=hyresobjekt,hyresgaster`,
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/mimer/avtal/${leaseId}?populate=hyresobjekt`,
     })
 
     if (res.status !== 200) {

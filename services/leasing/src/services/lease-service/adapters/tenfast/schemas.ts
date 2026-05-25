@@ -57,6 +57,11 @@ export const TenfastRentalObjectSchema = z.object({
   stadsdel: z.string().nullish(),
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
+  category: z.object({
+    code: z.string(),
+    label: z.string(),
+  }),
+  tags: z.array(z.string()).optional(),
   kvm: z.number().nullish(),
   roomCount: z.number().nullish(),
   avtal: z
@@ -99,6 +104,13 @@ export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
 export type TenfastTenantByContactCodeResponse = z.infer<
   typeof TenfastTenantByContactCodeResponseSchema
 >
+export const TenfastTagSchema = z.object({
+  _id: z.string(),
+  code: z.string(),
+  name: z.string(),
+})
+
+export type TenfastTag = z.infer<typeof TenfastTagSchema>
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
 export type TenfastRentalObjectByRentalObjectCodeResponse = z.infer<
   typeof TenfastRentalObjectByRentalObjectCodeResponseSchema

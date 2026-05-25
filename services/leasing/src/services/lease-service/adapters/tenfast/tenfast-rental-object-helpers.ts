@@ -1,6 +1,6 @@
-import { RentalObjectAvailabilityInfo } from '@onecore/types'
+import { RentalObjectAvailabilityInfo, RentalTag } from '@onecore/types'
 import currency from 'currency.js'
-import { TenfastLease, TenfastRentalObject } from './schemas'
+import { TenfastLease, TenfastRentalObject, TenfastTag } from './schemas'
 import { filterByStatus } from './filters'
 
 export const getLatestActiveLeasesEndDate = (
@@ -24,7 +24,8 @@ export const getLatestActiveLeasesEndDate = (
 
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
-  tenfastRentalObject: TenfastRentalObject
+  tenfastRentalObject: TenfastRentalObject,
+  tagsById: Map<string, TenfastTag> = new Map()
 ): RentalObjectAvailabilityInfo => {
   const lastDebitDate = getLatestActiveLeasesEndDate(
     tenfastRentalObject.avtal ?? []
@@ -45,6 +46,14 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
   return {
     rentalObjectCode: tenfastRentalObject.externalId,
     vacantFrom: vacantFrom,
+    rentalTenureType: {
+      id: tenfastRentalObject.category.code,
+      name: tenfastRentalObject.category.label,
+    },
+    rentalTags: tenfastRentalObject.tags?.flatMap((id): RentalTag[] => {
+      const tag = tagsById.get(id)
+      return tag ? [{ id: tag.code, name: tag.name }] : []
+    }),
     rent: {
       amount: includeVAT
         ? tenfastRentalObject.hyra
