@@ -5,6 +5,7 @@ import {
   StralforsGetChannelLookupResponseSchema,
   StralforsPostChannelLookupResponseSchema,
 } from './schema'
+import { logger } from '@onecore/utilities'
 
 let accessToken: string | null = null
 
@@ -105,6 +106,7 @@ export async function postChannelLookup(nationalIdentityNumbers: string[]) {
   )
 
   if (response.error) {
+    logger.error(response.error, 'stralfors-adapter.postChannelLookup')
     throw response.error
   }
 

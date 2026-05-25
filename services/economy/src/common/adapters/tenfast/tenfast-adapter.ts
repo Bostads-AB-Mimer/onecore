@@ -60,7 +60,11 @@ export const getTenantByContactCode = async (
       }
     )
     if (tenantResponse.status !== 200) {
-      return { ok: false, err: tenantResponse.statusText }
+      return {
+        ok: false,
+        err: tenantResponse.statusText,
+        statusCode: tenantResponse.status,
+      }
     }
 
     const parsedResponse = TenfastTenantByContactCodeResponseSchema.safeParse(
@@ -85,10 +89,15 @@ export const getContactByContactCode = async (
 ): Promise<AdapterResult<Contact, string>> => {
   const tenfastTenantResult = await getTenantByContactCode(contactCode)
   if (!tenfastTenantResult.ok) {
-    return { ok: false, err: tenfastTenantResult.err }
+    return {
+      ok: false,
+      err: tenfastTenantResult.err,
+      statusCode: tenfastTenantResult.statusCode,
+    }
   }
   if (!tenfastTenantResult.data) {
-    return { ok: false, err: 'not-found' }
+    logger.warn(`Tenant with contact code ${contactCode} not found`)
+    return { ok: false, err: 'not-found', statusCode: 404 }
   }
 
   const contact = transformTenfastTenantToContact(tenfastTenantResult.data)

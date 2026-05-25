@@ -300,8 +300,8 @@ export const routes = (router: KoaRouter) => {
    *   post:
    *     tags:
    *       - Economy service
-   *     summary: Look up invoice channels for contact codes
-   *     description: Returns the invoice delivery channel for each provided contact code.
+   *     summary: Look up invoice channels for national registration numbers
+   *     description: Returns the invoice delivery channel for each provided national registration number.
    *     requestBody:
    *       required: true
    *       content:
@@ -309,13 +309,13 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - contactCodes
+   *               - nationalRegistrationNumbers
    *             properties:
-   *               contactCodes:
+   *               nationalRegistrationNumbers:
    *                 type: array
    *                 items:
    *                   type: string
-   *                 description: List of contact codes to look up
+   *                 description: List of national registration numbers to look up
    *     responses:
    *       '200':
    *         description: Successfully retrieved invoice channels.
@@ -367,9 +367,11 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(economy.ChannelLookupRequestBodySchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { contactCodes } = ctx.request.body
+      const { nationalRegistrationNumbers } = ctx.request.body
 
-      const response = await economyAdapter.getInvoiceChannels(contactCodes)
+      const response = await economyAdapter.getInvoiceChannels(
+        nationalRegistrationNumbers
+      )
 
       if (response.ok) {
         ctx.status = 200

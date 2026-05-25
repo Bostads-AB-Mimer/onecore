@@ -13,6 +13,7 @@ import {
 
 import config from '../../common/config'
 import { AdapterResult } from './../types'
+import { AxiosError } from 'axios'
 
 export async function getInvoiceByInvoiceId(
   invoiceId: string
@@ -315,13 +316,13 @@ export async function processIMD(
 }
 
 export async function getInvoiceChannels(
-  contactCodes: string[]
-): Promise<AdapterResult<economy.ChannelLookupResponse, 'unknown'>> {
+  nationalRegistrationNumbers: string[]
+): Promise<AdapterResult<economy.ChannelLookupResponse, string>> {
   try {
     const response = await axios.post(
       `${config.economyService.url}/invoice-channels`,
       {
-        contactCodes,
+        nationalRegistrationNumbers,
       }
     )
 
@@ -331,8 +332,12 @@ export async function getInvoiceChannels(
 
     logger.error(response.data, 'economy-adapter.getInvoiceChannels')
     return { ok: false, err: 'unknown', statusCode: response.status }
-  } catch (err) {
+  } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoiceChannels')
+    if (err instanceof AxiosError) {
+      return { ok: false, err: err.response?.data.message }
+    }
+
     return { ok: false, err: 'unknown' }
   }
 }

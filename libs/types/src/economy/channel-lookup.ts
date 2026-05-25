@@ -1,7 +1,7 @@
 import z from 'zod'
 
 export const ChannelLookupRequestBodySchema = z.object({
-  contactCodes: z.string().array(),
+  nationalRegistrationNumbers: z.string().array(),
 })
 
 export const ChannelLookupSchema = z.object({

@@ -232,14 +232,22 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/invoice-channels', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { contactCodes } = ctx.request.body
+    const { nationalRegistrationNumbers } = ctx.request.body
 
-    const results = await stralforsPostChannelLookup(contactCodes)
+    try {
+      const results = await stralforsPostChannelLookup(
+        nationalRegistrationNumbers
+      )
 
-    ctx.status = 200
-    ctx.body = {
-      ...metadata,
-      content: results,
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+        content: results,
+      }
+    } catch (error: any) {
+      logger.error(error, 'Invoice channels lookup error')
+      ctx.status = 500
+      ctx.body = { ...metadata, message: error.message }
     }
   })
 }

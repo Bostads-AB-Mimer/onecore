@@ -56,7 +56,6 @@ import {
   getInvoicesByContactCode as getTenfastInvoicesByContactCode,
   getInvoicesForTenant,
   getTenantByContactCode,
-  getContactByContactCode,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
 
@@ -1052,38 +1051,8 @@ const enrichInvoiceRowsWithText = async (
   })
 }
 
-const getTenfastContacts = async (
-  contactCodes: string[]
-): Promise<Contact[]> => {
-  const contacts: Contact[] = []
-
-  for (const contactCode of contactCodes) {
-    const contactResult = await getContactByContactCode(contactCode)
-    if (!contactResult.ok || !contactResult.data) {
-      throw new Error(JSON.stringify(contactResult))
-    }
-
-    contacts.push(contactResult.data)
-  }
-
-  return contacts
-}
-
-export const stralforsPostChannelLookup = async (contactCodes: string[]) => {
-  const contacts = await getTenfastContacts(contactCodes)
-  const contactCodeByNationalRegistrationNumber = new Map(
-    contacts.map((c) => [c.nationalRegistrationNumber, c.contactCode] as const)
-  )
-  const response = await postChannelLookup(
-    contacts.map((c) => c.nationalRegistrationNumber)
-  )
-
-  return response.map((channel) => ({
-    ...channel,
-    matchedCandidates:
-      channel.matchedCandidates?.map(
-        (candidate) =>
-          contactCodeByNationalRegistrationNumber.get(candidate) ?? candidate
-      ) ?? null,
-  }))
+export const stralforsPostChannelLookup = async (
+  nationalRegistrationNumbers: string[]
+) => {
+  return await postChannelLookup(nationalRegistrationNumbers)
 }
