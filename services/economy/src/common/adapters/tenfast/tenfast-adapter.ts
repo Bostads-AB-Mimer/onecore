@@ -101,7 +101,10 @@ export const getContactByContactCode = async (
     return { ok: false, err: tenfastTenantResult.err }
   }
   if (!tenfastTenantResult.data) {
-    return { ok: false, err: 'not-found' }
+    return {
+      ok: false,
+      err: `Contact with contactCode ${contactCode} not found`,
+    }
   }
 
   const contact = transformTenfastTenantToContact(tenfastTenantResult.data)
@@ -201,7 +204,7 @@ export const getInvoicesByContactCode = async (
 
 export const getRentalProperty = async (
   rentalPropertyCode: string
-): Promise<AdapterResult<RentalProperty | null, string>> => {
+): Promise<AdapterResult<RentalProperty, string>> => {
   try {
     const result = await makeTenfastRequest(
       '/v1/hyresvard/hyresobjekt/search',
@@ -223,11 +226,16 @@ export const getRentalProperty = async (
       return { ok: false, err: 'schema-error' }
     }
 
+    if (!parsedResponse.data.records[0]) {
+      return {
+        ok: false,
+        err: `Rental property with rentalPropertyCode ${rentalPropertyCode} not found`,
+      }
+    }
+
     return {
       ok: true,
-      data: parsedResponse.data.records[0]
-        ? transformToRentalProperty(parsedResponse.data.records[0])
-        : null,
+      data: transformToRentalProperty(parsedResponse.data.records[0]),
     }
   } catch (err: any) {
     logger.error(err)
@@ -259,7 +267,7 @@ const transformToRentalProperty = (
 
 export const getLease = async (
   leaseId: string
-): Promise<AdapterResult<Lease | null, string>> => {
+): Promise<AdapterResult<Lease, string>> => {
   try {
     const result = await makeTenfastRequest('/v1/hyresvard/avtal/search', {
       params: {
@@ -279,11 +287,16 @@ export const getLease = async (
       return { ok: false, err: 'schema-error' }
     }
 
+    if (!parsedResponse.data.records[0]) {
+      return {
+        ok: false,
+        err: `Lease with leaseId ${leaseId} not found`,
+      }
+    }
+
     return {
       ok: true,
-      data: parsedResponse.data.records[0]
-        ? transformToLease(parsedResponse.data.records[0])
-        : null,
+      data: transformToLease(parsedResponse.data.records[0]),
     }
   } catch (err: any) {
     logger.error(err)
@@ -366,7 +379,7 @@ const transformToLease = (tenfastLease: TenfastLease): Lease => {
 
 export const getInvoiceByOcr = async (
   ocr: string
-): Promise<AdapterResult<Invoice | null, string>> => {
+): Promise<AdapterResult<Invoice, string>> => {
   try {
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
@@ -386,11 +399,16 @@ export const getInvoiceByOcr = async (
       return { ok: false, err: 'schema-error' }
     }
 
+    if (!parsedResponse.data.records[0]) {
+      return {
+        ok: false,
+        err: `Invoice with ocr ${ocr} not found`,
+      }
+    }
+
     return {
       ok: true,
-      data: parsedResponse.data.records[0]
-        ? transformToInvoice(parsedResponse.data.records[0])
-        : null,
+      data: transformToInvoice(parsedResponse.data.records[0]),
     }
   } catch (err: any) {
     logger.error(err)
