@@ -735,9 +735,6 @@ export async function getAllInvoicePaymentEvents(
 }
 
 function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
-  // TODO: consider passing slTransactionType (INVOICE, CREDIT_MEMO,
-  // ELECTRONIC_PAYMENT, ...) through to the frontend so the UI can label each
-  // event by its semantic type instead of just the source code.
   return {
     type: event.type,
     invoiceId: event.invoiceNumber,
@@ -748,6 +745,7 @@ function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
       : new Date(event.paymentDate),
     text: event.text,
     transactionSourceCode: event.transactionHeader.transactionSource.code,
+    slTransactionType: event.slTransactionType?.name ?? null,
   }
 }
 

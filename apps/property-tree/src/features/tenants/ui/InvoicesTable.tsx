@@ -20,6 +20,19 @@ const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   maximumFractionDigits: 2,
 })
 
+const paymentEventTypeLabels: Record<string, string> = {
+  INVOICE: 'Faktura',
+  CREDIT_MEMO: 'Kredit',
+  ELECTRONIC_PAYMENT: 'Inbetalning',
+  PAYMENT: 'Inbetalning',
+  REMINDER: 'Påminnelse',
+}
+
+const formatPaymentEventType = (slTransactionType: string | null) => {
+  if (!slTransactionType) return '-'
+  return paymentEventTypeLabels[slTransactionType] ?? slTransactionType
+}
+
 type Props = {
   invoices: Invoice[]
   onInvoiceRowClick: (invoiceId: string | null) => void
@@ -282,6 +295,7 @@ export const InvoicesTable = (props: Props) => {
         <table className="w-full">
           <thead>
             <tr className="border-b bg-muted/50">
+              <th className="text-left p-2 text-xs font-medium">Typ</th>
               <th className="text-left p-2 text-xs font-medium">Källa</th>
               <th className="text-left p-2 text-xs font-medium">Belopp</th>
               <th className="text-left p-2 text-xs font-medium">Text</th>
@@ -291,6 +305,9 @@ export const InvoicesTable = (props: Props) => {
           <tbody>
             {events.map((event, idx) => (
               <tr key={idx} className="border-b last:border-0">
+                <td className="p-2 text-sm">
+                  {formatPaymentEventType(event.slTransactionType)}
+                </td>
                 <td className="p-2 text-sm">{event.transactionSourceCode}</td>
                 <td className="p-2 text-sm">{formatCurrency(event.amount)}</td>
                 <td className="p-2 text-sm">{event.text || '-'}</td>
