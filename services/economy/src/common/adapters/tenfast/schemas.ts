@@ -84,7 +84,10 @@ export const TenfastLeaseSchema = z.object({
     'terminationScheduled',
     'preTermination',
   ]),
-  startDate: z.coerce.date().optional().default(new Date()), // TODO vill vi hantera Leases som inte har startdatum? dvs drafts?
+  startDate: z.coerce
+    .date()
+    .optional()
+    .default(() => new Date()),
   endDate: optionalDateField,
   hyresgaster: z
     .array(
