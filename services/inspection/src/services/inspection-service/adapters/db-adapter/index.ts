@@ -559,7 +559,7 @@ export async function getInspectionById(
       return { ok: false, err: 'not-found' }
     }
 
-    const rooms = parseDraftRooms(inspectionId, inspection.draftRooms)
+    let rooms = parseDraftRooms(inspectionId, inspection.draftRooms)
 
     // Decorate rooms with isAddedInThisInspection by joining the tracking table.
     if (rooms && rooms.length > 0) {
