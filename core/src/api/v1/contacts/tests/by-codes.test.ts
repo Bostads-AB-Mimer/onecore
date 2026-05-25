@@ -62,6 +62,7 @@ const makeIndividualContact = (code: string): Contact => ({
       city: 'Västerås',
       region: null,
       country: 'SE',
+      full: 'Testgatan 1, 72345 Västerås',
     },
   ],
 })

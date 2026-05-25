@@ -25,6 +25,9 @@ import * as propertyManagementAdapter from '../../adapters/property-management-a
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
+import { registerSchema } from '../../utils/openapi'
+
+registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
 export const routes = (router: KoaRouter) => {
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases

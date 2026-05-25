@@ -72,9 +72,7 @@ const LeasesPage = () => {
   const filters = useLeaseFilters()
   const searchProperties = usePropertySearch()
   const { leases: enrichedLeases, isLoadingContacts: isEnrichingContacts } =
-    useContactEnrichment(
-      filters.leases.length > 0 ? filters.leases : undefined
-    )
+    useContactEnrichment(filters.leases.length > 0 ? filters.leases : undefined)
 
   // TODO: Enable when leaseType filtering is supported by the search API
   // const searchLeaseTypes = useCallback(

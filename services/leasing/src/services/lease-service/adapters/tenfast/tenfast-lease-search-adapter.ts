@@ -65,11 +65,108 @@ interface BatchGetLease {
     vat: number
     label: string
     article: string
-    from?: string
-    to?: string
+    from?: Lease['rentRows'][number]['from']
+    to?: Lease['rentRows'][number]['to']
   }>
   tenants: BatchGetTenant[]
   rentalObjects: BatchGetRentalObject[]
+}
+
+/** Raw shapes from Tenfast batch-get response (before transformation) */
+interface RawBatchGetAvtal {
+  externalId?: string
+  startDate?: string
+  endDate?: string
+  stage?: string
+  signedAt?: string
+  uppsagningstid?: string
+  cancellation?: {
+    cancelled?: boolean
+    cancelledByType?: string
+    handledAt?: string
+    preferredMoveOutDate?: string
+  }
+  hyror?: Partial<BatchGetLease['hyror'][number]>[]
+  hyresgaster?: Partial<BatchGetTenant>[]
+  originalData?: { hyresgaster?: Partial<BatchGetTenant>[] }
+}
+
+interface RawBatchGetRentalObject extends Partial<BatchGetRentalObject> {
+  avtal?: RawBatchGetAvtal[]
+}
+
+/**
+ * Parse raw batch-get rental objects into typed BatchGetLease entries.
+ * Deduplicates by leaseId using the provided seenLeaseIds set.
+ */
+function parseBatchGetResponse(
+  rentalObjects: RawBatchGetRentalObject[],
+  seenLeaseIds: Set<string>
+): BatchGetLease[] {
+  const results: BatchGetLease[] = []
+
+  for (const ro of rentalObjects) {
+    if (!ro.avtal) continue
+
+    for (const raw of ro.avtal) {
+      const leaseId = raw.externalId
+      if (!leaseId || seenLeaseIds.has(leaseId)) continue
+      seenLeaseIds.add(leaseId)
+
+      const tenants = raw.originalData?.hyresgaster ?? raw.hyresgaster ?? []
+
+      results.push({
+        externalId: leaseId,
+        startDate: raw.startDate ? new Date(raw.startDate) : new Date(),
+        endDate: raw.endDate ? new Date(raw.endDate) : undefined,
+        stage: raw.stage ?? 'active',
+        signedAt: raw.signedAt ? new Date(raw.signedAt) : undefined,
+        uppsagningstid: raw.uppsagningstid ?? '',
+        cancellation: {
+          cancelled: raw.cancellation?.cancelled ?? false,
+          cancelledByType: raw.cancellation?.cancelledByType,
+          handledAt: raw.cancellation?.handledAt
+            ? new Date(raw.cancellation.handledAt)
+            : undefined,
+          preferredMoveOutDate: raw.cancellation?.preferredMoveOutDate
+            ? new Date(raw.cancellation.preferredMoveOutDate)
+            : undefined,
+        },
+        hyror: (raw.hyror ?? []).map((r) => ({
+          _id: r._id ?? '',
+          amount: r.amount ?? 0,
+          vat: r.vat ?? 0,
+          label: r.label ?? '',
+          article: r.article ?? '',
+          from: r.from,
+          to: r.to,
+        })),
+        tenants: tenants.map((t) => ({
+          externalId: t.externalId ?? '',
+          displayName: t.displayName ?? '',
+          name: t.name,
+          idbeteckning: t.idbeteckning ?? '',
+        })),
+        rentalObjects: [
+          {
+            externalId: ro.externalId ?? '',
+            typ: ro.typ,
+            postadress: ro.postadress,
+            stadsdel: ro.stadsdel,
+            fastighet: ro.fastighet
+              ? {
+                  fastighetsbeteckning: ro.fastighet.fastighetsbeteckning ?? '',
+                  stadsdel: ro.fastighet.stadsdel,
+                }
+              : undefined,
+            kvm: ro.kvm,
+          },
+        ],
+      })
+    }
+  }
+
+  return results
 }
 
 /** Map a batch-get lease to a onecore Lease */
@@ -126,8 +223,8 @@ function mapBatchGetLeaseToOnecoreLease(lease: BatchGetLease): Lease {
       vat: r.vat,
       label: r.label,
       articleId: r.article,
-      from: r.from as any,
-      to: r.to as any,
+      from: r.from,
+      to: r.to,
     })),
   }
 }
@@ -301,7 +398,7 @@ function applyLocalFilters(
         paramTypes.flatMap((t) => OBJECT_TYPE_PARAM_TO_LEASE_TYPES[t] ?? [])
       )
 
-      const leaseType = lease.type as LeaseType | undefined
+      const leaseType = lease.type
       if (leaseType === undefined) return false
 
       // Match if lease type is in the allowed set, or if 'ovrigt' is
@@ -530,6 +627,7 @@ export async function fetchAllLeasesForExport(
   }
 
   const queryParams = buildTenfastQueryParams({ ...params, limit: 500 })
+  // Tenfast API expects literal brackets and commas, not URL-encoded
   const queryString = queryParams
     .toString()
     .replace(/%5B/gi, '[')
@@ -629,7 +727,7 @@ async function fetchAllLeasesForExportViaBatchGet(
 
   for (let i = 0; i < codes.length; i += batchSize) {
     const batch = codes.slice(i, i + batchSize)
-    const res = await tenfastApi.request({
+    const res = await tenfastApi.request<RawBatchGetRentalObject[]>({
       method: 'post',
       url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
       data: { externalIds: batch },
@@ -637,77 +735,8 @@ async function fetchAllLeasesForExportViaBatchGet(
 
     if (res.status !== 200 && res.status !== 201) continue
 
-    const rentalObjects = res.data as Array<Record<string, unknown>>
-    for (const ro of rentalObjects) {
-      const avtal = ro.avtal as Array<Record<string, unknown>> | undefined
-      if (!avtal) continue
-
-      for (const raw of avtal) {
-        const leaseId = raw.externalId as string | undefined
-        if (!leaseId || seenLeaseIds.has(leaseId)) continue
-        seenLeaseIds.add(leaseId)
-
-        const od = raw.originalData as Record<string, unknown> | undefined
-        const tenants = (od?.hyresgaster ?? raw.hyresgaster ?? []) as Array<
-          Record<string, unknown>
-        >
-
-        batchLeases.push({
-          externalId: leaseId,
-          startDate: raw.startDate
-            ? new Date(raw.startDate as string)
-            : new Date(),
-          endDate: raw.endDate ? new Date(raw.endDate as string) : undefined,
-          stage: (raw.stage as string) ?? 'active',
-          signedAt: raw.signedAt ? new Date(raw.signedAt as string) : undefined,
-          uppsagningstid: (raw.uppsagningstid as string) ?? '',
-          cancellation: {
-            cancelled: (raw.cancellation as any)?.cancelled ?? false,
-            cancelledByType:
-              (raw.cancellation as any)?.cancelledByType ?? undefined,
-            handledAt: (raw.cancellation as any)?.handledAt
-              ? new Date((raw.cancellation as any).handledAt)
-              : undefined,
-            preferredMoveOutDate: (raw.cancellation as any)
-              ?.preferredMoveOutDate
-              ? new Date((raw.cancellation as any).preferredMoveOutDate)
-              : undefined,
-          },
-          hyror: ((raw.hyror as any[]) ?? []).map((r) => ({
-            _id: r._id ?? '',
-            amount: r.amount ?? 0,
-            vat: r.vat ?? 0,
-            label: r.label ?? '',
-            article: r.article ?? '',
-            from: r.from ?? undefined,
-            to: r.to ?? undefined,
-          })),
-          tenants: tenants.map((t) => ({
-            externalId: (t.externalId as string) ?? '',
-            displayName: (t.displayName as string) ?? '',
-            name: t.name as { first: string; last: string } | undefined,
-            idbeteckning: (t.idbeteckning as string) ?? '',
-          })),
-          rentalObjects: [
-            {
-              externalId: (ro.externalId as string) ?? '',
-              typ: (ro.typ as string) ?? undefined,
-              postadress: (ro.postadress as string) ?? undefined,
-              stadsdel: (ro.stadsdel as string) ?? undefined,
-              fastighet:
-                typeof ro.fastighet === 'object' && ro.fastighet
-                  ? {
-                      fastighetsbeteckning:
-                        (ro.fastighet as any).fastighetsbeteckning ?? '',
-                      stadsdel: (ro.fastighet as any).stadsdel,
-                    }
-                  : undefined,
-              kvm: (ro.kvm as number) ?? undefined,
-            },
-          ],
-        })
-      }
-    }
+    const parsed = parseBatchGetResponse(res.data, seenLeaseIds)
+    batchLeases.push(...parsed)
   }
 
   // Apply local filters (status, objectType, etc.)
@@ -940,7 +969,7 @@ export const searchLeases = async (
     for (let i = 0; i < codes.length; i += batchSize) {
       const batch = codes.slice(i, i + batchSize)
 
-      const res = await tenfastApi.request({
+      const res = await tenfastApi.request<RawBatchGetRentalObject[]>({
         method: 'post',
         url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
         data: { externalIds: batch },
@@ -956,80 +985,10 @@ export const searchLeases = async (
         continue
       }
 
-      const rentalObjects = res.data as Array<Record<string, unknown>>
+      const rentalObjects = res.data
 
-      for (const ro of rentalObjects) {
-        const avtal = ro.avtal as Array<Record<string, unknown>> | undefined
-        if (!avtal) continue
-
-        for (const raw of avtal) {
-          const leaseId = raw.externalId as string | undefined
-          if (!leaseId || seenLeaseIds.has(leaseId)) continue
-          seenLeaseIds.add(leaseId)
-
-          const od = raw.originalData as Record<string, unknown> | undefined
-          const tenants = (od?.hyresgaster ?? raw.hyresgaster ?? []) as Array<
-            Record<string, unknown>
-          >
-
-          batchLeases.push({
-            externalId: leaseId,
-            startDate: raw.startDate
-              ? new Date(raw.startDate as string)
-              : new Date(),
-            endDate: raw.endDate ? new Date(raw.endDate as string) : undefined,
-            stage: (raw.stage as string) ?? 'active',
-            signedAt: raw.signedAt
-              ? new Date(raw.signedAt as string)
-              : undefined,
-            uppsagningstid: (raw.uppsagningstid as string) ?? '',
-            cancellation: {
-              cancelled: (raw.cancellation as any)?.cancelled ?? false,
-              cancelledByType:
-                (raw.cancellation as any)?.cancelledByType ?? undefined,
-              handledAt: (raw.cancellation as any)?.handledAt
-                ? new Date((raw.cancellation as any).handledAt)
-                : undefined,
-              preferredMoveOutDate: (raw.cancellation as any)
-                ?.preferredMoveOutDate
-                ? new Date((raw.cancellation as any).preferredMoveOutDate)
-                : undefined,
-            },
-            hyror: ((raw.hyror as any[]) ?? []).map((r) => ({
-              _id: r._id ?? '',
-              amount: r.amount ?? 0,
-              vat: r.vat ?? 0,
-              label: r.label ?? '',
-              article: r.article ?? '',
-              from: r.from ?? undefined,
-              to: r.to ?? undefined,
-            })),
-            tenants: tenants.map((t) => ({
-              externalId: (t.externalId as string) ?? '',
-              displayName: (t.displayName as string) ?? '',
-              name: t.name as { first: string; last: string } | undefined,
-              idbeteckning: (t.idbeteckning as string) ?? '',
-            })),
-            rentalObjects: [
-              {
-                externalId: (ro.externalId as string) ?? '',
-                typ: (ro.typ as string) ?? undefined,
-                postadress: (ro.postadress as string) ?? undefined,
-                stadsdel: (ro.stadsdel as string) ?? undefined,
-                fastighet:
-                  typeof ro.fastighet === 'object' && ro.fastighet
-                    ? {
-                        fastighetsbeteckning:
-                          (ro.fastighet as any).fastighetsbeteckning ?? '',
-                        stadsdel: (ro.fastighet as any).stadsdel,
-                      }
-                    : undefined,
-                kvm: (ro.kvm as number) ?? undefined,
-              },
-            ],
-          })
-        }
-      }
+      const parsed = parseBatchGetResponse(rentalObjects, seenLeaseIds)
+      batchLeases.push(...parsed)
 
       // Apply local filters to check if we have enough results
       const currentLeases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
