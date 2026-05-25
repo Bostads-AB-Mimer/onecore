@@ -457,6 +457,10 @@ export const aggregateRows = (rows: InvoiceRow[]): InvoiceRow[] => {
 }
 
 const getMainLease = (leases: Lease[]) => {
+  if (leases.length === 0) {
+    throw new Error('getMainLease requires at least one lease')
+  }
+
   return leases.find((l) => l.type === LeaseType.HousingContract) ?? leases[0]
 }
 
