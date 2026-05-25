@@ -51,6 +51,12 @@ export const getCostCenterTreeById = async (
               residenceId: string | null
               parkingSpaceId: string | null
               staircaseId: string | null
+              building: {
+                buildingType: {
+                  code: string | null
+                  name: string | null
+                } | null
+              } | null
             }>
           )
         : prisma.propertyStructure
@@ -63,6 +69,13 @@ export const getCostCenterTreeById = async (
                 residenceId: true,
                 parkingSpaceId: true,
                 staircaseId: true,
+                building: {
+                  select: {
+                    buildingType: {
+                      select: { code: true, name: true },
+                    },
+                  },
+                },
               },
             })
             .then(trimStrings),
@@ -70,10 +83,18 @@ export const getCostCenterTreeById = async (
 
     const propertyByCode = new Map(properties.map((p) => [p.code, p]))
 
+    type BuildingTypeSummary = {
+      code: string | null
+      name: string | null
+    }
     type Aggregates = {
       addresses: Map<
         string,
-        { buildingCode: string; buildingName: string | null }
+        {
+          buildingCode: string
+          buildingName: string | null
+          buildingType: BuildingTypeSummary | null
+        }
       >
       residenceIds: Set<string>
       parkingIds: Set<string>
@@ -101,6 +122,12 @@ export const getCostCenterTreeById = async (
         a.addresses.set(s.buildingCode, {
           buildingCode: s.buildingCode,
           buildingName: s.buildingName ?? null,
+          buildingType: s.building?.buildingType
+            ? {
+                code: s.building.buildingType.code ?? null,
+                name: s.building.buildingType.name ?? null,
+              }
+            : null,
         })
       }
       if (s.residenceId) a.residenceIds.add(s.residenceId)
@@ -131,6 +158,7 @@ export const getCostCenterTreeById = async (
                   buildingCode: b.buildingCode,
                   buildingName: b.buildingName,
                   address: b.buildingName,
+                  buildingType: b.buildingType,
                 }))
               : [],
             aggregates: {

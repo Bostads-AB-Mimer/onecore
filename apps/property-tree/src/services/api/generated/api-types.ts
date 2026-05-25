@@ -3775,6 +3775,11 @@ export interface components {
                   buildingCode: string;
                   buildingName: string | null;
                   address: string | null;
+                  buildingType: ({
+                    id: string | null;
+                    code: string | null;
+                    name: string | null;
+                  }) | null;
                 })[];
               aggregates: {
                 residenceCount: number;
