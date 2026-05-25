@@ -439,14 +439,12 @@ describe('db-adapter', () => {
     }
 
     it('updates status from Registrerad to Påbörjad', async () => {
-      const mockDb = createMockDbForUpdate(mockInspectionRow, [
-        {
-          id: 1,
-          inspectionId: 1,
-          roomName: 'Kitchen',
-          createdAt: new Date(),
-        },
-      ])
+      const draftRooms = [InspectionRoomFactory.build()]
+      const inspectionWithDraft = {
+        ...mockInspectionRow,
+        draftRooms: JSON.stringify(draftRooms),
+      }
+      const mockDb = createMockDbForUpdate(inspectionWithDraft)
 
       const result = await dbAdapter.updateInspectionStatus(
         mockDb,

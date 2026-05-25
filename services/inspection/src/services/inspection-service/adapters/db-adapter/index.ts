@@ -34,10 +34,13 @@ function mapDbRemarkToResponse(r: DbInspectionRemark) {
   }
 }
 
-function mapDbInspectionToResponse(
+// Base mapper shared by DetailedXpandInspection and InternalInspection responses
+// — both share every field except `rooms`, which differs by shape (xpand remarks
+// vs. internal room/component data) and nullability.
+function mapDbInspectionToResponse<R>(
   inspection: DbInspection,
-  rooms: inspectionTypes.DetailedXpandInspection['rooms']
-): inspectionTypes.DetailedXpandInspection {
+  rooms: R
+): Omit<inspectionTypes.DetailedXpandInspection, 'rooms'> & { rooms: R } {
   return {
     id: String(inspection.id),
     status: inspection.status,
@@ -60,6 +63,38 @@ function mapDbInspectionToResponse(
     remarkCount: inspection.remarkCount,
     rooms,
   }
+}
+
+// Parses the JSON-encoded draftRooms column with the InspectionRoom schema.
+// Returns null for missing or malformed payloads so callers can still respond
+// (failing here would deny status updates on inspections with corrupt drafts).
+function parseDraftRooms(
+  inspectionId: string,
+  draftRooms: string | null | undefined
+): inspectionTypes.InspectionRoom[] | null {
+  if (!draftRooms) return null
+
+  let raw: unknown
+  try {
+    raw = JSON.parse(draftRooms)
+  } catch {
+    logger.error(
+      { inspectionId },
+      'Failed to parse draftRooms JSON for inspection'
+    )
+    return null
+  }
+
+  const parsed = inspectionTypes.InspectionRoomSchema.array().safeParse(raw)
+  if (!parsed.success) {
+    logger.error(
+      { inspectionId, errors: parsed.error.errors },
+      'draftRooms payload does not match InspectionRoom schema'
+    )
+    return null
+  }
+
+  return parsed.data
 }
 
 export async function createInspection(
@@ -165,7 +200,7 @@ export async function updateInternalInspection(
   params: UpdateInternalInspectionParams
 ): Promise<
   AdapterResult<
-    inspectionTypes.DetailedXpandInspection,
+    inspectionTypes.InternalInspection,
     'not-found' | 'invalid-status-transition' | 'unknown'
   >
 > {
@@ -207,23 +242,7 @@ export async function updateInternalInspection(
         .where('id', inspectionId)
         .returning<DbInspection[]>('*')
 
-      const dbRooms = await trx
-        .select('*')
-        .from<DbInspectionRoom>('inspection_room')
-        .where('inspectionId', updated.id)
-
-      const rooms = []
-      for (const dbRoom of dbRooms) {
-        const dbRemarks = await trx
-          .select('*')
-          .from<DbInspectionRemark>('inspection_remark')
-          .where('roomId', dbRoom.id)
-
-        rooms.push({
-          room: dbRoom.roomName,
-          remarks: dbRemarks.map(mapDbRemarkToResponse),
-        })
-      }
+      const rooms = parseDraftRooms(inspectionId, updated.draftRooms)
 
       return {
         ok: true as const,
@@ -244,7 +263,7 @@ export async function updateInspectionStatus(
   newStatus: InspectionStatus
 ): Promise<
   AdapterResult<
-    inspectionTypes.DetailedXpandInspection,
+    inspectionTypes.InternalInspection,
     'not-found' | 'invalid-status-transition' | 'unknown'
   >
 > {
@@ -484,44 +503,11 @@ export async function getInspectionById(
       return { ok: false, err: 'not-found' }
     }
 
-    let rooms: inspectionTypes.InspectionRoom[] | null = null
-    if (inspection.draftRooms) {
-      try {
-        rooms = JSON.parse(
-          inspection.draftRooms
-        ) as inspectionTypes.InspectionRoom[]
-      } catch {
-        logger.error(
-          { inspectionId },
-          'Failed to parse draftRooms JSON for inspection'
-        )
-      }
-    }
+    const rooms = parseDraftRooms(inspectionId, inspection.draftRooms)
 
     return {
       ok: true,
-      data: {
-        id: String(inspection.id),
-        status: inspection.status,
-        date: inspection.date,
-        startedAt: inspection.startedAt,
-        endedAt: inspection.endedAt,
-        inspector: inspection.inspector,
-        type: inspection.type,
-        residenceId: inspection.residenceId,
-        address: inspection.address,
-        apartmentCode: inspection.apartmentCode,
-        isFurnished: inspection.isFurnished,
-        leaseId: inspection.leaseId,
-        isTenantPresent: inspection.isTenantPresent,
-        isNewTenantPresent: inspection.isNewTenantPresent,
-        masterKeyAccess: inspection.masterKeyAccess,
-        hasRemarks: inspection.hasRemarks,
-        notes: inspection.notes,
-        totalCost: inspection.totalCost,
-        remarkCount: inspection.remarkCount,
-        rooms,
-      },
+      data: mapDbInspectionToResponse(inspection, rooms),
     }
   } catch (error) {
     logger.error({ error }, `Error fetching inspection by ID: ${inspectionId}`)

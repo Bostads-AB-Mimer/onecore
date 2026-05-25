@@ -318,7 +318,7 @@ export const saveInspectionDraft = async (
 export const updateInspectionStatus = async (
   inspectionId: string,
   body: components['schemas']['UpdateInspectionStatus']
-): Promise<AdapterResult<DetailedXpandInspection, string>> => {
+): Promise<AdapterResult<InternalInspection, string>> => {
   try {
     const fetchResponse = await client().PATCH(
       '/inspections/internal/{inspectionId}',

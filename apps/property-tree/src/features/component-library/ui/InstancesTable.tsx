@@ -179,6 +179,15 @@ export const InstancesTable = ({
       ),
     },
     {
+      key: 'lastInspectionDate',
+      label: 'Senaste inspektion',
+      render: (item) => (
+        <span className="text-muted-foreground">
+          {formatISODate(item.lastInspectionDate)}
+        </span>
+      ),
+    },
+    {
       key: 'economicLifespan',
       label: 'Ekon. livslängd',
       render: (item) => (

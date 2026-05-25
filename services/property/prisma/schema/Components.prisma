@@ -13,6 +13,7 @@ model Components {
   ncsCode                     String?   @db.NVarChar(10)
   status                      String    @default("ACTIVE") @db.NVarChar(20)
   condition                   String?   @db.NVarChar(20)
+  lastInspectionDate          DateTime? @db.Date
   createdAt                   DateTime  @default(now()) @db.DateTime
   updatedAt                   DateTime  @default(now()) @updatedAt @db.DateTime
 

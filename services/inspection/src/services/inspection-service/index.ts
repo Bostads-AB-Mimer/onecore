@@ -773,7 +773,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   properties:
    *                     inspection:
-   *                       $ref: '#/components/schemas/DetailedXpandInspection'
+   *                       $ref: '#/components/schemas/InternalInspection'
    *                 metadata:
    *                   type: object
    *                   description: Route metadata

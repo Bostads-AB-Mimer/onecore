@@ -24,7 +24,7 @@ type GetComponentCategoriesResponse =
 async function getComponentCategories(
   page?: number,
   limit?: number
-): Promise<AdapterResult<GetComponentCategoriesResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentCategoriesResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/component-categories', {
       params: { query: { page, limit } },
@@ -34,10 +34,10 @@ async function getComponentCategories(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentCategories')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -46,7 +46,7 @@ type GetComponentCategoryResponse = components['schemas']['ComponentCategory']
 async function getComponentCategoryById(
   id: string
 ): Promise<
-  AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>
+  AdapterResult<GetComponentCategoryResponse, 'upstream_error' | 'not_found'>
 > {
   try {
     const response = await client().GET('/component-categories/{id}', {
@@ -61,16 +61,16 @@ async function getComponentCategoryById(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentCategoryById')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function createComponentCategory(
   data: components['schemas']['CreateComponentCategoryRequest']
-): Promise<AdapterResult<GetComponentCategoryResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentCategoryResponse, 'upstream_error'>> {
   try {
     const response = await client().POST('/component-categories', {
       body: data,
@@ -80,10 +80,10 @@ async function createComponentCategory(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.createComponentCategory')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -91,7 +91,7 @@ async function updateComponentCategory(
   id: string,
   data: components['schemas']['UpdateComponentCategoryRequest']
 ): Promise<
-  AdapterResult<GetComponentCategoryResponse, 'unknown' | 'not_found'>
+  AdapterResult<GetComponentCategoryResponse, 'upstream_error' | 'not_found'>
 > {
   try {
     const response = await client().PUT('/component-categories/{id}', {
@@ -107,16 +107,16 @@ async function updateComponentCategory(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.updateComponentCategory')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function deleteComponentCategory(
   id: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<void, 'upstream_error' | 'not_found'>> {
   try {
     const response = await client().DELETE('/component-categories/{id}', {
       params: { path: { id } },
@@ -130,10 +130,10 @@ async function deleteComponentCategory(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.deleteComponentCategory')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -145,7 +145,7 @@ async function getComponentTypes(
   categoryId?: string,
   page?: number,
   limit?: number
-): Promise<AdapterResult<GetComponentTypesResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentTypesResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/component-types', {
       params: { query: { categoryId, page, limit } },
@@ -155,10 +155,10 @@ async function getComponentTypes(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentTypes')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -166,7 +166,9 @@ type GetComponentTypeResponse = components['schemas']['ComponentType']
 
 async function getComponentTypeById(
   id: string
-): Promise<AdapterResult<GetComponentTypeResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentTypeResponse, 'upstream_error' | 'not_found'>
+> {
   try {
     const response = await client().GET('/component-types/{id}', {
       params: { path: { id } },
@@ -180,16 +182,16 @@ async function getComponentTypeById(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentTypeById')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function createComponentType(
   data: components['schemas']['CreateComponentTypeRequest']
-): Promise<AdapterResult<GetComponentTypeResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentTypeResponse, 'upstream_error'>> {
   try {
     const response = await client().POST('/component-types', {
       body: data,
@@ -199,17 +201,19 @@ async function createComponentType(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.createComponentType')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function updateComponentType(
   id: string,
   data: components['schemas']['UpdateComponentTypeRequest']
-): Promise<AdapterResult<GetComponentTypeResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentTypeResponse, 'upstream_error' | 'not_found'>
+> {
   try {
     const response = await client().PUT('/component-types/{id}', {
       params: { path: { id } },
@@ -224,16 +228,16 @@ async function updateComponentType(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.updateComponentType')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function deleteComponentType(
   id: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<void, 'upstream_error' | 'not_found'>> {
   try {
     const response = await client().DELETE('/component-types/{id}', {
       params: { path: { id } },
@@ -247,10 +251,10 @@ async function deleteComponentType(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.deleteComponentType')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -263,7 +267,7 @@ async function getComponentSubtypes(
   page?: number,
   limit?: number,
   subtypeName?: string
-): Promise<AdapterResult<GetComponentSubtypesResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentSubtypesResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/component-subtypes', {
       params: { query: { typeId, page, limit, subtypeName } },
@@ -273,10 +277,10 @@ async function getComponentSubtypes(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentSubtypes')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -285,7 +289,7 @@ type GetComponentSubtypeResponse = components['schemas']['ComponentSubtype']
 async function getComponentSubtypeById(
   id: string
 ): Promise<
-  AdapterResult<GetComponentSubtypeResponse, 'unknown' | 'not_found'>
+  AdapterResult<GetComponentSubtypeResponse, 'upstream_error' | 'not_found'>
 > {
   try {
     const response = await client().GET('/component-subtypes/{id}', {
@@ -300,16 +304,16 @@ async function getComponentSubtypeById(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentSubtypeById')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function createComponentSubtype(
   data: components['schemas']['CreateComponentSubtypeRequest']
-): Promise<AdapterResult<GetComponentSubtypeResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentSubtypeResponse, 'upstream_error'>> {
   try {
     const response = await client().POST('/component-subtypes', {
       body: data,
@@ -319,10 +323,10 @@ async function createComponentSubtype(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.createComponentSubtype')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -330,7 +334,7 @@ async function updateComponentSubtype(
   id: string,
   data: components['schemas']['UpdateComponentSubtypeRequest']
 ): Promise<
-  AdapterResult<GetComponentSubtypeResponse, 'unknown' | 'not_found'>
+  AdapterResult<GetComponentSubtypeResponse, 'upstream_error' | 'not_found'>
 > {
   try {
     const response = await client().PUT('/component-subtypes/{id}', {
@@ -346,16 +350,16 @@ async function updateComponentSubtype(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.updateComponentSubtype')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function deleteComponentSubtype(
   id: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<void, 'upstream_error' | 'not_found'>> {
   try {
     const response = await client().DELETE('/component-subtypes/{id}', {
       params: { path: { id } },
@@ -369,10 +373,10 @@ async function deleteComponentSubtype(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.deleteComponentSubtype')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -387,7 +391,7 @@ async function getComponentModels(
   page?: number,
   limit?: number,
   modelName?: string
-): Promise<AdapterResult<GetComponentModelsResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentModelsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/component-models', {
       params: {
@@ -406,10 +410,10 @@ async function getComponentModels(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentModels')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -417,7 +421,9 @@ type GetComponentModelResponse = components['schemas']['ComponentModel']
 
 async function getComponentModelById(
   id: string
-): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentModelResponse, 'upstream_error' | 'not_found'>
+> {
   try {
     const response = await client().GET('/component-models/{id}', {
       params: { path: { id } },
@@ -431,10 +437,10 @@ async function getComponentModelById(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentModelById')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -444,7 +450,9 @@ async function getComponentModelById(
  */
 async function findModelByExactName(
   modelName: string
-): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentModelResponse, 'upstream_error' | 'not_found'>
+> {
   try {
     const response = await client().GET(
       '/component-models/by-name/{modelName}',
@@ -461,16 +469,16 @@ async function findModelByExactName(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.findModelByExactName')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function createComponentModel(
   data: components['schemas']['CreateComponentModelRequest']
-): Promise<AdapterResult<GetComponentModelResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentModelResponse, 'upstream_error'>> {
   try {
     const response = await client().POST('/component-models', {
       body: data,
@@ -480,17 +488,19 @@ async function createComponentModel(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.createComponentModel')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function updateComponentModel(
   id: string,
   data: components['schemas']['UpdateComponentModelRequest']
-): Promise<AdapterResult<GetComponentModelResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentModelResponse, 'upstream_error' | 'not_found'>
+> {
   try {
     const response = await client().PUT('/component-models/{id}', {
       params: { path: { id } },
@@ -505,16 +515,16 @@ async function updateComponentModel(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.updateComponentModel')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function deleteComponentModel(
   id: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<void, 'upstream_error' | 'not_found'>> {
   try {
     const response = await client().DELETE('/component-models/{id}', {
       params: { path: { id } },
@@ -528,15 +538,15 @@ async function deleteComponentModel(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.deleteComponentModel')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function getSurfaceModels(): Promise<
-  AdapterResult<GetComponentModelsResponse, 'unknown' | 'empty_data'>
+  AdapterResult<GetComponentModelsResponse, 'upstream_error' | 'empty_data'>
 > {
   try {
     const response = await client().GET('/component-models/surface', {})
@@ -546,13 +556,13 @@ async function getSurfaceModels(): Promise<
     }
 
     if (response.response.status >= 400) {
-      return { ok: false, err: 'unknown' }
+      return { ok: false, err: 'upstream_error' }
     }
 
     return { ok: false, err: 'empty_data' }
   } catch (err) {
     logger.error({ err }, 'componentsAdapter.getSurfaceModels')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -566,7 +576,7 @@ async function getComponents(
   page?: number,
   limit?: number,
   serialNumber?: string
-): Promise<AdapterResult<GetComponentsResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/components', {
       params: { query: { modelId, status, page, limit, serialNumber } },
@@ -576,10 +586,10 @@ async function getComponents(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponents')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -587,7 +597,9 @@ type GetComponentResponse = components['schemas']['Component']
 
 async function getComponentById(
   id: string
-): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentResponse, 'upstream_error' | 'not_found'>
+> {
   try {
     const response = await client().GET('/components/{id}', {
       params: { path: { id } },
@@ -601,16 +613,16 @@ async function getComponentById(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentById')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function createComponent(
   data: components['schemas']['CreateComponentRequest']
-): Promise<AdapterResult<GetComponentResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentResponse, 'upstream_error'>> {
   try {
     const response = await client().POST('/components', {
       body: data,
@@ -630,20 +642,22 @@ async function createComponent(
       'property-base-adapter.createComponent failed'
     )
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error(
       { err, requestData: data },
       'property-base-adapter.createComponent exception'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function updateComponent(
   id: string,
   data: components['schemas']['UpdateComponentRequest']
-): Promise<AdapterResult<GetComponentResponse, 'unknown' | 'not_found'>> {
+): Promise<
+  AdapterResult<GetComponentResponse, 'upstream_error' | 'not_found'>
+> {
   try {
     const response = await client().PUT('/components/{id}', {
       params: { path: { id } },
@@ -658,16 +672,16 @@ async function updateComponent(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.updateComponent')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function deleteComponent(
   id: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<void, 'upstream_error' | 'not_found'>> {
   try {
     const response = await client().DELETE('/components/{id}', {
       params: { path: { id } },
@@ -681,10 +695,40 @@ async function deleteComponent(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.deleteComponent')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
+  }
+}
+
+async function updateComponentInspectionState(
+  componentId: string,
+  data: { condition: 'GOOD' | 'FAIR' | 'DAMAGED'; lastInspectionDate: string }
+): Promise<
+  AdapterResult<GetComponentResponse, 'upstream_error' | 'not_found'>
+> {
+  try {
+    const response = await client().PUT('/components/{id}/inspection-state', {
+      params: { path: { id: componentId } },
+      body: data,
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    return { ok: false, err: 'upstream_error' }
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-base-adapter.updateComponentInspectionState'
+    )
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -699,7 +743,7 @@ async function getComponentInstallations(
   buildingPartId?: string,
   page?: number,
   limit?: number
-): Promise<AdapterResult<GetComponentInstallationsResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentInstallationsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/component-installations', {
       params: { query: { componentId, spaceId, buildingPartId, page, limit } },
@@ -709,10 +753,10 @@ async function getComponentInstallations(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentInstallations')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -722,7 +766,10 @@ type GetComponentInstallationResponse =
 async function getComponentInstallationById(
   id: string
 ): Promise<
-  AdapterResult<GetComponentInstallationResponse, 'unknown' | 'not_found'>
+  AdapterResult<
+    GetComponentInstallationResponse,
+    'upstream_error' | 'not_found'
+  >
 > {
   try {
     const response = await client().GET('/component-installations/{id}', {
@@ -737,16 +784,16 @@ async function getComponentInstallationById(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentInstallationById')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function createComponentInstallation(
   data: components['schemas']['CreateComponentInstallationRequest']
-): Promise<AdapterResult<GetComponentInstallationResponse, 'unknown'>> {
+): Promise<AdapterResult<GetComponentInstallationResponse, 'upstream_error'>> {
   try {
     const response = await client().POST('/component-installations', {
       body: data,
@@ -756,10 +803,10 @@ async function createComponentInstallation(
       return { ok: true, data: response.data.content }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.createComponentInstallation')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -767,7 +814,10 @@ async function updateComponentInstallation(
   id: string,
   data: components['schemas']['UpdateComponentInstallationRequest']
 ): Promise<
-  AdapterResult<GetComponentInstallationResponse, 'unknown' | 'not_found'>
+  AdapterResult<
+    GetComponentInstallationResponse,
+    'upstream_error' | 'not_found'
+  >
 > {
   try {
     const response = await client().PUT('/component-installations/{id}', {
@@ -783,16 +833,16 @@ async function updateComponentInstallation(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.updateComponentInstallation')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function deleteComponentInstallation(
   id: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<void, 'upstream_error' | 'not_found'>> {
   try {
     const response = await client().DELETE('/component-installations/{id}', {
       params: { path: { id } },
@@ -806,10 +856,10 @@ async function deleteComponentInstallation(
       return { ok: false, err: 'not_found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.deleteComponentInstallation')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -820,7 +870,7 @@ type GetComponentsByRoomIdResponse = components['schemas']['Component'][]
 async function getComponentsByRoomId(
   roomId: string
 ): Promise<
-  AdapterResult<GetComponentsByRoomIdResponse, 'not-found' | 'unknown'>
+  AdapterResult<GetComponentsByRoomIdResponse, 'not-found' | 'upstream_error'>
 > {
   try {
     const fetchResponse = await client().GET('/components/by-room/{roomId}', {
@@ -835,10 +885,10 @@ async function getComponentsByRoomId(
       return { ok: false, err: 'not-found' }
     }
 
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getComponentsByRoomId')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -851,7 +901,7 @@ async function uploadComponentFile(
   mimeType: string,
   _caption?: string
 ): Promise<
-  AdapterResult<DocumentWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
+  AdapterResult<DocumentWithUrl, 'upstream_error' | 'bad_request' | 'forbidden'>
 > {
   try {
     // Step 1: Upload file to file-storage service
@@ -868,7 +918,8 @@ async function uploadComponentFile(
     if (!uploadResult.ok) {
       return {
         ok: false,
-        err: uploadResult.err === 'bad_request' ? 'bad_request' : 'unknown',
+        err:
+          uploadResult.err === 'bad_request' ? 'bad_request' : 'upstream_error',
       }
     }
 
@@ -887,7 +938,7 @@ async function uploadComponentFile(
     )
 
     if (!documentResponse.data) {
-      return { ok: false, err: 'unknown' }
+      return { ok: false, err: 'upstream_error' }
     }
 
     // Step 3: Get presigned URL for the file
@@ -917,13 +968,13 @@ async function uploadComponentFile(
       { err, componentId },
       'property-base-adapter.uploadComponentFile'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function getComponentFiles(
   componentId: string
-): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<DocumentWithUrl[], 'upstream_error' | 'not_found'>> {
   try {
     // Get document metadata from property service
     const response = await client().GET('/documents/component-instances/{id}', {
@@ -990,14 +1041,14 @@ async function getComponentFiles(
       { err, componentId },
       'property-base-adapter.getComponentFiles'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function deleteComponentFile(
   documentId: string,
   fileId?: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<void, 'upstream_error' | 'not_found'>> {
   try {
     // Delete document metadata from property service
     await client().DELETE('/documents/{id}', {
@@ -1021,7 +1072,7 @@ async function deleteComponentFile(
       { err, documentId },
       'property-base-adapter.deleteComponentFile'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -1033,7 +1084,7 @@ async function uploadComponentModelDocument(
   fileName: string,
   mimeType: string
 ): Promise<
-  AdapterResult<DocumentWithUrl, 'unknown' | 'bad_request' | 'forbidden'>
+  AdapterResult<DocumentWithUrl, 'upstream_error' | 'bad_request' | 'forbidden'>
 > {
   try {
     // Step 1: Upload file to file-storage service
@@ -1050,7 +1101,8 @@ async function uploadComponentModelDocument(
     if (!uploadResult.ok) {
       return {
         ok: false,
-        err: uploadResult.err === 'bad_request' ? 'bad_request' : 'unknown',
+        err:
+          uploadResult.err === 'bad_request' ? 'bad_request' : 'upstream_error',
       }
     }
 
@@ -1069,7 +1121,7 @@ async function uploadComponentModelDocument(
     )
 
     if (!documentResponse.data) {
-      return { ok: false, err: 'unknown' }
+      return { ok: false, err: 'upstream_error' }
     }
 
     // Step 3: Get presigned URL for the file
@@ -1099,13 +1151,13 @@ async function uploadComponentModelDocument(
       { err, modelId },
       'property-base-adapter.uploadComponentModelDocument'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function getComponentModelDocuments(
   modelId: string
-): Promise<AdapterResult<DocumentWithUrl[], 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<DocumentWithUrl[], 'upstream_error' | 'not_found'>> {
   try {
     // Get document metadata from property service
     const response = await client().GET('/documents/component-models/{id}', {
@@ -1172,14 +1224,14 @@ async function getComponentModelDocuments(
       { err, modelId },
       'property-base-adapter.getComponentModelDocuments'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
 async function deleteComponentModelDocument(
   documentId: string,
   fileId?: string
-): Promise<AdapterResult<void, 'unknown' | 'not_found'>> {
+): Promise<AdapterResult<void, 'upstream_error' | 'not_found'>> {
   try {
     // Delete document metadata from property service
     await client().DELETE('/documents/{id}', {
@@ -1203,7 +1255,7 @@ async function deleteComponentModelDocument(
       { err, documentId },
       'property-base-adapter.deleteComponentModelDocument'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -1216,7 +1268,7 @@ async function createDocument(data: {
 }): Promise<
   AdapterResult<
     { id: string; fileId: string; createdAt: string },
-    'bad_request' | 'unknown'
+    'bad_request' | 'upstream_error'
   >
 > {
   try {
@@ -1231,7 +1283,7 @@ async function createDocument(data: {
       return { ok: false, err: 'bad_request' }
     }
     logger.error({ err, data }, 'property-base-adapter.createDocument')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'upstream_error' }
   }
 }
 
@@ -1311,6 +1363,7 @@ export {
   createComponent,
   updateComponent,
   deleteComponent,
+  updateComponentInspectionState,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

@@ -10,6 +10,7 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { generateInspectionProtocolPdf } from './helpers/pdf-generator'
 import { fetchEnrichedInspection } from './helpers/inspection-fetcher'
 import { fetchEnrichedInternalInspection } from './helpers/internal-inspection-fetcher'
+import { writeBackComponentInspectionStates } from './helpers/component-write-back'
 import { sendProtocolForInspection } from './helpers/protocol-sender'
 import { buildTenantContactsResponse } from './helpers/tenant-contacts-builder'
 import {
@@ -61,6 +62,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema(
     'SaveInspectionDraftRequest',
     inspection.SaveInspectionDraftRequestSchema
+  )
+  registerSchema(
+    'ComponentWriteBackError',
+    inspection.ComponentWriteBackErrorSchema
   )
 
   /**
@@ -1493,7 +1498,12 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   properties:
    *                     inspection:
-   *                       $ref: '#/components/schemas/DetailedInspection'
+   *                       $ref: '#/components/schemas/InternalInspection'
+   *                     componentWriteBackErrors:
+   *                       type: array
+   *                       description: Per-component write-back errors recorded when transitioning to "Genomförd". Empty for other status transitions.
+   *                       items:
+   *                         $ref: '#/components/schemas/ComponentWriteBackError'
    *       '400':
    *         description: Invalid request body or invalid status transition
    *         content:
@@ -1528,23 +1538,55 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 
+    const bodyResult = schemas.UpdateInspectionStatusRequestSchema.safeParse(
+      ctx.request.body
+    )
+    if (!bodyResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: bodyResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+    const body = bodyResult.data
+
     try {
       const result = await inspectionAdapter.updateInspectionStatus(
         inspectionId,
-        ctx.request.body
+        body
       )
 
-      if (result.ok) {
-        ctx.status = 200
-        ctx.body = {
-          content: {
-            inspection: result.data,
-          },
-          ...metadata,
-        }
-      } else {
+      if (!result.ok) {
         ctx.status = result.statusCode || 500
         ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      // On transition to "Genomförd" (completed), write each component's
+      // condition + lastInspectionDate back to property-base. Best-effort:
+      // per-component failures are aggregated and returned alongside the
+      // inspection so the UI can surface them — the inspection itself still
+      // completes.
+      const componentWriteBackErrors =
+        body.status === 'Genomförd'
+          ? await writeBackComponentInspectionStates(result.data)
+          : []
+      if (componentWriteBackErrors.length > 0) {
+        logger.warn(
+          { inspectionId, errors: componentWriteBackErrors },
+          'Some component inspection states failed to write back'
+        )
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspection: result.data,
+          componentWriteBackErrors,
+        },
+        ...metadata,
       }
     } catch (error) {
       logger.error({ error, inspectionId }, 'Error updating inspection status')
