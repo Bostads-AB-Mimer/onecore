@@ -13,6 +13,9 @@ describe('/contacts/batch', () => {
     })
     await testApp.start()
     httpClient = testApp.makeClient()
+    // Match the repeated-key serialization the route expects (Koa's default
+    // querystring parser doesn't unpack `?code[]=A&code[]=B` into an array).
+    httpClient.defaults.paramsSerializer = { indexes: null }
   })
 
   afterAll(async () => {
