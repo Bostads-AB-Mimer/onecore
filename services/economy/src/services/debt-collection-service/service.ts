@@ -351,7 +351,6 @@ export const enrichBalanceCorrections = async (
 
     const [invoices] = await Promise.all([
       getTenfastInvoices(rows.map((row) => row.invoiceNumber)),
-      // getInvoiceRows(rows.map((row) => row.invoiceNumber)),
     ])
 
     const leases = await getTenfastLeases(invoices.flatMap((i) => i.leaseIds))
