@@ -142,8 +142,12 @@ const getTenfastContacts = async (
 
   for (const contactCode of contactCodes) {
     const contactResult = await getContactByContactCode(contactCode)
-    if (!contactResult.ok || !contactResult.data) {
+    if (!contactResult.ok) {
       throw new Error(JSON.stringify(contactResult))
+    }
+
+    if (!contactResult.data) {
+      throw new Error(`Contact with contactCode ${contactCode} not found`)
     }
 
     contacts.push(contactResult.data)
@@ -157,8 +161,12 @@ const getTenfastInvoices = async (ocrs: string[]): Promise<Invoice[]> => {
 
   for (const ocr of ocrs) {
     const invoiceResult = await getInvoiceByOcr(ocr)
-    if (!invoiceResult.ok || !invoiceResult.data) {
+    if (!invoiceResult.ok) {
       throw new Error(JSON.stringify(invoiceResult))
+    }
+
+    if (!invoiceResult.data) {
+      throw new Error(`Invoice with ocr ${ocr} not found`)
     }
 
     invoices.push(invoiceResult.data)
@@ -172,8 +180,12 @@ const getTenfastLeases = async (leaseIds: string[]): Promise<Lease[]> => {
 
   for (const leaseId of leaseIds) {
     const leaseResult = await getLease(leaseId)
-    if (!leaseResult.ok || !leaseResult.data) {
-      throw new Error()
+    if (!leaseResult.ok) {
+      throw new Error(JSON.stringify(leaseResult))
+    }
+
+    if (!leaseResult.data) {
+      throw new Error(`Lease with leaseId ${leaseId} not found`)
     }
 
     leases.push(leaseResult.data)
@@ -189,8 +201,14 @@ const getTenfastRentalProperties = async (
 
   for (const rentalPropertyId of rentalPropertyIds) {
     const rentalPropertyResult = await getRentalProperty(rentalPropertyId)
-    if (!rentalPropertyResult.ok || !rentalPropertyResult.data) {
-      throw new Error()
+    if (!rentalPropertyResult.ok) {
+      throw new Error(JSON.stringify(rentalPropertyResult))
+    }
+
+    if (!rentalPropertyResult.data) {
+      throw new Error(
+        `Rental property with rentalPropertyId ${rentalPropertyId} not found`
+      )
     }
 
     rentalProperties.push(rentalPropertyResult.data)
