@@ -363,7 +363,8 @@ const transformToLease = (tenfastLease: TenfastLease): Lease => {
     tenants: undefined,
     rentalPropertyId: rentalProperty.externalId,
     rentalObject: undefined,
-    type: LeaseTypeFromTenfastTyp[rentalProperty.typ],
+    type:
+      LeaseTypeFromTenfastTyp[rentalProperty.typ] ?? LeaseType.OtherContract,
     lastDebitDate: lastDebitDate,
     noticeGivenBy: undefined,
     noticeDate: undefined,
