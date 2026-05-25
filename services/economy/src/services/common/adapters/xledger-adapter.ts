@@ -227,7 +227,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
 
   const invoice: Omit<Invoice, 'paymentStatus'> = {
     invoiceId: invoiceData.node.invoiceNumber,
-    leaseIds: ['missing'],
+    leaseIds: [],
     reference: invoiceData.node.subledger.code,
     amount: parseFloat(invoiceData.node.amount),
     invoiceDate: dateFromString(invoiceData.node.invoiceDate),
