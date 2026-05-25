@@ -49,6 +49,7 @@ interface Contact {
   deceased: boolean
   emigrated: boolean
   noAdvertising: boolean
+  careOf?: string
 }
 
 type NonEmptyArray<T> = [T, ...T[]]

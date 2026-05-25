@@ -1,10 +1,3 @@
-import { logger } from '@onecore/utilities'
-import {
-  getInvoices,
-  getContacts as getXpandContacts,
-  getRentalProperties,
-  getInvoiceRows,
-} from '../common/adapters/xpand-db-adapter'
 import {
   getCustomers as getXledgerCustomers,
   XledgerCustomer,
@@ -13,23 +6,32 @@ import generateBalanceCorrectionFile from './converters/generateBalanceCorrectio
 import generateInkassoSergelFile from './converters/generateInkassoSergelFile'
 import { getDateString, joinStrings, rightPad } from './converters/utils'
 import {
-  Invoice,
+  DebtCollectionInvoice,
   EnrichedXledgerRentCase,
   OtherInvoice,
   XledgerBalanceCorrection,
   XledgerBalanceCorrectionColumnIndexes,
   XledgerRentCase,
   XledgerRentCaseColumnIndexes,
-  RentalProperty,
   RentInvoice,
   EnrichedXledgerBalanceCorrection,
 } from '../common/types'
 import { InvoiceDeliveryMethod, XpandContact } from '@src/common/types'
-import { RentInvoiceRow } from '@onecore/types'
 import {
-  extractLeaseIdsFromInvoiceRows,
-  getRentalIdFromLeaseId,
-} from '../common/helpers'
+  Contact,
+  Invoice,
+  InvoiceRow,
+  Lease,
+  LeaseType,
+  RentalProperty,
+} from '@onecore/types'
+import { getRentalIdFromLeaseId } from '../common/helpers'
+import {
+  getContactByContactCode,
+  getInvoiceByOcr,
+  getLease,
+  getRentalProperty,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
 
 export const importInvoicesFromCsv = (
   csv: string,
@@ -133,21 +135,84 @@ export type EnrichResponse =
     }
   | { ok: false; error: Error }
 
+const getTenfastContacts = async (
+  contactCodes: string[]
+): Promise<Contact[]> => {
+  const contacts: Contact[] = []
+
+  for (const contactCode of contactCodes) {
+    const contactResult = await getContactByContactCode(contactCode)
+    if (!contactResult.ok) {
+      throw new Error(contactResult.err)
+    }
+
+    contacts.push(contactResult.data)
+  }
+
+  return contacts
+}
+
+const getTenfastInvoices = async (ocrs: string[]): Promise<Invoice[]> => {
+  const invoices: Invoice[] = []
+
+  for (const ocr of ocrs) {
+    const invoiceResult = await getInvoiceByOcr(ocr)
+    if (!invoiceResult.ok) {
+      throw new Error(invoiceResult.err)
+    }
+
+    invoices.push(invoiceResult.data)
+  }
+
+  return invoices
+}
+
+const getTenfastLeases = async (leaseIds: string[]): Promise<Lease[]> => {
+  const leases: Lease[] = []
+
+  for (const leaseId of leaseIds) {
+    const leaseResult = await getLease(leaseId)
+    if (!leaseResult.ok) {
+      throw new Error(leaseResult.err)
+    }
+
+    leases.push(leaseResult.data)
+  }
+
+  return leases
+}
+
+const getTenfastRentalProperties = async (
+  rentalPropertyIds: string[]
+): Promise<RentalProperty[]> => {
+  const rentalProperties: RentalProperty[] = []
+
+  for (const rentalPropertyId of rentalPropertyIds) {
+    const rentalPropertyResult = await getRentalProperty(rentalPropertyId)
+    if (!rentalPropertyResult.ok) {
+      throw new Error(rentalPropertyResult.err)
+    }
+
+    rentalProperties.push(rentalPropertyResult.data)
+  }
+
+  return rentalProperties
+}
+
 export const enrichRentInvoices = async (
   csv: string
 ): Promise<EnrichResponse> => {
   try {
     const rows = importInvoicesFromCsv(csv, ';')
 
-    const [contacts, invoices, allInvoiceRows] = await Promise.all([
-      getXpandContacts(rows.map((row) => row.contactCode)),
-      getInvoices(rows.map((row) => row.invoiceNumber)),
-      getInvoiceRows(rows.map((row) => row.invoiceNumber)),
+    const [contacts, invoices] = await Promise.all([
+      getTenfastContacts(rows.map((row) => row.contactCode)),
+      getTenfastInvoices(rows.map((row) => row.invoiceNumber)),
     ])
 
-    const allLeaseIds = extractLeaseIdsFromInvoiceRows(allInvoiceRows)
-    const rentalProperties = await getRentalProperties(
-      allLeaseIds.map(getRentalIdFromLeaseId)
+    const leases = await getTenfastLeases(invoices.flatMap((i) => i.leaseIds))
+    const rentalProperties = await getTenfastRentalProperties(
+      leases.map((l) => l.rentalPropertyId)
     )
 
     const enrichedInvoices = rows.map((row): EnrichedXledgerRentCase => {
@@ -158,63 +223,45 @@ export const enrichRentInvoices = async (
           `Contact not found for contact code '${row.contactCode}'`
         )
       }
-      const invoice = invoices.find(
-        (i) => i.invoiceNumber === row.invoiceNumber
-      )
+      const invoice = invoices.find((i) => i.invoiceId === row.invoiceNumber)
       if (!invoice) {
         // TODO how to handle this?
         throw new Error(
           `Invoice not found for invoice number '${row.invoiceNumber}'`
         )
       }
-
-      const invoiceRows = allInvoiceRows.filter(
-        (ir) => ir.invoiceNumber === invoice.invoiceNumber
-      )
-      const leaseIdsForInvoice = extractLeaseIdsFromInvoiceRows(invoiceRows)
-      const rentalPropertiesForInvoice = rentalProperties.filter(
-        (rentalProperty) =>
-          leaseIdsForInvoice
-            .map(getRentalIdFromLeaseId)
-            .includes(rentalProperty.rentalId)
-      )
-
-      if (rentalPropertiesForInvoice.length === 0) {
+      if (!invoice.expirationDate) {
         throw new Error(
-          `Rental properties not found for invoice ${invoice.invoiceNumber}`
+          `Invoice ${invoice.invoiceId} does not have an expiration date`
         )
       }
 
-      const reference = getReferenceForInvoice(
-        leaseIdsForInvoice,
-        rentalPropertiesForInvoice
+      const leasesForInvoice = leases.filter((l) =>
+        invoice.leaseIds.includes(l.leaseId)
       )
 
-      const aggregatedRows = aggregateRows(invoiceRows)
-      const aggregatedRowsWithRoundoff = addRoundoffToFirstRow(
-        aggregatedRows,
-        invoice.roundoff
+      const rentalPropertiesForInvoice = rentalProperties.filter((r) =>
+        leasesForInvoice.some((l) => l.rentalPropertyId === r.rentalPropertyId)
       )
+      const mainLease = getMainLease(leasesForInvoice)
+      const invoiceRows = aggregateRows(invoice.invoiceRows)
 
       return {
         ...row,
         contact,
         invoice: createInvoiceFromRentInvoiceWithRentalProperties(
           {
-            invoiceNumber: invoice.invoiceNumber,
-            reference: reference,
-            roundoff: invoice.roundoff,
+            invoiceNumber: invoice.invoiceId,
+            reference: invoice.reference,
             fromDate: new Date(invoice.fromDate),
             toDate: new Date(invoice.toDate),
             invoiceDate: new Date(invoice.invoiceDate),
-            expiryDate: new Date(invoice.expiryDate),
-            lastDebitDate: invoice.lastDebitDate
-              ? new Date(invoice.lastDebitDate)
-              : undefined,
-            careOf: invoice.careOf ?? undefined,
+            expiryDate: invoice.expirationDate,
+            lastDebitDate: mainLease.lastDebitDate,
+            careOf: contact.careOf ?? undefined,
           },
           rentalPropertiesForInvoice,
-          aggregatedRowsWithRoundoff,
+          invoiceRows,
           row.totalAmount - row.remainingAmount
         ),
       }
@@ -236,11 +283,11 @@ export const enrichOtherInvoices = async (
     const rows = importInvoicesFromCsv(csv, ';')
     const contactCodes = rows.map((row) => row.contactCode)
 
-    const [xpandContacts, xledgerCustomers] = await Promise.all([
-      getXpandContacts(contactCodes),
+    const [tenfastContacts, xledgerCustomers] = await Promise.all([
+      getTenfastContacts(contactCodes),
       getXledgerCustomers(contactCodes),
     ])
-    const allContacts = xpandContacts.concat(
+    const allContacts = tenfastContacts.concat(
       xledgerCustomers.map(transformXledgerCustomerToXpandContact)
     )
 
@@ -284,50 +331,49 @@ export const enrichBalanceCorrections = async (
   try {
     const rows = importBalanceCorrectionsFromCsv(csv, ';')
 
-    const [invoices, allInvoiceRows] = await Promise.all([
-      getInvoices(rows.map((row) => row.invoiceNumber)),
-      getInvoiceRows(rows.map((row) => row.invoiceNumber)),
+    const [invoices] = await Promise.all([
+      getTenfastInvoices(rows.map((row) => row.invoiceNumber)),
     ])
 
-    const leaseIds = extractLeaseIdsFromInvoiceRows(allInvoiceRows)
-    const rentalProperties = await getRentalProperties(
-      leaseIds.map(getRentalIdFromLeaseId)
+    const leases = await getTenfastLeases(invoices.flatMap((i) => i.leaseIds))
+    const rentalProperties = await getTenfastRentalProperties(
+      leases.map((l) => l.rentalPropertyId)
     )
 
     const enrichedBalanceCorrections = rows.map(
       (row): EnrichedXledgerBalanceCorrection => {
-        const invoice = invoices.find(
-          (i) => i.invoiceNumber === row.invoiceNumber
-        )
+        const invoice = invoices.find((i) => i.invoiceId === row.invoiceNumber)
 
         if (invoice) {
-          const invoiceRows = allInvoiceRows.filter(
-            (ir) => ir.invoiceNumber === invoice.invoiceNumber
+          const leasesForInvoice = leases.filter((l) =>
+            invoice.leaseIds.some((id) => id === l.leaseId)
           )
-          const leaseIdsForInvoice = extractLeaseIdsFromInvoiceRows(invoiceRows)
+
           const rentalPropertiesForInvoice = rentalProperties.filter(
             (rentalProperty) =>
-              leaseIdsForInvoice
+              invoice.leaseIds
                 .map(getRentalIdFromLeaseId)
-                .includes(rentalProperty.rentalId)
+                .includes(rentalProperty.rentalPropertyId)
           )
 
           if (rentalPropertiesForInvoice.length === 0) {
             throw new Error(
-              `Rental properties not found for invoice ${invoice.invoiceNumber}`
+              `Rental properties not found for invoice ${invoice.invoiceId}`
             )
           }
 
           const reference = getReferenceForInvoice(
-            leaseIdsForInvoice,
+            invoice.leaseIds,
             rentalPropertiesForInvoice
           )
+
+          const mainLease = getMainLease(leasesForInvoice)
 
           return {
             ...row,
             hasInvoice: true,
             reference: reference,
-            lastDebitDate: invoice.lastDebitDate,
+            lastDebitDate: mainLease.lastDebitDate,
             rentalProperty: getMainRentalProperty(rentalPropertiesForInvoice),
           }
         }
@@ -351,74 +397,30 @@ export const enrichBalanceCorrections = async (
   }
 }
 
-export const addRoundoffToFirstRow = (
-  rows: RentInvoiceRow[],
-  roundoff: number
-) => {
-  if (rows.length === 0) {
-    return rows
-  }
+export const aggregateRows = (rows: InvoiceRow[]): InvoiceRow[] => {
+  const groups: InvoiceRow[][] = []
 
-  return [
-    {
-      ...rows[0],
-      amount: rows[0].amount + roundoff,
-    },
-    ...rows.slice(1),
-  ]
-}
-
-export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
-  const groups: RentInvoiceRow[][] = []
-
-  // We should rewrite this when we have time
-  let i = 0
-  while (i < rows.length) {
-    const row = rows[i]
-
-    if (row.rowType === 3) {
-      // Header row
-      const regex = /^[A-Z\d]{3}-[A-Z\d]{3}-[A-Z\d]{2}-[A-Z\d]{4}\/\d{2}/i
-      const match = row.text.match(regex)
-      if (!match) {
-        logger.error(
-          { row: JSON.stringify(row) },
-          'Row text does not match regular expression for lease ids'
-        )
-        throw new Error(
-          `${row.text} does not match regular expression for lease ids`
-        )
-      }
-
-      const currentGroup: RentInvoiceRow[] = []
-
-      // Group following rows with same printgroup until we hit a new header or end
-      i++
-      const printGroup = rows[i].printGroup
-      currentGroup.push(rows[i])
-      i++
-
-      while (
-        i < rows.length &&
-        rows[i].rowType !== 3 &&
-        rows[i].printGroup === printGroup
-      ) {
-        currentGroup.push(rows[i])
-        i++
-      }
-
-      groups.push(currentGroup)
-    } else if (row.printGroup === null) {
-      // No printgroup, do not group
+  rows.forEach((row) => {
+    if (!row.printGroup) {
       groups.push([row])
-      i++
+      return
     }
-  }
 
-  const getMainRow = (groupRows: RentInvoiceRow[]) => {
+    const existingGroup = groups.find((g) => g[0].printGroup === row.printGroup)
+
+    if (existingGroup) {
+      existingGroup.push(row)
+    } else {
+      groups.push([row])
+    }
+  })
+
+  const getMainRow = (groupRows: InvoiceRow[]) => {
     return (
       groupRows.find(
-        (row) => row.text === 'Hyra bostad' || row.text === 'Hyra p-plats'
+        (row) =>
+          row.invoiceRowText === 'Hyra bostad' ||
+          row.invoiceRowText === 'Hyra p-plats'
       ) ?? groupRows[0]
     )
   }
@@ -427,7 +429,7 @@ export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
     acc.push({
       ...getMainRow(group),
       amount: group.reduce(
-        (sum, row) => sum + row.amount + row.reduction + row.vat,
+        (sum, row) => sum + (row.amount + row.deduction) * (1 + row.vat),
         0
       ),
     })
@@ -436,10 +438,18 @@ export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
   }, [])
 }
 
+const getMainLease = (leases: Lease[]) => {
+  if (leases.length === 0) {
+    throw new Error('getMainLease requires at least one lease')
+  }
+
+  return leases.find((l) => l.type === LeaseType.HousingContract) ?? leases[0]
+}
+
 const getMainRentalProperty = (rentalProperties: RentalProperty[]) => {
   return (
     rentalProperties.find(
-      (property) => property.rentalPropertyType === 'Residence'
+      (property) => property.rentalPropertyType === 'bostad'
     ) ?? rentalProperties[0]
   )
 }
@@ -453,12 +463,14 @@ const getReferenceForInvoice = (
   return (
     leaseIds.find(
       (leaseId) =>
-        getRentalIdFromLeaseId(leaseId) === mainRentalProperty.rentalId
+        getRentalIdFromLeaseId(leaseId) === mainRentalProperty.rentalPropertyId
     ) ?? ''
   )
 }
 
-const createInvoiceFromOtherInvoice = (invoice: OtherInvoice): Invoice => {
+const createInvoiceFromOtherInvoice = (
+  invoice: OtherInvoice
+): DebtCollectionInvoice => {
   return {
     invoiceNumber: invoice.invoiceNumber,
     invoiceDate: invoice.invoiceDate,
@@ -474,58 +486,35 @@ const createInvoiceFromOtherInvoice = (invoice: OtherInvoice): Invoice => {
 const createInvoiceFromRentInvoiceWithRentalProperties = (
   invoice: RentInvoice,
   rentalProperties: RentalProperty[],
-  rows: RentInvoiceRow[],
+  rows: InvoiceRow[],
   amountPaid: number
-): Invoice => {
-  const removePaidRows = (
-    rows: RentInvoiceRow[],
-    paid: number
-  ): RentInvoiceRow[] => {
+): DebtCollectionInvoice => {
+  const removePaidRows = (rows: InvoiceRow[], paid: number): InvoiceRow[] => {
     if (paid === 0 || rows.length === 0) {
       return rows
     }
 
-    const sorted = rows
-      .sort((a, b) => {
-        if (a.rentType === b.rentType) {
-          return 0
-        }
+    const sorted = rows.sort((a, b) => {
+      if (a.invoiceRowText === 'Hemförsäkring') {
+        return 1
+      }
 
-        if (a.rentType === 'Hemförsäkring') {
-          return 1
-        }
+      if (b.invoiceRowText === 'Hemförsäkring') {
+        return -1
+      }
 
-        if (b.rentType === 'Hemförsäkring') {
-          return -1
-        }
+      if (a.invoiceRowText === 'Hyra bostad') {
+        return -1
+      }
 
-        if (a.rentType === 'Hyra bostad') {
-          return -1
-        }
+      if (b.invoiceRowText === 'Hyra bostad') {
+        return 1
+      }
 
-        if (b.rentType === 'Hyra bostad') {
-          return 1
-        }
+      return 0
+    })
 
-        return 0
-      })
-      .sort((a, b) => {
-        if (a.type === b.type) {
-          return 0
-        }
-
-        if (a.type === 'Rent') {
-          return -1
-        }
-
-        if (b.type === 'Rent') {
-          return 1
-        }
-
-        return 0
-      })
-
-    const remainingRows: RentInvoiceRow[] = []
+    const remainingRows: InvoiceRow[] = []
 
     let i = 0
     while (i < sorted.length) {
@@ -580,18 +569,22 @@ const createRentInvoiceComment = (
     ' ',
     `${getDateString(invoice.fromDate)}-${getDateString(invoice.toDate)}`,
     ' Enhet:',
-    rightPad(rentalProperty.postalCode?.replaceAll(' ', '') ?? '', 6, ' '),
+    rightPad(
+      rentalProperty.address?.postalCode?.replaceAll(' ', '') ?? '',
+      6,
+      ' '
+    ),
     ' ',
-    rightPad(rentalProperty.code, 4, ' '),
+    rightPad(rentalProperty.rentalPropertyId, 4, ' '),
     ' ',
-    rightPad(rentalProperty.address, 32, ' '),
+    rightPad(rentalProperty.address?.street ?? '', 32, ' '),
     rightPad(rentalProperty.type, 30, ' '),
     rightPad(
-      `Area: ${rentalProperty.areaSize?.toFixed(1).replace('.', ',') ?? '0,0'}`,
+      `Area: ${rentalProperty.size?.toFixed(1).replace('.', ',') ?? '0,0'}`,
       20,
       ' '
     ),
-    rentalProperty.rentalPropertyType === 'Residence'
+    rentalProperty.rentalPropertyType === 'bostad'
       ? 'Vid ev avhysning, måste förråd tömmas!'
       : '',
   ])

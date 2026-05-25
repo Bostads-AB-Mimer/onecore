@@ -115,7 +115,7 @@ describe('Tenfast Adapter', () => {
         paidAmount: 0,
         remainingAmount: 1000,
         invoiceId: '55123456',
-        leaseId: '',
+        leaseIds: expect.arrayContaining([expect.any(String)]),
         paymentStatus: PaymentStatus.Unpaid,
         reference: '55123456',
         source: 'next',
@@ -172,7 +172,7 @@ describe('Tenfast Adapter', () => {
       })
     })
 
-    it('should return null when no invoice is found', async () => {
+    it('should return error when no invoice is found', async () => {
       mockAxios.request.mockResolvedValue({
         status: 200,
         data: { records: [] },
@@ -181,8 +181,8 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr('NONEXISTENT')
 
       expect(result).toEqual({
-        ok: true,
-        data: null,
+        ok: false,
+        err: 'Invoice with ocr NONEXISTENT not found',
       })
     })
 

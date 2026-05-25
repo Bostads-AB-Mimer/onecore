@@ -35,7 +35,7 @@ export const InvoicePaymentEventSchema = z.object({
 
 export const InvoiceSchema = z.object({
   invoiceId: z.string(),
-  leaseId: z.string(),
+  leaseIds: z.string().array(),
   amount: z.number(),
   reference: z.string(),
   fromDate: z.coerce.date(),

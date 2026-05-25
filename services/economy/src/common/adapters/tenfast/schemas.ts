@@ -6,39 +6,15 @@ export const optionalDateField = z
   .transform((val) => (!val || val === '' ? null : val))
   .pipe(z.coerce.date().nullable())
 
-export const TenfastLeaseSchema = z.object({
-  _id: z.string(),
-  id: z.string(),
-  externalId: z.string(), // Onecore canonical lease id, e.g. "306-008-01-0201/02"
-  stage: z.string(),
-  startDate: z.coerce.date(),
-  endDate: optionalDateField,
-  hyresgaster: z.array(
-    z.object({
-      name: z.object({
-        first: z.string(),
-        last: z.string(),
-      }),
-      _id: z.string(),
-      isCompany: z.boolean(),
-      displayName: z.string(),
-    })
-  ),
-  hyresobjekt: z.array(
-    z.object({
-      _id: z.string(),
-      nummer: z.string(),
-      postadress: z.string(),
-      skvNummer: z.string().nullable(),
-      displayName: z.string(),
-      subType: z.string(),
-      states: z.array(z.any()),
-    })
-  ),
-  reference: z.number(),
-  invitationsToRegister: z.array(z.any()),
-  canDelete: z.boolean(),
-  depositState: z.array(z.any()),
+const TenfastPartOfYearSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+})
+
+const TenfastFileSchema = z.object({
+  key: z.string(),
+  location: z.string(),
+  originalName: z.string(),
 })
 
 export const TenfastInvoiceRowSchema = z.object({
@@ -54,6 +30,84 @@ export const TenfastInvoiceRowSchema = z.object({
   _id: z.string(),
 })
 
+export const TenfastRentalPropertySchema = z.object({
+  hyresvard: z.string(),
+  hyra: z.number(),
+  hyraExcludingVat: z.number(),
+  hyraVat: z.number(),
+  hyror: z.array(TenfastInvoiceRowSchema),
+  nummer: z.string(),
+  skvNummer: z.number().nullable(),
+  postnummer: z.string(),
+  postadress: z.string(),
+  commonName: z.string().optional(),
+  stad: z.string(),
+  stadsdel: z.string(),
+  typ: z.string(),
+  kvm: z.number(),
+  roomCount: z.number().nullable(),
+  bostadType: z.string().nullable(),
+  parkeringType: z.string().nullable(),
+  lokalType: z.string().nullable(),
+  category: z.any(), // TODO ? ska vara string
+  description: z.string().optional(),
+  public: z.boolean().optional(),
+  images: z.array(TenfastFileSchema),
+  files: z.array(TenfastFileSchema),
+  comments: z.array(z.string()),
+  tags: z.array(z.string()),
+  externalId: z.string(),
+  useCounter: z.number(),
+  contractTemplate: z.string().optional(),
+  terminationTemplate: z.string().optional(),
+  avtalStates: z.array(z.string()),
+  states: z.array(z.string()),
+  lastStateChanged: z.string(),
+  rentFreePeriod: TenfastPartOfYearSchema.optional(),
+  displayName: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
+})
+
+export const TenfastLeaseSchema = z.object({
+  _id: z.string(),
+  id: z.string(),
+  externalId: z.string(), // Onecore canonical lease id, e.g. "306-008-01-0201/02"
+  stage: z.enum([
+    'archived',
+    'voided',
+    'terminated',
+    'active',
+    'signingInProgress',
+    'upcoming',
+    'draft',
+    'terminationScheduled',
+    'preTermination',
+  ]),
+  startDate: z.coerce
+    .date()
+    .optional()
+    .default(() => new Date()),
+  endDate: optionalDateField,
+  hyresgaster: z
+    .array(
+      z.object({
+        name: z.object({
+          first: z.string(),
+          last: z.string(),
+        }),
+        _id: z.string(),
+        isCompany: z.boolean(),
+        displayName: z.string(),
+      })
+    )
+    .min(1),
+  hyresobjekt: z.array(TenfastRentalPropertySchema).min(1),
+  reference: z.number(),
+  invitationsToRegister: z.array(z.any()),
+  canDelete: z.boolean(),
+  depositState: z.array(z.any()),
+})
 export const TenfastInvoiceStateSchema = z.enum([
   'betald',
   'ny',
@@ -73,8 +127,47 @@ export const TenfastInvoiceSchema = z.object({
   }),
   _id: z.string(),
   hyresvard: z.string(),
-  avtal: z.array(z.string()),
-  hyror: z.array(TenfastInvoiceRowSchema),
+  avtal: z.array(
+    z.object({
+      _id: z.string(),
+      hyresobjekt: z
+        .array(
+          z.object({
+            _id: z.string(),
+            nummer: z.string(),
+            skvNummer: z.number().nullable(),
+            postadress: z.string(),
+            externalId: z.string(),
+            displayName: z.string(),
+            subType: z.string(),
+            states: z.string().array(),
+          })
+        )
+        .min(1),
+      hyresgaster: z
+        .array(
+          z.object({
+            name: z.object({
+              first: z.string(),
+              last: z.string(),
+            }),
+            _id: z.string(),
+            externalId: z.string(),
+            company: z.string(),
+            isCompany: z.boolean(),
+            displayName: z.string(),
+          })
+        )
+        .min(1),
+      externalId: z.string(),
+      reference: z.number(),
+      stage: z.string(),
+      canDelete: z.boolean(),
+      canVoid: z.boolean(),
+      id: z.string(),
+    })
+  ),
+  hyror: TenfastInvoiceRowSchema.array(),
   vatEnabled: z.boolean(),
   propertyTax: z.boolean(),
   simpleHyra: z.boolean(),
@@ -99,43 +192,95 @@ export const TenfastInvoiceSchema = z.object({
   state: TenfastInvoiceStateSchema,
 })
 
+export const TenfastRentalPropertySearchResponseSchema = z.object({
+  records: z.array(TenfastRentalPropertySchema),
+  next: z.string().nullable(),
+  prev: z.string().nullable(),
+  totalCount: z.number(),
+})
+
+export const TenfastLeaseSearchResponseSchema = z.object({
+  records: z.array(TenfastLeaseSchema),
+  next: z.string().nullable(),
+  prev: z.string().nullable(),
+  totalCount: z.number(),
+})
+
 // Getting invoices by OCR from Tenfast returns a list of full Lease objects,
 export const TenfastInvoicesByOcrResponseSchema = z.object({
-  records: z.array(
-    TenfastInvoiceSchema.extend({
-      avtal: z.array(TenfastLeaseSchema),
-    }).transform((data) => ({
-      ...data,
-      avtal: data.avtal.map((x) => x.id),
-    }))
-  ),
+  records: TenfastInvoiceSchema.array(),
 })
 
 export const TenfastInvoicesByTenantIdResponseSchema =
   z.array(TenfastInvoiceSchema)
 
 export const TenfastTenantSchema = z.object({
+  _id: z.string(),
+  hyresvard: z.string(),
+  isCompany: z.boolean(),
   name: z.object({
     first: z.string(),
     last: z.string(),
   }),
-  moms: z.number(),
-  alternatePhones: z.array(z.any()),
-  comments: z.array(z.any()),
-  onlineInboxes: z.record(z.any()).optional(),
-  signeringsMetod: z.string(),
-  _id: z.string(),
-  hyresvard: z.string(),
-  isCompany: z.boolean(),
-  phone: z.string(),
+  company: z.string().optional(),
   idbeteckning: z.string(),
+  moms: z.number(),
+  phone: z.string(),
+  normalizedPhone: z.string().optional(),
   postadress: z.string(),
+  careOfAddress: z.string().optional(),
   postnummer: z.string(),
   stad: z.string(),
+  fortnoxSendMethod: z.string().nullable().optional(),
+  invoiceEmail: z.string().optional(),
+  user: z.string().optional(),
+  borgenarer: z.array(
+    z.object({
+      idbeteckning: z.string(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+    })
+  ),
+  firmatecknare: z.array(
+    z.object({
+      idbeteckning: z.string(),
+      email: z.string().optional(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+    })
+  ),
+  fakturaMottagare: z
+    .object({
+      name: z.string().nullable().optional(),
+      idbeteckning: z.string().optional(),
+      email: z.string().nullable().optional(),
+      phone: z.string().nullable().optional(),
+      postadress: z.string().nullable().optional(),
+      postnummer: z.string().nullable().optional(),
+      godMan: z.boolean().optional(),
+    })
+    .optional(),
+  isTrustee: z.boolean().optional(),
+  trustee: z
+    .object({
+      name: z.string().nullable().optional(),
+      idbeteckning: z.string().optional(),
+      email: z.string().nullable().optional(),
+      phone: z.string().nullable().optional(),
+      postadress: z.string().nullable().optional(),
+      postnummer: z.string().nullable().optional(),
+    })
+    .optional(),
+  alternatePhones: z.array(z.string()),
+  comments: z.array(z.any()),
+  fortnoxId: z.string().nullable().optional(),
   externalId: z.string(),
-  borgenarer: z.array(z.any()),
-  firmatecknare: z.array(z.any()),
+  signeringsMetod: z.string(),
   displayName: z.string(),
+  onlineInboxes: z.record(z.any()).optional(),
+  archivedAt: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 })
 
 export const TenfastTenantByContactCodeResponseSchema = z.object({
@@ -199,3 +344,5 @@ export type TenfastBatchGetRentalObject = z.infer<
 export type TenfastBatchGetRentalObjectsResponse = z.infer<
   typeof TenfastBatchGetRentalObjectsResponseSchema
 >
+
+export type TenfastRentalProperty = z.infer<typeof TenfastRentalPropertySchema>
