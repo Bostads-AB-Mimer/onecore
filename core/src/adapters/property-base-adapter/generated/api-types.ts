@@ -1720,10 +1720,10 @@ export interface paths {
         };
         /** @description Internal server error. */
         500: {
-          content: never
-        }
-      }
-    }
+          content: never;
+        };
+      };
+    };
     /**
      * Create a new room in Xpand for a residence.
      * @description Performs a transactional 3-table write (cmobj, barum, babuf) in the
@@ -1734,34 +1734,28 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateRoomRequest']
-        }
-      }
+          "application/json": components["schemas"]["CreateRoomRequest"];
+        };
+      };
       responses: {
         /** @description Room created. */
         201: {
           content: {
-            'application/json': {
-              content?: components['schemas']['Room']
-            }
-          }
-        }
+            "application/json": {
+              content?: components["schemas"]["Room"];
+            };
+          };
+        };
         /** @description Validation failure (unknown roomTypeCode, invalid caption, etc.). */
         400: {
-          content: never
-        }
+          content: never;
+        };
         /** @description Residence not found for the supplied rentalId. */
         404: {
-          content: never
-        }
+          content: never;
+        };
         /** @description Internal server error. */
         500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rooms/by-facility-id/{facilityId}': {
           content: never;
         };
       };
@@ -2638,62 +2632,6 @@ export interface components {
         /** Format: date-time */
         availableFrom: string | null;
         /** Format: date-time */
-        availableTo: string | null
-      }
-      sortingOrder: number
-      deleted: boolean
-      timestamp: string
-      roomType: {
-        id: string
-        code: string
-        name: string | null
-        use: number
-        optionAllowed: number
-        isSystemStandard: number
-        allowSmallRoomsInValuation: number
-        timestamp: string
-      } | null
-      area?: number
-    }
-    CreateRoomRequest: {
-      rentalId: string
-      /** @enum {string} */
-      roomTypeCode:
-        | 'BAD'
-        | 'BAL'
-        | 'BRS'
-        | 'DUSCH'
-        | 'FÖR'
-        | 'GROV'
-        | 'HALL'
-        | 'KLÄD'
-        | 'KLÄD2'
-        | 'KÖK'
-        | 'KOV'
-        | 'KV'
-        | 'MAT'
-        | 'PA'
-        | 'RUM'
-        | 'TRAPP'
-        | 'UP'
-        | 'VARD'
-        | 'WC'
-        | 'WC/DU1'
-      code?: string
-      caption?: string
-      features?: {
-        hasToilet?: boolean
-        isHeated?: boolean
-        hasThermostatValve?: boolean
-        orientation?: number
-      }
-      usage?: {
-        shared?: boolean
-        allowPeriodicWorks?: boolean
-        spaceType?: number
-      }
-      sortingOrder?: number
-    }
         availableTo: string | null;
       };
       sortingOrder: number;
@@ -2710,6 +2648,24 @@ export interface components {
         timestamp: string;
       }) | null;
       area?: number;
+    };
+    CreateRoomRequest: {
+      rentalId: string;
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      code?: string;
+      caption?: string;
+      features?: {
+        hasToilet?: boolean;
+        isHeated?: boolean;
+        hasThermostatValve?: boolean;
+        orientation?: number;
+      };
+      usage?: {
+        shared?: boolean;
+        allowPeriodicWorks?: boolean;
+        spaceType?: number;
+      };
     };
     Company: {
       id: string;
