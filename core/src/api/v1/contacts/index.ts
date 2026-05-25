@@ -4,7 +4,7 @@ import { OkapiRouter } from 'koa-okapi-router'
 import {
   ContactSchema,
   GetContactResponseBodySchema,
-  GetContactsResponseBodySchema,
+  GetContactsListResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
 } from './schema'
 import {
@@ -159,13 +159,12 @@ export const routes = (router: OkapiRouter, config: Config) => {
         },
       },
       response: {
-        200: GetContactsResponseBodySchema,
+        200: GetContactsListResponseBodySchema,
         500: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
       const { code, includePhone, includeEmail, includeAddress } = ctx.query
-      const metadata = generateRouteMetadata(ctx)
 
       const response = await contactsAdapter.getByContactCodeBatch(code, {
         includePhone,
@@ -173,15 +172,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
         includeAddress,
       })
 
-      if (response.ok) {
-        ctx.status = 200
-        ctx.body = {
-          ...metadata,
-          content: { contacts: transformContacts(response.data) },
-        }
-      } else {
-        encodeError(ctx, response, metadata)
-      }
+      encodeListResponse(ctx, response)
     }
   )
 

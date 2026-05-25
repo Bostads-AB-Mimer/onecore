@@ -9036,9 +9036,7 @@ export interface paths {
           content: {
             "application/json": {
               _links?: unknown;
-              content: {
-                contacts: components["schemas"]["ContactV1"][];
-              };
+              content: components["schemas"]["ContactV1"][];
             };
           };
         };

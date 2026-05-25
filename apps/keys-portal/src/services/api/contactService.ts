@@ -55,8 +55,8 @@ export async function fetchContactsByContactCodeBatch(
 
   if (error || !data) return []
 
-  // The API wraps the result in { content: { contacts: [...] } }
-  return data?.content?.contacts ?? []
+  // The API wraps the result in { content: ContactV1[], _links }
+  return data?.content ?? []
 }
 
 /**
