@@ -872,29 +872,22 @@ export async function createRoom(
   body: CreateRoomBody
 ): Promise<AdapterResult<Room, 'not-found' | 'validation' | 'unknown'>> {
   try {
-    const response = await axios.post(
-      `${config.propertyBaseService.url}/rooms`,
-      body,
-      {
-        headers: { 'Content-Type': 'application/json' },
-        // Treat 4xx/5xx as data rather than thrown errors so we can map
-        // status codes to AdapterResult shapes.
-        validateStatus: () => true,
-      }
-    )
+    const response = await client().POST('/rooms', { body })
 
-    if (response.status === 201 && response.data?.content) {
+    if (response.data?.content) {
       return { ok: true, data: response.data.content }
     }
-    if (response.status === 404) {
+
+    const status = response.response?.status
+    if (status === 404) {
       return { ok: false, err: 'not-found' }
     }
-    if (response.status === 400) {
+    if (status === 400) {
       return { ok: false, err: 'validation' }
     }
 
     logger.error(
-      { status: response.status, body: response.data },
+      { status, error: response.error },
       'property-base-adapter.createRoom unexpected response'
     )
     return { ok: false, err: 'unknown' }
