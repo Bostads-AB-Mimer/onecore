@@ -143,7 +143,7 @@ const getTenfastContacts = async (
   for (const contactCode of contactCodes) {
     const contactResult = await getContactByContactCode(contactCode)
     if (!contactResult.ok) {
-      throw new Error(JSON.stringify(contactResult))
+      throw new Error(contactResult.err)
     }
 
     contacts.push(contactResult.data)
@@ -158,7 +158,7 @@ const getTenfastInvoices = async (ocrs: string[]): Promise<Invoice[]> => {
   for (const ocr of ocrs) {
     const invoiceResult = await getInvoiceByOcr(ocr)
     if (!invoiceResult.ok) {
-      throw new Error(JSON.stringify(invoiceResult))
+      throw new Error(invoiceResult.err)
     }
 
     invoices.push(invoiceResult.data)
@@ -173,7 +173,7 @@ const getTenfastLeases = async (leaseIds: string[]): Promise<Lease[]> => {
   for (const leaseId of leaseIds) {
     const leaseResult = await getLease(leaseId)
     if (!leaseResult.ok) {
-      throw new Error(JSON.stringify(leaseResult))
+      throw new Error(leaseResult.err)
     }
 
     leases.push(leaseResult.data)
@@ -190,7 +190,7 @@ const getTenfastRentalProperties = async (
   for (const rentalPropertyId of rentalPropertyIds) {
     const rentalPropertyResult = await getRentalProperty(rentalPropertyId)
     if (!rentalPropertyResult.ok) {
-      throw new Error(JSON.stringify(rentalPropertyResult))
+      throw new Error(rentalPropertyResult.err)
     }
 
     rentalProperties.push(rentalPropertyResult.data)
