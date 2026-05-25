@@ -35,6 +35,6 @@ export function deriveRoomIsHandled(
   // Every fetched component must have a non‑empty condition on the room
   return fetched.every((comp) => {
     const stored = componentsById.get(comp.id)
-    return stored?.condition?.trim() !== ''
+    return Boolean(stored?.condition?.trim())
   })
 }
