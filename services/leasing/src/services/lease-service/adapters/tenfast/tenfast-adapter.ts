@@ -264,12 +264,25 @@ const getTags = (): Promise<Map<string, TenfastTag>> => {
         method: 'get',
         url: `${tenfastBaseUrl}/v1/hyresvard/tags?hyresvard=${tenfastCompanyId}`,
       })
-      if (res.status !== 200) return new Map()
+      if (res.status !== 200) {
+        tagsCache = null
+        tagsCachedAt = 0
+        return new Map()
+      }
       const tags = z.array(TenfastTagSchema).safeParse(res.data)
-      if (!tags.success) return new Map()
+      if (!tags.success) {
+        tagsCache = null
+        tagsCachedAt = 0
+        return new Map()
+      }
       return new Map(tags.data.map((t) => [t._id, t]))
-    } catch {
+    } catch (err) {
+      logger.error(
+        { err: JSON.stringify(err) },
+        'Failed to fetch tags from Tenfast '
+      )
       tagsCache = null
+      tagsCachedAt = 0
       return new Map()
     }
   })()

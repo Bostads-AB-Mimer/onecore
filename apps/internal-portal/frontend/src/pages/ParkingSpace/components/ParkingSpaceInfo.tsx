@@ -112,10 +112,8 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Hyresform</Typography>
             <Box>
               <Typography fontWeight="bold">
-                {
-                  parkingSpaceListing.rentalObject.availabilityInfo
-                    ?.rentalTenureType?.name
-                }
+                {parkingSpaceListing.rentalObject.availabilityInfo
+                  ?.rentalTenureType?.name || '-'}
               </Typography>
             </Box>
           </Box>
