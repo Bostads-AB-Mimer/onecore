@@ -30,7 +30,7 @@ beforeEach(() => {
 })
 
 describe('GET /leases/by-contact-code/:contactCode', () => {
-  it('responds with 404 if tenant not found', async () => {
+  it('returns 200 with empty array when contact is not found', async () => {
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
       .mockResolvedValueOnce({ ok: true, data: null })
@@ -39,7 +39,39 @@ describe('GET /leases/by-contact-code/:contactCode', () => {
       '/leases/by-contact-code/P965339'
     )
 
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([])
+  })
+
+  it('returns 500 when fetching contact fails', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({ ok: false, err: 'could-not-retrieve-tenant' })
+
+    const res = await request(app.callback()).get(
+      '/leases/by-contact-code/P965339'
+    )
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('could-not-retrieve-tenant')
+  })
+
+  it('returns 200 with leases when contact is found', async () => {
+    const tenant = factory.tenfastTenant.build()
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: tenant })
+    jest
+      .spyOn(tenfastAdapter, 'getLeasesByTenantId')
+      .mockResolvedValueOnce({ ok: true, data: [lease] })
+
+    const res = await request(app.callback()).get(
+      '/leases/by-contact-code/P965339'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(1)
   })
 })
 

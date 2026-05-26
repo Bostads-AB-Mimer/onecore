@@ -934,6 +934,10 @@ export const routes = (router: KoaRouter) => {
     const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
+      logger.error(
+        { error: queryParams.error, metadata },
+        'Invalid query parameters for get leases by contact code'
+      )
       ctx.status = 400
       ctx.body = { error: queryParams.error.issues, ...metadata }
       return
@@ -945,6 +949,10 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!contact.ok) {
+      logger.error(
+        { error: contact.err, metadata },
+        'Error fetching contact by contact code'
+      )
       ctx.status = 500
       ctx.body = {
         error: contact.err,
@@ -955,11 +963,14 @@ export const routes = (router: KoaRouter) => {
     }
 
     if (!contact.data) {
-      ctx.status = 404
-      ctx.body = {
-        error: 'Contact not found',
-        ...metadata,
-      }
+      logger.info(
+        { contactCode: ctx.params.contactCode },
+        'No contact found by contact code'
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody([], metadata)
+
       return
     }
 
@@ -973,6 +984,10 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!getLeases.ok) {
+      logger.error(
+        { error: getLeases.err, metadata },
+        'Error fetching leases by tenant ID'
+      )
       ctx.status = 500
       ctx.body = {
         error: getLeases.err,
