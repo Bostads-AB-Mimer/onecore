@@ -41,7 +41,6 @@ const baseTree = {
             {
               buildingCode: '04101-B1',
               buildingName: 'Hus 1',
-              address: 'Hus 1',
               buildingType: { code: 'STD', name: 'Standard' },
             },
           ],

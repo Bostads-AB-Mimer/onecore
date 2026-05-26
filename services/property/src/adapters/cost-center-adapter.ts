@@ -157,7 +157,6 @@ export const getCostCenterTreeById = async (
               ? Array.from(agg.addresses.values()).map((b) => ({
                   buildingCode: b.buildingCode,
                   buildingName: b.buildingName,
-                  address: b.buildingName,
                   buildingType: b.buildingType,
                 }))
               : [],

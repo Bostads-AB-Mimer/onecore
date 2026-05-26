@@ -1,16 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Building2, Car, DoorOpen, Home } from 'lucide-react'
 
-import { useCostCenters } from '@/features/property-areas/hooks/useCostCenters'
-import { useCostCenterTree } from '@/features/property-areas/hooks/useCostCenterTree'
 import {
-  KvvAreaInfo,
-  PropertyForAdmin,
-} from '@/features/property-areas/types/adminTypes'
-import {
+  type KvvAreaInfo,
+  type PropertyForAdmin,
   StewardAdminMobile,
   StewardColumn,
-} from '@/features/property-areas/ui/admin'
+  useCostCenters,
+  useCostCenterTree,
+} from '@/features/property-areas'
 
 import type { CostCenterTree, CostCenterTreeKvvArea } from '@/services/types'
 
@@ -87,7 +85,9 @@ function mapProperties(area: CostCenterTreeKvvArea): PropertyForAdmin[] {
     propertyCode: property.code,
     propertyName: property.designation || property.tract || property.code,
     addresses: sortAddresses(
-      property.addresses.map((a) => a.address).filter((v): v is string => !!v)
+      property.addresses
+        .map((a) => a.buildingName)
+        .filter((v): v is string => !!v)
     ),
     buildingType:
       property.addresses.find((a) => a.buildingType)?.buildingType ?? null,

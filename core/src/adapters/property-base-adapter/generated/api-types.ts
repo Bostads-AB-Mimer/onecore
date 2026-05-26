@@ -3772,7 +3772,6 @@ export interface components {
           addresses: {
             buildingCode: string
             buildingName: string | null
-            address: string | null
             buildingType: {
               code: string | null
               name: string | null

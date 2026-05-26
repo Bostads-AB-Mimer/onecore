@@ -3,7 +3,6 @@ import { z } from 'zod'
 export const CostCenterTreeAddressSchema = z.object({
   buildingCode: z.string(),
   buildingName: z.string().nullable(),
-  address: z.string().nullable(),
   buildingType: z
     .object({
       code: z.string().nullable(),
