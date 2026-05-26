@@ -164,6 +164,11 @@ function SidebarNavigationContent() {
           icon={Settings}
           label="Administrera Komponenter"
         />
+        <SidebarNavLink
+          to={routes.propertyAreas}
+          icon={LayoutGrid}
+          label="Förvaltningsområden"
+        />
       </SidebarContent>
     </Sidebar>
   )

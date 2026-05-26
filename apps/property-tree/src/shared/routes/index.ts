@@ -13,6 +13,7 @@ export const routes = {
   dashboard: '/',
   properties: '/fastigheter',
   property: '/fastigheter/:propertyCode', // -- byts ut mot :propertyCode
+  propertyAreas: '/forvaltningsomraden',
   building: '/byggnader/:buildingCode', // klar
   staircase: '/uppgangar/:buildingCode/:staircaseCode', // klar
   residence: '/bostader/:rentalId',

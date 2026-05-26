@@ -1132,3 +1132,65 @@ export const AddComponentResponseSchema = z.object({
 
 export type AddComponentRequest = z.infer<typeof AddComponentRequestSchema>
 export type AddComponentResponse = z.infer<typeof AddComponentResponseSchema>
+
+export const KeycloakUserSummarySchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().optional(),
+  mobilePhone: z.string().optional(),
+  employeeId: z.string().optional(),
+})
+
+export const CostCenterTreeAddressSchema = z.object({
+  buildingCode: z.string(),
+  buildingName: z.string().nullable(),
+  buildingType: z
+    .object({
+      code: z.string().nullable(),
+      name: z.string().nullable(),
+    })
+    .nullable(),
+})
+
+export const CostCenterTreeAggregatesSchema = z.object({
+  residenceCount: z.number().int().nonnegative(),
+  parkingCount: z.number().int().nonnegative(),
+  entranceCount: z.number().int().nonnegative(),
+})
+
+export const CostCenterTreePropertySchema = z.object({
+  code: z.string(),
+  designation: z.string().nullable(),
+  tract: z.string().nullable(),
+  addresses: z.array(CostCenterTreeAddressSchema),
+  aggregates: CostCenterTreeAggregatesSchema,
+})
+
+export const CostCenterTreeKvvAreaSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+  properties: z.array(CostCenterTreePropertySchema),
+})
+
+export const CostCenterTreeSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+  lead: KeycloakUserSummarySchema.nullable(),
+  deputy: KeycloakUserSummarySchema.nullable(),
+  kvvAreas: z.array(CostCenterTreeKvvAreaSchema),
+})
+
+export type CostCenterTree = z.infer<typeof CostCenterTreeSchema>
+
+export const CostCenterSummarySchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+})
+
+export type CostCenterSummary = z.infer<typeof CostCenterSummarySchema>

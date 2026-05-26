@@ -10,6 +10,7 @@ import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
 import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
+import { PropertyAreasPage } from '@/pages/PropertyAreasPage'
 import { PropertyPage } from '@/pages/PropertyPage'
 import { RentalBlocksPage } from '@/pages/RentalBlocksPage'
 import { ResidencePage } from '@/pages/ResidencePage'
@@ -67,6 +68,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.property,
             element: <PropertyPage />,
             handle: { title: 'Fastighet' },
+          },
+          {
+            path: routes.propertyAreas,
+            element: <PropertyAreasPage />,
+            handle: { title: 'Förvaltningsområden' },
           },
           {
             path: routes.building,

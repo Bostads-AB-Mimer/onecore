@@ -2087,6 +2087,63 @@ export interface paths {
       };
     };
   };
+  "/cost-centers": {
+    /**
+     * List all cost centers
+     * @description Returns a minimal list of all OneCore cost centers, sorted by code. Used to populate select lists.
+     */
+    get: {
+      responses: {
+        /** @description List of cost centers */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterSummary"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/cost-centers/{id}/tree": {
+    /**
+     * Get the management tree for a cost center
+     * @description Returns the cost center, its KVV areas, properties (with addresses and
+     * aggregate counts) and the Keycloak user IDs for lead, deputy and
+     * responsible. Keycloak user details are NOT expanded here — that
+     * composition happens in core.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The cost center id */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Cost center tree */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterTree"];
+            };
+          };
+        };
+        /** @description Cost center not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/components/analyze-image": {
     /**
      * Analyze component image(s) using AI
@@ -3696,6 +3753,45 @@ export interface components {
       ncsCode: string | null;
       additionalInformation: string | null;
       confidence: number;
+    };
+    CostCenterTree: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+      leadKeycloakUserId: string | null;
+      deputyKeycloakUserId: string | null;
+      kvvAreas: ({
+          /** Format: uuid */
+          id: string;
+          code: string;
+          name: string | null;
+          responsibleKeycloakUserId: string | null;
+          properties: ({
+              code: string;
+              designation: string | null;
+              tract: string | null;
+              addresses: ({
+                  buildingCode: string;
+                  buildingName: string | null;
+                  buildingType: ({
+                    code: string | null;
+                    name: string | null;
+                  }) | null;
+                })[];
+              aggregates: {
+                residenceCount: number;
+                parkingCount: number;
+                entranceCount: number;
+              };
+            })[];
+        })[];
+    };
+    CostCenterSummary: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
     };
   };
   responses: never;
