@@ -3757,6 +3757,28 @@ export interface paths {
       };
     };
   };
+  "/component-models/surface": {
+    /**
+     * Get surface component models (Ytskikt hierarchy)
+     * @description Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+     */
+    get: {
+      responses: {
+        /** @description List of surface component models */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/components": {
     /**
      * Get all components
@@ -3886,6 +3908,48 @@ export interface paths {
         };
         /** @description Component not found */
         404: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/inspection-state": {
+    /**
+     * Update component inspection state
+     * @description Updates component condition and last inspection date
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            condition: "GOOD" | "FAIR" | "DAMAGED";
+            /** Format: date-time */
+            lastInspectionDate: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Component inspection state updated */
+        200: {
+          content: never;
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
           content: never;
         };
       };
@@ -5049,14 +5113,14 @@ export interface paths {
   };
   "/rooms": {
     /**
-     * Get rooms by residence id.
+     * Get rooms by rental id.
      * @description Returns all rooms belonging to a residence.
      */
     get: {
       parameters: {
         query: {
-          /** @description The id of the residence. */
-          residenceId: string;
+          /** @description The rental id of the residence. */
+          rentalId: string;
           /** @description The code of the room (optional). */
           roomCode?: string;
         };
@@ -5072,6 +5136,41 @@ export interface paths {
         };
         /** @description Invalid query parameters. */
         400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Create a room for a residence.
+     * @description Forwards to property-base-service which performs a transactional
+     * 3-table Xpand write (cmobj, barum, babuf). Returns the created
+     * Room in the same shape as GET /rooms.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateRoomRequest"];
+        };
+      };
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Room"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Residence not found. */
+        404: {
           content: never;
         };
         /** @description Internal server error. */
@@ -5900,6 +5999,184 @@ export interface paths {
       };
     };
   };
+  "/inspections/internal/{inspectionId}/details": {
+    /**
+     * Retrieve an enriched internal inspection by ID
+     * @description Retrieves a specific internal inspection by its ID, normalized into the same shape as Xpand inspections (with lease, residence, and flattened room remarks) so it can be rendered by the protocol UI without source-specific branching.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the inspection to retrieve. */
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the inspection. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["DetailedInspection"];
+            };
+          };
+        };
+        /** @description Inspection not found. */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/pdf": {
+    /**
+     * Generate PDF protocol for an internal inspection
+     * @description Generates and returns a PDF protocol for a specific internal inspection by its ID.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include cost information in the PDF. */
+          includeCosts?: boolean;
+        };
+        path: {
+          /** @description The ID of the inspection to generate a PDF for. */
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully generated PDF protocol. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                /** @description Base64 encoded PDF document */
+                pdfBase64?: string;
+              };
+            };
+          };
+        };
+        /** @description Inspection not found. */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/tenant-contacts": {
+    /**
+     * Get tenant contacts for an internal inspection
+     * @description Retrieves contact information for new and previous tenants associated with an internal inspection's residence.
+     */
+    get: {
+      parameters: {
+        path: {
+          inspectionId: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved tenant contacts. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["TenantContactsResponse"];
+            };
+          };
+        };
+        /** @description Inspection or residence not found. */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/send-protocol": {
+    /**
+     * Send inspection protocol to tenant for an internal inspection
+     * @description Sends the inspection protocol PDF via email to the specified tenant (new or previous) for an internal inspection.
+     */
+    post: {
+      parameters: {
+        path: {
+          inspectionId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["SendProtocolRequest"];
+        };
+      };
+      responses: {
+        /** @description Protocol sent successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["SendProtocolResponse"];
+            };
+          };
+        };
+        /** @description Invalid request or no contract found. */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Inspection not found. */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
   "/inspections/{inspectionId}/tenant-contacts": {
     /**
      * Get tenant contacts for inspection protocol modal
@@ -6057,7 +6334,9 @@ export interface paths {
           content: {
             "application/json": {
               content?: {
-                inspection?: components["schemas"]["DetailedInspection"];
+                inspection?: components["schemas"]["InternalInspection"];
+                /** @description Per-component write-back errors recorded when transitioning to "Genomförd". Empty for other status transitions. */
+                componentWriteBackErrors?: components["schemas"]["ComponentWriteBackError"][];
               };
             };
           };
@@ -6124,6 +6403,68 @@ export interface paths {
           };
         };
         /** @description Internal server error */
+        500: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/rooms": {
+    /**
+     * Add a room to a residence during an inspection.
+     * @description Creates a new room in Xpand (via property-base) for the residence
+     * associated with the inspection, then records the xpand-issued room id
+     * in the inspection's tracking table so the inspector sees the room as
+     * 'added during this inspection'.
+     *
+     * If the property write fails, no inspection state is touched. If the
+     * property write succeeds but the inspection-tracking write fails, the
+     * room exists in Xpand and is returned to the caller; the caller is
+     * expected to refresh the inspection to pick it up.
+     */
+    post: {
+      parameters: {
+        path: {
+          inspectionId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["AddInspectionRoomRequest"];
+        };
+      };
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            "application/json": {
+              content?: {
+                room?: components["schemas"]["Room"];
+              };
+            };
+          };
+        };
+        /** @description Invalid request body or no residence linked to the inspection. */
+        400: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Inspection or residence not found. */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+        /** @description Internal server error. */
         500: {
           content: {
             "application/json": {
@@ -9902,6 +10243,24 @@ export interface components {
       }) | null;
       area?: number;
     };
+    CreateRoomRequest: {
+      rentalId: string;
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      code?: string;
+      caption?: string;
+      features?: {
+        hasToilet?: boolean;
+        isHeated?: boolean;
+        hasThermostatValve?: boolean;
+        orientation?: number;
+      };
+      usage?: {
+        shared?: boolean;
+        allowPeriodicWorks?: boolean;
+        spaceType?: number;
+      };
+    };
     ParkingSpace: {
       rentalId: string;
       companyCode: string;
@@ -10100,6 +10459,7 @@ export interface components {
       status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
       /** @enum {string|null} */
       condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+      lastInspectionDate?: string | null;
       quantity: number;
       economicLifespan: number;
       createdAt: string;
@@ -10330,6 +10690,7 @@ export interface components {
         status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
         /** @enum {string|null} */
         condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+        lastInspectionDate?: string | null;
         quantity: number;
         economicLifespan: number;
         createdAt: string;
@@ -11681,90 +12042,128 @@ export interface components {
             leaseContactType?: string;
           }[];
       }) | null;
-      rooms: {
+      rooms: (({
           roomId: string;
+          name?: string;
           conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
+          componentCosts: {
+            /** @default 0 */
+            details?: number;
+          };
           componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
+          };
+          componentCostResponsibilities: {
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            details?: "tenant" | "landlord" | null;
           };
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
-        }[] | null;
+          /** @default [] */
+          detailComponents?: {
+              id: string;
+              type: string;
+              label: string;
+              note: string;
+            }[];
+          /** @default [] */
+          components?: ({
+              componentId: string;
+              label: string;
+              condition: string;
+              action: string[];
+              note: string;
+              photos: string[];
+              cost?: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
+            })[];
+          /** @default false */
+          isAddedInThisInspection?: boolean;
+        })[]) | null;
+    };
+    InspectionComponent: {
+      componentId: string;
+      label: string;
+      condition: string;
+      action: string[];
+      note: string;
+      photos: string[];
+      cost?: number;
+      /**
+       * @default null
+       * @enum {string|null}
+       */
+      costResponsibility?: "tenant" | "landlord" | null;
     };
     InspectionRoom: {
       roomId: string;
+      name?: string;
       conditions: {
-        wall1: string;
-        wall2: string;
-        wall3: string;
-        wall4: string;
-        floor: string;
-        ceiling: string;
         details: string;
       };
       actions: {
-        wall1: string[];
-        wall2: string[];
-        wall3: string[];
-        wall4: string[];
-        floor: string[];
-        ceiling: string[];
         details: string[];
       };
       componentNotes: {
-        wall1: string;
-        wall2: string;
-        wall3: string;
-        wall4: string;
-        floor: string;
-        ceiling: string;
         details: string;
       };
+      componentCosts: {
+        /** @default 0 */
+        details?: number;
+      };
       componentPhotos: {
-        wall1: string[];
-        wall2: string[];
-        wall3: string[];
-        wall4: string[];
-        floor: string[];
-        ceiling: string[];
         details: string[];
+      };
+      componentCostResponsibilities: {
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        details?: "tenant" | "landlord" | null;
       };
       photos: string[];
       isApproved: boolean;
       isHandled: boolean;
+      /** @default [] */
+      detailComponents?: {
+          id: string;
+          type: string;
+          label: string;
+          note: string;
+        }[];
+      /** @default [] */
+      components?: ({
+          componentId: string;
+          label: string;
+          condition: string;
+          action: string[];
+          note: string;
+          photos: string[];
+          cost?: number;
+          /**
+           * @default null
+           * @enum {string|null}
+           */
+          costResponsibility?: "tenant" | "landlord" | null;
+        })[];
+      /** @default false */
+      isAddedInThisInspection?: boolean;
     };
     DetailedInspection: {
       id: string;
@@ -11799,6 +12198,11 @@ export interface components {
               remarkGrade: number;
               remarkStatus: string | null;
               cost: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
               invoice: boolean;
               quantity: number;
               isMissing: boolean;
@@ -12053,576 +12457,49 @@ export interface components {
       }) | null;
     };
     DetailedInspectionRoom: {
-      id: string;
-      status: string;
-      /** Format: date-time */
-      date: string;
-      /** Format: date-time */
-      startedAt: string | null;
-      /** Format: date-time */
-      endedAt: string | null;
-      inspector: string;
-      type: string;
-      residenceId: string;
-      address: string;
-      apartmentCode: string | null;
-      isFurnished: boolean;
-      leaseId: string;
-      isTenantPresent: boolean;
-      isNewTenantPresent: boolean;
-      masterKeyAccess: string | null;
-      hasRemarks: boolean;
-      notes: string | null;
-      totalCost: number | null;
-      remarkCount: number;
-      rooms: ({
-          room: string;
-          remarks: ({
-              remarkId: string;
-              location: string | null;
-              buildingComponent: string | null;
-              notes: string | null;
-              remarkGrade: number;
-              remarkStatus: string | null;
-              cost: number;
-              invoice: boolean;
-              quantity: number;
-              isMissing: boolean;
-              /** Format: date-time */
-              fixedDate: string | null;
-              workOrderCreated: boolean;
-              workOrderStatus: number | null;
-            })[];
+      room: string;
+      remarks: ({
+          remarkId: string;
+          location: string | null;
+          buildingComponent: string | null;
+          notes: string | null;
+          remarkGrade: number;
+          remarkStatus: string | null;
+          cost: number;
+          /**
+           * @default null
+           * @enum {string|null}
+           */
+          costResponsibility?: "tenant" | "landlord" | null;
+          invoice: boolean;
+          quantity: number;
+          isMissing: boolean;
+          /** Format: date-time */
+          fixedDate: string | null;
+          workOrderCreated: boolean;
+          workOrderStatus: number | null;
         })[];
-      lease: ({
-        leaseId: string;
-        leaseNumber: string;
-        /** Format: date-time */
-        leaseStartDate: string;
-        /** Format: date-time */
-        leaseEndDate?: string;
-        /** @enum {string} */
-        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
-        tenantContactIds?: string[];
-        rentalPropertyId: string;
-        rentalProperty?: {
-          rentalPropertyId: string;
-          apartmentNumber: number;
-          size: number;
-          type: string;
-          address?: {
-            street?: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          rentalPropertyType: string;
-          additionsIncludedInRent: string;
-          otherInfo?: string;
-          roomTypes?: {
-              roomTypeId: string;
-              name: string;
-            }[];
-          /** Format: date-time */
-          lastUpdated?: string;
-        };
-        type: string;
-        rentInfo?: {
-          currentRent: {
-            rentId?: string;
-            leaseId?: string;
-            currentRent: number;
-            vat: number;
-            additionalChargeDescription?: string;
-            additionalChargeAmount?: number;
-            /** Format: date-time */
-            rentStartDate?: string;
-            /** Format: date-time */
-            rentEndDate?: string;
-          };
-        };
-        address?: {
-          street?: string;
-          number: string;
-          postalCode: string;
-          city: string;
-        };
-        noticeGivenBy?: string;
-        /** Format: date-time */
-        noticeDate?: string;
-        noticeTimeTenant?: string | number;
-        /** Format: date-time */
-        preferredMoveOutDate?: string;
-        /** Format: date-time */
-        terminationDate?: string;
-        /** Format: date-time */
-        contractDate?: string;
-        /** Format: date-time */
-        lastDebitDate?: string;
-        /** Format: date-time */
-        approvalDate?: string;
-        residentialArea?: {
-          code: string;
-          caption: string;
-        };
-        tenants?: {
-            contactCode: string;
-            contactKey: string;
-            leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
-            nationalRegistrationNumber: string;
-            /** Format: date-time */
-            birthDate: string;
-            address?: {
-              street?: string;
-              number: string;
-              postalCode: string;
-              city: string;
-            };
-            phoneNumbers?: {
-                phoneNumber: string;
-                type: string;
-                isMainNumber: boolean;
-              }[];
-            emailAddress?: string;
-            isTenant: boolean;
-            parkingSpaceWaitingList?: {
-              /** Format: date-time */
-              queueTime: string;
-              queuePoints: number;
-              type: number;
-            };
-            specialAttention?: boolean;
-            leaseContactType?: string;
-          }[];
-      }) | null;
-      residence: ({
-        id: string;
-        code: string;
-        name: string | null;
-        /** @enum {string|null} */
-        status: "VACANT" | "LEASED" | null;
-        entrance: string | null;
-        location: string | null;
-        floor: string | null;
-        partNo: number | null;
-        part: string | null;
-        deleted: boolean;
-        validityPeriod: {
-          /** Format: date-time */
-          fromDate: string;
-          /** Format: date-time */
-          toDate: string;
-        };
-        accessibility: {
-          wheelchairAccessible: boolean;
-          elevator: boolean;
-          residenceAdapted: boolean;
-        };
-        features: {
-          hygieneFacility: string | null;
-          balcony1?: {
-            location: string;
-            type: string;
-          };
-          balcony2?: {
-            location: string;
-            type: string;
-          };
-          patioLocation: string | null;
-          sauna: boolean;
-          extraToilet: boolean;
-          sharedKitchen: boolean;
-          petAllergyFree: boolean;
-          /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean;
-          smokeFree: boolean;
-          asbestos: boolean;
-        };
-        type: {
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-        };
-        residenceType: {
-          residenceTypeId: string;
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-          systemStandard: number;
-          checklistId: string | null;
-          componentTypeActionId: string | null;
-          statisticsGroupSCBId: string | null;
-          statisticsGroup2Id: string | null;
-          statisticsGroup3Id: string | null;
-          statisticsGroup4Id: string | null;
-          timestamp: string;
-        };
-        rentalInformation: ({
-          apartmentNumber: string | null;
-          rentalId: string | null;
-          type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
-        propertyObject: {
-          energy: {
-            energyClass: number;
-            /** Format: date-time */
-            energyRegistered?: string;
-            /** Format: date-time */
-            energyReceived?: string;
-            energyIndex?: number;
-          };
-          rentalId: string | null;
-          rentalInformation: ({
-            type: {
-              code: string;
-              name: string | null;
-            };
-          }) | null;
-          rentalBlocks: ({
-              id: string;
-              blockReasonId: string | null;
-              blockReason: string | null;
-              /** Format: date-time */
-              fromDate: string;
-              /** Format: date-time */
-              toDate: string | null;
-              amount: number | null;
-            })[];
-        };
-        property: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        building: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        staircase: ({
-          id: string;
-          code: string;
-          name: string | null;
-          features: {
-            floorPlan: string | null;
-            accessibleByElevator: boolean;
-          };
-          dates: {
-            /** Format: date-time */
-            from: string;
-            /** Format: date-time */
-            to: string;
-          };
-          property?: {
-            propertyId: string | null;
-            propertyName: string | null;
-            propertyCode: string | null;
-          };
-          building?: {
-            buildingId: string | null;
-            buildingName: string | null;
-            buildingCode: string | null;
-          };
-          deleted: boolean;
-          timestamp: string;
-        }) | null;
-        areaSize: number | null;
-        malarEnergiFacilityId: string | null;
-      }) | null;
     };
     DetailedInspectionRemark: {
-      id: string;
-      status: string;
-      /** Format: date-time */
-      date: string;
-      /** Format: date-time */
-      startedAt: string | null;
-      /** Format: date-time */
-      endedAt: string | null;
-      inspector: string;
-      type: string;
-      residenceId: string;
-      address: string;
-      apartmentCode: string | null;
-      isFurnished: boolean;
-      leaseId: string;
-      isTenantPresent: boolean;
-      isNewTenantPresent: boolean;
-      masterKeyAccess: string | null;
-      hasRemarks: boolean;
+      remarkId: string;
+      location: string | null;
+      buildingComponent: string | null;
       notes: string | null;
-      totalCost: number | null;
-      remarkCount: number;
-      rooms: ({
-          room: string;
-          remarks: ({
-              remarkId: string;
-              location: string | null;
-              buildingComponent: string | null;
-              notes: string | null;
-              remarkGrade: number;
-              remarkStatus: string | null;
-              cost: number;
-              invoice: boolean;
-              quantity: number;
-              isMissing: boolean;
-              /** Format: date-time */
-              fixedDate: string | null;
-              workOrderCreated: boolean;
-              workOrderStatus: number | null;
-            })[];
-        })[];
-      lease: ({
-        leaseId: string;
-        leaseNumber: string;
-        /** Format: date-time */
-        leaseStartDate: string;
-        /** Format: date-time */
-        leaseEndDate?: string;
-        /** @enum {string} */
-        status: "Current" | "Upcoming" | "AboutToEnd" | "Ended";
-        tenantContactIds?: string[];
-        rentalPropertyId: string;
-        rentalProperty?: {
-          rentalPropertyId: string;
-          apartmentNumber: number;
-          size: number;
-          type: string;
-          address?: {
-            street?: string;
-            number: string;
-            postalCode: string;
-            city: string;
-          };
-          rentalPropertyType: string;
-          additionsIncludedInRent: string;
-          otherInfo?: string;
-          roomTypes?: {
-              roomTypeId: string;
-              name: string;
-            }[];
-          /** Format: date-time */
-          lastUpdated?: string;
-        };
-        type: string;
-        rentInfo?: {
-          currentRent: {
-            rentId?: string;
-            leaseId?: string;
-            currentRent: number;
-            vat: number;
-            additionalChargeDescription?: string;
-            additionalChargeAmount?: number;
-            /** Format: date-time */
-            rentStartDate?: string;
-            /** Format: date-time */
-            rentEndDate?: string;
-          };
-        };
-        address?: {
-          street?: string;
-          number: string;
-          postalCode: string;
-          city: string;
-        };
-        noticeGivenBy?: string;
-        /** Format: date-time */
-        noticeDate?: string;
-        noticeTimeTenant?: string | number;
-        /** Format: date-time */
-        preferredMoveOutDate?: string;
-        /** Format: date-time */
-        terminationDate?: string;
-        /** Format: date-time */
-        contractDate?: string;
-        /** Format: date-time */
-        lastDebitDate?: string;
-        /** Format: date-time */
-        approvalDate?: string;
-        residentialArea?: {
-          code: string;
-          caption: string;
-        };
-        tenants?: {
-            contactCode: string;
-            contactKey: string;
-            leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
-            nationalRegistrationNumber: string;
-            /** Format: date-time */
-            birthDate: string;
-            address?: {
-              street?: string;
-              number: string;
-              postalCode: string;
-              city: string;
-            };
-            phoneNumbers?: {
-                phoneNumber: string;
-                type: string;
-                isMainNumber: boolean;
-              }[];
-            emailAddress?: string;
-            isTenant: boolean;
-            parkingSpaceWaitingList?: {
-              /** Format: date-time */
-              queueTime: string;
-              queuePoints: number;
-              type: number;
-            };
-            specialAttention?: boolean;
-            leaseContactType?: string;
-          }[];
-      }) | null;
-      residence: ({
-        id: string;
-        code: string;
-        name: string | null;
-        /** @enum {string|null} */
-        status: "VACANT" | "LEASED" | null;
-        entrance: string | null;
-        location: string | null;
-        floor: string | null;
-        partNo: number | null;
-        part: string | null;
-        deleted: boolean;
-        validityPeriod: {
-          /** Format: date-time */
-          fromDate: string;
-          /** Format: date-time */
-          toDate: string;
-        };
-        accessibility: {
-          wheelchairAccessible: boolean;
-          elevator: boolean;
-          residenceAdapted: boolean;
-        };
-        features: {
-          hygieneFacility: string | null;
-          balcony1?: {
-            location: string;
-            type: string;
-          };
-          balcony2?: {
-            location: string;
-            type: string;
-          };
-          patioLocation: string | null;
-          sauna: boolean;
-          extraToilet: boolean;
-          sharedKitchen: boolean;
-          petAllergyFree: boolean;
-          /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean;
-          smokeFree: boolean;
-          asbestos: boolean;
-        };
-        type: {
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-        };
-        residenceType: {
-          residenceTypeId: string;
-          code: string;
-          name: string | null;
-          roomCount: number | null;
-          kitchen: number;
-          systemStandard: number;
-          checklistId: string | null;
-          componentTypeActionId: string | null;
-          statisticsGroupSCBId: string | null;
-          statisticsGroup2Id: string | null;
-          statisticsGroup3Id: string | null;
-          statisticsGroup4Id: string | null;
-          timestamp: string;
-        };
-        rentalInformation: ({
-          apartmentNumber: string | null;
-          rentalId: string | null;
-          type: {
-            code: string;
-            name: string | null;
-          };
-        }) | null;
-        propertyObject: {
-          energy: {
-            energyClass: number;
-            /** Format: date-time */
-            energyRegistered?: string;
-            /** Format: date-time */
-            energyReceived?: string;
-            energyIndex?: number;
-          };
-          rentalId: string | null;
-          rentalInformation: ({
-            type: {
-              code: string;
-              name: string | null;
-            };
-          }) | null;
-          rentalBlocks: ({
-              id: string;
-              blockReasonId: string | null;
-              blockReason: string | null;
-              /** Format: date-time */
-              fromDate: string;
-              /** Format: date-time */
-              toDate: string | null;
-              amount: number | null;
-            })[];
-        };
-        property: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        building: {
-          id: string | null;
-          name: string | null;
-          code: string | null;
-        };
-        staircase: ({
-          id: string;
-          code: string;
-          name: string | null;
-          features: {
-            floorPlan: string | null;
-            accessibleByElevator: boolean;
-          };
-          dates: {
-            /** Format: date-time */
-            from: string;
-            /** Format: date-time */
-            to: string;
-          };
-          property?: {
-            propertyId: string | null;
-            propertyName: string | null;
-            propertyCode: string | null;
-          };
-          building?: {
-            buildingId: string | null;
-            buildingName: string | null;
-            buildingCode: string | null;
-          };
-          deleted: boolean;
-          timestamp: string;
-        }) | null;
-        areaSize: number | null;
-        malarEnergiFacilityId: string | null;
-      }) | null;
+      remarkGrade: number;
+      remarkStatus: string | null;
+      cost: number;
+      /**
+       * @default null
+       * @enum {string|null}
+       */
+      costResponsibility?: "tenant" | "landlord" | null;
+      invoice: boolean;
+      quantity: number;
+      isMissing: boolean;
+      /** Format: date-time */
+      fixedDate: string | null;
+      workOrderCreated: boolean;
+      workOrderStatus: number | null;
     };
     TenantContactsResponse: {
       inspection: {
@@ -12686,6 +12563,11 @@ export interface components {
               remarkGrade: number;
               remarkStatus: string | null;
               cost: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
               invoice: boolean;
               quantity: number;
               isMissing: boolean;
@@ -12831,93 +12713,139 @@ export interface components {
       leaseId: string;
       masterKeyAccess: string | null;
       residenceId: string;
-      rooms: {
+      isFurnished: boolean;
+      /** Format: date-time */
+      startedAt: string | null;
+      /** Format: date-time */
+      endedAt: string | null;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: (({
           roomId: string;
+          name?: string;
           conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
+          componentCosts: {
+            /** @default 0 */
+            details?: number;
+          };
           componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
+          };
+          componentCostResponsibilities: {
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            details?: "tenant" | "landlord" | null;
           };
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
-        }[] | null;
+          /** @default [] */
+          detailComponents?: {
+              id: string;
+              type: string;
+              label: string;
+              note: string;
+            }[];
+          /** @default [] */
+          components?: ({
+              componentId: string;
+              label: string;
+              condition: string;
+              action: string[];
+              note: string;
+              photos: string[];
+              cost?: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
+            })[];
+          /** @default false */
+          isAddedInThisInspection?: boolean;
+        })[]) | null;
     };
     SaveInspectionDraftRequest: {
       inspectorName: string;
-      rooms: {
+      rooms: ({
           roomId: string;
+          name?: string;
           conditions: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
           actions: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
           };
           componentNotes: {
-            wall1: string;
-            wall2: string;
-            wall3: string;
-            wall4: string;
-            floor: string;
-            ceiling: string;
             details: string;
           };
+          componentCosts: {
+            /** @default 0 */
+            details?: number;
+          };
           componentPhotos: {
-            wall1: string[];
-            wall2: string[];
-            wall3: string[];
-            wall4: string[];
-            floor: string[];
-            ceiling: string[];
             details: string[];
+          };
+          componentCostResponsibilities: {
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            details?: "tenant" | "landlord" | null;
           };
           photos: string[];
           isApproved: boolean;
           isHandled: boolean;
-        }[];
+          /** @default [] */
+          detailComponents?: {
+              id: string;
+              type: string;
+              label: string;
+              note: string;
+            }[];
+          /** @default [] */
+          components?: ({
+              componentId: string;
+              label: string;
+              condition: string;
+              action: string[];
+              note: string;
+              photos: string[];
+              cost?: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
+            })[];
+          /** @default false */
+          isAddedInThisInspection?: boolean;
+        })[];
+      isFurnished: boolean;
+    };
+    ComponentWriteBackError: {
+      componentId: string;
+      componentLabel: string;
+      message: string;
+    };
+    AddInspectionRoomRequest: {
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      caption?: string;
     };
     FileListItem: {
       /** @description Full file path/name */

@@ -1,159 +1,20 @@
 import { z } from 'zod'
+import { inspection, ALL_VALID_TYPE_CODES } from '@onecore/types'
 import { Lease } from '../lease-service/schemas/lease'
 import { ResidenceDetailsSchema } from '../property-base-service/schemas'
 
-/**
- * Inspection status filter constants
- */
-export const INSPECTION_STATUS_FILTER = {
-  ONGOING: 'ongoing',
-  COMPLETED: 'completed',
-} as const
-
-export type InspectionStatusFilter =
-  (typeof INSPECTION_STATUS_FILTER)[keyof typeof INSPECTION_STATUS_FILTER]
-
-export const XpandInspectionSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-  date: z.coerce.date(),
-  inspector: z.string(),
-  type: z.string(),
-  address: z.string(),
-  apartmentCode: z.string().nullable(),
-  leaseId: z.string(),
-  masterKeyAccess: z.string().nullable(),
-})
-
-export const InspectionRoomSchema = z.object({
-  roomId: z.string(),
-  conditions: z.object({
-    wall1: z.string(),
-    wall2: z.string(),
-    wall3: z.string(),
-    wall4: z.string(),
-    floor: z.string(),
-    ceiling: z.string(),
-    details: z.string(),
-  }),
-  actions: z.object({
-    wall1: z.array(z.string()),
-    wall2: z.array(z.string()),
-    wall3: z.array(z.string()),
-    wall4: z.array(z.string()),
-    floor: z.array(z.string()),
-    ceiling: z.array(z.string()),
-    details: z.array(z.string()),
-  }),
-  componentNotes: z.object({
-    wall1: z.string(),
-    wall2: z.string(),
-    wall3: z.string(),
-    wall4: z.string(),
-    floor: z.string(),
-    ceiling: z.string(),
-    details: z.string(),
-  }),
-  componentPhotos: z.object({
-    wall1: z.array(z.string()),
-    wall2: z.array(z.string()),
-    wall3: z.array(z.string()),
-    wall4: z.array(z.string()),
-    floor: z.array(z.string()),
-    ceiling: z.array(z.string()),
-    details: z.array(z.string()),
-  }),
-  photos: z.array(z.string()),
-  isApproved: z.boolean(),
-  isHandled: z.boolean(),
-})
-
-export const InspectionSchema = XpandInspectionSchema.extend({
+export const InspectionSchema = inspection.XpandInspectionSchema.extend({
   lease: Lease.nullable(),
 
   // TODO: rooms are nullable for now because xpand inspections currently lack this data
-  rooms: z.array(InspectionRoomSchema).nullable(),
+  rooms: z.array(inspection.InspectionRoomSchema).nullable(),
 })
 
-export const InternalInspectionSchema = XpandInspectionSchema.extend({
-  residenceId: z.string(),
-  rooms: z.array(InspectionRoomSchema).nullable(),
-})
-
-export const DetailedXpandInspectionRemarkSchema = z.object({
-  remarkId: z.string(),
-  location: z.string().nullable(),
-  buildingComponent: z.string().nullable(),
-  notes: z.string().nullable(),
-  remarkGrade: z.number(),
-  remarkStatus: z.string().nullable(),
-  cost: z.number(),
-  invoice: z.boolean(),
-  quantity: z.number(),
-  isMissing: z.boolean(),
-  fixedDate: z.coerce.date().nullable(),
-  workOrderCreated: z.boolean(),
-  workOrderStatus: z.number().nullable(),
-})
-
-export const DetailedXpandInspectionRoomSchema = z.object({
-  room: z.string(),
-  remarks: DetailedXpandInspectionRemarkSchema.array(),
-})
-
-export const DetailedXpandInspectionSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-  date: z.coerce.date(),
-  startedAt: z.coerce.date().nullable(),
-  endedAt: z.coerce.date().nullable(),
-  inspector: z.string(),
-  type: z.string(),
-  residenceId: z.string(),
-  address: z.string(),
-  apartmentCode: z.string().nullable(),
-  isFurnished: z.boolean(),
-  leaseId: z.string(),
-  isTenantPresent: z.boolean(),
-  isNewTenantPresent: z.boolean(),
-  masterKeyAccess: z.string().nullable(),
-  hasRemarks: z.boolean(),
-  notes: z.string().nullable(),
-  totalCost: z.number().nullable(),
-  remarkCount: z.number(),
-  rooms: DetailedXpandInspectionRoomSchema.array(),
-})
-
-export const DetailedInspectionSchema = DetailedXpandInspectionSchema.extend({
-  lease: Lease.nullable(),
-  residence: ResidenceDetailsSchema.nullable(),
-})
-
-export const GetInspectionsFromXpandQuerySchema = z.object({
-  page: z.coerce.number().min(1).optional(),
-  limit: z.coerce.number().min(1).max(100).optional(),
-  statusFilter: z
-    .enum([
-      INSPECTION_STATUS_FILTER.ONGOING,
-      INSPECTION_STATUS_FILTER.COMPLETED,
-    ])
-    .optional(),
-  sortAscending: z
-    .string()
-    .transform((s) => (s === 'true' ? true : false))
-    .optional(),
-  inspector: z.string().optional(),
-  address: z.string().optional(),
-})
-
-export const GetInspectionsByResidenceIdQuerySchema = z.object({
-  statusFilter: z
-    .enum([
-      INSPECTION_STATUS_FILTER.ONGOING,
-      INSPECTION_STATUS_FILTER.COMPLETED,
-    ])
-    .optional(),
-})
+export const DetailedInspectionSchema =
+  inspection.DetailedXpandInspectionSchema.extend({
+    lease: Lease.nullable(),
+    residence: ResidenceDetailsSchema.nullable(),
+  })
 
 export const INSPECTION_SOURCE = {
   XPAND: 'xpand',
@@ -168,15 +29,14 @@ export const InspectionSourceSchema = z.enum([
   INSPECTION_SOURCE.INTERNAL,
 ])
 
-export const InspectionWithSourceSchema = XpandInspectionSchema.extend({
-  source: InspectionSourceSchema,
-  lease: Lease.nullable(),
-})
+export const InspectionWithSourceSchema =
+  inspection.XpandInspectionSchema.extend({
+    source: InspectionSourceSchema,
+    lease: Lease.nullable(),
+  })
 
-export type XpandInspection = z.infer<typeof XpandInspectionSchema>
 export type InspectionWithSource = z.infer<typeof InspectionWithSourceSchema>
 export type Inspection = z.infer<typeof InspectionSchema>
-export type InspectionRoom = z.infer<typeof InspectionRoomSchema>
 export type DetailedInspection = z.infer<typeof DetailedInspectionSchema>
 
 // Tenant contact schemas for send-protocol feature
@@ -216,12 +76,11 @@ export const SendProtocolResponseSchema = z.object({
   error: z.string().optional(),
 })
 
-export const CreateInspectionRequestSchema = DetailedXpandInspectionSchema.omit(
-  {
+export const CreateInspectionRequestSchema =
+  inspection.DetailedXpandInspectionSchema.omit({
     id: true,
     remarkCount: true,
-  }
-)
+  })
 
 export type CreateInspectionRequest = z.infer<
   typeof CreateInspectionRequestSchema
@@ -244,13 +103,21 @@ export type UpdateInspectionStatusRequest = z.infer<
   typeof UpdateInspectionStatusRequestSchema
 >
 
-export const SaveInspectionDraftRequestSchema = z.object({
-  inspectorName: z.string(),
-  rooms: z.array(InspectionRoomSchema),
+// Body for POST /inspections/internal/:inspectionId/rooms. rentalId is
+// looked up server-side from the inspection's residenceId. Type-specific
+// defaults (features, usage, code) are handled by the property service —
+// the inspector flow has no input for them.
+export const AddInspectionRoomRequestSchema = z.object({
+  roomTypeCode: z.enum(ALL_VALID_TYPE_CODES, {
+    errorMap: () => ({
+      message: `roomTypeCode must be one of: ${ALL_VALID_TYPE_CODES.join(', ')}`,
+    }),
+  }),
+  caption: z.string().min(1).max(30).optional(),
 })
 
-export type SaveInspectionDraftRequest = z.infer<
-  typeof SaveInspectionDraftRequestSchema
+export type AddInspectionRoomRequest = z.infer<
+  typeof AddInspectionRoomRequestSchema
 >
 
 export type TenantContact = z.infer<typeof TenantContactSchema>

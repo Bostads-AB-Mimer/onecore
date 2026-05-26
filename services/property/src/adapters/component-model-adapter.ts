@@ -1,4 +1,5 @@
 import { trimStrings } from '@src/utils/data-conversion'
+import { property } from '@onecore/types'
 import { prisma } from './db'
 import type {
   CreateComponentModel,
@@ -129,6 +130,39 @@ export const updateComponentModel = async (
 export const deleteComponentModel = async (id: string) => {
   await prisma.componentModels.delete({
     where: { id },
+  })
+}
+
+// Returns Models under the surface-finish hierarchy with the full Subtype →
+// Type → Category tree populated, sorted so the placeholder Subtype
+// (`Ospecificera*`) pins to the top of each Type. Used by the inspection
+// surface picker.
+export const getSurfaceModels = async () => {
+  const models = await prisma.componentModels.findMany({
+    where: {
+      subtype: {
+        componentType: {
+          category: { categoryName: property.SURFACE_CATEGORY_NAME },
+        },
+      },
+    },
+    include: {
+      subtype: {
+        include: {
+          componentType: { include: { category: true } },
+        },
+      },
+    },
+  })
+
+  return models.sort((a, b) => {
+    const aSub = a.subtype.subTypeName
+    const bSub = b.subtype.subTypeName
+    const aUn = aSub.startsWith('Ospecificera')
+    const bUn = bSub.startsWith('Ospecificera')
+    if (aUn && !bUn) return -1
+    if (!aUn && bUn) return 1
+    return aSub.localeCompare(bSub)
   })
 }
 

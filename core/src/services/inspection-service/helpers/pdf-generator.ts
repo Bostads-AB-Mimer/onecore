@@ -771,7 +771,13 @@ function drawRemarksTable(
 
   // Draw header row
   currentY = drawRemarksTableHeader(doc, currentY, pageWidth, includeCosts)
-  let totalCost = 0
+  // Split totals by cost responsibility so the summary at the bottom can show
+  // what the tenant pays vs what the landlord pays. Xpand-sourced remarks have
+  // `costResponsibility === null` for everything, in which case we fall back
+  // to a single SUMMA below.
+  let tenantTotal = 0
+  let landlordTotal = 0
+  let unassignedTotal = 0
 
   // Data rows - validate rooms data
   const rooms = inspection.rooms || []
@@ -849,7 +855,13 @@ function drawRemarksTable(
         }
 
         const cost = remark.cost || 0
-        totalCost += cost
+        if (remark.costResponsibility === 'tenant') {
+          tenantTotal += cost
+        } else if (remark.costResponsibility === 'landlord') {
+          landlordTotal += cost
+        } else {
+          unassignedTotal += cost
+        }
 
         drawTableRow(
           doc,
@@ -869,13 +881,34 @@ function drawRemarksTable(
     }
   })
 
-  // Summary row (only when costs are included)
+  // Summary rows (only when costs are included). Internal inspections classify
+  // each cost as tenant- or landlord-paid; the PDF mirrors that classification
+  // so the reader can tell what Mimer owes vs what the tenant owes. Xpand
+  // remarks have no responsibility data — everything lands in `unassignedTotal`
+  // and we render a single legacy SUMMA row to preserve existing behavior.
   if (includeCosts) {
+    const hasResponsibilityData = tenantTotal > 0 || landlordTotal > 0
+    const summaryRows: Array<{ label: string; amount: number }> =
+      hasResponsibilityData
+        ? [
+            { label: 'SUMMA Hyresgäst', amount: tenantTotal },
+            { label: 'SUMMA Hyresvärd', amount: landlordTotal },
+            ...(unassignedTotal > 0
+              ? [{ label: 'SUMMA Ej angivet', amount: unassignedTotal }]
+              : []),
+            {
+              label: 'Totalt',
+              amount: tenantTotal + landlordTotal + unassignedTotal,
+            },
+          ]
+        : [{ label: 'SUMMA', amount: unassignedTotal }]
+
+    const totalSummaryHeight = TABLE.SUMMARY_HEIGHT * summaryRows.length
     if (
       !fitsOnPage(
         doc,
         currentY,
-        TABLE.SUMMARY_HEIGHT,
+        totalSummaryHeight,
         LAYOUT.PAGE_BOTTOM_THRESHOLD_SUMMARY
       )
     ) {
@@ -883,25 +916,33 @@ function drawRemarksTable(
       currentY = LAYOUT.MARGIN
     }
 
-    doc
-      .fillColor(COLORS.TABLE_HEADER)
-      .rect(LAYOUT.MARGIN, currentY, pageWidth, TABLE.SUMMARY_HEIGHT)
-      .fill()
+    summaryRows.forEach((row) => {
+      doc
+        .fillColor(COLORS.TABLE_HEADER)
+        .rect(LAYOUT.MARGIN, currentY, pageWidth, TABLE.SUMMARY_HEIGHT)
+        .fill()
 
-    doc
-      .fontSize(FONT_SIZES.MEDIUM)
-      .fillColor(COLORS.WHITE)
-      .font('Helvetica-Bold')
-      .text('SUMMA', LAYOUT.MARGIN + SPACING.CELL_PADDING_SMALL, currentY + 6)
-      .text(
-        totalCost.toString(),
-        getRemarksColumnX(4, includeCosts) + SPACING.CELL_PADDING_SMALL,
-        currentY + 6,
-        {
-          width: colWidths.cost - SPACING.CELL_PADDING_MEDIUM,
-          align: 'right',
-        }
-      )
+      doc
+        .fontSize(FONT_SIZES.MEDIUM)
+        .fillColor(COLORS.WHITE)
+        .font('Helvetica-Bold')
+        .text(
+          row.label,
+          LAYOUT.MARGIN + SPACING.CELL_PADDING_SMALL,
+          currentY + 6
+        )
+        .text(
+          row.amount.toString(),
+          getRemarksColumnX(4, includeCosts) + SPACING.CELL_PADDING_SMALL,
+          currentY + 6,
+          {
+            width: colWidths.cost - SPACING.CELL_PADDING_MEDIUM,
+            align: 'right',
+          }
+        )
+
+      currentY += TABLE.SUMMARY_HEIGHT
+    })
   }
 }
 

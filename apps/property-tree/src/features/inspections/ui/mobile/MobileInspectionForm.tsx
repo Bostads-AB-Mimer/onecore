@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, User } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
+  TenantInfoCardData,
   TenantSnapshot,
 } from '@/features/inspections/types/index'
 
@@ -15,13 +16,18 @@ import { Card, CardContent } from '@/shared/ui/Card'
 import { ScrollArea } from '@/shared/ui/ScrollArea'
 
 import { useInspectionForm } from '../../hooks/useInspectionForm'
-import { InspectorSelectionCard } from '../InspectorSelectionCard'
+import { InspectionInfoSection } from '../InspectionInfoSection'
+import { InspectionMoreMenu } from '../InspectionMoreMenu'
 import { RoomInspectionEditor } from '../RoomInspectionEditor'
+import { SaveDraftConfirmDialog } from '../SaveDraftConfirmDialog'
 import { InspectionProgressIndicator } from './InspectionProgressIndicator'
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 interface MobileInspectionFormProps {
+  // Initial rooms from the property system. The form maintains its own
+  // rooms state internally (via useInspectionForm) to support ad-hoc rooms
+  // added by the inspector via InspectionMoreMenu.
   rooms: Room[]
   onSave: (
     inspectorName: string,
@@ -30,88 +36,106 @@ interface MobileInspectionFormProps {
     additionalData: InspectionSubmitData
   ) => void
   onCancel: () => void
-  tenant?: any
-  existingInspection?: Inspection
+  tenant?: TenantInfoCardData
+  address?: string
+  apartmentCode?: string | null
+  existingInspection: Inspection
+  rentalId?: string
 }
 
 export function MobileInspectionForm({
-  rooms,
+  rooms: initialRooms,
   onSave,
   onCancel,
   tenant,
+  address,
+  apartmentCode,
   existingInspection,
+  rentalId,
 }: MobileInspectionFormProps) {
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0)
-  // If we have existing inspection data, skip inspector selection
-  const [showInspectorSelection, setShowInspectorSelection] =
-    useState(!existingInspection)
+  const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
+  // Show the inspector-selection landing screen for brand-new inspections
+  // and for "start over" restarts. Continuing a draft has persisted room
+  // data and skips straight into the form.
+  const isContinuingExistingInspection = !!existingInspection?.rooms?.length
+  const [showInspectorSelection, setShowInspectorSelection] = useState(
+    !isContinuingExistingInspection
+  )
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  // TODO(MIM-1676): mobile form does not yet have the Sammanställning step
+  // or the `isFurnished` Ja/Nej toggle that the desktop form has.
   const {
     inspectorName,
     setInspectorName,
-    inspectionTime,
-    setInspectionTime,
     needsMasterKey,
-    setNeedsMasterKey,
+    isFurnished,
+    rooms,
     inspectionData,
+    handleAddRoom,
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
     handleComponentPhotoAdd,
     handleComponentPhotoRemove,
-  } = useInspectionForm(rooms, existingInspection)
+    handleComponentCostResponsibilityUpdate,
+    handleDetailComponentAdd,
+    handleDetailComponentRemove,
+    handleDetailComponentNoteUpdate,
+    handleComponentConditionUpdate,
+    handleComponentActionUpdate,
+    handleComponentNoteUpdateById,
+    handleComponentPhotoAddById,
+    handleComponentPhotoRemoveById,
+    handleComponentCostResponsibilityUpdateById,
+    handleRoomHandledSet,
+  } = useInspectionForm(initialRooms, existingInspection)
+
+  // After adding a server-issued room, jump to it so the inspector can start
+  // filling it in immediately. The new room is always appended, so its index
+  // is the current length (before the state update completes, that length
+  // equals the new room's index).
+  const handleAddRoomAndNavigate = (room: import('@/services/types').Room) => {
+    handleAddRoom(room)
+    setCurrentRoomIndex(rooms.length)
+  }
 
   const currentRoom = rooms[currentRoomIndex]
   const completedRooms = rooms.filter(
     (room) => inspectionData[room.id]?.isHandled
   ).length
+  const isFirstRoom = currentRoomIndex === 0
+  const isLastRoom = currentRoomIndex >= rooms.length - 1
 
   // Create tenant snapshot for saving
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
     if (!tenant) return undefined
     return {
-      name:
-        `${tenant.firstName || ''} ${tenant.lastName || ''}`.trim() ||
-        tenant.name ||
-        '',
-      personalNumber: tenant.personalNumber || '',
-      phone: tenant.phone,
-      email: tenant.email,
-    }
-  }
-
-  const handleNext = () => {
-    if (currentRoomIndex < rooms.length - 1) {
-      setCurrentRoomIndex(currentRoomIndex + 1)
+      name: tenant.fullName ?? '',
+      personalNumber: '',
     }
   }
 
   const handlePrevious = () => {
-    if (currentRoomIndex > 0) {
+    if (!isFirstRoom) {
       setCurrentRoomIndex(currentRoomIndex - 1)
     }
   }
 
-  // const handleSubmit = () => {
-  //   if (canComplete) {
-  //     onSave(inspectorName, inspectionData, 'completed', {
-  //       needsMasterKey,
-  //       tenant: createTenantSnapshot(),
-  //     })
-  //   }
-  // }
+  const handleNext = () => {
+    if (!isLastRoom) {
+      setCurrentRoomIndex(currentRoomIndex + 1)
+    }
+  }
 
-  // const handleSaveDraft = () => {
-  //   if (inspectorName.trim()) {
-  //     onSave(inspectorName, inspectionData, 'draft', {
-  //       needsMasterKey,
-  //       tenant: createTenantSnapshot(),
-  //     })
-  //   }
-  // }
-
-  const canComplete =
-    inspectorName && inspectionTime && completedRooms === rooms.length
+  const handleConfirmSaveDraft = () => {
+    onSave(inspectorName, inspectionData, 'draft', {
+      needsMasterKey,
+      isFurnished,
+      tenant: createTenantSnapshot(),
+    })
+    setIsDraftConfirmOpen(false)
+  }
 
   // Reset scroll position when room changes
   useEffect(() => {
@@ -140,15 +164,13 @@ export function MobileInspectionForm({
 
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
-            {/* <InspectorSelectionCard
+            <InspectionInfoSection
               inspectorName={inspectorName}
               setInspectorName={setInspectorName}
-              inspectionTime={inspectionTime}
-              setInspectionTime={setInspectionTime}
-              needsMasterKey={needsMasterKey}
-              setNeedsMasterKey={setNeedsMasterKey}
               tenant={tenant}
-            /> */}
+              address={address}
+              apartmentCode={apartmentCode}
+            />
 
             <div className="pt-4 pb-20">
               <Button
@@ -216,7 +238,7 @@ export function MobileInspectionForm({
                   onClick={() => setCurrentRoomIndex(index)}
                 >
                   <CardContent className="p-4 text-center space-y-2">
-                    <div className="text-sm font-medium leading-tight">
+                    <div className="text-sm font-medium leading-tight uppercase">
                       {room.name}
                     </div>
                     <Badge
@@ -244,20 +266,74 @@ export function MobileInspectionForm({
             <RoomInspectionEditor
               room={currentRoom}
               inspectionData={inspectionData[currentRoom.id]}
-              onConditionUpdate={(field, value) =>
-                handleConditionUpdate(currentRoom.id, field, value)
+              inspectionId={existingInspection.id}
+              onDetailComponentAdd={(component) =>
+                handleDetailComponentAdd(currentRoom.id, component)
               }
-              onActionUpdate={(field, action) =>
-                handleActionUpdate(currentRoom.id, field, action)
+              onDetailComponentRemove={(componentId) =>
+                handleDetailComponentRemove(currentRoom.id, componentId)
               }
-              onComponentNoteUpdate={(field, note) =>
-                handleComponentNoteUpdate(currentRoom.id, field, note)
+              onDetailComponentNoteUpdate={(componentId, note) =>
+                handleDetailComponentNoteUpdate(
+                  currentRoom.id,
+                  componentId,
+                  note
+                )
               }
-              onComponentPhotoAdd={(field, photoDataUrl) =>
-                handleComponentPhotoAdd(currentRoom.id, field, photoDataUrl)
+              onFetchedComponentConditionUpdate={(componentId, label, value) =>
+                handleComponentConditionUpdate(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  value
+                )
               }
-              onComponentPhotoRemove={(field, index) =>
-                handleComponentPhotoRemove(currentRoom.id, field, index)
+              onFetchedComponentActionUpdate={(componentId, label, action) =>
+                handleComponentActionUpdate(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  action
+                )
+              }
+              onFetchedComponentNoteUpdate={(componentId, label, note) =>
+                handleComponentNoteUpdateById(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  note
+                )
+              }
+              onFetchedComponentPhotoAdd={(componentId, label, photoPath) =>
+                handleComponentPhotoAddById(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  photoPath
+                )
+              }
+              onFetchedComponentPhotoRemove={(componentId, label, index) =>
+                handleComponentPhotoRemoveById(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  index
+                )
+              }
+              onFetchedComponentCostResponsibilityUpdate={(
+                componentId,
+                label,
+                value
+              ) =>
+                handleComponentCostResponsibilityUpdateById(
+                  currentRoom.id,
+                  componentId,
+                  label,
+                  value
+                )
+              }
+              onRoomHandledChange={(isHandled) =>
+                handleRoomHandledSet(currentRoom.id, isHandled)
               }
             />
           </div>
@@ -265,44 +341,53 @@ export function MobileInspectionForm({
       </div>
 
       {/* Bottom Navigation */}
-      <div className="sticky bottom-0 bg-background border-t p-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentRoomIndex === 0}
-              className="flex-1"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Föregående
-            </Button>
+      <div className="sticky bottom-0 bg-background border-t px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handlePrevious}
+            disabled={isFirstRoom}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">Föregående rum</span>
+          </Button>
 
-            {/* {currentRoomIndex === rooms.length - 1 ? (
-              <Button
-                onClick={handleSubmit}
-                disabled={!canComplete}
-                className="flex-1"
-              >
-                Slutför
-              </Button>
-            ) : (
-              <Button onClick={handleNext} className="flex-1">
-                Nästa
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            )} */}
-          </div>
-          {/* <Button
+          <InspectionMoreMenu
+            rentalId={rentalId}
+            inspectionId={existingInspection?.id}
+            onRoomAdded={handleAddRoomAndNavigate}
+          />
+
+          <Button
             variant="secondary"
-            onClick={handleSaveDraft}
+            onClick={() => setIsDraftConfirmOpen(true)}
             disabled={!inspectorName.trim()}
-            className="w-full"
+            className="flex-1"
           >
             Spara utkast
-          </Button> */}
+          </Button>
+
+          {/* TODO(MIM-?): add "Slutför besiktning" path on mobile. Mobile
+              currently has no way to finalize an inspection — only draft
+              saves. The right chevron just disables on the last room. */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleNext}
+            disabled={isLastRoom}
+          >
+            <ChevronRight className="h-4 w-4" />
+            <span className="sr-only">Nästa rum</span>
+          </Button>
         </div>
       </div>
+
+      <SaveDraftConfirmDialog
+        open={isDraftConfirmOpen}
+        onOpenChange={setIsDraftConfirmOpen}
+        onConfirm={handleConfirmSaveDraft}
+      />
     </div>
   )
 }

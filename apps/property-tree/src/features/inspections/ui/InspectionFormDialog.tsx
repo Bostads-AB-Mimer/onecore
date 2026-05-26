@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { PlayCircle, RotateCcw } from 'lucide-react'
 
+import type {
+  InspectionSubmitData,
+  TenantInfoCardData,
+} from '@/features/inspections/types/index'
+
 import { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
@@ -13,12 +18,11 @@ import {
   DialogTitle,
 } from '@/shared/ui/Dialog'
 
+import { initialRoomData } from '../lib/initialFormData'
 import { InspectionForm } from './InspectionForm'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
 type InspectionRoom = components['schemas']['InspectionRoom']
 type Inspection = components['schemas']['InternalInspection']
-
-import type { InspectionSubmitData } from '@/features/inspections/types/index'
 
 import type { Room } from '@/services/types'
 
@@ -33,19 +37,47 @@ interface InspectionFormDialogProps {
   ) => void
   rooms: Room[]
   buttonSize?: string
-  tenant?: any
-  existingInspection?: Inspection
+  tenant?: TenantInfoCardData
+  address?: string
+  apartmentCode?: string | null
+  existingInspection: Inspection
+  rentalId?: string
 }
 
-// Check if inspection has actual saved data
+// Returns true if the room holds any user-entered data. The dialog uses this
+// to decide whether to offer the "resume draft" choice; a false negative here
+// causes the form to start fresh and silently overwrite the persisted draft
+// on next save.
+const roomHasAnyData = (room: InspectionRoom): boolean => {
+  if (Object.values(room.conditions).some((c) => c && c.trim() !== '')) {
+    return true
+  }
+  if (room.components && room.components.length > 0) return true
+  if (room.detailComponents && room.detailComponents.length > 0) return true
+  if (Object.values(room.componentNotes).some((n) => n && n.trim() !== '')) {
+    return true
+  }
+  if (Object.values(room.componentPhotos).some((p) => p.length > 0)) return true
+  if (Object.values(room.actions).some((a) => a.length > 0)) return true
+  if (
+    room.componentCosts &&
+    Object.values(room.componentCosts).some((c) => (c ?? 0) > 0)
+  ) {
+    return true
+  }
+  if (
+    room.componentCostResponsibilities &&
+    Object.values(room.componentCostResponsibilities).some((r) => r != null)
+  ) {
+    return true
+  }
+  if (room.photos.length > 0) return true
+  return false
+}
+
 const hasExistingData = (inspection?: Inspection): boolean => {
-  if (!inspection?.rooms) return false
-  return (
-    Object.keys(inspection.rooms).length > 0 &&
-    Object.values(inspection.rooms).some((room) =>
-      Object.values(room.conditions).some((c) => c && c.trim() !== '')
-    )
-  )
+  if (!inspection?.rooms || inspection.rooms.length === 0) return false
+  return inspection.rooms.some(roomHasAnyData)
 }
 
 export function InspectionFormDialog({
@@ -53,9 +85,11 @@ export function InspectionFormDialog({
   onClose,
   onSubmit,
   rooms,
-  buttonSize,
   tenant,
+  address,
+  apartmentCode,
   existingInspection,
+  rentalId,
 }: InspectionFormDialogProps) {
   const isMobile = useIsMobile()
   const hasSavedData = hasExistingData(existingInspection)
@@ -73,13 +107,26 @@ export function InspectionFormDialog({
   }
 
   // Determine which inspection data to use based on user choice.
-  // When starting fresh, preserve the existing inspection metadata (e.g. inspector)
-  // but clear rooms so the form starts blank.
+  // When starting fresh, wipe user-entered fields but rebuild the rooms list
+  // from the *current* property-base rooms — so concurrent additions or
+  // deletions in Xpand are reflected. Overlay `isAddedInThisInspection` from
+  // the inspection's snapshot (sourced from the inspection_added_room join)
+  // so the "Tillagt" badge survives the reset.
+  const addedRoomIds = new Set(
+    existingInspection?.rooms
+      ?.filter((r) => r.isAddedInThisInspection)
+      .map((r) => r.roomId) ?? []
+  )
   const inspectionToUse =
     userChoice === 'fresh'
-      ? existingInspection
-        ? { ...existingInspection, rooms: null }
-        : undefined
+      ? {
+          ...existingInspection,
+          rooms: rooms.map((r) => ({
+            ...initialRoomData,
+            roomId: r.id,
+            isAddedInThisInspection: addedRoomIds.has(r.id),
+          })),
+        }
       : existingInspection
 
   // Show choice dialog if there's saved data and user hasn't chosen yet
@@ -136,15 +183,18 @@ export function InspectionFormDialog({
         onSubmit={onSubmit}
         rooms={rooms}
         tenant={tenant}
+        address={address}
+        apartmentCode={apartmentCode}
         existingInspection={inspectionToUse}
+        rentalId={rentalId}
       />
     )
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[95vw] xl:max-w-7xl p-4 sm:p-6 max-h-[95vh] overflow-hidden">
-        <DialogHeader className="space-y-1">
+      <DialogContent className="max-w-[95vw] xl:max-w-7xl p-4 sm:p-6 max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogHeader className="shrink-0 space-y-1">
           <DialogTitle>Genomför besiktning</DialogTitle>
           <DialogDescription>
             Gå igenom och bedöm skicket på alla rum
@@ -156,7 +206,10 @@ export function InspectionFormDialog({
           onSave={onSubmit}
           onCancel={onClose}
           tenant={tenant}
+          address={address}
+          apartmentCode={apartmentCode}
           existingInspection={inspectionToUse}
+          rentalId={rentalId}
         />
       </DialogContent>
     </Dialog>

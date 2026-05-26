@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 
+import { useLeasesByRentalProperty } from '@/entities/lease'
+
 import { inspectionService, roomService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 import type { ResidenceDetails } from '@/services/types'
@@ -12,29 +14,34 @@ import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import { isCompleted } from '../constants/statuses'
+import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
 import { CreateInspectionDialog } from './CreateInspectionDialog'
+import { InspectionConductDialog } from './InspectionConductDialog'
 import { InspectionsTable } from './InspectionsTable'
 
 type InspectionWithSource = components['schemas']['InspectionWithSource']
 
 interface InspectionsTabContentProps {
-  residenceId: string
   rentalId: string | undefined
-  leaseId: string | undefined
   residence?: ResidenceDetails
 }
 
 const INITIAL_DISPLAY_COUNT = 5
 
 export function InspectionsTabContent({
-  residenceId,
   rentalId,
-  leaseId,
   residence,
 }: InspectionsTabContentProps) {
   const [showAll, setShowAll] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [newlyCreatedInspectionId, setNewlyCreatedInspectionId] = useState<
+    string | null
+  >(null)
   const { toast } = useToast()
+
+  const { startInspection } = useUpdateInspectionStatus({ rentalId })
+
+  const { data: leases } = useLeasesByRentalProperty(rentalId)
 
   const inspectionsQuery = useQuery({
     queryKey: ['inspections', rentalId],
@@ -43,9 +50,9 @@ export function InspectionsTabContent({
   })
 
   const roomsQuery = useQuery({
-    queryKey: ['rooms', residenceId],
-    queryFn: () => roomService.getByResidenceId(residenceId),
-    enabled: !!residenceId,
+    queryKey: ['rooms', rentalId],
+    queryFn: () => roomService.getByRentalId(rentalId!),
+    enabled: !!rentalId,
   })
 
   const inspections = inspectionsQuery.data ?? []
@@ -82,8 +89,7 @@ export function InspectionsTabContent({
         <Button
           size="sm"
           onClick={() => setIsCreateDialogOpen(true)}
-          // disabled={!leaseId}
-          disabled={true}
+          disabled={!rentalId}
           className="flex items-center gap-1"
         >
           <Plus className="h-4 w-4" /> Skapa ny
@@ -143,16 +149,21 @@ export function InspectionsTabContent({
         </TabsContent>
       </Tabs>
 
-      {leaseId && rentalId && (
+      {rentalId && (
         <CreateInspectionDialog
           isOpen={isCreateDialogOpen}
           onClose={() => setIsCreateDialogOpen(false)}
-          onSuccess={({ inspector }) => {
+          onSuccess={(inspection) => {
             toast({
               title: 'Besiktning skapad',
-              description: `Besiktning skapad av ${inspector}.`,
+              description: `Besiktning skapad av ${inspection.inspector}.`,
             })
             setIsCreateDialogOpen(false)
+            // Mirror the "Starta besiktning" table action: transition to
+            // Påbörjad and open the conduct form directly on the new
+            // inspection (MIM-1672).
+            startInspection(inspection.id)
+            setNewlyCreatedInspectionId(inspection.id)
           }}
           onError={() => {
             toast({
@@ -164,8 +175,18 @@ export function InspectionsTabContent({
           rentalId={rentalId}
           address={address}
           apartmentCode={apartmentCode}
-          leaseId={leaseId}
+          leases={leases ?? []}
           roomNames={(roomsQuery.data ?? []).map((r) => r.name ?? r.code)}
+        />
+      )}
+
+      {newlyCreatedInspectionId && (
+        <InspectionConductDialog
+          inspectionId={newlyCreatedInspectionId}
+          rentalId={rentalId}
+          rooms={roomsQuery.data ?? []}
+          isOpen={true}
+          onClose={() => setNewlyCreatedInspectionId(null)}
         />
       )}
     </TabLayout>

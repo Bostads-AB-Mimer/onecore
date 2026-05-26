@@ -1,42 +1,88 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
-import { initializeInspectionData } from '../lib/initialFormData'
+import {
+  EMPTY_COMPONENT_COST_RESPONSIBILITIES,
+  initializeInspectionData,
+  initialRoomData,
+} from '../lib/initialFormData'
 
 type Inspection = components['schemas']['InternalInspection']
 type InspectionRoom = components['schemas']['InspectionRoom']
 
 export interface UseInspectionFormStateReturn {
+  rooms: Room[]
   inspectionData: Record<string, InspectionRoom>
   setInspectionData: React.Dispatch<
     React.SetStateAction<Record<string, InspectionRoom>>
   >
+  addServerRoom: (room: Room) => void
   completedRooms: number
   totalRooms: number
   isAllRoomsComplete: boolean
 }
 
 export function useInspectionFormState(
-  rooms: Room[],
+  initialRooms: Room[],
   existingInspection?: Inspection
 ): UseInspectionFormStateReturn {
+  // Rooms list is stateful so the inspector can append new rooms (created
+  // server-side via POST /inspections/internal/:id/rooms) via
+  // InspectionMoreMenu without a page reload.
+  const [rooms, setRooms] = useState<Room[]>(initialRooms)
+
   const [inspectionData, setInspectionData] = useState<
     Record<string, InspectionRoom>
   >(() => {
     if (existingInspection?.rooms && existingInspection.rooms.length > 0) {
       // Convert array of rooms to Record keyed by roomId
+      // Ensure detailComponents / componentCostResponsibilities defaults for rooms
+      // saved before those fields existed
       return existingInspection.rooms.reduce(
         (acc, room) => {
-          acc[room.roomId] = room
+          acc[room.roomId] = {
+            ...room,
+            detailComponents: room.detailComponents ?? [],
+            componentCostResponsibilities:
+              room.componentCostResponsibilities ?? {
+                ...EMPTY_COMPONENT_COST_RESPONSIBILITIES,
+              },
+            // Default costResponsibility: null for components saved before
+            // the field existed; Zod's server-side default covers writes.
+            components: (room.components ?? []).map((c) => ({
+              costResponsibility: null,
+              ...c,
+            })),
+          }
           return acc
         },
         {} as Record<string, InspectionRoom>
       )
     }
-    return initializeInspectionData(rooms)
+    return initializeInspectionData(initialRooms)
   })
+
+  // Append a server-issued Room (created via POST
+  // /inspections/internal/:id/rooms) to local state. Idempotent: a duplicate
+  // call is silently dropped — the room is already in the list.
+  const addServerRoom = useCallback((room: Room): void => {
+    setRooms((prev) =>
+      prev.some((r) => r.id === room.id) ? prev : [...prev, room]
+    )
+    setInspectionData((prev) => {
+      if (prev[room.id]) return prev
+      return {
+        ...prev,
+        [room.id]: {
+          ...initialRoomData,
+          roomId: room.id,
+          name: room.name ?? undefined,
+        },
+      }
+    })
+  }, [])
 
   // Calculate completion metrics
   const completedRooms = Object.values(inspectionData).filter(
@@ -47,8 +93,10 @@ export function useInspectionFormState(
   const isAllRoomsComplete = completedRooms === totalRooms
 
   return {
+    rooms,
     inspectionData,
     setInspectionData,
+    addServerRoom,
     completedRooms,
     totalRooms,
     isAllRoomsComplete,

@@ -1,33 +1,51 @@
 import { useState } from 'react'
-import { Plus, X, ZoomIn } from 'lucide-react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { X, ZoomIn } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
-import { Dialog, DialogContent } from '@/shared/ui/Dialog'
+import { Dialog, DialogOverlay, DialogPortal } from '@/shared/ui/Dialog'
 
-import { PhotoCapture } from './PhotoCapture'
+import { useInspectionPhotos } from '../hooks/useInspectionPhotos'
+
+import { InspectionPhoto } from './InspectionPhoto'
+import { PhotoCapture, type InspectionPhotoUploadContext } from './PhotoCapture'
 
 interface PhotoGalleryProps {
   photos: string[]
   onRemovePhoto: (index: number) => void
-  onAddPhoto: (photoDataUrl: string) => void
+  onAddPhoto: (path: string) => void
+  uploadContext: InspectionPhotoUploadContext
 }
 
 export function PhotoGallery({
   photos,
   onRemovePhoto,
   onAddPhoto,
+  uploadContext,
 }: PhotoGalleryProps) {
   const [fullscreenPhotoIndex, setFullscreenPhotoIndex] = useState<
     number | null
   >(null)
+  const { deleteAsync } = useInspectionPhotos(uploadContext.inspectionId)
+
+  const handleRemove = (index: number) => {
+    const path = photos[index]
+    onRemovePhoto(index)
+    // Best-effort cleanup; the array entry is gone regardless. 404s are
+    // tolerated inside useInspectionPhotos; non-404 failures leave an
+    // orphan file and are logged for visibility.
+    void deleteAsync(path).catch((err) => {
+      console.error('Failed to delete inspection photo:', err)
+    })
+  }
 
   return (
     <>
       <div className="grid grid-cols-3 gap-2">
         {photos.map((photo, index) => (
           <div key={index} className="relative aspect-square group">
-            <img
-              src={photo}
+            <InspectionPhoto
+              path={photo}
               alt={`Foto ${index + 1}`}
               className="w-full h-full object-cover rounded-lg border border-border cursor-pointer"
               onClick={() => setFullscreenPhotoIndex(index)}
@@ -38,7 +56,7 @@ export function PhotoGallery({
               className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => {
                 e.stopPropagation()
-                onRemovePhoto(index)
+                handleRemove(index)
               }}
             >
               <X className="h-3 w-3" />
@@ -49,51 +67,61 @@ export function PhotoGallery({
           </div>
         ))}
         <div className="aspect-square border-2 border-dashed border-border rounded-lg flex items-center justify-center">
-          <PhotoCapture onPhotoCapture={onAddPhoto} photoCount={0} />
+          <PhotoCapture
+            onPhotoCaptured={onAddPhoto}
+            uploadContext={uploadContext}
+          />
         </div>
       </div>
 
-      {/* Fullscreen photo viewer */}
+      {/* Fullscreen photo viewer. Composed from radix primitives directly
+          for finer control over sizing/padding; relies on portal DOM order
+          to paint above any parent Sheet/Dialog (all at z-50). */}
       <Dialog
         open={fullscreenPhotoIndex !== null}
         onOpenChange={() => setFullscreenPhotoIndex(null)}
       >
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
-          {fullscreenPhotoIndex !== null && (
-            <div className="relative">
-              <img
-                src={photos[fullscreenPhotoIndex]}
-                alt={`Foto ${fullscreenPhotoIndex + 1}`}
-                className="w-full h-full object-contain"
-              />
-              <div className="absolute top-2 right-2 flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  onClick={() => {
-                    onRemovePhoto(fullscreenPhotoIndex)
-                    setFullscreenPhotoIndex(null)
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              {photos.length > 1 && (
-                <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
-                  {photos.map((_, idx) => (
-                    <button
-                      key={idx}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        idx === fullscreenPhotoIndex ? 'bg-primary' : 'bg-muted'
-                      }`}
-                      onClick={() => setFullscreenPhotoIndex(idx)}
-                    />
-                  ))}
+        <DialogPortal>
+          <DialogOverlay />
+          <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[95vw] max-h-[95vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-0 shadow-lg sm:rounded-lg">
+            {fullscreenPhotoIndex !== null && (
+              <div className="relative">
+                <InspectionPhoto
+                  path={photos[fullscreenPhotoIndex]}
+                  alt={`Foto ${fullscreenPhotoIndex + 1}`}
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => {
+                      handleRemove(fullscreenPhotoIndex)
+                      setFullscreenPhotoIndex(null)
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
+                {photos.length > 1 && (
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
+                    {photos.map((_, idx) => (
+                      <button
+                        key={idx}
+                        className={`w-2 h-2 rounded-full transition-colors ${
+                          idx === fullscreenPhotoIndex
+                            ? 'bg-primary'
+                            : 'bg-muted'
+                        }`}
+                        onClick={() => setFullscreenPhotoIndex(idx)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogPrimitive.Content>
+        </DialogPortal>
       </Dialog>
     </>
   )

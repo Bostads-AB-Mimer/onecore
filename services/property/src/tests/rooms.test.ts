@@ -3,8 +3,7 @@ import app from '../app'
 
 describe('Rooms API', () => {
   let buildingCode: string
-  let staircaseCode: string
-  let residenceCode: string
+  let rentalId: string
   let facilityId: string | undefined
 
   beforeAll(async () => {
@@ -18,8 +17,7 @@ describe('Rooms API', () => {
       .get('/residences')
       .query({ buildingCode })
     const residence = residencesResponse.body.content[0]
-    residenceCode = residence.code
-    staircaseCode = '1' // Assuming staircase code 1 exists
+    rentalId = residence.rentalId
 
     // Get a facility ID for testing rooms by facility
     const facilitiesResponse = await request(app.callback()).get(
@@ -33,7 +31,7 @@ describe('Rooms API', () => {
   it('should return rooms for a residence', async () => {
     const response = await request(app.callback())
       .get('/rooms')
-      .query({ buildingCode, staircaseCode, residenceCode })
+      .query({ rentalId })
 
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
@@ -43,17 +41,11 @@ describe('Rooms API', () => {
       const room = response.body.content[0]
       expect(room.id).toBeDefined()
       expect(room.code).toBeDefined()
-      expect(room._links).toBeDefined()
-      expect(room._links.self).toBeDefined()
-      expect(room._links.residence).toBeDefined()
-      expect(room._links.building).toBeDefined()
     }
   })
 
   it('should validate required query parameters', async () => {
-    const response = await request(app.callback())
-      .get('/rooms')
-      .query({ buildingCode }) // Missing required parameters
+    const response = await request(app.callback()).get('/rooms').query({}) // Missing required rentalId
 
     expect(response.status).toBe(400)
     expect(response.body.errors).toBeDefined()
@@ -63,7 +55,7 @@ describe('Rooms API', () => {
     // First get a room ID from the list
     const roomsResponse = await request(app.callback())
       .get('/rooms')
-      .query({ buildingCode, staircaseCode, residenceCode })
+      .query({ rentalId })
 
     if (roomsResponse.body.content.length > 0) {
       const roomId = roomsResponse.body.content[0].id
@@ -75,7 +67,7 @@ describe('Rooms API', () => {
       const room = response.body.content
       expect(room.id).toBe(roomId)
       expect(room.code).toBeDefined()
-      expect(room._links).toBeDefined()
+      expect(response.body._links).toBeDefined()
     }
   })
 

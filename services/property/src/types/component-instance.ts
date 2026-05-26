@@ -103,6 +103,11 @@ export const ComponentSchema = z.object({
   ncsCode: z.string().nullable().optional(),
   status: ComponentStatusEnum,
   condition: ComponentConditionEnum.nullable().optional(),
+  lastInspectionDate: z
+    .union([z.string(), z.date()])
+    .nullable()
+    .optional()
+    .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   quantity: z.number().min(0),
   economicLifespan: z.number().min(0),
   createdAt: z

@@ -2,16 +2,18 @@ import KoaRouter from '@koa/router'
 
 import * as inspectionAdapter from '../../adapters/inspection-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as schemas from './schemas'
+import { inspection } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { generateInspectionProtocolPdf } from './helpers/pdf-generator'
-import {
-  identifyTenantContracts,
-  sendProtocolToTenants,
-} from './helpers/email-sender'
 import { fetchEnrichedInspection } from './helpers/inspection-fetcher'
+import { fetchEnrichedInternalInspection } from './helpers/internal-inspection-fetcher'
+import { writeBackComponentInspectionStates } from './helpers/component-write-back'
+import { sendProtocolForInspection } from './helpers/protocol-sender'
+import { buildTenantContactsResponse } from './helpers/tenant-contacts-builder'
 import {
   logSourceError,
   tagAndEnrichInspections,
@@ -34,10 +36,17 @@ import {
  */
 export const routes = (router: KoaRouter) => {
   registerSchema('Inspection', schemas.InspectionSchema)
-  registerSchema('InspectionRoom', schemas.InspectionRoomSchema)
+  registerSchema('InspectionComponent', inspection.InspectionComponentSchema)
+  registerSchema('InspectionRoom', inspection.InspectionRoomSchema)
   registerSchema('DetailedInspection', schemas.DetailedInspectionSchema)
-  registerSchema('DetailedInspectionRoom', schemas.DetailedInspectionSchema)
-  registerSchema('DetailedInspectionRemark', schemas.DetailedInspectionSchema)
+  registerSchema(
+    'DetailedInspectionRoom',
+    inspection.DetailedXpandInspectionRoomSchema
+  )
+  registerSchema(
+    'DetailedInspectionRemark',
+    inspection.DetailedXpandInspectionRemarkSchema
+  )
   registerSchema('TenantContactsResponse', schemas.TenantContactsResponseSchema)
   registerSchema('SendProtocolRequest', schemas.SendProtocolRequestSchema)
   registerSchema('SendProtocolResponse', schemas.SendProtocolResponseSchema)
@@ -50,10 +59,18 @@ export const routes = (router: KoaRouter) => {
     schemas.UpdateInspectionStatusRequestSchema
   )
   registerSchema('InspectionWithSource', schemas.InspectionWithSourceSchema)
-  registerSchema('InternalInspection', schemas.InternalInspectionSchema)
+  registerSchema('InternalInspection', inspection.InternalInspectionSchema)
   registerSchema(
     'SaveInspectionDraftRequest',
-    schemas.SaveInspectionDraftRequestSchema
+    inspection.SaveInspectionDraftRequestSchema
+  )
+  registerSchema(
+    'ComponentWriteBackError',
+    inspection.ComponentWriteBackErrorSchema
+  )
+  registerSchema(
+    'AddInspectionRoomRequest',
+    schemas.AddInspectionRoomRequestSchema
   )
 
   /**
@@ -156,9 +173,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/inspections', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsedParams = schemas.GetInspectionsFromXpandQuerySchema.safeParse(
-      ctx.query
-    )
+    const parsedParams =
+      inspection.GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
     if (!parsedParams.success) {
       ctx.status = 400
       ctx.body = {
@@ -300,7 +316,7 @@ export const routes = (router: KoaRouter) => {
     const { residenceId } = ctx.params
 
     const parsedQuery =
-      schemas.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
+      inspection.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
     const statusFilter = parsedQuery.success
       ? parsedQuery.data.statusFilter
       : undefined
@@ -459,9 +475,8 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/inspections/xpand', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsedParams = schemas.GetInspectionsFromXpandQuerySchema.safeParse(
-      ctx.query
-    )
+    const parsedParams =
+      inspection.GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
     if (!parsedParams.success) {
       ctx.status = 400
       ctx.body = {
@@ -593,7 +608,7 @@ export const routes = (router: KoaRouter) => {
     const { residenceId } = ctx.params
 
     const parsedQuery =
-      schemas.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
+      inspection.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
     const statusFilter = parsedQuery.success
       ? parsedQuery.data.statusFilter
       : undefined
@@ -806,25 +821,9 @@ export const routes = (router: KoaRouter) => {
       if (result.ok) {
         const inspection = result.data
 
-        let protocol
-        try {
-          protocol = await generateInspectionProtocolPdf(inspection, {
-            includeCosts,
-          })
-        } catch (pdfError) {
-          logger.error(
-            {
-              pdfError,
-              errorMessage:
-                pdfError instanceof Error ? pdfError.message : String(pdfError),
-              errorStack:
-                pdfError instanceof Error ? pdfError.stack : undefined,
-              inspectionId,
-            },
-            'Error generating PDF protocol'
-          )
-          throw pdfError
-        }
+        const protocol = await generateInspectionProtocolPdf(inspection, {
+          includeCosts,
+        })
 
         ctx.status = 200
         ctx.body = {
@@ -845,16 +844,374 @@ export const routes = (router: KoaRouter) => {
         ctx.status = result.statusCode || 500
         ctx.body = { error: result.err, ...metadata }
       }
-    } catch (error) {
+    } catch (err) {
       logger.error(
-        { error, inspectionId },
-        'Error generating PDF protocol for inspection'
+        { err, inspectionId },
+        'Error generating PDF protocol for xpand inspection'
       )
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
       return
     }
   })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/details:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve an enriched internal inspection by ID
+   *     description: Retrieves a specific internal inspection by its ID, normalized into the same shape as Xpand inspections (with lease, residence, and flattened room remarks) so it can be rendered by the protocol UI without source-specific branching.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to retrieve.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DetailedInspection'
+   *       '404':
+   *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/internal/:inspectionId/details', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result = await fetchEnrichedInternalInspection(inspectionId)
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        logger.error(
+          { err: result.err, inspectionId, metadata },
+          'Error getting internal inspection details'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error getting internal inspection details'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/pdf:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Generate PDF protocol for an internal inspection
+   *     description: Generates and returns a PDF protocol for a specific internal inspection by its ID.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to generate a PDF for.
+   *       - in: query
+   *         name: includeCosts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: true
+   *         description: Whether to include cost information in the PDF.
+   *     responses:
+   *       '200':
+   *         description: Successfully generated PDF protocol.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     pdfBase64:
+   *                       type: string
+   *                       description: Base64 encoded PDF document
+   *       '404':
+   *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/internal/:inspectionId/pdf', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+    const includeCosts = ctx.query.includeCosts !== 'false'
+
+    try {
+      const result = await fetchEnrichedInternalInspection(inspectionId)
+
+      if (result.ok) {
+        const inspection = result.data
+
+        const protocol = await generateInspectionProtocolPdf(inspection, {
+          includeCosts,
+        })
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            pdfBase64: protocol.toString('base64'),
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          { err: result.err, inspectionId, metadata },
+          'Error getting internal inspection for PDF generation'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (err) {
+      logger.error(
+        { err, inspectionId },
+        'Error generating PDF protocol for internal inspection'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/tenant-contacts:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Get tenant contacts for an internal inspection
+   *     description: Retrieves contact information for new and previous tenants associated with an internal inspection's residence.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved tenant contacts.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/TenantContactsResponse'
+   *       '404':
+   *         description: Inspection or residence not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/inspections/internal/:inspectionId/tenant-contacts',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { inspectionId } = ctx.params
+
+      try {
+        const inspectionResult =
+          await inspectionAdapter.getInternalInspectionById(inspectionId)
+
+        if (!inspectionResult.ok) {
+          logger.error(
+            { err: inspectionResult.err, inspectionId },
+            'tenant-contacts.internal: error fetching inspection'
+          )
+          ctx.status = inspectionResult.statusCode || 500
+          ctx.body = { error: inspectionResult.err, ...metadata }
+          return
+        }
+
+        const response = await buildTenantContactsResponse(
+          inspectionResult.data
+        )
+        ctx.status = 200
+        ctx.body = { content: response, ...metadata }
+      } catch (error) {
+        logger.error({ err: error, inspectionId }, 'tenant-contacts.internal')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/send-protocol:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Send inspection protocol to tenant for an internal inspection
+   *     description: Sends the inspection protocol PDF via email to the specified tenant (new or previous) for an internal inspection.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SendProtocolRequest'
+   *     responses:
+   *       '200':
+   *         description: Protocol sent successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/SendProtocolResponse'
+   *       '400':
+   *         description: Invalid request or no contract found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '404':
+   *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/inspections/internal/:inspectionId/send-protocol',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { inspectionId } = ctx.params
+
+      try {
+        const validation = schemas.SendProtocolRequestSchema.safeParse(
+          ctx.request.body
+        )
+
+        if (!validation.success) {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Invalid request body',
+            details: validation.error.errors,
+            ...metadata,
+          }
+          return
+        }
+
+        const inspectionResult =
+          await fetchEnrichedInternalInspection(inspectionId)
+
+        if (!inspectionResult.ok) {
+          logger.error(
+            { err: inspectionResult.err, inspectionId },
+            'send-protocol.internal: error fetching inspection'
+          )
+          ctx.status = inspectionResult.statusCode || 500
+          ctx.body = { error: inspectionResult.err, ...metadata }
+          return
+        }
+
+        const { status, body } = await sendProtocolForInspection(
+          inspectionResult.data,
+          validation.data.recipient
+        )
+        ctx.status = status
+        ctx.body = { content: body, ...metadata }
+      } catch (error) {
+        logger.error({ err: error, inspectionId }, 'send-protocol.internal')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger
@@ -909,83 +1266,24 @@ export const routes = (router: KoaRouter) => {
     const { inspectionId } = ctx.params
 
     try {
-      // Fetch inspection by ID
       const inspectionResult =
         await inspectionAdapter.getXpandInspectionById(inspectionId)
 
       if (!inspectionResult.ok) {
         logger.error(
-          {
-            err: inspectionResult.err,
-            inspectionId,
-          },
-          'Error getting inspection by id for tenant contacts'
+          { err: inspectionResult.err, inspectionId },
+          'tenant-contacts.xpand: error fetching inspection'
         )
         ctx.status = inspectionResult.statusCode || 500
         ctx.body = { error: inspectionResult.err, ...metadata }
         return
       }
 
-      const inspection = inspectionResult.data
-
-      // Fetch leases for the property
-      const leases = await leasingAdapter.getLeasesForPropertyId(
-        inspection.residenceId,
-        {
-          includeContacts: true,
-          includeUpcomingLeases: true,
-          includeTerminatedLeases: true,
-        }
-      )
-
-      // Identify tenant contracts using inspection's leaseId
-      const { newTenant, tenant } = identifyTenantContracts(
-        leases,
-        inspection.leaseId
-      )
-
-      // Build response
-      const response: schemas.TenantContactsResponse = {
-        inspection: {
-          id: inspection.id,
-          address: inspection.address,
-          apartmentCode: inspection.apartmentCode,
-        },
-      }
-
-      if (newTenant && newTenant.tenants) {
-        response.new_tenant = {
-          contacts: newTenant.tenants
-            .filter((t) => t.emailAddress)
-            .map((t) => ({
-              fullName: t.fullName,
-              emailAddress: t.emailAddress!,
-              contactCode: t.contactCode,
-            })),
-          contractId: newTenant.leaseId,
-        }
-      }
-
-      if (tenant && tenant.tenants) {
-        response.tenant = {
-          contacts: tenant.tenants
-            .filter((t) => t.emailAddress)
-            .map((t) => ({
-              fullName: t.fullName,
-              emailAddress: t.emailAddress!,
-              contactCode: t.contactCode,
-            })),
-          contractId: tenant.leaseId,
-        }
-      }
-
+      const response = await buildTenantContactsResponse(inspectionResult.data)
       ctx.status = 200
       ctx.body = { content: response, ...metadata }
     } catch (error) {
-      logger.error(
-        { error, inspectionId },
-        'Error retrieving tenant contacts for inspection'
-      )
+      logger.error({ err: error, inspectionId }, 'tenant-contacts.xpand')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
@@ -1060,173 +1358,42 @@ export const routes = (router: KoaRouter) => {
     const { inspectionId } = ctx.params
 
     try {
-      // Validate request body
-      const validationResult = schemas.SendProtocolRequestSchema.safeParse(
+      const validation = schemas.SendProtocolRequestSchema.safeParse(
         ctx.request.body
       )
 
-      if (!validationResult.success) {
+      if (!validation.success) {
         ctx.status = 400
         ctx.body = {
           error: 'Invalid request body',
-          details: validationResult.error.errors,
+          details: validation.error.errors,
           ...metadata,
         }
         return
       }
 
-      const { recipient } = validationResult.data
-
-      // Fetch enriched inspection
       const inspectionResult = await fetchEnrichedInspection(inspectionId)
 
       if (!inspectionResult.ok) {
         logger.error(
-          {
-            err: inspectionResult.err,
-            inspectionId,
-          },
-          'Error getting inspection by id for sending protocol'
+          { err: inspectionResult.err, inspectionId },
+          'send-protocol.xpand: error fetching inspection'
         )
-        ctx.status = inspectionResult.statusCode || 404
+        ctx.status = inspectionResult.statusCode || 500
         ctx.body = { error: inspectionResult.err, ...metadata }
         return
       }
 
-      const inspection = inspectionResult.data
-
-      // Fetch all leases for the property
-      const leases = await leasingAdapter.getLeasesForPropertyId(
-        inspection.residenceId,
-        {
-          includeContacts: true,
-          includeUpcomingLeases: true,
-          includeTerminatedLeases: true,
-        }
+      const { status, body } = await sendProtocolForInspection(
+        inspectionResult.data,
+        validation.data.recipient
       )
-
-      // Identify tenant contracts using inspection's leaseId
-      const { newTenant, tenant } = identifyTenantContracts(
-        leases,
-        inspection.leaseId
-      )
-
-      // Select the requested contract
-      const selectedContract = recipient === 'new-tenant' ? newTenant : tenant
-
-      if (!selectedContract) {
-        ctx.status = 400
-        ctx.body = {
-          content: {
-            success: false,
-            recipient,
-            sentTo: {
-              emails: [],
-              contactNames: [],
-              contractId: '',
-            },
-            error: `No contract found for ${recipient}`,
-          },
-          ...metadata,
-        }
-        return
-      }
-
-      // Verify contract has contacts with email addresses
-      if (
-        !selectedContract.tenants ||
-        selectedContract.tenants.length === 0 ||
-        !selectedContract.tenants.some((t) => t.emailAddress)
-      ) {
-        ctx.status = 400
-        ctx.body = {
-          content: {
-            success: false,
-            recipient,
-            sentTo: {
-              emails: [],
-              contactNames: [],
-              contractId: selectedContract.leaseId,
-            },
-            error: 'No email addresses found for tenant',
-          },
-          ...metadata,
-        }
-        return
-      }
-
-      // Generate PDF protocol
-      let pdfBuffer: Buffer
-      try {
-        pdfBuffer = await generateInspectionProtocolPdf(inspection, {
-          includeCosts: recipient !== 'new-tenant',
-        })
-      } catch (pdfError) {
-        logger.error(
-          {
-            pdfError,
-            errorMessage:
-              pdfError instanceof Error ? pdfError.message : String(pdfError),
-            errorStack: pdfError instanceof Error ? pdfError.stack : undefined,
-            inspectionId,
-          },
-          'Error generating PDF protocol for sending'
-        )
-        ctx.status = 500
-        ctx.body = {
-          content: {
-            success: false,
-            recipient,
-            sentTo: {
-              emails: [],
-              contactNames: [],
-              contractId: selectedContract.leaseId,
-            },
-            error: 'Failed to generate PDF protocol',
-          },
-          ...metadata,
-        }
-        return
-      }
-
-      // Send protocol to tenants
-      const result = await sendProtocolToTenants(
-        inspection,
-        pdfBuffer,
-        selectedContract,
-        recipient
-      )
-
-      ctx.status = 200
-      ctx.body = {
-        content: {
-          success: result.success,
-          recipient,
-          sentTo: {
-            emails: result.emails,
-            contactNames: result.contactNames,
-            contractId: result.contractId,
-          },
-          error: result.error,
-        },
-        ...metadata,
-      }
+      ctx.status = status
+      ctx.body = { content: body, ...metadata }
     } catch (error) {
-      logger.error({ error, inspectionId }, 'Error sending inspection protocol')
+      logger.error({ err: error, inspectionId }, 'send-protocol.xpand')
       ctx.status = 500
-      ctx.body = {
-        content: {
-          success: false,
-          recipient: 'unknown',
-          sentTo: {
-            emails: [],
-            contactNames: [],
-            contractId: '',
-          },
-          error: 'Internal server error',
-        },
-        ...metadata,
-      }
+      ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
 
@@ -1336,7 +1503,12 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   properties:
    *                     inspection:
-   *                       $ref: '#/components/schemas/DetailedInspection'
+   *                       $ref: '#/components/schemas/InternalInspection'
+   *                     componentWriteBackErrors:
+   *                       type: array
+   *                       description: Per-component write-back errors recorded when transitioning to "Genomförd". Empty for other status transitions.
+   *                       items:
+   *                         $ref: '#/components/schemas/ComponentWriteBackError'
    *       '400':
    *         description: Invalid request body or invalid status transition
    *         content:
@@ -1371,23 +1543,55 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 
+    const bodyResult = schemas.UpdateInspectionStatusRequestSchema.safeParse(
+      ctx.request.body
+    )
+    if (!bodyResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: bodyResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+    const body = bodyResult.data
+
     try {
       const result = await inspectionAdapter.updateInspectionStatus(
         inspectionId,
-        ctx.request.body
+        body
       )
 
-      if (result.ok) {
-        ctx.status = 200
-        ctx.body = {
-          content: {
-            inspection: result.data,
-          },
-          ...metadata,
-        }
-      } else {
+      if (!result.ok) {
         ctx.status = result.statusCode || 500
         ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      // On transition to "Genomförd" (completed), write each component's
+      // condition + lastInspectionDate back to property-base. Best-effort:
+      // per-component failures are aggregated and returned alongside the
+      // inspection so the UI can surface them — the inspection itself still
+      // completes.
+      const componentWriteBackErrors =
+        body.status === 'Genomförd'
+          ? await writeBackComponentInspectionStates(result.data)
+          : []
+      if (componentWriteBackErrors.length > 0) {
+        logger.warn(
+          { inspectionId, errors: componentWriteBackErrors },
+          'Some component inspection states failed to write back'
+        )
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspection: result.data,
+          componentWriteBackErrors,
+        },
+        ...metadata,
       }
     } catch (error) {
       logger.error({ error, inspectionId }, 'Error updating inspection status')
@@ -1527,13 +1731,192 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/rooms:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Add a room to a residence during an inspection.
+   *     description: |
+   *       Creates a new room in Xpand (via property-base) for the residence
+   *       associated with the inspection, then records the xpand-issued room id
+   *       in the inspection's tracking table so the inspector sees the room as
+   *       'added during this inspection'.
+   *
+   *       If the property write fails, no inspection state is touched. If the
+   *       property write succeeds but the inspection-tracking write fails, the
+   *       room exists in Xpand and is returned to the caller; the caller is
+   *       expected to refresh the inspection to pick it up.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/AddInspectionRoomRequest'
+   *     responses:
+   *       '201':
+   *         description: Room created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     room:
+   *                       $ref: '#/components/schemas/Room'
+   *       '400':
+   *         description: Invalid request body or no residence linked to the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '404':
+   *         description: Inspection or residence not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/inspections/internal/:inspectionId/rooms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    const parsed = schemas.AddInspectionRoomRequestSchema.safeParse(
+      ctx.request.body
+    )
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = { errors: parsed.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const inspectionResult =
+        await inspectionAdapter.getInternalInspectionById(inspectionId)
+      if (!inspectionResult.ok) {
+        if (inspectionResult.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Inspection not found', ...metadata }
+          return
+        }
+        logger.error(
+          { err: inspectionResult.err, inspectionId, metadata },
+          'Failed to load inspection'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      const rentalId = inspectionResult.data.residenceId
+      if (!rentalId) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Inspection has no associated residence',
+          ...metadata,
+        }
+        return
+      }
+
+      const createResult = await propertyBaseAdapter.createRoom({
+        rentalId,
+        ...parsed.data,
+      })
+      if (!createResult.ok) {
+        if (createResult.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Residence not found for inspection',
+            ...metadata,
+          }
+          return
+        }
+        if (createResult.err === 'validation') {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Validation error from property service',
+            ...metadata,
+          }
+          return
+        }
+        logger.error(
+          { err: createResult.err, inspectionId, metadata },
+          'Failed to create room'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      const createdRoom = createResult.data
+
+      // Partial-success: if tracking insert fails after the Xpand write
+      // succeeded, the room still exists and we return it. The flag just
+      // won't show up; refreshing the inspection picks the room up via
+      // draftRooms once the FE saves the draft.
+      const trackResult = await inspectionAdapter.addRoomToInspection(
+        inspectionId,
+        createdRoom.id
+      )
+      if (!trackResult.ok) {
+        logger.error(
+          {
+            err: trackResult.err,
+            inspectionId,
+            xpandRoomId: createdRoom.id,
+            metadata,
+          },
+          'createRoom succeeded but addRoomToInspection failed — partial success'
+        )
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: { room: createdRoom },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error orchestrating inspection room creation'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
   router.patch('/inspections/internal/:inspectionId/draft', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 
-    const validationResult = schemas.SaveInspectionDraftRequestSchema.safeParse(
-      ctx.request.body
-    )
+    const validationResult =
+      inspection.SaveInspectionDraftRequestSchema.safeParse(ctx.request.body)
     if (!validationResult.success) {
       ctx.status = 400
       ctx.body = {

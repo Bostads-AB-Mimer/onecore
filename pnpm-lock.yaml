@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
   injectWorkspacePackages: true
 
+overrides:
+  is-generator-function: 1.1.0
+
 importers:
 
   .:

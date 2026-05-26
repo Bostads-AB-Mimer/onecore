@@ -1,8 +1,7 @@
 import { z } from 'zod'
 import { property } from '@onecore/types'
 
-// Xpand ID validation - variable length IDs (max 15 chars) from legacy system
-const xpandIdSchema = z.string().max(15)
+export { CreateRoomRequestSchema, type CreateRoomRequest } from '@onecore/types'
 
 export const BuildingSchema = z.object({
   id: z.string(),
@@ -464,7 +463,7 @@ export const FacilityDetailsSchema = z.object({
 })
 
 export const GetRoomsQueryParamsSchema = z.object({
-  residenceId: z.string().min(1, { message: 'residenceId is required.' }),
+  rentalId: z.string().min(1, { message: 'rentalId is required.' }),
   roomCode: z.string().optional(),
 })
 
@@ -739,6 +738,7 @@ export const ComponentSchema = z.object({
   ncsCode: z.string().nullable().optional(),
   status: ComponentStatusEnum,
   condition: ComponentConditionEnum.nullable().optional(),
+  lastInspectionDate: z.string().nullable().optional(),
   quantity: z.number().min(0),
   economicLifespan: z.number().min(0),
   createdAt: z.string(),

@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 
-import { residenceService, roomService } from '@/services/api/core'
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import type { Room } from '@/services/types'
@@ -22,12 +21,11 @@ import {
 import { useInspectors } from '../hooks/useInspectors'
 import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
 import { useUpdateInspector } from '../hooks/useUpdateInspector'
-import { InspectionFormDialog } from './InspectionFormDialog'
+import { InspectionConductDialog } from './InspectionConductDialog'
 import { InspectionProtocol } from './InspectionProtocol'
 
 type Inspection = components['schemas']['InspectionWithSource']
 type DetailedInspection = components['schemas']['DetailedInspection']
-type InternalInspection = components['schemas']['InternalInspection']
 
 interface InspectionsTableProps {
   inspections: Inspection[]
@@ -59,7 +57,6 @@ export function InspectionsTable({
     'xpand' | 'internal' | null
   >(null)
 
-  const queryClient = useQueryClient()
   const { startInspection, isPending, pendingInspectionId } =
     useUpdateInspectionStatus({
       rentalId,
@@ -80,43 +77,19 @@ export function InspectionsTable({
 
   const { mutate: updateInspector } = useUpdateInspector()
 
-  // Fetch detailed inspection when selected
+  // Fetch detailed inspection when selected (for the completed-protocol view).
+  // Both sources land on the same DetailedInspection shape — internal goes
+  // through the /details endpoint, which enriches and normalizes server-side.
   const { data: detailedInspection } = useQuery<DetailedInspection>({
-    queryKey: ['inspections', selectedInspectionId],
+    queryKey: ['inspections', selectedInspectionSource, selectedInspectionId],
     queryFn: () =>
-      inspectionService.getInspectionById(selectedInspectionId as string),
-    enabled: !!selectedInspectionId && selectedInspectionSource === 'xpand',
+      selectedInspectionSource === 'internal'
+        ? inspectionService.getInternalInspectionDetails(
+            selectedInspectionId as string
+          )
+        : inspectionService.getInspectionById(selectedInspectionId as string),
+    enabled: !!selectedInspectionId && !!selectedInspectionSource,
   })
-
-  // Fetch internal inspection (with draft rooms) when form is open
-  const { data: internalInspection, isLoading: isLoadingInternal } =
-    useQuery<InternalInspection>({
-      queryKey: ['inspections-internal', selectedInspectionId],
-      queryFn: () =>
-        inspectionService.getInternalInspectionById(
-          selectedInspectionId as string
-        ),
-      enabled: !!selectedInspectionId && isResumeDialogOpen,
-    })
-
-  // internalInspection.residenceId stores the Xpand rentalId, not the property service UUID.
-  // We first resolve the residence UUID via the rentalId, then fetch rooms by UUID.
-  const rentalIdForRooms =
-    rooms.length === 0 ? internalInspection?.residenceId : undefined
-
-  const { data: residenceForRooms, isLoading: isLoadingResidence } = useQuery({
-    queryKey: ['residence', rentalIdForRooms],
-    queryFn: () => residenceService.getByRentalId(rentalIdForRooms!),
-    enabled: !!rentalIdForRooms,
-  })
-
-  const { data: fetchedRooms, isLoading: isLoadingRooms } = useQuery({
-    queryKey: ['rooms', residenceForRooms?.id],
-    queryFn: () => roomService.getByResidenceId(residenceForRooms!.id),
-    enabled: !!residenceForRooms?.id,
-  })
-
-  const resolvedRooms = rooms.length > 0 ? rooms : (fetchedRooms ?? [])
 
   const handleInspectionClick = (inspection: Inspection) => {
     if (isPending) return
@@ -175,53 +148,22 @@ export function InspectionsTable({
         )}
       />
 
-      {isResumeDialogOpen &&
-        !isLoadingInternal &&
-        !isLoadingResidence &&
-        !isLoadingRooms && (
-          <InspectionFormDialog
-            isOpen={isResumeDialogOpen}
-            onClose={() => setIsResumeDialogOpen(false)}
-            onSubmit={async (inspectorName, inspectionRooms, status) => {
-              // TODO: handle 'completed' status when "Slutför besiktning" is enabled
-              if (status !== 'draft') return
-              try {
-                await inspectionService.saveInspectionDraft(
-                  selectedInspectionId as string,
-                  {
-                    inspectorName,
-                    rooms: Object.values(inspectionRooms),
-                  }
-                )
-                await queryClient.invalidateQueries({
-                  queryKey: ['inspections'],
-                })
-                await queryClient.invalidateQueries({
-                  queryKey: ['inspections-internal', selectedInspectionId],
-                })
-                toast({
-                  title: 'Utkast sparat',
-                  description: 'Besiktningen har sparats som utkast.',
-                })
-                setIsResumeDialogOpen(false)
-              } catch {
-                toast({
-                  title: 'Fel',
-                  description: 'Kunde inte spara utkast.',
-                  variant: 'destructive',
-                })
-              }
-            }}
-            rooms={resolvedRooms}
-            existingInspection={internalInspection}
-          />
-        )}
+      {isResumeDialogOpen && selectedInspectionId && (
+        <InspectionConductDialog
+          inspectionId={selectedInspectionId}
+          rentalId={rentalId}
+          rooms={rooms}
+          isOpen={isResumeDialogOpen}
+          onClose={() => setIsResumeDialogOpen(false)}
+        />
+      )}
 
       {isProtocolDialogOpen && (
         <InspectionProtocol
           inspection={detailedInspection ?? null}
           isOpen={isProtocolDialogOpen}
           onClose={() => setIsProtocolDialogOpen(false)}
+          source={selectedInspectionSource ?? 'xpand'}
         />
       )}
     </>

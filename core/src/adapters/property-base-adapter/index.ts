@@ -364,12 +364,12 @@ export async function getStaircases(
 type GetRoomsResponse = components['schemas']['Room'][]
 
 export async function getRooms(
-  residenceId: string,
+  rentalId: string,
   roomCode?: string
 ): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/rooms', {
-      params: { query: { residenceId, roomCode } },
+      params: { query: { rentalId, roomCode } },
     })
 
     if (!fetchResponse.data?.content) {
@@ -886,6 +886,38 @@ export async function getBlockReasons(): Promise<
   }
 }
 
+type Room = components['schemas']['Room']
+type CreateRoomBody = components['schemas']['CreateRoomRequest']
+
+export async function createRoom(
+  body: CreateRoomBody
+): Promise<AdapterResult<Room, 'not-found' | 'validation' | 'unknown'>> {
+  try {
+    const response = await client().POST('/rooms', { body })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    const status = response.response?.status
+    if (status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (status === 400) {
+      return { ok: false, err: 'validation' }
+    }
+
+    logger.error(
+      { status, error: response.error },
+      'property-base-adapter.createRoom unexpected response'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createRoom')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
 
 export { getApartmentTemperatures } from './apartment-temperatures'
@@ -918,12 +950,14 @@ export {
   createComponentModel,
   updateComponentModel,
   deleteComponentModel,
+  getSurfaceModels,
   // Components
   getComponents,
   getComponentById,
   createComponent,
   updateComponent,
   deleteComponent,
+  updateComponentInspectionState,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

@@ -8,12 +8,14 @@ export interface InspectorInfo {
   inspectorName: string
   inspectionTime: string
   needsMasterKey: boolean
+  isFurnished: boolean
 }
 
 export interface UseInspectorInfoReturn extends InspectorInfo {
   setInspectorName: (name: string) => void
   setInspectionTime: (time: string) => void
   setNeedsMasterKey: (value: boolean) => void
+  setIsFurnished: (value: boolean) => void
   isValid: boolean
 }
 
@@ -39,6 +41,13 @@ export function useInspectorInfo(
     Boolean(existingInspection?.masterKeyAccess)
   )
 
+  // Default true — apartments are furnished at inspection time in ~99% of
+  // cases. The inspector flips this off only for the rare empty-apartment
+  // case. Mirrors the create-dialog seed.
+  const [isFurnished, setIsFurnished] = useState(
+    existingInspection?.isFurnished ?? true
+  )
+
   // Validation: inspector name is required
   const isValid = Boolean(inspectorName.trim() && inspectionTime)
 
@@ -46,9 +55,11 @@ export function useInspectorInfo(
     inspectorName,
     inspectionTime,
     needsMasterKey,
+    isFurnished,
     setInspectorName,
     setInspectionTime,
     setNeedsMasterKey,
+    setIsFurnished,
     isValid,
   }
 }

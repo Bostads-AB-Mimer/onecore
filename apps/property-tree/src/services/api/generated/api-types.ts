@@ -441,6 +441,28 @@ export interface paths {
       };
     };
   };
+  "/component-models/surface": {
+    /**
+     * Get surface component models (Ytskikt hierarchy)
+     * @description Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+     */
+    get: {
+      responses: {
+        /** @description List of surface component models */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/component-models/by-name/{modelName}": {
     /**
      * Find component model by exact name
@@ -659,6 +681,52 @@ export interface paths {
       responses: {
         /** @description Component instance deleted */
         204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/inspection-state": {
+    /**
+     * Update component inspection state
+     * @description Updates component condition and last inspection date. Only accepts the three condition values written back from inspections.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            condition: "GOOD" | "FAIR" | "DAMAGED";
+            /** Format: date-time */
+            lastInspectionDate: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Component inspection state updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
           content: never;
         };
       };
@@ -1660,14 +1728,14 @@ export interface paths {
   };
   "/rooms": {
     /**
-     * Get rooms by residence id.
+     * Get rooms by rental id.
      * @description Returns all rooms belonging to a residence.
      */
     get: {
       parameters: {
         query: {
-          /** @description The id of the residence. */
-          residenceId: string;
+          /** @description The rental id of the residence. */
+          rentalId: string;
           /** @description The code of the room (optional). */
           roomCode?: string;
         };
@@ -1683,6 +1751,42 @@ export interface paths {
         };
         /** @description Invalid query parameters. */
         400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Create a new room in Xpand for a residence.
+     * @description Performs a transactional 3-table write (cmobj, barum, babuf) in the
+     * Xpand DB. Returns the created room in the same shape as GET /rooms.
+     * The caller provides the parent rentalId and a curated roomTypeCode;
+     * code and caption default to auto-derived values if omitted.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateRoomRequest"];
+        };
+      };
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Room"];
+            };
+          };
+        };
+        /** @description Validation failure (unknown roomTypeCode, invalid caption, etc.). */
+        400: {
+          content: never;
+        };
+        /** @description Residence not found for the supplied rentalId. */
+        404: {
           content: never;
         };
         /** @description Internal server error. */
@@ -2617,6 +2721,24 @@ export interface components {
       }) | null;
       area?: number;
     };
+    CreateRoomRequest: {
+      rentalId: string;
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      code?: string;
+      caption?: string;
+      features?: {
+        hasToilet?: boolean;
+        isHeated?: boolean;
+        hasThermostatValve?: boolean;
+        orientation?: number;
+      };
+      usage?: {
+        shared?: boolean;
+        allowPeriodicWorks?: boolean;
+        spaceType?: number;
+      };
+    };
     Company: {
       id: string;
       propertyObjectId: string;
@@ -3358,6 +3480,7 @@ export interface components {
       status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
       /** @enum {string|null} */
       condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+      lastInspectionDate?: string | null;
       quantity: number;
       economicLifespan: number;
       createdAt: string;
@@ -3477,6 +3600,7 @@ export interface components {
         status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
         /** @enum {string|null} */
         condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+        lastInspectionDate?: string | null;
         quantity: number;
         economicLifespan: number;
         createdAt: string;

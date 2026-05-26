@@ -7,8 +7,9 @@ import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as pdfGenerator from '../helpers/pdf-generator'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
-import * as schemas from '../schemas'
-import { INSPECTION_STATUS_FILTER } from '../schemas'
+import { inspection } from '@onecore/types'
+
+const { INSPECTION_STATUS_FILTER } = inspection
 import {
   DetailedXpandInspectionFactory,
   XpandInspectionFactory,
@@ -438,7 +439,7 @@ describe('inspection-service index', () => {
       expect(res.status).toBe(200)
       expect(Array.isArray(res.body.content)).toBe(true)
       expect(() =>
-        schemas.XpandInspectionSchema.array().parse(res.body.content)
+        inspection.XpandInspectionSchema.array().parse(res.body.content)
       ).not.toThrow()
     })
 
@@ -640,7 +641,7 @@ describe('inspection-service index', () => {
 
       expect(res.status).toBe(200)
       expect(() =>
-        schemas.XpandInspectionSchema.array().parse(
+        inspection.XpandInspectionSchema.array().parse(
           res.body.content.inspections
         )
       ).not.toThrow()
@@ -791,7 +792,7 @@ describe('inspection-service index', () => {
 
       expect(res.status).toBe(200)
       expect(() =>
-        schemas.DetailedXpandInspectionSchema.parse(res.body.content)
+        inspection.DetailedXpandInspectionSchema.parse(res.body.content)
       ).not.toThrow()
       expect(getXpandInspectionByIdSpy).toHaveBeenCalled()
     })

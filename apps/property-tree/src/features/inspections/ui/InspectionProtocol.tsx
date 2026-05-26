@@ -51,12 +51,14 @@ interface InspectionProtocolProps {
   inspection: DetailedInspection | null
   onClose?: () => void
   isOpen?: boolean
+  source?: 'xpand' | 'internal'
 }
 
 export function InspectionProtocol({
   inspection,
   onClose,
   isOpen,
+  source = 'xpand',
 }: InspectionProtocolProps) {
   const [expandedPhotos, setExpandedPhotos] = useState<Record<string, boolean>>(
     {}
@@ -87,7 +89,8 @@ export function InspectionProtocol({
       setIsFetchingContacts(true)
       try {
         const contacts = await inspectionService.getTenantContacts(
-          inspection.id
+          inspection.id,
+          source
         )
         if (!cancelled) setTenantContacts(contacts)
       } catch (error) {
@@ -102,7 +105,7 @@ export function InspectionProtocol({
     return () => {
       cancelled = true
     }
-  }, [inspection?.id])
+  }, [inspection?.id, source])
 
   const hasNewTenantContacts =
     tenantContacts?.new_tenant && tenantContacts.new_tenant.contacts.length > 0
@@ -111,12 +114,18 @@ export function InspectionProtocol({
 
   const handleDownloadPdf = async () => {
     if (!inspection?.id) return
-    await downloadPdf(inspection.id, undefined, { includeCosts: true })
+    await downloadPdf(inspection.id, undefined, {
+      includeCosts: true,
+      source,
+    })
   }
 
   const handleDownloadPdfWithoutCosts = async () => {
     if (!inspection?.id) return
-    await downloadPdf(inspection.id, undefined, { includeCosts: false })
+    await downloadPdf(inspection.id, undefined, {
+      includeCosts: false,
+      source,
+    })
   }
 
   const handleOpenSendModal = (recipient: 'new-tenant' | 'tenant') => {
@@ -133,7 +142,11 @@ export function InspectionProtocol({
     setSendError(null)
 
     try {
-      const result = await sendProtocol(inspection.id, selectedRecipient)
+      const result = await sendProtocol(
+        inspection.id,
+        selectedRecipient,
+        source
+      )
 
       if (result.success) {
         console.log('Protocol sent successfully to:', result.sentTo.emails)

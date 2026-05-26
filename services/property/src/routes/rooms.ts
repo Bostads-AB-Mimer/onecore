@@ -2,11 +2,17 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 
 import {
+  createRoom,
   getRoomById,
   getRooms,
   getRoomsByFacilityId,
+  ResidenceNotFoundError,
 } from '@src/adapters/room-adapter'
-import { roomsQueryParamsSchema } from '@src/types/room'
+import {
+  CreateRoomRequestSchema,
+  roomsQueryParamsSchema,
+  type CreateRoomRequest,
+} from '@src/types/room'
 import { generateMetaLinks } from '@src/utils/links'
 import { parseRequest } from '@src/middleware/parse-request'
 
@@ -22,17 +28,17 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /rooms:
    *   get:
-   *     summary: Get rooms by residence id.
+   *     summary: Get rooms by rental id.
    *     description: Returns all rooms belonging to a residence.
    *     tags:
    *       - Rooms
    *     parameters:
    *       - in: query
-   *         name: residenceId
+   *         name: rentalId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The id of the residence.
+   *         description: The rental id of the residence.
    *       - in: query
    *         name: roomCode
    *         required: false
@@ -60,12 +66,12 @@ export const routes = (router: KoaRouter) => {
     '(.*)/rooms',
     parseRequest({ query: roomsQueryParamsSchema }),
     async (ctx) => {
-      const { residenceId, roomCode } = ctx.request.parsedQuery
+      const { rentalId, roomCode } = ctx.request.parsedQuery
 
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const rooms = await getRooms(residenceId, roomCode)
+        const rooms = await getRooms(rentalId, roomCode)
         ctx.body = {
           content: rooms,
           ...metadata,
@@ -177,4 +183,64 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /rooms:
+   *   post:
+   *     summary: Create a new room in Xpand for a residence.
+   *     description: |
+   *       Performs a transactional 3-table write (cmobj, barum, babuf) in the
+   *       Xpand DB. Returns the created room in the same shape as GET /rooms.
+   *       The caller provides the parent rentalId and a curated roomTypeCode;
+   *       code and caption default to auto-derived values if omitted.
+   *     tags:
+   *       - Rooms
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateRoomRequest'
+   *     responses:
+   *       201:
+   *         description: Room created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Room'
+   *       400:
+   *         description: Validation failure (unknown roomTypeCode, invalid caption, etc.).
+   *       404:
+   *         description: Residence not found for the supplied rentalId.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.post(
+    '(.*)/rooms',
+    parseRequest({ body: CreateRoomRequestSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const input = ctx.request.parsedBody as CreateRoomRequest
+
+      try {
+        const room = await createRoom(input)
+        ctx.status = 201
+        ctx.body = { content: room, ...metadata }
+      } catch (err) {
+        if (err instanceof ResidenceNotFoundError) {
+          ctx.status = 404
+          ctx.body = { reason: err.message, ...metadata }
+          return
+        }
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
 }

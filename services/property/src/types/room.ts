@@ -1,7 +1,9 @@
 import { z } from 'zod'
 
+export { CreateRoomRequestSchema, type CreateRoomRequest } from '@onecore/types'
+
 export const roomsQueryParamsSchema = z.object({
-  residenceId: z.string().min(1, { message: 'residenceId is required.' }),
+  rentalId: z.string().min(1, { message: 'rentalId is required.' }),
   roomCode: z.string().optional(),
 })
 

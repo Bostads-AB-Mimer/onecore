@@ -113,7 +113,7 @@ export const ResidenceTabs = ({
       </TabsList>
 
       <TabsContent value="rooms">
-        <RoomsTabContent residenceId={residence.id} />
+        {rentalId ? <RoomsTabContent rentalId={rentalId} /> : null}
       </TabsContent>
 
       <TabsContent value="floorplan">
@@ -122,9 +122,7 @@ export const ResidenceTabs = ({
 
       <TabsContent value="inspections">
         <InspectionsTabContent
-          residenceId={residence.id}
           rentalId={residence.propertyObject.rentalId ?? undefined}
-          leaseId={currentLease?.leaseId}
           residence={residence}
         />
       </TabsContent>
