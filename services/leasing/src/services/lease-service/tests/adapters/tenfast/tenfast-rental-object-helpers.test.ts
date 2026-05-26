@@ -38,29 +38,77 @@ describe('tenfast-rental-object-helpers', () => {
       expect(getLatestActiveLeasesEndDate([currentLease])).toBeNull()
     })
 
-    it('returns the end date of a single active lease', () => {
+    it('returns null when active lease has endDate but is not cancelled', () => {
       const currentLease = factory.tenfastLease.build({
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-06-30'),
+        cancellation: {
+          cancelled: false,
+          doneAutomatically: false,
+          receivedCancellationAt: null,
+          notifiedAt: null,
+          handledAt: null,
+          handledBy: null,
+          preferredMoveOutDate: null,
+          cancelledByType: null,
+        },
+      })
+      expect(getLatestActiveLeasesEndDate([currentLease])).toBeNull()
+    })
+
+    it('returns the end date of a single active cancelled lease', () => {
+      const currentLease = factory.tenfastLease.build({
+        startDate: new Date('2026-01-01'),
+        endDate: new Date('2026-06-30'),
+        cancellation: {
+          cancelled: true,
+          doneAutomatically: false,
+          receivedCancellationAt: null,
+          notifiedAt: null,
+          handledAt: null,
+          handledBy: null,
+          preferredMoveOutDate: null,
+          cancelledByType: null,
+        },
       })
       expect(getLatestActiveLeasesEndDate([currentLease])).toEqual(
         new Date('2026-06-30')
       )
     })
 
-    it('returns the latest end date when there are multiple active leases', () => {
+    it('returns the latest end date among cancelled leases, ignoring non-cancelled', () => {
       const leases = [
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
           endDate: new Date('2026-06-30'),
+          cancellation: {
+            cancelled: true,
+            doneAutomatically: false,
+            receivedCancellationAt: null,
+            notifiedAt: null,
+            handledAt: null,
+            handledBy: null,
+            preferredMoveOutDate: null,
+            cancelledByType: null,
+          },
         }),
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
           endDate: new Date('2026-12-31'),
+          cancellation: {
+            cancelled: true,
+            doneAutomatically: false,
+            receivedCancellationAt: null,
+            notifiedAt: null,
+            handledAt: null,
+            handledBy: null,
+            preferredMoveOutDate: null,
+            cancelledByType: null,
+          },
         }),
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
-          endDate: new Date('2026-09-15'),
+          endDate: new Date('2027-06-30'), // not cancelled — should be ignored
         }),
       ]
       expect(getLatestActiveLeasesEndDate(leases)).toEqual(
@@ -72,12 +120,32 @@ describe('tenfast-rental-object-helpers', () => {
       const leases = [
         factory.tenfastLease.build({
           startDate: new Date('2025-01-01'),
-          endDate: new Date('2025-12-31'), // ended
+          endDate: new Date('2025-12-31'),
           stage: 'archived',
+          cancellation: {
+            cancelled: true,
+            doneAutomatically: false,
+            receivedCancellationAt: null,
+            notifiedAt: null,
+            handledAt: null,
+            handledBy: null,
+            preferredMoveOutDate: null,
+            cancelledByType: null,
+          },
         }),
         factory.tenfastLease.build({
           startDate: new Date('2026-01-01'),
-          endDate: new Date('2026-06-30'), // current
+          endDate: new Date('2026-06-30'),
+          cancellation: {
+            cancelled: true,
+            doneAutomatically: false,
+            receivedCancellationAt: null,
+            notifiedAt: null,
+            handledAt: null,
+            handledBy: null,
+            preferredMoveOutDate: null,
+            cancelledByType: null,
+          },
         }),
       ]
       expect(getLatestActiveLeasesEndDate(leases)).toEqual(
@@ -100,6 +168,16 @@ describe('tenfast-rental-object-helpers', () => {
       const lease = factory.tenfastLease.build({
         startDate: new Date('2026-01-01'),
         endDate: new Date('2026-06-30'),
+        cancellation: {
+          cancelled: true,
+          doneAutomatically: false,
+          receivedCancellationAt: null,
+          notifiedAt: null,
+          handledAt: null,
+          handledBy: null,
+          preferredMoveOutDate: null,
+          cancelledByType: null,
+        },
       })
       const rentalObject = factory.tenfastRentalObject.build({ avtal: [lease] })
       const result = mapTenfastRentalObjectToAvailabilityInfo(
@@ -149,6 +227,114 @@ describe('tenfast-rental-object-helpers', () => {
       )
       expect(result.rent.amount).toBe(1250)
       expect(result.rent.vat).toBe(250)
+    })
+  })
+
+  describe('rentalTags in mapTenfastRentalObjectToAvailabilityInfo', () => {
+    it('returns undefined rentalTags when rental object has no tags field', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: undefined,
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rentalTags).toBeUndefined()
+    })
+
+    it('returns empty array when rental object has empty tags', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: [],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rentalTags).toEqual([])
+    })
+
+    it('maps tag ids to name objects using tagsById', () => {
+      const tagsById = new Map([
+        ['tag-1', { _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+        ['tag-2', { _id: 'tag-2', code: 'ROKFRITT', name: 'Rökfritt' }],
+      ])
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: ['tag-1', 'tag-2'],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject,
+        tagsById
+      )
+      expect(result.rentalTags).toEqual([
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
+        { id: 'ROKFRITT', name: 'Rökfritt' },
+      ])
+    })
+
+    it('filters out tag ids not present in tagsById', () => {
+      const tagsById = new Map([
+        ['tag-1', { _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+      ])
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: ['tag-1', 'tag-unknown'],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject,
+        tagsById
+      )
+      expect(result.rentalTags).toEqual([
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
+      ])
+    })
+
+    it('returns empty array when no tag ids match tagsById', () => {
+      const tagsById = new Map([
+        ['tag-1', { _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+      ])
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: ['tag-unknown'],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject,
+        tagsById
+      )
+      expect(result.rentalTags).toEqual([])
+    })
+
+    it('returns empty array when tagsById is empty', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        tags: ['tag-1', 'tag-2'],
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject,
+        new Map()
+      )
+      expect(result.rentalTags).toEqual([])
+    })
+
+    it('maps rentalTenureType from category', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        category: { code: 'Bilplats', label: 'Bilplats' },
+        avtal: [],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rentalTenureType).toEqual({
+        id: 'Bilplats',
+        name: 'Bilplats',
+      })
     })
   })
 })

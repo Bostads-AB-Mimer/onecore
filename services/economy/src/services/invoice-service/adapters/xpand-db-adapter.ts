@@ -492,7 +492,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   return {
     reference: contactCode,
     invoiceId: row.invoiceId.trim(),
-    leaseId: row.leaseId?.trim(),
+    leaseIds: row.leaseId ? [row.leaseId.trim()] : [],
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
     fromDate: row.fromDate,
     toDate: row.toDate,

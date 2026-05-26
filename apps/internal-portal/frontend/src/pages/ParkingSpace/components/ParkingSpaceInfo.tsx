@@ -109,6 +109,25 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             </Box>
           </Box>
           <Box display="flex" justifyContent="space-between" flex="1">
+            <Typography>Hyresform</Typography>
+            <Box>
+              <Typography fontWeight="bold">
+                {parkingSpaceListing.rentalObject.availabilityInfo
+                  ?.rentalTenureType?.name || '-'}
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex" justifyContent="space-between" flex="1">
+            <Typography>Uthyrningstyp</Typography>
+            <Box>
+              <Typography fontWeight="bold">
+                {parkingSpaceListing.rentalObject.availabilityInfo?.rentalTags
+                  ?.map((t) => t.name)
+                  .join(', ') || '-'}
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex" justifyContent="space-between" flex="1">
             <Typography>Hyra</Typography>
             <Box>
               <Typography fontWeight="bold">{`${numberFormatter.format(

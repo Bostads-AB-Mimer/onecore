@@ -9,6 +9,7 @@ import {
   SyncContactToEconomyPayload,
   XledgerContact,
   XledgerProject,
+  schemas,
 } from '@onecore/types'
 
 import config from '../../common/config'
@@ -329,7 +330,6 @@ export async function getInvoiceChannels(
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
-
     logger.error(response.data, 'economy-adapter.getInvoiceChannels')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
@@ -339,6 +339,85 @@ export async function getInvoiceChannels(
     }
 
     return { ok: false, err: 'unknown' }
+  }
+}
+const PaymentsSinceResultSchema = z.object({
+  events: schemas.v1.InvoicePaymentEventSchema.array(),
+  lastCursor: z.string().nullable(),
+})
+
+export type PaymentsSinceResult = z.infer<typeof PaymentsSinceResultSchema>
+
+export async function getLatestPaymentCursor(): Promise<
+  AdapterResult<string | null, 'unknown'>
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/payments/latest-cursor`
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+    logger.error(response.data, 'economy-adapter.getLatestPaymentCursor')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getLatestPaymentCursor')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function getPaymentsSince(
+  afterCursor: string
+): Promise<AdapterResult<PaymentsSinceResult, 'unknown'>> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/payments/since`,
+      { params: { after: afterCursor } }
+    )
+
+    if (response.status === 200) {
+      const parsed = PaymentsSinceResultSchema.parse(response.data.content)
+      return { ok: true, data: parsed }
+    }
+
+    logger.error(response.data, 'economy-adapter.getPaymentsSince')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getPaymentsSince')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function recordInvoicePayment(
+  invoiceId: string,
+  payment: { amount: number; dateTime: Date; method: string }
+): Promise<AdapterResult<null, 'not-found' | 'unknown'>> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/invoices/${encodeURIComponent(invoiceId)}/payments`,
+      {
+        amount: payment.amount,
+        dateTime: payment.dateTime.toISOString(),
+        method: payment.method,
+      }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: null }
+    }
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+
+    logger.error(response.data, 'economy-adapter.recordInvoicePayment')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    logger.error(err, 'economy-adapter.recordInvoicePayment')
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
 

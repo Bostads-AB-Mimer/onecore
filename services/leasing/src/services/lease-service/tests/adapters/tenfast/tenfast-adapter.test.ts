@@ -8,6 +8,11 @@ import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
 import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
 
+// Shared clock offset used to bust the module-level tag cache (TTL: 5 min) between tests.
+// Each test that needs a fresh tag fetch increments this by 1 hour before mocking Date.now.
+let tagTestClockOffset = 0
+const TAG_CACHE_BASE_TIME = new Date('2100-01-01').getTime()
+
 describe(tenfastAdapter.getLeaseTemplate, () => {
   it('should return template when response is valid and status is 200', async () => {
     // Arrange
@@ -412,6 +417,58 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     if (!result.ok) return
     expect(result.data).toHaveLength(1)
     expect(result.data![0].rentalObjectCode).toBe('R1003')
+  })
+
+  describe('tag propagation', () => {
+    let nowSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      tagTestClockOffset += 60 * 60 * 1000
+      nowSpy = jest
+        .spyOn(Date, 'now')
+        .mockReturnValue(TAG_CACHE_BASE_TIME + tagTestClockOffset)
+      ;(request as jest.Mock).mockReset()
+    })
+
+    afterEach(() => {
+      nowSpy.mockRestore()
+    })
+
+    it('includes rentalTenureType and rentalTags in availability info', async () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        externalId: 'R1001',
+        category: { code: 'BP', label: 'Bilplats' },
+        tags: ['tag-1'],
+        avtal: [],
+      })
+      ;(request as jest.Mock)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: [{ _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: [rentalObject],
+            prev: null,
+            next: null,
+            totalCount: 1,
+          },
+        })
+
+      const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+        tenfastAdapter.RentalObjectType.ParkingSpace
+      )
+
+      assert(result.ok)
+      expect(result.data![0].rentalTenureType).toEqual({
+        id: 'BP',
+        name: 'Bilplats',
+      })
+      expect(result.data![0].rentalTags).toEqual([
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
+      ])
+    })
   })
 })
 
@@ -1316,6 +1373,51 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
     expect(result.err).toBe('could-not-find-rental-object')
   })
 
+  describe('tag and tenure type propagation', () => {
+    let nowSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      tagTestClockOffset += 60 * 60 * 1000
+      nowSpy = jest
+        .spyOn(Date, 'now')
+        .mockReturnValue(TAG_CACHE_BASE_TIME + tagTestClockOffset)
+      ;(request as jest.Mock).mockReset()
+    })
+
+    afterEach(() => {
+      nowSpy.mockRestore()
+    })
+
+    it('includes rentalTenureType and rentalTags in returned availability info', async () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        externalId: 'R1001',
+        category: { code: 'BP', label: 'Bilplats' },
+        tags: ['tag-1'],
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValueOnce({ ok: true, data: rentalObject })
+      ;(request as jest.Mock).mockResolvedValueOnce({
+        status: 200,
+        data: [{ _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+      }) // tags
+
+      const result = await tenfastAdapter.getAvailabilityForRentalObject(
+        'R1001',
+        true
+      )
+
+      assert(result.ok)
+      expect(result.data.rentalTenureType).toEqual({
+        id: 'BP',
+        name: 'Bilplats',
+      })
+      expect(result.data.rentalTags).toEqual([
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
+      ])
+    })
+  })
+
   it('should return rent with correct VAT values when includeVAT is true', async () => {
     // Arrange
     const mockRentalObject = factory.tenfastRentalObject.build({
@@ -1537,6 +1639,132 @@ describe(tenfastAdapter.getRentalObjectAvailabilityInfo, () => {
     // Assert
     assert(!result.ok)
     expect(result.err).toBe('unknown')
+  })
+
+  describe('tag and tenure type propagation', () => {
+    let nowSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      tagTestClockOffset += 60 * 60 * 1000
+      nowSpy = jest
+        .spyOn(Date, 'now')
+        .mockReturnValue(TAG_CACHE_BASE_TIME + tagTestClockOffset)
+      ;(request as jest.Mock).mockReset()
+    })
+
+    afterEach(() => {
+      nowSpy.mockRestore()
+    })
+
+    it('includes rentalTenureType derived from category', async () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        externalId: 'R1001',
+        category: { code: 'BP', label: 'Bilplats' },
+        tags: [],
+      })
+      ;(request as jest.Mock)
+        .mockResolvedValueOnce({ status: 200, data: [] }) // tags
+        .mockResolvedValueOnce({ status: 200, data: [rentalObject] }) // batch-get
+
+      const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
+        ['R1001'],
+        true
+      )
+
+      assert(result.ok)
+      expect(result.data[0].rentalTenureType).toEqual({
+        id: 'BP',
+        name: 'Bilplats',
+      })
+    })
+
+    it('resolves rentalTags from tag IDs via the tags API', async () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        externalId: 'R1001',
+        tags: ['tag-1', 'tag-2'],
+      })
+      ;(request as jest.Mock)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: [
+            { _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' },
+            { _id: 'tag-2', code: 'SENIOR', name: 'Seniorlägenhet' },
+          ],
+        }) // tags
+        .mockResolvedValueOnce({ status: 200, data: [rentalObject] }) // batch-get
+
+      const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
+        ['R1001'],
+        true
+      )
+
+      assert(result.ok)
+      expect(result.data[0].rentalTags).toEqual([
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
+        { id: 'SENIOR', name: 'Seniorlägenhet' },
+      ])
+    })
+
+    it('omits tag IDs not present in the tags API response', async () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        externalId: 'R1001',
+        tags: ['tag-known', 'tag-unknown'],
+      })
+      ;(request as jest.Mock)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: [{ _id: 'tag-known', code: 'KNOWN', name: 'Känd tagg' }],
+        }) // tags
+        .mockResolvedValueOnce({ status: 200, data: [rentalObject] }) // batch-get
+
+      const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
+        ['R1001'],
+        true
+      )
+
+      assert(result.ok)
+      expect(result.data[0].rentalTags).toEqual([
+        { id: 'KNOWN', name: 'Känd tagg' },
+      ])
+    })
+
+    it('includes rentalTenureType and rentalTags across multiple objects in batch', async () => {
+      const r1 = factory.tenfastRentalObject.build({
+        externalId: 'R1001',
+        category: { code: 'BP', label: 'Bilplats' },
+        tags: ['tag-1'],
+      })
+      const r2 = factory.tenfastRentalObject.build({
+        externalId: 'R1002',
+        category: { code: 'LGH', label: 'Lägenhet' },
+        tags: [],
+      })
+      ;(request as jest.Mock)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: [{ _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+        }) // tags
+        .mockResolvedValueOnce({ status: 200, data: [r1, r2] }) // batch-get
+
+      const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
+        ['R1001', 'R1002'],
+        true
+      )
+
+      assert(result.ok)
+      expect(result.data[0].rentalTenureType).toEqual({
+        id: 'BP',
+        name: 'Bilplats',
+      })
+      expect(result.data[0].rentalTags).toEqual([
+        { id: 'UNGDOM', name: 'Ungdomslägenhet' },
+      ])
+      expect(result.data[1].rentalTenureType).toEqual({
+        id: 'LGH',
+        name: 'Lägenhet',
+      })
+      expect(result.data[1].rentalTags).toEqual([])
+    })
   })
 })
 
