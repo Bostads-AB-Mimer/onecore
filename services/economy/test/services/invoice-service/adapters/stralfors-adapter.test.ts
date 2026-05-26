@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { postChannelLookup } from '@src/services/invoice-service/adapters/stralfors/stralfors-adapter'
+jest.mock('@src/common/config', () => require('@test/common/__mocks__/config'))
 
 jest.mock('axios', () => {
   const mockAxios = Object.assign(jest.fn(), {
@@ -7,19 +8,6 @@ jest.mock('axios', () => {
   })
   return { default: mockAxios, __esModule: true }
 })
-
-jest.mock('@src/common/config', () => ({
-  default: {
-    stralfors: {
-      baseUrl: 'https://stralfors.test',
-      clientId: 'test-client-id',
-      clientSecret: 'test-client-secret',
-      retryBackoffMs: 0,
-      maxRetries: 10,
-    },
-  },
-  __esModule: true,
-}))
 
 const mockAuthResponse = {
   data: { access_token: 'test-token', token_type: 'Bearer' },

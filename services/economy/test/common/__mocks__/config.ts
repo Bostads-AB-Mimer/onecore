@@ -26,4 +26,11 @@ export default {
     baseUrl: 'http://localhost',
     apiKey: 'abc123',
   },
+  stralfors: {
+    baseUrl: 'https://stralfors.test',
+    clientId: 'test-client-id',
+    clientSecret: 'test-client-secret',
+    retryBackoffMs: 0,
+    maxRetries: 10,
+  },
 }
