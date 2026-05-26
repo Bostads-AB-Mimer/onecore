@@ -49,7 +49,7 @@ describe('economy-adapter', () => {
       },
     ]
 
-    it('returns invoice channels for given contact codes', async () => {
+    it('returns invoice channels for given national registration numbers', async () => {
       nock(config.economyService.url)
         .post('/invoice-channels', {
           nationalRegistrationNumbers: ['191212121212', '198112172385'],
