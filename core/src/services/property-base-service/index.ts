@@ -10,6 +10,7 @@ import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
 
 import { routes as componentRoutes } from './components'
+import { routes as costCenterRoutes } from './cost-centers'
 
 /**
  * @swagger
@@ -131,8 +132,20 @@ export const routes = (router: KoaRouter) => {
     schemas.ApartmentTemperaturesResponseSchema
   )
 
+  registerSchema('KeycloakUserSummary', schemas.KeycloakUserSummarySchema)
+  registerSchema('CostCenterTreeAddress', schemas.CostCenterTreeAddressSchema)
+  registerSchema(
+    'CostCenterTreeAggregates',
+    schemas.CostCenterTreeAggregatesSchema
+  )
+  registerSchema('CostCenterTreeProperty', schemas.CostCenterTreePropertySchema)
+  registerSchema('CostCenterTreeKvvArea', schemas.CostCenterTreeKvvAreaSchema)
+  registerSchema('CostCenterTree', schemas.CostCenterTreeSchema)
+  registerSchema('CostCenterSummary', schemas.CostCenterSummarySchema)
+
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)
+  costCenterRoutes(router)
 
   /**
    * @swagger
