@@ -8,6 +8,8 @@ packages:
 injectWorkspacePackages: true
 
 minimumReleaseAge: 5760
+syncInjectedDepsAfterScripts:
+  - build
 
 onlyBuiltDependencies:
   - '@prisma/client'

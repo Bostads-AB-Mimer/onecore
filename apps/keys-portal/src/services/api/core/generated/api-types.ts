@@ -5570,6 +5570,54 @@ export interface paths {
       };
     };
   };
+  "/apartments/{objectNumber}/temperatures": {
+    /**
+     * Get indoor temperatures for an apartment
+     * @description Fetches indoor temperature time series for an apartment by its object
+     * number, sourced from the EcoGuard "Curves" platform. Each series entry
+     * corresponds to one sub-node (sensor) under the apartment node, with
+     * avg/min/max merged per time bucket. Defaults to the last 24 hours at
+     * hourly intervals.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Unix timestamp (seconds) for range start. Defaults to `to - 86400`. */
+          from?: number;
+          /** @description Unix timestamp (seconds) for range end. Defaults to now. */
+          to?: number;
+          /** @description Aggregation bucket size. Defaults to "H" (hourly). */
+          interval?: "H" | "D";
+        };
+        path: {
+          /** @description Apartment object number (e.g. "806-032-01-0101"). */
+          objectNumber: string;
+        };
+      };
+      responses: {
+        /** @description Temperature series successfully retrieved. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ApartmentTemperaturesResponse"];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description No apartment node found for the given object number. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -5580,7 +5628,8 @@ export interface paths {
      * - Parking Spaces: Matches on rental ID or parking space name
      * - Maintenance Units: Matches on code
      * - Facilities: Matches on rental ID or facility name
-     * Returns up to 10 results per entity type (max 60 total results).
+     * - Staircases: Matches on staircase name
+     * Returns up to 10 results per entity type (max 70 total results).
      */
     get: {
       parameters: {
@@ -6954,6 +7003,15 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys' loans
+           * and attaches them as a `contacts` sidecar keyed by contactCode.
+           * Soft fails — if the contacts service errors, the response is
+           * returned without the sidecar.
+           */
+          includeContacts?: boolean;
+        };
         path: {
           /** @description The key bundle ID */
           id: string;
@@ -6965,6 +7023,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyBundleDetailsResponse"];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7285,6 +7347,13 @@ export interface paths {
           pickedUpAt?: string;
           createdAt?: string;
           updatedAt?: string;
+          /**
+           * @description When true, batch-fetches contacts referenced by the loans and
+           * attaches them as a `contacts` sidecar keyed by contactCode. Soft
+           * fails — if the contacts service errors, loans are still returned
+           * without the sidecar.
+           */
+          includeContacts?: boolean;
         };
       };
       responses: {
@@ -7293,6 +7362,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoan"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7318,6 +7391,15 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /**
+           * @description When true, batch-fetches contacts referenced by the loans and
+           * attaches them as a `contacts` sidecar keyed by contactCode. Soft
+           * fails — if the contacts service errors, loans are still returned
+           * without the sidecar.
+           */
+          includeContacts?: boolean;
+        };
         path: {
           /** @description The key ID to fetch loans for */
           keyId: string;
@@ -7329,6 +7411,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoan"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7423,6 +7509,13 @@ export interface paths {
           loanType?: "TENANT" | "MAINTENANCE";
           /** @description Filter by return status (true = returned, false = not returned) */
           returned?: boolean;
+          /**
+           * @description When true, batch-fetches contacts referenced by the loans and
+           * attaches them as a `contacts` sidecar keyed by contactCode. Soft
+           * fails — if the contacts service errors, loans are still returned
+           * without the sidecar.
+           */
+          includeContacts?: boolean;
         };
         path: {
           /** @description The contact identifier to search for */
@@ -7435,6 +7528,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoanWithDetails"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -7459,6 +7556,13 @@ export interface paths {
           loanType?: "TENANT" | "MAINTENANCE";
           /** @description Filter by return status (true = returned, false = not returned) */
           returned?: boolean;
+          /**
+           * @description When true, batch-fetches contacts referenced by the loans and
+           * attaches them as a `contacts` sidecar keyed by contactCode. Soft
+           * fails — if the contacts service errors, loans are still returned
+           * without the sidecar.
+           */
+          includeContacts?: boolean;
         };
         path: {
           /** @description The bundle ID to search for */
@@ -7471,6 +7575,10 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["KeyLoanWithDetails"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -8106,6 +8214,13 @@ export interface paths {
           page?: number;
           /** @description Number of records per page */
           limit?: number;
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys'
+           * `activeLoanContact` field and attaches them as a `contacts`
+           * sidecar keyed by contactCode. Soft fails — if the contacts
+           * service errors, keys are still returned without the sidecar.
+           */
+          includeContacts?: boolean;
         };
       };
       responses: {
@@ -8114,6 +8229,10 @@ export interface paths {
           content: {
             "application/json": components["schemas"]["PaginatedResponse"] & {
               content?: components["schemas"]["KeyDetails"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -8184,6 +8303,13 @@ export interface paths {
           keySystemId?: string;
           createdAt?: string;
           updatedAt?: string;
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys'
+           * `activeLoanContact` field and attaches them as a `contacts`
+           * sidecar keyed by contactCode. Soft fails — if the contacts
+           * service errors, keys are still returned without the sidecar.
+           */
+          includeContacts?: boolean;
         };
       };
       responses: {
@@ -8192,6 +8318,10 @@ export interface paths {
           content: {
             "application/json": components["schemas"]["PaginatedResponse"] & {
               content?: components["schemas"]["KeyDetails"][];
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components["schemas"]["ContactV1"];
+              };
             };
           };
         };
@@ -9223,6 +9353,45 @@ export interface paths {
       };
     };
   };
+  "/v1/contacts/batch": {
+    /**
+     * Batch lookup of contacts by contact code
+     * @description Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, or `includeAddress` to include those joins. Missing contact codes are simply absent from the response.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Contact code(s) to look up. Repeat the parameter for multiple codes, e.g. ?code=P123&code=P456. */
+          code: string[];
+          /** @description Include phone numbers in the response. */
+          includePhone?: boolean;
+          /** @description Include email addresses in the response. */
+          includeEmail?: boolean;
+          /** @description Include addresses in the response. */
+          includeAddress?: boolean;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+              content: components["schemas"]["ContactV1"][];
+            };
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
   "/v1/contacts/{contactCode}": {
     /** Get a single contact by canonical id (contact code) */
     get: {
@@ -9580,6 +9749,10 @@ export interface components {
           content: string;
         } | {
           /** @enum {string} */
+          type: "bold_text";
+          content: string;
+        } | {
+          /** @enum {string} */
           type: "link";
           name: string;
           /** Format: uri */
@@ -9614,6 +9787,10 @@ export interface components {
           content: string;
         } | {
           /** @enum {string} */
+          type: "bold_text";
+          content: string;
+        } | {
+          /** @enum {string} */
           type: "link";
           name: string;
           /** Format: uri */
@@ -9640,6 +9817,10 @@ export interface components {
         } | {
           /** @enum {string} */
           type: "bullet_list";
+          content: string;
+        } | {
+          /** @enum {string} */
+          type: "bold_text";
           content: string;
         } | {
           /** @enum {string} */
@@ -10780,6 +10961,41 @@ export interface components {
       additionalInformation: string | null;
       confidence: number;
     };
+    ApartmentTemperaturePoint: {
+      time: number;
+      avg: number | null;
+      min: number | null;
+      max: number | null;
+    };
+    ApartmentTemperatureSeries: {
+      subNodeId: number;
+      subNodeName: string;
+      points: ({
+          time: number;
+          avg: number | null;
+          min: number | null;
+          max: number | null;
+        })[];
+    };
+    ApartmentTemperaturesResponse: {
+      objectNumber: string;
+      nodeId: number;
+      from: number;
+      to: number;
+      /** @enum {string} */
+      interval: "H" | "D";
+      unit: string;
+      series: ({
+          subNodeId: number;
+          subNodeName: string;
+          points: ({
+              time: number;
+              avg: number | null;
+              min: number | null;
+              max: number | null;
+            })[];
+        })[];
+    };
     Key: {
       /** Format: uuid */
       id: string;
@@ -11546,7 +11762,30 @@ export interface components {
       /** @description Property name */
       estate: string | null;
     };
-    /** @description A search result that can be either a property, building, residence, parking space, maintenance unit or facility */
+    StaircaseSearchResult: {
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a staircase result
+       * @enum {string}
+       */
+      type: "staircase";
+      /** @description Code of the staircase */
+      code: string;
+      /** @description Name (caption) of the staircase */
+      name: string | null;
+      property: {
+        code: string;
+        /** @description Name of property associated with the staircase */
+        name: string | null;
+      };
+      building: {
+        code: string;
+        /** @description Name of building associated with the staircase */
+        name: string | null;
+      };
+    };
+    /** @description A search result that can be either a property, building, residence, parking space, maintenance unit, facility or staircase */
     SearchResult: {
       /** @description Unique identifier for the search result */
       id: string;
@@ -11663,6 +11902,28 @@ export interface components {
       building: {
         code: string | null;
         /** @description Name of building associated with the facility */
+        name: string | null;
+      };
+    }) | ({
+      /** @description Unique identifier for the search result */
+      id: string;
+      /**
+       * @description Indicates this is a staircase result
+       * @enum {string}
+       */
+      type: "staircase";
+      /** @description Code of the staircase */
+      code: string;
+      /** @description Name (caption) of the staircase */
+      name: string | null;
+      property: {
+        code: string;
+        /** @description Name of property associated with the staircase */
+        name: string | null;
+      };
+      building: {
+        code: string;
+        /** @description Name of building associated with the staircase */
         name: string | null;
       };
     });

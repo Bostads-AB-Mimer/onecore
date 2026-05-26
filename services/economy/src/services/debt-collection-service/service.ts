@@ -404,8 +404,8 @@ export const aggregateRows = (rows: RentInvoiceRow[]): RentInvoiceRow[] => {
       }
 
       groups.push(currentGroup)
-    } else if (row.printGroup === null) {
-      // No printgroup, do not group
+    } else {
+      // No printgroup or printgroup without header row, do not group
       groups.push([row])
       i++
     }

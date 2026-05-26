@@ -5,6 +5,7 @@ import type {
   CreateKeyLoanRequest,
   UpdateKeyLoanRequest,
   PaginatedResponse,
+  ContactV1,
 } from '@/services/types'
 import { querySerializer } from '@/utils/querySerializer'
 
@@ -40,14 +41,28 @@ export const keyLoanService = {
   async search(
     searchParams: Record<string, string | number | string[] | undefined>,
     page: number = 1,
-    limit: number = 60
-  ): Promise<PaginatedResponse<KeyLoan>> {
+    limit: number = 60,
+    options?: { includeContacts?: boolean }
+  ): Promise<
+    PaginatedResponse<KeyLoan> & { contacts?: Record<string, ContactV1> }
+  > {
+    const includeContacts = options?.includeContacts
     const { data, error } = await GET('/key-loans/search', {
-      params: { query: { ...searchParams, page, limit } as any },
+      params: {
+        query: {
+          ...searchParams,
+          page,
+          limit,
+          ...(includeContacts ? { includeContacts: true } : {}),
+        } as any,
+      },
       querySerializer,
     })
     if (error) throw error
-    return ensurePaginatedResponse<KeyLoan>(data)
+    return {
+      ...ensurePaginatedResponse<KeyLoan>(data),
+      contacts: data?.contacts,
+    }
   },
 
   async get(
@@ -73,6 +88,24 @@ export const keyLoanService = {
     })
     if (error) throw error
     return data?.content ?? []
+  },
+
+  /**
+   * Variant of `getByKeyId` that also asks the server to include the
+   * referenced contacts as a sidecar map. Use this in flows that need
+   * to render contact names alongside loans (e.g. row expansion).
+   */
+  async getByKeyIdWithContacts(
+    keyId: string
+  ): Promise<{ loans: KeyLoan[]; contacts: Record<string, ContactV1> }> {
+    const { data, error } = await GET('/key-loans/by-key/{keyId}', {
+      params: { path: { keyId }, query: { includeContacts: true } },
+    })
+    if (error) throw error
+    return {
+      loans: data?.content ?? [],
+      contacts: data?.contacts ?? {},
+    }
   },
 
   async getByCardId(cardId: string): Promise<KeyLoan[]> {
@@ -126,8 +159,12 @@ export const keyLoanService = {
   async getByContactWithKeys(
     contact: string,
     loanType?: 'TENANT' | 'MAINTENANCE',
-    returned?: boolean
-  ): Promise<KeyLoanWithDetails[]> {
+    returned?: boolean,
+    options?: { includeContacts?: boolean }
+  ): Promise<{
+    loans: KeyLoanWithDetails[]
+    contacts: Record<string, ContactV1>
+  }> {
     const { data, error } = await GET(
       '/key-loans/by-contact/{contact}/with-keys',
       {
@@ -136,12 +173,16 @@ export const keyLoanService = {
           query: {
             ...(loanType !== undefined ? { loanType } : {}),
             ...(returned !== undefined ? { returned } : {}),
+            ...(options?.includeContacts ? { includeContacts: true } : {}),
           },
         },
       }
     )
     if (error) throw error
-    return data?.content ?? []
+    return {
+      loans: data?.content ?? [],
+      contacts: data?.contacts ?? {},
+    }
   },
 
   /**
@@ -154,8 +195,12 @@ export const keyLoanService = {
   async getByBundleWithKeys(
     bundleId: string,
     loanType?: 'TENANT' | 'MAINTENANCE',
-    returned?: boolean
-  ): Promise<KeyLoanWithDetails[]> {
+    returned?: boolean,
+    options?: { includeContacts?: boolean }
+  ): Promise<{
+    loans: KeyLoanWithDetails[]
+    contacts: Record<string, ContactV1>
+  }> {
     const { data, error } = await GET(
       '/key-loans/by-bundle/{bundleId}/with-keys',
       {
@@ -164,12 +209,16 @@ export const keyLoanService = {
           query: {
             ...(loanType !== undefined ? { loanType } : {}),
             ...(returned !== undefined ? { returned } : {}),
+            ...(options?.includeContacts ? { includeContacts: true } : {}),
           },
         },
       }
     )
     if (error) throw error
-    return data?.content ?? []
+    return {
+      loans: data?.content ?? [],
+      contacts: data?.contacts ?? {},
+    }
   },
 
   /**

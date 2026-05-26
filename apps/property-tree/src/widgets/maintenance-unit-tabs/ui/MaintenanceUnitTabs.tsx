@@ -60,6 +60,11 @@ export function MaintenanceUnitTabs({
         <WorkOrdersTabContent
           contextType={ContextType.MaintenanceUnit}
           id={maintenanceUnit.code}
+          metadata={{
+            propertyName: maintenanceUnit.estate || '',
+            type: maintenanceUnit.type || '',
+            code: maintenanceUnit.code,
+          }}
         />
       </TabsContent>
     </Tabs>

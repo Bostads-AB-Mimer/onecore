@@ -26,6 +26,10 @@ interface ArticleSectionProps {
   }
 }
 
+function sanitizePriceInput(value: string): string {
+  return value.replace(/\D/g, '')
+}
+
 export function ArticleSection({
   invoiceRows,
   administrativeCosts,
@@ -35,7 +39,7 @@ export function ArticleSection({
 }: ArticleSectionProps) {
   const handleChangeRowPrice = (index: number, value: string) => {
     const newRows = [...invoiceRows]
-    newRows[index] = { ...newRows[index], price: value }
+    newRows[index] = { ...newRows[index], price: sanitizePriceInput(value) }
     onInvoiceRowsChange(newRows)
   }
 
@@ -58,18 +62,15 @@ export function ArticleSection({
       return
     }
 
-    newRows[index].articleId = articleId
-    newRows[index].articleName = article.name
+    newRows[index].article = article
     newRows[index].price =
       article.standardPrice === 0 ? '' : article.standardPrice.toString()
+
     onInvoiceRowsChange(newRows)
   }
 
   const handleAddRow = () => {
-    onInvoiceRowsChange([
-      ...invoiceRows,
-      { price: '0', amount: 1, articleId: '', articleName: '' },
-    ])
+    onInvoiceRowsChange([...invoiceRows, { price: '0', amount: 1 }])
   }
 
   const handleRemoveRow = (index: number) => {
@@ -92,7 +93,7 @@ export function ArticleSection({
               <div className="space-y-2">
                 <Label htmlFor="artikel">Artikel</Label>
                 <Select
-                  value={row.articleId}
+                  value={row.article?.id}
                   onValueChange={(articleId) =>
                     handleChangeRowArticle(index, articleId)
                   }
@@ -120,7 +121,7 @@ export function ArticleSection({
                 <Label htmlFor="artikelnummer">Artikelnummer</Label>
                 <Input
                   id="artikelnummer"
-                  value={row.articleId}
+                  value={row.article?.id}
                   readOnly
                   disabled
                   placeholder="Fylls i automatiskt"

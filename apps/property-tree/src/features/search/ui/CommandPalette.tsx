@@ -6,6 +6,7 @@ import {
   Building2,
   CarFront,
   Command,
+  DoorOpen,
   Loader2,
   SquareUser,
   Store,
@@ -28,6 +29,7 @@ const iconMap = {
   'parking-space': CarFront,
   'maintenance-unit': Wrench,
   facility: Store,
+  staircase: DoorOpen,
 } as const
 
 function getResultProps(item: CombinedSearchResult) {
@@ -100,6 +102,18 @@ function getResultProps(item: CombinedSearchResult) {
         state: {
           buildingCode: item.building?.code || null,
           propertyCode: item.property?.code || null,
+        },
+      }
+    case 'staircase':
+      return {
+        icon,
+        label: item.name ?? item.code,
+        prefix: '[UPP]',
+        subtitle: item.building.name ?? item.property.name ?? undefined,
+        path: paths.staircase(item.building.code, item.code),
+        state: {
+          buildingCode: item.building.code,
+          propertyCode: item.property.code,
         },
       }
     default:

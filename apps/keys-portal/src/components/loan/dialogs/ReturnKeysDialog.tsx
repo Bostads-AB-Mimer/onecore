@@ -8,7 +8,7 @@ import type {
 } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { BeforeAfterDialogBase } from './BeforeAfterDialogBase'
-import { handleReturnKeys } from '@/services/loanHandlers'
+import { handlePartialReturn, handleReturnKeys } from '@/services/loanHandlers'
 import { useToast } from '@/hooks/use-toast'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -16,17 +16,25 @@ import { cn } from '@/lib/utils'
 import { CommentInput } from '@/components/shared/CommentInput'
 import { AvailabilityDatePicker } from '@/components/shared/AvailabilityDatePicker'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+
+type KeyForReturn = KeyDetails & { isOrphan: boolean }
+type CardForReturn = CardDetails & { isOrphan: boolean }
 
 type KeysByLoan = {
   loanId: string
   contact: string | null
-  keys: KeyDetails[]
+  keys: KeyForReturn[]
 }
 
 type CardsByLoan = {
   loanId: string
   contact: string | null
-  cards: CardDetails[]
+  cards: CardForReturn[]
 }
 
 type Props = {
@@ -127,11 +135,18 @@ export function ReturnKeysDialog({
         const keysLoansMap = new Map<string, KeysByLoan>()
         const cardsLoansMap = new Map<string, CardsByLoan>()
 
+        const allKeysById = new Map(allKeys.map((k) => [k.id, k]))
+
         uniqueActiveLoans.forEach((enrichedLoan, loanId) => {
-          // Use keysArray from enriched loan, match against allKeys for consistent objects
-          const loanKeyIds = enrichedLoan.keysArray?.map((k) => k.id) || []
-          if (loanKeyIds.length > 0) {
-            const loanKeys = allKeys.filter((k) => loanKeyIds.includes(k.id))
+          const loanKeys: KeyForReturn[] = (enrichedLoan.keysArray ?? []).map(
+            (k) => {
+              const known = allKeysById.get(k.id)
+              return known
+                ? { ...known, isOrphan: false }
+                : { ...k, isOrphan: true }
+            }
+          )
+          if (loanKeys.length > 0) {
             keysLoansMap.set(loanId, {
               loanId,
               contact: enrichedLoan.contact || null,
@@ -139,13 +154,16 @@ export function ReturnKeysDialog({
             })
           }
 
-          // Use keyCardsArray from enriched loan
-          const loanCardIds =
-            enrichedLoan.keyCardsArray?.map((c) => c.cardId) || []
-          if (loanCardIds.length > 0) {
-            const loanCards = allCards.filter((c) =>
-              loanCardIds.includes(c.cardId)
-            )
+          const allCardsById = new Map(allCards.map((c) => [c.cardId, c]))
+          const loanCards: CardForReturn[] = (
+            enrichedLoan.keyCardsArray ?? []
+          ).map((c): CardForReturn => {
+            const known = allCardsById.get(c.cardId)
+            return known
+              ? { ...known, isOrphan: false }
+              : { ...c, isOrphan: true }
+          })
+          if (loanCards.length > 0) {
             cardsLoansMap.set(loanId, {
               loanId,
               contact: enrichedLoan.contact || null,
@@ -163,7 +181,7 @@ export function ReturnKeysDialog({
           loanInfo.keys
             .filter((k) => !k.disposed)
             .forEach((key) => {
-              if (keyIds.includes(key.id)) {
+              if (keyIds.includes(key.id) || key.isOrphan) {
                 initialSelectedKeys.add(key.id)
               }
             })
@@ -174,7 +192,7 @@ export function ReturnKeysDialog({
         const initialSelectedCards = new Set<string>()
         cardsLoansMap.forEach((loanInfo) => {
           loanInfo.cards.forEach((card) => {
-            if (cardIds.includes(card.cardId)) {
+            if (cardIds.includes(card.cardId) || card.isOrphan) {
               initialSelectedCards.add(card.cardId)
             }
           })
@@ -241,6 +259,125 @@ export function ReturnKeysDialog({
     }
   }
 
+  // Partial-return accept: closes each affected loan with a return receipt for
+  // selected items, then creates a continuation loan for whatever the user left
+  // unchecked. Mixed dialog with some loans fully selected + others partial is
+  // handled per-loan: full-selected loans go through the existing return path.
+  const handlePartialAccept = async () => {
+    setIsProcessing(true)
+    try {
+      const affectedLoanIds = Array.from(
+        new Set([
+          ...keysByLoan.map((k) => k.loanId),
+          ...cardsByLoan.map((c) => c.loanId),
+        ])
+      )
+
+      const failures: string[] = []
+      let warnings = 0
+      const signedComment = addSignature(comment)
+      const availableIso = availableDate?.toISOString()
+
+      for (const loanId of affectedLoanIds) {
+        const keys = keysByLoan.find((k) => k.loanId === loanId)?.keys ?? []
+        const cards = cardsByLoan.find((c) => c.loanId === loanId)?.cards ?? []
+        const nonDisposed = keys.filter((k) => !k.disposed)
+        const totalSelectable = nonDisposed.length + cards.length
+        const selKeys = nonDisposed
+          .filter((k) => selectedKeyIds.has(k.id))
+          .map((k) => k.id)
+        const selCards = cards
+          .filter((c) => selectedCardIds.has(c.cardId))
+          .map((c) => c.cardId)
+        const selectedCount = selKeys.length + selCards.length
+
+        if (selectedCount === 0) continue
+
+        if (selectedCount === totalSelectable) {
+          const result = await handleReturnKeys({
+            keyIds: keys.map((k) => k.id),
+            cardIds: cards.map((c) => c.cardId),
+            availableToNextTenantFrom: availableIso,
+            selectedForReceipt: selKeys,
+            selectedCardsForReceipt: selCards,
+            lease,
+            comment: signedComment,
+          })
+          if (!result.success) {
+            failures.push(result.message ?? 'Okänt fel')
+          }
+        } else {
+          const result = await handlePartialReturn({
+            oldLoanId: loanId,
+            selectedKeyIds: new Set(selKeys),
+            selectedCardIds: new Set(selCards),
+            availableToNextTenantFrom: availableIso,
+            lease,
+            comment: signedComment,
+          })
+          if (!result.success) {
+            failures.push(result.message ?? 'Okänt fel')
+          } else if (result.fellBackToReturnOnly) {
+            warnings++
+          }
+        }
+      }
+
+      if (failures.length > 0) {
+        toast({
+          title: 'Partiell retur misslyckades för vissa lån',
+          description: failures.join('\n'),
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (warnings > 0) {
+        toast({
+          title: 'Partiell retur klar — varning',
+          description:
+            'Det fanns ingen ursprunglig låneblankett att kombinera; den nya låneblanketten innehåller bara återlämningskvittensen.',
+        })
+      } else {
+        toast({
+          title: 'Partiell retur klar',
+          description: 'Valda nycklar/droppar är återlämnade.',
+        })
+      }
+      onOpenChange(false)
+      onSuccess()
+    } catch (err: any) {
+      toast({
+        title: 'Fel',
+        description: err?.message || 'Kunde inte genomföra partiell retur.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  // Determine if any affected loan has a partial selection (some non-disposed
+  // keys + cards selected, but not all). Disposed keys are auto-included so
+  // they don't count toward the "selectable" total.
+  const partialMode = (() => {
+    const affectedLoanIds = new Set([
+      ...keysByLoan.map((k) => k.loanId),
+      ...cardsByLoan.map((c) => c.loanId),
+    ])
+    for (const loanId of affectedLoanIds) {
+      const keys = keysByLoan.find((k) => k.loanId === loanId)?.keys ?? []
+      const cards = cardsByLoan.find((c) => c.loanId === loanId)?.cards ?? []
+      const nonDisposed = keys.filter((k) => !k.disposed)
+      const total = nonDisposed.length + cards.length
+      const sel =
+        nonDisposed.filter((k) => selectedKeyIds.has(k.id)).length +
+        cards.filter((c) => selectedCardIds.has(c.cardId)).length
+      if (sel > 0 && sel < total) return true
+    }
+    return false
+  })()
+
   const totalKeys = keysByLoan.reduce(
     (sum, loanInfo) => sum + loanInfo.keys.length,
     0
@@ -306,7 +443,19 @@ export function ReturnKeysDialog({
                           className="mt-0.5"
                         />
                         <div className="flex-1">
-                          <div className="font-medium">{key.keyName}</div>
+                          <div className="font-medium flex items-center gap-1">
+                            {key.keyName}
+                            {key.isOrphan && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Nyckeln är inte kopplad till hyresobjektet
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {KeyTypeLabels[key.keyType]}
                             {key.keySystem?.systemCode &&
@@ -334,8 +483,14 @@ export function ReturnKeysDialog({
                         key={key.id}
                         className="p-3 border rounded-lg bg-destructive/5 border-destructive/20 text-sm"
                       >
-                        <div className="font-medium text-destructive">
+                        <div className="font-medium text-destructive flex items-center gap-1">
                           {key.keyName}
+                          {key.isOrphan && (
+                            <AlertCircle
+                              className="h-3.5 w-3.5 text-destructive"
+                              aria-label="Nyckeln är inte kopplad till hyresobjektet"
+                            />
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {KeyTypeLabels[key.keyType]}
@@ -385,8 +540,18 @@ export function ReturnKeysDialog({
                     className="mt-0.5"
                   />
                   <div className="flex-1">
-                    <div className="font-medium">
+                    <div className="font-medium flex items-center gap-1">
                       {card.name || card.cardId}
+                      {card.isOrphan && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Droppen är inte kopplad till hyresobjektet
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -439,9 +604,21 @@ export function ReturnKeysDialog({
       leftContent={leftContent}
       rightContent={rightContent}
       isProcessing={isProcessing}
-      onAccept={handleAccept}
-      acceptButtonText="Återlämna"
-      totalCount={totalItems}
+      onAccept={partialMode ? handlePartialAccept : handleAccept}
+      acceptButtonText={partialMode ? 'Partiell retur' : 'Återlämna'}
+      primaryLabel={partialMode ? 'Partiell retur' : 'Återlämna'}
+      totalCount={
+        partialMode ? selectedKeyIds.size + selectedCardIds.size : totalItems
+      }
+      secondaryAction={
+        partialMode
+          ? {
+              label: 'Retur med saknade nycklar',
+              onClick: handleAccept,
+              variant: 'secondary',
+            }
+          : undefined
+      }
     />
   )
 }

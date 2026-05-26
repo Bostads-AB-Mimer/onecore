@@ -21,7 +21,11 @@ import {
   XledgerContactSchema,
   RentInvoiceRowSchema,
 } from './schemas/v1'
-import { MiscellaneousInvoicePayload, MiscellaneousInvoiceRow } from './economy'
+import {
+  MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceRow,
+} from './economy'
 import { XledgerProjectSchema } from './schemas/v1/project'
 
 interface Contact {
@@ -426,5 +430,6 @@ export type {
   CommentType,
   Comment,
   MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceArticle,
   MiscellaneousInvoiceRow,
 }

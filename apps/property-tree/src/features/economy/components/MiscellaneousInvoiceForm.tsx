@@ -118,7 +118,7 @@ export function MiscellaneousInvoiceForm() {
   )
 
   const [invoiceRows, setInvoiceRows] = useState<MiscellaneousInvoiceRow[]>([
-    { price: '', amount: 1, articleId: '', articleName: '' },
+    { price: '', amount: 1 },
   ])
   const [selectedProject, setSelectedProject] = useState<XledgerProject | null>(
     null
@@ -180,7 +180,7 @@ export function MiscellaneousInvoiceForm() {
     }
 
     const hasValidInvoiceRows = invoiceRows.some(
-      (row) => row.articleId !== '' && !isNaN(parseFloat(row.price))
+      (row) => row.article?.id !== '' && !isNaN(parseFloat(row.price))
     )
     if (!hasValidInvoiceRows) {
       newErrors.articles = 'Minst en artikel eller tjänst måste läggas till'
@@ -202,13 +202,24 @@ export function MiscellaneousInvoiceForm() {
       return
     }
 
-    const rows = [...invoiceRows]
+    const rows = invoiceRows.map((row) => {
+      // Some articles should be sent to Xledger with VAT excluded
+      if (row.article?.vatExcluded) {
+        const vat = 0.25
+
+        return {
+          ...row,
+          price: (parseFloat(row.price) / (1 + vat)).toString(),
+        }
+      }
+
+      return row
+    })
     if (administrativeCosts) {
       const article = getArticleById('329000')
       if (article) {
         rows.push({
-          articleId: article.id,
-          articleName: article.name,
+          article,
           price: article.standardPrice.toString(),
           amount: 1,
         })
@@ -240,9 +251,7 @@ export function MiscellaneousInvoiceForm() {
     setSelectedTenant(null)
     setLeaseId('')
     setSelectedLease(null)
-    setInvoiceRows([
-      { price: '', amount: 1, articleId: '', articleName: '', text: '' },
-    ])
+    setInvoiceRows([{ price: '', amount: 1, text: '' }])
     setSelectedProject(null)
     setComment('')
     setAdministrativeCosts(false)

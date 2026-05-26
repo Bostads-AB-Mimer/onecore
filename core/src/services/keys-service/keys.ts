@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { KeysApi, CardsApi } from '../../adapters/keys-adapter'
-import { createLogEntry } from './helpers'
+import { createLogEntry, enrichWithContacts } from './helpers'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -26,6 +26,16 @@ export const routes = (router: KoaRouter) => {
    *           minimum: 1
    *           default: 20
    *         description: Number of records per page
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the keys'
+   *           `activeLoanContact` field and attaches them as a `contacts`
+   *           sidecar keyed by contactCode. Soft fails — if the contacts
+   *           service errors, keys are still returned without the sidecar.
    *     responses:
    *       200:
    *         description: Paginated list of keys
@@ -40,6 +50,11 @@ export const routes = (router: KoaRouter) => {
    *                       type: array
    *                       items:
    *                         $ref: '#/components/schemas/KeyDetails'
+   *                     contacts:
+   *                       type: object
+   *                       description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                       additionalProperties:
+   *                         $ref: '#/components/schemas/ContactV1'
    *       500:
    *         description: Server error
    *         content:
@@ -51,8 +66,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/keys', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const { includeContacts, ...listQuery } = ctx.query
 
-    const result = await KeysApi.list(ctx.query)
+    const result = await KeysApi.list(listQuery)
 
     if (!result.ok) {
       logger.error({ err: result.err, metadata }, 'Error fetching keys')
@@ -61,8 +77,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.content.map((k) => k.activeLoanContact),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { ...metadata, ...result.data }
+    ctx.body = {
+      ...metadata,
+      ...result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**
@@ -140,6 +168,16 @@ export const routes = (router: KoaRouter) => {
    *         name: updatedAt
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the keys'
+   *           `activeLoanContact` field and attaches them as a `contacts`
+   *           sidecar keyed by contactCode. Soft fails — if the contacts
+   *           service errors, keys are still returned without the sidecar.
    *     responses:
    *       200:
    *         description: Successfully retrieved paginated search results
@@ -154,6 +192,11 @@ export const routes = (router: KoaRouter) => {
    *                       type: array
    *                       items:
    *                         $ref: '#/components/schemas/KeyDetails'
+   *                     contacts:
+   *                       type: object
+   *                       description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                       additionalProperties:
+   *                         $ref: '#/components/schemas/ContactV1'
    *       400:
    *         description: Bad request
    *         content:
@@ -170,9 +213,15 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/keys/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['q', 'fields'])
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'fields',
+      'includeContacts',
+    ])
 
-    const result = await KeysApi.search(ctx.query)
+    const { includeContacts, ...searchQuery } = ctx.query
+
+    const result = await KeysApi.search(searchQuery)
 
     if (!result.ok) {
       if (result.err === 'bad-request') {
@@ -186,8 +235,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.content.map((k) => k.activeLoanContact),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { ...metadata, ...result.data }
+    ctx.body = {
+      ...metadata,
+      ...result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**

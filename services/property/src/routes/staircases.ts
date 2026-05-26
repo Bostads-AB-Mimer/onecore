@@ -6,8 +6,14 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 
-import { getStaircasesByBuildingCode } from '../adapters/staircase-adapter'
-import { staircasesQueryParamsSchema } from '../types/staircase'
+import {
+  getStaircasesByBuildingCode,
+  searchStaircases,
+} from '../adapters/staircase-adapter'
+import {
+  staircasesQueryParamsSchema,
+  staircasesSearchQueryParamsSchema,
+} from '../types/staircase'
 import { parseRequest } from '../middleware/parse-request'
 
 /**
@@ -86,6 +92,63 @@ export const routes = (router: KoaRouter) => {
 
         ctx.body = {
           content: responseContent,
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /staircases/search:
+   *   get:
+   *     summary: Search staircases
+   *     description: |
+   *       Searches for staircases by name (caption). The query is matched against
+   *       the staircase name using a case-insensitive contains operation. Staircases
+   *       with placeholder codes ('00', '99') are excluded to stay consistent with
+   *       the sidebar navigation. Returns up to 10 results.
+   *     tags:
+   *       - Staircases
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The search query. Matches against staircase name.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved the staircases.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Staircase'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get(
+    ['(.*)/staircases/search'],
+    parseRequest({ query: staircasesSearchQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const staircases = await searchStaircases(ctx.request.parsedQuery.q)
+
+        ctx.body = {
+          content: staircases,
           ...metadata,
         }
       } catch (err) {

@@ -52,14 +52,21 @@ describe('Contracts', () => {
 
       attachContactsV1Routes(apiRouter, config as Config)
 
-      const canonicalOpenAPIJSON = JSON.parse(
-        fs.readFileSync(
-          path.join(__dirname, 'v1/contacts.openapi.json'),
-          'utf8'
-        )
-      )
-
+      const canonicalPath = path.join(__dirname, 'v1/contacts.openapi.json')
       const generatedOpenAPIJSON = apiRouter.openapiJson()
+
+      // Set UPDATE_CONTRACTS=true to overwrite the canonical snapshot.
+      // Only do this for *deliberate* v1 contract changes, then commit the diff.
+      if (process.env.UPDATE_CONTRACTS === 'true') {
+        fs.writeFileSync(
+          canonicalPath,
+          JSON.stringify(generatedOpenAPIJSON, null, 2) + '\n'
+        )
+      }
+
+      const canonicalOpenAPIJSON = JSON.parse(
+        fs.readFileSync(canonicalPath, 'utf8')
+      )
 
       test('contacts/v1 API route schemas - MAY NOT CHANGE', () => {
         expect(generatedOpenAPIJSON).toEqual(canonicalOpenAPIJSON)

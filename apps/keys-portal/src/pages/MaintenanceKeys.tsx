@@ -24,17 +24,28 @@ import {
   updateKeyBundle,
 } from '@/services/api/keyBundleService'
 import { keyService } from '@/services/api/keyService'
-import type { KeyLoanWithDetails, KeyDetails, Contact } from '@/services/types'
+import type {
+  KeyLoanWithDetails,
+  KeyDetails,
+  Contact,
+  ContactV1,
+} from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 
 export default function MaintenanceKeys() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null)
   const [loans, setLoans] = useState<KeyLoanWithDetails[]>([])
+  const [loanContactsByCode, setLoanContactsByCode] = useState<
+    Record<string, ContactV1>
+  >({})
   const [loansLoading, setLoansLoading] = useState(false)
   const [hasLoadedLoans, setHasLoadedLoans] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [bundleKeys, setBundleKeys] = useState<KeyDetails[]>([])
+  const [bundleContactsByCode, setBundleContactsByCode] = useState<
+    Record<string, ContactV1>
+  >({})
   const [bundleKeysLoading, setBundleKeysLoading] = useState(false)
   const [keySystemMap, setKeySystemMap] = useState<Record<string, string>>({})
   const [loansKeySystemMap, setLoansKeySystemMap] = useState<
@@ -103,7 +114,7 @@ export default function MaintenanceKeys() {
 
     const fetchLoanedKeyIds = async () => {
       try {
-        const loans = await keyLoanService.getByContactWithKeys(
+        const { loans } = await keyLoanService.getByContactWithKeys(
           searchResult.contact!.contactCode,
           undefined,
           false
@@ -129,18 +140,30 @@ export default function MaintenanceKeys() {
       setLoansLoading(true)
       try {
         let allLoans: KeyLoanWithDetails[] = []
+        let contactsByCode: Record<string, ContactV1> = {}
 
         if (searchResult.type === 'contact' && searchResult.contact) {
-          allLoans = await keyLoanService.getByContactWithKeys(
-            searchResult.contact.contactCode
+          const result = await keyLoanService.getByContactWithKeys(
+            searchResult.contact.contactCode,
+            undefined,
+            undefined,
+            { includeContacts: true }
           )
+          allLoans = result.loans
+          contactsByCode = result.contacts
         } else if (searchResult.type === 'bundle' && searchResult.bundle) {
-          allLoans = await keyLoanService.getByBundleWithKeys(
-            searchResult.bundle.id
+          const result = await keyLoanService.getByBundleWithKeys(
+            searchResult.bundle.id,
+            undefined,
+            undefined,
+            { includeContacts: true }
           )
+          allLoans = result.loans
+          contactsByCode = result.contacts
         }
 
         setLoans(allLoans)
+        setLoanContactsByCode(contactsByCode)
         setHasLoadedLoans(true)
 
         // Fetch key systems for the keys in all loans
@@ -200,9 +223,11 @@ export default function MaintenanceKeys() {
           includeLoans: true,
           includeEvents: true,
           includeKeySystem: true,
+          includeContacts: true,
         })
         if (data) {
           setBundleKeys(data.keys)
+          setBundleContactsByCode(data.contacts ?? {})
 
           // Fetch key systems for the keys
           const uniqueKeySystemIds = [
@@ -371,10 +396,12 @@ export default function MaintenanceKeys() {
                             includeLoans: true,
                             includeEvents: true,
                             includeKeySystem: true,
+                            includeContacts: true,
                           }
                         )
                         if (data) {
                           setBundleKeys(data.keys)
+                          setBundleContactsByCode(data.contacts ?? {})
 
                           // Fetch key systems for the keys
                           const uniqueKeySystemIds = [
@@ -436,6 +463,7 @@ export default function MaintenanceKeys() {
                   <CardContent>
                     <KeyBundleKeysTable
                       keys={bundleKeys}
+                      contactsByCode={bundleContactsByCode}
                       bundleId={searchResult.bundle.id}
                       onRefresh={async () => {
                         try {
@@ -446,10 +474,12 @@ export default function MaintenanceKeys() {
                               includeLoans: true,
                               includeEvents: true,
                               includeKeySystem: true,
+                              includeContacts: true,
                             }
                           )
                           if (data) {
                             setBundleKeys(data.keys)
+                            setBundleContactsByCode(data.contacts ?? {})
 
                             // Fetch key systems for the keys
                             const uniqueKeySystemIds = [
@@ -514,6 +544,7 @@ export default function MaintenanceKeys() {
                 <CardContent className="p-0">
                   <MaintenanceLoansTable
                     loans={loans}
+                    contactsByCode={loanContactsByCode}
                     keySystemMap={loansKeySystemMap}
                     emptyMessage="Inga lån"
                     onLoanReturned={handleLoanReturn}

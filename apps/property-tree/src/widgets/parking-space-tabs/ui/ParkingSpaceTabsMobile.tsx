@@ -58,7 +58,7 @@ export function ParkingSpaceTabsMobile({
       title: 'Ärenden',
       content: (
         <WorkOrdersTabContent
-          contextType={ContextType.Residence}
+          contextType={ContextType.ParkingSpace}
           id={parkingSpace.rentalId}
         />
       ),

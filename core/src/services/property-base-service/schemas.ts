@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { property } from '@onecore/types'
 
 export { CreateRoomRequestSchema, type CreateRoomRequest } from '@onecore/types'
 
@@ -1132,3 +1133,22 @@ export const AddComponentResponseSchema = z.object({
 
 export type AddComponentRequest = z.infer<typeof AddComponentRequestSchema>
 export type AddComponentResponse = z.infer<typeof AddComponentResponseSchema>
+
+// ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
+// Re-exported from @onecore/types (single source of truth shared with the
+// property service). Keep the local export names so consumers / swagger
+// registration are unaffected.
+
+export const ApartmentTemperaturesIntervalSchema =
+  property.ApartmentTemperaturesIntervalSchema
+export const ApartmentTemperaturesQueryParamsSchema =
+  property.ApartmentTemperaturesQuerySchema
+export const ApartmentTemperaturePointSchema =
+  property.ApartmentTemperaturePointSchema
+export const ApartmentTemperatureSeriesSchema =
+  property.ApartmentTemperatureSeriesSchema
+export const ApartmentTemperaturesResponseSchema =
+  property.ApartmentTemperaturesResponseSchema
+
+export type ApartmentTemperaturesResponse =
+  property.ApartmentTemperaturesResponse
