@@ -1199,3 +1199,9 @@ export const CostCenterSummarySchema = z.object({
 })
 
 export type CostCenterSummary = z.infer<typeof CostCenterSummarySchema>
+
+export const KvvAreaSummarySchema = z.object({
+  code: z.string(),
+})
+
+export type KvvAreaSummary = z.infer<typeof KvvAreaSummarySchema>
