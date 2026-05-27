@@ -57,8 +57,6 @@ export const closeDb = () => {
 export const enrichInvoiceWithAccounting = async (
   invoice: InvoiceWithAccounting
 ): Promise<InvoiceWithAccounting> => {
-  console.log('invoices', invoice)
-
   const year = invoice.invoiceDate.getFullYear()
   const rentalIds = invoice.invoiceRows.map(
     (invoiceRow: InvoiceRowWithAccounting) => invoiceRow.rentalObject as string
