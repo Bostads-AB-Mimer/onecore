@@ -66,6 +66,9 @@ export function useInspectionForm(
     // callback only updates the in-memory inspection form so the inspector
     // can immediately fill it in.
     handleAddRoom: formState.addServerRoom,
+    // Drop a server-deleted room from local state after a successful
+    // DELETE /inspections/internal/:id/rooms/:roomId.
+    handleRemoveRoom: formState.removeServerRoom,
 
     // Room operations
     expandedRoomIds: roomOps.expandedRoomIds,

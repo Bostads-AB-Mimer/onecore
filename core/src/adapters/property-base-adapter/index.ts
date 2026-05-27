@@ -918,6 +918,36 @@ export async function createRoom(
   }
 }
 
+export async function deleteRoom(
+  roomId: string
+): Promise<AdapterResult<void, 'not-found' | 'has-components' | 'unknown'>> {
+  try {
+    const response = await client().DELETE('/rooms/{id}', {
+      params: { path: { id: roomId } },
+    })
+
+    const status = response.response?.status
+    if (status === 204) {
+      return { ok: true, data: undefined }
+    }
+    if (status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (status === 409) {
+      return { ok: false, err: 'has-components' }
+    }
+
+    logger.error(
+      { status, error: response.error, roomId },
+      'property-base-adapter.deleteRoom unexpected response'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err, roomId }, 'property-base-adapter.deleteRoom')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
 
 export { getApartmentTemperatures } from './apartment-temperatures'

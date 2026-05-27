@@ -1,6 +1,6 @@
 import { InspectionStatusFilter } from '@/shared/types/inspection'
 
-import { GET, PATCH, POST } from './baseApi'
+import { ApiError, DELETE, GET, PATCH, POST } from './baseApi'
 import { components } from './generated/api-types'
 
 type InspectionWithSource = components['schemas']['InspectionWithSource']
@@ -235,5 +235,24 @@ export const inspectionService = {
     const room = response.data?.content?.room
     if (!room) throw new Error('Failed to add inspection room')
     return room
+  },
+
+  async removeInspectionRoom(
+    inspectionId: string,
+    roomId: string
+  ): Promise<void> {
+    const response = await DELETE(
+      '/inspections/internal/{inspectionId}/rooms/{roomId}',
+      { params: { path: { inspectionId, roomId } } }
+    )
+    const status = response.response.status
+    if (status === 204) return
+    if (status === 404) {
+      throw new ApiError(404, 'room-not-added-in-this-inspection')
+    }
+    if (status === 409) {
+      throw new ApiError(409, 'room-has-components')
+    }
+    throw new ApiError(status, `Failed to remove room (status ${status})`)
   },
 }

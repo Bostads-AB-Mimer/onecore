@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, ChevronLeft, Plus } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, Plus, Trash2 } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
@@ -23,6 +23,7 @@ import { useInspectionForm } from '../hooks/useInspectionForm'
 import { InspectionInfoSection } from './InspectionInfoSection'
 import { InspectionMoreMenu } from './InspectionMoreMenu'
 import { InspectionSummary } from './InspectionSummary'
+import { RemoveInspectionRoomDialog } from './RemoveInspectionRoomDialog'
 import { RoomInspectionEditor } from './RoomInspectionEditor'
 import { SaveDraftConfirmDialog } from './SaveDraftConfirmDialog'
 type Inspection = components['schemas']['InternalInspection']
@@ -69,6 +70,7 @@ export function InspectionForm({
     rooms,
     inspectionData,
     handleAddRoom,
+    handleRemoveRoom,
     handleConditionUpdate,
     handleActionUpdate,
     handleComponentNoteUpdate,
@@ -102,6 +104,9 @@ export function InspectionForm({
 
   const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
   const [step, setStep] = useState<'rooms' | 'summary'>('rooms')
+  const [removeTargetRoomId, setRemoveTargetRoomId] = useState<string | null>(
+    null
+  )
 
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
     if (!tenant) return undefined
@@ -170,10 +175,25 @@ export function InspectionForm({
                           {room.name}
                         </span>
                         {roomData?.isAddedInThisInspection && (
-                          <Badge variant="secondary" className="gap-1">
-                            <Plus className="h-3 w-3" />
-                            Tillagt
-                          </Badge>
+                          <>
+                            <Badge variant="secondary" className="gap-1">
+                              <Plus className="h-3 w-3" />
+                              Tillagt
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 hover:text-destructive"
+                              aria-label="Ta bort rum"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
+                                setRemoveTargetRoomId(room.id)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
                       </div>
                       {isCompleted && (
@@ -376,6 +396,15 @@ export function InspectionForm({
         open={isDraftConfirmOpen}
         onOpenChange={setIsDraftConfirmOpen}
         onConfirm={handleConfirmSaveDraft}
+      />
+
+      <RemoveInspectionRoomDialog
+        inspectionId={existingInspection.id}
+        roomId={removeTargetRoomId}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTargetRoomId(null)
+        }}
+        onRoomRemoved={handleRemoveRoom}
       />
     </div>
   )

@@ -468,6 +468,41 @@ export async function saveInspectionDraft(
 }
 
 /**
+ * Drops the tracking row that marks a room as added during the inspection.
+ * Returns 'not-found' if no row matched — the caller decides whether that's
+ * an error (e.g. core's orchestration treats it as a 404).
+ */
+export async function removeAddedRoomFromInspection(
+  dbConnection: Knex = db,
+  params: { inspectionId: number; xpandRoomId: string }
+): Promise<AdapterResult<void, 'not-found' | 'unknown'>> {
+  try {
+    const deleted = await dbConnection('inspection_added_room')
+      .where({
+        inspectionId: params.inspectionId,
+        xpandRoomId: params.xpandRoomId,
+      })
+      .delete()
+
+    if (deleted === 0) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: true, data: undefined }
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        inspectionId: params.inspectionId,
+        xpandRoomId: params.xpandRoomId,
+      },
+      'db-adapter.removeAddedRoomFromInspection'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
  * Records that the inspector added a room (already created in Xpand by the
  * property service) during the current inspection. The UNIQUE constraint on
  * (inspectionId, xpandRoomId) means a duplicate call is harmless — we catch

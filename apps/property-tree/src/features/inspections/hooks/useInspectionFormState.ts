@@ -19,6 +19,7 @@ export interface UseInspectionFormStateReturn {
     React.SetStateAction<Record<string, InspectionRoom>>
   >
   addServerRoom: (room: Room) => void
+  removeServerRoom: (roomId: string) => void
   completedRooms: number
   totalRooms: number
   isAllRoomsComplete: boolean
@@ -84,6 +85,19 @@ export function useInspectionFormState(
     })
   }, [])
 
+  // Symmetric to addServerRoom: drops a room from local state after a
+  // successful DELETE /inspections/internal/:id/rooms/:roomId. The next
+  // draftRooms save naturally omits the room.
+  const removeServerRoom = useCallback((roomId: string): void => {
+    setRooms((prev) => prev.filter((r) => r.id !== roomId))
+    setInspectionData((prev) => {
+      if (!prev[roomId]) return prev
+      const next = { ...prev }
+      delete next[roomId]
+      return next
+    })
+  }, [])
+
   // Calculate completion metrics
   const completedRooms = Object.values(inspectionData).filter(
     (room) => room.isHandled
@@ -97,6 +111,7 @@ export function useInspectionFormState(
     inspectionData,
     setInspectionData,
     addServerRoom,
+    removeServerRoom,
     completedRooms,
     totalRooms,
     isAllRoomsComplete,

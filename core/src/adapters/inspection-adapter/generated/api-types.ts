@@ -479,6 +479,35 @@ export interface paths {
       }
     }
   }
+  '/inspections/internal/{inspectionId}/added-rooms/{roomId}': {
+    /** Drop the tracking row for a room added during the inspection. */
+    delete: {
+      parameters: {
+        path: {
+          inspectionId: string
+          roomId: string
+        }
+      }
+      responses: {
+        /** @description Tracking row dropped. */
+        204: {
+          content: never
+        }
+        /** @description Invalid inspectionId. */
+        400: {
+          content: never
+        }
+        /** @description No tracking row matched. */
+        404: {
+          content: never
+        }
+        /** @description Internal error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>

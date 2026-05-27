@@ -315,6 +315,43 @@ export const saveInspectionDraft = async (
   }
 }
 
+export const removeAddedRoomFromInspection = async (
+  inspectionId: string,
+  xpandRoomId: string
+): Promise<AdapterResult<void, 'not-found' | 'unknown'>> => {
+  try {
+    const fetchResponse = await client().DELETE(
+      '/inspections/internal/{inspectionId}/added-rooms/{roomId}',
+      {
+        params: { path: { inspectionId, roomId: xpandRoomId } },
+      }
+    )
+
+    if (fetchResponse.response.status === 204) {
+      return { ok: true, data: undefined }
+    }
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    logger.error(
+      {
+        status: fetchResponse.response.status,
+        inspectionId,
+        xpandRoomId,
+      },
+      'inspection-adapter.removeAddedRoomFromInspection unexpected status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error(
+      { error, inspectionId, xpandRoomId },
+      'inspection-adapter.removeAddedRoomFromInspection'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const addRoomToInspection = async (
   inspectionId: string,
   xpandRoomId: string

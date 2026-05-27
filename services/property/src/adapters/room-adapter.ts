@@ -17,6 +17,20 @@ export class ResidenceNotFoundError extends Error {
   }
 }
 
+export class RoomNotFoundError extends Error {
+  constructor(roomId: string) {
+    super(`Room not found: ${roomId}`)
+    this.name = 'RoomNotFoundError'
+  }
+}
+
+export class RoomHasComponentsError extends Error {
+  constructor(roomId: string) {
+    super(`Room ${roomId} has installed components and cannot be deleted`)
+    this.name = 'RoomHasComponentsError'
+  }
+}
+
 const roomSelect = {
   id: true,
   propertyObjectId: true,
@@ -368,4 +382,44 @@ export const createRoom = async (input: CreateRoomRequest): Promise<Room> => {
     )
   }
   return room
+}
+
+/**
+ * Hard-deletes a room from Xpand. Symmetric to createRoom — removes the
+ * babuf (structure link), barum (room) and cmobj (property object) rows in a
+ * single transaction.
+ *
+ * Refuses with RoomHasComponentsError when any committed componentInstallations
+ * row references the room's cmobj with deinstallationDate IS NULL — orphaning
+ * those rows would silently break component reads.
+ */
+export const deleteRoom = async (roomId: string): Promise<void> => {
+  const room = await prisma.room.findUnique({
+    where: { id: roomId },
+    select: { id: true, propertyObjectId: true },
+  })
+  if (!room) {
+    throw new RoomNotFoundError(roomId)
+  }
+
+  // Components precheck runs inside the transaction so a concurrent install
+  // between check and delete can't orphan componentInstallations.spaceId.
+  // Cheap on a row count, and the only reason to precheck at all is
+  // correctness — so it has to be airtight.
+  await prisma.$transaction(async (tx) => {
+    const installation = await tx.componentInstallations.findFirst({
+      where: {
+        spaceId: room.propertyObjectId,
+        deinstallationDate: null,
+      },
+      select: { id: true },
+    })
+    if (installation) {
+      throw new RoomHasComponentsError(roomId)
+    }
+
+    await tx.$executeRaw`DELETE FROM babuf WHERE keycmobj = ${room.propertyObjectId}`
+    await tx.$executeRaw`DELETE FROM barum WHERE keybarum = ${roomId}`
+    await tx.$executeRaw`DELETE FROM cmobj WHERE keycmobj = ${room.propertyObjectId}`
+  })
 }
