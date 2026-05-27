@@ -12,6 +12,7 @@ export { StewardColumn } from './ui/admin/StewardColumn'
 // Hooks
 export { useCostCenters } from './hooks/useCostCenters'
 export { useCostCenterTree } from './hooks/useCostCenterTree'
+export { useCanEditPropertyAreas } from './hooks/useCanEditPropertyAreas'
 
 // Types
 export type {

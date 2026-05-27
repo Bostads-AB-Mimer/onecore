@@ -16,6 +16,15 @@ const PROPERTY_MANAGER_ROLE = 'property-manager'
 const DISTRICT_MANAGER_ROLE = 'district-manager'
 const DEPUTY_DISTRICT_MANAGER_ROLE = 'deputy-district-manager'
 
+// Realm role carried in the JWT's realm_access.roles. Members of the
+// "Förvaltningsområden" Keycloak group have it assigned via role mapping.
+// Backend PATCH endpoints (MIM-1780, MIM-1781) gate on the same constant.
+const PROPERTY_AREA_WRITE_ROLE = 'property-areas:write'
+
+function getPropertyAreaCapabilities(userRoles: string[]) {
+  return { canEdit: userRoles.includes(PROPERTY_AREA_WRITE_ROLE) }
+}
+
 function toUserSummary(user: KeycloakUser) {
   return {
     id: user.id,
@@ -178,12 +187,15 @@ export const routes = (router: KoaRouter) => {
       return u ? toUserSummary(u) : null
     }
 
+    const userRoles: string[] = ctx.state.user?.realm_access?.roles ?? []
+
     const composed: CostCenterTree = {
       id: raw.id,
       code: raw.code,
       name: raw.name,
       lead: lookup(raw.leadKeycloakUserId, leadById),
       deputy: lookup(raw.deputyKeycloakUserId, deputyById),
+      capabilities: getPropertyAreaCapabilities(userRoles),
       kvvAreas: raw.kvvAreas.map((area) => ({
         id: area.id,
         code: area.code,
