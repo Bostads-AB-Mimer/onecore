@@ -54,6 +54,20 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('/invoices/:invoiceId/pdf', async (ctx) => {
+    const result = await economyAdapter.getInvoicePdf(ctx.params.invoiceId)
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.set('Content-Disposition', result.data.contentDisposition)
+    ctx.body = result.data.data
+  })
+
   router.get('/invoices/:invoiceId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getInvoiceByInvoiceId(

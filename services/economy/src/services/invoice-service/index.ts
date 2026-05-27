@@ -20,6 +20,7 @@ import {
   getLeaseDetails,
 } from './service'
 import { getInvoiceDetails } from './service'
+import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -50,6 +51,20 @@ export const routes = (router: KoaRouter) => {
         message: error.message,
       }
     }
+  })
+
+  router.get('(.*)/invoices/:invoiceId/pdf', async (ctx) => {
+    const result = await getInvoicePdf(ctx.params.invoiceId)
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.set('Content-Disposition', result.data.contentDisposition)
+    ctx.body = result.data.data
   })
 
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
