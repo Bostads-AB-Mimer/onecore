@@ -1,6 +1,9 @@
 import nock from 'nock'
 import config from '../../common/config'
-import { syncPayments, notifySyncFailure } from './sync-xledger-payments-to-tenfast'
+import {
+  syncPayments,
+  notifySyncFailure,
+} from './sync-xledger-payments-to-tenfast'
 
 const ECONOMY_URL = config.economyService.url
 const COMM_URL = config.communicationService.url
