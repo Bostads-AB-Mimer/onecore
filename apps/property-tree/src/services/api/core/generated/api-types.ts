@@ -417,9 +417,9 @@ export interface paths {
           /** @description Area codes (Område) */
           areaCodes?: string[]
           /** @description District names */
-          districtNames?: string[]
+          districtNames?: string[];
           /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[]
+          buildingManager?: string[];
           /** @description Page number */
           page?: number
           /** @description Items per page */
@@ -540,11 +540,11 @@ export interface paths {
           /** @description Area codes (Område) */
           areaCodes?: string[]
           /** @description District names */
-          districtNames?: string[]
+          districtNames?: string[];
           /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[]
-        }
-      }
+          buildingManager?: string[];
+        };
+      };
       responses: {
         /** @description Excel file download */
         200: {
@@ -586,11 +586,11 @@ export interface paths {
           /** @description Area codes (Område) */
           areaCodes?: string[]
           /** @description District names */
-          districtNames?: string[]
+          districtNames?: string[];
           /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[]
-        }
-      }
+          buildingManager?: string[];
+        };
+      };
       responses: {
         /** @description Successful response with contact information */
         200: {
