@@ -17,6 +17,7 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
@@ -43,6 +44,59 @@ const getLeaseWithRelatedEntities = async (rentalId: string) => {
   const lease = await leasingAdapter.getLease(rentalId, 'true')
 
   return lease
+}
+
+type LeaseQuery = Record<string, string | string[] | undefined>
+
+type LeaseQueryResolution =
+  | { ok: true; query: LeaseQuery }
+  | { ok: false; status: 500; reason: string }
+  | { ok: false; status: 200; emptyResult: true }
+
+/**
+ * Resolves the `buildingManager` query param (Keycloak user IDs) to
+ * `kvvAreaCodes` (area codes) using the property-base service. The
+ * `buildingManager` key is always removed from the forwarded query because the
+ * leasing service no longer accepts it.
+ *
+ * - When no user IDs are present, the query is forwarded unchanged (minus the
+ *   `buildingManager` key).
+ * - When the property-base lookup fails, returns a 500.
+ * - When the lookup returns no kvv-areas, short-circuits to an empty 200
+ *   response because no leases can match.
+ */
+async function resolveBuildingManagerToKvvAreaCodes(
+  query: LeaseQuery
+): Promise<LeaseQueryResolution> {
+  const raw = query.buildingManager
+  const userIds: string[] = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string' && raw.length > 0
+      ? [raw]
+      : []
+
+  // Strip buildingManager from forwarded query regardless of resolution path.
+  const { buildingManager: _omit, ...rest } = query
+
+  if (userIds.length === 0) {
+    return { ok: true, query: rest }
+  }
+
+  const lookup =
+    await propertyBaseAdapter.findKvvAreaCodesByResponsibles(userIds)
+  if (!lookup.ok) {
+    return {
+      ok: false,
+      status: 500,
+      reason: 'Failed to resolve building managers',
+    }
+  }
+  if (lookup.data.length === 0) {
+    // No kvv-areas assigned to any of those users -> no leases can match.
+    return { ok: false, status: 200, emptyResult: true }
+  }
+
+  return { ok: true, query: { ...rest, kvvAreaCodes: lookup.data } }
 }
 
 /**
@@ -166,7 +220,7 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names (Kvartersvärd)
+   *         description: Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering
    *       - in: query
    *         name: page
    *         schema:
@@ -324,8 +378,25 @@ export const routes = (router: KoaRouter) => {
   router.get('/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
+    if (!resolved.ok) {
+      if (resolved.status === 500) {
+        ctx.status = 500
+        ctx.body = { error: resolved.reason, ...metadata }
+        return
+      }
+      // No matching kvv-areas -> empty paginated response.
+      ctx.status = 200
+      ctx.body = {
+        content: [],
+        _meta: { totalRecords: 0, page: 1, limit: 50 },
+        ...metadata,
+      }
+      return
+    }
+
     try {
-      const result = await leasingAdapter.searchLeases(ctx.query)
+      const result = await leasingAdapter.searchLeases(resolved.query)
 
       ctx.status = 200
       ctx.body = result
@@ -429,7 +500,7 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names (Kvartersvärd)
+   *         description: Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering
    *     produces:
    *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
    *     responses:
@@ -443,8 +514,25 @@ export const routes = (router: KoaRouter) => {
   router.get('/leases/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
+    if (!resolved.ok) {
+      if (resolved.status === 500) {
+        ctx.status = 500
+        ctx.body = { error: resolved.reason, ...metadata }
+        return
+      }
+      // No matching kvv-areas -> no leases can match. Return a friendly JSON
+      // response rather than fabricating an empty Excel file.
+      ctx.status = 200
+      ctx.body = {
+        message: 'No leases matched the building manager filter',
+        ...metadata,
+      }
+      return
+    }
+
     try {
-      const result = await leasingAdapter.exportLeasesToExcel(ctx.query)
+      const result = await leasingAdapter.exportLeasesToExcel(resolved.query)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Lease export failed')
@@ -551,7 +639,7 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names (Kvartersvärd)
+   *         description: Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering
    *     responses:
    *       '200':
    *         description: Successful response with contact information
@@ -572,7 +660,20 @@ export const routes = (router: KoaRouter) => {
   router.get('/contacts/from-lease-search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const result = await leasingAdapter.getContactsByFilters(ctx.query)
+    const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
+    if (!resolved.ok) {
+      if (resolved.status === 500) {
+        ctx.status = 500
+        ctx.body = { error: resolved.reason, ...metadata }
+        return
+      }
+      // No matching kvv-areas -> no contacts can match.
+      ctx.status = 200
+      ctx.body = { content: [], ...metadata }
+      return
+    }
+
+    const result = await leasingAdapter.getContactsByFilters(resolved.query)
 
     if (!result.ok) {
       ctx.status = 500
