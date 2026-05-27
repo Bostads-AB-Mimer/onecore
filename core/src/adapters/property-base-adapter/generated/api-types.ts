@@ -2142,6 +2142,39 @@ export interface paths {
       }
     }
   }
+  '/kvv-areas': {
+    /**
+     * List kvv-area codes filtered by responsible Keycloak users
+     * @description Returns the codes of kvv-areas (förvaltningsområden) whose
+     * responsibleKeycloakUserId is one of the provided user ids. Repeat the
+     * responsibleUserId query param for each user id. Returns an empty list
+     * if the param is omitted.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Keycloak user ids (repeatable) */
+          responsibleUserId?: string[]
+        }
+      }
+      responses: {
+        /** @description List of kvv-area codes */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                code: string
+              }[]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/components/analyze-image': {
     /**
      * Analyze component image(s) using AI
