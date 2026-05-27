@@ -104,14 +104,22 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
 
     async getUpdatedContacts(
       since: Date | null
-    ): Promise<AdapterResult<Contact[], 'unknown'>> {
+    ): Promise<
+      AdapterResult<{ contact: Contact; timestamp: Date }[], 'unknown'>
+    > {
       const params = since ? { since: since.toISOString() } : {}
       const response = await axios<SyncContactsResponseBody>(`/contacts/sync`, {
         params,
       })
 
       if (response.status === 200) {
-        return { ok: true, data: response.data.content.contacts }
+        const data = response.data.content.contacts.map(
+          (c: { contact: Contact; timestamp: string }) => ({
+            contact: c.contact,
+            timestamp: new Date(c.timestamp),
+          })
+        )
+        return { ok: true, data }
       }
 
       return { ok: false, err: 'unknown', statusCode: response.status }
