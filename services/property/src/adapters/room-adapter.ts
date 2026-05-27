@@ -411,10 +411,8 @@ export const deleteRoom = async (roomId: string): Promise<void> => {
     throw new RoomNotFoundError(roomId)
   }
 
-  // Components precheck runs inside the transaction so a concurrent install
-  // between check and delete can't orphan componentInstallations.spaceId.
-  // Cheap on a row count, and the only reason to precheck at all is
-  // correctness — so it has to be airtight.
+  // Precheck inside the tx — small race window remains under default
+  // isolation, accepted because installs don't happen mid-delete in practice.
   await prisma.$transaction(async (tx) => {
     const installation = await tx.componentInstallations.findFirst({
       where: {

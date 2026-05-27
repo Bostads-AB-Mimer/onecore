@@ -956,25 +956,51 @@ describe('inspection-service index', () => {
   })
 
   describe('DELETE /inspections/internal/:inspectionId/rooms/:roomId', () => {
-    // Builds a minimal InternalInspection with a single room. Only fields the
-    // orchestration route reads are populated — the rest is structural noise
-    // satisfying the generated type via a cast.
+    // Fully-typed minimal InternalInspection. The route only reads
+    // rooms[].roomId and rooms[].isAddedInThisInspection; the rest is
+    // populated to satisfy the schema.
     function buildInspectionWithRoom(
       roomId: string,
       isAddedInThisInspection: boolean
-    ) {
+    ): inspectionAdapter.InternalInspection {
       return {
+        id: '42',
+        status: 'Påbörjad',
+        date: '2026-01-01T00:00:00.000Z',
+        startedAt: null,
+        endedAt: null,
+        inspector: 'Test',
+        type: 'underhall',
+        residenceId: 'R1',
+        address: 'Addr',
+        apartmentCode: 'A1',
+        isFurnished: true,
+        leaseId: 'L1',
+        masterKeyAccess: null,
+        isTenantPresent: false,
+        isNewTenantPresent: false,
+        hasRemarks: false,
+        notes: null,
+        totalCost: null,
+        remarkCount: 0,
         rooms: [
           {
             roomId,
+            conditions: { details: '' },
+            actions: { details: [] },
+            componentNotes: { details: '' },
+            componentCosts: { details: 0 },
+            componentPhotos: { details: [] },
+            componentCostResponsibilities: { details: null },
+            photos: [],
+            isApproved: false,
+            isHandled: false,
+            detailComponents: [],
+            components: [],
             isAddedInThisInspection,
           },
         ],
-      } as unknown as Awaited<
-        ReturnType<typeof inspectionAdapter.getInternalInspectionById>
-      > extends { ok: true; data: infer T }
-        ? T
-        : never
+      }
     }
 
     it('returns 204 on happy path', async () => {
