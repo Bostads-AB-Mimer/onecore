@@ -16,10 +16,7 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
-import type {
-  LeaseChange,
-  SyncContactToLeasingPayload,
-} from '@onecore/types'
+import type { LeaseChange, SyncContactToLeasingPayload } from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
@@ -778,10 +775,9 @@ const getUpdatedLeases = async (
 ): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
   try {
     const params = since ? { since: since.toISOString() } : {}
-    const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/leases/sync`,
-      { params }
-    )
+    const response = await axios.get(`${tenantsLeasesServiceUrl}/leases/sync`, {
+      params,
+    })
 
     if (response.status === 200) {
       const content: LeaseChange[] = response.data.content.map(

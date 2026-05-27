@@ -87,21 +87,20 @@ describe('POST /leases/sync', () => {
   })
 
   it('returns 400 when action is missing', async () => {
-    const res = await request(app.callback())
-      .post('/leases/sync')
-      .send({ leaseId: '123-456/01', contact: factory.syncTenantPayload.build() })
+    const res = await request(app.callback()).post('/leases/sync').send({
+      leaseId: '123-456/01',
+      contact: factory.syncTenantPayload.build(),
+    })
 
     expect(res.status).toBe(400)
   })
 
   it('returns 400 when action is not in the enum', async () => {
-    const res = await request(app.callback())
-      .post('/leases/sync')
-      .send({
-        leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
-        action: 'patch',
-      })
+    const res = await request(app.callback()).post('/leases/sync').send({
+      leaseId: '123-456/01',
+      contact: factory.syncTenantPayload.build(),
+      action: 'patch',
+    })
 
     expect(res.status).toBe(400)
   })
@@ -122,15 +121,16 @@ describe('POST /leases/sync', () => {
           leaseStartDate: new Date('2026-01-01'),
         }),
       ])
-      importLease.mockResolvedValueOnce({ ok: true, data: { _id: 'tenfast-id' } })
+      importLease.mockResolvedValueOnce({
+        ok: true,
+        data: { _id: 'tenfast-id' },
+      })
 
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'create',
-        })
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'create',
+      })
 
       expect(res.status).toBe(201)
       expect(res.body.content).toEqual({
@@ -142,13 +142,11 @@ describe('POST /leases/sync', () => {
     it('returns 404 when xpand lease not found on create', async () => {
       getLeases.mockResolvedValueOnce([])
 
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'create',
-        })
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'create',
+      })
 
       expect(res.status).toBe(404)
       expect(res.body.error).toBe('Lease not found in xpand')
@@ -162,13 +160,11 @@ describe('POST /leases/sync', () => {
         }),
       ])
 
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'create',
-        })
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'create',
+      })
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('xpand lease has no leaseStartDate')
@@ -182,17 +178,15 @@ describe('POST /leases/sync', () => {
         }),
       ])
       importLease.mockResolvedValueOnce({
-          ok: false,
-          err: 'lease-could-not-be-created',
-        })
+        ok: false,
+        err: 'lease-could-not-be-created',
+      })
 
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'create',
-        })
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'create',
+      })
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('lease-could-not-be-created')
@@ -202,15 +196,15 @@ describe('POST /leases/sync', () => {
   describe('action: terminate', () => {
     it('does not require contact for terminate', async () => {
       getLeases.mockResolvedValueOnce([
-          factory.lease.build({
-            leaseId: '123-456/01',
-            lastDebitDate: new Date('2026-04-30'),
-          }),
-        ])
+        factory.lease.build({
+          leaseId: '123-456/01',
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
       terminateLease.mockResolvedValueOnce({
-          ok: true,
-          data: { action: 'terminated', leaseId: '123-456/01' },
-        })
+        ok: true,
+        data: { action: 'terminated', leaseId: '123-456/01' },
+      })
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -221,23 +215,21 @@ describe('POST /leases/sync', () => {
 
     it('returns 200 with action "terminated" on success', async () => {
       getLeases.mockResolvedValueOnce([
-          factory.lease.build({
-            leaseId: '123-456/01',
-            lastDebitDate: new Date('2026-04-30'),
-          }),
-        ])
-      terminateLease.mockResolvedValueOnce({
-          ok: true,
-          data: { action: 'terminated', leaseId: '123-456/01' },
-        })
-
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
+        factory.lease.build({
           leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'terminate',
-        })
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: true,
+        data: { action: 'terminated', leaseId: '123-456/01' },
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'terminate',
+      })
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual({
@@ -249,13 +241,11 @@ describe('POST /leases/sync', () => {
     it('returns 404 when xpand lease not found', async () => {
       getLeases.mockResolvedValueOnce([])
 
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'terminate',
-        })
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'terminate',
+      })
 
       expect(res.status).toBe(404)
       expect(res.body.error).toBe('Lease not found in xpand')
@@ -263,19 +253,17 @@ describe('POST /leases/sync', () => {
 
     it('returns 400 when xpand lease has no lastDebitDate', async () => {
       getLeases.mockResolvedValueOnce([
-          factory.lease.build({
-            leaseId: '123-456/01',
-            lastDebitDate: undefined,
-          }),
-        ])
-
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
+        factory.lease.build({
           leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'terminate',
-        })
+          lastDebitDate: undefined,
+        }),
+      ])
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'terminate',
+      })
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('xpand lease has no lastDebitDate')
@@ -283,20 +271,21 @@ describe('POST /leases/sync', () => {
 
     it('returns 200 action "skipped" when tenfast lease not found', async () => {
       getLeases.mockResolvedValueOnce([
-          factory.lease.build({
-            leaseId: '123-456/01',
-            lastDebitDate: new Date('2026-04-30'),
-          }),
-        ])
-      terminateLease.mockResolvedValueOnce({ ok: false, err: 'lease-not-found' })
-
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
+        factory.lease.build({
           leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'terminate',
-        })
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: false,
+        err: 'lease-not-found',
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'terminate',
+      })
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual({
@@ -307,23 +296,21 @@ describe('POST /leases/sync', () => {
 
     it('returns 200 action "skipped" when adapter returns already-terminated success', async () => {
       getLeases.mockResolvedValueOnce([
-          factory.lease.build({
-            leaseId: '123-456/01',
-            lastDebitDate: new Date('2026-04-30'),
-          }),
-        ])
-      terminateLease.mockResolvedValueOnce({
-          ok: true,
-          data: { action: 'skipped', leaseId: '123-456/01' },
-        })
-
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
+        factory.lease.build({
           leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'terminate',
-        })
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: true,
+        data: { action: 'skipped', leaseId: '123-456/01' },
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'terminate',
+      })
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual({
@@ -334,20 +321,21 @@ describe('POST /leases/sync', () => {
 
     it('returns 500 when terminate fails with non-idempotent error', async () => {
       getLeases.mockResolvedValueOnce([
-          factory.lease.build({
-            leaseId: '123-456/01',
-            lastDebitDate: new Date('2026-04-30'),
-          }),
-        ])
-      terminateLease.mockResolvedValueOnce({ ok: false, err: 'terminate-failed' })
-
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
+        factory.lease.build({
           leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'terminate',
-        })
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: false,
+        err: 'terminate-failed',
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'terminate',
+      })
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('terminate-failed')
@@ -357,9 +345,9 @@ describe('POST /leases/sync', () => {
   describe('action: void', () => {
     it('does not require contact for void', async () => {
       voidLease.mockResolvedValueOnce({
-          ok: true,
-          data: { action: 'voided', leaseId: '123-456/01' },
-        })
+        ok: true,
+        data: { action: 'voided', leaseId: '123-456/01' },
+      })
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -370,17 +358,15 @@ describe('POST /leases/sync', () => {
 
     it('returns 200 with action "voided" on success', async () => {
       voidLease.mockResolvedValueOnce({
-          ok: true,
-          data: { action: 'voided', leaseId: '123-456/01' },
-        })
+        ok: true,
+        data: { action: 'voided', leaseId: '123-456/01' },
+      })
 
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'void',
-        })
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'void',
+      })
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual({
@@ -392,13 +378,11 @@ describe('POST /leases/sync', () => {
     it('returns 200 action "skipped" when tenfast lease not found', async () => {
       voidLease.mockResolvedValueOnce({ ok: false, err: 'lease-not-found' })
 
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'void',
-        })
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'void',
+      })
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual({
@@ -410,13 +394,11 @@ describe('POST /leases/sync', () => {
     it('returns 500 when void fails', async () => {
       voidLease.mockResolvedValueOnce({ ok: false, err: 'void-failed' })
 
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'void',
-        })
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'void',
+      })
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('void-failed')

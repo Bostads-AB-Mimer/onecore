@@ -1045,7 +1045,6 @@ describe(tenfastAdapter.importLease, () => {
       ok: true,
       data: mockRentalObject,
     })
-
     ;(request as jest.Mock).mockResolvedValue({
       status: 201,
       data: { _id: 'created-lease-id' },
@@ -1137,7 +1136,6 @@ describe(tenfastAdapter.importLease, () => {
       ok: true,
       data: mockRentalObject,
     })
-
     ;(request as jest.Mock).mockResolvedValue({
       status: 500,
       data: { error: 'boom' },
@@ -1166,7 +1164,6 @@ describe(tenfastAdapter.importLease, () => {
       ok: true,
       data: mockRentalObject,
     })
-
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
     const payload = factory.syncTenantPayload.build()
@@ -2125,7 +2122,9 @@ describe(tenfastAdapter.terminateLease, () => {
   })
 
   it('returns ok:true with action:terminated on successful POST /terminate', async () => {
-    const lease = factory.tenfastLease.build({ externalId: '211-021-09-0101/08' })
+    const lease = factory.tenfastLease.build({
+      externalId: '211-021-09-0101/08',
+    })
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: true, data: lease })
@@ -2229,7 +2228,9 @@ describe(tenfastAdapter.voidLease, () => {
   })
 
   it('returns ok:true with action:voided on successful PATCH /void', async () => {
-    const lease = factory.tenfastLease.build({ externalId: '104-013-01-0106/10' })
+    const lease = factory.tenfastLease.build({
+      externalId: '104-013-01-0106/10',
+    })
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: true, data: lease })

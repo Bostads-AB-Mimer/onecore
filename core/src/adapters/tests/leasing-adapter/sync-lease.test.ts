@@ -73,7 +73,9 @@ describe(leasingAdapter.syncLease, () => {
     const contact = factory.syncContactToLeasingPayload.build()
     const leaseId = '101-002-03-0201/07'
     // Normalize contact so nock body-match sees the same JSON axios will send
-    const serialized = JSON.parse(JSON.stringify({ leaseId, contact, action: 'create' }))
+    const serialized = JSON.parse(
+      JSON.stringify({ leaseId, contact, action: 'create' })
+    )
 
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', serialized)
@@ -90,7 +92,9 @@ describe(leasingAdapter.syncLease, () => {
   it('returns { ok: true, data: { action, leaseId } } on 201 response', async () => {
     const contact = factory.syncContactToLeasingPayload.build()
     const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(JSON.stringify({ leaseId, contact, action: 'create' }))
+    const serialized = JSON.parse(
+      JSON.stringify({ leaseId, contact, action: 'create' })
+    )
 
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', serialized)
@@ -107,7 +111,9 @@ describe(leasingAdapter.syncLease, () => {
   it('returns { ok: false, err: "sync-failed" } on non-200 response', async () => {
     const contact = factory.syncContactToLeasingPayload.build()
     const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(JSON.stringify({ leaseId, contact, action: 'terminate' }))
+    const serialized = JSON.parse(
+      JSON.stringify({ leaseId, contact, action: 'terminate' })
+    )
 
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', serialized)
@@ -122,7 +128,9 @@ describe(leasingAdapter.syncLease, () => {
   it('returns { ok: false, err: "unknown" } on network error', async () => {
     const contact = factory.syncContactToLeasingPayload.build()
     const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(JSON.stringify({ leaseId, contact, action: 'terminate' }))
+    const serialized = JSON.parse(
+      JSON.stringify({ leaseId, contact, action: 'terminate' })
+    )
 
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', serialized)
@@ -144,7 +152,11 @@ describe(leasingAdapter.syncLease, () => {
       .post('/leases/sync', serialized)
       .reply(200, { content: { action: 'terminated', leaseId } })
 
-    const result = await leasingAdapter.syncLease(leaseId, undefined, 'terminate')
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      undefined,
+      'terminate'
+    )
 
     expect(result).toEqual({
       ok: true,

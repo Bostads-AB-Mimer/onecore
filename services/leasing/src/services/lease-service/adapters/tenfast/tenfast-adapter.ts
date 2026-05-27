@@ -263,9 +263,16 @@ export const uploadLeaseFile = async (
   filename: string
 ): Promise<AdapterResult<undefined, 'upload-failed' | 'unknown'>> => {
   try {
+    // Native FormData/fetch are stable in Node 20 despite the experimental flag.
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const form = new FormData()
-    form.append('file', new Blob([content], { type: 'application/pdf' }), filename)
+    form.append(
+      'file',
+      new Blob([content], { type: 'application/pdf' }),
+      filename
+    )
 
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const response = await fetch(
       `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-file?hyresvard=${tenfastCompanyId}`,
       {

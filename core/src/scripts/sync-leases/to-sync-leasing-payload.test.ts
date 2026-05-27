@@ -7,7 +7,9 @@ describe('toSyncLeasingPayload', () => {
 
     const result = toSyncLeasingPayload(individual)
 
-    expect(result.nationalRegistrationNumber).toBe(individual.personal.nationalId)
+    expect(result.nationalRegistrationNumber).toBe(
+      individual.personal.nationalId
+    )
     expect(result).not.toHaveProperty('nationalId')
     expect(result.contactCode).toBe(individual.contactCode)
     expect(result.firstName).toBe(individual.personal.firstName)

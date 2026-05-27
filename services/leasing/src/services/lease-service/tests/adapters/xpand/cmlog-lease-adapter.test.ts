@@ -102,7 +102,7 @@ describe('parseLeaseChanges', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 306-002-04-0401/07, PETTERSBERGSGATAN 29 B, P078554, Bostadskontrakt (Gällande)\nKoppling till 306-002-04-0401/0711 Kvittens passagedroppar P081792 är tillagd.",
+            'Hyreskontrakt 306-002-04-0401/07, PETTERSBERGSGATAN 29 B, P078554, Bostadskontrakt (Gällande)\nKoppling till 306-002-04-0401/0711 Kvittens passagedroppar P081792 är tillagd.',
           logtime: new Date('2026-04-16T10:00:00Z'),
         },
       ]
@@ -114,7 +114,7 @@ describe('parseLeaseChanges', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 520-001-04-0202/04, ORRVÄGEN 8 A, P150996, Bostadskontrakt (Registreras)\nKopplad blankett BOSTAD-02:M-MANUELL Hyreskontrakt för manuell signering, Bilaga M\nBOSTAD-02:M-MANUELL Hyreskontrakt för manuell signering, Bilaga M avförd",
+            'Hyreskontrakt 520-001-04-0202/04, ORRVÄGEN 8 A, P150996, Bostadskontrakt (Registreras)\nKopplad blankett BOSTAD-02:M-MANUELL Hyreskontrakt för manuell signering, Bilaga M\nBOSTAD-02:M-MANUELL Hyreskontrakt för manuell signering, Bilaga M avförd',
           logtime: new Date('2026-04-16T10:00:00Z'),
         },
       ]
@@ -198,7 +198,7 @@ describe('parseLeaseChanges', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 807-033-03-0602/01, STYRBORDSGATAN 11, P195163, Bostadskontrakt (Preliminärt uppsagt)\nKoppling till 807-033-03-0602/012 Uppsägning av bostad är tillagd.",
+            'Hyreskontrakt 807-033-03-0602/01, STYRBORDSGATAN 11, P195163, Bostadskontrakt (Preliminärt uppsagt)\nKoppling till 807-033-03-0602/012 Uppsägning av bostad är tillagd.',
           logtime: new Date('2026-04-16T10:00:00Z'),
         },
       ]
@@ -210,7 +210,7 @@ describe('parseLeaseChanges', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 104-068-04-0203/16, SÖDRA ALLÉGATAN 23, P161700, Bostadskontrakt (Kommande)\nKoppling till 104-068-04-0203/167 104-068-04-0203 Nyckelkvittens är tillagd.",
+            'Hyreskontrakt 104-068-04-0203/16, SÖDRA ALLÉGATAN 23, P161700, Bostadskontrakt (Kommande)\nKoppling till 104-068-04-0203/167 104-068-04-0203 Nyckelkvittens är tillagd.',
           logtime: new Date('2026-04-16T10:00:00Z'),
         },
       ]
@@ -335,7 +335,7 @@ describe('parseLeaseChanges', () => {
         },
         {
           logmemo:
-            "Hyreskontrakt 306-002-04-0401/07, PETTERSBERGSGATAN 29 B, P078554, Bostadskontrakt (Gällande)\nKoppling till 306-002-04-0401/0711 Kvittens passagedroppar P081792 är tillagd.",
+            'Hyreskontrakt 306-002-04-0401/07, PETTERSBERGSGATAN 29 B, P078554, Bostadskontrakt (Gällande)\nKoppling till 306-002-04-0401/0711 Kvittens passagedroppar P081792 är tillagd.',
           logtime: new Date('2026-04-16T10:00:00Z'),
         },
         {
@@ -408,7 +408,7 @@ describe('parseLeaseChanges', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 504-022-02-0301/06, SKALLBERGSGATAN 27, P045185, Bostadskontrakt (Gällande)\nKoppling till 504-022-02-0301/063 Fullmakt nycklar är tillagd.",
+            'Hyreskontrakt 504-022-02-0301/06, SKALLBERGSGATAN 27, P045185, Bostadskontrakt (Gällande)\nKoppling till 504-022-02-0301/063 Fullmakt nycklar är tillagd.',
           logtime: new Date('2026-04-30T10:00:00Z'),
         },
         {
