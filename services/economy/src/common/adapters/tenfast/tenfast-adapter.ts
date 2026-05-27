@@ -151,7 +151,7 @@ export const getInvoicesForTenant = async (
 ): Promise<AdapterResult<Invoice[], string>> => {
   try {
     const result = await makeTenfastRequest(
-      `/v1/hyresvard/hyresgaster/${tenantId}/hyror`,
+      `/v1/hyresvard/hyresgaster/${tenantId}/hyror?populate=avtal`,
       {
         params: {
           // these have no effect currently
@@ -169,6 +169,10 @@ export const getInvoicesForTenant = async (
     )
 
     if (!parsedResponse.success) {
+      logger.error(
+        { tenantId, error: parsedResponse.error.issues },
+        'Failed to parse Tenfast invoices by tenant id response'
+      )
       return { ok: false, err: 'schema-error' }
     }
 
