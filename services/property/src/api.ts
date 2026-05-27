@@ -19,6 +19,7 @@ import { routes as documentsRoutes } from './routes/documents'
 import { routes as aiAnalysisRoutes } from './routes/ai-analysis'
 import { routes as aiScannerRoutes } from './routes/ai-scanner'
 import { routes as costCentersRoutes } from './routes/cost-centers'
+import { routes as kvvAreasRoutes } from './routes/kvv-areas'
 
 import { routes as healthRoutes } from './routes/health'
 
@@ -43,6 +44,7 @@ facilitiesRoutes(router)
 aiAnalysisRoutes(router)
 aiScannerRoutes(router)
 costCentersRoutes(router)
+kvvAreasRoutes(router)
 healthRoutes(router)
 
 export default router
