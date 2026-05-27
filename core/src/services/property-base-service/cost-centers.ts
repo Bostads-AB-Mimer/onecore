@@ -17,21 +17,10 @@ import {
   PROPERTY_AREA_WRITE_ROLE,
   PROPERTY_MANAGER_ROLE,
 } from './constants'
+import { toUserSummary } from './keycloak-users'
 
 function getPropertyAreaCapabilities(userRoles: string[]) {
   return { canEdit: userRoles.includes(PROPERTY_AREA_WRITE_ROLE) }
-}
-
-function toUserSummary(user: KeycloakUser) {
-  return {
-    id: user.id,
-    username: user.username,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    mobilePhone: user.attributes?.mobilePhone?.[0],
-    employeeId: user.attributes?.employeeId?.[0],
-  }
 }
 
 /**

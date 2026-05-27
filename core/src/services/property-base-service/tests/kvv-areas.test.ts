@@ -94,6 +94,23 @@ describe('PATCH /kvv-areas/:id/responsible', () => {
     expect(res.status).toBe(502)
   })
 
+  it('returns 500 when the property service reports an unknown error', async () => {
+    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValueOnce({
+      ok: true,
+      data: [{ id: TARGET_USER_ID, username: 'target' }],
+    })
+    jest
+      .spyOn(propertyBaseAdapter, 'updateKvvAreaResponsible')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const app = appWithUser(['property-areas:write'])
+    const res = await request(app.callback())
+      .patch(`/kvv-areas/${AREA_ID}/responsible`)
+      .send({ keycloakUserId: TARGET_USER_ID })
+
+    expect(res.status).toBe(500)
+  })
+
   it('returns 404 when the property service reports the area is missing', async () => {
     jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValueOnce({
       ok: true,

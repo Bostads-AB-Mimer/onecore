@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { z } from 'zod'
@@ -6,6 +7,7 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { requireRole } from '../../middlewares/keycloak-auth'
 import { getUsersByRole } from '../auth-service/keycloak-admin-adapter'
 import { PROPERTY_AREA_WRITE_ROLE, PROPERTY_MANAGER_ROLE } from './constants'
+import { toUserSummary } from './keycloak-users'
 import {
   PatchedKvvAreaSchema,
   PatchKvvAreaResponsibleBodySchema,
@@ -186,12 +188,12 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const callerKeycloakId = ctx.state.user?.id
-      if (!callerKeycloakId) {
-        ctx.status = 401
-        ctx.body = { reason: 'Missing caller identity', ...metadata }
-        return
-      }
+      // requireRole runs after requireAuth, which guarantees ctx.state.user.id
+      assert(
+        ctx.state.user?.id,
+        'requireRole middleware must run before this route — ctx.state.user.id is not set'
+      )
+      const callerKeycloakId: string = ctx.state.user.id
 
       const result = await propertyBaseAdapter.updateKvvAreaResponsible(id, {
         keycloakUserId,
@@ -214,15 +216,7 @@ export const routes = (router: KoaRouter) => {
           id: result.data.id,
           code: result.data.code,
           name: result.data.name ?? null,
-          responsible: {
-            id: targetUser.id,
-            username: targetUser.username,
-            firstName: targetUser.firstName,
-            lastName: targetUser.lastName,
-            email: targetUser.email,
-            mobilePhone: targetUser.attributes?.mobilePhone?.[0],
-            employeeId: targetUser.attributes?.employeeId?.[0],
-          },
+          responsible: toUserSummary(targetUser),
         }),
         ...metadata,
       }

@@ -13,15 +13,7 @@ interface UpdateKvvAreaResponsibleVariables {
   costCenterId: string
 }
 
-interface UseUpdateKvvAreaResponsibleOptions {
-  onSuccess?: () => void
-  onError?: (error: Error) => void
-}
-
-export function useUpdateKvvAreaResponsible({
-  onSuccess,
-  onError,
-}: UseUpdateKvvAreaResponsibleOptions = {}) {
+export function useUpdateKvvAreaResponsible() {
   const queryClient = useQueryClient()
 
   return useMutation<
@@ -92,14 +84,12 @@ export function useUpdateKvvAreaResponsible({
         description: err.message,
         variant: 'destructive',
       })
-      onError?.(err)
     },
 
     onSuccess: () => {
       toast({
         title: 'Ansvarig kvartersvärd uppdaterad',
       })
-      onSuccess?.()
     },
 
     onSettled: (_data, _err, _vars, context) => {

@@ -103,12 +103,12 @@ export function PropertyAreasPage() {
     setPropertyOverrides(new Map())
   }, [selectedCostCenterId])
 
-  const { data: propertyManagers = [] } = usePropertyManagers()
+  const { data: propertyManagers } = usePropertyManagers()
 
   const updateResponsibleMutation = useUpdateKvvAreaResponsible()
 
   const allStewards = useMemo<Steward[]>(
-    () => propertyManagers.map(mapKeycloakUserToSteward),
+    () => (propertyManagers ?? []).map(mapKeycloakUserToSteward),
     [propertyManagers]
   )
 
@@ -189,6 +189,10 @@ export function PropertyAreasPage() {
       costCenterId: selectedCostCenterId,
     })
   }
+
+  // Without the manager list the dialog dropdown would be empty, so suppress
+  // the pencil entry-point until usePropertyManagers has resolved.
+  const onReassignArea = propertyManagers ? handleReassignArea : undefined
 
   const lead = tree ? formatUserName(tree.lead) : undefined
   const deputy = tree ? formatUserName(tree.deputy) : undefined
@@ -452,7 +456,7 @@ export function PropertyAreasPage() {
             kvvAreas={kvvAreaList}
             propertiesByKvvArea={propertiesByKvvArea}
             allStewards={allStewards}
-            onReassignArea={handleReassignArea}
+            onReassignArea={onReassignArea}
           />
         ) : (
           <div className="grid grid-cols-[minmax(0,1fr)] flex-1 min-h-0">
@@ -473,7 +477,7 @@ export function PropertyAreasPage() {
                         propertiesByKvvArea.get(kvvArea.kvvAreaId) ?? []
                       }
                       allStewards={allStewards}
-                      onReassignArea={handleReassignArea}
+                      onReassignArea={onReassignArea}
                       canEdit={canEdit}
                       isSaving={isSaving}
                       pendingPropertyCodes={pendingPropertyCodes}
