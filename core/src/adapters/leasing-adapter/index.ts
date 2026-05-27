@@ -16,7 +16,10 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
-import type { SyncContactToLeasingPayload } from '@onecore/types'
+import type {
+  LeaseChange,
+  SyncContactToLeasingPayload,
+} from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
@@ -768,14 +771,6 @@ const syncContactToLeasing = async (
     logger.error({ err }, 'leasing-adapter.syncContactToLeasing')
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
-}
-
-interface LeaseChange {
-  leaseId: string
-  contactCode: string
-  rentalObjectId: string
-  action: 'create' | 'terminate' | 'void'
-  timestamp: Date
 }
 
 const getUpdatedLeases = async (

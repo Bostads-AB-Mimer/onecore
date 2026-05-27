@@ -1,12 +1,5 @@
 import { Factory } from 'fishery'
-
-export type LeaseChange = {
-  leaseId: string
-  contactCode: string
-  rentalObjectId: string
-  action: 'create' | 'terminate' | 'void'
-  timestamp: Date
-}
+import type { LeaseChange } from '@onecore/types'
 
 export const LeaseChangeFactory = Factory.define<LeaseChange>(
   ({ sequence }) => ({

@@ -27,6 +27,12 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
+const getLeases = jest.spyOn(tenantLeaseAdapter, 'getLeases')
+const getLeaseChanges = jest.spyOn(cmlogLeaseAdapter, 'getLeaseChanges')
+const importLease = jest.spyOn(tenfastAdapter, 'importLease')
+const terminateLease = jest.spyOn(tenfastAdapter, 'terminateLease')
+const voidLease = jest.spyOn(tenfastAdapter, 'voidLease')
+
 beforeEach(() => {
   jest.clearAllMocks()
 })
@@ -35,9 +41,7 @@ describe('GET /leases/sync', () => {
   it('returns 200 with changes when valid since param', async () => {
     const change = factory.leaseChange.build()
 
-    jest
-      .spyOn(cmlogLeaseAdapter, 'getLeaseChanges')
-      .mockResolvedValueOnce([change])
+    getLeaseChanges.mockResolvedValueOnce([change])
 
     const res = await request(app.callback()).get(
       '/leases/sync?since=2024-01-01T00:00:00.000Z'
@@ -52,15 +56,13 @@ describe('GET /leases/sync', () => {
   it('returns 200 with changes when no since param (fallback)', async () => {
     const change = factory.leaseChange.build()
 
-    jest
-      .spyOn(cmlogLeaseAdapter, 'getLeaseChanges')
-      .mockResolvedValueOnce([change])
+    getLeaseChanges.mockResolvedValueOnce([change])
 
     const res = await request(app.callback()).get('/leases/sync')
 
     expect(res.status).toBe(200)
     expect(res.body.content[0].timestamp).toBe(change.timestamp.toISOString())
-    expect(cmlogLeaseAdapter.getLeaseChanges).toHaveBeenCalledWith(null)
+    expect(getLeaseChanges).toHaveBeenCalledWith(null)
   })
 
   it('returns 400 when invalid since param', async () => {
@@ -114,15 +116,13 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 201 with action "created" on successful create', async () => {
-      ;(tenantLeaseAdapter.getLeases as jest.Mock).mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
         factory.lease.build({
           leaseId: '123-456/01',
           leaseStartDate: new Date('2026-01-01'),
         }),
       ])
-      jest
-        .spyOn(tenfastAdapter, 'importLease')
-        .mockResolvedValueOnce({ ok: true, data: { _id: 'tenfast-id' } })
+      importLease.mockResolvedValueOnce({ ok: true, data: { _id: 'tenfast-id' } })
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -140,7 +140,7 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 404 when xpand lease not found on create', async () => {
-      ;(tenantLeaseAdapter.getLeases as jest.Mock).mockResolvedValueOnce([])
+      getLeases.mockResolvedValueOnce([])
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -155,7 +155,7 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 400 when xpand lease has no leaseStartDate', async () => {
-      ;(tenantLeaseAdapter.getLeases as jest.Mock).mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
         factory.lease.build({
           leaseId: '123-456/01',
           leaseStartDate: undefined as unknown as Date,
@@ -175,15 +175,13 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 500 when importLease fails', async () => {
-      ;(tenantLeaseAdapter.getLeases as jest.Mock).mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
         factory.lease.build({
           leaseId: '123-456/01',
           leaseStartDate: new Date('2026-01-01'),
         }),
       ])
-      jest
-        .spyOn(tenfastAdapter, 'importLease')
-        .mockResolvedValueOnce({
+      importLease.mockResolvedValueOnce({
           ok: false,
           err: 'lease-could-not-be-created',
         })
@@ -203,17 +201,13 @@ describe('POST /leases/sync', () => {
 
   describe('action: terminate', () => {
     it('does not require contact for terminate', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeases')
-        .mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
           factory.lease.build({
             leaseId: '123-456/01',
             lastDebitDate: new Date('2026-04-30'),
           }),
         ])
-      jest
-        .spyOn(tenfastAdapter, 'terminateLease')
-        .mockResolvedValueOnce({
+      terminateLease.mockResolvedValueOnce({
           ok: true,
           data: { action: 'terminated', leaseId: '123-456/01' },
         })
@@ -226,17 +220,13 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 200 with action "terminated" on success', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeases')
-        .mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
           factory.lease.build({
             leaseId: '123-456/01',
             lastDebitDate: new Date('2026-04-30'),
           }),
         ])
-      jest
-        .spyOn(tenfastAdapter, 'terminateLease')
-        .mockResolvedValueOnce({
+      terminateLease.mockResolvedValueOnce({
           ok: true,
           data: { action: 'terminated', leaseId: '123-456/01' },
         })
@@ -257,7 +247,7 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 404 when xpand lease not found', async () => {
-      jest.spyOn(tenantLeaseAdapter, 'getLeases').mockResolvedValueOnce([])
+      getLeases.mockResolvedValueOnce([])
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -272,9 +262,7 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 400 when xpand lease has no lastDebitDate', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeases')
-        .mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
           factory.lease.build({
             leaseId: '123-456/01',
             lastDebitDate: undefined,
@@ -294,17 +282,13 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 200 action "skipped" when tenfast lease not found', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeases')
-        .mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
           factory.lease.build({
             leaseId: '123-456/01',
             lastDebitDate: new Date('2026-04-30'),
           }),
         ])
-      jest
-        .spyOn(tenfastAdapter, 'terminateLease')
-        .mockResolvedValueOnce({ ok: false, err: 'lease-not-found' })
+      terminateLease.mockResolvedValueOnce({ ok: false, err: 'lease-not-found' })
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -322,17 +306,13 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 200 action "skipped" when adapter returns already-terminated success', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeases')
-        .mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
           factory.lease.build({
             leaseId: '123-456/01',
             lastDebitDate: new Date('2026-04-30'),
           }),
         ])
-      jest
-        .spyOn(tenfastAdapter, 'terminateLease')
-        .mockResolvedValueOnce({
+      terminateLease.mockResolvedValueOnce({
           ok: true,
           data: { action: 'skipped', leaseId: '123-456/01' },
         })
@@ -353,17 +333,13 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 500 when terminate fails with non-idempotent error', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeases')
-        .mockResolvedValueOnce([
+      getLeases.mockResolvedValueOnce([
           factory.lease.build({
             leaseId: '123-456/01',
             lastDebitDate: new Date('2026-04-30'),
           }),
         ])
-      jest
-        .spyOn(tenfastAdapter, 'terminateLease')
-        .mockResolvedValueOnce({ ok: false, err: 'terminate-failed' })
+      terminateLease.mockResolvedValueOnce({ ok: false, err: 'terminate-failed' })
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -380,9 +356,7 @@ describe('POST /leases/sync', () => {
 
   describe('action: void', () => {
     it('does not require contact for void', async () => {
-      jest
-        .spyOn(tenfastAdapter, 'voidLease')
-        .mockResolvedValueOnce({
+      voidLease.mockResolvedValueOnce({
           ok: true,
           data: { action: 'voided', leaseId: '123-456/01' },
         })
@@ -395,9 +369,7 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 200 with action "voided" on success', async () => {
-      jest
-        .spyOn(tenfastAdapter, 'voidLease')
-        .mockResolvedValueOnce({
+      voidLease.mockResolvedValueOnce({
           ok: true,
           data: { action: 'voided', leaseId: '123-456/01' },
         })
@@ -418,9 +390,7 @@ describe('POST /leases/sync', () => {
     })
 
     it('returns 200 action "skipped" when tenfast lease not found', async () => {
-      jest
-        .spyOn(tenfastAdapter, 'voidLease')
-        .mockResolvedValueOnce({ ok: false, err: 'lease-not-found' })
+      voidLease.mockResolvedValueOnce({ ok: false, err: 'lease-not-found' })
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -437,27 +407,8 @@ describe('POST /leases/sync', () => {
       })
     })
 
-    it('returns 500 when lease is signed (hard-fail)', async () => {
-      jest
-        .spyOn(tenfastAdapter, 'voidLease')
-        .mockResolvedValueOnce({ ok: false, err: 'lease-signed' })
-
-      const res = await request(app.callback())
-        .post('/leases/sync')
-        .send({
-          leaseId: '123-456/01',
-          contact: factory.syncTenantPayload.build(),
-          action: 'void',
-        })
-
-      expect(res.status).toBe(500)
-      expect(res.body.error).toBe('lease-signed')
-    })
-
-    it('returns 500 when void fails with non-signed error', async () => {
-      jest
-        .spyOn(tenfastAdapter, 'voidLease')
-        .mockResolvedValueOnce({ ok: false, err: 'void-failed' })
+    it('returns 500 when void fails', async () => {
+      voidLease.mockResolvedValueOnce({ ok: false, err: 'void-failed' })
 
       const res = await request(app.callback())
         .post('/leases/sync')

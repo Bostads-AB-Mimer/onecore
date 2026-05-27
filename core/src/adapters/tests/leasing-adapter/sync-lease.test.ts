@@ -1,10 +1,11 @@
+import assert from 'node:assert'
 import nock from 'nock'
 
 import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'
 import * as factory from '../../../../test/factories'
 
-describe('leasing-adapter.getUpdatedLeases', () => {
+describe(leasingAdapter.getUpdatedLeases, () => {
   it('parses timestamp string to Date on 200 response', async () => {
     const since = new Date('2026-04-28T10:00:00.000Z')
     const change = factory.leaseChange.build()
@@ -34,10 +35,8 @@ describe('leasing-adapter.getUpdatedLeases', () => {
 
     const result = await leasingAdapter.getUpdatedLeases(null)
 
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.data[0].timestamp).toEqual(change.timestamp)
-    }
+    assert(result.ok)
+    expect(result.data[0].timestamp).toEqual(change.timestamp)
   })
 
   it('returns { ok: false, err: "unknown" } on non-200 response', async () => {
@@ -50,10 +49,8 @@ describe('leasing-adapter.getUpdatedLeases', () => {
 
     const result = await leasingAdapter.getUpdatedLeases(since)
 
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.err).toBe('unknown')
-    }
+    assert(!result.ok)
+    expect(result.err).toBe('unknown')
   })
 
   it('returns { ok: false, err: "unknown" } on network error', async () => {
@@ -66,14 +63,12 @@ describe('leasing-adapter.getUpdatedLeases', () => {
 
     const result = await leasingAdapter.getUpdatedLeases(since)
 
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.err).toBe('unknown')
-    }
+    assert(!result.ok)
+    expect(result.err).toBe('unknown')
   })
 })
 
-describe('leasing-adapter.syncLease', () => {
+describe(leasingAdapter.syncLease, () => {
   it('returns { ok: true, data: { action, leaseId } } on success', async () => {
     const contact = factory.syncContactToLeasingPayload.build()
     const leaseId = '101-002-03-0201/07'
@@ -120,10 +115,8 @@ describe('leasing-adapter.syncLease', () => {
 
     const result = await leasingAdapter.syncLease(leaseId, contact, 'terminate')
 
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.err).toBe('sync-failed')
-    }
+    assert(!result.ok)
+    expect(result.err).toBe('sync-failed')
   })
 
   it('returns { ok: false, err: "unknown" } on network error', async () => {
@@ -137,10 +130,8 @@ describe('leasing-adapter.syncLease', () => {
 
     const result = await leasingAdapter.syncLease(leaseId, contact, 'terminate')
 
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.err).toBe('unknown')
-    }
+    assert(!result.ok)
+    expect(result.err).toBe('unknown')
   })
 
   it('serializes body without contact when contact is undefined', async () => {

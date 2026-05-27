@@ -42,35 +42,40 @@ const decodeFildata = (raw: unknown): Buffer | null => {
 export const getSignedContractPdf = async (
   leaseId: string
 ): Promise<SignedContract | null> => {
-  const dorevRows = (await xpandDb('dorev')
-    .where('keydotyp', SIGNED_CONTRACT_KEYDOTYP)
-    .andWhereLike('dok', `${leaseId}%`)
-    .orderBy('skapdat', 'asc')
-    .select('keydorev', 'path')) as Array<{
-    keydorev: string
-    path: string | null
-  }>
+  try {
+    const dorevRows = (await xpandDb('dorev')
+      .where('keydotyp', SIGNED_CONTRACT_KEYDOTYP)
+      .andWhereLike('dok', `${leaseId}%`)
+      .orderBy('skapdat', 'asc')
+      .select('keydorev', 'path')) as Array<{
+      keydorev: string
+      path: string | null
+    }>
 
-  if (!dorevRows.length) {
-    logger.warn({ leaseId }, 'getSignedContractPdf: no dorev row for lease')
+    if (!dorevRows.length) {
+      logger.warn({ leaseId }, 'getSignedContractPdf: no dorev row for lease')
+      return null
+    }
+
+    for (const dorev of dorevRows) {
+      const files = (await xpandDb('dofil')
+        .where({ keydorev: dorev.keydorev })
+        .select('fildata')) as Array<{ fildata: string | null }>
+      for (const file of files) {
+        const content = decodeFildata(file.fildata)
+        if (!content) continue
+        const filename = (dorev.path ?? `${leaseId}.pdf`).trim()
+        return { filename, content }
+      }
+    }
+
+    logger.warn(
+      { leaseId },
+      'getSignedContractPdf: dorev rows found but no decodable file content'
+    )
+    return null
+  } catch (err) {
+    logger.error({ err, leaseId }, 'getSignedContractPdf failed')
     return null
   }
-
-  for (const dorev of dorevRows) {
-    const files = (await xpandDb('dofil')
-      .where({ keydorev: dorev.keydorev })
-      .select('fildata')) as Array<{ fildata: string | null }>
-    for (const file of files) {
-      const content = decodeFildata(file.fildata)
-      if (!content) continue
-      const filename = (dorev.path ?? `${leaseId}.pdf`).trim()
-      return { filename, content }
-    }
-  }
-
-  logger.warn(
-    { leaseId },
-    'getSignedContractPdf: dorev rows found but no decodable file content'
-  )
-  return null
 }

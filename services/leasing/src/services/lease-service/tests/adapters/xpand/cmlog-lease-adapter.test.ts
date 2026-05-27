@@ -37,7 +37,7 @@ describe('parseLeaseChanges', () => {
     expect(result).toEqual([])
   })
 
-  it('deduplicates by leaseId', () => {
+  it('emits one entry per matching row, including repeats for the same leaseId', () => {
     const rows = [
       {
         logmemo:
@@ -53,7 +53,7 @@ describe('parseLeaseChanges', () => {
 
     const result = parseLeaseChanges(rows)
 
-    expect(result).toHaveLength(1)
+    expect(result).toHaveLength(2)
   })
 
   it('handles Lokalkontrakt and Garagekontrakt', () => {
@@ -431,11 +431,11 @@ describe('parseLeaseChanges', () => {
       ])
     })
 
-    it('preserves the latest logtime when deduplicating events for the same leaseId', () => {
+    it('emits multiple events for the same leaseId in chronological order', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 504-022-02-0301/06, SKALLBERGSGATAN 27, P045185, Bostadskontrakt (Uppsagt)\nVärdet i fältet 'Uppsagt datum' ändrat från '' till '2026-04-28'.",
+            "Hyreskontrakt 504-022-02-0301/06, SKALLBERGSGATAN 27, P045185, Bostadskontrakt (Kommande)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-04-28'.",
           logtime: new Date('2026-04-28T10:00:00Z'),
         },
         {
@@ -447,8 +447,11 @@ describe('parseLeaseChanges', () => {
 
       const result = parseLeaseChanges(rows)
 
-      expect(result).toHaveLength(1)
-      expect(result[0].timestamp).toEqual(new Date('2026-04-29T10:00:00Z'))
+      expect(result).toHaveLength(2)
+      expect(result[0].action).toBe('create')
+      expect(result[0].timestamp).toEqual(new Date('2026-04-28T10:00:00Z'))
+      expect(result[1].action).toBe('terminate')
+      expect(result[1].timestamp).toEqual(new Date('2026-04-29T10:00:00Z'))
     })
   })
 })

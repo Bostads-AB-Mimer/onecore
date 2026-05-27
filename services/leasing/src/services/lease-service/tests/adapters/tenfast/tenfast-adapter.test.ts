@@ -2110,7 +2110,7 @@ describe(tenfastAdapter.syncTenant, () => {
   })
 })
 
-describe('terminateLease', () => {
+describe(tenfastAdapter.terminateLease, () => {
   const terminateBody: tenfastAdapter.TerminateLeaseBody = {
     endDate: new Date('2026-04-30T00:00:00.000Z'),
     reason: 'Synced from xpand',
@@ -2155,7 +2155,7 @@ describe('terminateLease', () => {
     )
   })
 
-  it('returns ok:false err:lease-not-found when getLeaseByExternalId returns not-found', async () => {
+  it('fails with lease-not-found when getLeaseByExternalId returns not-found', async () => {
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
@@ -2222,7 +2222,7 @@ describe('terminateLease', () => {
   })
 })
 
-describe('voidLease', () => {
+describe(tenfastAdapter.voidLease, () => {
   beforeEach(() => {
     jest.restoreAllMocks()
     ;(request as jest.Mock).mockReset()
@@ -2245,11 +2245,12 @@ describe('voidLease', () => {
       expect.objectContaining({
         method: 'patch',
         url: expect.stringContaining(`/avtal/${lease._id}/void`),
+        data: { reason: 'Synced from xpand' },
       })
     )
   })
 
-  it('returns ok:false err:lease-not-found when getLeaseByExternalId returns not-found', async () => {
+  it('fails with lease-not-found when getLeaseByExternalId returns not-found', async () => {
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
@@ -2257,21 +2258,6 @@ describe('voidLease', () => {
     const result = await tenfastAdapter.voidLease('999/01')
 
     expect(result).toEqual({ ok: false, err: 'lease-not-found' })
-  })
-
-  it('returns ok:false err:lease-signed when Tenfast returns 400 signed-error', async () => {
-    const lease = factory.tenfastLease.build()
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: true, data: lease })
-    ;(request as jest.Mock).mockResolvedValueOnce({
-      status: 400,
-      data: { error: 'Avtalet kan bara makuleras innan det är signerat.' },
-    })
-
-    const result = await tenfastAdapter.voidLease(lease.externalId)
-
-    expect(result).toEqual({ ok: false, err: 'lease-signed' })
   })
 
   it('returns ok:false err:void-failed on unexpected 4xx response', async () => {

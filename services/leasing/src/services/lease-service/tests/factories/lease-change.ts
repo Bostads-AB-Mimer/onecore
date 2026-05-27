@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import type { LeaseChange } from '../../adapters/xpand/cmlog-lease-adapter'
+import type { LeaseChange } from '@onecore/types'
 
 export const LeaseChangeFactory = Factory.define<LeaseChange>(
   ({ sequence }) => ({

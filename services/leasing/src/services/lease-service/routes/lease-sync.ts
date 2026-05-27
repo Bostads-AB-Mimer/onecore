@@ -1,5 +1,9 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { SyncContactToLeasingSchema } from '@onecore/types'
 
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
@@ -34,7 +38,7 @@ export const routes = (router: KoaRouter) => {
       const changes = await getLeaseChanges(since)
 
       ctx.status = 200
-      ctx.body = { content: changes, ...metadata }
+      ctx.body = makeSuccessResponseBody(changes, metadata)
     } catch (error: unknown) {
       logger.error(
         { error, metadata },
@@ -137,10 +141,10 @@ export const routes = (router: KoaRouter) => {
           }
 
           ctx.status = 201
-          ctx.body = {
-            content: { action: 'created', leaseId },
-            ...metadata,
-          }
+          ctx.body = makeSuccessResponseBody(
+            { action: 'created', leaseId },
+            metadata
+          )
           return
         }
 
@@ -175,10 +179,10 @@ export const routes = (router: KoaRouter) => {
           if (!result.ok) {
             if (result.err === 'lease-not-found') {
               ctx.status = 200
-              ctx.body = {
-                content: { action: 'skipped', leaseId },
-                ...metadata,
-              }
+              ctx.body = makeSuccessResponseBody(
+                { action: 'skipped', leaseId },
+                metadata
+              )
               return
             }
             logger.error(
@@ -192,7 +196,7 @@ export const routes = (router: KoaRouter) => {
 
           logger.info({ leaseId }, 'Lease terminated in Tenfast')
           ctx.status = 200
-          ctx.body = { content: result.data, ...metadata }
+          ctx.body = makeSuccessResponseBody(result.data, metadata)
           return
         }
 
@@ -202,10 +206,10 @@ export const routes = (router: KoaRouter) => {
           if (!result.ok) {
             if (result.err === 'lease-not-found') {
               ctx.status = 200
-              ctx.body = {
-                content: { action: 'skipped', leaseId },
-                ...metadata,
-              }
+              ctx.body = makeSuccessResponseBody(
+                { action: 'skipped', leaseId },
+                metadata
+              )
               return
             }
             logger.error(
@@ -219,7 +223,7 @@ export const routes = (router: KoaRouter) => {
 
           logger.info({ leaseId }, 'Lease voided in Tenfast')
           ctx.status = 200
-          ctx.body = { content: result.data, ...metadata }
+          ctx.body = makeSuccessResponseBody(result.data, metadata)
           return
         }
       } catch (error: unknown) {

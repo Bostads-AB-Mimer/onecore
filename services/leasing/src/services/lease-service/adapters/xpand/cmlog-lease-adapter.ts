@@ -1,17 +1,13 @@
 import { Knex } from 'knex'
 import { logger } from '@onecore/utilities'
+import type { LeaseChange } from '@onecore/types'
 
 import { xpandDb } from './xpandDb'
 
-export interface LeaseChange {
-  leaseId: string
-  contactCode: string
-  rentalObjectId: string
-  action: 'create' | 'terminate' | 'void'
-  // Source cmlog.logtime — used by sync-leases to checkpoint after each
-  // successful sync so the next run resumes at the right place.
-  timestamp: Date
-}
+// `LeaseChange.timestamp` is sourced from cmlog.logtime — used by
+// sync-leases to checkpoint after each successful sync so the next run
+// resumes at the right place.
+export type { LeaseChange }
 
 const UNDERTECKNAT_CREATE_PATTERN =
   /Värdet i fältet 'Undertecknat' ändrat från '' till '\d{4}-\d{2}-\d{2}'/
@@ -47,17 +43,18 @@ const RELEVANT_CONTRACT_TYPES = [
 export const cmlogLeaseChanges = (
   db: Knex,
   since: Date | null
-): Promise<Record<string, unknown>[]> => {
+): Promise<{ logmemo: string; logtime: Date }[]> => {
   const base = db
     .from('cmlog')
     .whereLike('logmemo', 'Hyreskontrakt %')
     .orderBy('logtime', 'asc')
+    .select('logmemo', 'logtime')
 
   return since ? base.andWhere('logtime', '>', since) : base
 }
 
 /**
- * Parses cmlog rows into deduplicated LeaseChange entries.
+ * Parses cmlog rows into LeaseChange entries, one per matching row.
  *
  * Extracts leaseId from the first token after "Hyreskontrakt ", contact code
  * (P-prefixed or other known prefixes), and derives rentalObjectId by stripping
@@ -72,13 +69,16 @@ export const cmlogLeaseChanges = (
  *                 the rename line are skipped with a warning.
  *
  * Only rows containing Bostadskontrakt, Lokalkontrakt, or Garagekontrakt are
- * included. Expects rows in chronological order (oldest first); when the same
- * leaseId has multiple events, the latest is kept.
+ * included. Events are emitted in the order they appear in `rows` (callers pass
+ * them chronologically). Multiple events for the same leaseId are all emitted —
+ * downstream sync replays them in order so Tenfast converges on the same final
+ * state as xpand, even when a lease was created and later terminated/voided
+ * within a single sync window.
  */
 export const parseLeaseChanges = (
   rows: { logmemo: string; logtime: Date }[]
 ): LeaseChange[] => {
-  const byLeaseId = new Map<string, LeaseChange>()
+  const changes: LeaseChange[] = []
 
   for (const row of rows) {
     const firstLine = row.logmemo.split('\n')[0]
@@ -120,7 +120,7 @@ export const parseLeaseChanges = (
         ? effectiveLeaseId.substring(0, slashIndex)
         : effectiveLeaseId
 
-    byLeaseId.set(effectiveLeaseId, {
+    changes.push({
       leaseId: effectiveLeaseId,
       contactCode,
       rentalObjectId,
@@ -129,7 +129,7 @@ export const parseLeaseChanges = (
     })
   }
 
-  return Array.from(byLeaseId.values())
+  return changes
 }
 
 /**
@@ -138,10 +138,7 @@ export const parseLeaseChanges = (
 export const getLeaseChanges = async (
   since: Date | null
 ): Promise<LeaseChange[]> => {
-  const rows = (await cmlogLeaseChanges(xpandDb, since)) as {
-    logmemo: string
-    logtime: Date
-  }[]
+  const rows = await cmlogLeaseChanges(xpandDb, since)
 
   const changes = parseLeaseChanges(rows)
 

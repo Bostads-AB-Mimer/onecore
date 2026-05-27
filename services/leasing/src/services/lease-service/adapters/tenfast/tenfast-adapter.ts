@@ -103,7 +103,8 @@ export const createLease = async (
     | 'unknown'
   >
 > => {
-  const tenantResult = await getOrCreateTenant(contact.contactCode, () =>
+  const tenantResult = await getOrCreateTenant(
+    contact.contactCode,
     buildTenantRequestData(contact)
   )
   if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
@@ -189,7 +190,8 @@ export const importLease = async (
       { leaseId, contactCode: contact.contactCode, rentalObjectCode },
       'tenfast-adapter.importLease: starting import'
     )
-    const tenantResult = await getOrCreateTenant(contact.contactCode, () =>
+    const tenantResult = await getOrCreateTenant(
+      contact.contactCode,
       buildTenantRequestDataFromPayload(contact)
     )
     if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
@@ -715,7 +717,7 @@ export const getTenantByContactCode = async (
   }
 }
 
-const postCreateTenant = async (
+const createTenantRequest = async (
   requestData: object
 ): Promise<
   AdapterResult<
@@ -758,11 +760,11 @@ const postCreateTenant = async (
 }
 
 export const createTenant = (contact: Contact) =>
-  postCreateTenant(buildTenantRequestData(contact))
+  createTenantRequest(buildTenantRequestData(contact))
 
 async function getOrCreateTenant(
   contactCode: string,
-  buildRequestData: () => object
+  requestData: object
 ): Promise<
   AdapterResult<
     TenfastTenant,
@@ -774,7 +776,7 @@ async function getOrCreateTenant(
     return { ok: false, err: 'could-not-retrieve-tenant' }
   }
   if (!tenantResponse.data) {
-    const createTenantResult = await postCreateTenant(buildRequestData())
+    const createTenantResult = await createTenantRequest(requestData)
     if (!createTenantResult.ok || !createTenantResult.data) {
       return { ok: false, err: 'could-not-create-tenant' }
     }
@@ -1330,7 +1332,7 @@ export const voidLease = async (
 ): Promise<
   AdapterResult<
     { action: 'voided'; leaseId: string },
-    'lease-not-found' | 'lease-signed' | 'void-failed' | 'unknown'
+    'lease-not-found' | 'void-failed' | 'unknown'
   >
 > => {
   const existing = await getLeaseByExternalId(leaseId)
@@ -1345,27 +1347,15 @@ export const voidLease = async (
     const response = await tenfastApi.request({
       method: 'patch',
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existing.data._id}/void?hyresvard=${tenfastCompanyId}`,
-      data: {},
+      data: { reason: 'Synced from xpand' },
     })
 
     if (response.status === 200) {
       return { ok: true, data: { action: 'voided', leaseId } }
     }
 
-    if (
-      response.status === 400 &&
-      response.data?.error ===
-        'Avtalet kan bara makuleras innan det är signerat.'
-    ) {
-      logger.error(
-        { leaseId },
-        'tenfast-adapter.voidLease: lease is signed, manual handling required'
-      )
-      return { ok: false, err: 'lease-signed' }
-    }
-
     logger.error(
-      { status: response.status, error: response.data },
+      { leaseId, status: response.status, error: response.data },
       'tenfast-adapter.voidLease'
     )
     return { ok: false, err: 'void-failed' }
