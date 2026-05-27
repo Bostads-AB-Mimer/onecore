@@ -16,7 +16,7 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
-import type { SyncContactToLeasingPayload } from '@onecore/types'
+import type { LeaseChange, SyncContactToLeasingPayload } from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
@@ -770,6 +770,63 @@ const syncContactToLeasing = async (
   }
 }
 
+const getUpdatedLeases = async (
+  since: Date | null
+): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
+  try {
+    const params = since ? { since: since.toISOString() } : {}
+    const response = await axios.get(`${tenantsLeasesServiceUrl}/leases/sync`, {
+      params,
+    })
+
+    if (response.status === 200) {
+      const content: LeaseChange[] = response.data.content.map(
+        (c: Omit<LeaseChange, 'timestamp'> & { timestamp: string }) => ({
+          ...c,
+          timestamp: new Date(c.timestamp),
+        })
+      )
+      return { ok: true, data: content }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getUpdatedLeases')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncLease = async (
+  leaseId: string,
+  contact: SyncContactToLeasingPayload | undefined,
+  action: 'create' | 'terminate' | 'void'
+): Promise<
+  AdapterResult<
+    {
+      action: 'created' | 'terminated' | 'voided' | 'skipped'
+      leaseId: string
+    },
+    'sync-failed' | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/sync`,
+      { leaseId, contact, action }
+    )
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'leasing-adapter.syncLease')
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncLease')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   exportLeasesToExcel,
@@ -799,6 +856,8 @@ export {
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,
+  getUpdatedLeases,
+  syncLease,
 }
 
 export {
