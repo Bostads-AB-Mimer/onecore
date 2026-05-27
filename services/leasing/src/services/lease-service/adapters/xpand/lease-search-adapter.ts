@@ -397,9 +397,9 @@ export class LeaseSearchQueryBuilder {
    * Apply building manager filter (Kvartersvärd)
    */
   applyBuildingManagerFilter(): this {
-    if (this.params.buildingManager && this.params.buildingManager.length > 0) {
+    if (this.params.kvvAreaCodes && this.params.kvvAreaCodes.length > 0) {
       this.ensureDistrictJoin()
-      this.query.whereIn('bafen.omrade', this.params.buildingManager)
+      this.query.whereIn('bafen.code', this.params.kvvAreaCodes)
     }
 
     return this

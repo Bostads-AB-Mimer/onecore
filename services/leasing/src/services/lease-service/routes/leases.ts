@@ -304,7 +304,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManager',
+      'kvvAreaCodes',
       'parkingSpaceType',
       'page',
       'limit',
@@ -442,7 +442,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManager',
+      'kvvAreaCodes',
       'parkingSpaceType',
       'sortBy',
       'sortOrder',
@@ -629,7 +629,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManager',
+      'kvvAreaCodes',
     ])
 
     const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
