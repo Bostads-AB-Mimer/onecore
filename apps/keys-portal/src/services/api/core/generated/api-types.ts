@@ -4297,6 +4297,61 @@ export interface paths {
       };
     };
   };
+  "/cost-centers": {
+    /**
+     * List all cost centers
+     * @description Returns all OneCore cost centers in a minimal shape suitable for select lists.
+     */
+    get: {
+      responses: {
+        /** @description List of cost centers */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterSummary"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/cost-centers/{id}/tree": {
+    /**
+     * Get a cost center management tree
+     * @description Returns the cost center with KVV areas, properties (addresses + aggregates)
+     * and Keycloak-expanded lead, deputy and responsible users. If Keycloak is
+     * unreachable, the tree is returned with user fields set to null.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Cost center tree */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterTree"];
+            };
+          };
+        };
+        /** @description Cost center not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/buildings": {
     /**
      * Get all buildings for a specific property
@@ -10432,6 +10487,129 @@ export interface components {
       additionalInformation: string | null;
       confidence: number;
     };
+    KeycloakUserSummary: {
+      id: string;
+      username: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      mobilePhone?: string;
+      employeeId?: string;
+    };
+    CostCenterTreeAddress: {
+      buildingCode: string;
+      buildingName: string | null;
+      buildingType: ({
+        code: string | null;
+        name: string | null;
+      }) | null;
+    };
+    CostCenterTreeAggregates: {
+      residenceCount: number;
+      parkingCount: number;
+      entranceCount: number;
+    };
+    CostCenterTreeProperty: {
+      code: string;
+      designation: string | null;
+      tract: string | null;
+      addresses: ({
+          buildingCode: string;
+          buildingName: string | null;
+          buildingType: ({
+            code: string | null;
+            name: string | null;
+          }) | null;
+        })[];
+      aggregates: {
+        residenceCount: number;
+        parkingCount: number;
+        entranceCount: number;
+      };
+    };
+    CostCenterTreeKvvArea: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string | null;
+      responsible: {
+        id: string;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        mobilePhone?: string;
+        employeeId?: string;
+      } | null;
+      properties: ({
+          code: string;
+          designation: string | null;
+          tract: string | null;
+          addresses: ({
+              buildingCode: string;
+              buildingName: string | null;
+              buildingType: ({
+                code: string | null;
+                name: string | null;
+              }) | null;
+            })[];
+          aggregates: {
+            residenceCount: number;
+            parkingCount: number;
+            entranceCount: number;
+          };
+        })[];
+    };
+    CostCenterTree: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+      lead: {
+        id: string;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        mobilePhone?: string;
+        employeeId?: string;
+      } | null;
+      deputy: components["schemas"]["CostCenterTree"]["lead"] | null;
+      capabilities: {
+        canEdit: boolean;
+      };
+      kvvAreas: ({
+          /** Format: uuid */
+          id: string;
+          code: string;
+          name: string | null;
+          responsible: components["schemas"]["CostCenterTree"]["lead"] | null;
+          properties: ({
+              code: string;
+              designation: string | null;
+              tract: string | null;
+              addresses: ({
+                  buildingCode: string;
+                  buildingName: string | null;
+                  buildingType: ({
+                    code: string | null;
+                    name: string | null;
+                  }) | null;
+                })[];
+              aggregates: {
+                residenceCount: number;
+                parkingCount: number;
+                entranceCount: number;
+              };
+            })[];
+        })[];
+    };
+    CostCenterSummary: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+    };
     Key: {
       /** Format: uuid */
       id: string;
@@ -12817,11 +12995,23 @@ export interface components {
       totalInvalid: number;
     };
     KeycloakUser: {
-      id?: string;
-      username?: string;
+      id: string;
+      username: string;
       firstName?: string;
       lastName?: string;
       email?: string;
+      emailVerified?: boolean;
+      /** @description Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings. */
+      attributes?: {
+        [key: string]: string[];
+      };
+      /** Format: int64 */
+      createdTimestamp?: number;
+      enabled?: boolean;
+      totp?: boolean;
+      disableableCredentialTypes?: string[];
+      requiredActions?: string[];
+      notBefore?: number;
     };
     RentalPropertyResponse: {
       content?: {

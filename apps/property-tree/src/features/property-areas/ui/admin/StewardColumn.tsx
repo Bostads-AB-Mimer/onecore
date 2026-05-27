@@ -20,6 +20,7 @@ interface StewardColumnProps {
   properties: PropertyForAdmin[]
   allStewards?: Steward[]
   onReassignArea?: (kvvArea: string, toStewardRefNr: string) => void
+  canEdit?: boolean
 }
 
 export function StewardColumn({
@@ -27,6 +28,7 @@ export function StewardColumn({
   properties,
   allStewards = [],
   onReassignArea,
+  canEdit,
 }: StewardColumnProps) {
   const [showAssignDialog, setShowAssignDialog] = useState(false)
 
@@ -45,6 +47,12 @@ export function StewardColumn({
                 variant="subtle"
                 size="icon"
                 className="h-7 w-7 -mt-1 -mr-2"
+                disabled={canEdit === false}
+                title={
+                  canEdit === false
+                    ? 'Du saknar behörighet att ändra förvaltningsområde'
+                    : undefined
+                }
                 onClick={() => setShowAssignDialog(true)}
               >
                 <Pencil className="h-4 w-4" />
