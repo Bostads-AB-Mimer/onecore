@@ -954,4 +954,189 @@ describe('inspection-service index', () => {
       )
     })
   })
+
+  describe('DELETE /inspections/internal/:inspectionId/rooms/:roomId', () => {
+    // Fully-typed minimal InternalInspection. The route only reads
+    // rooms[].roomId and rooms[].isAddedInThisInspection; the rest is
+    // populated to satisfy the schema.
+    function buildInspectionWithRoom(
+      roomId: string,
+      isAddedInThisInspection: boolean
+    ): inspectionAdapter.InternalInspection {
+      return {
+        id: '42',
+        status: 'Påbörjad',
+        date: '2026-01-01T00:00:00.000Z',
+        startedAt: null,
+        endedAt: null,
+        inspector: 'Test',
+        type: 'underhall',
+        residenceId: 'R1',
+        address: 'Addr',
+        apartmentCode: 'A1',
+        isFurnished: true,
+        leaseId: 'L1',
+        masterKeyAccess: null,
+        isTenantPresent: false,
+        isNewTenantPresent: false,
+        hasRemarks: false,
+        notes: null,
+        totalCost: null,
+        remarkCount: 0,
+        rooms: [
+          {
+            roomId,
+            conditions: { details: '' },
+            actions: { details: [] },
+            componentNotes: { details: '' },
+            componentCosts: { details: 0 },
+            componentPhotos: { details: [] },
+            componentCostResponsibilities: { details: null },
+            photos: [],
+            isApproved: false,
+            isHandled: false,
+            detailComponents: [],
+            components: [],
+            isAddedInThisInspection,
+          },
+        ],
+      }
+    }
+
+    it('returns 204 on happy path', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: buildInspectionWithRoom('ROOM-1', true),
+        })
+      const deleteRoomSpy = jest
+        .spyOn(propertyBaseAdapter, 'deleteRoom')
+        .mockResolvedValue({ ok: true, data: undefined })
+      const removeTrackingSpy = jest
+        .spyOn(inspectionAdapter, 'removeAddedRoomFromInspection')
+        .mockResolvedValue({ ok: true, data: undefined })
+
+      const res = await request(app.callback()).delete(
+        '/inspections/internal/42/rooms/ROOM-1'
+      )
+
+      expect(res.status).toBe(204)
+      expect(deleteRoomSpy).toHaveBeenCalledWith('ROOM-1')
+      expect(removeTrackingSpy).toHaveBeenCalledWith('42', 'ROOM-1')
+    })
+
+    it('returns 404 when inspection is not found', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionById')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+      const deleteRoomSpy = jest.spyOn(propertyBaseAdapter, 'deleteRoom')
+
+      const res = await request(app.callback()).delete(
+        '/inspections/internal/999/rooms/ROOM-1'
+      )
+
+      expect(res.status).toBe(404)
+      expect(deleteRoomSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns 404 when room is absent from the inspection', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: buildInspectionWithRoom('OTHER-ROOM', true),
+        })
+      const deleteRoomSpy = jest.spyOn(propertyBaseAdapter, 'deleteRoom')
+
+      const res = await request(app.callback()).delete(
+        '/inspections/internal/42/rooms/ROOM-1'
+      )
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('room-not-added-in-this-inspection')
+      expect(deleteRoomSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns 404 when the room exists but isAddedInThisInspection is false', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: buildInspectionWithRoom('ROOM-1', false),
+        })
+      const deleteRoomSpy = jest.spyOn(propertyBaseAdapter, 'deleteRoom')
+
+      const res = await request(app.callback()).delete(
+        '/inspections/internal/42/rooms/ROOM-1'
+      )
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('room-not-added-in-this-inspection')
+      expect(deleteRoomSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns 409 when xpand has installed components', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: buildInspectionWithRoom('ROOM-1', true),
+        })
+      jest
+        .spyOn(propertyBaseAdapter, 'deleteRoom')
+        .mockResolvedValue({ ok: false, err: 'has-components' })
+      const removeTrackingSpy = jest.spyOn(
+        inspectionAdapter,
+        'removeAddedRoomFromInspection'
+      )
+
+      const res = await request(app.callback()).delete(
+        '/inspections/internal/42/rooms/ROOM-1'
+      )
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toBe('room-has-components')
+      expect(removeTrackingSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns 404 when xpand reports the room is missing', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: buildInspectionWithRoom('ROOM-1', true),
+        })
+      jest
+        .spyOn(propertyBaseAdapter, 'deleteRoom')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).delete(
+        '/inspections/internal/42/rooms/ROOM-1'
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('still returns 204 when the tracking-row drop reports not-found (partial success)', async () => {
+      jest
+        .spyOn(inspectionAdapter, 'getInternalInspectionById')
+        .mockResolvedValue({
+          ok: true,
+          data: buildInspectionWithRoom('ROOM-1', true),
+        })
+      jest
+        .spyOn(propertyBaseAdapter, 'deleteRoom')
+        .mockResolvedValue({ ok: true, data: undefined })
+      jest
+        .spyOn(inspectionAdapter, 'removeAddedRoomFromInspection')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).delete(
+        '/inspections/internal/42/rooms/ROOM-1'
+      )
+
+      expect(res.status).toBe(204)
+    })
+  })
 })

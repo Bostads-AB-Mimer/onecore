@@ -1911,6 +1911,150 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/rooms/{roomId}:
+   *   delete:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Remove a room that was added during the current inspection.
+   *     description: |
+   *       Symmetric to POST /inspections/internal/{inspectionId}/rooms.
+   *       Verifies the room was added during this inspection (via the
+   *       inspection_added_room tracking table) before deleting it from Xpand
+   *       and dropping the tracking row.
+   *
+   *       The isAddedInThisInspection check is authoritative — the frontend
+   *       gate is just UX. Rooms that originated from the property system
+   *       (isAddedInThisInspection: false) cannot be removed through this
+   *       endpoint.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: path
+   *         name: roomId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       '204':
+   *         description: Room removed.
+   *       '404':
+   *         description: |
+   *           Inspection not found, room not found in Xpand, or the room was
+   *           not added during this inspection.
+   *       '409':
+   *         description: Room has installed components and cannot be removed.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete(
+    '/inspections/internal/:inspectionId/rooms/:roomId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { inspectionId, roomId } = ctx.params
+
+      try {
+        const inspectionResult =
+          await inspectionAdapter.getInternalInspectionById(inspectionId)
+        if (!inspectionResult.ok) {
+          if (inspectionResult.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Inspection not found', ...metadata }
+            return
+          }
+          logger.error(
+            { err: inspectionResult.err, inspectionId, metadata },
+            'Failed to load inspection'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        // Authoritative isAddedInThisInspection check. The inspection's rooms
+        // are decorated by the inspection service via the join on the
+        // inspection_added_room tracking table — so this is the DB-backed
+        // validation. Frontend gating is just UX.
+        const targetRoom = inspectionResult.data.rooms?.find(
+          (r) => r.roomId === roomId
+        )
+        if (!targetRoom || !targetRoom.isAddedInThisInspection) {
+          ctx.status = 404
+          ctx.body = {
+            error: 'room-not-added-in-this-inspection',
+            ...metadata,
+          }
+          return
+        }
+
+        const deleteResult = await propertyBaseAdapter.deleteRoom(roomId)
+        if (!deleteResult.ok) {
+          if (deleteResult.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Room not found in Xpand', ...metadata }
+            return
+          }
+          if (deleteResult.err === 'has-components') {
+            ctx.status = 409
+            ctx.body = { error: 'room-has-components', ...metadata }
+            return
+          }
+          logger.error(
+            { err: deleteResult.err, inspectionId, roomId, metadata },
+            'Failed to delete room in Xpand'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        // Partial-success ordering matches the add path: if the tracking-row
+        // drop fails after the Xpand delete succeeds, the room is gone but
+        // the tracking row is stale. The next inspection load won't surface
+        // it (draftRooms no longer contains the room once the FE saves), so
+        // the orphan row is harmless. Log and return 204.
+        const trackResult =
+          await inspectionAdapter.removeAddedRoomFromInspection(
+            inspectionId,
+            roomId
+          )
+        if (!trackResult.ok) {
+          // 'not-found' is the documented partial-success case (e.g. retry of
+          // a previously-half-completed delete) — warn, not error. 'unknown'
+          // is genuinely unexpected and stays at error.
+          const payload = {
+            err: trackResult.err,
+            inspectionId,
+            roomId,
+            metadata,
+          }
+          const msg =
+            'deleteRoom succeeded but removeAddedRoomFromInspection failed — partial success'
+          if (trackResult.err === 'not-found') {
+            logger.warn(payload, msg)
+          } else {
+            logger.error(payload, msg)
+          }
+        }
+
+        ctx.status = 204
+      } catch (error) {
+        logger.error(
+          { error, inspectionId, roomId },
+          'Error orchestrating inspection room removal'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
   router.patch('/inspections/internal/:inspectionId/draft', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params

@@ -16,7 +16,7 @@ import {
 import { DbInspection } from '../../../adapters/db-adapter/types'
 
 jest.mock('@onecore/utilities', () => ({
-  logger: { info: jest.fn(), error: jest.fn() },
+  logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }))
 
 let nextInspectionId = 1
@@ -1037,6 +1037,67 @@ describe('db-adapter', () => {
       ) as unknown as Knex
 
       const result = await dbAdapter.getInspectionById(mockDb, '1')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+  })
+
+  describe('removeAddedRoomFromInspection', () => {
+    function createMockDbForRemove(deletedCount: number | Error) {
+      const chain: Record<string, jest.Mock> = {}
+      chain.where = jest.fn().mockReturnValue(chain)
+      chain.delete = jest.fn().mockImplementation(() => {
+        if (deletedCount instanceof Error) throw deletedCount
+        return Promise.resolve(deletedCount)
+      })
+
+      const mockDb = Object.assign(
+        jest.fn().mockReturnValue(chain),
+        chain
+      ) as unknown as Knex
+      return { mockDb, chain }
+    }
+
+    it('returns ok when a tracking row is deleted', async () => {
+      const { mockDb, chain } = createMockDbForRemove(1)
+
+      const result = await dbAdapter.removeAddedRoomFromInspection(mockDb, {
+        inspectionId: 42,
+        xpandRoomId: 'ROOM-1',
+      })
+
+      expect(result.ok).toBe(true)
+      expect(chain.where).toHaveBeenCalledWith({
+        inspectionId: 42,
+        xpandRoomId: 'ROOM-1',
+      })
+      expect(chain.delete).toHaveBeenCalled()
+    })
+
+    it('returns not-found when no row matched', async () => {
+      const { mockDb } = createMockDbForRemove(0)
+
+      const result = await dbAdapter.removeAddedRoomFromInspection(mockDb, {
+        inspectionId: 42,
+        xpandRoomId: 'MISSING',
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('not-found')
+      }
+    })
+
+    it('returns unknown when the query throws', async () => {
+      const { mockDb } = createMockDbForRemove(new Error('DB down'))
+
+      const result = await dbAdapter.removeAddedRoomFromInspection(mockDb, {
+        inspectionId: 42,
+        xpandRoomId: 'ROOM-1',
+      })
 
       expect(result.ok).toBe(false)
       if (!result.ok) {

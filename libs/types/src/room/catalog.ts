@@ -1,26 +1,15 @@
-/**
- * Curated mapping of Xpand room type codes (barut.code) to allowed
- * room captions, with an alwaysNumber flag controlling auto-numbering
- * behaviour. Derived from the most common type/caption combinations
- * in production Mimer data (combinations with ≥100 occurrences, after
- * deduplicating reversed synonyms and typos).
- *
- * The first caption per type is the default chosen when the API
- * caller omits the caption.
- *
- * alwaysNumber semantics:
- *  - true  → the very first room of this type is numbered (RUM 1, then RUM 2, ...)
- *  - false → first room uses the base name (HALL), second is HALL 2, etc.
- *
- * Shared between the property service (server-side write validation)
- * and the property-tree frontend (form dropdowns) so both surfaces
- * stay in lockstep without an extra API hop.
- */
+// Curated Xpand room type code → allowed captions. First caption is the
+// default when caller omits it. alwaysNumber: true numbers from RUM 1, false
+// uses the base name then 2, 3, ... startingRoomCode: indoor types start at
+// 01, outdoor/auxiliary (BAL, UP, BRS) at 20; getNextRoomCode picks the
+// lowest free slot at or above and may spill past the next bucket if full.
+// Shared by property service (validation) and property-tree (form dropdowns).
 export type RoomCaptionTemplate = {
   typeCode: string
   typeLabel: string
   captionOptions: readonly [string, ...string[]]
   alwaysNumber: boolean
+  startingRoomCode: number
 }
 
 export const ROOM_CAPTION_TEMPLATES: readonly RoomCaptionTemplate[] = [
@@ -29,114 +18,133 @@ export const ROOM_CAPTION_TEMPLATES: readonly RoomCaptionTemplate[] = [
     typeLabel: 'Badrum',
     captionOptions: ['BADRUM'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'BAL',
     typeLabel: 'Balkong',
     captionOptions: ['BALKONG', 'BALKONG (Inglasad)'],
     alwaysNumber: false,
+    startingRoomCode: 20,
   },
   {
     typeCode: 'BRS',
     typeLabel: 'Säkerhetsutrustning',
     captionOptions: ['SÄKERHETSUTRUSTNING'],
     alwaysNumber: false,
+    startingRoomCode: 20,
   },
   {
     typeCode: 'DUSCH',
     typeLabel: 'Duschrum',
     captionOptions: ['DUSCHRUM', 'DUSCH'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'FÖR',
     typeLabel: 'Förråd',
     captionOptions: ['FÖRRÅD'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'GROV',
     typeLabel: 'Grovkök',
     captionOptions: ['GROVKÖK'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'HALL',
     typeLabel: 'Hall',
     captionOptions: ['HALL', 'HALL LITEN'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'KLÄD',
     typeLabel: 'Klädkammare',
     captionOptions: ['KLÄDKAMMARE'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'KÖK',
     typeLabel: 'Kök',
     captionOptions: ['KÖK'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'KOV',
     typeLabel: 'Kök/vardagsrum',
     captionOptions: ['KÖK/VARDAGSRUM'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'KV',
     typeLabel: 'Kokvrå',
     captionOptions: ['KOKVRÅ'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'MAT',
     typeLabel: 'Matplats',
     captionOptions: ['MATPLATS'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'PA',
     typeLabel: 'Passage',
     captionOptions: ['PASSAGE'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'RUM',
     typeLabel: 'Rum',
     captionOptions: ['RUM'],
     alwaysNumber: true,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'TRAPP',
     typeLabel: 'Trappa',
     captionOptions: ['TRAPP', 'TRAPP MED VINDFÅNG'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'UP',
     typeLabel: 'Uteplats',
     captionOptions: ['UTEPLATS', 'UTEPLATS (ALTAN)'],
     alwaysNumber: false,
+    startingRoomCode: 20,
   },
   {
     typeCode: 'VARD',
     typeLabel: 'Vardagsrum',
     captionOptions: ['VARDAGSRUM'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'WC',
     typeLabel: 'Toalett',
     captionOptions: ['WC'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
   {
     typeCode: 'WC/DU1',
     typeLabel: 'Wc/Dusch 1',
     captionOptions: ['WC/DUSCH'],
     alwaysNumber: false,
+    startingRoomCode: 1,
   },
 ] as const
 
@@ -181,3 +189,7 @@ export const alwaysNumberFor = (typeCode: string): boolean =>
 
 export const getDefaultCaption = (typeCode: string): string | null =>
   TEMPLATES_BY_CODE.get(typeCode)?.captionOptions[0] ?? null
+
+// Unknown type codes fall back to 1 (indoor).
+export const startingRoomCodeFor = (typeCode: string): number =>
+  TEMPLATES_BY_CODE.get(typeCode)?.startingRoomCode ?? 1

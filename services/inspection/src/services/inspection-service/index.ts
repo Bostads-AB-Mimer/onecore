@@ -1076,6 +1076,79 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/added-rooms/{roomId}:
+   *   delete:
+   *     tags:
+   *       - Inspection
+   *     summary: Drop the tracking row for a room added during the inspection.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: path
+   *         name: roomId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       204:
+   *         description: Tracking row dropped.
+   *       400:
+   *         description: Invalid inspectionId.
+   *       404:
+   *         description: No tracking row matched.
+   *       500:
+   *         description: Internal error.
+   */
+  router.delete(
+    '(.*)/inspections/internal/:inspectionId/added-rooms/:roomId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const inspectionId = Number(ctx.params.inspectionId)
+      if (!Number.isInteger(inspectionId) || inspectionId <= 0) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'inspectionId must be a positive integer',
+          ...metadata,
+        }
+        return
+      }
+
+      const { roomId } = ctx.params
+
+      try {
+        const result = await dbAdapter.removeAddedRoomFromInspection(db, {
+          inspectionId,
+          xpandRoomId: roomId,
+        })
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Tracking row not found', ...metadata }
+            return
+          }
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.status = 204
+      } catch (error) {
+        logger.error(
+          { error, inspectionId, roomId },
+          'Error removing room from inspection'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
   router.patch('(.*)/inspections/internal/:inspectionId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params

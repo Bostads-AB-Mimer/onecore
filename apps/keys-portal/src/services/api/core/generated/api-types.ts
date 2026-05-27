@@ -6475,6 +6475,49 @@ export interface paths {
       };
     };
   };
+  "/inspections/internal/{inspectionId}/rooms/{roomId}": {
+    /**
+     * Remove a room that was added during the current inspection.
+     * @description Symmetric to POST /inspections/internal/{inspectionId}/rooms.
+     * Verifies the room was added during this inspection (via the
+     * inspection_added_room tracking table) before deleting it from Xpand
+     * and dropping the tracking row.
+     *
+     * The isAddedInThisInspection check is authoritative — the frontend
+     * gate is just UX. Rooms that originated from the property system
+     * (isAddedInThisInspection: false) cannot be removed through this
+     * endpoint.
+     */
+    delete: {
+      parameters: {
+        path: {
+          inspectionId: string;
+          roomId: string;
+        };
+      };
+      responses: {
+        /** @description Room removed. */
+        204: {
+          content: never;
+        };
+        /**
+         * @description Inspection not found, room not found in Xpand, or the room was
+         * not added during this inspection.
+         */
+        404: {
+          content: never;
+        };
+        /** @description Room has installed components and cannot be removed. */
+        409: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/files": {
     /** List files with optional prefix */
     get: {

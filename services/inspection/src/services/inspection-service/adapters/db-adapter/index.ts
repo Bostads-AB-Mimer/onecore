@@ -468,10 +468,73 @@ export async function saveInspectionDraft(
 }
 
 /**
+ * Drops the tracking row that marks a room as added during the inspection.
+ * Returns 'not-found' if no row matched — the caller decides whether that's
+ * an error (e.g. core's orchestration treats it as a 404).
+ */
+export async function removeAddedRoomFromInspection(
+  dbConnection: Knex = db,
+  params: { inspectionId: number; xpandRoomId: string }
+): Promise<AdapterResult<void, 'not-found' | 'unknown'>> {
+  try {
+    const deleted = await dbConnection('inspection_added_room')
+      .where({
+        inspectionId: params.inspectionId,
+        xpandRoomId: params.xpandRoomId,
+      })
+      .delete()
+
+    if (deleted === 0) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: true, data: undefined }
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        inspectionId: params.inspectionId,
+        xpandRoomId: params.xpandRoomId,
+      },
+      'db-adapter.removeAddedRoomFromInspection'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// Empty InspectionRoom skeleton stamped into draftRooms when a room is first
+// added. Mirrors the FE's initialRoomData so the row is interaction-ready
+// (and refresh-safe) before the inspector saves a draft.
+function emptyInspectionRoom(roomId: string): inspectionTypes.InspectionRoom {
+  return {
+    roomId,
+    conditions: { details: '' },
+    actions: { details: [] },
+    componentNotes: { details: '' },
+    componentCosts: { details: 0 },
+    componentPhotos: { details: [] },
+    componentCostResponsibilities: { details: null },
+    photos: [],
+    isApproved: false,
+    isHandled: false,
+    detailComponents: [],
+    components: [],
+    isAddedInThisInspection: false,
+  }
+}
+
+/**
  * Records that the inspector added a room (already created in Xpand by the
- * property service) during the current inspection. The UNIQUE constraint on
- * (inspectionId, xpandRoomId) means a duplicate call is harmless — we catch
- * the constraint violation and return ok.
+ * property service) during the current inspection. Two atomic effects:
+ *   1. Inserts the tracking row into inspection_added_room (UNIQUE on
+ *      inspectionId+xpandRoomId so retries are harmless).
+ *   2. Appends an empty InspectionRoom entry to the inspection's draftRooms
+ *      JSON so the room is refresh-safe before the FE saves a draft.
+ *      Idempotent: skips the append if the room is already in draftRooms.
+ *
+ * On save, the FE overwrites draftRooms with its full inspectionData, so the
+ * placeholder is replaced by whatever the user has edited — same roomId, no
+ * duplicate.
  */
 export async function addRoomToInspection(
   dbConnection: Knex = db,
@@ -483,24 +546,36 @@ export async function addRoomToInspection(
   >
 > {
   try {
-    const inspection = await dbConnection('inspection')
-      .where('id', params.inspectionId)
-      .first('id')
-    if (!inspection) {
-      return { ok: false, err: 'inspection-not-found' }
-    }
-
-    try {
-      await dbConnection('inspection_added_room').insert({
-        inspectionId: params.inspectionId,
-        xpandRoomId: params.xpandRoomId,
-      })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (!/uq_inspection_added_room|UNIQUE/i.test(msg)) {
-        throw err
+    await dbConnection.transaction(async (trx) => {
+      const inspection = await trx('inspection')
+        .where('id', params.inspectionId)
+        .first('id', 'draftRooms')
+      if (!inspection) {
+        throw new Error('inspection-not-found')
       }
-    }
+
+      try {
+        await trx('inspection_added_room').insert({
+          inspectionId: params.inspectionId,
+          xpandRoomId: params.xpandRoomId,
+        })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (!/uq_inspection_added_room|UNIQUE/i.test(msg)) {
+          throw err
+        }
+      }
+
+      const existing =
+        parseDraftRooms(String(params.inspectionId), inspection.draftRooms) ??
+        []
+      if (!existing.some((r) => r.roomId === params.xpandRoomId)) {
+        const next = [...existing, emptyInspectionRoom(params.xpandRoomId)]
+        await trx('inspection')
+          .where('id', params.inspectionId)
+          .update({ draftRooms: JSON.stringify(next) })
+      }
+    })
 
     return {
       ok: true,
@@ -510,6 +585,9 @@ export async function addRoomToInspection(
       },
     }
   } catch (err) {
+    if (err instanceof Error && err.message === 'inspection-not-found') {
+      return { ok: false, err: 'inspection-not-found' }
+    }
     logger.error(
       {
         err,

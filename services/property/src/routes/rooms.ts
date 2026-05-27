@@ -3,10 +3,13 @@ import { generateRouteMetadata } from '@onecore/utilities'
 
 import {
   createRoom,
+  deleteRoom,
   getRoomById,
   getRooms,
   getRoomsByFacilityId,
   ResidenceNotFoundError,
+  RoomHasComponentsError,
+  RoomNotFoundError,
 } from '@src/adapters/room-adapter'
 import {
   CreateRoomRequestSchema,
@@ -243,4 +246,57 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /rooms/{id}:
+   *   delete:
+   *     summary: Delete a room in Xpand.
+   *     description: |
+   *       Hard-deletes the room and its supporting rows (babuf, barum, cmobj)
+   *       in a single transaction. Refuses with 409 if any committed
+   *       componentInstallations still reference the room — orphaning those
+   *       rows would break component reads.
+   *     tags:
+   *       - Rooms
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the room to delete (barum.keybarum).
+   *     responses:
+   *       204:
+   *         description: Room deleted.
+   *       404:
+   *         description: Room not found.
+   *       409:
+   *         description: Room has installed components and cannot be deleted.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.delete('(.*)/rooms/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    try {
+      await deleteRoom(id)
+      ctx.status = 204
+    } catch (err) {
+      if (err instanceof RoomNotFoundError) {
+        ctx.status = 404
+        ctx.body = { reason: err.message, ...metadata }
+        return
+      }
+      if (err instanceof RoomHasComponentsError) {
+        ctx.status = 409
+        ctx.body = { reason: 'room-has-components', ...metadata }
+        return
+      }
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'unknown error'
+      ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
 }

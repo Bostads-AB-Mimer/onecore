@@ -96,4 +96,12 @@ describe('Rooms API', () => {
     expect(Array.isArray(response.body.content)).toBe(true)
     expect(response.body.content.length).toBe(0)
   })
+
+  it('should return 404 when deleting a non-existent room', async () => {
+    const response = await request(app.callback()).delete(
+      '/rooms/non-existent-id'
+    )
+
+    expect(response.status).toBe(404)
+  })
 })

@@ -1851,6 +1851,39 @@ export interface paths {
         }
       }
     }
+    /**
+     * Delete a room in Xpand.
+     * @description Hard-deletes the room and its supporting rows (babuf, barum, cmobj)
+     * in a single transaction. Refuses with 409 if any committed
+     * componentInstallations still reference the room — orphaning those
+     * rows would break component reads.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the room to delete (barum.keybarum). */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Room deleted. */
+        204: {
+          content: never
+        }
+        /** @description Room not found. */
+        404: {
+          content: never
+        }
+        /** @description Room has installed components and cannot be deleted. */
+        409: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
   }
   '/companies': {
     /**
