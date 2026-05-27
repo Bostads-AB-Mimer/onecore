@@ -34,6 +34,20 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: List of kvv-area codes
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                     required:
+   *                       - code
    *       500:
    *         description: Internal server error
    */
