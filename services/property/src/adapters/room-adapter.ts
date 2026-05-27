@@ -6,7 +6,11 @@ import { logger } from '@onecore/utilities'
 import { CreateRoomRequest, Room } from '@src/types/room'
 import { trimStrings } from '@src/utils/data-conversion'
 import { generateXpandId } from '@src/utils/generate-xpand-id'
-import { alwaysNumberFor, getDefaultCaption } from '@onecore/types'
+import {
+  alwaysNumberFor,
+  getDefaultCaption,
+  startingRoomCodeFor,
+} from '@onecore/types'
 
 import { prisma } from './db'
 
@@ -175,22 +179,26 @@ export async function getRoomsByFacilityId(facilityId: string) {
   )
 }
 
-/**
- * Computes the next available zero-padded 2-digit room code for a residence.
- * Existing codes (e.g. '01', '02', '03') are scanned via babuf.rumcode; non-
- * numeric codes are ignored (TRY_CAST → NULL).
- */
-export const getNextRoomCode = async (rentalId: string): Promise<string> => {
-  const rows = await prisma.$queryRaw<{ next_n: number }[]>`
-    SELECT ISNULL(MAX(TRY_CAST(bf.rumcode AS INT)), 0) + 1 AS next_n
+// Returns the lowest zero-padded rumcode ≥ the type's startingRoomCode that
+// isn't already used in the residence. Fills gaps (1-6,8 → 7) and spills past
+// the next bucket if everything below is full (1-21 → 22).
+export const getNextRoomCode = async (
+  rentalId: string,
+  typeCode: string
+): Promise<string> => {
+  const rows = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT TRY_CAST(bf.rumcode AS INT) AS n
     FROM babuf bf
     INNER JOIN barum r ON r.keycmobj = bf.keycmobj
     WHERE bf.hyresid = ${rentalId}
       AND bf.keyobjlok IS NULL
       AND bf.deletemark = 0
+      AND TRY_CAST(bf.rumcode AS INT) IS NOT NULL
   `
-  const next = rows[0]?.next_n ?? 1
-  return String(next).padStart(2, '0')
+  const used = new Set(rows.map((r) => r.n))
+  let n = startingRoomCodeFor(typeCode)
+  while (used.has(n)) n++
+  return String(n).padStart(2, '0')
 }
 
 /**
@@ -279,7 +287,8 @@ export const createRoom = async (input: CreateRoomRequest): Promise<Room> => {
   }
 
   // 3. Resolve code + caption (auto-derived when not supplied).
-  const code = input.code ?? (await getNextRoomCode(input.rentalId))
+  const code =
+    input.code ?? (await getNextRoomCode(input.rentalId, input.roomTypeCode))
   const caption = await resolveRoomCaption(
     input.rentalId,
     input.roomTypeCode,
