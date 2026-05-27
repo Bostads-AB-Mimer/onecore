@@ -47,10 +47,7 @@ export const exportRentalInvoicesAccounting = async (
       throw new Error('Could not find company ' + companyId)
     }
 
-    const invoicesResult = await getInvoicesNotExported(
-      CHUNK_SIZE,
-      company.tenfastId
-    )
+    const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE, company)
     if (!invoicesResult.ok) {
       logger.error(
         { error: invoicesResult.err },
@@ -71,9 +68,6 @@ export const exportRentalInvoicesAccounting = async (
     const counterPartCustomers = await getCounterPartCustomers()
 
     for (const invoice of invoices) {
-      console.log('Incoming invoice')
-      console.table(invoice.invoiceRows)
-
       try {
         await enrichInvoiceWithAccounting(invoice)
         await setInvoiceRowsTaxRule(invoice)

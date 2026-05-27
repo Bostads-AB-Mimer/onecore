@@ -22,6 +22,7 @@ import {
 import {
   InvoiceRowWithAccounting,
   InvoiceWithAccounting,
+  MimerCompany,
   TenfastRentalObject,
 } from '@src/common/types/typesv2'
 
@@ -203,7 +204,6 @@ export const getInvoiceByOcr = async (
       : null
 
     if (invoice && parsedResponse.data.records?.[0].recipientId) {
-      console.log(parsedResponse.data.records[0].recipientId)
       const tenantResult = await getTenantById(
         parsedResponse.data.records[0].recipientId
       )
@@ -336,12 +336,14 @@ const enrichInvoiceRowsWithAccounting = async (
 
       if (articleResult.ok) {
         const article = articleResult.data
-        console.log(article)
         invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
         if (article.accountConfigurations?.length) {
           const accountConfiguration = article.accountConfigurations.find(
             (accountConfiguration) => {
-              return accountConfiguration.categoryCode === 'Intäkter'
+              return (
+                accountConfiguration.categoryCode === 'Intäkter' &&
+                accountConfiguration.debitType === 'HYRA'
+              )
             }
           )
 
@@ -395,7 +397,7 @@ const enrichInvoiceRowsWithAccounting = async (
 
 export const getInvoicesNotExported = async (
   maxCount: number,
-  landlordId: string
+  company: MimerCompany
 ): Promise<
   AdapterResult<
     {
@@ -413,10 +415,10 @@ export const getInvoicesNotExported = async (
         isManuallyExported: 'false',
         status: 'issued',
         limit: maxCount,
-        hyresvard: landlordId,
+        hyresvard: company.tenfastId,
         /*paginate:
           'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
-        /*ocrNumber: '552606001449921',*/
+        ocrNumber: '552606000000733',
       },
     })
 

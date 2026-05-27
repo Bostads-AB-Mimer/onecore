@@ -1,5 +1,6 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
+import { MimerCompany } from './types/typesv2'
 dotenv.config()
 
 type SftpConfig = {
@@ -65,13 +66,7 @@ export interface Config {
     baseUrl: string
     apiKey: string
   }
-  companies: [
-    {
-      name: string
-      xpandId: string
-      tenfastId: string
-    },
-  ]
+  companies: MimerCompany[]
   health: {
     xledger: {
       systemName: string

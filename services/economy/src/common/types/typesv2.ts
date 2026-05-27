@@ -29,6 +29,7 @@ export type ArticleAccountConfiguration = {
 }
 
 export type InvoiceRowWithAccounting = InvoiceRow & {
+  mimerCompanyCode?: string
   rentArticleName?: string
   projectCode?: string
   property?: string
@@ -140,4 +141,10 @@ export type LedgerRow = {
 export type TenfastRentalObject = {
   _id: string
   externalId: string
+}
+
+export type MimerCompany = {
+  name: string
+  xpandId: string
+  tenfastId: string
 }
