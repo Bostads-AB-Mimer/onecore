@@ -54,8 +54,8 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('/invoices/:invoiceId/pdf', async (ctx) => {
-    const result = await economyAdapter.getInvoicePdf(ctx.params.invoiceId)
+  router.get('/invoices/:ocr/pdf', async (ctx) => {
+    const result = await economyAdapter.getInvoicePdf(ctx.params.ocr)
 
     if (!result.ok) {
       ctx.status = result.err === 'not-found' ? 404 : 500
@@ -64,7 +64,12 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.set('Content-Type', 'application/pdf')
-    ctx.set('Content-Disposition', result.data.contentDisposition)
+    ctx.set(
+      'Content-Disposition',
+      (
+        result.data.contentDisposition || 'attachment; filename="invoice.pdf"'
+      ).replace(/[\r\n]/g, '')
+    )
     ctx.body = result.data.data
   })
 

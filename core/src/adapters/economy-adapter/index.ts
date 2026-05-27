@@ -16,7 +16,7 @@ import { AdapterResult } from './../types'
 import type { SyncContactToEconomyPayload } from '@onecore/types'
 
 export async function getInvoicePdf(
-  invoiceId: string
+  ocr: string
 ): Promise<
   AdapterResult<
     { data: Buffer; contentDisposition: string },
@@ -24,13 +24,16 @@ export async function getInvoicePdf(
   >
 > {
   const response = await axios.get(
-    `${config.economyService.url}/invoices/${invoiceId}/pdf`,
+    `${config.economyService.url}/invoices/${ocr}/pdf`,
     { responseType: 'arraybuffer', validateStatus: () => true }
   )
 
   if (response.status === 404) return { ok: false, err: 'not-found' }
   if (response.status !== 200) {
-    logger.error(response.data, 'economy-adapter.getInvoicePdf')
+    logger.error(
+      { ocr, status: response.status },
+      'economy-adapter.getInvoicePdf'
+    )
     return { ok: false, err: 'unknown' }
   }
 

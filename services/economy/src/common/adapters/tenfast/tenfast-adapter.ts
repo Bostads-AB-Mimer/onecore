@@ -175,7 +175,6 @@ export const getInvoicesForTenant = async (
       )
       return { ok: false, err: 'schema-error' }
     }
-
     return { ok: true, data: parsedResponse.data.map(transformToInvoice) }
   } catch (err: any) {
     logger.error(err)
@@ -753,10 +752,19 @@ export const getInvoicePdf = async (
       headers: {
         'api-token': apiKey,
       },
+      validateStatus: () => true,
     })
 
     if (response.status === 404) {
       return { ok: false, err: 'not-found' }
+    }
+
+    if (response.status !== 200) {
+      logger.error(
+        { ocr, tenfastId, status: response.status },
+        'getInvoicePdf: PDF download failed'
+      )
+      return { ok: false, err: 'unknown' }
     }
 
     return {
@@ -767,9 +775,6 @@ export const getInvoicePdf = async (
       },
     }
   } catch (err: any) {
-    if (err?.response?.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
     logger.error({ err, ocr }, 'getInvoicePdf: failed')
     return { ok: false, err: 'unknown' }
   }
