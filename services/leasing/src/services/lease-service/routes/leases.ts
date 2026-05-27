@@ -113,12 +113,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names
    *       - in: query
-   *         name: buildingManager
+   *         name: kvvAreaCodes
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names (Kvartersvärd)
+   *         description: KVV-area codes (bafen.code) — filters leases to those in the listed förvaltningsområden
    *       - in: query
    *         name: page
    *         schema:
@@ -593,12 +593,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names
    *       - in: query
-   *         name: buildingManager
+   *         name: kvvAreaCodes
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names
+   *         description: KVV-area codes (bafen.code)
    *     responses:
    *       200:
    *         description: Unique contacts matching the filters
