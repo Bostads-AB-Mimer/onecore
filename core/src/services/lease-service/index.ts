@@ -515,24 +515,27 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
+    // For export, even an empty kvv-area result must produce a valid Excel
+    // file. Use a sentinel kvv-area code that won't match any leases so the
+    // downstream Excel generator still produces a properly-formatted (empty)
+    // workbook instead of a JSON payload that would corrupt the .xlsx blob.
+    let exportQuery: LeaseQuery
     if (!resolved.ok) {
       if (resolved.status === 500) {
         ctx.status = 500
         ctx.body = { error: resolved.reason, ...metadata }
         return
       }
-      // No matching kvv-areas -> no leases can match. Return a friendly JSON
-      // response rather than fabricating an empty Excel file.
-      ctx.status = 200
-      ctx.body = {
-        message: 'No leases matched the building manager filter',
-        ...metadata,
+      const { buildingManager: _omit, ...rest } = ctx.query as LeaseQuery & {
+        buildingManager?: string | string[] | undefined
       }
-      return
+      exportQuery = { ...rest, kvvAreaCodes: ['__no_match__'] }
+    } else {
+      exportQuery = resolved.query
     }
 
     try {
-      const result = await leasingAdapter.exportLeasesToExcel(resolved.query)
+      const result = await leasingAdapter.exportLeasesToExcel(exportQuery)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Lease export failed')
