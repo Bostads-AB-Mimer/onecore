@@ -23,3 +23,25 @@ export const PropertyKvvAreaLinkSchema = z.object({
 })
 
 export type PropertyKvvAreaLink = z.infer<typeof PropertyKvvAreaLinkSchema>
+
+export const KvvAreaSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+  costCenterId: z.string().uuid(),
+  responsibleKeycloakUserId: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  updatedBy: z.string().nullable(),
+})
+
+export type KvvArea = z.infer<typeof KvvAreaSchema>
+
+export const PatchKvvAreaResponsibleSchema = z.object({
+  keycloakUserId: z.string().uuid(),
+  updatedBy: z.string().min(1),
+})
+
+export type PatchKvvAreaResponsibleBody = z.infer<
+  typeof PatchKvvAreaResponsibleSchema
+>

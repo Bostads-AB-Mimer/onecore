@@ -1242,3 +1242,16 @@ export const PropertyKvvAreaLinkSchema = z.object({
 })
 
 export type PropertyKvvAreaLink = z.infer<typeof PropertyKvvAreaLinkSchema>
+
+export const PatchKvvAreaResponsibleBodySchema = z.object({
+  keycloakUserId: z.string().uuid(),
+})
+
+export const PatchedKvvAreaSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+})
+
+export type PatchedKvvArea = z.infer<typeof PatchedKvvAreaSchema>

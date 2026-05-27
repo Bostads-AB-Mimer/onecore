@@ -1065,6 +1065,35 @@ export async function findKvvAreaCodesByResponsibles(
   }
 }
 
+type UpdateKvvAreaResponsibleResponse = components['schemas']['KvvArea']
+
+export async function updateKvvAreaResponsible(
+  id: string,
+  body: { keycloakUserId: string; updatedBy: string }
+): Promise<
+  AdapterResult<UpdateKvvAreaResponsibleResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().PATCH('/kvv-areas/{id}/responsible', {
+      params: { path: { id } },
+      body,
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateKvvAreaResponsible')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {

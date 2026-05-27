@@ -14,6 +14,8 @@ export { StewardColumn } from './ui/admin/StewardColumn'
 export { useCanEditPropertyAreas } from './hooks/useCanEditPropertyAreas'
 export { useCostCenters } from './hooks/useCostCenters'
 export { useCostCenterTree } from './hooks/useCostCenterTree'
+export { usePropertyManagers } from './hooks/usePropertyManagers'
+export { useUpdateKvvAreaResponsible } from './hooks/useUpdateKvvAreaResponsible'
 export { useUpdatePropertyKvvArea } from './hooks/useUpdatePropertyKvvArea'
 
 // Types

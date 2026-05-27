@@ -242,6 +242,11 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
+  ...zodToJsonSchema(types.KvvAreaSchema, {
+    name: 'KvvArea',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
 }
 
 swaggerSpec.definition.components = {

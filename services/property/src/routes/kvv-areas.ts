@@ -2,7 +2,12 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { z } from 'zod'
 
-import { findKvvAreaCodesByResponsibles } from '../adapters/kvv-area-adapter'
+import {
+  findKvvAreaCodesByResponsibles,
+  updateKvvAreaResponsible,
+} from '../adapters/kvv-area-adapter'
+import { parseRequest } from '../middleware/parse-request'
+import { KvvAreaSchema, PatchKvvAreaResponsibleSchema } from '../types/kvv-area'
 
 const QuerySchema = z.object({
   responsibleUserId: z
@@ -10,6 +15,8 @@ const QuerySchema = z.object({
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
 })
+
+const PathParamsSchema = z.object({ id: z.string().uuid() })
 
 /**
  * @swagger
@@ -76,4 +83,90 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /kvv-areas/{id}/responsible:
+   *   patch:
+   *     summary: Update the responsible kvartersvärd for a KVV area
+   *     description: |
+   *       Sets `responsible_keycloak_user_id` for the given KVV area and stamps
+   *       `updated_by`. Target-user role validation happens in core; this
+   *       endpoint trusts the caller.
+   *     tags:
+   *       - Kvv Areas
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [keycloakUserId, updatedBy]
+   *             properties:
+   *               keycloakUserId:
+   *                 type: string
+   *                 format: uuid
+   *               updatedBy:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Updated KVV area
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/KvvArea'
+   *       400:
+   *         description: Invalid id or body
+   *       404:
+   *         description: KVV area not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.patch(
+    '(.*)/kvv-areas/:id/responsible',
+    parseRequest({ body: PatchKvvAreaResponsibleSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const params = PathParamsSchema.safeParse(ctx.params)
+      if (!params.success) {
+        ctx.status = 400
+        ctx.body = { reason: 'Invalid id', ...metadata }
+        return
+      }
+
+      const { keycloakUserId, updatedBy } = ctx.request.parsedBody
+
+      try {
+        const result = await updateKvvAreaResponsible(params.data.id, {
+          responsibleKeycloakUserId: keycloakUserId,
+          updatedBy,
+        })
+
+        if (!result.ok) {
+          ctx.status = 404
+          ctx.body = { reason: 'KVV area not found', ...metadata }
+          return
+        }
+
+        ctx.body = {
+          content: KvvAreaSchema.parse(result.data),
+          ...metadata,
+        }
+      } catch (err) {
+        ctx.status = 500
+        const errorMessage = err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
 }

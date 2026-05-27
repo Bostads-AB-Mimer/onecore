@@ -22,8 +22,9 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 
 interface Steward {
-  refNr: string
+  id: string
   name: string
+  employeeId?: string
   phone?: string
 }
 
@@ -33,7 +34,7 @@ interface StewardAssignmentDialogProps {
   kvvArea: string
   currentSteward: Steward
   allStewards: Steward[]
-  onAssign: (newStewardRefNr: string) => void
+  onAssign: (newStewardId: string) => void
 }
 
 export function StewardAssignmentDialog({
@@ -45,20 +46,18 @@ export function StewardAssignmentDialog({
   onAssign,
 }: StewardAssignmentDialogProps) {
   const [selectedSteward, setSelectedSteward] = useState<string>(
-    currentSteward.refNr
+    currentSteward.id
   )
   const [popoverOpen, setPopoverOpen] = useState(false)
 
   const handleSave = () => {
-    if (selectedSteward !== currentSteward.refNr) {
+    if (selectedSteward !== currentSteward.id) {
       onAssign(selectedSteward)
     }
     onOpenChange(false)
   }
 
-  const selectedStewardData = allStewards.find(
-    (s) => s.refNr === selectedSteward
-  )
+  const selectedStewardData = allStewards.find((s) => s.id === selectedSteward)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -84,7 +83,10 @@ export function StewardAssignmentDialog({
               >
                 {selectedStewardData ? (
                   <span>
-                    {selectedStewardData.name} ({selectedStewardData.refNr})
+                    {selectedStewardData.name}
+                    {selectedStewardData.employeeId
+                      ? ` (${selectedStewardData.employeeId})`
+                      : ''}
                   </span>
                 ) : (
                   <span className="text-muted-foreground">
@@ -102,27 +104,30 @@ export function StewardAssignmentDialog({
                   <CommandGroup>
                     {allStewards.map((steward) => (
                       <CommandItem
-                        key={steward.refNr}
-                        value={`${steward.name} ${steward.refNr}`}
+                        key={steward.id}
+                        value={`${steward.name} ${steward.employeeId ?? ''}`}
                         onSelect={() => {
-                          setSelectedSteward(steward.refNr)
+                          setSelectedSteward(steward.id)
                           setPopoverOpen(false)
                         }}
                       >
                         <Check
                           className={cn(
                             'mr-2 h-4 w-4',
-                            selectedSteward === steward.refNr
+                            selectedSteward === steward.id
                               ? 'opacity-100'
                               : 'opacity-0'
                           )}
                         />
                         <div className="flex flex-col">
                           <span>{steward.name}</span>
-                          <span className="opacity-70 text-xs">
-                            {steward.refNr}
-                            {steward.phone && ` • ${steward.phone}`}
-                          </span>
+                          {(steward.employeeId || steward.phone) && (
+                            <span className="opacity-70 text-xs">
+                              {steward.employeeId}
+                              {steward.employeeId && steward.phone && ' • '}
+                              {steward.phone}
+                            </span>
+                          )}
                         </div>
                       </CommandItem>
                     ))}
@@ -139,7 +144,7 @@ export function StewardAssignmentDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={selectedSteward === currentSteward.refNr}
+            disabled={selectedSteward === currentSteward.id}
           >
             Spara
           </Button>
