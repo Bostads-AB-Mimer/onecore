@@ -6,6 +6,7 @@ import {
   type PropertyForAdmin,
   StewardAdminMobile,
   StewardColumn,
+  useCanEditPropertyAreas,
   useCostCenters,
   useCostCenterTree,
 } from '@/features/property-areas'
@@ -117,6 +118,8 @@ export function PropertyAreasPage() {
   const { data: tree, isLoading: treeLoading } = useCostCenterTree(
     selectedCostCenterId || undefined
   )
+
+  const canEdit = useCanEditPropertyAreas(selectedCostCenterId || undefined)
 
   const kvvAreaList = useMemo<KvvAreaInfo[]>(() => {
     if (!tree) return []
@@ -271,6 +274,7 @@ export function PropertyAreasPage() {
                     key={kvvArea.kvvArea}
                     kvvArea={kvvArea}
                     properties={propertiesByKvvArea.get(kvvArea.kvvArea) || []}
+                    canEdit={canEdit}
                   />
                 ))}
               </div>

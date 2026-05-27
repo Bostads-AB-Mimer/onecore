@@ -13,6 +13,19 @@ costCenterRoutes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
+function appWithUserRoles(roles: string[]) {
+  const a = new Koa()
+  const r = new KoaRouter()
+  a.use(async (ctx, next) => {
+    ctx.state.user = { realm_access: { roles } }
+    await next()
+  })
+  costCenterRoutes(r)
+  a.use(bodyParser())
+  a.use(r.routes())
+  return a
+}
+
 beforeEach(jest.resetAllMocks)
 
 const TREE_ID = '11111111-1111-1111-1111-111111111111'
@@ -155,6 +168,40 @@ describe('GET /cost-centers/:id/tree', () => {
     expect(res.body.content.lead).not.toBeNull()
     expect(res.body.content.deputy).toBeNull()
     expect(res.body.content.kvvAreas[0].responsible).toBeNull()
+  })
+
+  it('returns capabilities.canEdit: true when the user has the property-areas:write role', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockResolvedValue({ ok: true, data: [] })
+
+    const authedApp = appWithUserRoles(['property-areas:write'])
+    const res = await request(authedApp.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.capabilities).toEqual({ canEdit: true })
+  })
+
+  it('returns capabilities.canEdit: false when the user lacks the property-areas:write role', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockResolvedValue({ ok: true, data: [] })
+
+    const unauthedApp = appWithUserRoles(['some-other-role'])
+    const res = await request(unauthedApp.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.capabilities).toEqual({ canEdit: false })
   })
 
   it('hydrates lead/deputy/responsible from their respective roles only', async () => {

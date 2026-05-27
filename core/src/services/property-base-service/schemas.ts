@@ -1196,12 +1196,17 @@ export const CostCenterTreeKvvAreaSchema = z.object({
   properties: z.array(CostCenterTreePropertySchema),
 })
 
+export const CostCenterTreeCapabilitiesSchema = z.object({
+  canEdit: z.boolean(),
+})
+
 export const CostCenterTreeSchema = z.object({
   id: z.string().uuid(),
   code: z.string(),
   name: z.string(),
   lead: KeycloakUserSummarySchema.nullable(),
   deputy: KeycloakUserSummarySchema.nullable(),
+  capabilities: CostCenterTreeCapabilitiesSchema,
   kvvAreas: z.array(CostCenterTreeKvvAreaSchema),
 })
 
