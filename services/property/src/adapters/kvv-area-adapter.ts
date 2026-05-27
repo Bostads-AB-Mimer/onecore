@@ -1,7 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { Prisma } from '@prisma/client'
-
-import type { KvvArea } from '@src/types/kvv-area'
+import { Prisma, type OnecoreKvvArea } from '@prisma/client'
 
 import type { PropertyKvvAreaLink } from '../types/kvv-area'
 
@@ -82,7 +80,7 @@ export const upsertPropertyKvvArea = async (
 }
 
 export type UpdateKvvAreaResponsibleResult =
-  | { ok: true; data: KvvArea }
+  | { ok: true; data: OnecoreKvvArea }
   | { ok: false; err: 'not-found' }
 
 export const updateKvvAreaResponsible = async (

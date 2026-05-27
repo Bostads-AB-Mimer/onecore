@@ -18,6 +18,9 @@ const QuerySchema = z.object({
 
 const PathParamsSchema = z.object({ id: z.string().uuid() })
 
+const formatZodIssues = (error: z.ZodError) =>
+  error.issues.map(({ message, path }) => ({ message, path }))
+
 /**
  * @swagger
  * openapi: 3.0.0
@@ -140,7 +143,10 @@ export const routes = (router: KoaRouter) => {
       const params = PathParamsSchema.safeParse(ctx.params)
       if (!params.success) {
         ctx.status = 400
-        ctx.body = { reason: 'Invalid id', ...metadata }
+        ctx.body = {
+          status: 'error with request params',
+          data: formatZodIssues(params.error),
+        }
         return
       }
 
@@ -163,9 +169,12 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
+        logger.error(
+          { err, id: params.data.id },
+          'kvv-areas.route.updateResponsible'
+        )
         ctx.status = 500
-        const errorMessage = err instanceof Error ? err.message : 'unknown error'
-        ctx.body = { reason: errorMessage, ...metadata }
+        ctx.body = { reason: 'Internal server error', ...metadata }
       }
     }
   )

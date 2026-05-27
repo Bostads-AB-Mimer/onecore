@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client'
 import request from 'supertest'
 
 import app from '../app'
@@ -124,17 +123,13 @@ describe('PATCH /kvv-areas/:id/responsible', () => {
   it('returns 500 when the adapter throws an unexpected error', async () => {
     jest
       .spyOn(kvvAreaAdapter, 'updateKvvAreaResponsible')
-      .mockRejectedValueOnce(
-        new Prisma.PrismaClientKnownRequestError('boom', {
-          code: 'P2002',
-          clientVersion: '5.0.0',
-        })
-      )
+      .mockRejectedValueOnce(new Error('boom'))
 
     const res = await request(app.callback())
       .patch(`/kvv-areas/${KVV_AREA_ID}/responsible`)
       .send({ keycloakUserId: NEW_RESPONSIBLE_ID, updatedBy: UPDATED_BY })
 
     expect(res.status).toBe(500)
+    expect(res.body.reason).toBe('Internal server error')
   })
 })
