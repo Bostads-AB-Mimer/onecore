@@ -2,11 +2,11 @@
 export interface AreaReassignment {
   kvvArea: string
   fromSteward: {
-    refNr: string
+    id: string
     name: string
   }
   toSteward: {
-    refNr: string
+    id: string
     name: string
   }
   timestamp: Date
@@ -16,8 +16,9 @@ export interface AreaReassignment {
 export interface KvvAreaInfo {
   kvvAreaId: string
   kvvArea: string
-  stewardRefNr: string
+  stewardId: string
   stewardName: string
+  stewardEmployeeId?: string
   stewardPhone?: string
   propertyCount: number
   residenceCount: number
@@ -26,8 +27,9 @@ export interface KvvAreaInfo {
 }
 
 export interface StewardInfo {
-  refNr: string
+  id: string
   name: string
+  employeeId?: string
   phone?: string
   kvvArea?: string
   propertyCount: number
@@ -41,7 +43,7 @@ export interface PropertyForAdmin {
   buildingType?: { code: string | null; name: string | null } | null
   kvvAreaId: string
   kvvArea?: string
-  stewardRefNr: string
+  stewardId: string
   costCenter: string
   residenceCount?: number
   parkingCount?: number

@@ -11,15 +11,12 @@ import {
   CostCenterTreeSchema,
   type CostCenterTree,
 } from './schemas'
-
-const PROPERTY_MANAGER_ROLE = 'property-manager'
-const DISTRICT_MANAGER_ROLE = 'district-manager'
-const DEPUTY_DISTRICT_MANAGER_ROLE = 'deputy-district-manager'
-
-// Realm role carried in the JWT's realm_access.roles. Members of the
-// "Förvaltningsområden" Keycloak group have it assigned via role mapping.
-// Backend PATCH endpoints (MIM-1780, MIM-1781) gate on the same constant.
-const PROPERTY_AREA_WRITE_ROLE = 'property-areas:write'
+import {
+  DEPUTY_DISTRICT_MANAGER_ROLE,
+  DISTRICT_MANAGER_ROLE,
+  PROPERTY_AREA_WRITE_ROLE,
+  PROPERTY_MANAGER_ROLE,
+} from './constants'
 
 function getPropertyAreaCapabilities(userRoles: string[]) {
   return { canEdit: userRoles.includes(PROPERTY_AREA_WRITE_ROLE) }

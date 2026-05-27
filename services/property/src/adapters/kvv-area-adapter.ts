@@ -1,4 +1,7 @@
 import { logger } from '@onecore/utilities'
+import { Prisma } from '@prisma/client'
+
+import type { KvvArea } from '@src/types/kvv-area'
 
 import type { PropertyKvvAreaLink } from '../types/kvv-area'
 
@@ -75,5 +78,34 @@ export const upsertPropertyKvvArea = async (
   } catch (err) {
     logger.error({ err, input }, 'kvv-area-adapter.upsertPropertyKvvArea')
     return { ok: false, err: 'unknown' }
+  }
+}
+
+export type UpdateKvvAreaResponsibleResult =
+  | { ok: true; data: KvvArea }
+  | { ok: false; err: 'not-found' }
+
+export const updateKvvAreaResponsible = async (
+  id: string,
+  data: { responsibleKeycloakUserId: string; updatedBy: string }
+): Promise<UpdateKvvAreaResponsibleResult> => {
+  try {
+    const updated = await prisma.onecoreKvvArea.update({
+      where: { id },
+      data: {
+        responsibleKeycloakUserId: data.responsibleKeycloakUserId,
+        updatedBy: data.updatedBy,
+      },
+    })
+    return { ok: true, data: updated }
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === 'P2025'
+    ) {
+      return { ok: false, err: 'not-found' }
+    }
+    logger.error({ err, id }, 'kvv-area-adapter.updateKvvAreaResponsible')
+    throw err
   }
 }

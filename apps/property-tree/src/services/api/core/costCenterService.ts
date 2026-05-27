@@ -1,4 +1,4 @@
-import { GET } from './baseApi'
+import { GET, PATCH } from './baseApi'
 
 export const costCenterService = {
   async getAll() {
@@ -13,5 +13,15 @@ export const costCenterService = {
     })
     if (error) throw error
     return data?.content
+  },
+}
+
+export const kvvAreaService = {
+  async updateResponsible(id: string, keycloakUserId: string): Promise<void> {
+    const { error } = await PATCH('/kvv-areas/{id}/responsible', {
+      params: { path: { id } },
+      body: { keycloakUserId },
+    })
+    if (error) throw error
   },
 }

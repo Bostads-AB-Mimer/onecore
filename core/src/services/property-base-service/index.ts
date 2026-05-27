@@ -134,6 +134,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('KvvAreaSummary', schemas.KvvAreaSummarySchema)
   registerSchema('PutPropertyKvvAreaBody', schemas.PutPropertyKvvAreaBodySchema)
   registerSchema('PropertyKvvAreaLink', schemas.PropertyKvvAreaLinkSchema)
+  registerSchema('PatchedKvvArea', schemas.PatchedKvvAreaSchema)
 
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)

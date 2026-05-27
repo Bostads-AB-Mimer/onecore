@@ -23,6 +23,8 @@ import {
   useCanEditPropertyAreas,
   useCostCenters,
   useCostCenterTree,
+  usePropertyManagers,
+  useUpdateKvvAreaResponsible,
   useUpdatePropertyKvvArea,
 } from '@/features/property-areas'
 import { COLUMN_INNER_WIDTH_PX } from '@/features/property-areas/constants'
@@ -30,6 +32,8 @@ import {
   mapKvvArea,
   mapProperties,
 } from '@/features/property-areas/utils/treeMappers'
+
+import type { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { useToast } from '@/shared/hooks/useToast'
@@ -44,6 +48,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/Select'
+
+type KeycloakUser = components['schemas']['KeycloakUser']
+
+interface Steward {
+  id: string
+  name: string
+  employeeId?: string
+  phone?: string
+}
+
+function mapKeycloakUserToSteward(user: KeycloakUser): Steward {
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
+  return {
+    id: user.id,
+    name: fullName || user.username,
+    employeeId: user.attributes?.employeeId?.[0],
+    phone: user.attributes?.mobilePhone?.[0],
+  }
+}
 
 export function PropertyAreasPage() {
   const isMobile = useIsMobile()
@@ -79,6 +102,15 @@ export function PropertyAreasPage() {
   useEffect(() => {
     setPropertyOverrides(new Map())
   }, [selectedCostCenterId])
+
+  const { data: propertyManagers = [] } = usePropertyManagers()
+
+  const updateResponsibleMutation = useUpdateKvvAreaResponsible()
+
+  const allStewards = useMemo<Steward[]>(
+    () => propertyManagers.map(mapKeycloakUserToSteward),
+    [propertyManagers]
+  )
 
   const kvvAreaList = useMemo<KvvAreaInfo[]>(() => {
     if (!tree) return []
@@ -149,7 +181,15 @@ export function PropertyAreasPage() {
     return grouped
   }, [tree, pendingChanges])
 
-  // Map indexed by kvvAreaId (matches StewardColumn / useDroppable)
+  const handleReassignArea = (kvvAreaId: string, toStewardId: string) => {
+    if (!selectedCostCenterId) return
+    updateResponsibleMutation.mutate({
+      kvvAreaId,
+      keycloakUserId: toStewardId,
+      costCenterId: selectedCostCenterId,
+    })
+  }
+
   const lead = tree ? formatUserName(tree.lead) : undefined
   const deputy = tree ? formatUserName(tree.deputy) : undefined
 
@@ -411,6 +451,8 @@ export function PropertyAreasPage() {
           <StewardAdminMobile
             kvvAreas={kvvAreaList}
             propertiesByKvvArea={propertiesByKvvArea}
+            allStewards={allStewards}
+            onReassignArea={handleReassignArea}
           />
         ) : (
           <div className="grid grid-cols-[minmax(0,1fr)] flex-1 min-h-0">
@@ -430,6 +472,8 @@ export function PropertyAreasPage() {
                       properties={
                         propertiesByKvvArea.get(kvvArea.kvvAreaId) ?? []
                       }
+                      allStewards={allStewards}
+                      onReassignArea={handleReassignArea}
                       canEdit={canEdit}
                       isSaving={isSaving}
                       pendingPropertyCodes={pendingPropertyCodes}

@@ -13,8 +13,9 @@ import { PropertyCard } from './PropertyCard'
 import { StewardAssignmentDialog } from './StewardAssignmentDialog'
 
 interface Steward {
-  refNr: string
+  id: string
   name: string
+  employeeId?: string
   phone?: string
 }
 
@@ -22,7 +23,7 @@ interface StewardColumnProps {
   kvvArea: KvvAreaInfo
   properties: PropertyForAdmin[]
   allStewards?: Steward[]
-  onReassignArea?: (kvvArea: string, toStewardRefNr: string) => void
+  onReassignArea?: (kvvAreaId: string, toStewardId: string) => void
   canEdit?: boolean
   // While a save is in flight, drag and drop are inert but the visual
   // affordances (grip handle, pencil) stay rendered so the layout doesn't
@@ -48,8 +49,8 @@ export function StewardColumn({
     disabled: !canEdit || isSaving,
   })
 
-  const handleAssign = (newStewardRefNr: string) => {
-    onReassignArea?.(kvvArea.kvvArea, newStewardRefNr)
+  const handleAssign = (newStewardId: string) => {
+    onReassignArea?.(kvvArea.kvvAreaId, newStewardId)
   }
 
   return (
@@ -83,8 +84,12 @@ export function StewardColumn({
           </div>
           <div className="font-medium text-sm">{kvvArea.stewardName}</div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {kvvArea.stewardRefNr && <span>{kvvArea.stewardRefNr}</span>}
-            {kvvArea.stewardRefNr && kvvArea.stewardPhone && <span>•</span>}
+            {kvvArea.stewardEmployeeId && (
+              <span>{kvvArea.stewardEmployeeId}</span>
+            )}
+            {kvvArea.stewardEmployeeId && kvvArea.stewardPhone && (
+              <span>•</span>
+            )}
             {kvvArea.stewardPhone && <span>{kvvArea.stewardPhone}</span>}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
@@ -143,8 +148,9 @@ export function StewardColumn({
         onOpenChange={setShowAssignDialog}
         kvvArea={kvvArea.kvvArea}
         currentSteward={{
-          refNr: kvvArea.stewardRefNr,
+          id: kvvArea.stewardId,
           name: kvvArea.stewardName,
+          employeeId: kvvArea.stewardEmployeeId,
           phone: kvvArea.stewardPhone,
         }}
         allStewards={allStewards}

@@ -13,8 +13,9 @@ import { AddressList } from '../AddressList'
 import { StewardAssignmentDialog } from './StewardAssignmentDialog'
 
 interface Steward {
-  refNr: string
+  id: string
   name: string
+  employeeId?: string
   phone?: string
 }
 
@@ -22,7 +23,7 @@ interface StewardAdminMobileProps {
   kvvAreas: KvvAreaInfo[]
   propertiesByKvvArea: Map<string, PropertyForAdmin[]>
   allStewards?: Steward[]
-  onReassignArea?: (kvvArea: string, toStewardRefNr: string) => void
+  onReassignArea?: (kvvAreaId: string, toStewardId: string) => void
 }
 
 export function StewardAdminMobile({
@@ -41,9 +42,9 @@ export function StewardAdminMobile({
     setShowAssignDialog(true)
   }
 
-  const handleAssign = (newStewardRefNr: string) => {
+  const handleAssign = (newStewardId: string) => {
     if (selectedKvvArea && onReassignArea) {
-      onReassignArea(selectedKvvArea.kvvArea, newStewardRefNr)
+      onReassignArea(selectedKvvArea.kvvAreaId, newStewardId)
     }
   }
 
@@ -74,9 +75,11 @@ export function StewardAdminMobile({
       ),
       content: (
         <div className="space-y-3">
-          {kvvArea.stewardPhone && (
+          {(kvvArea.stewardEmployeeId || kvvArea.stewardPhone) && (
             <div className="text-sm text-muted-foreground px-2">
-              {kvvArea.stewardRefNr} • {kvvArea.stewardPhone}
+              {kvvArea.stewardEmployeeId}
+              {kvvArea.stewardEmployeeId && kvvArea.stewardPhone && ' • '}
+              {kvvArea.stewardPhone}
             </div>
           )}
 
@@ -122,8 +125,9 @@ export function StewardAdminMobile({
           onOpenChange={setShowAssignDialog}
           kvvArea={selectedKvvArea.kvvArea}
           currentSteward={{
-            refNr: selectedKvvArea.stewardRefNr,
+            id: selectedKvvArea.stewardId,
             name: selectedKvvArea.stewardName,
+            employeeId: selectedKvvArea.stewardEmployeeId,
             phone: selectedKvvArea.stewardPhone,
           }}
           allStewards={allStewards}
