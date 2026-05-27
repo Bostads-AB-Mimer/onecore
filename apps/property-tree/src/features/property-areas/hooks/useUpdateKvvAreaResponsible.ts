@@ -72,7 +72,7 @@ export function useUpdateKvvAreaResponsible() {
       return { previousTree, costCenterId }
     },
 
-    onError: (err, _vars, context) => {
+    onError: (_err, _vars, context) => {
       if (context?.previousTree) {
         queryClient.setQueryData(
           ['costCenterTree', context.costCenterId],
@@ -81,7 +81,6 @@ export function useUpdateKvvAreaResponsible() {
       }
       toast({
         title: 'Kunde inte byta ansvarig kvartersvärd',
-        description: err.message,
         variant: 'destructive',
       })
     },
