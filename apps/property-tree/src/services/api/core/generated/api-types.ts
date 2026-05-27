@@ -455,38 +455,12 @@ export interface paths {
         }
         /** @description Internal server error */
         500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/building-managers': {
-    /**
-     * Get all building managers
-     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
-     */
-    get: {
-      responses: {
-        /** @description List of building managers */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                code?: string
-                name?: string
-                district?: string
-              }[]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/parking-space-types': {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/parking-space-types": {
     /**
      * Get all parking space types
      * @description Returns a list of all parking space types (P-platstyper).

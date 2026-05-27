@@ -10,7 +10,6 @@ import {
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
-  getBuildingManagers,
   getParkingSpaceTypes,
   getStatusLabel,
 } from '../adapters/xpand/lease-search-adapter'
@@ -223,26 +222,6 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
-  router.get('(.*)/leases/building-managers', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    try {
-      const result = await getBuildingManagers()
-      ctx.status = 200
-      ctx.body = { content: result, ...metadata }
-    } catch (error) {
-      ctx.status = 500
-      ctx.body = {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unknown error occurred fetching building managers',
-        ...metadata,
-      }
-    }
-  })
-
   /**
    * @swagger
    * /leases/parking-space-types:

@@ -2168,6 +2168,10 @@ export interface paths {
             };
           };
         };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
         /** @description Internal server error */
         500: {
           content: never;

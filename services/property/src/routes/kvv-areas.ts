@@ -1,7 +1,15 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { z } from 'zod'
 
 import { findKvvAreaCodesByResponsibles } from '../adapters/kvv-area-adapter'
+
+const QuerySchema = z.object({
+  responsibleUserId: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .optional(),
+})
 
 /**
  * @swagger
@@ -48,17 +56,26 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                     required:
    *                       - code
+   *       400:
+   *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
    */
   router.get('(.*)/kvv-areas', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['responsibleUserId'])
+    const parsed = QuerySchema.safeParse(ctx.query)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = { reason: 'Invalid query parameters', ...metadata }
+      return
+    }
     try {
-      const raw = ctx.query.responsibleUserId
-      const userIds = Array.isArray(raw) ? raw : raw ? [raw] : []
-      const codes = await findKvvAreaCodesByResponsibles(userIds)
+      const codes = await findKvvAreaCodesByResponsibles(
+        parsed.data.responsibleUserId ?? []
+      )
       ctx.body = { content: codes.map((code) => ({ code })), ...metadata }
     } catch (err) {
+      logger.error({ err }, 'kvv-areas.get')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }

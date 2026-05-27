@@ -1,15 +1,19 @@
 import { useCallback, useMemo, useRef } from 'react'
 
+import { authService } from '@/services/api/core/authService'
 import {
   leaseSearchService,
   type ParkingSpaceType,
 } from '@/services/api/core/leaseSearchService'
 
-import { authService } from '@/services/api/core/authService'
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
 import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
 
 import { useLeaseSearch } from './useLeaseSearch'
+
+type PropertyManager = Awaited<
+  ReturnType<typeof authService.getUsersByRole>
+>[number]
 
 const PAGE_SIZE = 50
 
@@ -159,9 +163,7 @@ export function useLeaseFilters() {
   )
 
   // Building manager filter: fetch once from Keycloak (property-manager role), filter client-side
-  const propertyManagersRef = useRef<Awaited<
-    ReturnType<typeof authService.getUsersByRole>
-  > | null>(null)
+  const propertyManagersRef = useRef<PropertyManager[] | null>(null)
 
   const searchBuildingManagers = useCallback(
     async (query: string): Promise<SearchFilterOption[]> => {
