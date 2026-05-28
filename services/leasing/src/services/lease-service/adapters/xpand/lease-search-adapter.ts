@@ -394,12 +394,13 @@ export class LeaseSearchQueryBuilder {
   }
 
   /**
-   * Apply building manager filter (Kvartersvärd)
+   * Apply KVV-area filter (förvaltningsområde). Matches bafen.code against
+   * the area codes resolved by core from the responsible Keycloak users.
    */
-  applyBuildingManagerFilter(): this {
-    if (this.params.buildingManager && this.params.buildingManager.length > 0) {
+  applyKvvAreaFilter(): this {
+    if (this.params.kvvAreaCodes && this.params.kvvAreaCodes.length > 0) {
       this.ensureDistrictJoin()
-      this.query.whereIn('bafen.omrade', this.params.buildingManager)
+      this.query.whereIn('bafen.code', this.params.kvvAreaCodes)
     }
 
     return this
@@ -626,29 +627,6 @@ export const parseContactsJson = (
   }
 }
 
-export const getBuildingManagers = async (): Promise<
-  { code: string; name: string; district: string }[]
-> => {
-  const rows = await xpandDb
-    .from('bafen')
-    .select(
-      'bafen.code as code',
-      'bafen.omrade as name',
-      'bafen.distrikt as district'
-    )
-    .distinct()
-    .whereNotNull('bafen.omrade')
-    .where('bafen.omrade', '!=', '')
-    .orderBy('bafen.distrikt')
-    .orderBy('bafen.omrade')
-
-  return rows.map((row: { code: string; name: string; district: string }) => ({
-    code: row.code.trim(),
-    name: row.name.trim(),
-    district: row.district?.trim() ?? '',
-  }))
-}
-
 export const getParkingSpaceTypes = async (): Promise<
   { code: string; caption: string }[]
 > => {
@@ -687,7 +665,7 @@ export const searchLeases = async (
     .applyBuildingFilter()
     .applyAreaFilter()
     .applyDistrictFilter()
-    .applyBuildingManagerFilter()
+    .applyKvvAreaFilter()
     .buildSelectFields()
     .applySorting()
 
