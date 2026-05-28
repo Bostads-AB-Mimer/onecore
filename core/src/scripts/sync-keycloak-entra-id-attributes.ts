@@ -26,7 +26,9 @@ export type SyncReport = {
   failed: number
 }
 
-export async function syncEmployeeIds(deps: Deps): Promise<SyncReport> {
+export async function syncKeycloakEntraIdAttributes(
+  deps: Deps
+): Promise<SyncReport> {
   const kcResult = await deps.listKeycloakUsers()
   if (!kcResult.ok) throw new Error(`Keycloak list failed: ${kcResult.err}`)
 
@@ -80,7 +82,7 @@ export async function syncEmployeeIds(deps: Deps): Promise<SyncReport> {
       report.failed += 1
       logger.error(
         { userId: kcUser.id, err: updateResult.err },
-        'sync-keycloak-employee-ids.updateFailed'
+        'sync-keycloak-entra-id-attributes.updateFailed'
       )
     }
   }
@@ -89,12 +91,12 @@ export async function syncEmployeeIds(deps: Deps): Promise<SyncReport> {
 }
 
 if (require.main === module) {
-  syncEmployeeIds({
+  syncKeycloakEntraIdAttributes({
     listKeycloakUsers: listAllUsers,
     listGraphUsers,
     updateKeycloakUser: updateUser,
   }).then((report) => {
-    logger.info(report, 'sync-keycloak-employee-ids complete')
+    logger.info(report, 'sync-keycloak-entra-id-attributes complete')
     if (report.failed > 0) {
       throw new Error(`Sync completed with ${report.failed} failed updates`)
     }

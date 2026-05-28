@@ -1,4 +1,4 @@
-import { syncEmployeeIds } from '../sync-keycloak-employee-ids'
+import { syncKeycloakEntraIdAttributes } from '../sync-keycloak-entra-id-attributes'
 import type { KeycloakUser } from '../../services/auth-service/keycloak-admin-adapter'
 import type { GraphUser } from '../../adapters/microsoft-graph-adapter'
 
@@ -21,10 +21,10 @@ function graphUser(over: Partial<GraphUser>): GraphUser {
   }
 }
 
-describe('syncEmployeeIds', () => {
+describe('syncKeycloakEntraIdAttributes', () => {
   it('updates a user whose employeeId is missing in Keycloak', async () => {
     const updates: KeycloakUser[] = []
-    const result = await syncEmployeeIds({
+    const result = await syncKeycloakEntraIdAttributes({
       listKeycloakUsers: async () => ({
         ok: true,
         data: [kcUser({ id: 'u1', username: 'alice@x.se' })],
@@ -47,7 +47,7 @@ describe('syncEmployeeIds', () => {
 
   it('skips users whose employeeId already matches', async () => {
     const updates: KeycloakUser[] = []
-    const result = await syncEmployeeIds({
+    const result = await syncKeycloakEntraIdAttributes({
       listKeycloakUsers: async () => ({
         ok: true,
         data: [
@@ -75,7 +75,7 @@ describe('syncEmployeeIds', () => {
 
   it('skips users whose Graph employeeId is null (does NOT clear existing value)', async () => {
     const updates: KeycloakUser[] = []
-    const result = await syncEmployeeIds({
+    const result = await syncKeycloakEntraIdAttributes({
       listKeycloakUsers: async () => ({
         ok: true,
         data: [
@@ -102,7 +102,7 @@ describe('syncEmployeeIds', () => {
   })
 
   it('counts Keycloak users with no Graph match as missing', async () => {
-    const result = await syncEmployeeIds({
+    const result = await syncKeycloakEntraIdAttributes({
       listKeycloakUsers: async () => ({
         ok: true,
         data: [kcUser({ id: 'u1', username: 'ghost@x.se' })],
@@ -115,7 +115,7 @@ describe('syncEmployeeIds', () => {
 
   it('matches case-insensitively on UPN', async () => {
     const updates: KeycloakUser[] = []
-    const result = await syncEmployeeIds({
+    const result = await syncKeycloakEntraIdAttributes({
       listKeycloakUsers: async () => ({
         ok: true,
         data: [kcUser({ id: 'u1', username: 'Alice@X.SE' })],
@@ -136,7 +136,7 @@ describe('syncEmployeeIds', () => {
 
   it('preserves other attributes during update', async () => {
     const updates: KeycloakUser[] = []
-    await syncEmployeeIds({
+    await syncKeycloakEntraIdAttributes({
       listKeycloakUsers: async () => ({
         ok: true,
         data: [
