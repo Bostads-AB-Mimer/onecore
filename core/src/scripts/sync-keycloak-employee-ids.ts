@@ -73,8 +73,10 @@ export async function syncEmployeeIds(deps: Deps): Promise<SyncReport> {
     }
     const updateResult = await deps.updateKeycloakUser(merged)
     if (updateResult.ok) {
+      logger.info(`updated ${merged.username}`)
       report.updated += 1
     } else {
+      logger.warn(`failed to update ${merged.username}`)
       report.failed += 1
       logger.error(
         { userId: kcUser.id, err: updateResult.err },
@@ -91,13 +93,10 @@ if (require.main === module) {
     listKeycloakUsers: listAllUsers,
     listGraphUsers,
     updateKeycloakUser: updateUser,
+  }).then((report) => {
+    logger.info(report, 'sync-keycloak-employee-ids complete')
+    if (report.failed > 0) {
+      throw new Error(`Sync completed with ${report.failed} failed updates`)
+    }
   })
-    .then((report) => {
-      logger.info(report, 'sync-keycloak-employee-ids complete')
-      process.exit(report.failed > 0 ? 1 : 0)
-    })
-    .catch((err) => {
-      logger.error({ err }, 'sync-keycloak-employee-ids failed')
-      process.exit(1)
-    })
 }
