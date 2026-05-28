@@ -150,7 +150,7 @@ export function MobileInspectionForm({
     }
   }
 
-  // Reset scroll position when room changes
+  // Reset scroll position when room changes or step changes
   useEffect(() => {
     if (scrollAreaRef.current) {
       const viewport = scrollAreaRef.current.querySelector(
@@ -160,7 +160,7 @@ export function MobileInspectionForm({
         viewport.scrollTop = 0
       }
     }
-  }, [currentRoomIndex])
+  }, [currentRoomIndex, step])
 
   if (showInspectorSelection) {
     return (
@@ -207,9 +207,11 @@ export function MobileInspectionForm({
       <div className="sticky top-0 z-10 bg-background shadow-sm">
         <div className="border-b">
           <InspectionProgressIndicator
-            current={completedRooms}
+            current={step === 'summary' ? rooms.length : completedRooms}
             total={rooms.length}
-            currentRoomName={currentRoom.name}
+            currentRoomName={
+              step === 'summary' ? 'Sammanställning' : currentRoom.name
+            }
           />
 
           <div className="flex items-center justify-between px-4 py-[7px]">

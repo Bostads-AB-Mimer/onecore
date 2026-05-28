@@ -124,83 +124,85 @@ function RoomSummarySection({
   return (
     <section className="border rounded-lg p-4 space-y-3 bg-card">
       <h3 className="text-base font-semibold">{room.name}</h3>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Komponent</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-40">Kostnad (kr)</TableHead>
-            <TableHead className="w-44">Kostnadsansvar</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {remarks.map((remark) => {
-            const conditionConfig = getConditionConfig(remark.condition)
-            const component = roomData?.components?.find(
-              (c) => c.componentId === remark.componentId
-            )
-            const costValue = component?.cost ?? 0
-            const costResponsibility = component?.costResponsibility ?? null
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Komponent</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-40">Kostnad (kr)</TableHead>
+              <TableHead className="w-44">Kostnadsansvar</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {remarks.map((remark) => {
+              const conditionConfig = getConditionConfig(remark.condition)
+              const component = roomData?.components?.find(
+                (c) => c.componentId === remark.componentId
+              )
+              const costValue = component?.cost ?? 0
+              const costResponsibility = component?.costResponsibility ?? null
 
-            return (
-              <TableRow key={remark.key}>
-                <TableCell className="font-medium">{remark.label}</TableCell>
-                <TableCell>
-                  {conditionConfig && (
-                    <Badge
-                      variant={conditionConfig.badgeVariant}
-                      className={conditionConfig.badgeClassName}
-                    >
-                      {conditionConfig.label}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={1}
-                    // Render 0 as an empty field so the placeholder shows and
-                    // the user can type from scratch without fighting a sticky
-                    // "0" from the controlled value.
-                    value={costValue === 0 ? '' : costValue}
-                    placeholder="0"
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => {
-                      const raw = e.target.value
-                      const cost =
-                        raw === ''
-                          ? 0
-                          : Math.max(0, Math.trunc(Number(raw) || 0))
-                      onComponentCostByIdUpdate(
-                        room.id,
-                        remark.componentId,
-                        remark.rawLabel ?? remark.label,
-                        cost
-                      )
-                    }}
-                    aria-label={`Kostnad för ${remark.label}`}
-                  />
-                </TableCell>
-                <TableCell>
-                  <CostResponsibilitySelect
-                    value={costResponsibility}
-                    onChange={(value) => {
-                      onComponentCostResponsibilityByIdUpdate(
-                        room.id,
-                        remark.componentId,
-                        remark.rawLabel ?? remark.label,
-                        value
-                      )
-                    }}
-                    ariaLabel={`Kostnadsansvar för ${remark.label}`}
-                  />
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+              return (
+                <TableRow key={remark.key}>
+                  <TableCell className="font-medium">{remark.label}</TableCell>
+                  <TableCell>
+                    {conditionConfig && (
+                      <Badge
+                        variant={conditionConfig.badgeVariant}
+                        className={conditionConfig.badgeClassName}
+                      >
+                        {conditionConfig.label}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      // Render 0 as an empty field so the placeholder shows and
+                      // the user can type from scratch without fighting a sticky
+                      // "0" from the controlled value.
+                      value={costValue === 0 ? '' : costValue}
+                      placeholder="0"
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const raw = e.target.value
+                        const cost =
+                          raw === ''
+                            ? 0
+                            : Math.max(0, Math.trunc(Number(raw) || 0))
+                        onComponentCostByIdUpdate(
+                          room.id,
+                          remark.componentId,
+                          remark.rawLabel ?? remark.label,
+                          cost
+                        )
+                      }}
+                      aria-label={`Kostnad för ${remark.label}`}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <CostResponsibilitySelect
+                      value={costResponsibility}
+                      onChange={(value) => {
+                        onComponentCostResponsibilityByIdUpdate(
+                          room.id,
+                          remark.componentId,
+                          remark.rawLabel ?? remark.label,
+                          value
+                        )
+                      }}
+                      ariaLabel={`Kostnadsansvar för ${remark.label}`}
+                    />
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </section>
   )
 }

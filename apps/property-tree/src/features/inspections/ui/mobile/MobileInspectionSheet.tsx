@@ -42,7 +42,7 @@ export function MobileInspectionSheet({
 }: MobileInspectionSheetProps) {
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[95vh] p-0 max-w-none w-full">
+      <SheetContent side="bottom" className="h-[100dvh] p-0 max-w-none w-full">
         <MobileInspectionForm
           rooms={rooms}
           onSave={onSubmit}
