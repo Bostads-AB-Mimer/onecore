@@ -23,7 +23,7 @@
     "dev:script:start-offer-batches": "ts-node src/scripts/start-offer-batches.ts",
     "dev:script:unpaid-invoice-payment-summaries": "ts-node src/scripts/unpaid-invoice-payment-summaries.ts",
     "dev:script:bosociala": "ts-node src/scripts/bosociala.ts",
-    "dev:script:sync-keycloak-entra-id-attributes": "ts-node --compiler-options '{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}' src/scripts/sync-keycloak-entra-id-attributes.ts",
+    "dev:script:sync-keycloak-entra-id-attributes": "ts-node src/scripts/sync-keycloak-entra-id-attributes.ts",
     "script:handle-expired-offers": "node build/src/scripts/handle-expired-offers",
     "script:start-offer-batches": "node build/src/scripts/start-offer-batches",
     "script:unpaid-invoice-payment-summaries": "node build/src/scripts/unpaid-invoice-payment-summaries",
