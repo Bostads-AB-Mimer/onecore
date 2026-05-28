@@ -56,7 +56,7 @@ async function fetchNewToken(): Promise<string> {
   return cachedToken.value
 }
 
-async function getAdminToken(): Promise<string> {
+export async function getAdminToken(): Promise<string> {
   // Serve from cache if the token is still valid with 30 s to spare
   if (cachedToken && Date.now() < cachedToken.expiresAt - 30_000) {
     return cachedToken.value
@@ -66,6 +66,10 @@ async function getAdminToken(): Promise<string> {
     tokenPromise = fetchNewToken().finally(() => (tokenPromise = null))
   }
   return tokenPromise
+}
+
+export function invalidateAdminToken() {
+  cachedToken = null
 }
 
 // Returns users with the role directly assigned (not via group).
@@ -127,6 +131,93 @@ async function fetchUsersByRoleViaGroups(roleName: string, token: string) {
   }
 
   return uniqueUsers
+}
+
+const PAGE_SIZE = 100
+
+export async function listAllUsers(): Promise<
+  AdapterResult<KeycloakUser[], GetUsersByRoleError>
+> {
+  try {
+    const token = await getAdminToken()
+    const { url, realm } = config.auth.keycloak
+    const all: KeycloakUser[] = []
+    let first = 0
+    while (true) {
+      const res = await loggedAxios.get<KeycloakUser[]>(
+        `${url}/admin/realms/${realm}/users`,
+        {
+          params: {
+            first,
+            max: PAGE_SIZE,
+            briefRepresentation: false,
+          },
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      const page: KeycloakUser[] = Array.isArray(res.data) ? res.data : []
+      all.push(...page)
+      if (page.length < PAGE_SIZE) break
+      first += PAGE_SIZE
+    }
+    return { ok: true, data: all }
+  } catch (err) {
+    logger.error(err, 'keycloak-admin-adapter.listAllUsers')
+    return mapAdminError(err)
+  }
+}
+
+export async function getUserById(
+  userId: string
+): Promise<AdapterResult<KeycloakUser, GetUsersByRoleError>> {
+  try {
+    const token = await getAdminToken()
+    const { url, realm } = config.auth.keycloak
+    const res = await loggedAxios.get<KeycloakUser>(
+      `${url}/admin/realms/${realm}/users/${encodeURIComponent(userId)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    return { ok: true, data: res.data }
+  } catch (err) {
+    logger.error(err, 'keycloak-admin-adapter.getUserById')
+    return mapAdminError(err)
+  }
+}
+
+export async function updateUser(
+  user: KeycloakUser
+): Promise<AdapterResult<undefined, GetUsersByRoleError>> {
+  try {
+    const token = await getAdminToken()
+    const { url, realm } = config.auth.keycloak
+    await loggedAxios.put(
+      `${url}/admin/realms/${realm}/users/${encodeURIComponent(user.id)}`,
+      user,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    return { ok: true, data: undefined }
+  } catch (err) {
+    logger.error(err, 'keycloak-admin-adapter.updateUser')
+    return mapAdminError(err)
+  }
+}
+
+function mapAdminError(
+  err: unknown
+): AdapterResult<never, GetUsersByRoleError> {
+  if (err instanceof AxiosError) {
+    if (!err.response)
+      return { ok: false, err: 'keycloak_unreachable', statusCode: 502 }
+    const status = err.response.status
+    if (status === 401)
+      return { ok: false, err: 'unauthorized', statusCode: status }
+    if (status === 403)
+      return { ok: false, err: 'forbidden', statusCode: status }
+    if (status === 404)
+      return { ok: false, err: 'role_not_found', statusCode: status }
+    return { ok: false, err: 'unknown', statusCode: status }
+  }
+  return { ok: false, err: 'unknown', statusCode: 500 }
 }
 
 export async function getUsersByRole(
