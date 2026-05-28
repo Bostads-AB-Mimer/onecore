@@ -996,6 +996,29 @@ export async function getCostCenterTreeById(
 
 export { getApartmentTemperatures } from './apartment-temperatures'
 
+export async function findKvvAreaCodesByResponsibles(
+  userIds: string[]
+): Promise<AdapterResult<string[], 'unknown'>> {
+  if (userIds.length === 0) return { ok: true, data: [] }
+  try {
+    const fetchResponse = await client().GET('/kvv-areas', {
+      params: { query: { responsibleUserId: userIds } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content.map((r) => r.code) }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-base-adapter.findKvvAreaCodesByResponsibles'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {

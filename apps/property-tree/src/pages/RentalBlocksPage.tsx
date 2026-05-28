@@ -1,5 +1,6 @@
 import { Download } from 'lucide-react'
 
+import { useCostCenters } from '@/features/property-areas'
 import { usePropertySearch } from '@/features/properties'
 import {
   rentalBlockColumns,
@@ -35,16 +36,9 @@ const kategoriOptions = [
   'Övrigt',
 ] as const
 
-const distriktOptions = [
-  'Distrikt Norr',
-  'Distrikt Väst',
-  'Distrikt Öst',
-  'Distrikt Mitt',
-  'Mimer Student',
-] as const
-
 export function RentalBlocksPage() {
   const { data: blockReasons } = useBlockReasons()
+  const { data: costCenters } = useCostCenters()
   const filters = useRentalBlocksFilters()
   const searchProperties = usePropertySearch()
 
@@ -139,7 +133,10 @@ export function RentalBlocksPage() {
               />
 
               <FilterDropdown
-                options={distriktOptions.map((o) => ({ label: o, value: o }))}
+                options={(costCenters ?? []).map((cc) => ({
+                  label: cc.name ?? cc.code,
+                  value: cc.name ?? cc.code,
+                }))}
                 selectedValue={filters.getFilterValue('distrikt') || null}
                 onSelectionChange={(val) =>
                   filters.setFilterValue('distrikt', val)
