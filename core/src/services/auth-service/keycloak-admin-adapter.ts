@@ -56,7 +56,7 @@ async function fetchNewToken(): Promise<string> {
   return cachedToken.value
 }
 
-async function getAdminToken(): Promise<string> {
+export async function getAdminToken(): Promise<string> {
   // Serve from cache if the token is still valid with 30 s to spare
   if (cachedToken && Date.now() < cachedToken.expiresAt - 30_000) {
     return cachedToken.value
@@ -66,6 +66,10 @@ async function getAdminToken(): Promise<string> {
     tokenPromise = fetchNewToken().finally(() => (tokenPromise = null))
   }
   return tokenPromise
+}
+
+export function invalidateAdminToken() {
+  cachedToken = null
 }
 
 // Returns users with the role directly assigned (not via group).
