@@ -2,7 +2,6 @@ import fs from 'fs/promises'
 import { logger } from '@onecore/utilities'
 import config from '../../common/config'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
-import { sendEmail } from '../../adapters/communication-adapter'
 import { syncContactToLeasing } from '../../adapters/leasing-adapter'
 import { syncContactToEconomy } from '../../adapters/economy-adapter'
 import { syncContactToWorkOrder } from '../../adapters/work-order-adapter'
@@ -26,35 +25,6 @@ const saveLastTimestamp = async (ts: Date) => {
   const tmp = `${STATE_FILE}.tmp`
   await fs.writeFile(tmp, ts.toISOString(), 'utf-8')
   await fs.rename(tmp, STATE_FILE)
-}
-
-const notifySyncFailure = async (p: {
-  contactCode: string
-  timestamp: Date
-  error: unknown
-}) => {
-  if (!config.emailAddresses.xpandSync) {
-    logger.warn(
-      'config.emailAddresses.xpandSync is not set — skipping sync failure notification'
-    )
-    return
-  }
-
-  try {
-    await sendEmail({
-      to: config.emailAddresses.xpandSync,
-      subject: 'Fel i körning: sync-contacts',
-      body: [
-        `Misslyckades på kontakt ${p.contactCode}`,
-        `Tidsstämpel: ${p.timestamp.toISOString()}`,
-        `Fel: ${p.error instanceof Error ? p.error.message : String(p.error)}`,
-        ``,
-        `Checkpoint kvar på senaste lyckade kontakten. Nästa körning kommer att misslyckas på samma kontakt tills det åtgärdas.`,
-      ].join('\n'),
-    })
-  } catch (emailErr) {
-    logger.error({ emailErr }, 'failed to send sync failure notification')
-  }
 }
 
 const syncContacts = async () => {
@@ -122,11 +92,6 @@ const syncContacts = async () => {
         { err, contactCode: payload.contactCode },
         'sync-contacts: aborting run on first failure, checkpoint kept at last success'
       )
-      await notifySyncFailure({
-        contactCode: payload.contactCode,
-        timestamp,
-        error: err,
-      })
       throw err
     }
   }
