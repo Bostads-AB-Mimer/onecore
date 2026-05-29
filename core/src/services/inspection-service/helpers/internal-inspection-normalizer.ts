@@ -33,6 +33,17 @@ const isReportableCondition = (condition: string): boolean => {
   return trimmed === 'acceptabel' || trimmed === 'skadad'
 }
 
+// Display mapping for condition strings that surface in the protocol PDF
+// (Åtgärd column, when no explicit action was set). The stored value stays
+// "Acceptabel" so we don't migrate historical data, but every user-facing
+// surface — frontend label, PDF — renders it as "Ok".
+const CONDITION_DISPLAY_LABEL: Record<string, string> = {
+  Acceptabel: 'Ok',
+}
+
+const displayCondition = (condition: string): string =>
+  CONDITION_DISPLAY_LABEL[condition] ?? condition
+
 const shouldKeep = (seed: RemarkSeed): boolean =>
   seed.cost > 0 ||
   seed.actions.length > 0 ||
@@ -48,9 +59,10 @@ const seedToRemark = (seed: RemarkSeed): DetailedXpandInspectionRemark => {
     notes: seed.notes,
     remarkGrade: 0,
     // The PDF renders `remarkStatus` in the "Åtgärd" column. Prefer the joined
-    // action list; fall back to the condition text so non-OK rows without an
-    // explicit action still surface their state.
-    remarkStatus: actionText || seed.condition,
+    // action list; fall back to the user-facing condition label so non-OK rows
+    // without an explicit action still surface their state (and read as "Ok"
+    // not "Acceptabel").
+    remarkStatus: actionText || displayCondition(seed.condition),
     cost: seed.cost,
     costResponsibility: seed.costResponsibility,
     invoice: false,

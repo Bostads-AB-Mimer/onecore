@@ -98,6 +98,7 @@ export function useInspectionForm(
     handleComponentCostUpdateById: componentOps.updateComponentCostById,
     handleComponentCostResponsibilityUpdateById:
       componentOps.updateComponentCostResponsibilityById,
+    handleMarkRoomNoRemarks: componentOps.markRoomNoRemarks,
     handleRoomHandledSet: componentOps.setRoomHandled,
 
     // Legacy handlers

@@ -2,7 +2,11 @@ import { useCallback } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
-import { CONDITION_TYPE, type CostResponsibility } from '../constants'
+import {
+  CONDITION_TYPE,
+  COST_RESPONSIBILITY,
+  type CostResponsibility,
+} from '../constants'
 
 import { emptyInspectionComponent } from '../lib/inspectionComponent'
 
@@ -97,6 +101,10 @@ export interface UseComponentInspectionReturn {
     label: string,
     value: CostResponsibility
   ) => void
+  markRoomNoRemarks: (
+    roomId: string,
+    components: ReadonlyArray<{ id: string; label: string }>
+  ) => void
   setRoomHandled: (roomId: string, isHandled: boolean) => void
 }
 
@@ -141,12 +149,17 @@ export function useComponentInspection(
           },
         }
 
-        // Cost responsibility only applies to Acceptabel/Skadad; clear it when
-        // the condition is switched back to God so stale data isn't persisted.
-        if (value === CONDITION_TYPE.GOOD) {
+        // Cost and responsibility only apply to Skadad; clear both whenever
+        // the condition is anything else (God/Ok) so stale data isn't
+        // persisted. Mirrors updateComponentCondition for the fetched path.
+        if (value !== CONDITION_TYPE.DAMAGED) {
           updatedRoom.componentCostResponsibilities = {
             ...updatedRoom.componentCostResponsibilities,
             [field]: null,
+          }
+          updatedRoom.componentCosts = {
+            ...updatedRoom.componentCosts,
+            [field]: 0,
           }
         }
 
@@ -366,8 +379,8 @@ export function useComponentInspection(
 
   /**
    * Update condition for a fetched component (keyed by componentId).
-   * Cost responsibility only applies to Acceptabel/Skadad; clear it when the
-   * condition is switched back to God so stale data isn't persisted. Mirrors
+   * Cost responsibility only applies to Skadad; clear it (and any cost) when
+   * the condition becomes anything else so stale data isn't persisted. Mirrors
    * the surface-keyed rule in updateCondition.
    */
   const updateComponentCondition = useCallback(
@@ -383,8 +396,8 @@ export function useComponentInspection(
             (c) => ({
               ...c,
               condition: value,
-              ...(value === CONDITION_TYPE.GOOD
-                ? { costResponsibility: null }
+              ...(value !== CONDITION_TYPE.DAMAGED
+                ? { costResponsibility: null, cost: 0 }
                 : {}),
             })
           ),
@@ -548,10 +561,55 @@ export function useComponentInspection(
             prev[roomId].components,
             componentId,
             label,
-            (c) => ({ ...c, costResponsibility: value })
+            (c) => ({
+              ...c,
+              costResponsibility: value,
+              // Landlord-borne costs aren't entered by the inspector — clear
+              // any previously entered tenant cost so it isn't persisted.
+              ...(value === COST_RESPONSIBILITY.LANDLORD ? { cost: 0 } : {}),
+            })
           ),
         },
       }))
+    },
+    [setInspectionData]
+  )
+
+  /**
+   * Mark every still-ungraded fetched component in a room as God in one
+   * update — "the rest of the room is clean, fill in the unfilled". Components
+   * the inspector has already graded (Ok/Skadad) are left alone so the action
+   * is non-destructive; a Skadad cost/responsibility won't get silently wiped.
+   */
+  const markRoomNoRemarks = useCallback(
+    (
+      roomId: string,
+      components: ReadonlyArray<{ id: string; label: string }>
+    ) => {
+      setInspectionData((prev) => {
+        let next = prev[roomId].components ?? []
+        const gradedIds = new Set(
+          next
+            .filter((c) => c.condition.trim().length > 0)
+            .map((c) => c.componentId)
+        )
+        for (const { id, label } of components) {
+          if (gradedIds.has(id)) continue
+          next = upsertComponent(next, id, label, (c) => ({
+            ...c,
+            condition: CONDITION_TYPE.GOOD,
+            costResponsibility: null,
+            cost: 0,
+          }))
+        }
+        return {
+          ...prev,
+          [roomId]: {
+            ...prev[roomId],
+            components: next,
+          },
+        }
+      })
     },
     [setInspectionData]
   )
@@ -574,6 +632,7 @@ export function useComponentInspection(
     removeComponentPhoto,
     updateComponentCostById,
     updateComponentCostResponsibilityById,
+    markRoomNoRemarks,
     setRoomHandled,
   }
 }

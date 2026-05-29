@@ -60,7 +60,7 @@ export function ComponentDetailSheet({
                 variant={conditionConfig.badgeVariant}
                 className={conditionConfig.badgeClassName}
               >
-                {condition}
+                {conditionConfig.label}
               </Badge>
             </div>
           )}

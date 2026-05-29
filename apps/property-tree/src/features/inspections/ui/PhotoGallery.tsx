@@ -95,10 +95,8 @@ export function PhotoGallery({
                   <Button
                     variant="secondary"
                     size="icon"
-                    onClick={() => {
-                      handleRemove(fullscreenPhotoIndex)
-                      setFullscreenPhotoIndex(null)
-                    }}
+                    aria-label="Stäng"
+                    onClick={() => setFullscreenPhotoIndex(null)}
                   >
                     <X className="h-4 w-4" />
                   </Button>

@@ -28,7 +28,7 @@ export const CONDITION_CONFIG = {
   },
   [CONDITION_TYPE.ACCEPTABLE]: {
     value: 'Acceptabel',
-    label: 'Acceptabel',
+    label: 'Ok',
     badgeVariant: 'secondary' as const,
     badgeClassName:
       'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-600',

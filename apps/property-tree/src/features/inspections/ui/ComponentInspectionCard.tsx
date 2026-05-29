@@ -103,9 +103,8 @@ export function ComponentInspectionCard({
         ))}
       </div>
 
-      {/* Cost responsibility radio — only shown for Skadad / Acceptabel */}
-      {(condition === CONDITION_TYPE.DAMAGED ||
-        condition === CONDITION_TYPE.ACCEPTABLE) && (
+      {/* Cost responsibility radio — only shown for Skadad */}
+      {condition === CONDITION_TYPE.DAMAGED && (
         <div className="mb-3">
           <p className="text-sm text-muted-foreground mb-2">Kostnadsansvar</p>
           <div className="flex gap-4">

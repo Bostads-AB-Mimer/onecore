@@ -65,6 +65,9 @@ export function MobileInspectionForm({
     !isContinuingExistingInspection
   )
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  // Refs to each room nav card so we can scroll the active one into view as
+  // the inspector advances — otherwise the selection ring drifts off-screen.
+  const roomCardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const {
     inspectorName,
     setInspectorName,
@@ -90,6 +93,7 @@ export function MobileInspectionForm({
     handleComponentPhotoRemoveById,
     handleComponentCostUpdateById,
     handleComponentCostResponsibilityUpdateById,
+    handleMarkRoomNoRemarks,
     handleRoomHandledSet,
   } = useInspectionForm(initialRooms, existingInspection)
 
@@ -161,6 +165,20 @@ export function MobileInspectionForm({
       }
     }
   }, [currentRoomIndex, step])
+
+  // Keep the active room card visible in the horizontal nav strip whenever
+  // currentRoomIndex changes (via card tap or the </> buttons).
+  useEffect(() => {
+    if (step !== 'rooms') return
+    const currentId = rooms[currentRoomIndex]?.id
+    if (!currentId) return
+    const card = roomCardRefs.current[currentId]
+    card?.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'center',
+      block: 'nearest',
+    })
+  }, [currentRoomIndex, rooms, step])
 
   if (showInspectorSelection) {
     return (
@@ -252,6 +270,9 @@ export function MobileInspectionForm({
                 return (
                   <Card
                     key={room.id}
+                    ref={(el) => {
+                      roomCardRefs.current[room.id] = el
+                    }}
                     className={`min-w-[140px] cursor-pointer transition-all ${
                       isCurrent
                         ? 'ring-2 ring-inset ring-primary bg-primary/5'
@@ -359,6 +380,9 @@ export function MobileInspectionForm({
                     label,
                     value
                   )
+                }
+                onMarkRoomNoRemarks={(components) =>
+                  handleMarkRoomNoRemarks(currentRoom.id, components)
                 }
                 onRoomHandledChange={(isHandled) =>
                   handleRoomHandledSet(currentRoom.id, isHandled)

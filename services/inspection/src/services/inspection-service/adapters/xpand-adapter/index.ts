@@ -68,6 +68,12 @@ export const db = knex({
   },
 })
 
+// Xpand uses 1 ("Genomförd") and 3 ("Besiktningsresultat skickat") for
+// inspections that are functionally complete from the inspector's perspective
+// — the result has been registered (1) or also dispatched to the tenant (3).
+// Both must be treated as "completed" so they appear under historical filters.
+const COMPLETED_XPAND_STATUSES = [1, 3] as const
+
 function buildBaseInspectionQuery() {
   return db<XpandDbInspection>('lbbes')
     .select(
@@ -115,9 +121,9 @@ export async function getInspections({
     const baseQuery = buildBaseInspectionQuery()
 
     if (statusFilter === inspection.INSPECTION_STATUS_FILTER.ONGOING) {
-      baseQuery.whereNot('lbbes.status', 1)
+      baseQuery.whereNotIn('lbbes.status', [...COMPLETED_XPAND_STATUSES])
     } else if (statusFilter === inspection.INSPECTION_STATUS_FILTER.COMPLETED) {
-      baseQuery.where('lbbes.status', 1)
+      baseQuery.whereIn('lbbes.status', [...COMPLETED_XPAND_STATUSES])
     }
 
     if (inspector) {
@@ -182,9 +188,9 @@ export async function getInspectionsByResidenceId(
     )
 
     if (statusFilter === inspection.INSPECTION_STATUS_FILTER.ONGOING) {
-      query.whereNot('lbbes.status', 1)
+      query.whereNotIn('lbbes.status', [...COMPLETED_XPAND_STATUSES])
     } else if (statusFilter === inspection.INSPECTION_STATUS_FILTER.COMPLETED) {
-      query.where('lbbes.status', 1)
+      query.whereIn('lbbes.status', [...COMPLETED_XPAND_STATUSES])
     }
 
     const dbInspections = await query.orderBy('lbbes.besdat', 'desc')

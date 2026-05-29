@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, Plus, Trash2 } from 'lucide-react'
 
 import type {
@@ -87,6 +87,7 @@ export function InspectionForm({
     handleComponentPhotoRemoveById,
     handleComponentCostUpdateById,
     handleComponentCostResponsibilityUpdateById,
+    handleMarkRoomNoRemarks,
     handleRoomHandledSet,
   } = useInspectionForm(initialRooms, existingInspection)
 
@@ -107,6 +108,59 @@ export function InspectionForm({
   const [removeTargetRoomId, setRemoveTargetRoomId] = useState<string | null>(
     null
   )
+  // Controlled accordion so the room navigator can programmatically open a
+  // room when the inspector clicks its pill.
+  const [expandedRoomIds, setExpandedRoomIds] = useState<string[]>([])
+  // Tracks which room is currently in the inspector's viewport so its pill
+  // can be highlighted in the sticky navigator.
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
+  const roomRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+
+  const handleSelectRoom = (roomId: string) => {
+    setExpandedRoomIds((prev) =>
+      prev.includes(roomId) ? prev : [...prev, roomId]
+    )
+    // Defer the scroll a tick so the accordion has time to expand before we
+    // measure offsets — otherwise scrollIntoView lands above the target.
+    requestAnimationFrame(() => {
+      roomRefs.current[roomId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+  }
+
+  // Stable key so the observer effect doesn't re-run on every render just
+  // because the parent handed us a fresh `rooms` array reference.
+  const roomIdsKey = rooms.map((r) => r.id).join(',')
+
+  // Highlight the pill for whichever room is currently in view. The rootMargin
+  // shrinks the observed band to the top half of the scroll container so the
+  // active pill matches the room the inspector is actually reading, not the
+  // one that just scrolled into the bottom edge.
+  useEffect(() => {
+    if (step !== 'rooms') return
+    const root = scrollContainerRef.current
+    if (!root) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible.length === 0) return
+        const id = visible[0].target.getAttribute('data-room-id')
+        if (id) setActiveRoomId(id)
+      },
+      { root, rootMargin: '-10% 0px -60% 0px', threshold: 0 }
+    )
+    for (const id of roomIdsKey.split(',')) {
+      const el = roomRefs.current[id]
+      if (el) observer.observe(el)
+    }
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomIdsKey, step])
 
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
     if (!tenant) return undefined
@@ -138,7 +192,10 @@ export function InspectionForm({
   return (
     <div className="flex flex-col overflow-hidden min-w-0 min-h-0 flex-1">
       {/* Scrollable area — info, progress, and rooms/summary all scroll together */}
-      <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-6">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-6"
+      >
         <InspectionInfoSection
           inspectorName={inspectorName}
           setInspectorName={setInspectorName}
@@ -157,152 +214,199 @@ export function InspectionForm({
         </div>
 
         {step === 'rooms' && (
-          <Accordion type="multiple" className="space-y-2">
-            {rooms.map((room) => {
-              const roomData = inspectionData[room.id]
-              const isCompleted = roomData?.isHandled
-
-              return (
-                <AccordionItem
-                  key={room.id}
-                  value={room.id}
-                  className="border rounded-lg overflow-hidden"
-                >
-                  <AccordionTrigger className="hover:no-underline sticky top-0 bg-background z-10">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium uppercase">
-                          {room.name}
-                        </span>
-                        {roomData?.isAddedInThisInspection && (
-                          <>
-                            <Badge variant="secondary" className="gap-1">
-                              <Plus className="h-3 w-3" />
-                              Tillagt
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 hover:text-destructive"
-                              aria-label="Ta bort rum"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                setRemoveTargetRoomId(room.id)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                      {isCompleted && (
-                        <Badge variant="default" className="gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Klar
-                        </Badge>
+          <>
+            <div className="sticky top-0 z-20 -mt-2 pt-2 pb-2 bg-background border-b">
+              <div
+                className="flex gap-2 overflow-x-auto pb-1"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
+                {rooms.map((room) => {
+                  const isHandled = inspectionData[room.id]?.isHandled
+                  const isActive = activeRoomId === room.id
+                  return (
+                    <button
+                      key={room.id}
+                      type="button"
+                      onClick={() => handleSelectRoom(room.id)}
+                      className={`shrink-0 px-3 py-1.5 rounded-md text-sm border transition-colors ${
+                        isActive
+                          ? 'ring-2 ring-inset ring-primary bg-primary/5 border-primary'
+                          : 'hover:bg-muted border-border'
+                      }`}
+                    >
+                      <span className="font-medium uppercase">{room.name}</span>
+                      {isHandled && (
+                        <CheckCircle2 className="h-3 w-3 inline ml-1.5 text-green-600" />
                       )}
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pr-4 min-w-0">
-                    <RoomInspectionEditor
-                      room={room}
-                      inspectionData={roomData}
-                      inspectionId={existingInspection?.id}
-                      onDetailComponentAdd={(component) =>
-                        handleDetailComponentAdd(room.id, component)
-                      }
-                      onDetailComponentRemove={(componentId) =>
-                        handleDetailComponentRemove(room.id, componentId)
-                      }
-                      onDetailComponentNoteUpdate={(componentId, note) =>
-                        handleDetailComponentNoteUpdate(
-                          room.id,
-                          componentId,
-                          note
-                        )
-                      }
-                      onFetchedComponentConditionUpdate={(
-                        componentId,
-                        label,
-                        value
-                      ) =>
-                        handleComponentConditionUpdate(
-                          room.id,
-                          componentId,
-                          label,
-                          value
-                        )
-                      }
-                      onFetchedComponentActionUpdate={(
-                        componentId,
-                        label,
-                        action
-                      ) =>
-                        handleComponentActionUpdate(
-                          room.id,
-                          componentId,
-                          label,
-                          action
-                        )
-                      }
-                      onFetchedComponentNoteUpdate={(
-                        componentId,
-                        label,
-                        note
-                      ) =>
-                        handleComponentNoteUpdateById(
-                          room.id,
-                          componentId,
-                          label,
-                          note
-                        )
-                      }
-                      onFetchedComponentPhotoAdd={(
-                        componentId,
-                        label,
-                        photoPath
-                      ) =>
-                        handleComponentPhotoAddById(
-                          room.id,
-                          componentId,
-                          label,
-                          photoPath
-                        )
-                      }
-                      onFetchedComponentPhotoRemove={(
-                        componentId,
-                        label,
-                        index
-                      ) =>
-                        handleComponentPhotoRemoveById(
-                          room.id,
-                          componentId,
-                          label,
-                          index
-                        )
-                      }
-                      onFetchedComponentCostResponsibilityUpdate={(
-                        componentId,
-                        label,
-                        value
-                      ) =>
-                        handleComponentCostResponsibilityUpdateById(
-                          room.id,
-                          componentId,
-                          label,
-                          value
-                        )
-                      }
-                      onRoomHandledChange={(isHandled) =>
-                        handleRoomHandledSet(room.id, isHandled)
-                      }
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-              )
-            })}
-          </Accordion>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <Accordion
+              type="multiple"
+              value={expandedRoomIds}
+              onValueChange={setExpandedRoomIds}
+              className="space-y-2"
+            >
+              {rooms.map((room) => {
+                const roomData = inspectionData[room.id]
+                const isCompleted = roomData?.isHandled
+
+                return (
+                  <div
+                    key={room.id}
+                    ref={(el) => {
+                      roomRefs.current[room.id] = el
+                    }}
+                    data-room-id={room.id}
+                    className="scroll-mt-16"
+                  >
+                    <AccordionItem
+                      value={room.id}
+                      className="border rounded-lg overflow-hidden"
+                    >
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium uppercase">
+                              {room.name}
+                            </span>
+                            {roomData?.isAddedInThisInspection && (
+                              <>
+                                <Badge variant="secondary" className="gap-1">
+                                  <Plus className="h-3 w-3" />
+                                  Tillagt
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 hover:text-destructive"
+                                  aria-label="Ta bort rum"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    e.preventDefault()
+                                    setRemoveTargetRoomId(room.id)
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                          {isCompleted && (
+                            <Badge variant="default" className="gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Klar
+                            </Badge>
+                          )}
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pr-4 min-w-0">
+                        <RoomInspectionEditor
+                          room={room}
+                          inspectionData={roomData}
+                          inspectionId={existingInspection?.id}
+                          onDetailComponentAdd={(component) =>
+                            handleDetailComponentAdd(room.id, component)
+                          }
+                          onDetailComponentRemove={(componentId) =>
+                            handleDetailComponentRemove(room.id, componentId)
+                          }
+                          onDetailComponentNoteUpdate={(componentId, note) =>
+                            handleDetailComponentNoteUpdate(
+                              room.id,
+                              componentId,
+                              note
+                            )
+                          }
+                          onFetchedComponentConditionUpdate={(
+                            componentId,
+                            label,
+                            value
+                          ) =>
+                            handleComponentConditionUpdate(
+                              room.id,
+                              componentId,
+                              label,
+                              value
+                            )
+                          }
+                          onFetchedComponentActionUpdate={(
+                            componentId,
+                            label,
+                            action
+                          ) =>
+                            handleComponentActionUpdate(
+                              room.id,
+                              componentId,
+                              label,
+                              action
+                            )
+                          }
+                          onFetchedComponentNoteUpdate={(
+                            componentId,
+                            label,
+                            note
+                          ) =>
+                            handleComponentNoteUpdateById(
+                              room.id,
+                              componentId,
+                              label,
+                              note
+                            )
+                          }
+                          onFetchedComponentPhotoAdd={(
+                            componentId,
+                            label,
+                            photoPath
+                          ) =>
+                            handleComponentPhotoAddById(
+                              room.id,
+                              componentId,
+                              label,
+                              photoPath
+                            )
+                          }
+                          onFetchedComponentPhotoRemove={(
+                            componentId,
+                            label,
+                            index
+                          ) =>
+                            handleComponentPhotoRemoveById(
+                              room.id,
+                              componentId,
+                              label,
+                              index
+                            )
+                          }
+                          onFetchedComponentCostResponsibilityUpdate={(
+                            componentId,
+                            label,
+                            value
+                          ) =>
+                            handleComponentCostResponsibilityUpdateById(
+                              room.id,
+                              componentId,
+                              label,
+                              value
+                            )
+                          }
+                          onMarkRoomNoRemarks={(components) =>
+                            handleMarkRoomNoRemarks(room.id, components)
+                          }
+                          onRoomHandledChange={(isHandled) =>
+                            handleRoomHandledSet(room.id, isHandled)
+                          }
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </div>
+                )
+              })}
+            </Accordion>
+          </>
         )}
 
         {step === 'summary' && (
