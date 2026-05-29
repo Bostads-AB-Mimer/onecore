@@ -79,7 +79,7 @@ export const routes = (
     {
       summary: 'Get contacts updated since a given timestamp',
       description:
-        'Queries cmlog in Xpand for changes since the given timestamp. If no timestamp is provided, falls back to the last 5 minutes.',
+        'Queries cmlog in Xpand for changes since the given timestamp. If no timestamp is provided, returns all matching rows.',
       tags: ['Contacts'],
       query: {
         since: {
@@ -106,9 +106,30 @@ export const routes = (
         return
       }
 
-      const contactCodes =
+      const changedCodes =
         await contactsRepository.getChangedContactCodes(since)
-      const contacts = await contactsRepository.getByContactCodes(contactCodes)
+      const fetchedContacts = await contactsRepository.getByContactCodes(
+        changedCodes.map((c) => c.contactCode)
+      )
+      const contactByCode = new Map(
+        fetchedContacts.map((c) => [c.contactCode, c])
+      )
+
+      const contacts = changedCodes
+        .map((c) => {
+          const contact = contactByCode.get(c.contactCode)
+          return contact
+            ? { contact, timestamp: c.timestamp.toISOString() }
+            : null
+        })
+        .filter(
+          (
+            c
+          ): c is {
+            contact: (typeof fetchedContacts)[number]
+            timestamp: string
+          } => c !== null
+        )
 
       ctx.status = 200
       ctx.body = {

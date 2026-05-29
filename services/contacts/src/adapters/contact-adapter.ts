@@ -95,13 +95,18 @@ export interface ContactsRepository {
   getByEmailAddress: (emailAddress: string) => Promise<Contact[]>
 
   /**
-   * Retrieves contact codes for contacts changed since the given timestamp.
+   * Retrieves contact codes for contacts changed since the given timestamp,
+   * each paired with the latest logtime for that code. Results are ordered
+   * by timestamp ascending. If no timestamp is provided, returns all
+   * matching rows.
    *
-   * @param since - The timestamp to query changes from, or null to use the fallback window.
+   * @param since - The timestamp to query changes from, or null for all rows.
    *
-   * @returns A promise that resolves to a deduplicated array of contact codes.
+   * @returns A promise that resolves to contact codes with timestamps, ordered ascending.
    */
-  getChangedContactCodes: (since: Date | null) => Promise<string[]>
+  getChangedContactCodes: (
+    since: Date | null
+  ) => Promise<{ contactCode: string; timestamp: Date }[]>
 
   /**
    * Retrieves full Contact objects for the given list of contact codes in a single batch.

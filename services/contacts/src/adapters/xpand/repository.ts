@@ -170,31 +170,32 @@ export const xpandContactsRepository = (
     },
 
     /**
-     * Retrieves contact codes for contacts updated since the given timestamp.
+     * Retrieves contact codes for contacts updated since the given timestamp,
+     * each paired with the latest logtime for that code. Results are ordered
+     * by timestamp ascending so callers can checkpoint per item. If no
+     * timestamp is provided, returns all matching rows.
      *
-     * Filters cmlog for rows whose logmemo starts with "Kontakt {contactCode}"
-     * and returns a deduplicated list of the extracted contact codes.
-     * If no timestamp is provided, falls back to the last 5 minutes.
-     *
-     * @param since - The timestamp to query changes from, or null to use the fallback window.
-     * @returns A promise that resolves to a deduplicated array of contact codes.
+     * @param since - The timestamp to query changes from, or null for all rows.
+     * @returns A promise that resolves to contact codes with timestamps, ordered ascending.
      */
-    getChangedContactCodes: async (since: Date | null): Promise<string[]> => {
+    getChangedContactCodes: async (
+      since: Date | null
+    ): Promise<{ contactCode: string; timestamp: Date }[]> => {
       const rows = await cmlogContactChanges(db.get(), since)
 
-      const contactCodes = [
-        ...new Set(
-          rows
-            .map((row) => {
-              const match = (row['logmemo'] as string)?.match(/^Kontakt (\S+)/)
-              return match?.[1] ?? null
-            })
-            .filter((code): code is string => code !== null)
-        ),
-      ]
+      const byContactCode = new Map<string, Date>()
+      for (const row of rows) {
+        const match = (row['logmemo'] as string)?.match(/^Kontakt (\S+)/)
+        if (!match) continue
+        byContactCode.set(match[1], row['logtime'] as Date)
+      }
+
+      const contactCodes = Array.from(byContactCode.entries())
+        .map(([contactCode, timestamp]) => ({ contactCode, timestamp }))
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
 
       logger.info(
-        { contactCodes },
+        { contactCodes: contactCodes.map((c) => c.contactCode) },
         'cmlog contact codes updated since last sync'
       )
 
