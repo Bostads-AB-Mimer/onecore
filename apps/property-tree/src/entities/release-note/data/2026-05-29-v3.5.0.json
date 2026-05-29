@@ -1,0 +1,44 @@
+[
+  {
+    "id": "rn-2026-05-29-v350-1",
+    "date": "2026-05-29",
+    "title": "Markera hela rum som Utan anmärkningar",
+    "description": "Ny knapp i rummets rubrik som markerar alla komponenter i rummet som God i ett klick. Komponenter du redan har bedömt lämnas orörda.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-05-29-v350-2",
+    "date": "2026-05-29",
+    "title": "Skicket Acceptabel heter nu Ok",
+    "description": "Etiketten Acceptabel har bytts till Ok i besiktningsformuläret, sammanställningen och i PDF-protokollet.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-05-29-v350-3",
+    "date": "2026-05-29",
+    "title": "Enklare registrering av kostnad och kostnadsansvar",
+    "description": "Kostnadsansvar visas nu bara för komponenter med skick Skadad, och kostnadsfältet döljs när hyresvärden bär kostnaden. Mindre att fylla i, mindre att missa.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-05-29-v350-4",
+    "date": "2026-05-29",
+    "title": "Snabbare navigering mellan rum",
+    "description": "Högst upp i besiktningen visas alltid en lista över rummen. Klick på ett rum öppnar det och hoppar dit. På mobil scrollar listan automatiskt så det aktiva rummet hålls i bild.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-05-29-v350-5",
+    "date": "2026-05-29",
+    "title": "Historiska besiktningar visar även Besiktningsresultat skickat",
+    "description": "Besiktningar med status Besiktningsresultat skickat visas nu tillsammans med Genomförda besiktningar i historiken — tidigare filtrerades de bort.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-05-29-v350-6",
+    "date": "2026-05-29",
+    "title": "Standardtext på besiktningsprotokoll",
+    "description": "Genererade PDF-protokoll innehåller nu sluttext om hyresgästens godkännande och besiktningsmannens intygande.",
+    "category": "improvement"
+  }
+]

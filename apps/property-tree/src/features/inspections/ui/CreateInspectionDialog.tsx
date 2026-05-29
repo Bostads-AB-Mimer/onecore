@@ -23,8 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/Select'
-import { Textarea } from '@/shared/ui/Textarea'
-
 import {
   INSPECTION_TYPE,
   INSPECTION_TYPE_LABELS,
@@ -113,7 +111,6 @@ export function CreateInspectionDialog({
   const [isTenantPresent, setIsTenantPresent] = useState(false)
   const [isNewTenantPresent, setIsNewTenantPresent] = useState(false)
   const [masterKeyAccess, setMasterKeyAccess] = useState('')
-  const [notes, setNotes] = useState('')
   const [leaseValue, setLeaseValue] = useState<string>(defaultLeaseValue)
 
   const canSubmit = inspector.trim() && type && date
@@ -146,7 +143,7 @@ export function CreateInspectionDialog({
       isNewTenantPresent,
       masterKeyAccess: masterKeyAccess.trim() || null,
       hasRemarks: false,
-      notes: notes.trim() || null,
+      notes: null,
       totalCost: null,
       rooms: roomNames.map((name) => ({ room: name, remarks: [] })),
     }
@@ -167,7 +164,6 @@ export function CreateInspectionDialog({
     setIsTenantPresent(false)
     setIsNewTenantPresent(false)
     setMasterKeyAccess('')
-    setNotes('')
     setLeaseValue(defaultLeaseValue)
   }
 
@@ -308,17 +304,6 @@ export function CreateInspectionDialog({
                 <SelectItem value="Nej">Nej</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Anteckningar</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Valfria anteckningar"
-              rows={3}
-            />
           </div>
         </div>
 
