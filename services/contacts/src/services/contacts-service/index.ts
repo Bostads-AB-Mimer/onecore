@@ -123,8 +123,12 @@ export const routes = (
             : null
         })
         .filter(
-          (c): c is { contact: (typeof fetchedContacts)[number]; timestamp: string } =>
-            c !== null
+          (
+            c
+          ): c is {
+            contact: (typeof fetchedContacts)[number]
+            timestamp: string
+          } => c !== null
         )
 
       ctx.status = 200
