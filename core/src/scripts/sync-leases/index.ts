@@ -4,7 +4,6 @@ import { toSyncLeasingPayload } from './to-sync-leasing-payload'
 import { RentalPropertyInfo, SyncContactToLeasingPayload } from '@onecore/types'
 import config from '../../common/config'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
-import { sendEmail } from '../../adapters/communication-adapter'
 import { getUpdatedLeases, syncLease } from '../../adapters/leasing-adapter'
 import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
 
@@ -37,36 +36,6 @@ const saveLastTimestamp = async (ts: Date) => {
   const tmp = `${STATE_FILE}.tmp`
   await fs.writeFile(tmp, ts.toISOString(), 'utf-8')
   await fs.rename(tmp, STATE_FILE)
-}
-
-const notifySyncFailure = async (p: {
-  leaseId: string
-  action: string
-  timestamp: Date
-  error: unknown
-}) => {
-  if (!config.emailAddresses.xpandSync) {
-    logger.warn(
-      'config.emailAddresses.xpandSync is not set — skipping sync failure notification'
-    )
-    return
-  }
-
-  try {
-    await sendEmail({
-      to: config.emailAddresses.xpandSync,
-      subject: 'Fel i körning: sync-leases',
-      body: [
-        `Misslyckades på avtal ${p.leaseId} (${p.action})`,
-        `Tidsstämpel: ${p.timestamp.toISOString()}`,
-        `Fel: ${p.error instanceof Error ? p.error.message : String(p.error)}`,
-        ``,
-        `Checkpoint kvar på senaste lyckade objektet. Nästa körning kommer att misslyckas på samma objekt tills det åtgärdas.`,
-      ].join('\n'),
-    })
-  } catch (emailErr) {
-    logger.error({ emailErr }, 'failed to send sync failure notification')
-  }
 }
 
 const syncLeases = async () => {
@@ -155,12 +124,6 @@ const syncLeases = async () => {
         { err, leaseId: lease.leaseId, action: lease.action },
         'sync-leases: aborting run on first failure, checkpoint kept at last success'
       )
-      await notifySyncFailure({
-        leaseId: lease.leaseId,
-        action: lease.action,
-        timestamp: lease.timestamp,
-        error: err,
-      })
       throw err
     }
   }
