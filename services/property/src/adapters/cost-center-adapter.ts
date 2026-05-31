@@ -24,8 +24,6 @@ export const getCostCenterTreeById = async (
   id: string
 ): Promise<CostCenterTree | null> => {
   try {
-    const tStart = Date.now()
-    const tCc = Date.now()
     const costCenter = await prisma.onecoreCostCenter
       .findUnique({
         where: { id },
@@ -36,10 +34,6 @@ export const getCostCenterTreeById = async (
         },
       })
       .then(trimStrings)
-    logger.info(
-      { id, ms: Date.now() - tCc },
-      'cost-center-adapter.timing: costCenter+kvvAreas+links'
-    )
 
     if (!costCenter) return null
 
@@ -47,9 +41,9 @@ export const getCostCenterTreeById = async (
       area.propertyLinks.map((link) => link.propertyCode)
     )
     const uniqueCodes = Array.from(new Set(propertyCodes))
+    const codesJson = JSON.stringify(uniqueCodes)
 
-    const tPs = Date.now()
-    const timedProperties =
+    const [properties, addressRows, countRows] = await Promise.all([
       uniqueCodes.length === 0
         ? Promise.resolve(
             [] as Array<{
@@ -58,88 +52,42 @@ export const getCostCenterTreeById = async (
               tract: string | null
             }>
           )
-        : (async () => {
-            const t = Date.now()
-            const rows = await prisma.property
-              .findMany({
-                where: { code: { in: uniqueCodes } },
-                select: { code: true, designation: true, tract: true },
-              })
-              .then(trimStrings)
-            logger.info(
-              { id, ms: Date.now() - t, rows: rows.length },
-              'cost-center-adapter.timing: properties query'
-            )
-            return rows
-          })()
-
-    const codesJson = JSON.stringify(uniqueCodes)
-
-    const timedAddresses =
+        : prisma.property
+            .findMany({
+              where: { code: { in: uniqueCodes } },
+              select: { code: true, designation: true, tract: true },
+            })
+            .then(trimStrings),
       uniqueCodes.length === 0
         ? Promise.resolve([] as AddressRow[])
-        : (async () => {
-            const t = Date.now()
-            const rows = await prisma.$queryRaw<AddressRow[]>`
-              SELECT DISTINCT
-                s.fstcode     AS propertyCode,
-                s.bygcode     AS buildingCode,
-                s.bygcaption  AS buildingName,
-                t.code        AS buildingTypeCode,
-                t.caption     AS buildingTypeName
-              FROM dbo.babuf s
-              LEFT JOIN dbo.babyg b ON b.keycmobj = s.keyobjbyg
-              LEFT JOIN dbo.babyt t ON t.keybabyt = b.keybabyt
-              WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
-                AND s.deletemark = 0
-                AND s.bygcode IS NOT NULL
-            `.then(trimStrings)
-            logger.info(
-              { id, ms: Date.now() - t, rows: rows.length },
-              'cost-center-adapter.timing: addresses query'
-            )
-            return rows
-          })()
-
-    const timedCounts =
+        : prisma.$queryRaw<AddressRow[]>`
+            SELECT DISTINCT
+              s.fstcode     AS propertyCode,
+              s.bygcode     AS buildingCode,
+              s.bygcaption  AS buildingName,
+              t.code        AS buildingTypeCode,
+              t.caption     AS buildingTypeName
+            FROM dbo.babuf s
+            LEFT JOIN dbo.babyg b ON b.keycmobj = s.keyobjbyg
+            LEFT JOIN dbo.babyt t ON t.keybabyt = b.keybabyt
+            WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
+              AND s.deletemark = 0
+              AND s.bygcode IS NOT NULL
+          `.then(trimStrings),
       uniqueCodes.length === 0
         ? Promise.resolve([] as CountRow[])
-        : (async () => {
-            const t = Date.now()
-            const rows = await prisma.$queryRaw<CountRow[]>`
-              SELECT
-                fstcode AS propertyCode,
-                COUNT(DISTINCT keyobjlgh) AS residenceCount,
-                COUNT(DISTINCT keyobjbps) AS parkingCount,
-                COUNT(DISTINCT keyobjvan) AS entranceCount
-              FROM dbo.babuf
-              WHERE fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
-                AND deletemark = 0
-              GROUP BY fstcode
-            `.then(trimStrings)
-            logger.info(
-              { id, ms: Date.now() - t, rows: rows.length },
-              'cost-center-adapter.timing: counts query'
-            )
-            return rows
-          })()
-
-    const [properties, addressRows, countRows] = await Promise.all([
-      timedProperties,
-      timedAddresses,
-      timedCounts,
+        : prisma.$queryRaw<CountRow[]>`
+            SELECT
+              fstcode AS propertyCode,
+              COUNT(DISTINCT keyobjlgh) AS residenceCount,
+              COUNT(DISTINCT keyobjbps) AS parkingCount,
+              COUNT(DISTINCT keyobjvan) AS entranceCount
+            FROM dbo.babuf
+            WHERE fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
+              AND deletemark = 0
+            GROUP BY fstcode
+          `.then(trimStrings),
     ])
-    logger.info(
-      {
-        id,
-        ms: Date.now() - tPs,
-        uniqueCodes: uniqueCodes.length,
-        addressRows: addressRows.length,
-        countRows: countRows.length,
-        propertyRows: properties.length,
-      },
-      'cost-center-adapter.timing: properties+addresses+counts queries (parallel)'
-    )
 
     const propertyByCode = new Map(properties.map((p) => [p.code, p]))
 
@@ -173,7 +121,7 @@ export const getCostCenterTreeById = async (
 
     const countsByProperty = new Map(countRows.map((c) => [c.propertyCode, c]))
 
-    const result = {
+    return {
       id: costCenter.id,
       code: costCenter.code,
       name: costCenter.name,
@@ -202,11 +150,6 @@ export const getCostCenterTreeById = async (
         }),
       })),
     }
-    logger.info(
-      { id, ms: Date.now() - tStart },
-      'cost-center-adapter.timing: getCostCenterTreeById total'
-    )
-    return result
   } catch (err) {
     logger.error({ err, id }, 'cost-center-adapter.getCostCenterTreeById')
     throw err
