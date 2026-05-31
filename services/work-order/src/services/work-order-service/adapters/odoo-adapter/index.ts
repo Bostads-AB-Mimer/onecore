@@ -266,14 +266,7 @@ export const createWorkOrder = async (
 ): Promise<AdapterResult<number, unknown>> => {
   try {
     await odoo.connect()
-    const isPestWorkOrder = details.Rows.some(
-      (row) =>
-        row.PartOfBuildingCode.trim() === 'SD' ||
-        row.PartOfBuildingCode.trim() === 'DJUR'
-    )
-    const maintenanceTeamId = await getMaintenanceTeamId(
-      isPestWorkOrder ? 'Skadedjurssamordnare' : 'Kundcenter'
-    )
+    const maintenanceTeamId = await getMaintenanceTeamId('Kundcenter')
 
     const newRentalPropertyRecord =
       await createRentalPropertyRecord(rentalPropertyInfo)
