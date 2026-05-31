@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client'
 import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
@@ -74,6 +73,8 @@ export const getCostCenterTreeById = async (
             return rows
           })()
 
+    const codesJson = JSON.stringify(uniqueCodes)
+
     const timedAddresses =
       uniqueCodes.length === 0
         ? Promise.resolve([] as AddressRow[])
@@ -89,7 +90,7 @@ export const getCostCenterTreeById = async (
               FROM dbo.babuf s
               LEFT JOIN dbo.babyg b ON b.keycmobj = s.keyobjbyg
               LEFT JOIN dbo.babyt t ON t.keybabyt = b.keybabyt
-              WHERE s.fstcode IN (${Prisma.join(uniqueCodes)})
+              WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
                 AND s.deletemark = 0
                 AND s.bygcode IS NOT NULL
             `.then(trimStrings)
@@ -112,7 +113,7 @@ export const getCostCenterTreeById = async (
                 COUNT(DISTINCT keyobjbps) AS parkingCount,
                 COUNT(DISTINCT keyobjvan) AS entranceCount
               FROM dbo.babuf
-              WHERE fstcode IN (${Prisma.join(uniqueCodes)})
+              WHERE fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
                 AND deletemark = 0
               GROUP BY fstcode
             `.then(trimStrings)
