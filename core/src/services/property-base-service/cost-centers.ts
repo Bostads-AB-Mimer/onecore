@@ -122,14 +122,8 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/cost-centers/:id/tree', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
-    const tStart = Date.now()
 
-    const tTree = Date.now()
     const treeResult = await propertyBaseAdapter.getCostCenterTreeById(id)
-    logger.info(
-      { id, ms: Date.now() - tTree },
-      'cost-centers.tree.timing: property-service getCostCenterTreeById'
-    )
     if (!treeResult.ok) {
       if (treeResult.err === 'not-found') {
         ctx.status = 404
@@ -143,16 +137,11 @@ export const routes = (router: KoaRouter) => {
 
     const raw = treeResult.data
 
-    const tKc = Date.now()
     const [responsibleResult, leadResult, deputyResult] = await Promise.all([
       getUsersByRole(PROPERTY_MANAGER_ROLE),
       getUsersByRole(DISTRICT_MANAGER_ROLE),
       getUsersByRole(DEPUTY_DISTRICT_MANAGER_ROLE),
     ])
-    logger.info(
-      { id, ms: Date.now() - tKc },
-      'cost-centers.tree.timing: keycloak getUsersByRole x3'
-    )
 
     const buildUserMap = (users: KeycloakUser[]) => {
       const map = new Map<string, KeycloakUser>()
@@ -216,20 +205,9 @@ export const routes = (router: KoaRouter) => {
       })),
     }
 
-    const tParse = Date.now()
-    const content = CostCenterTreeSchema.parse(composed)
-    logger.info(
-      { id, ms: Date.now() - tParse },
-      'cost-centers.tree.timing: zod parse'
-    )
-
     ctx.body = {
-      content,
+      content: CostCenterTreeSchema.parse(composed),
       ...metadata,
     }
-    logger.info(
-      { id, ms: Date.now() - tStart },
-      'cost-centers.tree.timing: total'
-    )
   })
 }
