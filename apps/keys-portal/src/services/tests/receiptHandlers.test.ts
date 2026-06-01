@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-import type { KeyDetails, Card, Lease } from '@/services/types'
+import type { KeyDetails, Card, Lease, Tenant, Contact } from '@/services/types'
 
 import {
   categorizeKeys,
   categorizeCards,
   assembleReturnReceipt,
   assembleMaintenanceLoanReceipt,
+  resolveLoanTenants,
 } from '../receiptHandlers'
 import { keyLoanService } from '../api/keyLoanService'
 import { fetchContactByContactCode } from '../api/contactService'
@@ -51,6 +52,37 @@ function makeKey(overrides: Partial<KeyDetails> & { id: string }): KeyDetails {
 
 function makeCard(overrides: Partial<Card> & { cardId: string }): Card {
   return { ...overrides } as Card
+}
+
+function makeTenant(
+  overrides: Partial<Tenant> & { contactCode: string }
+): Tenant {
+  return {
+    contactKey: 'key-' + overrides.contactCode,
+    firstName: 'First',
+    lastName: 'Last',
+    fullName: 'First Last',
+    nationalRegistrationNumber: '199001011234',
+    birthDate: '1990-01-01',
+    isTenant: true,
+    ...overrides,
+  } as Tenant
+}
+
+function makeContact(
+  overrides: Partial<Contact> & { contactCode: string }
+): Contact {
+  return {
+    contactKey: 'key-' + overrides.contactCode,
+    firstName: 'First',
+    lastName: 'Last',
+    fullName: 'First Last',
+    nationalRegistrationNumber: '199001011234',
+    birthDate: '1990-01-01',
+    phoneNumbers: [],
+    isTenant: true,
+    ...overrides,
+  } as Contact
 }
 
 function makeLease(overrides: Partial<Lease> = {}): Lease {
@@ -114,11 +146,101 @@ describe('categorizeCards', () => {
   })
 })
 
-describe('assembleReturnReceipt', () => {
-  it('returns undefined for missingKeys/disposedKeys/cards when all keys returned and no cards', () => {
-    const keys = [makeKey({ id: 'k1' })]
+describe('resolveLoanTenants', () => {
+  beforeEach(() => {
+    vi.mocked(fetchContactByContactCode).mockReset()
+  })
 
-    const result = assembleReturnReceipt(keys, new Set(['k1']), makeLease())
+  it('reuses a matching knownTenant without calling the contact API', async () => {
+    const tenant = makeTenant({ contactCode: 'P001', fullName: 'Anna A' })
+
+    const result = await resolveLoanTenants({ contact: 'P001' }, [tenant])
+
+    expect(result).toEqual([tenant])
+    expect(fetchContactByContactCode).not.toHaveBeenCalled()
+  })
+
+  it('matches a knownTenant case-insensitively', async () => {
+    const tenant = makeTenant({ contactCode: 'P001' })
+
+    const result = await resolveLoanTenants({ contact: 'p001' }, [tenant])
+
+    expect(result[0].contactCode).toBe('P001')
+    expect(fetchContactByContactCode).not.toHaveBeenCalled()
+  })
+
+  it('fetches the real borrower via API when not on the lease (the bug case)', async () => {
+    vi.mocked(fetchContactByContactCode).mockResolvedValue(
+      makeContact({ contactCode: 'P999', fullName: 'Bob B' })
+    )
+    const leaseTenant = makeTenant({ contactCode: 'P001', fullName: 'Anna A' })
+
+    const result = await resolveLoanTenants({ contact: 'P999' }, [leaseTenant])
+
+    expect(fetchContactByContactCode).toHaveBeenCalledWith('P999')
+    expect(result).toHaveLength(1)
+    expect(result[0].fullName).toBe('Bob B')
+    expect(result[0].contactCode).toBe('P999')
+  })
+
+  it('resolves entirely via API when no knownTenants are provided', async () => {
+    vi.mocked(fetchContactByContactCode).mockResolvedValue(
+      makeContact({ contactCode: 'P001', fullName: 'Anna A' })
+    )
+
+    const result = await resolveLoanTenants({ contact: 'P001' })
+
+    expect(fetchContactByContactCode).toHaveBeenCalledWith('P001')
+    expect(result[0].fullName).toBe('Anna A')
+  })
+
+  it('resolves both contact and contact2 in loan order', async () => {
+    const a = makeTenant({ contactCode: 'P001', fullName: 'Anna' })
+    const b = makeTenant({ contactCode: 'P002', fullName: 'Bo' })
+
+    const result = await resolveLoanTenants(
+      { contact: 'P001', contact2: 'P002' },
+      [a, b]
+    )
+
+    expect(result.map((t) => t.contactCode)).toEqual(['P001', 'P002'])
+  })
+
+  it('dedupes when contact and contact2 are the same code', async () => {
+    const a = makeTenant({ contactCode: 'P001' })
+
+    const result = await resolveLoanTenants(
+      { contact: 'P001', contact2: 'P001' },
+      [a]
+    )
+
+    expect(result).toHaveLength(1)
+  })
+
+  it('throws (blocks printing) when a contact code cannot be resolved', async () => {
+    vi.mocked(fetchContactByContactCode).mockResolvedValue(null)
+
+    await expect(resolveLoanTenants({ contact: 'P404' })).rejects.toThrow()
+  })
+
+  it('throws when the loan has no contact codes', async () => {
+    await expect(
+      resolveLoanTenants({ contact: null, contact2: null })
+    ).rejects.toThrow()
+  })
+})
+
+describe('assembleReturnReceipt', () => {
+  it('returns undefined for missingKeys/disposedKeys/cards when all keys returned and no cards', async () => {
+    const keys = [makeKey({ id: 'k1' })]
+    const lease = makeLease({ tenants: [makeTenant({ contactCode: 'P001' })] })
+
+    const result = await assembleReturnReceipt(
+      { contact: 'P001' },
+      keys,
+      new Set(['k1']),
+      lease
+    )
 
     expect(result.keys).toHaveLength(1)
     expect(result.missingKeys).toBeUndefined()
@@ -129,7 +251,7 @@ describe('assembleReturnReceipt', () => {
     expect(result.operationDate).toBeInstanceOf(Date)
   })
 
-  it('populates all fields for partial return with disposed keys, cards, and comment', () => {
+  it('populates all fields for partial return with disposed keys, cards, and comment', async () => {
     const keys = [
       makeKey({ id: 'k1' }), // returned
       makeKey({ id: 'k2' }), // missing (not selected)
@@ -139,11 +261,13 @@ describe('assembleReturnReceipt', () => {
       makeCard({ cardId: 'c1' }), // returned
       makeCard({ cardId: 'c2' }), // missing
     ]
+    const lease = makeLease({ tenants: [makeTenant({ contactCode: 'P001' })] })
 
-    const result = assembleReturnReceipt(
+    const result = await assembleReturnReceipt(
+      { contact: 'P001' },
       keys,
       new Set(['k1']),
-      makeLease(),
+      lease,
       cards,
       new Set(['c1']),
       'Test comment'

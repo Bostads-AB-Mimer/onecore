@@ -209,54 +209,44 @@ export async function handleReturnKeys({
         }
       }
 
-      // Update the loan
+      // Create the receipt and its PDF BEFORE marking the loan returned, so a
+      // failure to produce a correct kvittens (e.g. unresolved contact) aborts the
+      // return via the outer catch rather than leaving a returned loan without one.
+      const receipt = await receiptService.create({
+        keyLoanId: loanId,
+        receiptType: 'RETURN',
+        type: 'PHYSICAL',
+      })
+      receiptId = receipt.id
+
+      if (lease && selectedForReceipt) {
+        const keyLoan = (await keyLoanService.get(loanId, {
+          includeKeySystem: true,
+          includeCards: true,
+        })) as KeyLoanWithDetails
+
+        const loanKeys = keyLoan.keysArray as KeyDetails[]
+        const loanCards = (keyLoan.keyCardsArray || []) as Card[]
+        const selectedKeySet = new Set(selectedForReceipt)
+        const selectedCardSet = new Set(selectedCardsForReceipt || [])
+        await generateAndUploadReturnReceipt(
+          receiptId,
+          keyLoan,
+          loanKeys,
+          selectedKeySet,
+          lease,
+          loanCards,
+          selectedCardSet,
+          comment
+        )
+      }
+
+      // Receipt is in place — now mark the loan returned.
       lastProcessedLoanId = loanId
       await keyLoanService.update(loanId, {
         returnedAt: now,
         availableToNextTenantFrom: availableToNextTenantFrom ?? null,
       } as UpdateKeyLoanRequest)
-
-      // Create return receipt for this loan
-      try {
-        const receipt = await receiptService.create({
-          keyLoanId: loanId,
-          receiptType: 'RETURN',
-          type: 'PHYSICAL',
-        })
-        receiptId = receipt.id
-
-        // Generate and upload PDF if we have lease info
-        if (lease && receiptId && selectedForReceipt) {
-          try {
-            // Fetch loan with keys (including keySystem) and cards in one call
-            const keyLoan = (await keyLoanService.get(loanId, {
-              includeKeySystem: true,
-              includeCards: true,
-            })) as KeyLoanWithDetails
-
-            const loanKeys = keyLoan.keysArray as KeyDetails[]
-            const loanCards = (keyLoan.keyCardsArray || []) as Card[]
-
-            // Generate and upload the return receipt PDF
-            const selectedKeySet = new Set(selectedForReceipt)
-            const selectedCardSet = new Set(selectedCardsForReceipt || [])
-            await generateAndUploadReturnReceipt(
-              receiptId,
-              loanKeys,
-              selectedKeySet,
-              lease,
-              loanCards,
-              selectedCardSet,
-              comment
-            )
-          } catch (pdfErr) {
-            console.error('Failed to generate/upload PDF:', pdfErr)
-            // Don't fail the return if PDF generation fails
-          }
-        }
-      } catch (receiptErr) {
-        console.error('Failed to create return receipt:', receiptErr)
-      }
     }
 
     // Generate appropriate success message
@@ -398,7 +388,8 @@ export async function handlePartialReturn(
       if (!lease) {
         throw new Error('lease krävs för partiell retur av hyresgästlån')
       }
-      const returnData = assembleReturnReceipt(
+      const returnData = await assembleReturnReceipt(
+        oldLoan,
         allKeys,
         selectedKeyIds,
         lease,

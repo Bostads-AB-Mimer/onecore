@@ -20,6 +20,8 @@ import type {
   ReceiptData,
   MaintenanceReceiptData,
   Lease,
+  Tenant,
+  KeyLoan,
   KeyDetails,
   Card,
   KeyLoanWithDetails,
@@ -74,6 +76,47 @@ export function categorizeCards(
   return { returned, missing }
 }
 
+/**
+ * Resolves a loan's borrower(s) from its own contact codes (never the page's lease)
+ * so the receipt names who the loan is registered to. Reuses a knownTenants match to
+ * skip the API; throws if a code is missing/unresolvable, blocking the receipt.
+ */
+export async function resolveLoanTenants(
+  loan: Pick<KeyLoan, 'contact' | 'contact2'>,
+  knownTenants: Tenant[] = []
+): Promise<Tenant[]> {
+  const codes = [loan.contact, loan.contact2]
+    .map((code) => code?.trim())
+    .filter((code): code is string => !!code)
+  const uniqueCodes = [...new Set(codes.map((code) => code.toUpperCase()))]
+
+  if (uniqueCodes.length === 0) {
+    throw new Error('Lånet saknar kontakt och kan inte få en kvittens.')
+  }
+
+  const knownByCode = new Map(
+    knownTenants
+      .filter((tenant) => tenant.contactCode)
+      .map((tenant) => [tenant.contactCode.toUpperCase(), tenant])
+  )
+
+  const tenants: Tenant[] = []
+  for (const code of uniqueCodes) {
+    const known = knownByCode.get(code)
+    if (known) {
+      tenants.push(known)
+      continue
+    }
+    const contact = await fetchContactByContactCode(code)
+    if (!contact) {
+      throw new Error(`Kunde inte hämta kontakten (${code}) för kvittensen.`)
+    }
+    tenants.push(contact)
+  }
+
+  return tenants
+}
+
 // ============================================================================
 // Data Assembly Functions
 // ============================================================================
@@ -110,7 +153,7 @@ async function assembleFromReceipt(
 
   return {
     lease,
-    tenants: lease.tenants ?? [],
+    tenants: await resolveLoanTenants(keyLoan, lease.tenants ?? []),
     keys,
     receiptType: receipt.receiptType,
     operationDate,
@@ -120,10 +163,12 @@ async function assembleFromReceipt(
 }
 
 /**
- * Assembles ReceiptData for a return receipt from pre-fetched data
- * Used for: generating return receipt PDFs (no additional API calls)
+ * Assembles ReceiptData for a return receipt. The borrower(s) are resolved from
+ * the loan itself (not the lease), so the receipt names whoever the loan is
+ * registered to; resolution can fall back to the contact API, so this is async.
  */
-export function assembleReturnReceipt(
+export async function assembleReturnReceipt(
+  loan: Pick<KeyLoan, 'contact' | 'contact2'>,
   loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
   lease: Lease,
@@ -133,7 +178,7 @@ export function assembleReturnReceipt(
   // When true, unchecked items aren't missing — they continue on a new
   // continuation loan and get rendered in the "NYCKLAR KVAR PÅ LÅN" section.
   partialReturn = false
-): ReceiptData {
+): Promise<ReceiptData> {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
     selectedKeyIds
@@ -145,7 +190,7 @@ export function assembleReturnReceipt(
 
   return {
     lease,
-    tenants: lease.tenants ?? [],
+    tenants: await resolveLoanTenants(loan, lease.tenants ?? []),
     keys: returned,
     receiptType: 'RETURN',
     operationDate: new Date(),
@@ -383,7 +428,7 @@ export async function assembleFromLoan(
 
   return {
     lease,
-    tenants: lease.tenants ?? [],
+    tenants: await resolveLoanTenants(keyLoan, lease.tenants ?? []),
     keys,
     receiptType: 'LOAN',
     operationDate: keyLoan.createdAt ? new Date(keyLoan.createdAt) : new Date(),
@@ -396,6 +441,7 @@ export async function assembleFromLoan(
  * Generates and uploads a return receipt PDF to MinIO for a single loan
  *
  * @param receiptId - The receipt ID
+ * @param loan - The loan being returned (its contacts identify the borrower(s))
  * @param loanKeys - All key objects in this specific loan (with keySystem included)
  * @param selectedKeyIds - Key IDs that were checked in the dialog (returned keys)
  * @param lease - The lease associated with the receipt
@@ -405,6 +451,7 @@ export async function assembleFromLoan(
  */
 export async function generateAndUploadReturnReceipt(
   receiptId: string,
+  loan: Pick<KeyLoan, 'contact' | 'contact2'>,
   loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
   lease: Lease,
@@ -412,8 +459,9 @@ export async function generateAndUploadReturnReceipt(
   selectedCardIds: Set<string> = new Set(),
   comment?: string
 ): Promise<void> {
-  // Assemble receipt data (no API calls - uses pre-fetched data with keySystem)
-  const receiptData = assembleReturnReceipt(
+  // Assemble receipt data (borrower resolved from the loan, not the lease)
+  const receiptData = await assembleReturnReceipt(
+    loan,
     loanKeys,
     selectedKeyIds,
     lease,

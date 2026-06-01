@@ -49,6 +49,7 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
   // Tenant mode: fetch receipt data
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null)
   const [isLoadingReceipt, setIsLoadingReceipt] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [comment, setComment] = useState('')
   const [isPrinting, setIsPrinting] = useState(false)
 
@@ -61,12 +62,14 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
     if (!isOpen || (!receiptId && !loanId)) {
       setReceiptData(null)
       setComment('')
+      setLoadError(null)
       return
     }
 
     let cancelled = false
     const loadReceiptData = async () => {
       setIsLoadingReceipt(true)
+      setLoadError(null)
       try {
         const data = receiptId
           ? await fetchReceiptData(receiptId, lease)
@@ -76,6 +79,14 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
         }
       } catch (err) {
         console.error('Failed to fetch receipt data:', err)
+        if (!cancelled) {
+          setReceiptData(null)
+          setLoadError(
+            err instanceof Error
+              ? err.message
+              : 'Kunde inte skapa kvittensen. Kontrollera lånets kontakt.'
+          )
+        }
       } finally {
         if (!cancelled) {
           setIsLoadingReceipt(false)
@@ -163,8 +174,16 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Blocking error: borrower couldn't be resolved from the loan */}
+          {!isMaintenance && loadError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{loadError}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Warning about signature for LOAN receipts */}
-          {isLoanReceipt && (
+          {isLoanReceipt && !loadError && (
             <Alert
               variant="default"
               className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20"
