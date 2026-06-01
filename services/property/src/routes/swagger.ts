@@ -232,6 +232,16 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
+  ...zodToJsonSchema(types.PutPropertyKvvAreaBodySchema, {
+    name: 'PutPropertyKvvAreaBody',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.PropertyKvvAreaLinkSchema, {
+    name: 'PropertyKvvAreaLink',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
 }
 
 swaggerSpec.definition.components = {

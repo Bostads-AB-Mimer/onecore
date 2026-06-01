@@ -5535,6 +5535,52 @@ export interface paths {
       };
     };
   };
+  "/properties/{propertyCode}/kvv-area": {
+    /**
+     * Set the KVV-area (förvaltningsområde) of a property
+     * @description Sets the KVV-area a property belongs to. Cross-cost-center moves are
+     * allowed without validation. Requires the `property-areas:write` realm
+     * role (see MIM-1788).
+     */
+    put: {
+      parameters: {
+        path: {
+          propertyCode: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["PutPropertyKvvAreaBody"];
+        };
+      };
+      responses: {
+        /** @description Property → KVV-area link upserted */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["PropertyKvvAreaLink"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description Missing `property-areas:write` role */
+        403: {
+          content: never;
+        };
+        /** @description Property or KVV-area not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/search": {
     /**
      * Omni-search for different entities
@@ -10621,6 +10667,17 @@ export interface components {
     };
     KvvAreaSummary: {
       code: string;
+    };
+    PutPropertyKvvAreaBody: {
+      /** Format: uuid */
+      kvvAreaId: string;
+    };
+    PropertyKvvAreaLink: {
+      propertyCode: string;
+      /** Format: uuid */
+      kvvAreaId: string;
+      updatedAt: string;
+      updatedBy: string | null;
     };
     Key: {
       /** Format: uuid */

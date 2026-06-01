@@ -284,6 +284,50 @@ export async function getPropertyDetails(
   }
 }
 
+export type PropertyKvvAreaLink = {
+  propertyCode: string
+  kvvAreaId: string
+  updatedAt: string
+  updatedBy: string | null
+}
+
+export async function updatePropertyKvvArea(
+  propertyCode: string,
+  body: { kvvAreaId: string; updatedBy?: string | null }
+): Promise<
+  AdapterResult<
+    PropertyKvvAreaLink,
+    'property-not-found' | 'kvv-area-not-found' | 'unknown'
+  >
+> {
+  try {
+    const response = await axios.put(
+      `${config.propertyBaseService.url}/properties/${encodeURIComponent(propertyCode)}/kvv-area`,
+      body,
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200 && response.data?.content) {
+      return { ok: true, data: response.data.content as PropertyKvvAreaLink }
+    }
+
+    if (response.status === 404) {
+      // services/property emits a discriminator `code` on 404 bodies. Switching
+      // on it keeps us decoupled from the human-readable `reason` text.
+      const code: unknown = response.data?.code
+      if (code === 'KVV_AREA_NOT_FOUND') {
+        return { ok: false, err: 'kvv-area-not-found' }
+      }
+      return { ok: false, err: 'property-not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.updatePropertyKvvArea')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetResidencesResponse = components['schemas']['Residence'][]
 
 export async function getResidences(

@@ -1519,6 +1519,59 @@ export interface paths {
       }
     }
   }
+  '/properties/{code}/kvv-area': {
+    /**
+     * Set the KVV-area (förvaltningsområde) membership of a property
+     * @description Upserts the property → KVV-area link in `onecore_property_kvv_area`.
+     * Cross-cost-center moves are allowed without validation: the target
+     * KVV-area does not have to belong to the same cost center the property
+     * was previously associated with.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The property code (Xpand `Property.code`). */
+          code: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: uuid */
+            kvvAreaId: string
+            /**
+             * @description Identifier of the user performing the change. Stored in
+             * `updated_by` for audit. Typically the Keycloak
+             * preferred_username forwarded by core.
+             */
+            updatedBy?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Link upserted successfully. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLink']
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
+        }
+        /** @description Property or KVV-area not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/parking-spaces/search': {
     /**
      * Search parking spaces
@@ -2162,11 +2215,13 @@ export interface paths {
         200: {
           content: {
             'application/json': {
-              content?: {
-                code: string
-              }[]
+              content?: components['schemas']['KvvAreaSummary'][]
             }
           }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -3823,6 +3878,21 @@ export interface components {
       id: string
       code: string
       name: string
+    }
+    KvvAreaSummary: {
+      code: string
+    }
+    PutPropertyKvvAreaBody: {
+      /** Format: uuid */
+      kvvAreaId: string
+      updatedBy?: string
+    }
+    PropertyKvvAreaLink: {
+      propertyCode: string
+      /** Format: uuid */
+      kvvAreaId: string
+      updatedAt: string
+      updatedBy: string | null
     }
   }
   responses: never
