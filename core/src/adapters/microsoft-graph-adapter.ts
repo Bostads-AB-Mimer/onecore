@@ -7,6 +7,9 @@ export type GraphUser = {
   id: string
   userPrincipalName: string
   employeeId: string | null
+  mobilePhone: string | null
+  jobTitle: string | null
+  officeLocation: string | null
 }
 
 type GraphError = 'graph_unreachable' | 'unauthorized' | 'forbidden' | 'unknown'
@@ -56,7 +59,10 @@ export async function listUsers(): Promise<
   try {
     const token = await getGraphToken()
     const url = new URL('https://graph.microsoft.com/v1.0/users')
-    url.searchParams.set('$select', 'id,userPrincipalName,employeeId')
+    url.searchParams.set(
+      '$select',
+      'id,userPrincipalName,employeeId,mobilePhone,jobTitle,officeLocation'
+    )
     url.searchParams.set('$top', '999')
 
     const users: GraphUser[] = []

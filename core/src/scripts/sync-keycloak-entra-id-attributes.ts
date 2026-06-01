@@ -16,6 +16,7 @@ type Deps = {
   updateKeycloakUser: (
     u: KeycloakUser
   ) => Promise<AdapterResult<undefined, string>>
+  dryRun?: boolean
 }
 
 export type SyncReport = {
@@ -24,6 +25,7 @@ export type SyncReport = {
   skipped: number
   missing: number
   failed: number
+  dryRun: boolean
 }
 
 export async function syncKeycloakEntraIdAttributes(
@@ -48,7 +50,18 @@ export async function syncKeycloakEntraIdAttributes(
     skipped: 0,
     missing: 0,
     failed: 0,
+    dryRun: deps.dryRun ?? false,
   }
+
+  // Attributes synced from Microsoft Graph to Keycloak. The Graph property name
+  // is reused as the Keycloak attribute key. Null Graph values are skipped — we
+  // never clear an existing Keycloak value from a sync run.
+  const SYNCED_ATTRIBUTES = [
+    'employeeId',
+    'mobilePhone',
+    'jobTitle',
+    'officeLocation',
+  ] as const
 
   for (const kcUser of kcResult.data) {
     const key = (kcUser.username || kcUser.email || '').toLowerCase()
@@ -57,21 +70,36 @@ export async function syncKeycloakEntraIdAttributes(
       report.missing += 1
       continue
     }
-    if (!match.employeeId) {
-      report.skipped += 1
-      continue
+    const mergedAttributes: Record<string, string[]> = {
+      ...(kcUser.attributes ?? {}),
     }
-    const current = kcUser.attributes?.employeeId?.[0]
-    if (current === match.employeeId) {
+    let hasChanges = false
+    for (const attr of SYNCED_ATTRIBUTES) {
+      const graphValue = match[attr]
+      if (!graphValue) continue
+      const current = kcUser.attributes?.[attr]?.[0]
+      if (current === graphValue) continue
+      mergedAttributes[attr] = [graphValue]
+      hasChanges = true
+    }
+    if (!hasChanges) {
       report.skipped += 1
       continue
     }
     const merged: KeycloakUser = {
       ...kcUser,
-      attributes: {
-        ...(kcUser.attributes ?? {}),
-        employeeId: [match.employeeId],
-      },
+      attributes: mergedAttributes,
+    }
+    if (deps.dryRun) {
+      const changedAttrs = SYNCED_ATTRIBUTES.filter(
+        (attr) => mergedAttributes[attr]?.[0] !== kcUser.attributes?.[attr]?.[0]
+      )
+      logger.info(
+        { username: merged.username, changedAttrs },
+        'sync-keycloak-entra-id-attributes.wouldUpdate'
+      )
+      report.updated += 1
+      continue
     }
     const updateResult = await deps.updateKeycloakUser(merged)
     if (updateResult.ok) {
@@ -91,10 +119,15 @@ export async function syncKeycloakEntraIdAttributes(
 }
 
 if (require.main === module) {
+  const dryRun = process.argv.includes('--dry-run')
+  if (dryRun) {
+    logger.info('sync-keycloak-entra-id-attributes running in --dry-run mode')
+  }
   syncKeycloakEntraIdAttributes({
     listKeycloakUsers: listAllUsers,
     listGraphUsers,
     updateKeycloakUser: updateUser,
+    dryRun,
   }).then((report) => {
     logger.info(report, 'sync-keycloak-entra-id-attributes complete')
     if (report.failed > 0) {
