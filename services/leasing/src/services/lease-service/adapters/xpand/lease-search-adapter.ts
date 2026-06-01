@@ -177,6 +177,27 @@ export class LeaseSearchQueryBuilder {
   }
 
   /**
+   * Ensure the yearly rent aggregate is joined on babuf.hyresid (rental object code).
+   * The aggregate sums yearrent rows per rentalpropertyid so each lease gets one totalYearRent.
+   * LEFT JOIN — leases without rent rows just see null.
+   */
+  private ensureRentJoin(): void {
+    this.ensureBabufJoin()
+    if (!this.joinedTables.has('rent')) {
+      this.query.leftJoin(
+        xpandDb.raw(`(
+          SELECT rentalpropertyid, SUM(yearrent) as totalYearRent
+          FROM hy_debitrowrentalproperty_xpand_api
+          GROUP BY rentalpropertyid
+        ) as rent`),
+        'rent.rentalpropertyid',
+        'babuf.hyresid'
+      )
+      this.joinedTables.add('rent')
+    }
+  }
+
+  /**
    * Apply text search filter
    * Uses smart analysis to only search relevant columns based on input pattern
    * Uses EXISTS subquery for contact search to avoid row duplication
@@ -421,6 +442,7 @@ export class LeaseSearchQueryBuilder {
     if (this.options.forExport) {
       this.ensureDistrictJoin()
       this.ensureBabptJoin()
+      this.ensureRentJoin()
     }
 
     // Always selected (core display fields)
@@ -476,6 +498,10 @@ export class LeaseSearchQueryBuilder {
 
     if (this.joinedTables.has('babpt')) {
       this.query.select('babpt.caption as parkingSpaceType')
+    }
+
+    if (this.joinedTables.has('rent')) {
+      this.query.select('rent.totalYearRent')
     }
 
     return this
@@ -598,6 +624,13 @@ export const transformRow = (
 
   if (trimmedRow.parkingSpaceType !== undefined) {
     result.parkingSpaceType = trimmedRow.parkingSpaceType || null
+  }
+
+  if (trimmedRow.totalYearRent !== undefined) {
+    result.totalYearRent =
+      typeof trimmedRow.totalYearRent === 'number'
+        ? trimmedRow.totalYearRent
+        : null
   }
 
   return result
