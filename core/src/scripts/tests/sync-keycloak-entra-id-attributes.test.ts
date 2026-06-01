@@ -17,6 +17,9 @@ function graphUser(over: Partial<GraphUser>): GraphUser {
     id: 'g1',
     userPrincipalName: 'alice@x.se',
     employeeId: 'E1',
+    mobilePhone: null,
+    jobTitle: null,
+    officeLocation: null,
     ...over,
   }
 }
@@ -132,6 +135,29 @@ describe('syncKeycloakEntraIdAttributes', () => {
       },
     })
     expect(result.updated).toBe(1)
+  })
+
+  it('does not call updateKeycloakUser in dry-run mode but still counts updates', async () => {
+    const updates: KeycloakUser[] = []
+    const result = await syncKeycloakEntraIdAttributes({
+      listKeycloakUsers: async () => ({
+        ok: true,
+        data: [kcUser({ id: 'u1', username: 'alice@x.se' })],
+      }),
+      listGraphUsers: async () => ({
+        ok: true,
+        data: [
+          graphUser({ userPrincipalName: 'alice@x.se', employeeId: 'E1' }),
+        ],
+      }),
+      updateKeycloakUser: async (u) => {
+        updates.push(u)
+        return { ok: true, data: undefined }
+      },
+      dryRun: true,
+    })
+    expect(updates).toHaveLength(0)
+    expect(result).toMatchObject({ updated: 1, dryRun: true })
   })
 
   it('preserves other attributes during update', async () => {
