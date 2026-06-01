@@ -6,7 +6,7 @@ import { sendEmail } from '../../adapters/communication-adapter'
 import { syncContactToLeasing } from '../../adapters/leasing-adapter'
 import { syncContactToEconomy } from '../../adapters/economy-adapter'
 import { syncContactToWorkOrder } from '../../adapters/work-order-adapter'
-import { Contact } from '@onecore/types'
+import type { Contact } from '@onecore/contacts/schema'
 import { toSyncPayload } from './payload'
 import {
   addEntry,
