@@ -1,11 +1,14 @@
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
-import nock from 'nock'
 import config from '../../common/config'
 import { syncLeases } from './index'
 import * as factory from '../../../test/factories'
 import { addEntry, readQueue, FailedRowEntry } from '../shared/failed-sync-queue'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
+import * as contactsAdapterModule from '../../adapters/contacts-adapter'
+import * as communicationAdapter from '../../adapters/communication-adapter'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,53 +25,6 @@ const makeLeaseEntry = (
   lastError: error,
 })
 
-// Nock the propertyInfo endpoint to return a "Lägenhet" (in-scope)
-const nockPropertyInfo = (rentalObjectId: string) =>
-  nock(config.propertyInfoService.url)
-    .get(`/rentalPropertyInfo/${rentalObjectId}`)
-    .reply(200, { content: factory.rentalPropertyInfo.build() })
-
-// Nock the syncLease (POST /leases/sync) endpoint — success
-const nockSyncLease = (leaseId: string) =>
-  nock(config.tenantsLeasesService.url)
-    .post('/leases/sync')
-    .reply(200, { content: { action: 'terminated', leaseId } })
-
-// Nock the getUpdatedLeases (GET /leases/sync) endpoint
-const nockGetUpdatedLeases = (
-  content: Array<ReturnType<typeof factory.leaseChange.build>>,
-  since?: Date | null
-) => {
-  const interceptor = nock(config.tenantsLeasesService.url).get('/leases/sync')
-  if (since) {
-    interceptor.query({ since: since.toISOString() })
-  } else {
-    interceptor.query(true)
-  }
-  return interceptor.reply(200, {
-    content: content.map((c) => ({
-      ...c,
-      timestamp: c.timestamp.toISOString(),
-    })),
-  })
-}
-
-// Nock send-email (POST /send-email) — capture subjects
-const nockSendEmail = (times = 1) => {
-  const subjects: string[] = []
-  const scope = nock(config.communicationService.url)
-    .post('/send-email')
-    .times(times)
-    .reply(function (_uri, body) {
-      // multipart/form-data: extract subject from raw body string
-      const raw = typeof body === 'string' ? body : JSON.stringify(body)
-      const match = raw.match(/name="subject"\r?\n\r?\n([^\r\n]+)/)
-      if (match) subjects.push(match[1])
-      return [200, { content: null }]
-    })
-  return { scope, subjects }
-}
-
 // ---------------------------------------------------------------------------
 // Test state
 // ---------------------------------------------------------------------------
@@ -77,7 +33,6 @@ let dir: string
 let stateFile: string
 let queueFile: string
 
-// Keep a reference to the original xpandSync value so tests can restore it
 const originalXpandSync = config.emailAddresses.xpandSync
 
 beforeEach(async () => {
@@ -92,7 +47,8 @@ beforeEach(async () => {
 afterEach(async () => {
   ;(config.emailAddresses as Record<string, string>).xpandSync =
     originalXpandSync
-  nock.cleanAll()
+  jest.clearAllMocks()
+  jest.resetAllMocks()
   await fs.rm(dir, { recursive: true, force: true })
 })
 
@@ -107,14 +63,29 @@ describe('syncLeases', () => {
       timestamp: new Date('2026-05-01T10:00:00.000Z'),
     })
 
-    nockGetUpdatedLeases([lease])
-    nockPropertyInfo(lease.rentalObjectId)
-    nockSyncLease(lease.leaseId)
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+
+    jest
+      .spyOn(leasingAdapter, 'syncLease')
+      .mockResolvedValue({ ok: true, data: { action: 'terminated' } })
+
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     await syncLeases({ stateFile, queueFile })
 
     // No email sent
-    expect(nock.pendingMocks()).toHaveLength(0)
+    expect(sendEmailSpy).not.toHaveBeenCalled()
 
     // Queue still empty
     expect(await readQueue(queueFile)).toHaveLength(0)
@@ -130,15 +101,18 @@ describe('syncLeases', () => {
       timestamp: new Date('2026-05-01T11:00:00.000Z'),
     })
 
-    nockGetUpdatedLeases([lease])
-    // propertyInfo returns a non-200 to force failure inside syncLease
-    nock(config.propertyInfoService.url)
-      .get(`/rentalPropertyInfo/${lease.rentalObjectId}`)
-      .reply(500, {})
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
 
-    const emailScope = nock(config.communicationService.url)
-      .post('/send-email')
-      .reply(200, { content: null })
+    // propertyInfo returns non-200 to force failure inside syncLease
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({ status: 500, data: undefined })
+
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     await syncLeases({ stateFile, queueFile })
 
@@ -149,10 +123,13 @@ describe('syncLeases', () => {
       `${lease.leaseId}:${lease.action}:${lease.timestamp.toISOString()}`
     )
 
-    // Exactly one email was sent (failure notification)
-    expect(emailScope.isDone()).toBe(true)
+    // Exactly one failure email was sent
+    expect(sendEmailSpy).toHaveBeenCalledTimes(1)
+    expect(sendEmailSpy.mock.calls[0][0].subject).toMatch(
+      `sync-leases: nytt fel på avtal ${lease.leaseId}`
+    )
 
-    // State advanced to that row's timestamp (saveLastTimestamp is called even on failure)
+    // State advanced to that row's timestamp
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(lease.timestamp.toISOString())
   })
@@ -168,17 +145,18 @@ describe('syncLeases', () => {
     await addEntry(queueFile, entry)
 
     // Drain attempt fails (propertyInfo 500)
-    nock(config.propertyInfoService.url)
-      .get(`/rentalPropertyInfo/${lease.rentalObjectId}`)
-      .reply(500, {})
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({ status: 500, data: undefined })
 
     // No new cmlog rows
-    nockGetUpdatedLeases([])
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [] })
 
-    // Track that no email is sent
-    const emailScope = nock(config.communicationService.url)
-      .post('/send-email')
-      .reply(200, { content: null })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     await syncLeases({ stateFile, queueFile })
 
@@ -187,9 +165,8 @@ describe('syncLeases', () => {
     expect(queue).toHaveLength(1)
     expect(queue[0].key).toBe(entry.key)
 
-    // Email interceptor was NOT consumed (no mails sent)
-    expect(emailScope.isDone()).toBe(false)
-    nock.cleanAll()
+    // No email sent (silent retry)
+    expect(sendEmailSpy).not.toHaveBeenCalled()
 
     // State file not written (no rows processed)
     await expect(fs.readFile(stateFile, 'utf-8')).rejects.toThrow()
@@ -206,16 +183,25 @@ describe('syncLeases', () => {
     await addEntry(queueFile, entry)
 
     // Drain attempt succeeds
-    nockPropertyInfo(lease.rentalObjectId)
-    nockSyncLease(lease.leaseId)
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+
+    jest
+      .spyOn(leasingAdapter, 'syncLease')
+      .mockResolvedValue({ ok: true, data: { action: 'terminated' } })
 
     // No new cmlog rows
-    nockGetUpdatedLeases([])
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [] })
 
-    // Expect one recovery email
-    const emailScope = nock(config.communicationService.url)
-      .post('/send-email')
-      .reply(200, { content: null })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     await syncLeases({ stateFile, queueFile })
 
@@ -223,7 +209,10 @@ describe('syncLeases', () => {
     expect(await readQueue(queueFile)).toHaveLength(0)
 
     // Recovery email was sent
-    expect(emailScope.isDone()).toBe(true)
+    expect(sendEmailSpy).toHaveBeenCalledTimes(1)
+    expect(sendEmailSpy.mock.calls[0][0].subject).toMatch(
+      `sync-leases: tidigare felande avtal ${lease.leaseId} är nu synkat`
+    )
 
     // State file was NOT written (no new cmlog rows processed)
     await expect(fs.readFile(stateFile, 'utf-8')).rejects.toThrow()
@@ -239,23 +228,19 @@ describe('syncLeases', () => {
     const entry = makeLeaseEntry(lease)
     await addEntry(queueFile, entry)
 
-    // Drain attempt fails (propertyInfo 500 for first call)
-    nock(config.propertyInfoService.url)
-      .get(`/rentalPropertyInfo/${lease.rentalObjectId}`)
-      .reply(500, {})
+    // Drain attempt fails, then new row attempt also fails
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({ status: 500, data: undefined })
 
     // New cmlog returns the same lease again
-    nockGetUpdatedLeases([lease])
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
 
-    // New row's sync also fails (second propertyInfo call)
-    nock(config.propertyInfoService.url)
-      .get(`/rentalPropertyInfo/${lease.rentalObjectId}`)
-      .reply(500, {})
-
-    // Expect zero emails (dedupe gate prevents failure mail; no recovery)
-    const emailScope = nock(config.communicationService.url)
-      .post('/send-email')
-      .reply(200, { content: null })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
 
     await syncLeases({ stateFile, queueFile })
 
@@ -264,9 +249,8 @@ describe('syncLeases', () => {
     expect(queue).toHaveLength(1)
     expect(queue[0].key).toBe(entry.key)
 
-    // No email sent
-    expect(emailScope.isDone()).toBe(false)
-    nock.cleanAll()
+    // No email sent (dedupe gate prevents failure mail; no recovery)
+    expect(sendEmailSpy).not.toHaveBeenCalled()
 
     // State advanced to the row's timestamp
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
