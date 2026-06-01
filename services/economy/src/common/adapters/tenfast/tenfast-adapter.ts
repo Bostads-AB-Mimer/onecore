@@ -72,7 +72,11 @@ export const getTenantByContactCode = async (
       }
     )
     if (tenantResponse.status !== 200) {
-      return { ok: false, err: tenantResponse.statusText }
+      return {
+        ok: false,
+        err: tenantResponse.statusText,
+        statusCode: tenantResponse.status,
+      }
     }
 
     const parsedResponse = TenfastTenantByContactCodeResponseSchema.safeParse(

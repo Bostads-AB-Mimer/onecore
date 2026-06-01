@@ -3,7 +3,7 @@ import {
   generateRouteMetadata,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy } from '@onecore/types'
+import { economy, schemas } from '@onecore/types'
 
 import * as economyAdapter from '../../adapters/economy-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
@@ -291,6 +291,97 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  )
+
+  /**
+   * @swagger
+   * /invoice-channels:
+   *   post:
+   *     tags:
+   *       - Economy service
+   *     summary: Look up invoice channels for national registration numbers
+   *     description: Returns the invoice delivery channel for each provided national registration number.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - nationalRegistrationNumbers
+   *             properties:
+   *               nationalRegistrationNumbers:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: List of national registration numbers to look up
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved invoice channels.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - content
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     required:
+   *                       - channel
+   *                       - matchedCandidates
+   *                       - error
+   *                     properties:
+   *                       channel:
+   *                         type: string
+   *                         enum:
+   *                           - Kivra
+   *                           - Billo
+   *                           - eInvoiceB2C
+   *                           - eInvoiceB2B
+   *                       matchedCandidates:
+   *                         type: array
+   *                         items:
+   *                           type: string
+   *                         nullable: true
+   *                       error:
+   *                         type: string
+   *                         nullable: true
+   *       '400':
+   *         description: Invalid request body.
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   */
+  router.post(
+    '/invoice-channels',
+    parseRequestBody(economy.ChannelLookupRequestBodySchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { nationalRegistrationNumbers } = ctx.request.body
+
+      const response = await economyAdapter.getInvoiceChannels(
+        nationalRegistrationNumbers
+      )
+
+      if (response.ok) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(response.data, metadata)
+      } else {
+        ctx.status = 500
+        ctx.body = {
+          error: response.err,
+        }
+      }
     }
   )
 }

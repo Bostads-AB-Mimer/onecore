@@ -6,6 +6,7 @@ import {
   Invoice,
   InvoicePaymentEvent,
   RentInvoiceRow,
+  SyncContactToEconomyPayload,
   XledgerContact,
   XledgerProject,
   schemas,
@@ -13,7 +14,7 @@ import {
 
 import config from '../../common/config'
 import { AdapterResult } from './../types'
-import type { SyncContactToEconomyPayload } from '@onecore/types'
+import { AxiosError } from 'axios'
 
 export async function getInvoiceByInvoiceId(
   invoiceId: string
@@ -315,6 +316,31 @@ export async function processIMD(
   }
 }
 
+export async function getInvoiceChannels(
+  nationalRegistrationNumbers: string[]
+): Promise<AdapterResult<economy.ChannelLookupResponse, string>> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/invoice-channels`,
+      {
+        nationalRegistrationNumbers,
+      }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+    logger.error(response.data, 'economy-adapter.getInvoiceChannels')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoiceChannels')
+    if (err instanceof AxiosError) {
+      return { ok: false, err: err.response?.data.message }
+    }
+
+    return { ok: false, err: 'unknown' }
+  }
+}
 const PaymentsSinceResultSchema = z.object({
   events: schemas.v1.InvoicePaymentEventSchema.array(),
   lastCursor: z.string().nullable(),
@@ -333,7 +359,6 @@ export async function getLatestPaymentCursor(): Promise<
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
-
     logger.error(response.data, 'economy-adapter.getLatestPaymentCursor')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {

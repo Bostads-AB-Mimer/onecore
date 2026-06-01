@@ -77,6 +77,7 @@ describe('Tenfast Adapter', () => {
       expect(result).toEqual({
         ok: false,
         err: 'Not Found',
+        statusCode: 404,
       })
     })
 

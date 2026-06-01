@@ -125,4 +125,51 @@ describe('economy-service routes', () => {
       expect(res.body.error).toBe('Processing failed')
     })
   })
+
+  describe('POST /invoice-channels', () => {
+    it('returns 200 with channel data on success', async () => {
+      const mockData = [
+        { channel: 'Kivra', matchedCandidates: ['P000111'], error: null },
+        { channel: 'eInvoiceB2C', matchedCandidates: ['P000222'], error: null },
+      ]
+
+      jest.spyOn(economyAdapter, 'getInvoiceChannels').mockResolvedValue({
+        ok: true,
+        data: mockData as any,
+      })
+
+      const res = await request(app.callback())
+        .post('/invoice-channels')
+        .send({ nationalRegistrationNumbers: ['P000111', 'P000222'] })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(mockData)
+      expect(economyAdapter.getInvoiceChannels).toHaveBeenCalledWith([
+        'P000111',
+        'P000222',
+      ])
+    })
+
+    it('returns 400 when nationalRegistrationNumbers is missing', async () => {
+      const res = await request(app.callback())
+        .post('/invoice-channels')
+        .send({})
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 500 when adapter returns error', async () => {
+      jest.spyOn(economyAdapter, 'getInvoiceChannels').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback())
+        .post('/invoice-channels')
+        .send({ nationalRegistrationNumbers: ['P000111'] })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('unknown')
+    })
+  })
 })
