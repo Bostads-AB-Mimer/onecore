@@ -1,4 +1,5 @@
 export { PendingChangesPanel } from './PendingChangesPanel'
+export { PendingPropertyMovesPanel } from './PendingPropertyMovesPanel'
 export { PropertyCard } from './PropertyCard'
 export { StewardAdminMobile } from './StewardAdminMobile'
 export { StewardAssignmentDialog } from './StewardAssignmentDialog'

@@ -12,6 +12,7 @@ import { calculateResidenceStatus } from './calculate-residence-status'
 import { routes as componentRoutes } from './components'
 import { routes as costCenterRoutes } from './cost-centers'
 import { routes as kvvAreaRoutes } from './kvv-areas'
+import { routes as propertyKvvAreaRoutes } from './property-kvv-area'
 
 /**
  * @swagger
@@ -131,11 +132,14 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CostCenterTree', schemas.CostCenterTreeSchema)
   registerSchema('CostCenterSummary', schemas.CostCenterSummarySchema)
   registerSchema('KvvAreaSummary', schemas.KvvAreaSummarySchema)
+  registerSchema('PutPropertyKvvAreaBody', schemas.PutPropertyKvvAreaBodySchema)
+  registerSchema('PropertyKvvAreaLink', schemas.PropertyKvvAreaLinkSchema)
 
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)
   costCenterRoutes(router)
   kvvAreaRoutes(router)
+  propertyKvvAreaRoutes(router)
 
   /**
    * @swagger
