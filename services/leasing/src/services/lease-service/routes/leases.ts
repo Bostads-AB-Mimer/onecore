@@ -290,6 +290,79 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /leases/search:
+   *   get:
+   *     summary: Search leases with filters, pagination and optional export columns
+   *     description: |
+   *       Paginated lease search. Filters use AND between groups and OR within a group.
+   *       Optional `forExport=true` joins district + parking-type tables and always
+   *       includes property/building/area/district fields in each row regardless of
+   *       which filters were used. Use it when downstream callers (Excel export,
+   *       cross-property aggregations) need the wider field set without applying
+   *       restrictive filters.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema: { type: string }
+   *         description: Free-text search (lease id, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: property
+   *         schema: { type: array, items: { type: string } }
+   *         style: form
+   *         explode: true
+   *         description: Filter by property designation (babuf.fstcaption)
+   *       - in: query
+   *         name: buildingCodes
+   *         schema: { type: array, items: { type: string } }
+   *         style: form
+   *         explode: true
+   *         description: Filter by building code (babuf.bygcode)
+   *       - in: query
+   *         name: districtNames
+   *         schema: { type: array, items: { type: string } }
+   *         style: form
+   *         explode: true
+   *         description: Filter by district name (bafen.distrikt)
+   *       - in: query
+   *         name: status
+   *         schema: { type: array, items: { type: string } }
+   *         style: form
+   *         explode: true
+   *         description: LeaseStatus values as strings (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
+   *       - in: query
+   *         name: includeEnded
+   *         schema: { type: boolean }
+   *         description: When false (default), Upphört (status 3) is excluded
+   *       - in: query
+   *         name: forExport
+   *         schema: { type: boolean }
+   *         description: |
+   *           When true, joins bafen + babpt and always selects property, buildingCode,
+   *           area, buildingManager, districtName and parkingSpaceType regardless of
+   *           which filters were used.
+   *       - in: query
+   *         name: page
+   *         schema: { type: integer, minimum: 1, default: 1 }
+   *       - in: query
+   *         name: limit
+   *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+   *       - in: query
+   *         name: sortBy
+   *         schema: { type: string, enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode] }
+   *       - in: query
+   *         name: sortOrder
+   *         schema: { type: string, enum: [asc, desc] }
+   *     responses:
+   *       '200':
+   *         description: Paginated lease search results
+   *       '400':
+   *         description: Invalid query parameters
+   *       '500':
+   *         description: Internal server error
+   */
   router.get('(.*)/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
@@ -327,7 +400,9 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await searchLeases(queryParams.data, ctx)
+      const result = await searchLeases(queryParams.data, ctx, {
+        forExport: queryParams.data.forExport === true,
+      })
 
       ctx.status = 200
       ctx.body = result

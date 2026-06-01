@@ -1637,6 +1637,39 @@ export interface paths {
       };
     };
   };
+  "/leases/keys-export": {
+    /**
+     * Export all leases for a property as Excel, enriched with key name(s)
+     * @description Returns an .xlsx file with one row per lease matching the property filter,
+     * enriched with the key name(s) from the keys service.
+     * Optional buildingCode filter narrows to a single building.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Property designation (fastighetsbeteckning), e.g. "ALLMOGEKULTUREN 1" */
+          property: string;
+          buildingCode?: string;
+        };
+      };
+      responses: {
+        /** @description Excel file */
+        200: {
+          content: {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
+        /** @description Server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/listings": {
     /**
      * Get listings
@@ -9723,6 +9756,7 @@ export interface components {
       buildingManager?: string | null;
       districtName?: string | null;
       parkingSpaceType?: string | null;
+      totalYearRent?: number | null;
     };
     ContactInfo: {
       name: string;
