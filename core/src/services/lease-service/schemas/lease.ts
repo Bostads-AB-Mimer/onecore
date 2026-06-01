@@ -11,15 +11,9 @@ import { z } from 'zod'
  */
 
 /**
- * Contact schema for Swagger OpenAPI generation
- * Matches the response from GET /contacts/{contactCode}
- *
- * KEEP IN SYNC WITH the inline `tenants` array in `Lease` below. All tenants are
- * contacts (not the reverse): every field here MUST exist on a tenant. A tenant may
- * ADD fields or be STRICTER (narrower) on a shared one, but may never drop or loosen
- * one. The tenant shape is an inline copy on purpose — extending/referencing a shared
- * schema makes zod-to-json-schema emit a $ref for the shared `address`, which the
- * generated frontend types can't resolve. Enforced by tests/contact-tenant-sync.test.ts.
+ * GET /contacts/{contactCode} schema. KEEP IN SYNC WITH Lease.tenants below: all
+ * tenants are contacts, so a tenant carries every Contact field (may add or narrow,
+ * never drop/loosen). Inline copy avoids a shared $ref. See contact-tenant-sync.test.ts.
  */
 export const Contact = z.object({
   contactCode: z.string(),
@@ -126,11 +120,9 @@ export const Lease = z.object({
       caption: z.string(),
     })
     .optional(),
-  // KEEP IN SYNC WITH `Contact` above — all tenants are contacts. A tenant must
-  // carry every Contact field (here it adds parkingSpaceWaitingList and
-  // leaseContactType); it may be stricter on a shared field but never drop or
-  // loosen one. Inline (not a ref) so no $ref leaks into the frontend types.
-  // Enforced by tests/contact-tenant-sync.test.ts.
+  // KEEP IN SYNC WITH `Contact` above (all tenants are contacts): carry every Contact
+  // field, here adding parkingSpaceWaitingList + leaseContactType. Inline copy avoids
+  // a shared $ref. Enforced by tests/contact-tenant-sync.test.ts.
   tenants: z
     .array(
       z.object({
