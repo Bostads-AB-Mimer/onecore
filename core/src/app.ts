@@ -66,6 +66,11 @@ app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/scan-receipt')) {
     return requireRole('scanner-upload')(ctx, next)
   }
+
+  if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
+    return requireRole(['api-access', 'contacts:read'])(ctx, next)
+  }
+
   return requireRole('api-access')(ctx, next)
 })
 
