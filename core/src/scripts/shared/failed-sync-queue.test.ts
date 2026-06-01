@@ -7,7 +7,7 @@ import {
   removeEntry,
   hasKey,
   FailedRowEntry,
-} from './failed-row-queue'
+} from './failed-sync-queue'
 
 let dir: string
 let file: string
@@ -29,7 +29,7 @@ const makeEntry = (key: string): FailedRowEntry => ({
   lastError: 'oops',
 })
 
-describe('failed-row-queue', () => {
+describe('failed-sync-queue', () => {
   it('readQueue returns [] when file is missing', async () => {
     expect(await readQueue(file)).toEqual([])
   })

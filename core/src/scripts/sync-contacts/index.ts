@@ -14,7 +14,7 @@ import {
   readQueue,
   removeEntry,
   FailedRowEntry,
-} from '../shared/failed-row-queue'
+} from '../shared/failed-sync-queue'
 
 const STATE_FILE = '/data/last-timestamp.txt'
 const QUEUE_FILE = '/data/failed-rows.jsonl'

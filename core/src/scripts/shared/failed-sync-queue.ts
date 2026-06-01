@@ -15,7 +15,7 @@ export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
     content = await fs.readFile(path, 'utf-8')
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') return []
-    logger.warn({ err, path }, 'failed-row-queue: read error, treating as empty')
+    logger.warn({ err, path }, 'failed-sync-queue: read error, treating as empty')
     return []
   }
   try {
@@ -26,7 +26,7 @@ export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
   } catch (err) {
     logger.warn(
       { err, path },
-      'failed-row-queue: unable to parse queue file, treating as empty'
+      'failed-sync-queue: unable to parse queue file, treating as empty'
     )
     return []
   }
