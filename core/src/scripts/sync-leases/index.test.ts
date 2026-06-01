@@ -4,7 +4,11 @@ import path from 'path'
 import config from '../../common/config'
 import { syncLeases } from './index'
 import * as factory from '../../../test/factories'
-import { addEntry, readQueue, FailedRowEntry } from '../shared/failed-sync-queue'
+import {
+  addEntry,
+  readQueue,
+  FailedRowEntry,
+} from '../shared/failed-sync-queue'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as contactsAdapterModule from '../../adapters/contacts-adapter'

@@ -4,7 +4,11 @@ import path from 'path'
 import config from '../../common/config'
 import { syncContacts } from './index'
 import * as factory from '../../../test/factories'
-import { addEntry, readQueue, FailedRowEntry } from '../shared/failed-sync-queue'
+import {
+  addEntry,
+  readQueue,
+  FailedRowEntry,
+} from '../shared/failed-sync-queue'
 import * as contactsAdapterModule from '../../adapters/contacts-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as economyAdapter from '../../adapters/economy-adapter'
@@ -64,14 +68,12 @@ describe('syncContacts', () => {
     const contact = factory.domainContact.build()
     const ts = new Date('2026-05-01T10:00:00.000Z')
 
-    jest
-      .spyOn(contactsAdapterModule, 'makeContactsAdapter')
-      .mockReturnValue({
-        getUpdatedContacts: jest.fn().mockResolvedValue({
-          ok: true,
-          data: [{ contact, timestamp: ts }],
-        }),
-      } as any)
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [{ contact, timestamp: ts }],
+      }),
+    } as any)
 
     jest
       .spyOn(leasingAdapter, 'syncContactToLeasing')
@@ -109,14 +111,12 @@ describe('syncContacts', () => {
     const contact = factory.domainContact.build()
     const ts = new Date('2026-05-01T11:00:00.000Z')
 
-    jest
-      .spyOn(contactsAdapterModule, 'makeContactsAdapter')
-      .mockReturnValue({
-        getUpdatedContacts: jest.fn().mockResolvedValue({
-          ok: true,
-          data: [{ contact, timestamp: ts }],
-        }),
-      } as any)
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [{ contact, timestamp: ts }],
+      }),
+    } as any)
 
     // Leasing sync fails → whole contact sync fails
     jest
@@ -176,14 +176,12 @@ describe('syncContacts', () => {
       .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     // No new rows
-    jest
-      .spyOn(contactsAdapterModule, 'makeContactsAdapter')
-      .mockReturnValue({
-        getUpdatedContacts: jest.fn().mockResolvedValue({
-          ok: true,
-          data: [],
-        }),
-      } as any)
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [],
+      }),
+    } as any)
 
     const sendEmailSpy = jest
       .spyOn(communicationAdapter, 'sendEmail')
@@ -225,14 +223,12 @@ describe('syncContacts', () => {
       .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     // No new rows
-    jest
-      .spyOn(contactsAdapterModule, 'makeContactsAdapter')
-      .mockReturnValue({
-        getUpdatedContacts: jest.fn().mockResolvedValue({
-          ok: true,
-          data: [],
-        }),
-      } as any)
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [],
+      }),
+    } as any)
 
     const sendEmailSpy = jest
       .spyOn(communicationAdapter, 'sendEmail')
@@ -275,14 +271,12 @@ describe('syncContacts', () => {
       .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     // New cmlog row: same contact, same timestamp
-    jest
-      .spyOn(contactsAdapterModule, 'makeContactsAdapter')
-      .mockReturnValue({
-        getUpdatedContacts: jest.fn().mockResolvedValue({
-          ok: true,
-          data: [{ contact, timestamp: ts }],
-        }),
-      } as any)
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [{ contact, timestamp: ts }],
+      }),
+    } as any)
 
     const sendEmailSpy = jest
       .spyOn(communicationAdapter, 'sendEmail')

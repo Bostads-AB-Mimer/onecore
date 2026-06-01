@@ -111,7 +111,9 @@ const notifyRecovery = async (entry: FailedRowEntry) => {
 }
 
 const syncLease = async (lease: LeaseChange): Promise<void> => {
-  const propertyInfo = await getRentalPropertyInfoFromXpand(lease.rentalObjectId)
+  const propertyInfo = await getRentalPropertyInfoFromXpand(
+    lease.rentalObjectId
+  )
   if (propertyInfo.status !== 200 || !propertyInfo.data) {
     throw new Error(
       `Failed to fetch rental property info for ${lease.rentalObjectId} (status ${propertyInfo.status})`
@@ -146,9 +148,7 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
     lease.action
   )
   if (!syncResult.ok) {
-    throw new Error(
-      `Failed to sync lease ${lease.leaseId}: ${syncResult.err}`
-    )
+    throw new Error(`Failed to sync lease ${lease.leaseId}: ${syncResult.err}`)
   }
   logger.info(
     { leaseId: lease.leaseId, action: syncResult.data.action },
