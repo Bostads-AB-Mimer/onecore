@@ -557,6 +557,8 @@ export interface components {
           remarkGrade: number
           remarkStatus: string | null
           cost: number
+          /** @default null */
+          costResponsibility?: ('tenant' | 'landlord') | null
           invoice: boolean
           quantity: number
           isMissing: boolean
@@ -567,84 +569,41 @@ export interface components {
       }[]
     }
     DetailedXpandInspectionRoom: {
-      id: string
-      status: string
-      /** Format: date-time */
-      date: string
-      startedAt: string | null
-      endedAt: string | null
-      inspector: string
-      type: string
-      residenceId: string
-      address: string
-      apartmentCode: string | null
-      isFurnished: boolean
-      leaseId: string
-      isTenantPresent: boolean
-      isNewTenantPresent: boolean
-      masterKeyAccess: string | null
-      hasRemarks: boolean
-      notes: string | null
-      totalCost: number | null
-      remarkCount: number
-      rooms: {
-        room: string
-        remarks: {
-          remarkId: string
-          location: string | null
-          buildingComponent: string | null
-          notes: string | null
-          remarkGrade: number
-          remarkStatus: string | null
-          cost: number
-          invoice: boolean
-          quantity: number
-          isMissing: boolean
-          fixedDate: string | null
-          workOrderCreated: boolean
-          workOrderStatus: number | null
-        }[]
+      room: string
+      remarks: {
+        remarkId: string
+        location: string | null
+        buildingComponent: string | null
+        notes: string | null
+        remarkGrade: number
+        remarkStatus: string | null
+        cost: number
+        /** @default null */
+        costResponsibility?: ('tenant' | 'landlord') | null
+        invoice: boolean
+        quantity: number
+        isMissing: boolean
+        fixedDate: string | null
+        workOrderCreated: boolean
+        workOrderStatus: number | null
       }[]
     }
     DetailedXpandInspectionRemark: {
-      id: string
-      status: string
-      /** Format: date-time */
-      date: string
-      startedAt: string | null
-      endedAt: string | null
-      inspector: string
-      type: string
-      residenceId: string
-      address: string
-      apartmentCode: string | null
-      isFurnished: boolean
-      leaseId: string
-      isTenantPresent: boolean
-      isNewTenantPresent: boolean
-      masterKeyAccess: string | null
-      hasRemarks: boolean
+      remarkId: string
+      location: string | null
+      buildingComponent: string | null
       notes: string | null
-      totalCost: number | null
-      remarkCount: number
-      rooms: {
-        room: string
-        remarks: {
-          remarkId: string
-          location: string | null
-          buildingComponent: string | null
-          notes: string | null
-          remarkGrade: number
-          remarkStatus: string | null
-          cost: number
-          invoice: boolean
-          quantity: number
-          isMissing: boolean
-          fixedDate: string | null
-          workOrderCreated: boolean
-          workOrderStatus: number | null
-        }[]
-      }[]
+      remarkGrade: number
+      remarkStatus: string | null
+      cost: number
+      /** @default null */
+      costResponsibility?: ('tenant' | 'landlord') | null
+      invoice: boolean
+      quantity: number
+      isMissing: boolean
+      fixedDate: string | null
+      workOrderCreated: boolean
+      workOrderStatus: number | null
     }
     CreateInspection: {
       status: string
@@ -689,47 +648,64 @@ export interface components {
       status?: 'Registrerad' | 'Påbörjad' | 'Genomförd'
       inspector?: string
     }
+    InspectionComponent: {
+      componentId: string
+      label: string
+      condition: string
+      action: string[]
+      note: string
+      photos: string[]
+      cost?: number
+      /** @default null */
+      costResponsibility?: ('tenant' | 'landlord') | null
+    }
     InspectionRoom: {
       roomId: string
+      name?: string
       conditions: {
-        wall1: string
-        wall2: string
-        wall3: string
-        wall4: string
-        floor: string
-        ceiling: string
         details: string
       }
       actions: {
-        wall1: string[]
-        wall2: string[]
-        wall3: string[]
-        wall4: string[]
-        floor: string[]
-        ceiling: string[]
         details: string[]
       }
       componentNotes: {
-        wall1: string
-        wall2: string
-        wall3: string
-        wall4: string
-        floor: string
-        ceiling: string
         details: string
       }
+      componentCosts: {
+        /** @default 0 */
+        details?: number
+      }
       componentPhotos: {
-        wall1: string[]
-        wall2: string[]
-        wall3: string[]
-        wall4: string[]
-        floor: string[]
-        ceiling: string[]
         details: string[]
+      }
+      componentCostResponsibilities: {
+        /** @default null */
+        details?: ('tenant' | 'landlord') | null
       }
       photos: string[]
       isApproved: boolean
       isHandled: boolean
+      /** @default [] */
+      detailComponents?: {
+        id: string
+        type: string
+        label: string
+        note: string
+      }[]
+      /** @default [] */
+      components?: {
+        componentId: string
+        label: string
+        condition: string
+        action: string[]
+        note: string
+        photos: string[]
+        cost?: number
+        /** @default null */
+        costResponsibility?: ('tenant' | 'landlord') | null
+      }[]
+      /** @default false */
+      isAddedInThisInspection?: boolean
     }
     InternalInspection: {
       id: string
@@ -743,48 +719,63 @@ export interface components {
       leaseId: string
       masterKeyAccess: string | null
       residenceId: string
+      isFurnished: boolean
+      startedAt: string | null
+      endedAt: string | null
+      isTenantPresent: boolean
+      isNewTenantPresent: boolean
+      hasRemarks: boolean
+      notes: string | null
+      totalCost: number | null
+      remarkCount: number
       rooms:
         | {
             roomId: string
+            name?: string
             conditions: {
-              wall1: string
-              wall2: string
-              wall3: string
-              wall4: string
-              floor: string
-              ceiling: string
               details: string
             }
             actions: {
-              wall1: string[]
-              wall2: string[]
-              wall3: string[]
-              wall4: string[]
-              floor: string[]
-              ceiling: string[]
               details: string[]
             }
             componentNotes: {
-              wall1: string
-              wall2: string
-              wall3: string
-              wall4: string
-              floor: string
-              ceiling: string
               details: string
             }
+            componentCosts: {
+              /** @default 0 */
+              details?: number
+            }
             componentPhotos: {
-              wall1: string[]
-              wall2: string[]
-              wall3: string[]
-              wall4: string[]
-              floor: string[]
-              ceiling: string[]
               details: string[]
+            }
+            componentCostResponsibilities: {
+              /** @default null */
+              details?: ('tenant' | 'landlord') | null
             }
             photos: string[]
             isApproved: boolean
             isHandled: boolean
+            /** @default [] */
+            detailComponents?: {
+              id: string
+              type: string
+              label: string
+              note: string
+            }[]
+            /** @default [] */
+            components?: {
+              componentId: string
+              label: string
+              condition: string
+              action: string[]
+              note: string
+              photos: string[]
+              cost?: number
+              /** @default null */
+              costResponsibility?: ('tenant' | 'landlord') | null
+            }[]
+            /** @default false */
+            isAddedInThisInspection?: boolean
           }[]
         | null
     }
@@ -792,46 +783,53 @@ export interface components {
       inspectorName: string
       rooms: {
         roomId: string
+        name?: string
         conditions: {
-          wall1: string
-          wall2: string
-          wall3: string
-          wall4: string
-          floor: string
-          ceiling: string
           details: string
         }
         actions: {
-          wall1: string[]
-          wall2: string[]
-          wall3: string[]
-          wall4: string[]
-          floor: string[]
-          ceiling: string[]
           details: string[]
         }
         componentNotes: {
-          wall1: string
-          wall2: string
-          wall3: string
-          wall4: string
-          floor: string
-          ceiling: string
           details: string
         }
+        componentCosts: {
+          /** @default 0 */
+          details?: number
+        }
         componentPhotos: {
-          wall1: string[]
-          wall2: string[]
-          wall3: string[]
-          wall4: string[]
-          floor: string[]
-          ceiling: string[]
           details: string[]
+        }
+        componentCostResponsibilities: {
+          /** @default null */
+          details?: ('tenant' | 'landlord') | null
         }
         photos: string[]
         isApproved: boolean
         isHandled: boolean
+        /** @default [] */
+        detailComponents?: {
+          id: string
+          type: string
+          label: string
+          note: string
+        }[]
+        /** @default [] */
+        components?: {
+          componentId: string
+          label: string
+          condition: string
+          action: string[]
+          note: string
+          photos: string[]
+          cost?: number
+          /** @default null */
+          costResponsibility?: ('tenant' | 'landlord') | null
+        }[]
+        /** @default false */
+        isAddedInThisInspection?: boolean
       }[]
+      isFurnished: boolean
     }
   }
   responses: never
