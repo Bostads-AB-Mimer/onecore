@@ -16,14 +16,14 @@ import {
   FailedRowEntry,
 } from '../shared/failed-sync-queue'
 
-const STATE_FILE = '/data/last-timestamp.txt'
-const QUEUE_FILE = '/data/failed-rows.jsonl'
+const DEFAULT_STATE_FILE = '/data/last-timestamp.txt'
+const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
 
 type ContactUpdate = { contact: Contact; timestamp: Date }
 
-const getLastTimestamp = async (): Promise<Date | null> => {
+const getLastTimestamp = async (stateFile: string): Promise<Date | null> => {
   try {
-    const content = await fs.readFile(STATE_FILE, 'utf-8')
+    const content = await fs.readFile(stateFile, 'utf-8')
     const trimmed = content.trim()
     if (!trimmed) return null
     const date = new Date(trimmed)
@@ -33,10 +33,10 @@ const getLastTimestamp = async (): Promise<Date | null> => {
   }
 }
 
-const saveLastTimestamp = async (ts: Date) => {
-  const tmp = `${STATE_FILE}.tmp`
+const saveLastTimestamp = async (stateFile: string, ts: Date) => {
+  const tmp = `${stateFile}.tmp`
   await fs.writeFile(tmp, ts.toISOString(), 'utf-8')
-  await fs.rename(tmp, STATE_FILE)
+  await fs.rename(tmp, stateFile)
 }
 
 const keyFor = (update: ContactUpdate): string =>
@@ -133,16 +133,21 @@ const syncContact = async (update: ContactUpdate): Promise<void> => {
   logger.info({ contactCode: payload.contactCode }, 'contact synced')
 }
 
-const syncContacts = async () => {
+export const syncContacts = async (
+  opts: { stateFile?: string; queueFile?: string } = {}
+) => {
+  const stateFile = opts.stateFile ?? DEFAULT_STATE_FILE
+  const queueFile = opts.queueFile ?? DEFAULT_QUEUE_FILE
+
   // 1) Drain queue first
-  const queue = await readQueue(QUEUE_FILE)
+  const queue = await readQueue(queueFile)
   logger.info({ queueDepth: queue.length }, 'draining failure queue')
   for (const entry of queue) {
     if (entry.type !== 'contact') continue
     const update = reviveContactFromPayload(entry.payload)
     try {
       await syncContact(update)
-      await removeEntry(QUEUE_FILE, entry.key)
+      await removeEntry(queueFile, entry.key)
       await notifyRecovery(entry)
     } catch (err) {
       logger.warn(
@@ -153,7 +158,7 @@ const syncContacts = async () => {
   }
 
   // 2) Process new cmlog rows
-  const lastTimestamp = await getLastTimestamp()
+  const lastTimestamp = await getLastTimestamp(stateFile)
   if (lastTimestamp) {
     logger.info({ lastTimestamp }, 'syncing contacts since last timestamp')
   } else {
@@ -168,7 +173,7 @@ const syncContacts = async () => {
   const updates = result.data
   logger.info({ count: updates.length }, 'contacts to sync')
 
-  const queueForRun = await readQueue(QUEUE_FILE)
+  const queueForRun = await readQueue(queueFile)
 
   for (const update of updates) {
     try {
@@ -185,7 +190,7 @@ const syncContacts = async () => {
         lastError: err instanceof Error ? err.message : String(err),
       }
       if (!hasKey(queueForRun, entry.key)) {
-        await addEntry(QUEUE_FILE, entry)
+        await addEntry(queueFile, entry)
         queueForRun.push(entry)
         await notifyFailure(entry)
         logger.error(
@@ -199,13 +204,15 @@ const syncContacts = async () => {
         )
       }
     }
-    await saveLastTimestamp(update.timestamp)
+    await saveLastTimestamp(stateFile, update.timestamp)
   }
 
   logger.info({ count: updates.length }, 'all contacts processed')
 }
 
-syncContacts().catch((err) => {
-  logger.error({ err }, 'sync-contacts script failed')
-  process.exitCode = 1
-})
+if (require.main === module) {
+  syncContacts().catch((err) => {
+    logger.error({ err }, 'sync-contacts script failed')
+    process.exitCode = 1
+  })
+}

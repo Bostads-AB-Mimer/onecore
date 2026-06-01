@@ -22,8 +22,8 @@ import {
   FailedRowEntry,
 } from '../shared/failed-sync-queue'
 
-const STATE_FILE = '/data/last-timestamp-leases.txt'
-const QUEUE_FILE = '/data/failed-rows.jsonl'
+const DEFAULT_STATE_FILE = '/data/last-timestamp-leases.txt'
+const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
 
 const isResidenceOrStorage = (info: RentalPropertyInfo): boolean => {
   if (info.type.toLowerCase() === 'lägenhet') return true
@@ -36,9 +36,9 @@ const isResidenceOrStorage = (info: RentalPropertyInfo): boolean => {
   return false
 }
 
-const getLastTimestamp = async (): Promise<Date | null> => {
+const getLastTimestamp = async (stateFile: string): Promise<Date | null> => {
   try {
-    const content = await fs.readFile(STATE_FILE, 'utf-8')
+    const content = await fs.readFile(stateFile, 'utf-8')
     const trimmed = content.trim()
     if (!trimmed) return null
     const date = new Date(trimmed)
@@ -48,10 +48,10 @@ const getLastTimestamp = async (): Promise<Date | null> => {
   }
 }
 
-const saveLastTimestamp = async (ts: Date) => {
-  const tmp = `${STATE_FILE}.tmp`
+const saveLastTimestamp = async (stateFile: string, ts: Date) => {
+  const tmp = `${stateFile}.tmp`
   await fs.writeFile(tmp, ts.toISOString(), 'utf-8')
-  await fs.rename(tmp, STATE_FILE)
+  await fs.rename(tmp, stateFile)
 }
 
 const keyFor = (lease: LeaseChange): string =>
@@ -156,16 +156,21 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
   )
 }
 
-const syncLeases = async () => {
+export const syncLeases = async (
+  opts: { stateFile?: string; queueFile?: string } = {}
+) => {
+  const stateFile = opts.stateFile ?? DEFAULT_STATE_FILE
+  const queueFile = opts.queueFile ?? DEFAULT_QUEUE_FILE
+
   // 1) Drain queue first
-  const queue = await readQueue(QUEUE_FILE)
+  const queue = await readQueue(queueFile)
   logger.info({ queueDepth: queue.length }, 'draining failure queue')
   for (const entry of queue) {
     if (entry.type !== 'lease') continue
     const lease = reviveLeaseFromPayload(entry.payload)
     try {
       await syncLease(lease)
-      await removeEntry(QUEUE_FILE, entry.key)
+      await removeEntry(queueFile, entry.key)
       await notifyRecovery(entry)
     } catch (err) {
       logger.warn(
@@ -176,7 +181,7 @@ const syncLeases = async () => {
   }
 
   // 2) Process new cmlog rows
-  const lastTimestamp = await getLastTimestamp()
+  const lastTimestamp = await getLastTimestamp(stateFile)
   if (lastTimestamp) {
     logger.info({ lastTimestamp }, 'syncing leases since last timestamp')
   } else {
@@ -191,7 +196,7 @@ const syncLeases = async () => {
   logger.info({ count: leases.length }, 'lease changes to process')
 
   // Re-read queue for the new-row loop's dedupe check.
-  const queueForRun = await readQueue(QUEUE_FILE)
+  const queueForRun = await readQueue(queueFile)
 
   for (const lease of leases) {
     try {
@@ -205,7 +210,7 @@ const syncLeases = async () => {
         lastError: err instanceof Error ? err.message : String(err),
       }
       if (!hasKey(queueForRun, entry.key)) {
-        await addEntry(QUEUE_FILE, entry)
+        await addEntry(queueFile, entry)
         queueForRun.push(entry)
         await notifyFailure(entry)
         logger.error(
@@ -219,13 +224,15 @@ const syncLeases = async () => {
         )
       }
     }
-    await saveLastTimestamp(lease.timestamp)
+    await saveLastTimestamp(stateFile, lease.timestamp)
   }
 
   logger.info({ count: leases.length }, 'all leases processed')
 }
 
-syncLeases().catch((err) => {
-  logger.error({ err }, 'sync-leases script failed')
-  process.exitCode = 1
-})
+if (require.main === module) {
+  syncLeases().catch((err) => {
+    logger.error({ err }, 'sync-leases script failed')
+    process.exitCode = 1
+  })
+}
