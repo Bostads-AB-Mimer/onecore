@@ -58,6 +58,9 @@ export const getCostCenterTreeById = async (
               select: { code: true, designation: true, tract: true },
             })
             .then(trimStrings),
+      // Raw SQL + OPENJSON IN-list: Prisma's per-element parameter binding on
+      // a 65-code IN(?,?,...) dominated wall-clock (3s → 388ms after this).
+      // Do NOT "tidy" back into prisma.propertyStructure.findMany.
       uniqueCodes.length === 0
         ? Promise.resolve([] as AddressRow[])
         : prisma.$queryRaw<AddressRow[]>`
