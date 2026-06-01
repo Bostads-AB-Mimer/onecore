@@ -388,7 +388,6 @@ export const getInvoiceByOcr = async (
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         'filter[ocrNumber]': ocr,
-        states: TENFAST_INVOICE_STATES.join(','),
       },
     })
     if (result.status !== 200) {

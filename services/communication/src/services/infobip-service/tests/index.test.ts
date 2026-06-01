@@ -2,7 +2,12 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import { Email, WorkOrderSms, BulkSms } from '@onecore/types'
+import {
+  Email,
+  WorkOrderSms,
+  BulkSms,
+  InvoiceNotificationEmail,
+} from '@onecore/types'
 
 import { isMessageEmail, isValidWorkOrderSms, isValidBulkSms } from '../index'
 import * as emailAdapter from '../adapters/email-adapter'
@@ -300,6 +305,94 @@ describe('/sendBulkSms', () => {
     expect(res.status).toBe(400)
     expect(res.body.reason).toBe('No valid phone numbers')
     expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('/sendInvoiceNotificationEmail', () => {
+  let sendInvoiceNotificationEmailSpy: jest.SpyInstance<
+    Promise<any>,
+    [email: InvoiceNotificationEmail],
+    any
+  >
+
+  beforeEach(() => {
+    sendInvoiceNotificationEmailSpy = jest.spyOn(
+      emailAdapter,
+      'sendInvoiceNotificationEmail'
+    )
+    sendInvoiceNotificationEmailSpy.mockReset()
+  })
+
+  const validBody = {
+    to: 'tenant@example.com',
+    firstName: 'Anna',
+    address: 'Testgatan 1',
+    invoiceNumber: 'INV-2024-001',
+    dueDate: '2024-03-31',
+    totalAmount: '5000',
+  }
+
+  it('should return 204 for a valid request without attachments', async () => {
+    sendInvoiceNotificationEmailSpy.mockResolvedValue({ data: {} })
+
+    const res = await request(app.callback())
+      .post('/sendInvoiceNotificationEmail')
+      .send(validBody)
+
+    expect(res.status).toBe(204)
+    expect(sendInvoiceNotificationEmailSpy).toHaveBeenCalledWith(validBody)
+  })
+
+  it('should return 204 for a valid request with PDF attachment', async () => {
+    sendInvoiceNotificationEmailSpy.mockResolvedValue({ data: {} })
+
+    const body = {
+      ...validBody,
+      attachments: [
+        {
+          filename: 'faktura.pdf',
+          content: Buffer.from('pdf-content').toString('base64'),
+          contentType: 'application/pdf',
+        },
+      ],
+    }
+
+    const res = await request(app.callback())
+      .post('/sendInvoiceNotificationEmail')
+      .send(body)
+
+    expect(res.status).toBe(204)
+    expect(sendInvoiceNotificationEmailSpy).toHaveBeenCalledWith(body)
+  })
+
+  it('should return 400 for missing required fields', async () => {
+    const res = await request(app.callback())
+      .post('/sendInvoiceNotificationEmail')
+      .send({ to: 'tenant@example.com' })
+
+    expect(res.status).toBe(400)
+    expect(sendInvoiceNotificationEmailSpy).not.toHaveBeenCalled()
+  })
+
+  it('should return 400 for invalid email address', async () => {
+    const res = await request(app.callback())
+      .post('/sendInvoiceNotificationEmail')
+      .send({ ...validBody, to: 'not-an-email' })
+
+    expect(res.status).toBe(400)
+    expect(sendInvoiceNotificationEmailSpy).not.toHaveBeenCalled()
+  })
+
+  it('should return 500 when adapter throws', async () => {
+    sendInvoiceNotificationEmailSpy.mockRejectedValue(
+      new Error('Infobip error')
+    )
+
+    const res = await request(app.callback())
+      .post('/sendInvoiceNotificationEmail')
+      .send(validBody)
+
+    expect(res.status).toBe(500)
   })
 })
 

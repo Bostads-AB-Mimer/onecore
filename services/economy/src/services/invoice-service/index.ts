@@ -20,7 +20,10 @@ import {
   getLeaseDetails,
 } from './service'
 import { getInvoiceDetails } from './service'
-import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
+import {
+  getInvoiceByOcr,
+  getInvoicePdf,
+} from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -70,6 +73,19 @@ export const routes = (router: KoaRouter) => {
       ).replace(/[\r\n]/g, '')
     )
     ctx.body = result.data.data
+  })
+
+  router.get('(.*)/invoices/by-ocr/:ocr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await getInvoiceByOcr(ctx.params.ocr)
+
+    if (!result.ok) {
+      ctx.status = result.err.includes('not found') ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(result.data, metadata)
   })
 
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
@@ -149,10 +165,10 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
-  /* 
+  /*
     Gets property information required to create a miscellaneous invoice for a lease.
     We could instead get the required information by making several queries to the leasing- and
-    property-services, but since it is only required in one place at the moment 
+    property-services, but since it is only required in one place at the moment
     (creating miscellaneous invoices from the onecore web application) I decided to keep it
     isolated here.
   */

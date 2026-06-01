@@ -12,6 +12,7 @@ import {
   sendBulkEmail,
   sendNonScoredParkingSpaceApproved,
   sendNonScoredParkingSpaceDenied,
+  sendInvoiceNotificationEmail,
 } from './adapters/email-adapter'
 import {
   sendParkingSpaceOfferSms,
@@ -31,6 +32,7 @@ import {
   BulkEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
+  InvoiceNotificationEmail,
 } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
@@ -491,6 +493,48 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  const InvoiceNotificationEmailSchema = z.object({
+    to: z.string().email(),
+    firstName: z.string(),
+    address: z.string(),
+    invoiceNumber: z.string(),
+    dueDate: z.string(),
+    totalAmount: z.string(),
+    attachments: z
+      .array(
+        z.object({
+          filename: z.string(),
+          content: z.string(),
+          contentType: z.string(),
+        })
+      )
+      .optional(),
+  })
+  router.post(
+    '(.*)/sendInvoiceNotificationEmail',
+    parseRequestBody(InvoiceNotificationEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as InvoiceNotificationEmail
+
+      try {
+        const result = await sendInvoiceNotificationEmail(body)
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendInvoiceNotificationEmail'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
 
   router.post('(.*)/sendBulkEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
