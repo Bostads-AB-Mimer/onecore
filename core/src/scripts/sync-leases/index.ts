@@ -9,7 +9,10 @@ import {
 import config from '../../common/config'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { sendEmail } from '../../adapters/communication-adapter'
-import { getUpdatedLeases, syncLease } from '../../adapters/leasing-adapter'
+import {
+  getUpdatedLeases,
+  syncLease as syncLeaseToTenfast,
+} from '../../adapters/leasing-adapter'
 import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
 import {
   addEntry,
@@ -107,7 +110,7 @@ const notifyRecovery = async (entry: FailedRowEntry) => {
   }
 }
 
-const syncOneLease = async (lease: LeaseChange): Promise<void> => {
+const syncLease = async (lease: LeaseChange): Promise<void> => {
   const propertyInfo = await getRentalPropertyInfoFromXpand(lease.rentalObjectId)
   if (propertyInfo.status !== 200 || !propertyInfo.data) {
     throw new Error(
@@ -137,7 +140,11 @@ const syncOneLease = async (lease: LeaseChange): Promise<void> => {
   }
 
   logger.info({ leaseId: lease.leaseId, action: lease.action }, 'syncing lease')
-  const syncResult = await syncLease(lease.leaseId, contact, lease.action)
+  const syncResult = await syncLeaseToTenfast(
+    lease.leaseId,
+    contact,
+    lease.action
+  )
   if (!syncResult.ok) {
     throw new Error(
       `Failed to sync lease ${lease.leaseId}: ${syncResult.err}`
@@ -157,7 +164,7 @@ const syncLeases = async () => {
     if (entry.type !== 'lease') continue
     const lease = reviveLeaseFromPayload(entry.payload)
     try {
-      await syncOneLease(lease)
+      await syncLease(lease)
       await removeEntry(QUEUE_FILE, entry.key)
       await notifyRecovery(entry)
     } catch (err) {
@@ -188,7 +195,7 @@ const syncLeases = async () => {
 
   for (const lease of leases) {
     try {
-      await syncOneLease(lease)
+      await syncLease(lease)
     } catch (err) {
       const entry: FailedRowEntry = {
         key: keyFor(lease),

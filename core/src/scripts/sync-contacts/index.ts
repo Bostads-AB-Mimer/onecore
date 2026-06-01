@@ -93,7 +93,7 @@ const notifyRecovery = async (entry: FailedRowEntry) => {
   }
 }
 
-const syncOneContact = async (update: ContactUpdate): Promise<void> => {
+const syncContact = async (update: ContactUpdate): Promise<void> => {
   const payload = toSyncPayload(update.contact)
   const [tenfastResult, xledgerResult, odooResult] = await Promise.all([
     syncContactToLeasing({
@@ -141,7 +141,7 @@ const syncContacts = async () => {
     if (entry.type !== 'contact') continue
     const update = reviveContactFromPayload(entry.payload)
     try {
-      await syncOneContact(update)
+      await syncContact(update)
       await removeEntry(QUEUE_FILE, entry.key)
       await notifyRecovery(entry)
     } catch (err) {
@@ -172,7 +172,7 @@ const syncContacts = async () => {
 
   for (const update of updates) {
     try {
-      await syncOneContact(update)
+      await syncContact(update)
     } catch (err) {
       const entry: FailedRowEntry = {
         key: keyFor(update),
