@@ -28,7 +28,7 @@
     "script:start-offer-batches": "node build/src/scripts/start-offer-batches",
     "script:unpaid-invoice-payment-summaries": "node build/src/scripts/unpaid-invoice-payment-summaries",
     "script:bosociala": "node build/src/scripts/bosociala",
-    "script:sync-keycloak-entra-id-attributes": "node build/src/scripts/sync-keycloak-entra-id-attributes",
+    "script:sync-keycloak-entra-id-attributes": "node build/scripts/sync-keycloak-entra-id-attributes",
     "start": "node build/index.js",
     "test": "jest",
     "test:ci": "TZ=UTC jest --silent",
