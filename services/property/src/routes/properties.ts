@@ -14,11 +14,16 @@ import {
   getPropertyValuesByPropertyObjectId,
   searchProperties,
 } from '../adapters/property-adapter'
+import { upsertPropertyKvvArea } from '../adapters/kvv-area-adapter'
 import {
   propertiesQueryParamsSchema,
   PropertyDetailsSchema,
   PropertySchema,
 } from '../types/property'
+import {
+  PutPropertyKvvAreaBodySchema,
+  PropertyKvvAreaLinkSchema,
+} from '../types/kvv-area'
 import { parseRequest } from '../middleware/parse-request'
 
 /**
@@ -258,4 +263,102 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /properties/{code}/kvv-area:
+   *   put:
+   *     summary: Set the KVV-area (förvaltningsområde) membership of a property
+   *     description: |
+   *       Upserts the property → KVV-area link in `onecore_property_kvv_area`.
+   *       Cross-cost-center moves are allowed without validation: the target
+   *       KVV-area does not have to belong to the same cost center the property
+   *       was previously associated with.
+   *     tags:
+   *       - Properties
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The property code (Xpand `Property.code`).
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [kvvAreaId]
+   *             properties:
+   *               kvvAreaId:
+   *                 type: string
+   *                 format: uuid
+   *               updatedBy:
+   *                 type: string
+   *                 description: |
+   *                   Identifier of the user performing the change. Stored in
+   *                   `updated_by` for audit. Typically the Keycloak
+   *                   preferred_username forwarded by core.
+   *     responses:
+   *       200:
+   *         description: Link upserted successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/PropertyKvvAreaLink'
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: Property or KVV-area not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.put(
+    '(.*)/properties/:code/kvv-area',
+    parseRequest({ body: PutPropertyKvvAreaBodySchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const propertyCode = ctx.params.code
+      const { kvvAreaId, updatedBy } = ctx.request.parsedBody
+
+      const result = await upsertPropertyKvvArea({
+        propertyCode,
+        kvvAreaId,
+        updatedBy,
+      })
+
+      if (!result.ok) {
+        if (result.err === 'kvv-area-not-found') {
+          ctx.status = 404
+          ctx.body = {
+            reason: 'KVV-area not found',
+            code: 'KVV_AREA_NOT_FOUND',
+            ...metadata,
+          }
+          return
+        }
+        if (result.err === 'property-not-found') {
+          ctx.status = 404
+          ctx.body = {
+            reason: 'Property not found',
+            code: 'PROPERTY_NOT_FOUND',
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 500
+        ctx.body = { reason: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: PropertyKvvAreaLinkSchema.parse(result.data),
+        ...metadata,
+      }
+    }
+  )
 }
