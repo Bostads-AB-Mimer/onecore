@@ -795,6 +795,7 @@ export const preliminaryTerminateLease = async (
     PreliminaryTerminationResponse,
     | 'lease-not-found'
     | 'tenant-email-missing'
+    | 'termination-not-required'
     | 'termination-failed'
     | 'unknown'
   >
@@ -872,6 +873,7 @@ export const preliminaryTerminateLease = async (
     PreliminaryTerminationResponse,
     | 'lease-not-found'
     | 'tenant-email-missing'
+    | 'termination-not-required'
     | 'termination-failed'
     | 'unknown'
   > {
@@ -885,6 +887,17 @@ export const preliminaryTerminateLease = async (
         'Tenant missing valid email address'
       )
       return { ok: false, err: 'tenant-email-missing' }
+    }
+
+    if (
+      errorMessage ===
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.'
+    ) {
+      logger.info(
+        { leaseId, status: response.status },
+        'Lease expires within notice period, no termination required'
+      )
+      return { ok: false, err: 'termination-not-required' }
     }
 
     const errorMap: Record<

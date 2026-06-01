@@ -1759,6 +1759,17 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
+        if (result.err === 'termination-not-required') {
+          ctx.status = 400
+          ctx.body = {
+            error: result.err,
+            message:
+              'Lease expires within notice period, no termination required',
+            ...metadata,
+          }
+          return
+        }
+
         ctx.status = 500
         ctx.body = {
           error: result.err,
