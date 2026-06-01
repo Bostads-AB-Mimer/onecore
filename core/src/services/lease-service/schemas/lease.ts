@@ -13,6 +13,13 @@ import { z } from 'zod'
 /**
  * Contact schema for Swagger OpenAPI generation
  * Matches the response from GET /contacts/{contactCode}
+ *
+ * KEEP IN SYNC WITH the inline `tenants` array in `Lease` below. All tenants are
+ * contacts (not the reverse): every field here MUST exist on a tenant. A tenant may
+ * ADD fields or be STRICTER (narrower) on a shared one, but may never drop or loosen
+ * one. The tenant shape is an inline copy on purpose — extending/referencing a shared
+ * schema makes zod-to-json-schema emit a $ref for the shared `address`, which the
+ * generated frontend types can't resolve. Enforced by tests/contact-tenant-sync.test.ts.
  */
 export const Contact = z.object({
   contactCode: z.string(),
@@ -25,20 +32,23 @@ export const Contact = z.object({
   birthDate: z.coerce.date().nullable(),
   address: z
     .object({
-      street: z.string(),
+      street: z.string().optional(),
       number: z.string(),
       postalCode: z.string(),
       city: z.string(),
     })
-    .nullable(),
-  phoneNumbers: z.array(
-    z.object({
-      phoneNumber: z.string(),
-      type: z.string(),
-      isMainNumber: z.boolean(),
-    })
-  ),
-  emailAddress: z.string().nullable(),
+    .nullable()
+    .optional(),
+  phoneNumbers: z
+    .array(
+      z.object({
+        phoneNumber: z.string(),
+        type: z.string(),
+        isMainNumber: z.boolean(),
+      })
+    )
+    .optional(),
+  emailAddress: z.string().nullable().optional(),
   isTenant: z.boolean(),
   specialAttention: z.boolean().optional(),
 })
@@ -116,17 +126,22 @@ export const Lease = z.object({
       caption: z.string(),
     })
     .optional(),
+  // KEEP IN SYNC WITH `Contact` above — all tenants are contacts. A tenant must
+  // carry every Contact field (here it adds parkingSpaceWaitingList and
+  // leaseContactType); it may be stricter on a shared field but never drop or
+  // loosen one. Inline (not a ref) so no $ref leaks into the frontend types.
+  // Enforced by tests/contact-tenant-sync.test.ts.
   tenants: z
     .array(
       z.object({
         contactCode: z.string(),
         contactKey: z.string(),
         leaseIds: z.array(z.string()).optional(),
-        firstName: z.string(),
-        lastName: z.string(),
-        fullName: z.string(),
+        firstName: z.string().nullable(),
+        lastName: z.string().nullable(),
+        fullName: z.string().nullable(),
         nationalRegistrationNumber: z.string(),
-        birthDate: z.coerce.date(),
+        birthDate: z.coerce.date().nullable(),
         address: z
           .object({
             street: z.string().optional(),
@@ -134,6 +149,7 @@ export const Lease = z.object({
             postalCode: z.string(),
             city: z.string(),
           })
+          .nullable()
           .optional(),
         phoneNumbers: z
           .array(
@@ -144,8 +160,10 @@ export const Lease = z.object({
             })
           )
           .optional(),
-        emailAddress: z.string().optional(),
+        emailAddress: z.string().nullable().optional(),
         isTenant: z.boolean(),
+        specialAttention: z.boolean().optional(),
+        // --- tenant-only additions (not part of Contact) ---
         parkingSpaceWaitingList: z
           .object({
             queueTime: z.coerce.date(),
@@ -153,7 +171,6 @@ export const Lease = z.object({
             type: z.number(),
           })
           .optional(),
-        specialAttention: z.boolean().optional(),
         leaseContactType: z.string().optional(),
       })
     )
