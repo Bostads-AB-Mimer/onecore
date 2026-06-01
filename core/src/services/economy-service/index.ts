@@ -1,12 +1,16 @@
 import KoaRouter from '@koa/router'
 import {
   generateRouteMetadata,
+  logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy, schemas } from '@onecore/types'
 
+import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as economyAdapter from '../../adapters/economy-adapter'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
+import config from '../../common/config'
 
 /**
  * @swagger
@@ -214,6 +218,180 @@ export const routes = (router: KoaRouter) => {
     } else {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  })
+
+  /**
+   * @swagger
+   * /invoices/notifyBatch:
+   *   post:
+   *     tags:
+   *       - Economy service
+   *     summary: Send invoice notification emails for a selection of invoices
+   *     description: For each OCR number, fetches invoice data and PDF from economy, contact info from leasing, then sends a notification email with the invoice PDF attached.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - ocrs
+   *             properties:
+   *               ocrs:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: List of invoice OCR numbers
+   *     responses:
+   *       '200':
+   *         description: Notifications processed
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     sent:
+   *                       type: array
+   *                       items:
+   *                         type: string
+   *                     failed:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                     totalSent:
+   *                       type: number
+   *                     totalFailed:
+   *                       type: number
+   *       '400':
+   *         description: Invalid request
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/invoices/notifyBatch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = ctx.request.body as { ocrs?: unknown }
+
+    if (
+      !Array.isArray(body?.ocrs) ||
+      body.ocrs.length === 0 ||
+      !body.ocrs.every((id) => typeof id === 'string')
+    ) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'ocrs must be a non-empty array of strings',
+        ...metadata,
+      }
+      return
+    }
+
+    const ocrs = body.ocrs as string[]
+    const sent: string[] = []
+    const failed: { ocr: string; error: string }[] = []
+
+    for (const ocr of ocrs) {
+      const [invoiceResult, pdfResult] = await Promise.all([
+        economyAdapter.getInvoiceByOcr(ocr),
+        economyAdapter.getInvoicePdf(ocr),
+      ])
+
+      if (!invoiceResult.ok) {
+        failed.push({ ocr, error: invoiceResult.err })
+        continue
+      }
+      if (!pdfResult.ok) {
+        failed.push({ ocr, error: `pdf-${pdfResult.err}` })
+        continue
+      }
+
+      const invoice = invoiceResult.data
+      const leaseId = invoice.leaseIds[0]
+      if (!leaseId) {
+        failed.push({ ocr, error: 'no-lease-id' })
+        continue
+      }
+
+      const lease = await leasingAdapter.getLease(leaseId)
+      if (!lease) {
+        failed.push({ ocr, error: 'lease-not-found' })
+        continue
+      }
+
+      const contactCode = lease.tenantContactIds?.[0]
+      if (!contactCode) {
+        failed.push({ ocr, error: 'no-contact-code' })
+        continue
+      }
+
+      const contactResult =
+        await leasingAdapter.getContactByContactCode(contactCode)
+      if (!contactResult.ok) {
+        failed.push({ ocr, error: contactResult.err })
+        continue
+      }
+
+      const contact = contactResult.data
+      if (!contact.emailAddress) {
+        failed.push({ ocr, error: 'no-email' })
+        continue
+      }
+
+      const emailTo =
+        process.env.NODE_ENV !== 'production'
+          ? config.emailAddresses.tenantDefault
+          : contact.emailAddress
+
+      const dueDate = invoice.expirationDate
+        ? String(invoice.expirationDate).split('T')[0]
+        : (() => {
+            const d = new Date()
+            d.setMonth(d.getMonth() + 1)
+            d.setDate(1)
+            return d.toISOString().split('T')[0]
+          })()
+
+      const result = await communicationAdapter.sendInvoiceNotificationEmail({
+        to: emailTo,
+        firstName: contact.firstName,
+        address: lease.rentalObject?.address ?? '',
+        invoiceNumber: invoice.invoiceId,
+        dueDate,
+        totalAmount: String(invoice.amount),
+        attachments: [
+          {
+            filename: `faktura-${ocr}.pdf`,
+            content: pdfResult.data.data.toString('base64'),
+            contentType: 'application/pdf',
+          },
+        ],
+      })
+
+      if (result.ok) {
+        sent.push(ocr)
+      } else {
+        failed.push({ ocr, error: result.err })
+      }
+    }
+
+    logger.info(
+      { totalSent: sent.length, totalFailed: failed.length },
+      'Invoice notifications processed'
+    )
+
+    ctx.status = 200
+    ctx.body = {
+      content: {
+        sent,
+        failed,
+        totalSent: sent.length,
+        totalFailed: failed.length,
+      },
+      ...metadata,
     }
   })
 

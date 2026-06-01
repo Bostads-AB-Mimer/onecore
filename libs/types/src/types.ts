@@ -213,6 +213,16 @@ interface Email {
   attachments?: EmailAttachment[]
 }
 
+interface InvoiceNotificationEmail {
+  to: string
+  firstName: string
+  address: string
+  invoiceNumber: string
+  dueDate: string
+  totalAmount: string
+  attachments?: EmailAttachment[]
+}
+
 interface Sms {
   phoneNumber: string
 }
@@ -494,4 +504,5 @@ export type {
   MiscellaneousInvoiceRow,
   LeaseRentRow,
   IdentityCheckContact,
+  InvoiceNotificationEmail,
 }
