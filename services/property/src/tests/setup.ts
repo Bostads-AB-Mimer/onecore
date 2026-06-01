@@ -16,9 +16,6 @@ jest.mock('@onecore/utilities', () => {
       debug: () => {
         return
       },
-      warn: () => {
-        return
-      },
     },
     loggedAxios: jest.fn(),
     axiosTypes: jest.fn(),
