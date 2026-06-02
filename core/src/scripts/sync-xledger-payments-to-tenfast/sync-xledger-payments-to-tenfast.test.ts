@@ -125,7 +125,10 @@ describe('syncPayments', () => {
       nock(ECONOMY_URL)
         .get('/payments/since')
         .query({ after: 'cursor-start' })
-        .reply(200, makePaymentsResponse({ events: [], lastCursor: 'cursor-new' }))
+        .reply(
+          200,
+          makePaymentsResponse({ events: [], lastCursor: 'cursor-new' })
+        )
 
       await syncPayments(store)
 
