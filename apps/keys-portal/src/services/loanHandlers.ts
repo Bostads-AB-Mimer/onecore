@@ -7,7 +7,8 @@ import {
   buildMaintenanceReturnReceiptBlob,
   buildReturnReceiptBlob,
   generateAndUploadReturnReceipt,
-  resolveLoanContract,
+  pickAutoReturnContract,
+  resolveLoanReceiptObjects,
 } from './receiptHandlers'
 import type {
   Card,
@@ -219,16 +220,18 @@ export async function handleReturnKeys({
         const loanCards = (keyLoan.keyCardsArray || []) as Card[]
         const selectedKeySet = new Set(selectedForReceipt)
         const selectedCardSet = new Set(selectedCardsForReceipt || [])
-        // Avtals-ID resolved from the loan, not the page: use it only when exactly
-        // one lease matches (non-interactive flow can't prompt).
-        const { matches } = await resolveLoanContract(keyLoan)
-        const leaseDisplayId =
-          matches.length === 1 ? matches[0].leaseId : undefined
+        // Object + Avtals-ID auto-picked from the loan (no UI to prompt): a unique
+        // matching object/lease is used, otherwise left blank.
+        const options = await resolveLoanReceiptObjects(keyLoan)
+        const { rentalPropertyId, address, leaseDisplayId } =
+          pickAutoReturnContract(options)
         await generateAndUploadReturnReceipt({
           receiptId,
           loan: keyLoan,
           loanKeys,
           selectedKeyIds: selectedKeySet,
+          rentalPropertyId,
+          address,
           leaseDisplayId,
           loanCards,
           selectedCardIds: selectedCardSet,
@@ -376,14 +379,16 @@ export async function handlePartialReturn(
       })
       returnBlob = blob
     } else {
-      // Avtals-ID resolved from the loan, not the page; use it only on a single match.
-      const { matches } = await resolveLoanContract(oldLoan)
-      const leaseDisplayId =
-        matches.length === 1 ? matches[0].leaseId : undefined
+      // Object + Avtals-ID auto-picked from the loan (no UI to prompt).
+      const options = await resolveLoanReceiptObjects(oldLoan)
+      const { rentalPropertyId, address, leaseDisplayId } =
+        pickAutoReturnContract(options)
       const { blob } = await buildReturnReceiptBlob({
         loan: oldLoan,
         loanKeys: allKeys,
         selectedKeyIds,
+        rentalPropertyId,
+        address,
         leaseDisplayId,
         loanCards: allCards,
         selectedCardIds,

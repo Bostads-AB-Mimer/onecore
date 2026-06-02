@@ -10,11 +10,12 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { FileText, Printer, AlertCircle } from 'lucide-react'
 
-import type { ReceiptData, Lease } from '@/services/types'
+import type { ReceiptData } from '@/services/types'
 import {
   prepareReceipt,
   openPdfInNewTab,
   openMaintenanceReceiptInNewTab,
+  type LoanObjectOption,
 } from '@/services/receiptHandlers'
 import { CommentInput } from '@/components/shared/CommentInput'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
@@ -51,9 +52,11 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
   const [comment, setComment] = useState('')
   const [isPrinting, setIsPrinting] = useState(false)
 
-  // Candidate leases for the loan (rental object × contacts). One → auto-filled;
-  // many → picker; none → manual. leaseDisplayId holds the chosen/typed Avtals-ID.
-  const [leaseMatches, setLeaseMatches] = useState<Lease[]>([])
+  // Rental objects on the loan (each with its matching leases). >1 → object picker
+  // first; then per-object lease step. selectedObjectId/leaseDisplayId hold the
+  // chosen object and the chosen/typed Avtals-ID, merged into the PDF at print.
+  const [objectOptions, setObjectOptions] = useState<LoanObjectOption[]>([])
+  const [selectedObjectId, setSelectedObjectId] = useState('')
   const [leaseDisplayId, setLeaseDisplayId] = useState('')
 
   // Fetch receipt data when dialog opens (tenant mode only)
@@ -66,7 +69,8 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
       setReceiptData(null)
       setComment('')
       setLoadError(null)
-      setLeaseMatches([])
+      setObjectOptions([])
+      setSelectedObjectId('')
       setLeaseDisplayId('')
       return
     }
@@ -76,16 +80,19 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
       setIsLoadingReceipt(true)
       setLoadError(null)
       try {
-        // One loan fetch → ReceiptData + candidate leases; the chosen/typed
-        // Avtals-ID is merged in at print time.
-        const { receiptData: data, matches } = await prepareReceipt({
-          receiptId,
-          loanId,
-        })
+        // One loan fetch → base ReceiptData + per-object options; object + Avtals-ID
+        // are chosen here and merged into the PDF at print time.
+        const { receiptData: data, objectOptions: options } =
+          await prepareReceipt({ receiptId, loanId })
         if (cancelled) return
         setReceiptData(data)
-        setLeaseMatches(matches)
-        setLeaseDisplayId(matches.length === 1 ? matches[0].leaseId : '')
+        setObjectOptions(options)
+        // Auto-select when there's a single object, and its single lease.
+        const onlyObject = options.length === 1 ? options[0] : undefined
+        setSelectedObjectId(onlyObject?.rentalPropertyId ?? '')
+        setLeaseDisplayId(
+          onlyObject?.matches.length === 1 ? onlyObject.matches[0].leaseId : ''
+        )
       } catch (err) {
         console.error('Failed to fetch receipt data:', err)
         if (!cancelled) {
@@ -117,6 +124,12 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
     }
   }, [isOpen])
 
+  // The chosen object and its candidate leases drive the Avtal step + print merge.
+  const selectedObject = objectOptions.find(
+    (o) => o.rentalPropertyId === selectedObjectId
+  )
+  const leaseMatches = selectedObject?.matches ?? []
+
   // ---------- PRINT ----------
   const handleOpenPdfTab = async () => {
     if (isMaintenance) {
@@ -132,6 +145,8 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
       if (!receiptData) return
       const dataWithContract = {
         ...receiptData,
+        rentalPropertyId: selectedObject?.rentalPropertyId,
+        address: selectedObject?.address ?? null,
         leaseDisplayId: leaseDisplayId.trim() || undefined,
         comment: addSignature(comment),
       }
@@ -167,17 +182,23 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
     return null
   }
 
-  // Tenant mode with >1 candidate lease must pick one before printing.
+  // >1 object → must pick an object first; then >1 lease on it → must pick a lease.
+  const needsObjectPick =
+    !isMaintenance && objectOptions.length > 1 && !selectedObject
   const needsLeasePick =
     !isMaintenance &&
     leaseMatches.length > 1 &&
     !leaseMatches.some((l) => l.leaseId === leaseDisplayId)
 
   // For maintenance mode: ready to print immediately (no data fetching needed)
-  // For tenant mode: ready when receipt data is loaded and a contract is settled
+  // For tenant mode: ready when data is loaded and object + lease are settled
   const canPrint = isMaintenance
     ? !!(props as MaintenanceReceiptProps).loanId && !isPrinting
-    : !!receiptData && !isLoadingReceipt && !loadError && !needsLeasePick
+    : !!receiptData &&
+      !isLoadingReceipt &&
+      !loadError &&
+      !needsObjectPick &&
+      !needsLeasePick
 
   const isLoading = isMaintenance ? isPrinting : isLoadingReceipt
 
@@ -214,6 +235,46 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
               </AlertDescription>
             </Alert>
           )}
+
+          {/* Pick which rental object when the loan's keys span several */}
+          {!isMaintenance &&
+            !loadError &&
+            receiptData &&
+            objectOptions.length > 1 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Välj hyresobjekt</p>
+                <p className="text-xs text-muted-foreground">
+                  Lånet innehåller nycklar för flera objekt. Välj vilket som ska
+                  stå på kvittensen.
+                </p>
+                <div className="space-y-1">
+                  {objectOptions.map((o) => (
+                    <label
+                      key={o.rentalPropertyId}
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="object-pick"
+                        checked={selectedObjectId === o.rentalPropertyId}
+                        onChange={() => {
+                          setSelectedObjectId(o.rentalPropertyId)
+                          setLeaseDisplayId(
+                            o.matches.length === 1 ? o.matches[0].leaseId : ''
+                          )
+                        }}
+                      />
+                      <span className="tabular-nums">{o.rentalPropertyId}</span>
+                      {o.address && (
+                        <span className="text-muted-foreground">
+                          {o.address}
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
           {/* Pick which contract when several match the loan's contact */}
           {!isMaintenance && !loadError && receiptData && leaseMatches.length > 1 && (
@@ -256,6 +317,7 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
           {!isMaintenance &&
             !loadError &&
             receiptData &&
+            !needsObjectPick &&
             leaseMatches.length === 0 && (
               <div className="space-y-1">
                 <label htmlFor="manual-lease-id" className="text-sm font-medium">

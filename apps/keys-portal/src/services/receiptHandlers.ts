@@ -119,67 +119,102 @@ export async function resolveLoanTenants(
 }
 
 /**
- * Resolves a loan's contract context from the loan itself: the rental object comes
- * from its keys and the candidate lease(s) are those on that object whose tenants
- * include the loan's contact(s). Caller picks when several match and falls back to
- * manual entry when none — so a receipt never inherits the page's lease.
+ * One option per DISTINCT rental object on the loan's keys: the object's resolved
+ * address and the lease(s) on it whose tenants include the loan's contact(s). The
+ * receipt's object + Avtal are chosen from these (never the page lease). Empty when
+ * the keys carry no rental object.
  */
-export async function resolveLoanContract(
+export type LoanObjectOption = {
+  rentalPropertyId: string
+  address: string | null
+  matches: Lease[]
+}
+
+export async function resolveLoanReceiptObjects(
   loan: Pick<KeyLoanWithDetails, 'contact' | 'contact2' | 'keysArray'>
-): Promise<{ rentalPropertyId: string | null; matches: Lease[] }> {
+): Promise<LoanObjectOption[]> {
   const codes = [loan.contact, loan.contact2]
     .map((code) => code?.trim().toUpperCase())
     .filter((code): code is string => !!code)
 
-  const rentalPropertyId =
-    (loan.keysArray ?? [])
-      .map((key) => key.rentalObjectCode)
-      .find((code): code is string => !!code && code.length > 0) ?? null
+  const rentalPropertyIds = [
+    ...new Set(
+      (loan.keysArray ?? [])
+        .map((key) => key.rentalObjectCode)
+        .filter((code): code is string => !!code && code.length > 0)
+    ),
+  ]
 
-  if (!rentalPropertyId) {
-    return { rentalPropertyId: null, matches: [] }
-  }
-
-  const leases = await fetchLeasesByRentalPropertyId(rentalPropertyId)
-  const matches = leases.filter((lease) =>
-    (lease.tenants ?? []).some(
-      (tenant) =>
-        tenant.contactCode && codes.includes(tenant.contactCode.toUpperCase())
-    )
+  return Promise.all(
+    rentalPropertyIds.map(async (rentalPropertyId) => {
+      const leases = await fetchLeasesByRentalPropertyId(rentalPropertyId)
+      const matches = leases.filter((lease) =>
+        (lease.tenants ?? []).some(
+          (tenant) =>
+            tenant.contactCode &&
+            codes.includes(tenant.contactCode.toUpperCase())
+        )
+      )
+      return {
+        rentalPropertyId,
+        address: await resolveObjectAddress(rentalPropertyId),
+        matches,
+      }
+    })
   )
+}
 
-  return { rentalPropertyId, matches }
+/**
+ * Picks the object + Avtal for a non-interactive (auto-generated) return receipt,
+ * which can't prompt. Single object → use it (address always; Avtals-ID only on a
+ * single lease match). Multiple objects → use the one object that uniquely has a
+ * matching lease; otherwise leave object/address/Avtals-ID blank rather than guess.
+ */
+export function pickAutoReturnContract(options: LoanObjectOption[]): {
+  rentalPropertyId?: string
+  address: string | null
+  leaseDisplayId?: string
+} {
+  const withMatch = options.filter((o) => o.matches.length > 0)
+  const chosen =
+    options.length === 1
+      ? options[0]
+      : withMatch.length === 1
+        ? withMatch[0]
+        : undefined
+
+  if (!chosen) return { rentalPropertyId: undefined, address: null }
+
+  return {
+    rentalPropertyId: chosen.rentalPropertyId,
+    address: chosen.address,
+    leaseDisplayId:
+      chosen.matches.length === 1 ? chosen.matches[0].leaseId : undefined,
+  }
 }
 
 // ============================================================================
 // Data Assembly Functions
 // ============================================================================
 
-/**
- * Resolves the Avtal display strings from the loan's keys: the rental object and
- * its street address. Pure data so the PDF only renders strings.
- */
-async function resolveContractDisplay(
-  keys: KeyDetails[]
-): Promise<{ rentalPropertyId?: string; address: string | null }> {
-  const rentalPropertyId =
-    keys.find((k) => k.rentalObjectCode)?.rentalObjectCode ?? undefined
-  if (!rentalPropertyId) return { rentalPropertyId: undefined, address: null }
+/** Resolves a rental object's street address, normalising the unknown case to null. */
+async function resolveObjectAddress(
+  rentalPropertyId: string
+): Promise<string | null> {
   try {
     const fetched =
       await rentalObjectSearchService.getAddressByRentalId(rentalPropertyId)
-    return {
-      rentalPropertyId,
-      address: fetched && fetched !== 'Okänd adress' ? fetched : null,
-    }
+    return fetched && fetched !== 'Okänd adress' ? fetched : null
   } catch {
-    return { rentalPropertyId, address: null }
+    return null
   }
 }
 
 /**
- * Builds ReceiptData from an already-fetched loan. Borrower from the loan, Avtal
- * block from its keys; leaseDisplayId is applied later by the caller (the picker).
+ * Builds the base ReceiptData (borrower + keys) from an already-fetched loan. The
+ * Avtal block (rentalPropertyId/address/leaseDisplayId) is chosen from the object
+ * options and merged in by the caller — the dialog at print, the return path via
+ * pickAutoReturnContract — so it's intentionally absent here.
  */
 async function assembleReceiptData(
   loan: KeyLoanWithDetails,
@@ -195,11 +230,8 @@ async function assembleReceiptData(
       : loan.returnedAt
         ? new Date(loan.returnedAt)
         : new Date()
-  const { rentalPropertyId, address } = await resolveContractDisplay(keys)
 
   return {
-    rentalPropertyId,
-    address,
     tenants: await resolveLoanTenants(loan),
     keys,
     receiptType,
@@ -210,9 +242,9 @@ async function assembleReceiptData(
 }
 
 /**
- * Prepares a receipt from a loanId or receiptId in ONE loan fetch: the ReceiptData
- * plus the candidate lease(s) for the Avtal picker. Avtals-ID is chosen by the
- * caller and merged at print time.
+ * Prepares a receipt from a loanId or receiptId in ONE loan fetch: the base
+ * ReceiptData plus the per-object options (address + matching leases) the dialog
+ * uses to pick the object and Avtals-ID, merged into the data at print time.
  */
 export async function prepareReceipt({
   receiptId,
@@ -220,7 +252,7 @@ export async function prepareReceipt({
 }: {
   receiptId?: string | null
   loanId?: string | null
-}): Promise<{ receiptData: ReceiptData; matches: Lease[] }> {
+}): Promise<{ receiptData: ReceiptData; objectOptions: LoanObjectOption[] }> {
   let receiptType: 'LOAN' | 'RETURN' = 'LOAN'
   let resolvedLoanId = loanId ?? null
   if (receiptId) {
@@ -238,8 +270,8 @@ export async function prepareReceipt({
   })) as KeyLoanWithDetails
 
   const receiptData = await assembleReceiptData(loan, receiptType)
-  const { matches } = await resolveLoanContract(loan)
-  return { receiptData, matches }
+  const objectOptions = await resolveLoanReceiptObjects(loan)
+  return { receiptData, objectOptions }
 }
 
 /**
@@ -251,6 +283,9 @@ export type ReturnReceiptInput = {
   loan: Pick<KeyLoan, 'contact' | 'contact2'>
   loanKeys: KeyDetails[]
   selectedKeyIds: Set<string>
+  // Avtal block — resolved by the caller (pickAutoReturnContract for auto returns).
+  rentalPropertyId?: string
+  address?: string | null
   leaseDisplayId?: string
   loanCards?: Card[]
   selectedCardIds?: Set<string>
@@ -267,6 +302,8 @@ export async function assembleReturnReceipt({
   loan,
   loanKeys,
   selectedKeyIds,
+  rentalPropertyId,
+  address = null,
   leaseDisplayId,
   loanCards = [],
   selectedCardIds = new Set(),
@@ -281,7 +318,6 @@ export async function assembleReturnReceipt({
     loanCards,
     selectedCardIds
   )
-  const { rentalPropertyId, address } = await resolveContractDisplay(loanKeys)
 
   return {
     rentalPropertyId,

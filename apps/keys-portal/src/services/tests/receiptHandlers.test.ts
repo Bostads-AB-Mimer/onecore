@@ -9,7 +9,8 @@ import {
   assembleReturnReceipt,
   assembleMaintenanceLoanReceipt,
   resolveLoanTenants,
-  resolveLoanContract,
+  resolveLoanReceiptObjects,
+  pickAutoReturnContract,
   prepareReceipt,
   buildReturnReceiptBlob,
 } from '../receiptHandlers'
@@ -243,102 +244,142 @@ describe('resolveLoanTenants', () => {
   })
 })
 
-describe('resolveLoanContract', () => {
+describe('resolveLoanReceiptObjects', () => {
   beforeEach(() => {
-    vi.mocked(fetchLeasesByRentalPropertyId).mockReset()
+    vi.mocked(fetchLeasesByRentalPropertyId).mockReset().mockResolvedValue([])
   })
 
-  it('derives rentalPropertyId from the loan keys and returns contact-matched leases', async () => {
-    const matching = makeLease({
-      leaseId: 'L-1',
-      rentalPropertyId: 'OBJ-1',
-      tenants: [makeTenant({ contactCode: 'P001' })],
-    })
-    const other = makeLease({
-      leaseId: 'L-2',
-      rentalPropertyId: 'OBJ-1',
-      tenants: [makeTenant({ contactCode: 'P999' })],
-    })
-    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([matching, other])
+  it('returns one option per distinct object with its contact-matched leases', async () => {
+    vi.mocked(fetchLeasesByRentalPropertyId).mockImplementation(async (id) =>
+      id === 'OBJ-1'
+        ? [
+            makeLease({
+              leaseId: 'L-1',
+              rentalPropertyId: 'OBJ-1',
+              tenants: [makeTenant({ contactCode: 'P001' })],
+            }),
+            makeLease({
+              leaseId: 'L-X',
+              rentalPropertyId: 'OBJ-1',
+              tenants: [makeTenant({ contactCode: 'P999' })],
+            }),
+          ]
+        : [
+            makeLease({
+              leaseId: 'L-2',
+              rentalPropertyId: 'OBJ-2',
+              tenants: [makeTenant({ contactCode: 'P001' })],
+            }),
+          ]
+    )
 
-    const result = await resolveLoanContract({
+    const result = await resolveLoanReceiptObjects({
       contact: 'P001',
       contact2: null,
-      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
+      keysArray: [
+        makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' }),
+        makeKey({ id: 'k2', rentalObjectCode: 'OBJ-2' }),
+      ],
     })
 
-    expect(fetchLeasesByRentalPropertyId).toHaveBeenCalledWith('OBJ-1')
-    expect(result.rentalPropertyId).toBe('OBJ-1')
-    expect(result.matches.map((l) => l.leaseId)).toEqual(['L-1'])
+    expect(result.map((o) => o.rentalPropertyId)).toEqual(['OBJ-1', 'OBJ-2'])
+    expect(result[0].matches.map((l) => l.leaseId)).toEqual(['L-1'])
+    expect(result[1].matches.map((l) => l.leaseId)).toEqual(['L-2'])
   })
 
-  it('returns null rentalPropertyId and no matches when keys have no rental object', async () => {
-    const result = await resolveLoanContract({
+  it('dedupes keys that share an object', async () => {
+    const result = await resolveLoanReceiptObjects({
+      contact: 'P001',
+      contact2: null,
+      keysArray: [
+        makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' }),
+        makeKey({ id: 'k2', rentalObjectCode: 'OBJ-1' }),
+      ],
+    })
+
+    expect(result).toHaveLength(1)
+    expect(fetchLeasesByRentalPropertyId).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns [] when keys carry no object', async () => {
+    const result = await resolveLoanReceiptObjects({
       contact: 'P001',
       contact2: null,
       keysArray: [makeKey({ id: 'k1', rentalObjectCode: null })],
     })
 
-    expect(result.rentalPropertyId).toBeNull()
-    expect(result.matches).toEqual([])
+    expect(result).toEqual([])
     expect(fetchLeasesByRentalPropertyId).not.toHaveBeenCalled()
   })
 
   it('matches on contact2 and is case-insensitive', async () => {
-    const lease = makeLease({
-      leaseId: 'L-1',
-      rentalPropertyId: 'OBJ-1',
-      tenants: [makeTenant({ contactCode: 'P002' })],
-    })
-    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([lease])
+    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([
+      makeLease({
+        leaseId: 'L-1',
+        rentalPropertyId: 'OBJ-1',
+        tenants: [makeTenant({ contactCode: 'P002' })],
+      }),
+    ])
 
-    const result = await resolveLoanContract({
+    const result = await resolveLoanReceiptObjects({
       contact: 'P001',
       contact2: 'p002',
       keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
     })
 
-    expect(result.matches.map((l) => l.leaseId)).toEqual(['L-1'])
+    expect(result[0].matches.map((l) => l.leaseId)).toEqual(['L-1'])
+  })
+})
+
+describe('pickAutoReturnContract', () => {
+  const opt = (rentalPropertyId: string, leaseIds: string[]) => ({
+    rentalPropertyId,
+    address: `addr-${rentalPropertyId}`,
+    matches: leaseIds.map((leaseId) => ({ leaseId }) as Lease),
   })
 
-  it('returns multiple matches for the picker', async () => {
-    const a = makeLease({
-      leaseId: 'L-1',
+  it('single object: uses it; lease only on a single match', () => {
+    expect(pickAutoReturnContract([opt('OBJ-1', ['L-1'])])).toEqual({
       rentalPropertyId: 'OBJ-1',
-      tenants: [makeTenant({ contactCode: 'P001' })],
+      address: 'addr-OBJ-1',
+      leaseDisplayId: 'L-1',
     })
-    const b = makeLease({
-      leaseId: 'L-2',
-      rentalPropertyId: 'OBJ-1',
-      tenants: [makeTenant({ contactCode: 'P001' })],
-    })
-    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([a, b])
-
-    const result = await resolveLoanContract({
-      contact: 'P001',
-      contact2: null,
-      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
-    })
-
-    expect(result.matches.map((l) => l.leaseId)).toEqual(['L-1', 'L-2'])
   })
 
-  it('returns the rental object but no matches when no lease tenant matches', async () => {
-    const lease = makeLease({
-      leaseId: 'L-1',
-      rentalPropertyId: 'OBJ-1',
-      tenants: [makeTenant({ contactCode: 'P999' })],
-    })
-    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([lease])
+  it('single object, no matching lease: object/address shown, lease blank', () => {
+    const r = pickAutoReturnContract([opt('OBJ-1', [])])
+    expect(r.rentalPropertyId).toBe('OBJ-1')
+    expect(r.address).toBe('addr-OBJ-1')
+    expect(r.leaseDisplayId).toBeUndefined()
+  })
 
-    const result = await resolveLoanContract({
-      contact: 'P001',
-      contact2: null,
-      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
-    })
+  it('single object, multiple matches: object shown, lease blank', () => {
+    const r = pickAutoReturnContract([opt('OBJ-1', ['L-1', 'L-2'])])
+    expect(r.rentalPropertyId).toBe('OBJ-1')
+    expect(r.leaseDisplayId).toBeUndefined()
+  })
 
-    expect(result.rentalPropertyId).toBe('OBJ-1')
-    expect(result.matches).toEqual([])
+  it('multi-object: uses the one object that uniquely has a matching lease', () => {
+    expect(
+      pickAutoReturnContract([opt('OBJ-1', []), opt('OBJ-2', ['L-2'])])
+    ).toEqual({
+      rentalPropertyId: 'OBJ-2',
+      address: 'addr-OBJ-2',
+      leaseDisplayId: 'L-2',
+    })
+  })
+
+  it('multi-object: blanks everything when several objects match', () => {
+    const r = pickAutoReturnContract([opt('OBJ-1', ['L-1']), opt('OBJ-2', ['L-2'])])
+    expect(r.rentalPropertyId).toBeUndefined()
+    expect(r.address).toBeNull()
+    expect(r.leaseDisplayId).toBeUndefined()
+  })
+
+  it('multi-object: blanks everything when none match', () => {
+    const r = pickAutoReturnContract([opt('OBJ-1', []), opt('OBJ-2', [])])
+    expect(r.rentalPropertyId).toBeUndefined()
+    expect(r.leaseDisplayId).toBeUndefined()
   })
 })
 
@@ -366,14 +407,16 @@ describe('prepareReceipt', () => {
     })
     vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([lease])
 
-    const { receiptData, matches } = await prepareReceipt({ loanId: 'loan-1' })
+    const { receiptData, objectOptions } = await prepareReceipt({
+      loanId: 'loan-1',
+    })
 
     expect(receiptService.getById).not.toHaveBeenCalled()
     expect(keyLoanService.get).toHaveBeenCalledTimes(1)
     expect(receiptData.receiptType).toBe('LOAN')
-    expect(receiptData.rentalPropertyId).toBe('OBJ-1')
     expect(receiptData.loanId).toBe('loan-1')
-    expect(matches.map((l) => l.leaseId)).toEqual(['L-1'])
+    expect(objectOptions.map((o) => o.rentalPropertyId)).toEqual(['OBJ-1'])
+    expect(objectOptions[0].matches.map((l) => l.leaseId)).toEqual(['L-1'])
   })
 
   it('takes receiptType + loan from the receipt when given a receiptId', async () => {
