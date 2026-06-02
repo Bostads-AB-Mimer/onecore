@@ -20,7 +20,10 @@ beforeEach(() => {
 
 describe('createPendingLoan', () => {
   it('rejects an empty selection without calling the API', async () => {
-    const result = await createPendingLoan({ loanType: 'TENANT' })
+    const result = await createPendingLoan({
+      loanType: 'TENANT',
+      contact: 'P001',
+    })
 
     expect(result.success).toBe(false)
     expect(keyLoanService.create).not.toHaveBeenCalled()
@@ -69,6 +72,7 @@ describe('createPendingLoan', () => {
     const result = await createPendingLoan({
       loanType: 'TENANT',
       keyIds: ['k1'],
+      contact: 'P001',
     })
 
     expect(result.success).toBe(true)
@@ -82,6 +86,7 @@ describe('createPendingLoan', () => {
     const result = await createPendingLoan({
       loanType: 'TENANT',
       keyIds: ['k1'],
+      contact: 'P001',
     })
 
     expect(result.success).toBe(false)
