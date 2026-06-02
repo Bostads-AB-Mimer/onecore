@@ -151,74 +151,111 @@ export async function resolveLoanContract(
   return { rentalPropertyId, matches }
 }
 
-/**
- * Resolves the contract options for a receipt from just a loanId or receiptId —
- * no page lease. Fetches the loan, then the rental object + matching lease(s) via
- * resolveLoanContract. Used by the dialog to drive auto/pick/manual selection.
- */
-export async function resolveReceiptContract(args: {
-  receiptId?: string | null
-  loanId?: string | null
-}): Promise<{ rentalPropertyId: string | null; matches: Lease[] }> {
-  const loanId =
-    args.loanId ??
-    (args.receiptId
-      ? (await receiptService.getById(args.receiptId)).keyLoanId
-      : null)
-
-  if (!loanId) return { rentalPropertyId: null, matches: [] }
-
-  const loan = (await keyLoanService.get(loanId, {
-    includeKeySystem: true,
-    includeCards: true,
-  })) as KeyLoanWithDetails
-
-  return resolveLoanContract(loan)
-}
-
 // ============================================================================
 // Data Assembly Functions
 // ============================================================================
 
 /**
- * Assembles ReceiptData by fetching receipt, loan, keys, and cards
- * Used for: viewing/printing existing receipts
+ * Resolves the Avtal display strings from the loan's keys: the rental object and
+ * its street address. Pure data so the PDF only renders strings.
  */
-async function assembleFromReceipt(
-  receiptId: string,
-  leaseDisplayId?: string
-): Promise<ReceiptData> {
-  // Fetch receipt
-  const receipt = await receiptService.getById(receiptId)
+async function resolveContractDisplay(
+  keys: KeyDetails[]
+): Promise<{ rentalPropertyId?: string; address: string | null }> {
+  const rentalPropertyId =
+    keys.find((k) => k.rentalObjectCode)?.rentalObjectCode ?? undefined
+  if (!rentalPropertyId) return { rentalPropertyId: undefined, address: null }
+  try {
+    const fetched =
+      await rentalObjectSearchService.getAddressByRentalId(rentalPropertyId)
+    return {
+      rentalPropertyId,
+      address: fetched && fetched !== 'Okänd adress' ? fetched : null,
+    }
+  } catch {
+    return { rentalPropertyId, address: null }
+  }
+}
 
-  // Fetch loan with keys (including keySystem) and cards in one call
-  const keyLoan = (await keyLoanService.get(receipt.keyLoanId, {
+/**
+ * Builds ReceiptData from an already-fetched loan. Borrower from the loan, Avtal
+ * block from its keys; leaseDisplayId is applied later by the caller (the picker).
+ */
+async function assembleReceiptData(
+  loan: KeyLoanWithDetails,
+  receiptType: 'LOAN' | 'RETURN'
+): Promise<ReceiptData> {
+  const keys = loan.keysArray as KeyDetails[]
+  const cards = loan.keyCardsArray || []
+  const operationDate =
+    receiptType === 'LOAN'
+      ? loan.createdAt
+        ? new Date(loan.createdAt)
+        : new Date()
+      : loan.returnedAt
+        ? new Date(loan.returnedAt)
+        : new Date()
+  const { rentalPropertyId, address } = await resolveContractDisplay(keys)
+
+  return {
+    rentalPropertyId,
+    address,
+    tenants: await resolveLoanTenants(loan),
+    keys,
+    receiptType,
+    operationDate,
+    loanId: loan.id,
+    cards: cards.length > 0 ? cards : undefined,
+  }
+}
+
+/**
+ * Prepares a receipt from a loanId or receiptId in ONE loan fetch: the ReceiptData
+ * plus the candidate lease(s) for the Avtal picker. Avtals-ID is chosen by the
+ * caller and merged at print time.
+ */
+export async function prepareReceipt({
+  receiptId,
+  loanId,
+}: {
+  receiptId?: string | null
+  loanId?: string | null
+}): Promise<{ receiptData: ReceiptData; matches: Lease[] }> {
+  let receiptType: 'LOAN' | 'RETURN' = 'LOAN'
+  let resolvedLoanId = loanId ?? null
+  if (receiptId) {
+    const receipt = await receiptService.getById(receiptId)
+    receiptType = receipt.receiptType
+    resolvedLoanId = receipt.keyLoanId
+  }
+  if (!resolvedLoanId) {
+    throw new Error('Kan inte skapa kvittens: lånet saknas.')
+  }
+
+  const loan = (await keyLoanService.get(resolvedLoanId, {
     includeKeySystem: true,
     includeCards: true,
   })) as KeyLoanWithDetails
 
-  const keys = keyLoan.keysArray as KeyDetails[]
-  const cards = keyLoan.keyCardsArray || []
+  const receiptData = await assembleReceiptData(loan, receiptType)
+  const { matches } = await resolveLoanContract(loan)
+  return { receiptData, matches }
+}
 
-  // Determine operation date based on receipt type
-  const operationDate =
-    receipt.receiptType === 'LOAN'
-      ? keyLoan.createdAt
-        ? new Date(keyLoan.createdAt)
-        : new Date()
-      : keyLoan.returnedAt
-        ? new Date(keyLoan.returnedAt)
-        : new Date()
-
-  return {
-    leaseDisplayId,
-    tenants: await resolveLoanTenants(keyLoan),
-    keys,
-    receiptType: receipt.receiptType,
-    operationDate,
-    loanId: receipt.keyLoanId,
-    cards: cards.length > 0 ? cards : undefined,
-  }
+/**
+ * Input for a tenant return receipt. `selected*Ids` are the items checked in the
+ * dialog; when `partialReturn` is true the unchecked items continue on a new loan
+ * and render as "NYCKLAR KVAR PÅ LÅN" instead of as missing.
+ */
+export type ReturnReceiptInput = {
+  loan: Pick<KeyLoan, 'contact' | 'contact2'>
+  loanKeys: KeyDetails[]
+  selectedKeyIds: Set<string>
+  leaseDisplayId?: string
+  loanCards?: Card[]
+  selectedCardIds?: Set<string>
+  comment?: string
+  partialReturn?: boolean
 }
 
 /**
@@ -226,18 +263,16 @@ async function assembleFromReceipt(
  * the loan itself (not the lease), so the receipt names whoever the loan is
  * registered to; resolution can fall back to the contact API, so this is async.
  */
-export async function assembleReturnReceipt(
-  loan: Pick<KeyLoan, 'contact' | 'contact2'>,
-  loanKeys: KeyDetails[],
-  selectedKeyIds: Set<string>,
-  leaseDisplayId?: string,
-  loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set(),
-  comment?: string,
-  // When true, unchecked items aren't missing — they continue on a new
-  // continuation loan and get rendered in the "NYCKLAR KVAR PÅ LÅN" section.
-  partialReturn = false
-): Promise<ReceiptData> {
+export async function assembleReturnReceipt({
+  loan,
+  loanKeys,
+  selectedKeyIds,
+  leaseDisplayId,
+  loanCards = [],
+  selectedCardIds = new Set(),
+  comment,
+  partialReturn = false,
+}: ReturnReceiptInput): Promise<ReceiptData> {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
     selectedKeyIds
@@ -246,8 +281,11 @@ export async function assembleReturnReceipt(
     loanCards,
     selectedCardIds
   )
+  const { rentalPropertyId, address } = await resolveContractDisplay(loanKeys)
 
   return {
+    rentalPropertyId,
+    address,
     leaseDisplayId,
     tenants: await resolveLoanTenants(loan),
     keys: returned,
@@ -347,17 +385,33 @@ export async function assembleMaintenanceLoanReceipt(
  * Resolves rentalObjectCode → address via the rental-object search API,
  * so it needs to be awaited (one network call at most per receipt).
  */
-export async function assembleMaintenanceReturnReceipt(
-  contact: string,
-  contactName: string,
-  contactPerson: string | null,
-  description: string | null | undefined,
-  loanKeys: KeyDetails[],
-  selectedKeyIds: Set<string>,
-  loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set(),
-  partialReturn = false
-): Promise<MaintenanceReceiptData> {
+/**
+ * Input for a maintenance return receipt. Same return/partial semantics as
+ * ReturnReceiptInput, but the borrower is a company contact rather than a loan.
+ */
+export type MaintenanceReturnReceiptInput = {
+  contact: string
+  contactName: string
+  contactPerson: string | null
+  description?: string | null
+  loanKeys: KeyDetails[]
+  selectedKeyIds: Set<string>
+  loanCards?: Card[]
+  selectedCardIds?: Set<string>
+  partialReturn?: boolean
+}
+
+async function assembleMaintenanceReturnReceipt({
+  contact,
+  contactName,
+  contactPerson,
+  description,
+  loanKeys,
+  selectedKeyIds,
+  loanCards = [],
+  selectedCardIds = new Set(),
+  partialReturn = false,
+}: MaintenanceReturnReceiptInput): Promise<MaintenanceReceiptData> {
   const { returned, missing, disposed } = categorizeKeys(
     loanKeys,
     selectedKeyIds
@@ -456,88 +510,40 @@ function openPdfBlobInNewTab(blob: Blob, fileName: string): void {
 // ============================================================================
 
 /**
- * Fetches all data needed for a receipt and constructs ReceiptData
- *
- * @param receiptId - The receipt ID
- * @param lease - The lease associated with the receipt
- * @returns ReceiptData ready for PDF generation
+ * Builds (assemble → PDF) a tenant return-receipt blob without uploading. The
+ * blob-returning step is separate from upload so partial-return can merge it with
+ * the prior signed receipt before uploading.
  */
-export async function fetchReceiptData(
-  receiptId: string,
-  leaseDisplayId?: string
-): Promise<ReceiptData> {
-  return assembleFromReceipt(receiptId, leaseDisplayId)
+export async function buildReturnReceiptBlob(
+  input: ReturnReceiptInput
+): Promise<{ blob: Blob; fileName: string }> {
+  const receiptData = await assembleReturnReceipt(input)
+  return generateReturnReceiptBlob(receiptData)
 }
 
-/**
- * Assembles ReceiptData directly from a loan ID (no receipt record needed).
- * Used when the receipt record has been deleted but the loan still exists.
- */
-export async function assembleFromLoan(
-  loanId: string,
-  leaseDisplayId?: string
-): Promise<ReceiptData> {
-  const keyLoan = (await keyLoanService.get(loanId, {
-    includeKeySystem: true,
-    includeCards: true,
-  })) as KeyLoanWithDetails
-
-  const keys = keyLoan.keysArray as KeyDetails[]
-  const cards = keyLoan.keyCardsArray || []
-
-  return {
-    leaseDisplayId,
-    tenants: await resolveLoanTenants(keyLoan),
-    keys,
-    receiptType: 'LOAN',
-    operationDate: keyLoan.createdAt ? new Date(keyLoan.createdAt) : new Date(),
-    loanId,
-    cards: cards.length > 0 ? cards : undefined,
-  }
+/** Builds (assemble → PDF) a maintenance return-receipt blob without uploading. */
+export async function buildMaintenanceReturnReceiptBlob(
+  input: MaintenanceReturnReceiptInput
+): Promise<{ blob: Blob; fileName: string }> {
+  const receiptData = await assembleMaintenanceReturnReceipt(input)
+  return generateMaintenanceReturnReceiptBlob(receiptData)
 }
 
-/**
- * Generates and uploads a return receipt PDF to MinIO for a single loan
- *
- * @param receiptId - The receipt ID
- * @param loan - The loan being returned (its contacts identify the borrower(s))
- * @param loanKeys - All key objects in this specific loan (with keySystem included)
- * @param selectedKeyIds - Key IDs that were checked in the dialog (returned keys)
- * @param leaseDisplayId - Avtals-ID shown on the receipt (resolved or manual)
- * @param loanCards - All card objects in this specific loan (optional)
- * @param selectedCardIds - Card IDs that were checked in the dialog (optional)
- * @param comment - Optional comment to include in the receipt (max 280 chars)
- */
-export async function generateAndUploadReturnReceipt(
-  receiptId: string,
-  loan: Pick<KeyLoan, 'contact' | 'contact2'>,
-  loanKeys: KeyDetails[],
-  selectedKeyIds: Set<string>,
-  leaseDisplayId?: string,
-  loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set(),
-  comment?: string
-): Promise<void> {
-  // Assemble receipt data (borrower resolved from the loan, not the lease)
-  const receiptData = await assembleReturnReceipt(
-    loan,
-    loanKeys,
-    selectedKeyIds,
-    leaseDisplayId,
-    loanCards,
-    selectedCardIds,
-    comment
-  )
-
-  // Generate PDF blob
-  const { blob } = await generateReturnReceiptBlob(receiptData)
-
-  // Convert to File and upload to MinIO
+/** Uploads a receipt PDF blob to MinIO against an existing receipt record. */
+async function uploadReceiptFile(receiptId: string, blob: Blob): Promise<void> {
   const file = new File([blob], `return_${receiptId}.pdf`, {
     type: 'application/pdf',
   })
-
   await receiptService.uploadFile(receiptId, file)
+}
+
+/** Builds and uploads a tenant return receipt for a single loan. */
+export async function generateAndUploadReturnReceipt({
+  receiptId,
+  ...input
+}: ReturnReceiptInput & { receiptId: string }): Promise<void> {
+  const { blob } = await buildReturnReceiptBlob(input)
+  await uploadReceiptFile(receiptId, blob)
 }
 
 /**
@@ -572,48 +578,11 @@ export async function openMaintenanceReceiptInNewTab(
   openPdfBlobInNewTab(blob, fileName)
 }
 
-/**
- * Generates and uploads a maintenance return receipt PDF to MinIO
- *
- * @param receiptId - The receipt ID
- * @param contact - Contact code (e.g., F088710)
- * @param contactName - Company name (from Contact.fullName)
- * @param contactPerson - Contact person name (optional)
- * @param description - Description (optional)
- * @param loanKeys - All key objects in this specific loan (with keySystem included)
- * @param selectedKeyIds - Key IDs that were checked in the dialog (returned keys)
- * @param loanCards - All card objects in this specific loan (optional)
- * @param selectedCardIds - Card IDs that were checked in the dialog (optional)
- */
-export async function generateAndUploadMaintenanceReturnReceipt(
-  receiptId: string,
-  contact: string,
-  contactName: string,
-  contactPerson: string | null,
-  description: string | null | undefined,
-  loanKeys: KeyDetails[],
-  selectedKeyIds: Set<string>,
-  loanCards: Card[] = [],
-  selectedCardIds: Set<string> = new Set()
-): Promise<void> {
-  const receiptData = await assembleMaintenanceReturnReceipt(
-    contact,
-    contactName,
-    contactPerson,
-    description,
-    loanKeys,
-    selectedKeyIds,
-    loanCards,
-    selectedCardIds
-  )
-
-  // Generate PDF blob
-  const { blob } = await generateMaintenanceReturnReceiptBlob(receiptData)
-
-  // Convert to File and upload to MinIO
-  const file = new File([blob], `return_${receiptId}.pdf`, {
-    type: 'application/pdf',
-  })
-
-  await receiptService.uploadFile(receiptId, file)
+/** Builds and uploads a maintenance return receipt. */
+export async function generateAndUploadMaintenanceReturnReceipt({
+  receiptId,
+  ...input
+}: MaintenanceReturnReceiptInput & { receiptId: string }): Promise<void> {
+  const { blob } = await buildMaintenanceReturnReceiptBlob(input)
+  await uploadReceiptFile(receiptId, blob)
 }

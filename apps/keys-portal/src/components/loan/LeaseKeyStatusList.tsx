@@ -389,7 +389,6 @@ export function LeaseKeyStatusList({
           onKeysLoaned?.()
         }}
         receiptId={receiptId}
-        lease={lease}
       />
 
       <KeyLoanTransferDialog

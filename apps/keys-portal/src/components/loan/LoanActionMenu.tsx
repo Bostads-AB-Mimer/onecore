@@ -12,7 +12,7 @@ import { ReceiptDialog } from './dialogs/ReceiptDialog'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { useToast } from '@/hooks/use-toast'
 import { useEditKeyLoanHandlers } from '@/hooks/useEditKeyLoanHandlers'
-import type { KeyLoan, KeyLoanWithDetails, Lease } from '@/services/types'
+import type { KeyLoan, KeyLoanWithDetails } from '@/services/types'
 
 function isEnriched(
   loan: KeyLoan | KeyLoanWithDetails
@@ -22,7 +22,6 @@ function isEnriched(
 
 export interface LoanActionMenuProps {
   loan: KeyLoan | KeyLoanWithDetails
-  lease?: Lease
   onRefresh?: () => void
   onReturn?: (loan: KeyLoanWithDetails) => void
   onEdit?: (loan: KeyLoanWithDetails) => void
@@ -30,7 +29,6 @@ export interface LoanActionMenuProps {
 
 export function LoanActionMenu({
   loan,
-  lease,
   onRefresh,
   onReturn,
   onEdit,
@@ -265,7 +263,6 @@ export function LoanActionMenu({
           isOpen={showReceiptDialog}
           onClose={() => setShowReceiptDialog(false)}
           receiptId={loanReceipt?.id ?? null}
-          lease={lease}
           loanId={loan.id}
         />
       )}

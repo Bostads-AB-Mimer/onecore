@@ -10,7 +10,6 @@ import type {
   KeyDetails,
 } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
-import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 import { sortKeys } from '@/utils/sortKeys'
 
 import { registerCustomFonts, FONT_BISON, FONT_GRAPHIK } from './pdf-fonts'
@@ -130,16 +129,17 @@ const addMeta = (doc: jsPDF, y: number, type: 'loan' | 'return'): number => {
 /**
  * Adds tenant info (Hyresgäst) and lease info (Avtal) in two columns
  */
-const addTenantInfo = async (
+const addTenantInfo = (
   doc: jsPDF,
-  data: Pick<ReceiptData, 'tenants' | 'leaseDisplayId' | 'keys'>,
+  data: Pick<
+    ReceiptData,
+    'tenants' | 'leaseDisplayId' | 'rentalPropertyId' | 'address'
+  >,
   y: number
-): Promise<number> => {
+): number => {
   const { tenants } = data
-  // Rental object from the loan's keys; Avtals-ID from leaseDisplayId; address
-  // resolved from the rental object.
-  const rentalPropertyId =
-    data.keys.find((k) => k.rentalObjectCode)?.rentalObjectCode ?? '-'
+  // All values are pre-resolved by receiptHandlers; this only lays out text.
+  const rentalPropertyId = data.rentalPropertyId || '-'
   const leaseId = data.leaseDisplayId ?? null
   const leftCol = MARGIN_X
   const rightCol = 110
@@ -192,19 +192,7 @@ const addTenantInfo = async (
   doc.text(leaseIdLines, rightCol, rightY)
   rightY += Array.isArray(leaseIdLines) ? leaseIdLines.length * 5 : 5
 
-  // Resolve address from the rental object
-  let addressStr: string | null = null
-  try {
-    const fetched =
-      await rentalObjectSearchService.getAddressByRentalId(rentalPropertyId)
-    if (fetched && fetched !== 'Okänd adress') {
-      addressStr = fetched
-    }
-  } catch {
-    // ignore - will show "-"
-  }
-
-  doc.text(`Adress: ${addressStr || '-'}`, rightCol, rightY)
+  doc.text(`Adress: ${data.address || '-'}`, rightCol, rightY)
   rightY += 5
 
   return Math.max(leftY, rightY) + 6
@@ -961,7 +949,7 @@ async function buildLoanDoc(data: ReceiptData) {
 
   let y = addTitle(doc, 'loan')
   y = addMeta(doc, y, 'loan')
-  y = await addTenantInfo(doc, data, y)
+  y = addTenantInfo(doc, data, y)
 
   // Combined keys and cards table (sorted by type, system, name, flex, sequence)
   y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y)
@@ -987,7 +975,7 @@ async function buildReturnDoc(data: ReceiptData) {
 
   let y = addTitle(doc, 'return')
   y = addMeta(doc, y, 'return')
-  y = await addTenantInfo(doc, data, y)
+  y = addTenantInfo(doc, data, y)
 
   // Check for missing / remaining items
   const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0

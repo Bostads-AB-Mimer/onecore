@@ -1,15 +1,11 @@
-import {
-  generateMaintenanceReturnReceiptBlob,
-  generateReturnReceiptBlob,
-} from '@/lib/pdf-receipts'
 import { mergePdfBlobs } from '@/lib/pdf-merge'
 
 import { keyLoanService } from './api/keyLoanService'
 import { receiptService } from './api/receiptService'
 import { keyService } from './api/keyService'
 import {
-  assembleMaintenanceReturnReceipt,
-  assembleReturnReceipt,
+  buildMaintenanceReturnReceiptBlob,
+  buildReturnReceiptBlob,
   generateAndUploadReturnReceipt,
   resolveLoanContract,
 } from './receiptHandlers'
@@ -19,7 +15,6 @@ import type {
   KeyDetails,
   KeyLoan,
   KeyLoanWithDetails,
-  Lease,
   UpdateKeyLoanRequest,
 } from './types'
 
@@ -118,7 +113,6 @@ export type ReturnKeysParams = {
   availableToNextTenantFrom?: string // ISO date string
   selectedForReceipt?: string[] // Key IDs that were checked in dialog (for receipt PDF)
   selectedCardsForReceipt?: string[] // Card IDs that were checked in dialog (for receipt PDF)
-  lease?: Lease // Lease information for PDF generation
   comment?: string // Optional comment for the receipt (max 280 chars)
 }
 
@@ -184,12 +178,13 @@ export async function handleReturnKeys({
     })
 
     for (const [loanId] of uniqueActiveLoans.entries()) {
-      // Fetch loan with details to get key and card IDs
-      const enrichedLoan = (await keyLoanService.get(loanId, {
+      // Fetch once with everything the missing-check and the receipt PDF need.
+      const keyLoan = (await keyLoanService.get(loanId, {
+        includeKeySystem: true,
         includeCards: true,
       })) as KeyLoanWithDetails
-      const loanKeyIds = enrichedLoan.keysArray?.map((k) => k.id) || []
-      const loanCardIds = enrichedLoan.keyCardsArray?.map((c) => c.cardId) || []
+      const loanKeyIds = keyLoan.keysArray?.map((k) => k.id) || []
+      const loanCardIds = keyLoan.keyCardsArray?.map((c) => c.cardId) || []
 
       const missingKeys = loanKeyIds.filter((id) => !keyIdSet.has(id))
       const missingCards = loanCardIds.filter((id) => !cardIdSet.has(id))
@@ -220,11 +215,6 @@ export async function handleReturnKeys({
       receiptId = receipt.id
 
       if (selectedForReceipt) {
-        const keyLoan = (await keyLoanService.get(loanId, {
-          includeKeySystem: true,
-          includeCards: true,
-        })) as KeyLoanWithDetails
-
         const loanKeys = keyLoan.keysArray as KeyDetails[]
         const loanCards = (keyLoan.keyCardsArray || []) as Card[]
         const selectedKeySet = new Set(selectedForReceipt)
@@ -234,16 +224,16 @@ export async function handleReturnKeys({
         const { matches } = await resolveLoanContract(keyLoan)
         const leaseDisplayId =
           matches.length === 1 ? matches[0].leaseId : undefined
-        await generateAndUploadReturnReceipt(
+        await generateAndUploadReturnReceipt({
           receiptId,
-          keyLoan,
+          loan: keyLoan,
           loanKeys,
-          selectedKeySet,
+          selectedKeyIds: selectedKeySet,
           leaseDisplayId,
           loanCards,
-          selectedCardSet,
-          comment
-        )
+          selectedCardIds: selectedCardSet,
+          comment,
+        })
       }
 
       // Receipt is in place — now mark the loan returned.
@@ -280,8 +270,6 @@ export type PartialReturnParams = {
   selectedKeyIds: Set<string>
   selectedCardIds: Set<string>
   availableToNextTenantFrom?: string
-  // Tenant-only
-  lease?: Lease
   comment?: string
   // Maintenance-only
   maintenanceContext?: {
@@ -375,36 +363,34 @@ export async function handlePartialReturn(
           'maintenanceContext krävs för partiell retur av underhållslån'
         )
       }
-      const returnData = await assembleMaintenanceReturnReceipt(
-        maintenanceContext.contact,
-        maintenanceContext.contactName,
-        maintenanceContext.contactPerson,
-        maintenanceContext.notes,
-        allKeys,
+      const { blob } = await buildMaintenanceReturnReceiptBlob({
+        contact: maintenanceContext.contact,
+        contactName: maintenanceContext.contactName,
+        contactPerson: maintenanceContext.contactPerson,
+        description: maintenanceContext.notes,
+        loanKeys: allKeys,
         selectedKeyIds,
-        allCards,
+        loanCards: allCards,
         selectedCardIds,
-        true // partialReturn → unchecked items render as "kvar på lån"
-      )
-      const generated = await generateMaintenanceReturnReceiptBlob(returnData)
-      returnBlob = generated.blob
+        partialReturn: true, // unchecked items render as "kvar på lån"
+      })
+      returnBlob = blob
     } else {
       // Avtals-ID resolved from the loan, not the page; use it only on a single match.
       const { matches } = await resolveLoanContract(oldLoan)
       const leaseDisplayId =
         matches.length === 1 ? matches[0].leaseId : undefined
-      const returnData = await assembleReturnReceipt(
-        oldLoan,
-        allKeys,
+      const { blob } = await buildReturnReceiptBlob({
+        loan: oldLoan,
+        loanKeys: allKeys,
         selectedKeyIds,
         leaseDisplayId,
-        allCards,
+        loanCards: allCards,
         selectedCardIds,
         comment,
-        true // partialReturn → unchecked items render as "kvar på lån"
-      )
-      const generated = await generateReturnReceiptBlob(returnData)
-      returnBlob = generated.blob
+        partialReturn: true, // unchecked items render as "kvar på lån"
+      })
+      returnBlob = blob
     }
 
     // 4. Upload return PDF to old loan's return receipt

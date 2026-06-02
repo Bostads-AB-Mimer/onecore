@@ -162,15 +162,15 @@ export function ReturnMaintenanceKeysDialog({
       if (loanDetails && receipt.id) {
         try {
           const noteForPdf = addSignature(returnNote) || loanDetails.notes
-          await generateAndUploadMaintenanceReturnReceipt(
-            receipt.id,
-            loanDetails.contact,
-            loanDetails.contactName,
-            loanDetails.contactPerson,
-            noteForPdf,
-            loanGroup.keys,
-            selectedKeyIds
-          )
+          await generateAndUploadMaintenanceReturnReceipt({
+            receiptId: receipt.id,
+            contact: loanDetails.contact,
+            contactName: loanDetails.contactName,
+            contactPerson: loanDetails.contactPerson,
+            description: noteForPdf,
+            loanKeys: loanGroup.keys,
+            selectedKeyIds,
+          })
         } catch (pdfErr) {
           console.error('Failed to generate/upload PDF:', pdfErr)
         }

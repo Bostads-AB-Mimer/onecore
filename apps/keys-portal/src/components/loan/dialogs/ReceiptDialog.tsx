@@ -12,11 +12,9 @@ import { FileText, Printer, AlertCircle } from 'lucide-react'
 
 import type { ReceiptData, Lease } from '@/services/types'
 import {
-  fetchReceiptData,
-  assembleFromLoan,
+  prepareReceipt,
   openPdfInNewTab,
   openMaintenanceReceiptInNewTab,
-  resolveReceiptContract,
 } from '@/services/receiptHandlers'
 import { CommentInput } from '@/components/shared/CommentInput'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
@@ -25,9 +23,6 @@ type TenantReceiptProps = {
   isOpen: boolean
   onClose: () => void
   receiptId: string | null
-  // Page lease is no longer used for the contract — it's resolved from the loan.
-  // Kept optional for callers that still pass it; safe to omit on any page.
-  lease?: Lease
   loanType?: 'TENANT'
   loanId?: string
 }
@@ -81,20 +76,16 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
       setIsLoadingReceipt(true)
       setLoadError(null)
       try {
-        // Assemble (borrower + keys from the loan) and resolve the contract options
-        // in parallel; the chosen lease/manual id is merged in at print time.
-        const [data, contract] = await Promise.all([
-          receiptId
-            ? fetchReceiptData(receiptId)
-            : assembleFromLoan(loanId!),
-          resolveReceiptContract({ receiptId, loanId }),
-        ])
+        // One loan fetch → ReceiptData + candidate leases; the chosen/typed
+        // Avtals-ID is merged in at print time.
+        const { receiptData: data, matches } = await prepareReceipt({
+          receiptId,
+          loanId,
+        })
         if (cancelled) return
         setReceiptData(data)
-        setLeaseMatches(contract.matches)
-        setLeaseDisplayId(
-          contract.matches.length === 1 ? contract.matches[0].leaseId : ''
-        )
+        setLeaseMatches(matches)
+        setLeaseDisplayId(matches.length === 1 ? matches[0].leaseId : '')
       } catch (err) {
         console.error('Failed to fetch receipt data:', err)
         if (!cancelled) {

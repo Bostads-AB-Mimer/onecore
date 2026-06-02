@@ -232,7 +232,6 @@ export function LeaseItemsList({
             <div onClick={(e) => e.stopPropagation()}>
               <LoanActionMenu
                 loan={latestLoan}
-                lease={lease}
                 onRefresh={onRefresh}
                 onReturn={
                   onReturn

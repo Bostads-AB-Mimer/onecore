@@ -245,12 +245,13 @@ export interface LogFilterParams {
 // ----- Receipts (UI/domain) -----
 // Note: Receipt API types are already defined above (lines 39-75) from generated OpenAPI types
 
-// UI-only helper type for PDF generation
+// UI-only helper type for PDF generation. All Avtal fields are pre-resolved
+// strings so the PDF layer only lays out text — it resolves nothing.
 // Uses KeyDetails to include keySystem directly (no separate keySystemMap needed)
 export interface ReceiptData {
-  // Avtals-ID shown on the receipt — either a resolved lease's id or one typed by
-  // the operator. The rental object always comes from the loan's keys, not the lease.
-  leaseDisplayId?: string
+  rentalPropertyId?: string // Hyresobjekt, from the loan's keys
+  leaseDisplayId?: string // Avtals-ID: resolved lease's id or one typed by the operator
+  address?: string | null // resolved street address for the rental object
   tenants: Tenant[]
   keys: KeyDetails[] // Keys with keySystem included for display
   receiptType: 'LOAN' | 'RETURN'

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import type { KeyDetails, Card, Lease, Tenant, Contact } from '@/services/types'
+import { generateReturnReceiptBlob } from '@/lib/pdf-receipts'
 
 import {
   categorizeKeys,
@@ -9,13 +10,18 @@ import {
   assembleMaintenanceLoanReceipt,
   resolveLoanTenants,
   resolveLoanContract,
+  prepareReceipt,
+  buildReturnReceiptBlob,
 } from '../receiptHandlers'
 import { keyLoanService } from '../api/keyLoanService'
+import { receiptService } from '../api/receiptService'
 import { fetchContactByContactCode } from '../api/contactService'
 import { fetchLeasesByRentalPropertyId } from '../api/leaseSearchService'
 
 vi.mock('../api/receiptService', () => ({
-  receiptService: {},
+  receiptService: {
+    getById: vi.fn(),
+  },
 }))
 
 vi.mock('@/lib/pdf-receipts', () => ({
@@ -42,6 +48,7 @@ vi.mock('../api/leaseSearchService', () => ({
 vi.mock('../api/rentalObjectSearchService', () => ({
   rentalObjectSearchService: {
     getAddressesByRentalIds: vi.fn().mockResolvedValue({}),
+    getAddressByRentalId: vi.fn().mockResolvedValue('Testgatan 1, 722 12 Västerås'),
   },
 }))
 
@@ -335,6 +342,86 @@ describe('resolveLoanContract', () => {
   })
 })
 
+describe('prepareReceipt', () => {
+  beforeEach(() => {
+    vi.mocked(keyLoanService.get).mockReset()
+    vi.mocked(receiptService.getById).mockReset()
+    vi.mocked(fetchLeasesByRentalPropertyId).mockReset().mockResolvedValue([])
+    vi.mocked(fetchContactByContactCode).mockResolvedValue(
+      makeContact({ contactCode: 'P001' })
+    )
+  })
+
+  it('builds a LOAN receipt from a loanId with one loan fetch and resolves matches', async () => {
+    vi.mocked(keyLoanService.get).mockResolvedValue({
+      id: 'loan-1',
+      contact: 'P001',
+      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
+      keyCardsArray: [],
+    } as any)
+    const lease = makeLease({
+      leaseId: 'L-1',
+      rentalPropertyId: 'OBJ-1',
+      tenants: [makeTenant({ contactCode: 'P001' })],
+    })
+    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([lease])
+
+    const { receiptData, matches } = await prepareReceipt({ loanId: 'loan-1' })
+
+    expect(receiptService.getById).not.toHaveBeenCalled()
+    expect(keyLoanService.get).toHaveBeenCalledTimes(1)
+    expect(receiptData.receiptType).toBe('LOAN')
+    expect(receiptData.rentalPropertyId).toBe('OBJ-1')
+    expect(receiptData.loanId).toBe('loan-1')
+    expect(matches.map((l) => l.leaseId)).toEqual(['L-1'])
+  })
+
+  it('takes receiptType + loan from the receipt when given a receiptId', async () => {
+    vi.mocked(receiptService.getById).mockResolvedValue({
+      id: 'r-1',
+      keyLoanId: 'loan-9',
+      receiptType: 'RETURN',
+    } as any)
+    vi.mocked(keyLoanService.get).mockResolvedValue({
+      id: 'loan-9',
+      contact: 'P001',
+      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
+      keyCardsArray: [],
+    } as any)
+
+    const { receiptData } = await prepareReceipt({ receiptId: 'r-1' })
+
+    expect(receiptService.getById).toHaveBeenCalledWith('r-1')
+    expect(keyLoanService.get).toHaveBeenCalledTimes(1)
+    expect(receiptData.receiptType).toBe('RETURN')
+    expect(receiptData.loanId).toBe('loan-9')
+  })
+})
+
+describe('buildReturnReceiptBlob', () => {
+  it('assembles then renders, passing the loan-derived borrower to the PDF', async () => {
+    vi.mocked(fetchContactByContactCode).mockResolvedValue(
+      makeContact({ contactCode: 'P001', fullName: 'Anna A' })
+    )
+    vi.mocked(generateReturnReceiptBlob).mockResolvedValue({
+      blob: {} as Blob,
+      fileName: 'return.pdf',
+    })
+
+    const result = await buildReturnReceiptBlob({
+      loan: { contact: 'P001' },
+      loanKeys: [makeKey({ id: 'k1' })],
+      selectedKeyIds: new Set(['k1']),
+    })
+
+    expect(generateReturnReceiptBlob).toHaveBeenCalledTimes(1)
+    const rendered = vi.mocked(generateReturnReceiptBlob).mock.calls[0][0]
+    expect(rendered.receiptType).toBe('RETURN')
+    expect(rendered.tenants[0].fullName).toBe('Anna A')
+    expect(result.fileName).toBe('return.pdf')
+  })
+})
+
 describe('assembleReturnReceipt', () => {
   beforeEach(() => {
     vi.mocked(fetchContactByContactCode).mockResolvedValue(
@@ -345,12 +432,12 @@ describe('assembleReturnReceipt', () => {
   it('returns undefined for missingKeys/disposedKeys/cards when all keys returned and no cards', async () => {
     const keys = [makeKey({ id: 'k1' })]
 
-    const result = await assembleReturnReceipt(
-      { contact: 'P001' },
-      keys,
-      new Set(['k1']),
-      'L-1'
-    )
+    const result = await assembleReturnReceipt({
+      loan: { contact: 'P001' },
+      loanKeys: keys,
+      selectedKeyIds: new Set(['k1']),
+      leaseDisplayId: 'L-1',
+    })
 
     expect(result.keys).toHaveLength(1)
     expect(result.missingKeys).toBeUndefined()
@@ -372,15 +459,15 @@ describe('assembleReturnReceipt', () => {
       makeCard({ cardId: 'c2' }), // missing
     ]
 
-    const result = await assembleReturnReceipt(
-      { contact: 'P001' },
-      keys,
-      new Set(['k1']),
-      'L-1',
-      cards,
-      new Set(['c1']),
-      'Test comment'
-    )
+    const result = await assembleReturnReceipt({
+      loan: { contact: 'P001' },
+      loanKeys: keys,
+      selectedKeyIds: new Set(['k1']),
+      leaseDisplayId: 'L-1',
+      loanCards: cards,
+      selectedCardIds: new Set(['c1']),
+      comment: 'Test comment',
+    })
 
     expect(result.keys).toHaveLength(1)
     expect(result.keys[0].id).toBe('k1')
