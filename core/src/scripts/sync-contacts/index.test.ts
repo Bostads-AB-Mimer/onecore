@@ -77,11 +77,11 @@ describe('syncContacts', () => {
 
     jest
       .spyOn(leasingAdapter, 'syncContactToLeasing')
-      .mockResolvedValue({ ok: true })
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     jest
       .spyOn(economyAdapter, 'syncContactToEconomy')
-      .mockResolvedValue({ ok: true })
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     jest
       .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
@@ -121,11 +121,11 @@ describe('syncContacts', () => {
     // Leasing sync fails → whole contact sync fails
     jest
       .spyOn(leasingAdapter, 'syncContactToLeasing')
-      .mockResolvedValue({ ok: false, err: 'xpand-error' })
+      .mockResolvedValue({ ok: false, err: 'sync-failed' })
 
     jest
       .spyOn(economyAdapter, 'syncContactToEconomy')
-      .mockResolvedValue({ ok: true })
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     jest
       .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
@@ -165,11 +165,11 @@ describe('syncContacts', () => {
     // Drain attempt: leasing sync fails
     jest
       .spyOn(leasingAdapter, 'syncContactToLeasing')
-      .mockResolvedValue({ ok: false, err: 'xpand-error' })
+      .mockResolvedValue({ ok: false, err: 'sync-failed' })
 
     jest
       .spyOn(economyAdapter, 'syncContactToEconomy')
-      .mockResolvedValue({ ok: true })
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     jest
       .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
@@ -212,11 +212,11 @@ describe('syncContacts', () => {
     // Drain attempt: all sync adapters succeed
     jest
       .spyOn(leasingAdapter, 'syncContactToLeasing')
-      .mockResolvedValue({ ok: true })
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     jest
       .spyOn(economyAdapter, 'syncContactToEconomy')
-      .mockResolvedValue({ ok: true })
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     jest
       .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
@@ -260,11 +260,11 @@ describe('syncContacts', () => {
     // Both drain attempt and new row attempt fail (leasing fails)
     jest
       .spyOn(leasingAdapter, 'syncContactToLeasing')
-      .mockResolvedValue({ ok: false, err: 'xpand-error' })
+      .mockResolvedValue({ ok: false, err: 'sync-failed' })
 
     jest
       .spyOn(economyAdapter, 'syncContactToEconomy')
-      .mockResolvedValue({ ok: true })
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
 
     jest
       .spyOn(workOrderAdapter, 'syncContactToWorkOrder')

@@ -11,7 +11,6 @@ import {
 } from '../shared/failed-sync-queue'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
-import * as contactsAdapterModule from '../../adapters/contacts-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 
 // ---------------------------------------------------------------------------
@@ -78,9 +77,10 @@ describe('syncLeases', () => {
         data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
       })
 
-    jest
-      .spyOn(leasingAdapter, 'syncLease')
-      .mockResolvedValue({ ok: true, data: { action: 'terminated' } })
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: true,
+      data: { action: 'terminated', leaseId: 'L-1' },
+    })
 
     const sendEmailSpy = jest
       .spyOn(communicationAdapter, 'sendEmail')
@@ -194,9 +194,10 @@ describe('syncLeases', () => {
         data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
       })
 
-    jest
-      .spyOn(leasingAdapter, 'syncLease')
-      .mockResolvedValue({ ok: true, data: { action: 'terminated' } })
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: true,
+      data: { action: 'terminated', leaseId: 'L-1' },
+    })
 
     // No new cmlog rows
     jest
