@@ -248,7 +248,9 @@ export interface LogFilterParams {
 // UI-only helper type for PDF generation
 // Uses KeyDetails to include keySystem directly (no separate keySystemMap needed)
 export interface ReceiptData {
-  lease: Lease
+  // Avtals-ID shown on the receipt — either a resolved lease's id or one typed by
+  // the operator. The rental object always comes from the loan's keys, not the lease.
+  leaseDisplayId?: string
   tenants: Tenant[]
   keys: KeyDetails[] // Keys with keySystem included for display
   receiptType: 'LOAN' | 'RETURN'

@@ -16,6 +16,7 @@ import {
   assembleFromLoan,
   openPdfInNewTab,
   openMaintenanceReceiptInNewTab,
+  resolveReceiptContract,
 } from '@/services/receiptHandlers'
 import { CommentInput } from '@/components/shared/CommentInput'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
@@ -24,7 +25,9 @@ type TenantReceiptProps = {
   isOpen: boolean
   onClose: () => void
   receiptId: string | null
-  lease: Lease
+  // Page lease is no longer used for the contract — it's resolved from the loan.
+  // Kept optional for callers that still pass it; safe to omit on any page.
+  lease?: Lease
   loanType?: 'TENANT'
   loanId?: string
 }
@@ -53,16 +56,23 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
   const [comment, setComment] = useState('')
   const [isPrinting, setIsPrinting] = useState(false)
 
+  // Candidate leases for the loan (rental object × contacts). One → auto-filled;
+  // many → picker; none → manual. leaseDisplayId holds the chosen/typed Avtals-ID.
+  const [leaseMatches, setLeaseMatches] = useState<Lease[]>([])
+  const [leaseDisplayId, setLeaseDisplayId] = useState('')
+
   // Fetch receipt data when dialog opens (tenant mode only)
   useEffect(() => {
     if (isMaintenance) return
 
-    const { receiptId, loanId, lease } = props as TenantReceiptProps
+    const { receiptId, loanId } = props as TenantReceiptProps
 
     if (!isOpen || (!receiptId && !loanId)) {
       setReceiptData(null)
       setComment('')
       setLoadError(null)
+      setLeaseMatches([])
+      setLeaseDisplayId('')
       return
     }
 
@@ -71,12 +81,20 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
       setIsLoadingReceipt(true)
       setLoadError(null)
       try {
-        const data = receiptId
-          ? await fetchReceiptData(receiptId, lease)
-          : await assembleFromLoan(loanId!, lease)
-        if (!cancelled) {
-          setReceiptData(data)
-        }
+        // Assemble (borrower + keys from the loan) and resolve the contract options
+        // in parallel; the chosen lease/manual id is merged in at print time.
+        const [data, contract] = await Promise.all([
+          receiptId
+            ? fetchReceiptData(receiptId)
+            : assembleFromLoan(loanId!),
+          resolveReceiptContract({ receiptId, loanId }),
+        ])
+        if (cancelled) return
+        setReceiptData(data)
+        setLeaseMatches(contract.matches)
+        setLeaseDisplayId(
+          contract.matches.length === 1 ? contract.matches[0].leaseId : ''
+        )
       } catch (err) {
         console.error('Failed to fetch receipt data:', err)
         if (!cancelled) {
@@ -121,8 +139,12 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
       }
     } else {
       if (!receiptData) return
-      const dataWithComment = { ...receiptData, comment: addSignature(comment) }
-      await openPdfInNewTab(dataWithComment)
+      const dataWithContract = {
+        ...receiptData,
+        leaseDisplayId: leaseDisplayId.trim() || undefined,
+        comment: addSignature(comment),
+      }
+      await openPdfInNewTab(dataWithContract)
     }
   }
 
@@ -154,11 +176,17 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
     return null
   }
 
+  // Tenant mode with >1 candidate lease must pick one before printing.
+  const needsLeasePick =
+    !isMaintenance &&
+    leaseMatches.length > 1 &&
+    !leaseMatches.some((l) => l.leaseId === leaseDisplayId)
+
   // For maintenance mode: ready to print immediately (no data fetching needed)
-  // For tenant mode: ready when receipt data is loaded
+  // For tenant mode: ready when receipt data is loaded and a contract is settled
   const canPrint = isMaintenance
     ? !!(props as MaintenanceReceiptProps).loanId && !isPrinting
-    : !!receiptData && !isLoadingReceipt
+    : !!receiptData && !isLoadingReceipt && !loadError && !needsLeasePick
 
   const isLoading = isMaintenance ? isPrinting : isLoadingReceipt
 
@@ -195,6 +223,67 @@ export function ReceiptDialog(props: ReceiptDialogProps) {
               </AlertDescription>
             </Alert>
           )}
+
+          {/* Pick which contract when several match the loan's contact */}
+          {!isMaintenance && !loadError && receiptData && leaseMatches.length > 1 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Välj avtal</p>
+              <p className="text-xs text-muted-foreground">
+                Flera avtal matchar lånets kontakt. Välj vilket som ska stå på
+                kvittensen.
+              </p>
+              <div className="space-y-1">
+                {leaseMatches.map((l) => (
+                  <label
+                    key={l.leaseId}
+                    className="flex items-center gap-2 text-sm cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="lease-pick"
+                      checked={leaseDisplayId === l.leaseId}
+                      onChange={() => setLeaseDisplayId(l.leaseId)}
+                    />
+                    <span className="tabular-nums">{l.leaseId}</span>
+                    <span className="text-muted-foreground">
+                      {(l.tenants ?? [])
+                        .map(
+                          (t) =>
+                            t.fullName ||
+                            `${t.firstName ?? ''} ${t.lastName ?? ''}`.trim()
+                        )
+                        .filter(Boolean)
+                        .join(', ')}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No matching contract → optional manual Avtals-ID */}
+          {!isMaintenance &&
+            !loadError &&
+            receiptData &&
+            leaseMatches.length === 0 && (
+              <div className="space-y-1">
+                <label htmlFor="manual-lease-id" className="text-sm font-medium">
+                  Avtals-ID (valfritt)
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Inget avtal hittades för lånets kontakt på hyresobjektet. Ange
+                  avtals-ID manuellt om du vill.
+                </p>
+                <input
+                  id="manual-lease-id"
+                  type="text"
+                  value={leaseDisplayId}
+                  onChange={(e) => setLeaseDisplayId(e.target.value)}
+                  placeholder="t.ex. 123-456-78/9"
+                  className="w-full rounded-md border px-3 py-2 text-sm"
+                />
+              </div>
+            )}
 
           {/* Comment input */}
           <CommentInput

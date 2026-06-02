@@ -8,9 +8,11 @@ import {
   assembleReturnReceipt,
   assembleMaintenanceLoanReceipt,
   resolveLoanTenants,
+  resolveLoanContract,
 } from '../receiptHandlers'
 import { keyLoanService } from '../api/keyLoanService'
 import { fetchContactByContactCode } from '../api/contactService'
+import { fetchLeasesByRentalPropertyId } from '../api/leaseSearchService'
 
 vi.mock('../api/receiptService', () => ({
   receiptService: {},
@@ -31,6 +33,10 @@ vi.mock('../api/keyLoanService', () => ({
 
 vi.mock('../api/contactService', () => ({
   fetchContactByContactCode: vi.fn(),
+}))
+
+vi.mock('../api/leaseSearchService', () => ({
+  fetchLeasesByRentalPropertyId: vi.fn(),
 }))
 
 vi.mock('../api/rentalObjectSearchService', () => ({
@@ -230,16 +236,120 @@ describe('resolveLoanTenants', () => {
   })
 })
 
+describe('resolveLoanContract', () => {
+  beforeEach(() => {
+    vi.mocked(fetchLeasesByRentalPropertyId).mockReset()
+  })
+
+  it('derives rentalPropertyId from the loan keys and returns contact-matched leases', async () => {
+    const matching = makeLease({
+      leaseId: 'L-1',
+      rentalPropertyId: 'OBJ-1',
+      tenants: [makeTenant({ contactCode: 'P001' })],
+    })
+    const other = makeLease({
+      leaseId: 'L-2',
+      rentalPropertyId: 'OBJ-1',
+      tenants: [makeTenant({ contactCode: 'P999' })],
+    })
+    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([matching, other])
+
+    const result = await resolveLoanContract({
+      contact: 'P001',
+      contact2: null,
+      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
+    })
+
+    expect(fetchLeasesByRentalPropertyId).toHaveBeenCalledWith('OBJ-1')
+    expect(result.rentalPropertyId).toBe('OBJ-1')
+    expect(result.matches.map((l) => l.leaseId)).toEqual(['L-1'])
+  })
+
+  it('returns null rentalPropertyId and no matches when keys have no rental object', async () => {
+    const result = await resolveLoanContract({
+      contact: 'P001',
+      contact2: null,
+      keysArray: [makeKey({ id: 'k1', rentalObjectCode: null })],
+    })
+
+    expect(result.rentalPropertyId).toBeNull()
+    expect(result.matches).toEqual([])
+    expect(fetchLeasesByRentalPropertyId).not.toHaveBeenCalled()
+  })
+
+  it('matches on contact2 and is case-insensitive', async () => {
+    const lease = makeLease({
+      leaseId: 'L-1',
+      rentalPropertyId: 'OBJ-1',
+      tenants: [makeTenant({ contactCode: 'P002' })],
+    })
+    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([lease])
+
+    const result = await resolveLoanContract({
+      contact: 'P001',
+      contact2: 'p002',
+      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
+    })
+
+    expect(result.matches.map((l) => l.leaseId)).toEqual(['L-1'])
+  })
+
+  it('returns multiple matches for the picker', async () => {
+    const a = makeLease({
+      leaseId: 'L-1',
+      rentalPropertyId: 'OBJ-1',
+      tenants: [makeTenant({ contactCode: 'P001' })],
+    })
+    const b = makeLease({
+      leaseId: 'L-2',
+      rentalPropertyId: 'OBJ-1',
+      tenants: [makeTenant({ contactCode: 'P001' })],
+    })
+    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([a, b])
+
+    const result = await resolveLoanContract({
+      contact: 'P001',
+      contact2: null,
+      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
+    })
+
+    expect(result.matches.map((l) => l.leaseId)).toEqual(['L-1', 'L-2'])
+  })
+
+  it('returns the rental object but no matches when no lease tenant matches', async () => {
+    const lease = makeLease({
+      leaseId: 'L-1',
+      rentalPropertyId: 'OBJ-1',
+      tenants: [makeTenant({ contactCode: 'P999' })],
+    })
+    vi.mocked(fetchLeasesByRentalPropertyId).mockResolvedValue([lease])
+
+    const result = await resolveLoanContract({
+      contact: 'P001',
+      contact2: null,
+      keysArray: [makeKey({ id: 'k1', rentalObjectCode: 'OBJ-1' })],
+    })
+
+    expect(result.rentalPropertyId).toBe('OBJ-1')
+    expect(result.matches).toEqual([])
+  })
+})
+
 describe('assembleReturnReceipt', () => {
+  beforeEach(() => {
+    vi.mocked(fetchContactByContactCode).mockResolvedValue(
+      makeContact({ contactCode: 'P001' })
+    )
+  })
+
   it('returns undefined for missingKeys/disposedKeys/cards when all keys returned and no cards', async () => {
     const keys = [makeKey({ id: 'k1' })]
-    const lease = makeLease({ tenants: [makeTenant({ contactCode: 'P001' })] })
 
     const result = await assembleReturnReceipt(
       { contact: 'P001' },
       keys,
       new Set(['k1']),
-      lease
+      'L-1'
     )
 
     expect(result.keys).toHaveLength(1)
@@ -261,13 +371,12 @@ describe('assembleReturnReceipt', () => {
       makeCard({ cardId: 'c1' }), // returned
       makeCard({ cardId: 'c2' }), // missing
     ]
-    const lease = makeLease({ tenants: [makeTenant({ contactCode: 'P001' })] })
 
     const result = await assembleReturnReceipt(
       { contact: 'P001' },
       keys,
       new Set(['k1']),
-      lease,
+      'L-1',
       cards,
       new Set(['c1']),
       'Test comment'

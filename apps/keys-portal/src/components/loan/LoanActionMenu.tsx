@@ -126,18 +126,8 @@ export function LoanActionMenu({
       return
     }
 
-    // For non-maintenance loans without lease context, show error
-    if (loan.loanType !== 'MAINTENANCE' && !lease) {
-      toast({
-        title: 'Kan inte generera kvittens',
-        description:
-          'För att generera en lånkvittens, gå till utlåningssidan för kontraktet.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    // Open receipt dialog with comment input
+    // The receipt resolves its own contract from the loan, so no page lease is
+    // required — works from any page.
     setShowReceiptDialog(true)
   }
 
@@ -270,7 +260,7 @@ export function LoanActionMenu({
           loanType="MAINTENANCE"
           loanId={loan.id}
         />
-      ) : lease ? (
+      ) : (
         <ReceiptDialog
           isOpen={showReceiptDialog}
           onClose={() => setShowReceiptDialog(false)}
@@ -278,7 +268,7 @@ export function LoanActionMenu({
           lease={lease}
           loanId={loan.id}
         />
-      ) : null}
+      )}
 
       {enrichedLoan && (
         <EditKeyLoanDialog

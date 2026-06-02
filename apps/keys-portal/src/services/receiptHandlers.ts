@@ -15,6 +15,7 @@ import {
 import { receiptService } from './api/receiptService'
 import { keyLoanService } from './api/keyLoanService'
 import { fetchContactByContactCode } from './api/contactService'
+import { fetchLeasesByRentalPropertyId } from './api/leaseSearchService'
 import { rentalObjectSearchService } from './api/rentalObjectSearchService'
 import type {
   ReceiptData,
@@ -117,6 +118,64 @@ export async function resolveLoanTenants(
   return tenants
 }
 
+/**
+ * Resolves a loan's contract context from the loan itself: the rental object comes
+ * from its keys and the candidate lease(s) are those on that object whose tenants
+ * include the loan's contact(s). Caller picks when several match and falls back to
+ * manual entry when none — so a receipt never inherits the page's lease.
+ */
+export async function resolveLoanContract(
+  loan: Pick<KeyLoanWithDetails, 'contact' | 'contact2' | 'keysArray'>
+): Promise<{ rentalPropertyId: string | null; matches: Lease[] }> {
+  const codes = [loan.contact, loan.contact2]
+    .map((code) => code?.trim().toUpperCase())
+    .filter((code): code is string => !!code)
+
+  const rentalPropertyId =
+    (loan.keysArray ?? [])
+      .map((key) => key.rentalObjectCode)
+      .find((code): code is string => !!code && code.length > 0) ?? null
+
+  if (!rentalPropertyId) {
+    return { rentalPropertyId: null, matches: [] }
+  }
+
+  const leases = await fetchLeasesByRentalPropertyId(rentalPropertyId)
+  const matches = leases.filter((lease) =>
+    (lease.tenants ?? []).some(
+      (tenant) =>
+        tenant.contactCode && codes.includes(tenant.contactCode.toUpperCase())
+    )
+  )
+
+  return { rentalPropertyId, matches }
+}
+
+/**
+ * Resolves the contract options for a receipt from just a loanId or receiptId —
+ * no page lease. Fetches the loan, then the rental object + matching lease(s) via
+ * resolveLoanContract. Used by the dialog to drive auto/pick/manual selection.
+ */
+export async function resolveReceiptContract(args: {
+  receiptId?: string | null
+  loanId?: string | null
+}): Promise<{ rentalPropertyId: string | null; matches: Lease[] }> {
+  const loanId =
+    args.loanId ??
+    (args.receiptId
+      ? (await receiptService.getById(args.receiptId)).keyLoanId
+      : null)
+
+  if (!loanId) return { rentalPropertyId: null, matches: [] }
+
+  const loan = (await keyLoanService.get(loanId, {
+    includeKeySystem: true,
+    includeCards: true,
+  })) as KeyLoanWithDetails
+
+  return resolveLoanContract(loan)
+}
+
 // ============================================================================
 // Data Assembly Functions
 // ============================================================================
@@ -127,7 +186,7 @@ export async function resolveLoanTenants(
  */
 async function assembleFromReceipt(
   receiptId: string,
-  lease: Lease
+  leaseDisplayId?: string
 ): Promise<ReceiptData> {
   // Fetch receipt
   const receipt = await receiptService.getById(receiptId)
@@ -152,8 +211,8 @@ async function assembleFromReceipt(
         : new Date()
 
   return {
-    lease,
-    tenants: await resolveLoanTenants(keyLoan, lease.tenants ?? []),
+    leaseDisplayId,
+    tenants: await resolveLoanTenants(keyLoan),
     keys,
     receiptType: receipt.receiptType,
     operationDate,
@@ -171,7 +230,7 @@ export async function assembleReturnReceipt(
   loan: Pick<KeyLoan, 'contact' | 'contact2'>,
   loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
-  lease: Lease,
+  leaseDisplayId?: string,
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set(),
   comment?: string,
@@ -189,8 +248,8 @@ export async function assembleReturnReceipt(
   )
 
   return {
-    lease,
-    tenants: await resolveLoanTenants(loan, lease.tenants ?? []),
+    leaseDisplayId,
+    tenants: await resolveLoanTenants(loan),
     keys: returned,
     receiptType: 'RETURN',
     operationDate: new Date(),
@@ -405,9 +464,9 @@ function openPdfBlobInNewTab(blob: Blob, fileName: string): void {
  */
 export async function fetchReceiptData(
   receiptId: string,
-  lease: Lease
+  leaseDisplayId?: string
 ): Promise<ReceiptData> {
-  return assembleFromReceipt(receiptId, lease)
+  return assembleFromReceipt(receiptId, leaseDisplayId)
 }
 
 /**
@@ -416,7 +475,7 @@ export async function fetchReceiptData(
  */
 export async function assembleFromLoan(
   loanId: string,
-  lease: Lease
+  leaseDisplayId?: string
 ): Promise<ReceiptData> {
   const keyLoan = (await keyLoanService.get(loanId, {
     includeKeySystem: true,
@@ -427,8 +486,8 @@ export async function assembleFromLoan(
   const cards = keyLoan.keyCardsArray || []
 
   return {
-    lease,
-    tenants: await resolveLoanTenants(keyLoan, lease.tenants ?? []),
+    leaseDisplayId,
+    tenants: await resolveLoanTenants(keyLoan),
     keys,
     receiptType: 'LOAN',
     operationDate: keyLoan.createdAt ? new Date(keyLoan.createdAt) : new Date(),
@@ -444,7 +503,7 @@ export async function assembleFromLoan(
  * @param loan - The loan being returned (its contacts identify the borrower(s))
  * @param loanKeys - All key objects in this specific loan (with keySystem included)
  * @param selectedKeyIds - Key IDs that were checked in the dialog (returned keys)
- * @param lease - The lease associated with the receipt
+ * @param leaseDisplayId - Avtals-ID shown on the receipt (resolved or manual)
  * @param loanCards - All card objects in this specific loan (optional)
  * @param selectedCardIds - Card IDs that were checked in the dialog (optional)
  * @param comment - Optional comment to include in the receipt (max 280 chars)
@@ -454,7 +513,7 @@ export async function generateAndUploadReturnReceipt(
   loan: Pick<KeyLoan, 'contact' | 'contact2'>,
   loanKeys: KeyDetails[],
   selectedKeyIds: Set<string>,
-  lease: Lease,
+  leaseDisplayId?: string,
   loanCards: Card[] = [],
   selectedCardIds: Set<string> = new Set(),
   comment?: string
@@ -464,7 +523,7 @@ export async function generateAndUploadReturnReceipt(
     loan,
     loanKeys,
     selectedKeyIds,
-    lease,
+    leaseDisplayId,
     loanCards,
     selectedCardIds,
     comment

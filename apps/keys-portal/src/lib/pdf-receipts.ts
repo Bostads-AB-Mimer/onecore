@@ -132,10 +132,15 @@ const addMeta = (doc: jsPDF, y: number, type: 'loan' | 'return'): number => {
  */
 const addTenantInfo = async (
   doc: jsPDF,
-  tenants: ReceiptData['tenants'],
-  lease: ReceiptData['lease'],
+  data: Pick<ReceiptData, 'tenants' | 'leaseDisplayId' | 'keys'>,
   y: number
 ): Promise<number> => {
+  const { tenants } = data
+  // Rental object from the loan's keys; Avtals-ID from leaseDisplayId; address
+  // resolved from the rental object.
+  const rentalPropertyId =
+    data.keys.find((k) => k.rentalObjectCode)?.rentalObjectCode ?? '-'
+  const leaseId = data.leaseDisplayId ?? null
   const leftCol = MARGIN_X
   const rightCol = 110
 
@@ -178,35 +183,25 @@ const addTenantInfo = async (
   doc.text(hyresobjektLabel, rightCol, rightY)
   const labelWidth = doc.getTextWidth(hyresobjektLabel)
   doc.setFont(FONT_GRAPHIK, 'bold')
-  doc.text(lease.rentalPropertyId, rightCol + labelWidth, rightY)
+  doc.text(rentalPropertyId, rightCol + labelWidth, rightY)
   doc.setFont(FONT_GRAPHIK, 'normal')
   rightY += 5
 
   // Wrap long leaseId
-  const leaseIdLines = doc.splitTextToSize(`Avtals-ID: ${lease.leaseId}`, 75)
+  const leaseIdLines = doc.splitTextToSize(`Avtals-ID: ${leaseId || '-'}`, 75)
   doc.text(leaseIdLines, rightCol, rightY)
   rightY += Array.isArray(leaseIdLines) ? leaseIdLines.length * 5 : 5
 
-  // Display address from lease data, with API search fallback
+  // Resolve address from the rental object
   let addressStr: string | null = null
-  const addr = lease.rentalProperty?.address
-  if (addr) {
-    const street = [addr.street, addr.number].filter(Boolean).join(' ')
-    const city = [addr.postalCode, addr.city].filter(Boolean).join(' ')
-    addressStr = [street, city].filter(Boolean).join(', ') || null
-  }
-
-  if (!addressStr) {
-    try {
-      const fetched = await rentalObjectSearchService.getAddressByRentalId(
-        lease.rentalPropertyId
-      )
-      if (fetched && fetched !== 'Okänd adress') {
-        addressStr = fetched
-      }
-    } catch {
-      // ignore - will show "-"
+  try {
+    const fetched =
+      await rentalObjectSearchService.getAddressByRentalId(rentalPropertyId)
+    if (fetched && fetched !== 'Okänd adress') {
+      addressStr = fetched
     }
+  } catch {
+    // ignore - will show "-"
   }
 
   doc.text(`Adress: ${addressStr || '-'}`, rightCol, rightY)
@@ -966,7 +961,7 @@ async function buildLoanDoc(data: ReceiptData) {
 
   let y = addTitle(doc, 'loan')
   y = addMeta(doc, y, 'loan')
-  y = await addTenantInfo(doc, data.tenants, data.lease, y)
+  y = await addTenantInfo(doc, data, y)
 
   // Combined keys and cards table (sorted by type, system, name, flex, sequence)
   y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y)
@@ -992,7 +987,7 @@ async function buildReturnDoc(data: ReceiptData) {
 
   let y = addTitle(doc, 'return')
   y = addMeta(doc, y, 'return')
-  y = await addTenantInfo(doc, data.tenants, data.lease, y)
+  y = await addTenantInfo(doc, data, y)
 
   // Check for missing / remaining items
   const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0

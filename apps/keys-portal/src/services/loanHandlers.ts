@@ -11,6 +11,7 @@ import {
   assembleMaintenanceReturnReceipt,
   assembleReturnReceipt,
   generateAndUploadReturnReceipt,
+  resolveLoanContract,
 } from './receiptHandlers'
 import type {
   Card,
@@ -143,7 +144,6 @@ export async function handleReturnKeys({
   availableToNextTenantFrom,
   selectedForReceipt,
   selectedCardsForReceipt,
-  lease,
   comment,
 }: ReturnKeysParams): Promise<ReturnKeysResult> {
   if (keyIds.length === 0 && cardIds.length === 0) {
@@ -219,7 +219,7 @@ export async function handleReturnKeys({
       })
       receiptId = receipt.id
 
-      if (lease && selectedForReceipt) {
+      if (selectedForReceipt) {
         const keyLoan = (await keyLoanService.get(loanId, {
           includeKeySystem: true,
           includeCards: true,
@@ -229,12 +229,17 @@ export async function handleReturnKeys({
         const loanCards = (keyLoan.keyCardsArray || []) as Card[]
         const selectedKeySet = new Set(selectedForReceipt)
         const selectedCardSet = new Set(selectedCardsForReceipt || [])
+        // Avtals-ID resolved from the loan, not the page: use it only when exactly
+        // one lease matches (non-interactive flow can't prompt).
+        const { matches } = await resolveLoanContract(keyLoan)
+        const leaseDisplayId =
+          matches.length === 1 ? matches[0].leaseId : undefined
         await generateAndUploadReturnReceipt(
           receiptId,
           keyLoan,
           loanKeys,
           selectedKeySet,
-          lease,
+          leaseDisplayId,
           loanCards,
           selectedCardSet,
           comment
@@ -315,7 +320,6 @@ export async function handlePartialReturn(
     selectedKeyIds,
     selectedCardIds,
     availableToNextTenantFrom,
-    lease,
     comment,
     maintenanceContext,
   } = params
@@ -385,14 +389,15 @@ export async function handlePartialReturn(
       const generated = await generateMaintenanceReturnReceiptBlob(returnData)
       returnBlob = generated.blob
     } else {
-      if (!lease) {
-        throw new Error('lease krävs för partiell retur av hyresgästlån')
-      }
+      // Avtals-ID resolved from the loan, not the page; use it only on a single match.
+      const { matches } = await resolveLoanContract(oldLoan)
+      const leaseDisplayId =
+        matches.length === 1 ? matches[0].leaseId : undefined
       const returnData = await assembleReturnReceipt(
         oldLoan,
         allKeys,
         selectedKeyIds,
-        lease,
+        leaseDisplayId,
         allCards,
         selectedCardIds,
         comment,
