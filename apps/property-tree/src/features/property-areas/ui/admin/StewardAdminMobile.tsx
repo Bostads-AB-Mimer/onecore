@@ -48,10 +48,10 @@ export function StewardAdminMobile({
   }
 
   const accordionItems: MobileAccordionItem[] = kvvAreas.map((kvvArea) => {
-    const properties = propertiesByKvvArea.get(kvvArea.kvvArea) || []
+    const properties = propertiesByKvvArea.get(kvvArea.kvvAreaId) || []
 
     return {
-      id: kvvArea.kvvArea,
+      id: kvvArea.kvvAreaId,
       title: (
         <div className="flex items-center justify-between w-full pr-2">
           <span>
@@ -113,7 +113,7 @@ export function StewardAdminMobile({
     <>
       <MobileAccordion
         items={accordionItems}
-        defaultOpen={kvvAreas.length > 0 ? [kvvAreas[0].kvvArea] : []}
+        defaultOpen={kvvAreas.length > 0 ? [kvvAreas[0].kvvAreaId] : []}
       />
 
       {selectedKvvArea && (

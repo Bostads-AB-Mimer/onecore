@@ -410,14 +410,7 @@ export function PropertyAreasPage() {
         ) : isMobile ? (
           <StewardAdminMobile
             kvvAreas={kvvAreaList}
-            propertiesByKvvArea={
-              new Map(
-                kvvAreaList.map((k) => [
-                  k.kvvArea,
-                  propertiesByKvvArea.get(k.kvvAreaId) ?? [],
-                ])
-              )
-            }
+            propertiesByKvvArea={propertiesByKvvArea}
           />
         ) : (
           <div className="grid grid-cols-[minmax(0,1fr)] flex-1 min-h-0">
