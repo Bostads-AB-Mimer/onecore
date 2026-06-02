@@ -301,21 +301,23 @@ export async function updatePropertyKvvArea(
   >
 > {
   try {
-    const response = await axios.put(
-      `${config.propertyBaseService.url}/properties/${encodeURIComponent(propertyCode)}/kvv-area`,
-      body,
-      { validateStatus: () => true }
-    )
+    const response = await client().PUT('/properties/{code}/kvv-area', {
+      params: { path: { code: propertyCode } },
+      body: {
+        kvvAreaId: body.kvvAreaId,
+        ...(body.updatedBy ? { updatedBy: body.updatedBy } : {}),
+      },
+    })
 
-    if (response.status === 200 && response.data?.content) {
-      return { ok: true, data: response.data.content as PropertyKvvAreaLink }
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
     }
 
-    if (response.status === 404) {
+    if (response.response.status === 404) {
       // services/property emits a discriminator `code` on 404 bodies. Switching
       // on it keeps us decoupled from the human-readable `reason` text.
-      const code: unknown = response.data?.code
-      if (code === 'KVV_AREA_NOT_FOUND') {
+      const errBody = response.error as { code?: string } | undefined
+      if (errBody?.code === 'KVV_AREA_NOT_FOUND') {
         return { ok: false, err: 'kvv-area-not-found' }
       }
       return { ok: false, err: 'property-not-found' }
