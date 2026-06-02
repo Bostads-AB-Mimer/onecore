@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-import { buildReturnReceiptBlob } from '../loans/receiptPrint'
 import { generateReturnReceiptBlob } from '@/lib/pdf-receipts'
+
+import { buildReturnReceiptBlob } from '../loans/receiptPrint'
 import { fetchContactByContactCode } from '../api/contactService'
 import { makeKey, makeContact } from './fixtures'
 

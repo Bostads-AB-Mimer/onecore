@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { mergePdfBlobs } from '@/lib/pdf-merge'
+
 import { returnLoan, partialReturnLoan } from '../loans/returnFlow'
 import { keyLoanService } from '../api/keyLoanService'
 import { receiptService } from '../api/receiptService'
@@ -9,8 +11,7 @@ import {
   resolveObjectOptions,
   pickAutoContract,
 } from '../loans/receiptResolution'
-import { mergePdfBlobs } from '@/lib/pdf-merge'
-import { makeKey, makeCard, makeLoan } from './fixtures'
+import { makeKey, makeLoan } from './fixtures'
 
 vi.mock('../api/keyLoanService', () => ({
   keyLoanService: { update: vi.fn(), create: vi.fn() },

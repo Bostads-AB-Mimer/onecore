@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
 
+import type { ReceiptData } from '@/services/types'
+
 import {
   generateLoanReceiptBlob,
   generateReturnReceiptBlob,
 } from './pdf-receipts'
-import type { ReceiptData } from '@/services/types'
 
 // Smoke tests: exercise the real renderer end-to-end (jsPDF + fonts) for every
 // loanType × receiptType combination, guarding the 4→2 merge. They assert a

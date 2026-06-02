@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import type { Lease } from '@/services/types'
+
 import {
   categorizeKeys,
   categorizeCards,
