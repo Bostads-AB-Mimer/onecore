@@ -99,7 +99,7 @@ export async function postChannelLookup(nationalIdentityNumbers: string[]) {
     {
       method: 'POST',
       data: {
-        channels: ['Kivra', 'Billo', 'eInvoiceB2C'],
+        channels: ['Kivra', 'eInvoiceB2C'],
         candidates: nationalIdentityNumbers.map(
           (n) => n.replaceAll(/[^0-9]/g, '') // Strålfors API accepts only numeric characters in national identity number
         ),
