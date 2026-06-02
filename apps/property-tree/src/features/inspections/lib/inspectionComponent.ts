@@ -19,6 +19,19 @@ export function emptyInspectionComponent(
 }
 
 /**
+ * Canonical label for a fetched component, used everywhere a component name
+ * surfaces in the inspection UI (cards, detail sheet, bulk room actions).
+ * Falls back through subtype → model → id so the inspector never sees a blank.
+ */
+export function getFetchedComponentLabel(component: FetchedComponent): string {
+  return (
+    component.model?.subtype?.subTypeName ||
+    component.model?.modelName ||
+    component.id
+  )
+}
+
+/**
  * A room is handled when every fetched component has a non-empty `condition`.
  */
 export function deriveRoomIsHandled(

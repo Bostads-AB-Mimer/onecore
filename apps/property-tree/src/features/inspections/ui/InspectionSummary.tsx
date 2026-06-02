@@ -94,6 +94,36 @@ function CostResponsibilitySelect({
   )
 }
 
+function CostInput({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: number
+  onChange: (cost: number) => void
+  ariaLabel: string
+}) {
+  return (
+    <Input
+      type="number"
+      min={0}
+      step={1}
+      // Render 0 as an empty field so the placeholder shows and the user can
+      // type from scratch without fighting a sticky "0" from the controlled
+      // value.
+      value={value === 0 ? '' : value}
+      placeholder="0"
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => {
+        const raw = e.target.value
+        const cost = raw === '' ? 0 : Math.max(0, Math.trunc(Number(raw) || 0))
+        onChange(cost)
+      }}
+      aria-label={ariaLabel}
+    />
+  )
+}
+
 interface RoomSectionProps {
   room: Room
   roomData: InspectionRoom | undefined
@@ -121,86 +151,169 @@ function RoomSummarySection({
 
   if (remarks.length === 0) return null
 
+  // Compute the per-row presentation once so the mobile card layout and the
+  // desktop table can share the same conditional rules without diverging.
+  const rows = remarks.map((remark) => {
+    const conditionConfig = getConditionConfig(remark.condition)
+    const component = roomData?.components?.find(
+      (c) => c.componentId === remark.componentId
+    )
+    const costValue = component?.cost ?? 0
+    const costResponsibility = component?.costResponsibility ?? null
+    // Cost responsibility only applies to Skadad — Ok rows are informational
+    // and show no cost/responsibility inputs.
+    const showResponsibility = remark.condition === CONDITION_TYPE.DAMAGED
+    // When the landlord (Hyresvärd) bears the cost, the inspector doesn't
+    // enter a kr amount.
+    const showCost =
+      showResponsibility && costResponsibility !== COST_RESPONSIBILITY.LANDLORD
+    const handleCostChange = (cost: number) =>
+      onComponentCostByIdUpdate(
+        room.id,
+        remark.componentId,
+        remark.rawLabel ?? remark.label,
+        cost
+      )
+    const handleResponsibilityChange = (value: CostResponsibility) =>
+      onComponentCostResponsibilityByIdUpdate(
+        room.id,
+        remark.componentId,
+        remark.rawLabel ?? remark.label,
+        value
+      )
+    return {
+      remark,
+      conditionConfig,
+      costValue,
+      costResponsibility,
+      showResponsibility,
+      showCost,
+      handleCostChange,
+      handleResponsibilityChange,
+    }
+  })
+
   return (
     <section className="border rounded-lg p-4 space-y-3 bg-card">
       <h3 className="text-base font-semibold">{room.name}</h3>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Komponent</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-40">Kostnad (kr)</TableHead>
-            <TableHead className="w-44">Kostnadsansvar</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {remarks.map((remark) => {
-            const conditionConfig = getConditionConfig(remark.condition)
-            const component = roomData?.components?.find(
-              (c) => c.componentId === remark.componentId
-            )
-            const costValue = component?.cost ?? 0
-            const costResponsibility = component?.costResponsibility ?? null
 
-            return (
-              <TableRow key={remark.key}>
-                <TableCell className="font-medium">{remark.label}</TableCell>
-                <TableCell>
-                  {conditionConfig && (
-                    <Badge
-                      variant={conditionConfig.badgeVariant}
-                      className={conditionConfig.badgeClassName}
-                    >
-                      {conditionConfig.label}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={1}
-                    // Render 0 as an empty field so the placeholder shows and
-                    // the user can type from scratch without fighting a sticky
-                    // "0" from the controlled value.
-                    value={costValue === 0 ? '' : costValue}
-                    placeholder="0"
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => {
-                      const raw = e.target.value
-                      const cost =
-                        raw === ''
-                          ? 0
-                          : Math.max(0, Math.trunc(Number(raw) || 0))
-                      onComponentCostByIdUpdate(
-                        room.id,
-                        remark.componentId,
-                        remark.rawLabel ?? remark.label,
-                        cost
-                      )
-                    }}
-                    aria-label={`Kostnad för ${remark.label}`}
+      {/* Mobile: stacked cards. The 4-column table doesn't fit on a phone, so
+          each remark renders as a self-contained block instead. */}
+      <div className="sm:hidden space-y-3">
+        {rows.map(
+          ({
+            remark,
+            conditionConfig,
+            costValue,
+            costResponsibility,
+            showResponsibility,
+            showCost,
+            handleCostChange,
+            handleResponsibilityChange,
+          }) => (
+            <div
+              key={remark.key}
+              className="border rounded-md p-3 space-y-3 bg-background"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium">{remark.label}</span>
+                {conditionConfig && (
+                  <Badge
+                    variant={conditionConfig.badgeVariant}
+                    className={conditionConfig.badgeClassName}
+                  >
+                    {conditionConfig.label}
+                  </Badge>
+                )}
+              </div>
+              {showCost && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Kostnad (kr)
+                  </label>
+                  <CostInput
+                    value={costValue}
+                    onChange={handleCostChange}
+                    ariaLabel={`Kostnad för ${remark.label}`}
                   />
-                </TableCell>
-                <TableCell>
+                </div>
+              )}
+              {showResponsibility && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Kostnadsansvar
+                  </label>
                   <CostResponsibilitySelect
                     value={costResponsibility}
-                    onChange={(value) => {
-                      onComponentCostResponsibilityByIdUpdate(
-                        room.id,
-                        remark.componentId,
-                        remark.rawLabel ?? remark.label,
-                        value
-                      )
-                    }}
+                    onChange={handleResponsibilityChange}
                     ariaLabel={`Kostnadsansvar för ${remark.label}`}
                   />
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+                </div>
+              )}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Desktop: full table with all four columns. */}
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Komponent</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-40">Kostnad (kr)</TableHead>
+              <TableHead className="w-44">Kostnadsansvar</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map(
+              ({
+                remark,
+                conditionConfig,
+                costValue,
+                costResponsibility,
+                showResponsibility,
+                showCost,
+                handleCostChange,
+                handleResponsibilityChange,
+              }) => (
+                <TableRow key={remark.key}>
+                  <TableCell className="font-medium">{remark.label}</TableCell>
+                  <TableCell>
+                    {conditionConfig && (
+                      <Badge
+                        variant={conditionConfig.badgeVariant}
+                        className={conditionConfig.badgeClassName}
+                      >
+                        {conditionConfig.label}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {showCost && (
+                      <CostInput
+                        value={costValue}
+                        onChange={handleCostChange}
+                        ariaLabel={`Kostnad för ${remark.label}`}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {showResponsibility && (
+                      <CostResponsibilitySelect
+                        value={costResponsibility}
+                        onChange={handleResponsibilityChange}
+                        ariaLabel={`Kostnadsansvar för ${remark.label}`}
+                      />
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </section>
   )
 }

@@ -224,6 +224,73 @@ function renderHeader(doc: InstanceType<typeof PDFDocument>): void {
     .text('www.mimer.nu', { link: 'https://www.mimer.nu', underline: true })
 }
 
+// Standard boilerplate appended to every protocol. Module-scope so the array
+// isn't re-allocated on every PDF, and so the same source feeds both the
+// measure and render passes (no risk of drift).
+const CLOSING_NOTES: ReadonlyArray<{ title: string; body: string }> = [
+  {
+    title: 'Avflyttande hyresgäst/er',
+    body: 'Besiktningsprotokoll och ersättningsskyldighet godkänns av hyresgäst. Kostnader som påförts hyresgästen ska betalas innan nytt kontrakt kan tecknas. Samtliga nycklar ska lämnas tillbaka till Mimer.',
+  },
+  {
+    title: 'Besiktningsman',
+    body: 'Inga ytterligare ersättningskrav kommer ställas under förutsättning att inga dolda skador noteras vid besiktningen och inga nya skador uppkommer innan avflyttningen. Lägenheten, med tillhörande utrymmen, ska även ha lämnats väl rengjorda.',
+  },
+]
+
+/**
+ * Measures the height a closing-notes section will occupy, applying the same
+ * font/size the renderer uses. Centralized so render and measure can't drift —
+ * if you change the title or body font here, both passes pick it up.
+ */
+function measureClosingNotesSection(
+  doc: InstanceType<typeof PDFDocument>,
+  section: { title: string; body: string },
+  pageWidth: number
+): number {
+  doc.fontSize(FONT_SIZES.SMALL).font('Helvetica-Bold')
+  const titleHeight = doc.heightOfString(section.title, { width: pageWidth })
+  doc.fontSize(FONT_SIZES.SMALL).font('Helvetica')
+  const bodyHeight = doc.heightOfString(section.body, { width: pageWidth })
+  return titleHeight + bodyHeight + SPACING.SECTION_GAP
+}
+
+/**
+ * Renders the standard tenant + inspector acknowledgement paragraphs at the
+ * end of the protocol. Adds a new page first if the block won't fit on the
+ * current one so the headings never split across pages.
+ */
+function renderClosingNotes(
+  doc: InstanceType<typeof PDFDocument>,
+  pageWidth: number
+): void {
+  const totalHeight = CLOSING_NOTES.reduce(
+    (acc, section) => acc + measureClosingNotesSection(doc, section, pageWidth),
+    0
+  )
+
+  let currentY = doc.y + SPACING.SECTION_GAP
+  if (!fitsOnPage(doc, currentY, totalHeight)) {
+    doc.addPage()
+    currentY = LAYOUT.MARGIN
+  }
+
+  for (const section of CLOSING_NOTES) {
+    doc
+      .fontSize(FONT_SIZES.SMALL)
+      .fillColor(COLORS.BLACK)
+      .font('Helvetica-Bold')
+      .text(section.title, LAYOUT.MARGIN, currentY, { width: pageWidth })
+    currentY = doc.y
+
+    doc
+      .fontSize(FONT_SIZES.SMALL)
+      .font('Helvetica')
+      .text(section.body, LAYOUT.MARGIN, currentY, { width: pageWidth })
+    currentY = doc.y + SPACING.SECTION_GAP
+  }
+}
+
 /**
  * Renders the footer with page numbers and generation timestamp on all pages
  */
@@ -574,6 +641,11 @@ export async function generateInspectionProtocolPdf(
         pageWidth,
         includeCosts
       )
+
+      // Standard closing boilerplate (tenant + inspector acknowledgements).
+      // Must run before renderFooter so any page breaks it introduces are
+      // included in the final page numbering.
+      renderClosingNotes(doc, pageWidth)
 
       // Footer with generation timestamp
       renderFooter(doc, pageWidth)

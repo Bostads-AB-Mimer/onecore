@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CheckCircle2 } from 'lucide-react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
+import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
 import { Separator } from '@/shared/ui/Separator'
 import { Skeleton } from '@/shared/ui/Skeleton'
@@ -16,6 +18,7 @@ import { useRoomComponents } from '../hooks/useRoomComponents'
 import {
   deriveRoomIsHandled,
   emptyInspectionComponent,
+  getFetchedComponentLabel,
 } from '../lib/inspectionComponent'
 import { AddSurfaceComponentMenu } from './AddSurfaceComponentMenu'
 import { ComponentDetailSheet } from './ComponentDetailSheet'
@@ -65,6 +68,9 @@ interface RoomInspectionEditorProps {
     label: string,
     value: CostResponsibility
   ) => void
+  onMarkRoomNoRemarks: (
+    components: ReadonlyArray<{ id: string; label: string }>
+  ) => void
   onRoomHandledChange: (isHandled: boolean) => void
 }
 
@@ -81,6 +87,7 @@ export function RoomInspectionEditor({
   onFetchedComponentPhotoAdd,
   onFetchedComponentPhotoRemove,
   onFetchedComponentCostResponsibilityUpdate,
+  onMarkRoomNoRemarks,
   onRoomHandledChange,
 }: RoomInspectionEditorProps) {
   const [openDetail, setOpenDetail] = useState<OpenDetail>(null)
@@ -135,11 +142,31 @@ export function RoomInspectionEditor({
     }
   }, [derivedIsHandled, inspectionData.isHandled, onRoomHandledChange])
 
+  const fetchedComponentRefs = useMemo(
+    () =>
+      (fetchedComponents ?? []).map((component) => ({
+        id: component.id,
+        label: getFetchedComponentLabel(component),
+      })),
+    [fetchedComponents]
+  )
+
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="mb-4 pb-3 border-b border-border">
+        <div className="mb-4 pb-3 border-b border-border flex items-center justify-between gap-3">
           <h3 className="font-semibold text-lg">{room.name}</h3>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onMarkRoomNoRemarks(fetchedComponentRefs)}
+            disabled={isLoading || fetchedComponentRefs.length === 0}
+            className="gap-1.5"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            Utan anmärkningar
+          </Button>
         </div>
 
         {isLoading && (
@@ -158,10 +185,7 @@ export function RoomInspectionEditor({
         <div>
           {(fetchedComponents ?? []).map((component) => {
             const componentId = component.id
-            const label =
-              component.model?.subtype?.subTypeName ||
-              component.model?.modelName ||
-              component.id
+            const label = getFetchedComponentLabel(component)
             const state = getComponentState(componentId, label)
             return (
               <ComponentInspectionCard
@@ -218,10 +242,7 @@ export function RoomInspectionEditor({
 
         {(fetchedComponents ?? []).map((component) => {
           const componentId = component.id
-          const label =
-            component.model?.subtype?.subTypeName ||
-            component.model?.modelName ||
-            component.id
+          const label = getFetchedComponentLabel(component)
           const state = getComponentState(componentId, label)
           const isOpen =
             openDetail?.kind === 'component' && openDetail.id === componentId
