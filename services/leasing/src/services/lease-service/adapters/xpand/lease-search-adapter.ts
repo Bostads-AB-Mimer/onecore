@@ -677,6 +677,90 @@ export const getParkingSpaceTypes = async (): Promise<
 }
 
 /**
+ * Get distinct rental object codes (hyresid) managed by
+ * the given building manager name(s).
+ *
+ * Used by the Tenfast search adapter to post-filter leases
+ * by building manager. Returns Xpand rental object IDs that
+ * match Tenfast's hyresobjekt externalId.
+ */
+export const getRentalObjectCodesByBuildingManager = async (
+  buildingManagers: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('bafen')
+    .innerJoin('babuf', 'babuf.fencode', 'bafen.code')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('bafen.omrade', buildingManagers)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given building code(s).
+ */
+export const getRentalObjectCodesByBuildingCodes = async (
+  buildingCodes: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('babuf.bygcode', buildingCodes)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given area code(s) (område).
+ *
+ * Join chain: babuf → bafst (property) → babya (area)
+ */
+export const getRentalObjectCodesByAreaCodes = async (
+  areaCodes: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .innerJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
+    .innerJoin('babya', 'babya.keybabya', 'bafst.keybabya')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('babya.code', areaCodes)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given district name(s).
+ *
+ * Join chain: babuf → bafen (neighborhood manager, which has district)
+ */
+export const getRentalObjectCodesByDistrictNames = async (
+  districtNames: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .innerJoin('bafen', 'bafen.code', 'babuf.fencode')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('bafen.distrikt', districtNames)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
  * Main search function with pagination
  */
 export const searchLeases = async (

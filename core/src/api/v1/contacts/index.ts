@@ -125,6 +125,61 @@ export const routes = (router: OkapiRouter, config: Config) => {
   )
 
   router.get(
+    '/v1/contacts/by-codes',
+    {
+      summary: 'Get multiple contacts by their contact codes',
+      description:
+        'Fetch a batch of contacts by providing a comma-separated list of contact codes.',
+      tags: ['Contacts'],
+      query: {
+        codes: {
+          description: 'Comma-separated list of contact codes',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: z.object({
+          content: z.array(ContactSchema),
+        }),
+        400: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const codesParam = ctx.query.codes as string | undefined
+
+      if (!codesParam) {
+        const metadata = generateRouteMetadata(ctx)
+        ctx.status = 400
+        ctx.body = { ...metadata }
+        return
+      }
+
+      const codes = codesParam
+        .split(',')
+        .map((c: string) => c.trim())
+        .filter(Boolean)
+      if (codes.length === 0) {
+        const metadata = generateRouteMetadata(ctx)
+        ctx.status = 400
+        ctx.body = { ...metadata }
+        return
+      }
+
+      const result = await contactsAdapter.getByContactCodes(codes)
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: transformContacts(result.data),
+        }
+      } else {
+        const metadata = generateRouteMetadata(ctx)
+        encodeError(ctx, result, metadata)
+      }
+    }
+  )
+
+  router.get(
     '/v1/contacts/:contactCode',
     {
       summary: 'Get a single contact by canonical id (contact code)',

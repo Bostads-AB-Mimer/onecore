@@ -1517,7 +1517,7 @@ export interface paths {
       };
     };
   };
-  "/leases/search-v2": {
+  "/leases/search": {
     /**
      * Search and filter leases
      * @description Search leases with comprehensive filtering options.

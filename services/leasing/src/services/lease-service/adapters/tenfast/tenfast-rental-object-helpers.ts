@@ -56,10 +56,10 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
     }),
     rent: {
       amount: includeVAT
-        ? tenfastRentalObject.hyra
-        : tenfastRentalObject.hyraExcludingVat,
-      vat: includeVAT ? tenfastRentalObject.hyraVat : 0,
-      rows: tenfastRentalObject.hyror.map((hyra) => ({
+        ? (tenfastRentalObject.hyra ?? 0)
+        : (tenfastRentalObject.hyraExcludingVat ?? 0),
+      vat: includeVAT ? (tenfastRentalObject.hyraVat ?? 0) : 0,
+      rows: (tenfastRentalObject.hyror ?? []).map((hyra) => ({
         description: hyra.label || '',
         amount: includeVAT
           ? currency(hyra.amount).add(hyra.vat).value

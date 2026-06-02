@@ -426,10 +426,18 @@ export interface paths {
         query?: {
           /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
           q?: string;
+          /** @description Search by tenant name */
+          name?: string;
+          /** @description Search by rental object address */
+          address?: string;
           /** @description Object types (e.g., residence, parking) */
           objectType?: string[];
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ("0" | "1" | "2" | "3")[];
+          /** @description Contract status filter */
+          status?: ("current" | "active" | "upcoming" | "abouttoend" | "ended" | "pendingsignature" | "preliminaryterminated" | "notsent")[];
+          /** @description Lease type filter */
+          leaseType?: string[];
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[];
           /** @description Minimum start date (YYYY-MM-DD) */
           startDateFrom?: string;
           /** @description Maximum start date (YYYY-MM-DD) */
@@ -448,6 +456,10 @@ export interface paths {
           districtNames?: string[];
           /** @description Building manager names (Kvartersvärd) */
           buildingManager?: string[];
+          /** @description Sort field */
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
+          /** @description Sort direction */
+          sortOrder?: "asc" | "desc";
         };
       };
       responses: {
@@ -1427,20 +1439,81 @@ export interface paths {
       };
     };
   };
+  "/leases/building-managers": {
+    /**
+     * Get all building managers
+     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+     */
+    get: {
+      responses: {
+        /** @description List of building managers */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                  code?: string;
+                  name?: string;
+                  district?: string;
+                }[];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/leases/for-csc": {
+    /**
+     * Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
+     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved upcoming move-ins */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CustomerScoreCardInfoSchema"][];
+              _meta?: Record<string, never>;
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/leases/search": {
     /**
      * Search and filter leases
-     * @description Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+     * @description Search leases with comprehensive filtering options.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          /** @description Free-text search (contract ID, PNR, contact code) */
           q?: string;
-          /** @description Object types (e.g., residence, parking)) */
+          /** @description Search by tenant name */
+          name?: string;
+          /** @description Search by rental object address */
+          address?: string;
+          /** @description Object types (bostad, parkering, lokal, ovrigt) */
           objectType?: string[];
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ("0" | "1" | "2" | "3")[];
+          /** @description Contract status filter */
+          status?: ("current" | "active" | "upcoming" | "abouttoend" | "ended" | "pendingsignature" | "preliminaryterminated" | "notsent")[];
+          /** @description Lease type filter */
+          leaseType?: string[];
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[];
           /** @description Minimum start date (YYYY-MM-DD) */
           startDateFrom?: string;
           /** @description Maximum start date (YYYY-MM-DD) */
@@ -1479,84 +1552,6 @@ export interface paths {
               _links?: components["schemas"]["PaginationLinks"][];
             };
           };
-        };
-        /** @description Invalid query parameters */
-        400: {
-          content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/building-managers": {
-    /**
-     * Get all building managers
-     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
-     */
-    get: {
-      responses: {
-        /** @description List of building managers */
-        200: {
-          content: {
-            "application/json": {
-              content?: {
-                  code?: string;
-                  name?: string;
-                  district?: string;
-                }[];
-            };
-          };
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/search-v2": {
-    /**
-     * Search and filter leases
-     * @description Search leases with comprehensive filtering options.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, PNR, contact code) */
-          q?: string;
-          /** @description Search by tenant name */
-          name?: string;
-          /** @description Search by rental object address */
-          address?: string;
-          /** @description Object types (bostad, parkering, lokal, ovrigt) */
-          objectType?: string[];
-          /** @description Contract status filter */
-          status?: ("current" | "active" | "upcoming" | "abouttoend" | "ended" | "pendingsignature" | "preliminaryterminated" | "notsent")[];
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string;
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string;
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string;
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string;
-          /** @description Page number */
-          page?: number;
-          /** @description Items per page */
-          limit?: number;
-          /** @description Sort field */
-          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
-          /** @description Sort direction */
-          sortOrder?: "asc" | "desc";
-        };
-      };
-      responses: {
-        /** @description Successfully retrieved lease search results with pagination */
-        200: {
-          content: never;
         };
         /** @description Invalid query parameters */
         400: {
@@ -1661,6 +1656,66 @@ export interface paths {
               content?: components["schemas"]["Lease"][];
             };
           };
+        };
+      };
+    };
+  };
+  "/leases/export": {
+    /**
+     * Export leases to Excel
+     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string;
+          /** @description Search by tenant name */
+          name?: string;
+          /** @description Search by rental object address */
+          address?: string;
+          /** @description Object types (e.g., residence, parking) */
+          objectType?: string[];
+          /** @description Contract status filter */
+          status?: string[];
+          /** @description Lease type filter */
+          leaseType?: string[];
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[];
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string;
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string;
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string;
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string;
+          /** @description Property/estate names */
+          property?: string[];
+          /** @description Building codes */
+          buildingCodes?: string[];
+          /** @description Area codes (Område) */
+          areaCodes?: string[];
+          /** @description District names */
+          districtNames?: string[];
+          /** @description Building manager names (Kvartersvärd) */
+          buildingManager?: string[];
+          /** @description Sort field */
+          sortBy?: "leaseStartDate" | "lastDebitDate" | "leaseId" | "address" | "objectType" | "rentalObjectCode";
+          /** @description Sort direction */
+          sortOrder?: "asc" | "desc";
+        };
+      };
+      responses: {
+        /** @description Excel file download */
+        200: {
+          content: {
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
         };
       };
     };
@@ -1788,52 +1843,6 @@ export interface paths {
           content: never;
         };
         /** @description Internal server error. */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/export": {
-    /**
-     * Export leases to Excel
-     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string;
-          /** @description Object types (e.g., residence, parking) */
-          objectType?: string[];
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ("0" | "1" | "2" | "3")[];
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string;
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string;
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string;
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string;
-          /** @description Property/estate names */
-          property?: string[];
-          /** @description Building codes */
-          buildingCodes?: string[];
-          /** @description Area codes (Område) */
-          areaCodes?: string[];
-          /** @description District names */
-          districtNames?: string[];
-          /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[];
-        };
-      };
-      responses: {
-        /** @description Excel file download */
-        200: {
-          content: never;
-        };
-        /** @description Internal server error */
         500: {
           content: never;
         };
@@ -9253,6 +9262,38 @@ export interface paths {
       };
     };
   };
+  "/v1/contacts/by-codes": {
+    /**
+     * Get multiple contacts by their contact codes
+     * @description Fetch a batch of contacts by providing a comma-separated list of contact codes.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Comma-separated list of contact codes */
+          codes: string;
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            "application/json": {
+              content: components["schemas"]["ContactV1"][];
+            };
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          content: {
+            "application/json": {
+              _links?: unknown;
+            };
+          };
+        };
+      };
+    };
+  };
   "/v1/contacts/{contactCode}": {
     /** Get a single contact by canonical id (contact code) */
     get: {
@@ -9563,6 +9604,8 @@ export interface components {
           phone: string | null;
         })[];
       address: string | null;
+      postalCode: string | null;
+      city: string | null;
       /** Format: date-time */
       startDate: string | null;
       /** Format: date-time */
@@ -13444,6 +13487,35 @@ export interface components {
         name: string;
       };
     });
+    CustomerScoreCardInfoSchema: {
+      object_ref_nr: string;
+      division_1011: string;
+      object_real_estate?: string;
+      object_real_estate_year_construction?: number;
+      object_real_estate_year_reconstruction?: number;
+      real_estate_type: string;
+      division_1048: string;
+      division_1242: string;
+      division_1140: string;
+      object_type: string;
+      object_street_1: string;
+      object_zip: string;
+      object_city: string;
+      division_1501: string;
+      respondent_name_first: string;
+      respondent_name_last: string;
+      respondent_email: string;
+      respondent_phone: string;
+      postal_street_1: string;
+      postal_street_2?: string;
+      postal_zip: string;
+      postal_city: string;
+      division_1038: string;
+      division_1037?: string;
+      contract_start_date: string;
+      contract_end_date?: string;
+      contract_type: string;
+    };
   };
   responses: never;
   parameters: never;

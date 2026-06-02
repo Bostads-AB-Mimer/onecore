@@ -23,10 +23,13 @@ const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
   lokal: LeaseType.CommercialTenantContract,
   garage: LeaseType.GarageContract,
   forrad: LeaseType.StorageContract,
+  mark: LeaseType.OtherContract,
   ovrigt: LeaseType.OtherContract,
 }
 
-const mapTenfastTypToLeaseType = (typ: string | undefined): LeaseType => {
+export const mapTenfastTypToLeaseType = (
+  typ: string | undefined
+): LeaseType => {
   if (!typ) return LeaseType.OtherContract
   return TENFAST_TYP_TO_LEASE_TYPE[typ.toLowerCase()] ?? LeaseType.OtherContract
 }
@@ -77,9 +80,9 @@ const mapToOnecoreRentalObject = (
         name: rentalObject.category.label,
       },
       rent: {
-        amount: rentalObject.hyraExcludingVat,
-        vat: rentalObject.hyraVat,
-        rows: rentalObject.hyror.map((row) => ({
+        amount: rentalObject.hyraExcludingVat ?? 0,
+        vat: rentalObject.hyraVat ?? 0,
+        rows: (rentalObject.hyror ?? []).map((row) => ({
           code: row.article ?? '',
           description: row.label ?? '',
           amount: row.amount,

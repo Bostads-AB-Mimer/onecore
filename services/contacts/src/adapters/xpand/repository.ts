@@ -165,7 +165,7 @@ export const xpandContactsRepository = (
       if (codes.length === 0) return []
       const rows = await contactsQuery()
         .withContactCodeIn(codes)
-        .getPage(db.get())
+        .getPage(db.get(), { page: 0, pageSize: codes.length })
       return transformDbContactRows(rows)
     },
 

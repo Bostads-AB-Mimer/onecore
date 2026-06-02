@@ -57,6 +57,16 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       return { ok: false, err: 'unknown', statusCode: response.status }
     },
 
+    async getByContactCodes(
+      codes: string[]
+    ): Promise<AdapterResult<Contact[], 'unknown'>> {
+      const response = await axios<GetContactsResponseBody>(
+        `/contacts/by-codes`,
+        { params: { codes: codes.join(',') } }
+      )
+      return listResponse(response)
+    },
+
     async getByContactCode(
       contactCode: string
     ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {

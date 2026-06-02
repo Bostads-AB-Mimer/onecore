@@ -682,6 +682,7 @@ const getContacts = async (contactCodes: string[]) => {
       'cmadr.adress3 as postalCode',
       'cmadr.adress4 as city',
       'cmeml.cmemlben as emailAddress',
+      'cmtel.cmtelben as phoneNumber',
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
@@ -698,6 +699,13 @@ const getContacts = async (contactCodes: string[]) => {
         xpandDb.raw('1')
       )
     })
+    .leftJoin('cmtel', function () {
+      this.on('cmtel.keycmobj', '=', 'cmctc.keycmobj').andOn(
+        'cmtel.main',
+        '=',
+        xpandDb.raw('1')
+      )
+    })
     // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
     .where(function () {
       this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
@@ -706,9 +714,7 @@ const getContacts = async (contactCodes: string[]) => {
       this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
     })
     .where('cmctc.deletemark', '=', '0')
-    .whereRaw(
-      `cmctc.cmctckod IN (${contactCodes.map((code) => `'${code}'`).join(', ')})`
-    )
+    .whereIn('cmctc.cmctckod', contactCodes)
 
   return rows.map((row: any): Contact => {
     const protectedIdentity = row.protectedIdentity !== null
@@ -732,7 +738,15 @@ const getContacts = async (contactCodes: string[]) => {
         postalCode: row.postalCode,
         city: row.city,
       },
-      phoneNumbers: [],
+      phoneNumbers: row.phoneNumber
+        ? [
+            {
+              phoneNumber: row.phoneNumber,
+              type: '',
+              isMainNumber: true,
+            },
+          ]
+        : [],
       emailAddress:
         process.env.NODE_ENV === 'production'
           ? row.emailAddress == null || protectedIdentity

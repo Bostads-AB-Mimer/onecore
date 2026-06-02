@@ -30,14 +30,21 @@ export function FilterBar({
   return (
     <div className="flex flex-col gap-4">
       {onSearchChange !== undefined && (
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={searchPlaceholder}
-            className="pl-10"
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
+        <div className="w-full">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={searchPlaceholder}
+              className="pl-10"
+              value={searchValue}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1.5 ml-1 h-4">
+            {searchValue && searchValue.length > 0 && searchValue.length < 3
+              ? 'Skriv minst 3 tecken för att söka'
+              : '\u00A0'}
+          </p>
         </div>
       )}
 

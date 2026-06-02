@@ -20,7 +20,7 @@ export const LeaseSearchQueryParamsSchema = z.object({
   // Text search
   q: z.string().optional(),
 
-  // Explicit search fields (used by search-v2)
+  // Explicit search fields (used by search)
   name: z.string().optional(),
   address: z.string().optional(),
 

@@ -25,167 +25,11 @@ import * as propertyManagementAdapter from '../../adapters/property-management-a
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
+import { registerSchema } from '../../utils/openapi'
+
+registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
 export const routes = (router: KoaRouter) => {
-  /**
-   * @swagger
-   * /leases/search:
-   *   get:
-   *     summary: Search and filter leases
-   *     tags:
-   *       - Lease service
-   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
-   *     parameters:
-   *       - in: query
-   *         name: q
-   *         schema:
-   *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
-   *       - in: query
-   *         name: objectType
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Object types (e.g., residence, parking))
-   *       - in: query
-   *         name: status
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *             enum: ['0', '1', '2', '3']
-   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
-   *       - in: query
-   *         name: startDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: startDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum end date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum end date (YYYY-MM-DD)
-   *       - in: query
-   *         name: property
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Property/estate names
-   *       - in: query
-   *         name: buildingCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building codes
-   *       - in: query
-   *         name: areaCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Area codes (Område)
-   *       - in: query
-   *         name: districtNames
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: District names
-   *       - in: query
-   *         name: buildingManager
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building manager names (Kvartersvärd)
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *         description: Page number
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           default: 20
-   *           maximum: 100
-   *         description: Items per page
-   *       - in: query
-   *         name: sortBy
-   *         schema:
-   *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
-   *         description: Sort field
-   *       - in: query
-   *         name: sortOrder
-   *         schema:
-   *           type: string
-   *           enum: [asc, desc]
-   *         description: Sort direction
-   *     responses:
-   *       '200':
-   *         description: Successfully retrieved lease search results with pagination
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/LeaseSearchResult'
-   *                 _meta:
-   *                   $ref: '#/components/schemas/PaginationMeta'
-   *                 _links:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/PaginationLinks'
-   *       '400':
-   *         description: Invalid query parameters
-   *       '500':
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-
-  router.get('/leases/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    try {
-      const result = await leasingAdapter.searchLeases(ctx.query)
-
-      ctx.status = 200
-      ctx.body = result
-    } catch (error: unknown) {
-      logger.error({ error, metadata }, 'Error searching leases')
-      ctx.status = 500
-      ctx.body = {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unknown error occurred during lease search',
-        ...metadata,
-      }
-    }
-  })
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
   /**
    * @swagger
@@ -281,7 +125,7 @@ export const routes = (router: KoaRouter) => {
       if (Number(leaseSearchParams.limit) > 500) leaseSearchParams.limit = '500'
 
       const leaseSearchResult =
-        await leasingAdapter.searchLeasesV2(leaseSearchParams)
+        await leasingAdapter.searchLeases(leaseSearchParams)
 
       if (
         !leaseSearchResult.content ||
@@ -462,7 +306,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/search-v2:
+   * /leases/search:
    *   get:
    *     summary: Search and filter leases
    *     tags:
@@ -500,6 +344,20 @@ export const routes = (router: KoaRouter) => {
    *             enum: [current, active, upcoming, abouttoend, ended, pendingsignature, preliminaryterminated, notsent]
    *         description: Contract status filter
    *       - in: query
+   *         name: leaseType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Lease type filter
+   *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking space type filter
+   *       - in: query
    *         name: startDateFrom
    *         schema:
    *           type: string
@@ -523,6 +381,41 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           format: date
    *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property/estate names
+   *       - in: query
+   *         name: buildingCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building codes
+   *       - in: query
+   *         name: areaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Area codes (Område)
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *       - in: query
+   *         name: buildingManager
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building manager names (Kvartersvärd)
    *       - in: query
    *         name: page
    *         schema:
@@ -551,6 +444,21 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '200':
    *         description: Successfully retrieved lease search results with pagination
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/LeaseSearchResult'
+   *                 _meta:
+   *                   $ref: '#/components/schemas/PaginationMeta'
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/PaginationLinks'
    *       '400':
    *         description: Invalid query parameters
    *       '500':
@@ -558,7 +466,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('/leases/search-v2', async (ctx) => {
+  router.get('/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const parsed = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(ctx.query)
@@ -574,7 +482,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.searchLeasesV2(ctx.query)
+      const result = await leasingAdapter.searchLeases(ctx.query)
 
       ctx.status = 200
       ctx.body = result
@@ -894,6 +802,168 @@ export const routes = (router: KoaRouter) => {
 
     return { ok: true, data: leases }
   }
+
+  /**
+   * @swagger
+   * /leases/export:
+   *   get:
+   *     summary: Export leases to Excel
+   *     tags:
+   *       - Lease service
+   *     description: Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Search by tenant name
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Search by rental object address
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object types (e.g., residence, parking)
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
+   *       - in: query
+   *         name: leaseType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Lease type filter
+   *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking space type filter
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property/estate names
+   *       - in: query
+   *         name: buildingCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building codes
+   *       - in: query
+   *         name: areaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Area codes (Område)
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *       - in: query
+   *         name: buildingManager
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building manager names (Kvartersvärd)
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *         description: Sort direction
+   *     produces:
+   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   *     responses:
+   *       200:
+   *         description: Excel file download
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await leasingAdapter.exportLeasesToExcel(ctx.query)
+
+      if (!result.ok) {
+        logger.error({ err: result.err, metadata }, 'Lease export failed')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.set('Content-Type', result.data.contentType)
+      ctx.set('Content-Disposition', result.data.contentDisposition)
+      ctx.status = 200
+      ctx.body = result.data.data
+    } catch (error) {
+      logger.error({ error, metadata }, 'Error exporting leases to Excel')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 
   /**
    * @swagger
@@ -1352,126 +1422,4 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody(null, metadata)
     }
   )
-
-  /**
-   * @swagger
-   * /leases/export:
-   *   get:
-   *     summary: Export leases to Excel
-   *     tags:
-   *       - Lease service
-   *     description: Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
-   *     parameters:
-   *       - in: query
-   *         name: q
-   *         schema:
-   *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
-   *       - in: query
-   *         name: objectType
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Object types (e.g., residence, parking)
-   *       - in: query
-   *         name: status
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *             enum: ['0', '1', '2', '3']
-   *         description: Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
-   *       - in: query
-   *         name: startDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: startDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum end date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum end date (YYYY-MM-DD)
-   *       - in: query
-   *         name: property
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Property/estate names
-   *       - in: query
-   *         name: buildingCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building codes
-   *       - in: query
-   *         name: areaCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Area codes (Område)
-   *       - in: query
-   *         name: districtNames
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: District names
-   *       - in: query
-   *         name: buildingManager
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building manager names (Kvartersvärd)
-   *     produces:
-   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-   *     responses:
-   *       200:
-   *         description: Excel file download
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/leases/export', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    try {
-      const result = await leasingAdapter.exportLeasesToExcel(ctx.query)
-
-      if (!result.ok) {
-        logger.error({ err: result.err, metadata }, 'Lease export failed')
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      ctx.set('Content-Type', result.data.contentType)
-      ctx.set('Content-Disposition', result.data.contentDisposition)
-      ctx.status = 200
-      ctx.body = result.data.data
-    } catch (error) {
-      logger.error({ error, metadata }, 'Error exporting leases to Excel')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
 }

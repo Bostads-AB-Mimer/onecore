@@ -1,5 +1,5 @@
 import { Context } from 'koa'
-import { Lease, leasing } from '@onecore/types'
+import { Lease, leasing, LeaseStatus, LeaseType } from '@onecore/types'
 import {
   PaginatedResponse,
   buildPaginationLinks,
@@ -11,10 +11,301 @@ import * as tenfastApi from './tenfast-api'
 import { TenfastLeaseSchema } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../types'
-import { mapToOnecoreLease } from '../../helpers/tenfast'
+import {
+  mapTenfastTypToLeaseType,
+  calculateLeaseStatus,
+} from '../../helpers/tenfast'
+import {
+  getRentalObjectCodesByBuildingManager,
+  getRentalObjectCodesByBuildingCodes,
+  getRentalObjectCodesByAreaCodes,
+  getRentalObjectCodesByDistrictNames,
+} from '../xpand/lease-search-adapter'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
+
+/**
+ * Lightweight lease type for data from the batch-get endpoint.
+ * The batch-get response shape differs from the search endpoint,
+ * so we extract only the fields we need instead of using TenfastLeaseSchema.
+ */
+interface BatchGetTenant {
+  externalId: string
+  displayName: string
+  name?: { first: string; last: string }
+  idbeteckning: string
+}
+
+interface BatchGetRentalObject {
+  externalId: string
+  typ?: string
+  postadress?: string
+  stadsdel?: string
+  fastighet?: { fastighetsbeteckning: string; stadsdel?: string }
+  kvm?: number
+}
+
+interface BatchGetLease {
+  externalId: string
+  startDate: Date
+  endDate?: Date
+  stage: string
+  signedAt?: Date
+  uppsagningstid: string
+  cancellation: {
+    cancelled: boolean
+    cancelledByType?: string
+    handledAt?: Date
+    preferredMoveOutDate?: Date
+  }
+  hyror: Array<{
+    _id: string
+    amount: number
+    vat: number
+    label: string
+    article: string
+    from?: Lease['rentRows'][number]['from']
+    to?: Lease['rentRows'][number]['to']
+  }>
+  tenants: BatchGetTenant[]
+  rentalObjects: BatchGetRentalObject[]
+}
+
+/** Raw shapes from Tenfast batch-get response (before transformation) */
+interface RawBatchGetAvtal {
+  externalId?: string
+  startDate?: string
+  endDate?: string
+  stage?: string
+  signedAt?: string
+  uppsagningstid?: string
+  cancellation?: {
+    cancelled?: boolean
+    cancelledByType?: string
+    handledAt?: string
+    preferredMoveOutDate?: string
+  }
+  hyror?: Partial<BatchGetLease['hyror'][number]>[]
+  hyresgaster?: Partial<BatchGetTenant>[]
+  originalData?: { hyresgaster?: Partial<BatchGetTenant>[] }
+}
+
+interface RawBatchGetRentalObject extends Partial<BatchGetRentalObject> {
+  avtal?: RawBatchGetAvtal[]
+}
+
+/**
+ * Parse raw batch-get rental objects into typed BatchGetLease entries.
+ * Deduplicates by leaseId using the provided seenLeaseIds set.
+ */
+function parseBatchGetResponse(
+  rentalObjects: RawBatchGetRentalObject[],
+  seenLeaseIds: Set<string>
+): BatchGetLease[] {
+  const results: BatchGetLease[] = []
+
+  for (const ro of rentalObjects) {
+    if (!ro.avtal) continue
+
+    for (const raw of ro.avtal) {
+      const leaseId = raw.externalId
+      if (!leaseId || seenLeaseIds.has(leaseId)) continue
+      seenLeaseIds.add(leaseId)
+
+      const tenants = raw.originalData?.hyresgaster ?? raw.hyresgaster ?? []
+
+      results.push({
+        externalId: leaseId,
+        startDate: raw.startDate ? new Date(raw.startDate) : new Date(),
+        endDate: raw.endDate ? new Date(raw.endDate) : undefined,
+        stage: raw.stage ?? 'active',
+        signedAt: raw.signedAt ? new Date(raw.signedAt) : undefined,
+        uppsagningstid: raw.uppsagningstid ?? '',
+        cancellation: {
+          cancelled: raw.cancellation?.cancelled ?? false,
+          cancelledByType: raw.cancellation?.cancelledByType,
+          handledAt: raw.cancellation?.handledAt
+            ? new Date(raw.cancellation.handledAt)
+            : undefined,
+          preferredMoveOutDate: raw.cancellation?.preferredMoveOutDate
+            ? new Date(raw.cancellation.preferredMoveOutDate)
+            : undefined,
+        },
+        hyror: (raw.hyror ?? []).map((r) => ({
+          _id: r._id ?? '',
+          amount: r.amount ?? 0,
+          vat: r.vat ?? 0,
+          label: r.label ?? '',
+          article: r.article ?? '',
+          from: r.from,
+          to: r.to,
+        })),
+        tenants: tenants.map((t) => ({
+          externalId: t.externalId ?? '',
+          displayName: t.displayName ?? '',
+          name: t.name,
+          idbeteckning: t.idbeteckning ?? '',
+        })),
+        rentalObjects: [
+          {
+            externalId: ro.externalId ?? '',
+            typ: ro.typ,
+            postadress: ro.postadress,
+            stadsdel: ro.stadsdel,
+            fastighet: ro.fastighet
+              ? {
+                  fastighetsbeteckning: ro.fastighet.fastighetsbeteckning ?? '',
+                  stadsdel: ro.fastighet.stadsdel,
+                }
+              : undefined,
+            kvm: ro.kvm,
+          },
+        ],
+      })
+    }
+  }
+
+  return results
+}
+
+/** Map a batch-get lease to a onecore Lease */
+function mapBatchGetLeaseToOnecoreLease(lease: BatchGetLease): Lease {
+  const ro = lease.rentalObjects[0]
+  const stadsdel = ro?.stadsdel ?? ro?.fastighet?.stadsdel
+
+  const stageToStatus: Record<string, LeaseStatus> = {
+    active: LeaseStatus.Current,
+    upcoming: LeaseStatus.Upcoming,
+    terminationScheduled: LeaseStatus.AboutToEnd,
+    archived: LeaseStatus.Ended,
+    terminated: LeaseStatus.Ended,
+    signingInProgress: LeaseStatus.PendingSignature,
+    preTermination: LeaseStatus.PreliminaryTerminated,
+    draft: LeaseStatus.NotSent,
+  }
+
+  return {
+    leaseId: lease.externalId,
+    leaseNumber: lease.externalId.split('/')[1],
+    leaseStartDate: lease.startDate,
+    leaseEndDate: lease.endDate,
+    status: stageToStatus[lease.stage] ?? LeaseStatus.Ended,
+    noticeGivenBy: lease.cancellation.cancelledByType,
+    noticeDate: lease.cancellation.handledAt,
+    noticeTimeTenant: lease.uppsagningstid,
+    preferredMoveOutDate: lease.cancellation.preferredMoveOutDate,
+    terminationDate: lease.cancellation.handledAt,
+    contractDate: lease.signedAt,
+    lastDebitDate: lease.endDate,
+    approvalDate: lease.signedAt,
+    residentialArea: stadsdel
+      ? { code: stadsdel, caption: stadsdel }
+      : undefined,
+    tenantContactIds: lease.tenants.map((t) => t.externalId),
+    tenants: undefined,
+    rentalPropertyId: ro?.externalId ?? 'missing',
+    rentalObject: ro
+      ? {
+          rentalObjectCode: ro.externalId,
+          address: ro.postadress ?? '',
+          residentialAreaCaption: ro.stadsdel ?? '',
+          residentialAreaCode: ro.stadsdel ?? '',
+          objectTypeCaption: ro.typ ?? '',
+          objectTypeCode: ro.typ ?? '',
+          propertyCaption: ro.fastighet?.fastighetsbeteckning,
+        }
+      : undefined,
+    type: mapTenfastTypToLeaseType(ro?.typ),
+    rentRows: lease.hyror.map((r) => ({
+      id: r._id,
+      amount: r.amount,
+      vat: r.vat,
+      label: r.label,
+      articleId: r.article,
+      from: r.from,
+      to: r.to,
+    })),
+  }
+}
+
+/** Map Tenfast typ to Swedish label (matching Xpand's objectTypeCode output) */
+const TENFAST_TYP_TO_LABEL: Record<string, string> = {
+  bostad: 'Bostad',
+  parkering: 'Parkering',
+  lokal: 'Lokal',
+  ovrigt: 'Övrigt',
+  forrad: 'Förråd',
+}
+
+/** Build a LeaseSearchResult from a TenfastLease */
+function mapTenfastLeaseToSearchResult(
+  lease: TenfastLease
+): leasing.v1.LeaseSearchResult {
+  const ro = lease.hyresobjekt[0]
+  const contacts: leasing.v1.ContactInfo[] = lease.hyresgaster.map((t) => ({
+    name: t.displayName || `${t.name.first} ${t.name.last}`,
+    contactCode: t.externalId,
+    email: null,
+    phone: null,
+  }))
+
+  return {
+    leaseId: lease.externalId,
+    objectTypeCode: TENFAST_TYP_TO_LABEL[ro?.typ ?? ''] ?? ro?.typ ?? '',
+    leaseType: mapTenfastTypToLeaseType(ro?.typ),
+    contacts,
+    address: ro?.postadress ?? null,
+    rentalObjectCode: ro?.externalId ?? null,
+    postalCode: null,
+    city: null,
+    property: ro?.fastighet?.fastighetsbeteckning ?? null,
+    districtName: ro?.stadsdel ?? ro?.fastighet?.stadsdel ?? null,
+    startDate: lease.startDate ?? null,
+    lastDebitDate: lease.endDate ?? null,
+    status: calculateLeaseStatus(lease),
+  }
+}
+
+/** Build a LeaseSearchResult from a BatchGetLease */
+function mapBatchGetLeaseToSearchResult(
+  lease: BatchGetLease
+): leasing.v1.LeaseSearchResult {
+  const ro = lease.rentalObjects[0]
+  const stageToStatus: Record<string, LeaseStatus> = {
+    active: LeaseStatus.Current,
+    upcoming: LeaseStatus.Upcoming,
+    terminationScheduled: LeaseStatus.AboutToEnd,
+    archived: LeaseStatus.Ended,
+    terminated: LeaseStatus.Ended,
+    signingInProgress: LeaseStatus.PendingSignature,
+    preTermination: LeaseStatus.PreliminaryTerminated,
+    draft: LeaseStatus.NotSent,
+  }
+
+  const contacts: leasing.v1.ContactInfo[] = lease.tenants.map((t) => ({
+    name: t.displayName || (t.name ? `${t.name.first} ${t.name.last}` : ''),
+    contactCode: t.externalId,
+    email: null,
+    phone: null,
+  }))
+
+  return {
+    leaseId: lease.externalId,
+    objectTypeCode: TENFAST_TYP_TO_LABEL[ro?.typ ?? ''] ?? ro?.typ ?? '',
+    leaseType: mapTenfastTypToLeaseType(ro?.typ),
+    contacts,
+    address: ro?.postadress ?? null,
+    rentalObjectCode: ro?.externalId ?? null,
+    postalCode: null,
+    city: null,
+    property: ro?.fastighet?.fastighetsbeteckning ?? null,
+    districtName: ro?.stadsdel ?? ro?.fastighet?.stadsdel ?? null,
+    startDate: lease.startDate ?? null,
+    lastDebitDate: lease.endDate ?? null,
+    status: stageToStatus[lease.stage] ?? LeaseStatus.Ended,
+  }
+}
 
 /**
  * Uses the Tenfast search endpoint: GET /v1/hyresvard/avtal/search
@@ -33,8 +324,20 @@ const OBJECT_TYPE_TO_TENFAST_TYP: Record<string, string> = {
   bostad: 'bostad',
   parkering: 'parkering',
   lokal: 'lokal',
-  ovrigt: 'ovrigt',
-  forrad: 'forrad',
+}
+
+// UI param value → LeaseType enum values that match.
+// 'ovrigt' is a catch-all for anything not bostad/parkering/lokal.
+const KNOWN_NON_OVRIGT_TYPES = new Set([
+  LeaseType.HousingContract,
+  LeaseType.ParkingSpaceContract,
+  LeaseType.CommercialTenantContract,
+])
+
+const OBJECT_TYPE_PARAM_TO_LEASE_TYPES: Record<string, LeaseType[]> = {
+  bostad: [LeaseType.HousingContract],
+  parkering: [LeaseType.ParkingSpaceContract],
+  lokal: [LeaseType.CommercialTenantContract],
 }
 
 const STATUS_TO_TENFAST_STAGE: Record<string, string> = {
@@ -46,6 +349,130 @@ const STATUS_TO_TENFAST_STAGE: Record<string, string> = {
   pendingsignature: 'signingInProgress',
   preliminaryterminated: 'preTermination',
   notsent: 'draft',
+}
+
+const STATUS_PARAM_TO_LEASE_STATUS: Record<string, LeaseStatus> = {
+  current: LeaseStatus.Current,
+  active: LeaseStatus.Current,
+  upcoming: LeaseStatus.Upcoming,
+  abouttoend: LeaseStatus.AboutToEnd,
+  ended: LeaseStatus.Ended,
+  pendingsignature: LeaseStatus.PendingSignature,
+  preliminaryterminated: LeaseStatus.PreliminaryTerminated,
+  notsent: LeaseStatus.NotSent,
+}
+
+/**
+ * Apply all search/filter params locally on mapped leases.
+ * Used when leases come from batch-get (building manager path) instead of
+ * the search endpoint, since batch-get doesn't support query filters.
+ */
+function applyLocalFilters(
+  leases: Lease[],
+  batchLeases: BatchGetLease[],
+  params: leasing.v1.LeaseSearchQueryParams
+): Lease[] {
+  const batchByLeaseId = new Map<string, BatchGetLease>()
+  for (const bl of batchLeases) {
+    batchByLeaseId.set(bl.externalId, bl)
+  }
+
+  return leases.filter((lease) => {
+    const bl = batchByLeaseId.get(lease.leaseId)
+
+    // Status filter
+    if (params.status && params.status.length > 0) {
+      const allowedStatuses = new Set(
+        params.status
+          .map((s) => STATUS_PARAM_TO_LEASE_STATUS[s.toLowerCase()])
+          .filter((s) => s !== undefined)
+      )
+      if (!allowedStatuses.has(lease.status)) return false
+    }
+
+    // Object type filter
+    if (params.objectType && params.objectType.length > 0) {
+      const paramTypes = params.objectType.map((t) => t.toLowerCase())
+      const includesOvrigt = paramTypes.includes('ovrigt')
+      const allowedTypes = new Set(
+        paramTypes.flatMap((t) => OBJECT_TYPE_PARAM_TO_LEASE_TYPES[t] ?? [])
+      )
+
+      const leaseType = lease.type
+      if (leaseType === undefined) return false
+
+      // Match if lease type is in the allowed set, or if 'ovrigt' is
+      // selected and the type isn't one of the known non-övrigt types
+      const matches =
+        allowedTypes.has(leaseType) ||
+        (includesOvrigt && !KNOWN_NON_OVRIGT_TYPES.has(leaseType))
+      if (!matches) return false
+    }
+
+    // Free-text search (q)
+    if (params.q && bl) {
+      const q = params.q.toLowerCase().trim()
+      const matchFields = [
+        lease.leaseId,
+        lease.rentalPropertyId,
+        ...bl.tenants.map((t) => t.externalId),
+        ...bl.tenants.map((t) => t.idbeteckning),
+        ...bl.tenants.map((t) =>
+          t.name ? `${t.name.first} ${t.name.last}` : t.displayName
+        ),
+        ...bl.rentalObjects.map((o) => o.postadress ?? ''),
+      ]
+      if (!matchFields.some((f) => f.toLowerCase().includes(q))) return false
+    }
+
+    // Name filter (tenant name)
+    if (params.name && bl) {
+      const name = params.name.toLowerCase().trim()
+      const nameMatch = bl.tenants.some(
+        (t) =>
+          (t.name
+            ? `${t.name.first} ${t.name.last}`.toLowerCase().includes(name)
+            : false) || t.displayName.toLowerCase().includes(name)
+      )
+      if (!nameMatch) return false
+    }
+
+    // Address filter (rental object address)
+    if (params.address && bl) {
+      const addr = params.address.toLowerCase().trim()
+      const addrMatch = bl.rentalObjects.some((o) =>
+        (o.postadress ?? '').toLowerCase().includes(addr)
+      )
+      if (!addrMatch) return false
+    }
+
+    // Property filter (fastighetsbeteckning)
+    if (params.property && params.property.length > 0 && bl) {
+      const propSet = new Set(params.property.map((p) => p.toLowerCase()))
+      const propMatch = bl.rentalObjects.some(
+        (o) =>
+          o.fastighet &&
+          propSet.has(o.fastighet.fastighetsbeteckning.toLowerCase())
+      )
+      if (!propMatch) return false
+    }
+
+    // Date range filters
+    if (params.startDateFrom && lease.leaseStartDate) {
+      if (lease.leaseStartDate < new Date(params.startDateFrom)) return false
+    }
+    if (params.startDateTo && lease.leaseStartDate) {
+      if (lease.leaseStartDate > new Date(params.startDateTo)) return false
+    }
+    if (params.endDateFrom && lease.leaseEndDate) {
+      if (lease.leaseEndDate < new Date(params.endDateFrom)) return false
+    }
+    if (params.endDateTo && lease.leaseEndDate) {
+      if (lease.leaseEndDate > new Date(params.endDateTo)) return false
+    }
+
+    return true
+  })
 }
 
 /**
@@ -70,9 +497,8 @@ export function analyzeSearchTermForApi(q: string): Array<{
     ]
   }
 
-  // Personnummer or digit string
-  const digitsOnly = trimmed.replace(/[\s-]/g, '')
-  if (/^\d+$/.test(digitsOnly)) {
+  // Personnummer with dash: YYMMDD-XXXX or YYYYMMDD-XXXX
+  if (/^\d{6}-\d{4}$/.test(trimmed) || /^\d{8}-\d{4}$/.test(trimmed)) {
     return [
       {
         filterKey: 'filter[hyresgaster][idbeteckning]',
@@ -86,7 +512,33 @@ export function analyzeSearchTermForApi(q: string): Array<{
     return [{ filterKey: 'filter[externalId]', filterValue: trimmed }]
   }
 
-  return []
+  // Contains dash but not personnummer and not lease ID → contract number prefix
+  if (trimmed.includes('-')) {
+    return [{ filterKey: 'filter[externalId]', filterValue: trimmed }]
+  }
+
+  // Pure digits, 4+ → personnummer (last 4 digits or full without dash)
+  if (/^\d{4,}$/.test(trimmed)) {
+    return [
+      {
+        filterKey: 'filter[hyresgaster][idbeteckning]',
+        filterValue: trimmed,
+      },
+    ]
+  }
+
+  // Short numeric (1-3 digits): contract number prefix
+  if (/^\d{1,3}$/.test(trimmed)) {
+    return [{ filterKey: 'filter[externalId]', filterValue: trimmed }]
+  }
+
+  // Default: treat as address search
+  return [
+    {
+      filterKey: 'filter[hyresobjekt][postadress]',
+      filterValue: trimmed,
+    },
+  ]
 }
 
 export function buildTenfastQueryParams(
@@ -126,7 +578,7 @@ export function buildTenfastQueryParams(
   if (params.objectType && params.objectType.length > 0) {
     const tenfastTypes = params.objectType
       .map((t) => OBJECT_TYPE_TO_TENFAST_TYP[t.toLowerCase()])
-      .filter(Boolean)
+      .filter((t) => t && t !== 'ovrigt') // 'ovrigt' not supported by Tenfast search API
     if (tenfastTypes.length > 0) {
       query.set('filter[hyresobjekt][typ]', tenfastTypes.join(','))
     }
@@ -148,13 +600,156 @@ export function buildTenfastQueryParams(
     )
   }
 
-  if (params.districtNames && params.districtNames.length > 0) {
-    query.set('filter[hyresobjekt][stadsdel]', params.districtNames.join(','))
-  }
-
   query.set('limit', String(params.limit ?? 20))
 
   return query
+}
+
+/**
+ * Fetches all leases matching params using cursor-based pagination.
+ * Unlike fetchLeases (which re-traverses from page 1 each call),
+ * this function maintains cursor state internally — O(n) API calls total.
+ * Used for export to avoid O(n²) repeated cursor traversal.
+ */
+export async function fetchAllLeasesForExport(
+  params: leasing.v1.LeaseSearchQueryParams,
+  _ctx: Context
+): Promise<leasing.v1.LeaseSearchResult[]> {
+  // Check if batch-get path is needed (Xpand-bridged filters)
+  const needsBatchGet =
+    (params.buildingManager && params.buildingManager.length > 0) ||
+    (params.buildingCodes && params.buildingCodes.length > 0) ||
+    (params.areaCodes && params.areaCodes.length > 0) ||
+    (params.districtNames && params.districtNames.length > 0)
+
+  if (needsBatchGet) {
+    return fetchAllLeasesForExportViaBatchGet(params)
+  }
+
+  const queryParams = buildTenfastQueryParams({ ...params, limit: 500 })
+  // Tenfast API expects literal brackets and commas, not URL-encoded
+  const queryString = queryParams
+    .toString()
+    .replace(/%5B/gi, '[')
+    .replace(/%5D/gi, ']')
+    .replace(/%2C/gi, ',')
+  const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${queryString}`
+
+  let cursor = ''
+  const allLeases: TenfastLease[] = []
+  const MAX_PAGES = 50 // safety limit: 50 * 500 = 25,000 max
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const url = cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl
+    const res = await tenfastApi.request({ method: 'get', url })
+
+    if (res.status !== 200) {
+      logger.error(
+        { status: res.status },
+        'fetchAllLeasesForExport: request failed'
+      )
+      break
+    }
+
+    const parsed = TenfastLeaseSchema.array().safeParse(res.data.records)
+    if (!parsed.success) {
+      logger.error(
+        { error: parsed.error.issues.slice(0, 3) },
+        'fetchAllLeasesForExport: parse error, skipping page'
+      )
+      break
+    }
+
+    allLeases.push(...parsed.data)
+    cursor = res.data.next ?? ''
+
+    if (!cursor || parsed.data.length === 0) break
+  }
+
+  return allLeases.map((l) => mapTenfastLeaseToSearchResult(l))
+}
+
+/**
+ * Export path for Xpand-bridged filters (buildingManager, buildingCodes, etc.).
+ * Fetches ALL matching rental object codes from Xpand, then batch-gets all
+ * leases from Tenfast and applies local filters.
+ */
+async function fetchAllLeasesForExportViaBatchGet(
+  params: leasing.v1.LeaseSearchQueryParams
+): Promise<leasing.v1.LeaseSearchResult[]> {
+  // Get rental object codes from Xpand for each active filter
+  const codeSetPromises: Promise<string[]>[] = []
+  const filterLabels: string[] = []
+
+  if (params.buildingManager && params.buildingManager.length > 0) {
+    codeSetPromises.push(
+      getRentalObjectCodesByBuildingManager(params.buildingManager)
+    )
+    filterLabels.push('buildingManager')
+  }
+  if (params.buildingCodes && params.buildingCodes.length > 0) {
+    codeSetPromises.push(
+      getRentalObjectCodesByBuildingCodes(params.buildingCodes)
+    )
+    filterLabels.push('buildingCodes')
+  }
+  if (params.areaCodes && params.areaCodes.length > 0) {
+    codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
+    filterLabels.push('areaCodes')
+  }
+  if (params.districtNames && params.districtNames.length > 0) {
+    codeSetPromises.push(
+      getRentalObjectCodesByDistrictNames(params.districtNames)
+    )
+    filterLabels.push('districtNames')
+  }
+
+  const codeSets = await Promise.all(codeSetPromises)
+
+  // Intersect all code sets
+  let codes = codeSets[0]
+  for (let i = 1; i < codeSets.length; i++) {
+    const set = new Set(codeSets[i])
+    codes = codes.filter((c) => set.has(c))
+  }
+
+  logger.info(
+    { filters: filterLabels, intersectedCount: codes.length },
+    'fetchAllLeasesForExportViaBatchGet: codes from Xpand'
+  )
+
+  if (codes.length === 0) return []
+
+  // Batch-get all leases from Tenfast
+  const batchSize = 500
+  const seenLeaseIds = new Set<string>()
+  const batchLeases: BatchGetLease[] = []
+
+  for (let i = 0; i < codes.length; i += batchSize) {
+    const batch = codes.slice(i, i + batchSize)
+    const res = await tenfastApi.request<RawBatchGetRentalObject[]>({
+      method: 'post',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
+      data: { externalIds: batch },
+    })
+
+    if (res.status !== 200 && res.status !== 201) continue
+
+    const parsed = parseBatchGetResponse(res.data, seenLeaseIds)
+    batchLeases.push(...parsed)
+  }
+
+  // Apply local filters (status, objectType, etc.)
+  let leases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
+  leases = applyLocalFilters(leases, batchLeases, params)
+
+  const batchLeaseMap = new Map(batchLeases.map((bl) => [bl.externalId, bl]))
+  return leases
+    .map((l) => {
+      const bl = batchLeaseMap.get(l.leaseId)
+      return bl ? mapBatchGetLeaseToSearchResult(bl) : undefined
+    })
+    .filter((r): r is leasing.v1.LeaseSearchResult => r !== undefined)
 }
 
 export async function fetchLeases(
@@ -195,15 +790,13 @@ export async function fetchLeases(
         return { ok: false, err: 'unknown' }
       }
 
-      // Tenfast wraps results in { records: [...], prev, next, totalCount }
-      const isWrapped = !Array.isArray(res.data) && res.data?.records
-      records = isWrapped ? res.data.records : res.data
+      records = res.data.records
 
       if (currentPage === 1) {
-        totalCount = isWrapped ? (res.data.totalCount ?? 0) : 0
+        totalCount = res.data.totalCount ?? 0
       }
 
-      cursor = isWrapped ? (res.data.next ?? '') : ''
+      cursor = res.data.next ?? ''
 
       // If there are no more pages and we haven't reached the target yet,
       // the requested page is beyond the available data.
@@ -239,21 +832,21 @@ export async function fetchLeases(
 }
 
 const applySorting = (
-  results: Lease[],
+  results: leasing.v1.LeaseSearchResult[],
   params: leasing.v1.LeaseSearchQueryParams
-): Lease[] => {
+): leasing.v1.LeaseSearchResult[] => {
   const sortBy = params.sortBy || 'leaseStartDate'
   const sortOrder = params.sortOrder || 'desc'
   const multiplier = sortOrder === 'asc' ? 1 : -1
 
   return [...results].sort((a, b) => {
-    let aVal: Date | string | undefined
-    let bVal: Date | string | undefined
+    let aVal: Date | string | null | undefined
+    let bVal: Date | string | null | undefined
 
     switch (sortBy) {
       case 'leaseStartDate':
-        aVal = a.leaseStartDate
-        bVal = b.leaseStartDate
+        aVal = a.startDate
+        bVal = b.startDate
         break
       case 'lastDebitDate':
         aVal = a.lastDebitDate
@@ -264,14 +857,18 @@ const applySorting = (
         bVal = b.leaseId
         break
       default:
-        aVal = a.leaseStartDate
-        bVal = b.leaseStartDate
+        aVal = a.startDate
+        bVal = b.startDate
     }
 
-    // Handle undefined: push to end regardless of sort order
-    if (aVal === undefined && bVal === undefined) return 0
-    if (aVal === undefined) return 1
-    if (bVal === undefined) return -1
+    // Handle null/undefined: push to end regardless of sort order
+    if (
+      (aVal === undefined || aVal === null) &&
+      (bVal === undefined || bVal === null)
+    )
+      return 0
+    if (aVal === undefined || aVal === null) return 1
+    if (bVal === undefined || bVal === null) return -1
 
     if (aVal instanceof Date && bVal instanceof Date) {
       return (aVal.getTime() - bVal.getTime()) * multiplier
@@ -284,11 +881,66 @@ const applySorting = (
 export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
-): Promise<PaginatedResponse<Lease>> => {
-  // Unrecognized q patterns return empty — use `name`/`address` params for text search
-  if (params.q) {
-    const filters = analyzeSearchTermForApi(params.q)
-    if (filters.length === 0) {
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  // Bridge Xpand-only filters via batch-get:
+  // buildingManager, buildingCodes, areaCodes, districtNames
+  // 1. Get rental object codes from Xpand for each active filter
+  // 2. Intersect the code sets (all filters must match)
+  // 3. Call Tenfast batch-get with those codes
+  // 4. Map, apply remaining filters, sort and paginate locally
+  const needsBatchGet =
+    (params.buildingManager && params.buildingManager.length > 0) ||
+    (params.buildingCodes && params.buildingCodes.length > 0) ||
+    (params.areaCodes && params.areaCodes.length > 0) ||
+    (params.districtNames && params.districtNames.length > 0)
+
+  if (needsBatchGet) {
+    // Fetch rental object code sets in parallel for each active filter
+    const codeSetPromises: Promise<string[]>[] = []
+    const filterLabels: string[] = []
+
+    if (params.buildingManager && params.buildingManager.length > 0) {
+      codeSetPromises.push(
+        getRentalObjectCodesByBuildingManager(params.buildingManager)
+      )
+      filterLabels.push('buildingManager')
+    }
+    if (params.buildingCodes && params.buildingCodes.length > 0) {
+      codeSetPromises.push(
+        getRentalObjectCodesByBuildingCodes(params.buildingCodes)
+      )
+      filterLabels.push('buildingCodes')
+    }
+    if (params.areaCodes && params.areaCodes.length > 0) {
+      codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
+      filterLabels.push('areaCodes')
+    }
+    if (params.districtNames && params.districtNames.length > 0) {
+      codeSetPromises.push(
+        getRentalObjectCodesByDistrictNames(params.districtNames)
+      )
+      filterLabels.push('districtNames')
+    }
+
+    const codeSets = await Promise.all(codeSetPromises)
+
+    // Intersect all code sets — a rental object must match ALL active filters
+    let codes = codeSets[0]
+    for (let i = 1; i < codeSets.length; i++) {
+      const set = new Set(codeSets[i])
+      codes = codes.filter((c) => set.has(c))
+    }
+
+    logger.info(
+      {
+        filters: filterLabels,
+        codeCounts: codeSets.map((s, i) => `${filterLabels[i]}=${s.length}`),
+        intersectedCount: codes.length,
+      },
+      'Xpand-bridged filters: rental object codes from Xpand'
+    )
+
+    if (codes.length === 0) {
       return {
         content: [],
         _meta: {
@@ -300,8 +952,109 @@ export const searchLeases = async (
         _links: [],
       }
     }
+
+    // Lazy batch-get: fetch batches one at a time until we have enough
+    // results for the requested page. This avoids downloading ALL data
+    // when the code set is large (e.g., 10,000 codes for broad district filters).
+    const batchSize = 500
+    const page = params.page ?? 1
+    const limit = params.limit ?? 20
+    const needed = page * limit // total results needed to fill through current page
+
+    const seenLeaseIds = new Set<string>()
+    const batchLeases: BatchGetLease[] = []
+    let batchesFetched = 0
+    const totalBatches = Math.ceil(codes.length / batchSize)
+
+    for (let i = 0; i < codes.length; i += batchSize) {
+      const batch = codes.slice(i, i + batchSize)
+
+      const res = await tenfastApi.request<RawBatchGetRentalObject[]>({
+        method: 'post',
+        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
+        data: { externalIds: batch },
+      })
+
+      batchesFetched++
+
+      if (res.status !== 200 && res.status !== 201) {
+        logger.error(
+          { status: res.status, data: res.data },
+          'Xpand-bridged filters: batch-get failed'
+        )
+        continue
+      }
+
+      const rentalObjects = res.data
+
+      const parsed = parseBatchGetResponse(rentalObjects, seenLeaseIds)
+      batchLeases.push(...parsed)
+
+      // Apply local filters to check if we have enough results
+      const currentLeases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
+      const filtered = applyLocalFilters(currentLeases, batchLeases, params)
+
+      // Stop fetching if we have enough to fill the requested page
+      if (filtered.length >= needed) {
+        break
+      }
+    }
+
+    let leases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
+    leases = applyLocalFilters(leases, batchLeases, params)
+
+    // Estimate total count based on hit rate from fetched batches
+    const hitRate =
+      batchesFetched < totalBatches && leases.length > 0
+        ? leases.length / (batchesFetched * batchSize)
+        : 0
+    const estimatedTotal =
+      batchesFetched >= totalBatches
+        ? leases.length
+        : Math.round(hitRate * codes.length)
+    const totalCount =
+      batchesFetched >= totalBatches ? leases.length : estimatedTotal
+
+    // Map filtered leases to LeaseSearchResult
+    const batchLeaseMap = new Map(batchLeases.map((bl) => [bl.externalId, bl]))
+    const searchResults = leases
+      .map((l) => {
+        const bl = batchLeaseMap.get(l.leaseId)
+        return bl ? mapBatchGetLeaseToSearchResult(bl) : undefined
+      })
+      .filter((r): r is leasing.v1.LeaseSearchResult => r !== undefined)
+
+    logger.info(
+      {
+        batchesFetched,
+        totalBatches,
+        uniqueLeases: seenLeaseIds.size,
+        afterFilters: searchResults.length,
+        estimatedTotal: totalCount,
+      },
+      'Xpand-bridged filters: lazy batch-get completed'
+    )
+
+    const sorted = applySorting(searchResults, params)
+    const start = (page - 1) * limit
+    const pageSlice = sorted.slice(start, start + limit)
+    const totalPages = Math.ceil(totalCount / limit)
+
+    return {
+      content: pageSlice,
+      _meta: {
+        totalRecords: totalCount,
+        page,
+        limit,
+        count: pageSlice.length,
+      },
+      _links: buildPaginationLinks(ctx, page, limit, totalPages),
+    }
   }
 
+  // Standard path — no post-filtering, Tenfast handles pagination
+  const page = params.page ?? 1
+  const limit = params.limit ?? 20
   const leasesResult = await fetchLeases(params)
 
   if (!leasesResult.ok) {
@@ -310,12 +1063,10 @@ export const searchLeases = async (
 
   const { leases: tenfastLeases, totalCount } = leasesResult.data
 
-  // Map and sort within the current page
-  const leases = tenfastLeases.map(mapToOnecoreLease)
-  const sortedResults = applySorting(leases, params)
-
-  const page = params.page ?? 1
-  const limit = params.limit ?? 20
+  const searchResults = tenfastLeases.map((l) =>
+    mapTenfastLeaseToSearchResult(l)
+  )
+  const sortedResults = applySorting(searchResults, params)
   const totalPages = Math.ceil(totalCount / limit)
 
   return {

@@ -401,7 +401,7 @@ describe('leases routes', () => {
 
     it('returns 200 with empty array when no leases found', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([]))
 
       const res = await request(app.callback()).get('/leases/for-csc')
@@ -410,9 +410,9 @@ describe('leases routes', () => {
       expect(res.body.content).toEqual([])
     })
 
-    it('returns 500 if searchLeasesV2 throws', async () => {
+    it('returns 500 if searchLeases throws', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockRejectedValue(new Error('adapter error'))
 
       const res = await request(app.callback()).get('/leases/for-csc')
@@ -420,9 +420,9 @@ describe('leases routes', () => {
       expect(res.status).toBe(500)
     })
 
-    it('calls searchLeasesV2 with objectType bostad and status Current', async () => {
+    it('calls searchLeases with objectType bostad and status Current', async () => {
       const searchSpy = jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([]))
 
       await request(app.callback()).get('/leases/for-csc')
@@ -437,7 +437,7 @@ describe('leases routes', () => {
 
     it('enforces max limit of 500 even if higher value is passed as query param', async () => {
       const searchSpy = jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([]))
 
       await request(app.callback()).get('/leases/for-csc?limit=9999')
@@ -449,7 +449,7 @@ describe('leases routes', () => {
 
     it('filters out lease with no tenantContactIds', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(
           buildPaginatedResponse([
             factory.lease.build({ tenantContactIds: [] }),
@@ -464,7 +464,7 @@ describe('leases routes', () => {
 
     it('filters out lease when contact fetch fails', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([validLease()]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -481,7 +481,7 @@ describe('leases routes', () => {
 
     it('filters out lease when rental property fetch fails', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([validLease()]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -498,7 +498,7 @@ describe('leases routes', () => {
 
     it('filters out lease for contact with protectedIdentity', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([validLease()]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -518,7 +518,7 @@ describe('leases routes', () => {
 
     it('filters out lease for deceased contact', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([validLease()]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -538,7 +538,7 @@ describe('leases routes', () => {
 
     it('filters out lease for emigrated contact', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([validLease()]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -558,7 +558,7 @@ describe('leases routes', () => {
 
     it('filters out lease for contact with noAdvertising', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([validLease()]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -578,7 +578,7 @@ describe('leases routes', () => {
 
     it('filters out lease for company contact (contactCode not starting with P)', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([validLease()]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -598,7 +598,7 @@ describe('leases routes', () => {
 
     it('filters out rental object with test id starting with 000-000', async () => {
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([validLease()]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -622,7 +622,7 @@ describe('leases routes', () => {
       const rentalProperty = validRentalProperty()
 
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([lease]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
@@ -661,7 +661,7 @@ describe('leases routes', () => {
       })
 
       jest
-        .spyOn(tenantLeaseAdapter, 'searchLeasesV2')
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([lease1, lease2]))
       jest
         .spyOn(tenantLeaseAdapter, 'getContactByContactCode')

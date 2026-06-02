@@ -114,7 +114,10 @@ export const createLease = async (
   const rentalObjectResponse = await getRentalObject(rentalObjectCode)
   if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
     return { ok: false, err: 'could-not-find-rental-object' }
-  if (rentalObjectResponse.data.hyror.length === 0)
+  if (
+    !rentalObjectResponse.data.hyror ||
+    rentalObjectResponse.data.hyror.length === 0
+  )
     return { ok: false, err: 'rent-article-is-missing' }
   if (!rentalObjectResponse.data.contractTemplate)
     return { ok: false, err: 'rental-object-has-no-template' }
@@ -216,7 +219,7 @@ export const importLease = async (
       betalningsOffset: '1d',
       betalasForskott: true,
       // this might be changed later to just pass entire rentalObject.hyror
-      hyror: rentalObject.hyror.map(({ _id, ...rest }) => ({
+      hyror: (rentalObject.hyror ?? []).map(({ _id, ...rest }) => ({
         ...rest,
         hyresobjekt: rentalObject._id,
       })),
@@ -813,7 +816,7 @@ function buildLeaseRequestData(
     hyresgaster: [tenant?._id],
     hyresobjekt: [rentalObject._id],
     avtalsbyggare: true,
-    hyror: rentalObject.hyror.map((hyra) => {
+    hyror: (rentalObject.hyror ?? []).map((hyra) => {
       hyra.vat = vat //set vat according to includeVAT for all rent articles
       return hyra
     }),
@@ -931,6 +934,7 @@ export const preliminaryTerminateLease = async (
     PreliminaryTerminationResponse,
     | 'lease-not-found'
     | 'tenant-email-missing'
+    | 'termination-not-required'
     | 'termination-failed'
     | 'unknown'
   >
@@ -1008,6 +1012,7 @@ export const preliminaryTerminateLease = async (
     PreliminaryTerminationResponse,
     | 'lease-not-found'
     | 'tenant-email-missing'
+    | 'termination-not-required'
     | 'termination-failed'
     | 'unknown'
   > {
@@ -1021,6 +1026,17 @@ export const preliminaryTerminateLease = async (
         'Tenant missing valid email address'
       )
       return { ok: false, err: 'tenant-email-missing' }
+    }
+
+    if (
+      errorMessage ===
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.'
+    ) {
+      logger.info(
+        { leaseId, status: response.status },
+        'Lease expires within notice period, no termination required'
+      )
+      return { ok: false, err: 'termination-not-required' }
     }
 
     const errorMap: Record<

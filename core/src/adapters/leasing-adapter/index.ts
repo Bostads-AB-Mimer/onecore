@@ -616,6 +616,7 @@ const preliminaryTerminateLease = async (
     PreliminaryTerminateLeaseResponseData,
     | 'lease-not-found'
     | 'tenant-email-missing'
+    | 'termination-not-required'
     | 'termination-failed'
     | 'unknown'
   >
@@ -646,6 +647,13 @@ const preliminaryTerminateLease = async (
       }
     }
 
+    if (response.status === 400 && errorType === 'termination-not-required') {
+      return {
+        ok: false,
+        err: 'termination-not-required',
+      }
+    }
+
     logger.error(
       { status: response.status, data: response.data },
       'Failed to preliminary terminate lease'
@@ -667,6 +675,13 @@ const preliminaryTerminateLease = async (
         return {
           ok: false,
           err: 'tenant-email-missing',
+        }
+      }
+
+      if (status === 400 && errorType === 'termination-not-required') {
+        return {
+          ok: false,
+          err: 'termination-not-required',
         }
       }
 
@@ -883,7 +898,6 @@ export {
   cancelLeaseHomeInsurance,
   getBuildingManagers,
   searchLeases,
-  searchLeasesV2,
   getHomeInsuranceExport,
 } from './leases'
 

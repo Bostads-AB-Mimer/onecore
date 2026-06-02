@@ -48,10 +48,10 @@ export const TenfastTenantSchema = z.object({
 export const TenfastRentalObjectSchema = z.object({
   _id: z.string(),
   externalId: z.string(),
-  hyra: z.number(), //total hyra inklusive moms
-  hyraVat: z.number(), // total moms pa hyran
-  hyraExcludingVat: z.number(), // hyran exklusive moms
-  hyror: z.array(TenfastInvoiceRowSchema),
+  hyra: z.number().optional(), //total hyra inklusive moms
+  hyraVat: z.number().optional(), // total moms pa hyran
+  hyraExcludingVat: z.number().optional(), // hyran exklusive moms
+  hyror: z.array(TenfastInvoiceRowSchema).optional(),
   contractTemplate: z.string().optional().nullable(),
   postadress: z.string().nullish(),
   stadsdel: z.string().nullish(),
@@ -279,8 +279,8 @@ export const TenfastLeaseSchema = z.object({
     })
   ),
   versions: z.unknown().optional(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
+  createdAt: optionalDateField,
+  updatedAt: optionalDateField,
   startInvoicingFrom: optionalDateField,
   signedAt: optionalDateField, // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
   stage: z.string(),

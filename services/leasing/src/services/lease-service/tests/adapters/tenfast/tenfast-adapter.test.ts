@@ -1073,7 +1073,7 @@ describe(tenfastAdapter.importLease, () => {
       forskottAvisering: '2v',
       betalningsOffset: '1d',
       betalasForskott: true,
-      hyror: mockRentalObject.hyror.map(({ _id, ...rest }) => ({
+      hyror: (mockRentalObject.hyror ?? []).map(({ _id, ...rest }) => ({
         ...rest,
         hyresobjekt: mockRentalObject._id,
       })),

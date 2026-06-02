@@ -21,6 +21,7 @@ export { getPropertyIdentifier } from './lib/property'
 export { sortLeasesByStatus } from './lib/sorting'
 
 // Hooks
+export { useContactEnrichment } from './hooks/useContactEnrichment'
 export { useLeaseFilters } from './hooks/useLeaseFilters'
 export { useLeasesByContactCode } from './hooks/useLeasesByContactCode'
 export { useLeasesByRentalProperty } from './hooks/useLeasesByRentalProperty'
