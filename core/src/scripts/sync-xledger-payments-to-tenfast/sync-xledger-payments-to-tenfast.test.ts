@@ -191,6 +191,17 @@ describe('syncPayments', () => {
       expect(store.cursor).toBe('cursor-start')
     })
 
+    it('throws when Xledger returns payments but no cursor', async () => {
+      nock(ECONOMY_URL)
+        .get('/payments/since')
+        .query({ after: 'cursor-start' })
+        .reply(200, makePaymentsResponse({ lastCursor: null }))
+
+      await expect(syncPayments(makeStore('cursor-start'))).rejects.toThrow(
+        'Xledger returned payments but no cursor'
+      )
+    })
+
     it('throws when fetching payments from Xledger fails', async () => {
       nock(ECONOMY_URL)
         .get('/payments/since')

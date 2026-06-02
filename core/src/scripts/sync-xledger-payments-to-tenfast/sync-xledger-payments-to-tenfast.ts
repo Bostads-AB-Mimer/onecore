@@ -73,7 +73,7 @@ async function notifySyncFailure(err: unknown) {
 
   if (!result.ok) {
     logger.error(
-      { statusCode: result.statusCode },
+      { err: result.err, statusCode: result.statusCode },
       'failed to send sync failure notification'
     )
   }
@@ -111,6 +111,12 @@ async function syncPayments(store: CursorStore = fileCursorStore) {
 
   const { events: payments, lastCursor: newCursor } = paymentsResult.data
   logger.info({ count: payments.length }, 'payments fetched from Xledger')
+
+  if (payments.length > 0 && !newCursor) {
+    throw new Error(
+      'Xledger returned payments but no cursor — cannot advance state safely'
+    )
+  }
 
   if (payments.length === 0) {
     logger.info('no new payments')
