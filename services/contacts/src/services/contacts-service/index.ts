@@ -2,6 +2,7 @@ import z from 'zod'
 import { OkapiRouter } from 'koa-okapi-router'
 import {
   generateRouteMetadata,
+  makeSuccessResponseBody,
   buildPaginatedResponse,
   parsePaginationParams,
 } from '@onecore/utilities'
@@ -159,16 +160,7 @@ export const routes = (
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const codesParam = ctx.query.codes as string | undefined
-
-      if (!codesParam) {
-        ctx.status = 400
-        ctx.body = {
-          error: 'Missing required query parameter: codes',
-          ...metadata,
-        }
-        return
-      }
+      const codesParam = ctx.query.codes
 
       const codes = codesParam
         .split(',')
@@ -186,10 +178,7 @@ export const routes = (
       const contacts = await contactsRepository.getByContactCodes(codes)
 
       ctx.status = 200
-      ctx.body = {
-        content: { contacts },
-        ...metadata,
-      }
+      ctx.body = makeSuccessResponseBody({ contacts }, metadata)
     }
   )
 

@@ -6,7 +6,7 @@ import { makeOkapiRouter } from 'koa-okapi-router'
 import { routes } from '../index'
 import * as contactsAdapterModule from '../../../../adapters/contacts-adapter'
 import { Config } from '@/common/config'
-import type { Contact } from '@onecore/contacts/domain'
+import * as factory from '../../../../../test/factories'
 
 jest.mock('../../../../adapters/contacts-adapter')
 
@@ -35,38 +35,6 @@ app.use(koaRouter.routes())
 
 beforeEach(jest.clearAllMocks)
 
-const makeIndividualContact = (code: string): Contact => ({
-  type: 'individual',
-  contactCode: code,
-  contactKey: 'KEY',
-  personal: {
-    nationalId: '199001011234',
-    birthDate: '1990-01-01',
-    firstName: 'Test',
-    lastName: 'Testsson',
-    fullName: 'Test Testsson',
-  },
-  communication: {
-    phoneNumbers: [
-      { phoneNumber: '0701234567', type: 'mobile', isPrimary: true },
-    ],
-    emailAddresses: [
-      { emailAddress: 'test@example.com', type: 'private', isPrimary: true },
-    ],
-    specialAttention: false,
-  },
-  addresses: [
-    {
-      street: 'Testgatan 1',
-      zipCode: '72345',
-      city: 'Västerås',
-      region: null,
-      country: 'SE',
-      full: 'Testgatan 1, 72345 Västerås',
-    },
-  ],
-})
-
 describe('GET /v1/contacts/by-codes', () => {
   it('returns 400 when codes parameter is missing', async () => {
     const res = await request(app.callback()).get('/v1/contacts/by-codes')
@@ -88,9 +56,9 @@ describe('GET /v1/contacts/by-codes', () => {
   })
 
   it('returns 200 with contacts for valid codes', async () => {
-    const contacts: Contact[] = [
-      makeIndividualContact('P100001'),
-      makeIndividualContact('P100002'),
+    const contacts = [
+      factory.contactsServiceContact.build({ contactCode: 'P100001' }),
+      factory.contactsServiceContact.build({ contactCode: 'P100002' }),
     ]
     mockGetByContactCodes.mockResolvedValueOnce({ ok: true, data: contacts })
 
@@ -116,7 +84,7 @@ describe('GET /v1/contacts/by-codes', () => {
   })
 
   it('returns transformed contact shape', async () => {
-    const contact = makeIndividualContact('P100001')
+    const contact = factory.contactsServiceContact.build({ contactCode: 'P100001' })
     mockGetByContactCodes.mockResolvedValueOnce({
       ok: true,
       data: [contact],

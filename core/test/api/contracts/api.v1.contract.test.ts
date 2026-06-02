@@ -62,13 +62,6 @@ describe('Contracts', () => {
       const generatedOpenAPIJSON = apiRouter.openapiJson()
 
       test('contacts/v1 API route schemas - MAY NOT CHANGE', () => {
-        if (process.env.UPDATE_CONTRACTS) {
-          fs.writeFileSync(
-            path.join(__dirname, 'v1/contacts.openapi.json'),
-            JSON.stringify(generatedOpenAPIJSON, null, 2)
-          )
-          return
-        }
         expect(generatedOpenAPIJSON).toEqual(canonicalOpenAPIJSON)
       })
     })
