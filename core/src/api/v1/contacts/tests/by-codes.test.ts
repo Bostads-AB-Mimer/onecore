@@ -84,7 +84,9 @@ describe('GET /v1/contacts/by-codes', () => {
   })
 
   it('returns transformed contact shape', async () => {
-    const contact = factory.contactsServiceContact.build({ contactCode: 'P100001' })
+    const contact = factory.contactsServiceContact.build({
+      contactCode: 'P100001',
+    })
     mockGetByContactCodes.mockResolvedValueOnce({
       ok: true,
       data: [contact],
