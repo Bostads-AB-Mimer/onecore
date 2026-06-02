@@ -383,15 +383,10 @@ export const routes = (router: KoaRouter) => {
     )
 
     ctx.status = 200
-    ctx.body = {
-      content: {
-        sent,
-        failed,
-        totalSent: sent.length,
-        totalFailed: failed.length,
-      },
-      ...metadata,
-    }
+    ctx.body = makeSuccessResponseBody(
+      { sent, failed, totalSent: sent.length, totalFailed: failed.length },
+      metadata
+    )
   })
 
   /**
