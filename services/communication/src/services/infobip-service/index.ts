@@ -8,7 +8,6 @@ import {
   sendParkingSpaceAssignedToOther,
   sendWorkOrderEmail,
   sendParkingSpaceAcceptOffer,
-  sendInspectionProtocolEmail,
   sendBulkEmail,
   sendNonScoredParkingSpaceApproved,
   sendNonScoredParkingSpaceDenied,
@@ -35,7 +34,10 @@ import {
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import z from 'zod'
-import { sendEmailInfobipSdk } from './adapters/infobip-adapter'
+import {
+  sendEmailInfobipSdk,
+  sendInspectionProtocolEmail,
+} from './adapters/infobip-adapter'
 
 /**
  * Extract Swedish phone number from text that may contain names/labels
