@@ -7,14 +7,14 @@ import type {
 import { getActiveLoan } from '@/utils/loanHelpers'
 import { useItemSelection } from '@/hooks/useItemSelection'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
-import { ReturnMaintenanceKeysDialog } from './dialogs/ReturnMaintenanceKeysDialog'
+import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 import { LoanMaintenanceKeysDialog } from './dialogs/LoanMaintenanceKeysDialog'
 import { FlexMenu } from '@/components/loan/dialogs/FlexMenu'
 import { IncomingFlexMenu } from '@/components/loan/dialogs/IncomingFlexMenu'
 import { updateKeyBundle } from '@/services/api/keyBundleService'
 import { useToast } from '@/hooks/use-toast'
 import { Minus } from 'lucide-react'
-import { handleDisposeKeys } from '@/services/loanHandlers'
+import { disposeKeys } from '@/services/disposeKeys'
 import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
 import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 
@@ -151,7 +151,7 @@ export function KeyBundleKeysTable({
 
   const handleDispose = async () => {
     setIsProcessing(true)
-    const result = await handleDisposeKeys({ keyIds: keySelection.selectedIds })
+    const result = await disposeKeys(keySelection.selectedIds)
 
     if (result.success) {
       toast({
@@ -282,7 +282,7 @@ export function KeyBundleKeysTable({
         }}
       />
 
-      <ReturnMaintenanceKeysDialog
+      <ReturnKeysDialog
         open={showReturnDialog}
         onOpenChange={(open) => {
           setShowReturnDialog(open)

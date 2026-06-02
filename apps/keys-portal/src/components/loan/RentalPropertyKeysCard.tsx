@@ -10,7 +10,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import type { Lease } from '@/services/types'
-import { LeaseKeyStatusList } from './LeaseKeyStatusList'
+import { LeaseKeyList } from './LeaseKeyList'
 import { KeyLoansHistory } from './KeyLoansHistory'
 import { RentalObjectNotes } from './RentalObjectNotes'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
@@ -35,7 +35,10 @@ export function RentalPropertyKeysCard({
     defaultTab === 'history'
   )
 
-  // Minimal lease to satisfy LeaseKeyStatusList/KeyLoansHistory which require a Lease prop.
+  // TODO: ContractCard and this card share the same Nycklar/Historik tab body and differ
+  // only in header chrome — extract a shared <KeyManagementTabs> so this stops faking a
+  // lease just to reuse the list.
+  // Minimal lease to satisfy LeaseKeyList/KeyLoansHistory which require a Lease prop.
   // status: 'Current' ensures key management actions (add, dispose) are enabled.
   // tenants: [] means loan/return buttons are naturally hidden (no contact codes).
   const shellLease = useMemo<Lease>(
@@ -173,7 +176,7 @@ export function RentalPropertyKeysCard({
                 activeTab !== 'keys' ? 'hidden' : ''
               }`}
             >
-              <LeaseKeyStatusList
+              <LeaseKeyList
                 lease={shellLease}
                 refreshTrigger={keyStatusRefreshKey}
                 onKeysLoaned={() => {

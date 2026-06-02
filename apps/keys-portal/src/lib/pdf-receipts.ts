@@ -3,12 +3,7 @@ import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import QRCode from 'qrcode'
 
-import type {
-  ReceiptData,
-  MaintenanceReceiptData,
-  Card,
-  KeyDetails,
-} from '@/services/types'
+import type { ReceiptData, Card, KeyDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { sortKeys } from '@/utils/sortKeys'
 
@@ -133,11 +128,11 @@ const addTenantInfo = (
   doc: jsPDF,
   data: Pick<
     ReceiptData,
-    'tenants' | 'leaseDisplayId' | 'rentalPropertyId' | 'address'
+    'contacts' | 'leaseDisplayId' | 'rentalPropertyId' | 'address'
   >,
   y: number
 ): number => {
-  const { tenants } = data
+  const tenants = data.contacts
   // All values are pre-resolved by receiptHandlers; this only lays out text.
   const rentalPropertyId = data.rentalPropertyId || '-'
   const leaseId = data.leaseDisplayId ?? null
@@ -602,10 +597,11 @@ const renderReturnItemsTable = (
  */
 const addMaintenanceInfo = (
   doc: jsPDF,
-  data: MaintenanceReceiptData,
+  data: Pick<ReceiptData, 'contacts' | 'contactPerson'>,
   y: number
 ): number => {
   const leftCol = MARGIN_X
+  const company = data.contacts[0]
 
   doc.setFont(FONT_GRAPHIK, 'bold')
   doc.setFontSize(FONT_SIZE.SUB_HEADER)
@@ -616,9 +612,9 @@ const addMaintenanceInfo = (
   doc.setFontSize(FONT_SIZE.BODY)
   let leftY = y + 7
 
-  doc.text(`Namn: ${data.contactName}`, leftCol, leftY)
+  doc.text(`Namn: ${company?.fullName || '-'}`, leftCol, leftY)
   leftY += 5
-  doc.text(`Kundnummer: ${data.contact}`, leftCol, leftY)
+  doc.text(`Kundnummer: ${company?.contactCode || '-'}`, leftCol, leftY)
   leftY += 5
   if (data.contactPerson) {
     doc.text(`Kontaktperson: ${data.contactPerson}`, leftCol, leftY)
@@ -686,68 +682,12 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
 }
 
 /**
- * Adds the BEKRÄFTELSE (confirmation) section for maintenance return receipts
- */
-const addMaintenanceReturnConfirmation = (
-  doc: jsPDF,
-  y: number,
-  hasMissingItems: boolean,
-  hasRemainingItems: boolean
-): number => {
-  const bottom = contentBottom(doc)
-  const spaceNeeded = 35
-
-  if (y + spaceNeeded > bottom) {
-    doc.addPage()
-    y = MARGIN_TOP_CONTINUATION
-  }
-
-  // Section header
-  doc.setFont(FONT_BISON, 'bold')
-  doc.setFontSize(FONT_SIZE.SECTION_HEADER)
-  doc.setTextColor(BLUE.r, BLUE.g, BLUE.b)
-  doc.text('BEKRÄFTELSE', MARGIN_X, y)
-  doc.setTextColor(0, 0, 0)
-
-  y += 10
-
-  // Confirmation text
-  doc.setFont(FONT_GRAPHIK, 'normal')
-  doc.setFontSize(FONT_SIZE.BODY)
-
-  const paragraphs: string[] = [
-    'Ovanstående nycklar har återlämnats och kontrollerats.',
-  ]
-  if (hasMissingItems) {
-    paragraphs.push(
-      'Observera att vissa nycklar eller droppar saknas (se lista ovan).'
-    )
-  }
-  if (hasRemainingItems) {
-    paragraphs.push(
-      'Övriga nycklar och droppar är kvar på lån (se lista ovan).'
-    )
-  }
-
-  paragraphs.forEach((paragraph, i) => {
-    if (i > 0) y += 3
-    const lines = doc.splitTextToSize(paragraph, PAGE_W - 2 * MARGIN_X)
-    lines.forEach((line: string) => {
-      doc.text(line, MARGIN_X, y)
-      y += 5.5
-    })
-  })
-
-  return y + 10
-}
-
-/**
  * Adds the BEKRÄFTELSE (confirmation) section for loan receipts
  */
 const addLoanConfirmation = (
   doc: jsPDF,
   y: number,
-  tenants: ReceiptData['tenants']
+  contacts: ReceiptData['contacts']
 ): number => {
   const bottom = contentBottom(doc)
   const spaceNeeded = 50
@@ -790,10 +730,10 @@ const addLoanConfirmation = (
   y += 5
   doc.setFontSize(FONT_SIZE.BODY)
 
-  // Get first tenant name for signature label
-  const tenant = tenants[0]
-  const name = `${tenant?.firstName || ''} ${tenant?.lastName || ''}`.trim()
-  const fullName = name || tenant?.fullName || 'Förnamn Efternamn'
+  // Get first contact name for signature label
+  const contact = contacts[0]
+  const name = `${contact?.firstName || ''} ${contact?.lastName || ''}`.trim()
+  const fullName = name || contact?.fullName || 'Förnamn Efternamn'
 
   doc.text(`Signatur – ${fullName}`, MARGIN_X, y)
   doc.text('Datum', 130, y)
@@ -802,13 +742,15 @@ const addLoanConfirmation = (
 }
 
 /**
- * Adds the BEKRÄFTELSE (confirmation) section for return receipts
+ * Adds the BEKRÄFTELSE (confirmation) section for return receipts. Tenant returns
+ * are checked by Mimer's staff; maintenance returns omit that clause (`byStaff`).
  */
 const addReturnConfirmation = (
   doc: jsPDF,
   y: number,
   hasMissingItems: boolean,
-  hasRemainingItems: boolean
+  hasRemainingItems: boolean,
+  byStaff = true
 ): number => {
   const bottom = contentBottom(doc)
   const spaceNeeded = 35
@@ -832,7 +774,9 @@ const addReturnConfirmation = (
   doc.setFontSize(FONT_SIZE.BODY)
 
   const paragraphs: string[] = [
-    'Ovanstående nycklar har återlämnats och kontrollerats av Mimers personal.',
+    byStaff
+      ? 'Ovanstående nycklar har återlämnats och kontrollerats av Mimers personal.'
+      : 'Ovanstående nycklar har återlämnats och kontrollerats.',
   ]
   if (hasMissingItems) {
     paragraphs.push(
@@ -943,25 +887,40 @@ const addFooter = async (doc: jsPDF): Promise<void> => {
  * BUILD FUNCTIONS
  * ============================================================================ */
 
+/** Party header block, forked by loan type (Hyresgäst+Avtal vs Företag). */
+const addPartyHeader = (doc: jsPDF, data: ReceiptData, y: number): number =>
+  data.loanType === 'MAINTENANCE'
+    ? addMaintenanceInfo(doc, data, y)
+    : addTenantInfo(doc, data, y)
+
 async function buildLoanDoc(data: ReceiptData) {
   const doc = new jsPDF()
   registerCustomFonts(doc)
 
   let y = addTitle(doc, 'loan')
   y = addMeta(doc, y, 'loan')
-  y = addTenantInfo(doc, data, y)
+  y = addPartyHeader(doc, data, y)
 
-  // Combined keys and cards table (sorted by type, system, name, flex, sequence)
-  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y)
+  // Keys + cards table; maintenance passes the per-key Tillhörighet scope map.
+  y = renderItemsTable(
+    doc,
+    sortKeys(data.keys),
+    data.cards,
+    y,
+    data.scopeByKeyId
+  )
 
-  y = addLoanConfirmation(doc, y, data.tenants)
+  y =
+    data.loanType === 'MAINTENANCE'
+      ? addMaintenanceLoanConfirmation(doc, y)
+      : addLoanConfirmation(doc, y, data.contacts)
   addComment(doc, y, data.comment)
   await addFooter(doc)
   if (data.loanId) {
     await addQrCode(doc, data.loanId)
   }
 
-  const fileName = `nyckelutlaning_${data.tenants[0].contactCode}_${format(
+  const fileName = `nyckelutlaning_${data.contacts[0].contactCode}_${format(
     new Date(),
     'yyyyMMdd'
   )}.pdf`
@@ -975,97 +934,17 @@ async function buildReturnDoc(data: ReceiptData) {
 
   let y = addTitle(doc, 'return')
   y = addMeta(doc, y, 'return')
-  y = addTenantInfo(doc, data, y)
+  y = addPartyHeader(doc, data, y)
 
-  // Check for missing / remaining items
-  const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
-  const hasMissingCards = data.missingCards && data.missingCards.length > 0
-  const hasMissingItems = Boolean(hasMissingKeys || hasMissingCards)
+  const hasMissingItems = Boolean(
+    data.missingKeys?.length || data.missingCards?.length
+  )
   const hasRemainingItems = Boolean(
-    (data.remainingLoanKeys && data.remainingLoanKeys.length > 0) ||
-      (data.remainingLoanCards && data.remainingLoanCards.length > 0)
+    data.remainingLoanKeys?.length || data.remainingLoanCards?.length
   )
 
-  // Combined keys and cards table (returned, missing, remaining-on-loan, disposed)
-  // Sort each category for consistent löpnummer ordering
-  y = renderReturnItemsTable(
-    doc,
-    sortKeys(data.keys),
-    data.cards,
-    data.missingKeys ? sortKeys(data.missingKeys) : undefined,
-    data.missingCards,
-    data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
-    data.remainingLoanKeys ? sortKeys(data.remainingLoanKeys) : undefined,
-    data.remainingLoanCards,
-    y
-  )
-
-  y = addReturnConfirmation(doc, y, hasMissingItems, hasRemainingItems)
-  addComment(doc, y, data.comment)
-  await addFooter(doc)
-
-  const fileName = `nyckelaterlamning_${data.tenants[0].contactCode}_${format(
-    new Date(),
-    'yyyyMMdd'
-  )}.pdf`
-
-  return { doc, fileName }
-}
-
-/* ============================================================================
- * MAINTENANCE BUILD FUNCTIONS
- * ============================================================================ */
-
-async function buildMaintenanceLoanDoc(data: MaintenanceReceiptData) {
-  const doc = new jsPDF()
-  registerCustomFonts(doc)
-
-  let y = addTitle(doc, 'loan')
-  y = addMeta(doc, y, 'loan')
-  y = addMaintenanceInfo(doc, data, y)
-
-  // Combined keys and cards table (sorted) — pass Tillhörighet map for inline column
-  y = renderItemsTable(
-    doc,
-    sortKeys(data.keys),
-    data.cards,
-    y,
-    data.scopeByKeyId
-  )
-
-  y = addMaintenanceLoanConfirmation(doc, y)
-  addComment(doc, y, data.description ?? undefined)
-  await addFooter(doc)
-  if (data.loanId) {
-    await addQrCode(doc, data.loanId)
-  }
-
-  const fileName = `nyckelutlaning_${data.contact}_${format(
-    new Date(),
-    'yyyyMMdd'
-  )}.pdf`
-
-  return { doc, fileName }
-}
-
-async function buildMaintenanceReturnDoc(data: MaintenanceReceiptData) {
-  const doc = new jsPDF()
-  registerCustomFonts(doc)
-
-  let y = addTitle(doc, 'return')
-  y = addMeta(doc, y, 'return')
-  y = addMaintenanceInfo(doc, data, y)
-
-  // Check for missing / remaining items
-  const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
-  const hasMissingCards = data.missingCards && data.missingCards.length > 0
-  const hasMissingItems = Boolean(hasMissingKeys || hasMissingCards)
-  const hasRemainingItems = Boolean(
-    (data.remainingLoanKeys && data.remainingLoanKeys.length > 0) ||
-      (data.remainingLoanCards && data.remainingLoanCards.length > 0)
-  )
-
-  // Combined keys and cards table (returned, missing, remaining-on-loan, disposed)
+  // Returned, missing, remaining-on-loan, disposed — each sorted for stable löpnr
+  // ordering; maintenance passes the per-key Tillhörighet scope map.
   y = renderReturnItemsTable(
     doc,
     sortKeys(data.keys),
@@ -1079,16 +958,18 @@ async function buildMaintenanceReturnDoc(data: MaintenanceReceiptData) {
     data.scopeByKeyId
   )
 
-  y = addMaintenanceReturnConfirmation(
+  // Tenant returns are checked by Mimer staff; maintenance returns omit that clause.
+  y = addReturnConfirmation(
     doc,
     y,
     hasMissingItems,
-    hasRemainingItems
+    hasRemainingItems,
+    data.loanType !== 'MAINTENANCE'
   )
-  addComment(doc, y, data.description ?? undefined)
+  addComment(doc, y, data.comment)
   await addFooter(doc)
 
-  const fileName = `nyckelaterlamning_${data.contact}_${format(
+  const fileName = `nyckelaterlamning_${data.contacts[0].contactCode}_${format(
     new Date(),
     'yyyyMMdd'
   )}.pdf`
@@ -1104,30 +985,12 @@ export const generateLoanReceiptBlob = async (
   data: ReceiptData
 ): Promise<{ blob: Blob; fileName: string }> => {
   const { doc, fileName } = await buildLoanDoc(data)
-  const blob = doc.output('blob') as Blob
-  return { blob, fileName }
+  return { blob: doc.output('blob') as Blob, fileName }
 }
 
 export const generateReturnReceiptBlob = async (
   data: ReceiptData
 ): Promise<{ blob: Blob; fileName: string }> => {
   const { doc, fileName } = await buildReturnDoc(data)
-  const blob = doc.output('blob') as Blob
-  return { blob, fileName }
-}
-
-export const generateMaintenanceLoanReceiptBlob = async (
-  data: MaintenanceReceiptData
-): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildMaintenanceLoanDoc(data)
-  const blob = doc.output('blob') as Blob
-  return { blob, fileName }
-}
-
-export const generateMaintenanceReturnReceiptBlob = async (
-  data: MaintenanceReceiptData
-): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildMaintenanceReturnDoc(data)
-  const blob = doc.output('blob') as Blob
-  return { blob, fileName }
+  return { blob: doc.output('blob') as Blob, fileName }
 }

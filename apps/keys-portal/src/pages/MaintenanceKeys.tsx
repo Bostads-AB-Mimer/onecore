@@ -9,7 +9,7 @@ import {
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoansTable } from '@/components/maintenance/MaintenanceLoansTable'
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
-import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
+import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 import { CreateLoanWithKeysCard } from '@/components/maintenance/CreateLoanWithKeysCard'
 import { ContactLoanedKeysCard } from '@/components/maintenance/ContactLoanedKeysCard'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
@@ -559,7 +559,7 @@ export default function MaintenanceKeys() {
 
       {/* Return Loan Dialog */}
       {returnLoan && (
-        <ReturnMaintenanceKeysDialog
+        <ReturnKeysDialog
           open={returnDialogOpen}
           onOpenChange={(open) => {
             setReturnDialogOpen(open)

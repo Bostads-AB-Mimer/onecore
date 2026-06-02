@@ -18,7 +18,7 @@ import {
 } from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { LoanItemsTable } from '@/components/key-loans/LoanItemsTable'
-import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
+import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { NumberRangeFilterDropdown } from '@/components/ui/number-range-filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
@@ -166,7 +166,7 @@ export function KeyLoansTable({
   return (
     <>
       {returnLoan && (
-        <ReturnMaintenanceKeysDialog
+        <ReturnKeysDialog
           open={!!returnLoan}
           onOpenChange={(open) => {
             if (!open) setReturnLoan(null)
