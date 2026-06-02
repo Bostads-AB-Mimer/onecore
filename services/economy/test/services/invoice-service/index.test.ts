@@ -227,4 +227,45 @@ describe('Invoice Service', () => {
       ).not.toThrow()
     })
   })
+
+  describe('GET /invoices/:invoiceId/pdf', () => {
+    const pdfBuffer = Buffer.from('%PDF-1.4 mock')
+    const contentDisposition = 'attachment; filename=Hyresavi.pdf'
+
+    it('returns 200 with pdf bytes and headers on success', async () => {
+      jest.spyOn(tenfastAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: true,
+        data: { data: pdfBuffer, contentDisposition },
+      })
+
+      const res = await request(app.callback()).get('/invoices/55123456/pdf')
+
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toMatch('application/pdf')
+      expect(res.headers['content-disposition']).toBe(contentDisposition)
+      expect(Buffer.from(res.body)).toEqual(pdfBuffer)
+    })
+
+    it('returns 404 when invoice is not found', async () => {
+      jest.spyOn(tenfastAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: false,
+        err: 'not-found',
+      })
+
+      const res = await request(app.callback()).get('/invoices/NONEXISTENT/pdf')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 on unknown error', async () => {
+      jest.spyOn(tenfastAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback()).get('/invoices/55123456/pdf')
+
+      expect(res.status).toBe(500)
+    })
+  })
 })

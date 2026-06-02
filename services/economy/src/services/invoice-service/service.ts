@@ -57,6 +57,7 @@ import {
   getInvoicesForTenant,
   getTenantByContactCode,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
+import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
 
 const createRoundOffRow = async (
   invoice: InvoiceData,
@@ -1048,4 +1049,10 @@ const enrichInvoiceRowsWithText = async (
       invoiceRowText: article?.label ?? null,
     }
   })
+}
+
+export const stralforsPostChannelLookup = async (
+  nationalRegistrationNumbers: string[]
+) => {
+  return await postChannelLookup(nationalRegistrationNumbers)
 }

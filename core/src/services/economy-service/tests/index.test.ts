@@ -37,6 +37,51 @@ app.use(router.routes())
 describe('economy-service routes', () => {
   afterEach(() => jest.restoreAllMocks())
 
+  describe('GET /invoices/:ocr/pdf', () => {
+    const pdfBuffer = Buffer.from('%PDF-1.4 mock')
+    const contentDisposition = 'attachment; filename=Hyresavi.pdf'
+
+    it('returns 200 with pdf bytes and headers on success', async () => {
+      jest.spyOn(economyAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: true,
+        data: { data: pdfBuffer, contentDisposition },
+      })
+
+      const res = await request(app.callback()).get(
+        '/invoices/552606001476999/pdf'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toMatch('application/pdf')
+      expect(res.headers['content-disposition']).toBe(contentDisposition)
+      expect(Buffer.from(res.body)).toEqual(pdfBuffer)
+    })
+
+    it('returns 404 when invoice is not found', async () => {
+      jest.spyOn(economyAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: false,
+        err: 'not-found',
+      })
+
+      const res = await request(app.callback()).get('/invoices/NONEXISTENT/pdf')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 on unknown error', async () => {
+      jest.spyOn(economyAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback()).get(
+        '/invoices/552606001476999/pdf'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   describe('POST /imd/process', () => {
     it('returns 200 with enriched data on success', async () => {
       const mockData = {
@@ -123,6 +168,53 @@ describe('economy-service routes', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Processing failed')
+    })
+  })
+
+  describe('POST /invoice-channels', () => {
+    it('returns 200 with channel data on success', async () => {
+      const mockData = [
+        { channel: 'Kivra', matchedCandidates: ['P000111'], error: null },
+        { channel: 'eInvoiceB2C', matchedCandidates: ['P000222'], error: null },
+      ]
+
+      jest.spyOn(economyAdapter, 'getInvoiceChannels').mockResolvedValue({
+        ok: true,
+        data: mockData as any,
+      })
+
+      const res = await request(app.callback())
+        .post('/invoice-channels')
+        .send({ nationalRegistrationNumbers: ['P000111', 'P000222'] })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(mockData)
+      expect(economyAdapter.getInvoiceChannels).toHaveBeenCalledWith([
+        'P000111',
+        'P000222',
+      ])
+    })
+
+    it('returns 400 when nationalRegistrationNumbers is missing', async () => {
+      const res = await request(app.callback())
+        .post('/invoice-channels')
+        .send({})
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 500 when adapter returns error', async () => {
+      jest.spyOn(economyAdapter, 'getInvoiceChannels').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback())
+        .post('/invoice-channels')
+        .send({ nationalRegistrationNumbers: ['P000111'] })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('unknown')
     })
   })
 })

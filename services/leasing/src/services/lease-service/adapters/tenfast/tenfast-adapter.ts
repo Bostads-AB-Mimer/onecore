@@ -103,7 +103,10 @@ export const createLease = async (
     | 'unknown'
   >
 > => {
-  const tenantResult = await getOrCreateTenant(contact)
+  const tenantResult = await getOrCreateTenant(
+    contact.contactCode,
+    buildTenantRequestData(contact)
+  )
   if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
   else if (!tenantResult.data)
     return { ok: false, err: 'could-not-retrieve-tenant' }
@@ -150,7 +153,151 @@ export const createLease = async (
     //TODO: create schema for response and convert to onecore lease type here later
     return { ok: true, data: undefined }
   } catch (err) {
+    const responseData = isAxiosError(err) ? err.response?.data : undefined
+    logger.error(
+      { err, responseData },
+      'tenfast-adapter.createLease: caught exception'
+    )
     return handleTenfastError(err, 'lease-could-not-be-created')
+  }
+}
+
+/**
+ * Creates a Tenfast lease as an externally-signed import — no template, no
+ * generated PDF, no rent rows. The lease is linked to a Tenfast rental
+ * object and tenant; Tenfast derives rent from the rental object's own
+ * configuration. Used by the xpand → Tenfast sync flow on `Undertecknat`
+ * cmlog events. The signed PDF from xpand should be attached separately via
+ * `POST /v1/hyresvard/avtal/{id}/upload-file`.
+ */
+export const importLease = async (
+  leaseId: string,
+  contact: SyncContactToLeasingPayload,
+  rentalObjectCode: string,
+  fromDate: Date
+): Promise<
+  AdapterResult<
+    { _id: string },
+    | 'could-not-retrieve-tenant'
+    | 'could-not-create-tenant'
+    | 'could-not-find-rental-object'
+    | 'lease-could-not-be-created'
+    | 'unknown'
+  >
+> => {
+  try {
+    logger.info(
+      { leaseId, contactCode: contact.contactCode, rentalObjectCode },
+      'tenfast-adapter.importLease: starting import'
+    )
+    const tenantResult = await getOrCreateTenant(
+      contact.contactCode,
+      buildTenantRequestDataFromPayload(contact)
+    )
+    if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
+    if (!tenantResult.data)
+      return { ok: false, err: 'could-not-retrieve-tenant' }
+
+    const rentalObjectResponse = await getRentalObject(rentalObjectCode)
+    if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
+      return { ok: false, err: 'could-not-find-rental-object' }
+    const rentalObject = rentalObjectResponse.data
+    const body = {
+      // Pass the xpand leaseId as externalId so terminate/void can later look
+      // up this lease via GET /extras/avtal/{externalId} (see
+      // getLeaseByExternalId, used by terminateLease and voidLease).
+      externalId: leaseId,
+      hyresgaster: [tenantResult.data._id],
+      hyresobjekt: [rentalObject._id],
+      startDate: fromDate.toISOString(),
+      avtalsbyggare: false,
+      aviseringsFrekvens: '1m',
+      forskottAvisering: '2v',
+      betalningsOffset: '1d',
+      betalasForskott: true,
+      // this might be changed later to just pass entire rentalObject.hyror
+      hyror: rentalObject.hyror.map(({ _id, ...rest }) => ({
+        ...rest,
+        hyresobjekt: rentalObject._id,
+      })),
+      method: 'import',
+      signed: true,
+    }
+
+    const response = await tenfastApi.request({
+      method: 'post',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}`,
+      data: body,
+    })
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: { _id: response.data?._id } }
+    }
+
+    logger.error(
+      { status: response.status, error: response.data },
+      'tenfast-adapter.importLease'
+    )
+    return { ok: false, err: 'lease-could-not-be-created' }
+  } catch (err) {
+    const responseData = isAxiosError(err) ? err.response?.data : undefined
+    const requestUrl = isAxiosError(err) ? err.config?.url : undefined
+    logger.error(
+      { err, requestUrl, responseData },
+      'tenfast-adapter.importLease: caught exception'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Uploads a PDF as the main contract document for an existing Tenfast lease.
+ *
+ * Posts multipart/form-data to POST /v1/hyresvard/avtal/{id}/upload-file. The
+ * `tenfastApi.request` wrapper doesn't handle multipart, so we use native
+ * fetch + FormData here, replicating the api-token header.
+ */
+export const uploadLeaseFile = async (
+  tenfastLeaseId: string,
+  content: Buffer,
+  filename: string
+): Promise<AdapterResult<undefined, 'upload-failed' | 'unknown'>> => {
+  try {
+    // Native FormData/fetch are stable in Node 20 despite the experimental flag.
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const form = new FormData()
+    form.append(
+      'file',
+      new Blob([content], { type: 'application/pdf' }),
+      filename
+    )
+
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const response = await fetch(
+      `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-file?hyresvard=${tenfastCompanyId}`,
+      {
+        method: 'POST',
+        headers: { 'api-token': config.tenfast.apiKey },
+        body: form,
+      }
+    )
+
+    if (response.ok) {
+      return { ok: true, data: undefined }
+    }
+
+    const errorBody = await response.text()
+    logger.error(
+      { status: response.status, error: errorBody, tenfastLeaseId },
+      'tenfast-adapter.uploadLeaseFile'
+    )
+    return { ok: false, err: 'upload-failed' }
+  } catch (err) {
+    logger.error(
+      { err, tenfastLeaseId },
+      'tenfast-adapter.uploadLeaseFile: caught exception'
+    )
+    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -577,8 +724,8 @@ export const getTenantByContactCode = async (
   }
 }
 
-export const createTenant = async (
-  contact: Contact
+const createTenantRequest = async (
+  requestData: object
 ): Promise<
   AdapterResult<
     TenfastTenant | undefined,
@@ -587,12 +734,10 @@ export const createTenant = async (
     | 'create-tenant-bad-request'
   >
 > => {
-  const createTenantRequestData = buildTenantRequestData(contact)
-
   const tenantResponse = await tenfastApi.request({
     method: 'post',
     url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?hyresvard=${tenfastCompanyId}`,
-    data: createTenantRequestData,
+    data: requestData,
   })
 
   if (tenantResponse.status === 400)
@@ -621,20 +766,24 @@ export const createTenant = async (
   return { ok: true, data: parsedTenantResponse.data ?? undefined }
 }
 
+export const createTenant = (contact: Contact) =>
+  createTenantRequest(buildTenantRequestData(contact))
+
 async function getOrCreateTenant(
-  contact: Contact
+  contactCode: string,
+  requestData: object
 ): Promise<
   AdapterResult<
     TenfastTenant,
     'could-not-retrieve-tenant' | 'could-not-create-tenant'
   >
 > {
-  const tenantResponse = await getTenantByContactCode(contact.contactCode)
+  const tenantResponse = await getTenantByContactCode(contactCode)
   if (!tenantResponse.ok) {
     return { ok: false, err: 'could-not-retrieve-tenant' }
   }
   if (!tenantResponse.data) {
-    const createTenantResult = await createTenant(contact)
+    const createTenantResult = await createTenantRequest(requestData)
     if (!createTenantResult.ok || !createTenantResult.data) {
       return { ok: false, err: 'could-not-create-tenant' }
     }
@@ -644,20 +793,7 @@ async function getOrCreateTenant(
 }
 
 function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
-  if (isAxiosError(errorObj)) {
-    logger.error(
-      {
-        message: errorObj.message,
-        status: errorObj.response?.status,
-        data: errorObj.response?.data,
-        url: errorObj.config?.url,
-        method: errorObj.config?.method,
-      },
-      errorLiteral
-    )
-  } else {
-    logger.error({ err: JSON.stringify(errorObj) }, errorLiteral)
-  }
+  logger.error({ err: JSON.stringify(errorObj) }, errorLiteral)
   return { ok: false, err: errorLiteral } as const
 }
 
@@ -1056,9 +1192,11 @@ export async function getLeaseByLeaseId(
   }
 }
 
-export async function getLeaseByExternalId(
+export const getLeaseByExternalId = async (
   externalId: string
-): Promise<AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>> {
+): Promise<
+  AdapterResult<TenfastLease, 'unknown' | 'not-found' | SchemaError>
+> => {
   try {
     const res = await tenfastApi.request({
       method: 'get',
@@ -1149,6 +1287,101 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     return { ok: true, data: records }
   } catch (err: any) {
     return handleTenfastError(err, 'unknown')
+  }
+}
+
+export type TerminateLeaseBody = {
+  endDate: Date
+  reason: string
+  notifyHg: boolean
+  supplementaryAgreements: boolean
+  handled: boolean
+}
+
+export const terminateLease = async (
+  leaseId: string,
+  body: TerminateLeaseBody
+): Promise<
+  AdapterResult<
+    { action: 'terminated' | 'skipped'; leaseId: string },
+    'lease-not-found' | 'terminate-failed' | 'unknown'
+  >
+> => {
+  const existing = await getLeaseByExternalId(leaseId)
+  if (!existing.ok) {
+    if (existing.err === 'not-found') {
+      return { ok: false, err: 'lease-not-found' }
+    }
+    return { ok: false, err: 'unknown' }
+  }
+
+  try {
+    const response = await tenfastApi.request({
+      method: 'post',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existing.data._id}/terminate?hyresvard=${tenfastCompanyId}`,
+      data: {
+        ...body,
+        endDate: body.endDate.toISOString().split('T')[0],
+      },
+    })
+
+    if (response.status === 200) {
+      return { ok: true, data: { action: 'terminated', leaseId } }
+    }
+
+    if (
+      response.status === 400 &&
+      response.data?.error === 'Avtalet kan inte sägas upp'
+    ) {
+      return { ok: true, data: { action: 'skipped', leaseId } }
+    }
+
+    logger.error(
+      { status: response.status, error: response.data },
+      'tenfast-adapter.terminateLease'
+    )
+    return { ok: false, err: 'terminate-failed' }
+  } catch (err) {
+    logger.error({ err }, 'tenfast-adapter.terminateLease')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const voidLease = async (
+  leaseId: string
+): Promise<
+  AdapterResult<
+    { action: 'voided'; leaseId: string },
+    'lease-not-found' | 'void-failed' | 'unknown'
+  >
+> => {
+  const existing = await getLeaseByExternalId(leaseId)
+  if (!existing.ok) {
+    if (existing.err === 'not-found') {
+      return { ok: false, err: 'lease-not-found' }
+    }
+    return { ok: false, err: 'unknown' }
+  }
+
+  try {
+    const response = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existing.data._id}/void?hyresvard=${tenfastCompanyId}`,
+      data: { reason: 'Synced from xpand' },
+    })
+
+    if (response.status === 200) {
+      return { ok: true, data: { action: 'voided', leaseId } }
+    }
+
+    logger.error(
+      { leaseId, status: response.status, error: response.data },
+      'tenfast-adapter.voidLease'
+    )
+    return { ok: false, err: 'void-failed' }
+  } catch (err) {
+    logger.error({ err }, 'tenfast-adapter.voidLease')
+    return { ok: false, err: 'unknown' }
   }
 }
 

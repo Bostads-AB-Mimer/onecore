@@ -18,8 +18,10 @@ import {
   fetchInvoiceRows,
   fetchPaymentEvents,
   getLeaseDetails,
+  stralforsPostChannelLookup,
 } from './service'
 import { getInvoiceDetails } from './service'
+import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -50,6 +52,25 @@ export const routes = (router: KoaRouter) => {
         message: error.message,
       }
     }
+  })
+
+  router.get('(.*)/invoices/:ocr/pdf', async (ctx) => {
+    const result = await getInvoicePdf(ctx.params.ocr)
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.set(
+      'Content-Disposition',
+      (
+        result.data.contentDisposition || 'attachment; filename="invoice.pdf"'
+      ).replace(/[\r\n]/g, '')
+    )
+    ctx.body = result.data.data
   })
 
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
@@ -226,6 +247,27 @@ export const routes = (router: KoaRouter) => {
       ctx.body = {
         message: error.message,
       }
+    }
+  })
+
+  router.post('(.*)/invoice-channels', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { nationalRegistrationNumbers } = ctx.request.body
+
+    try {
+      const results = await stralforsPostChannelLookup(
+        nationalRegistrationNumbers
+      )
+
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+        content: results,
+      }
+    } catch (error: any) {
+      logger.error(error, 'Invoice channels lookup error')
+      ctx.status = 500
+      ctx.body = { ...metadata, message: error.message }
     }
   })
 }
