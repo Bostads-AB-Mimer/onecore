@@ -774,7 +774,7 @@ export const getInvoicePdf = async (
         contentDisposition: response.headers['content-disposition'] ?? '',
       },
     }
-  } catch (err: any) {
+  } catch (err) {
     logger.error({ err, ocr }, 'getInvoicePdf: failed')
     return { ok: false, err: 'unknown' }
   }
