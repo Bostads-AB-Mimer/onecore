@@ -106,7 +106,7 @@ describe('syncPayments', () => {
       expect(store.cursor).toBe('cursor-new')
     })
 
-    it('does nothing when there are no new payments', async () => {
+    it('does not advance the cursor when there are no new payments and no new cursor', async () => {
       const store = makeStore('cursor-start')
 
       nock(ECONOMY_URL)
@@ -117,6 +117,19 @@ describe('syncPayments', () => {
       await syncPayments(store)
 
       expect(store.cursor).toBe('cursor-start')
+    })
+
+    it('advances the cursor when events are empty but Xledger returns a new cursor', async () => {
+      const store = makeStore('cursor-start')
+
+      nock(ECONOMY_URL)
+        .get('/payments/since')
+        .query({ after: 'cursor-start' })
+        .reply(200, makePaymentsResponse({ events: [], lastCursor: 'cursor-new' }))
+
+      await syncPayments(store)
+
+      expect(store.cursor).toBe('cursor-new')
     })
 
     it('skips an invoice not found in Tenfast and still advances the cursor', async () => {
@@ -255,10 +268,10 @@ describe('notifySyncFailure', () => {
     await expect(notifySyncFailure(new Error('oops'))).resolves.toBeUndefined()
   })
 
-  it('does not throw when the email call itself fails', async () => {
+  it('does not throw when the email call returns a non-200 response', async () => {
     config.emailAddresses.economy = 'economy@example.com'
 
-    nock(COMM_URL).post('/send-email').replyWithError('SMTP down')
+    nock(COMM_URL).post('/send-email').reply(500, {})
 
     await expect(
       notifySyncFailure(new Error('sync error'))

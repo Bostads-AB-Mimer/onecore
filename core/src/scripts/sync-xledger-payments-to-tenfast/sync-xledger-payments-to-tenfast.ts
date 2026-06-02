@@ -59,20 +59,23 @@ async function notifySyncFailure(err: unknown) {
     return
   }
 
-  try {
-    await sendEmail({
-      to: config.emailAddresses.economy,
-      subject: 'Fel i körning: sync-xledger-payments-to-tenfast',
-      body: [
-        'Synkronisering av betalningar från Xledger till Tenfast misslyckades.',
-        '',
-        `Fel: ${err instanceof Error ? err.message : String(err)}`,
-        '',
-        'Markören har inte förflyttats. Nästa körning kommer att försöka igen från samma position.',
-      ].join('\n'),
-    })
-  } catch (emailErr) {
-    logger.error({ emailErr }, 'failed to send sync failure notification')
+  const result = await sendEmail({
+    to: config.emailAddresses.economy,
+    subject: 'Fel i körning: sync-xledger-payments-to-tenfast',
+    body: [
+      'Synkronisering av betalningar från Xledger till Tenfast misslyckades.',
+      '',
+      `Fel: ${err instanceof Error ? err.message : String(err)}`,
+      '',
+      'Markören har inte förflyttats. Nästa körning kommer att försöka igen från samma position.',
+    ].join('\n'),
+  })
+
+  if (!result.ok) {
+    logger.error(
+      { statusCode: result.statusCode },
+      'failed to send sync failure notification'
+    )
   }
 }
 
@@ -111,6 +114,10 @@ async function syncPayments(store: CursorStore = fileCursorStore) {
 
   if (payments.length === 0) {
     logger.info('no new payments')
+    if (newCursor) {
+      await store.save(newCursor)
+      logger.info({ newCursor }, 'cursor advanced')
+    }
     return
   }
 
