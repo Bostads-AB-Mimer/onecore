@@ -223,7 +223,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /invoices/notifyBatch:
+   * /invoices/notify-batch:
    *   post:
    *     tags:
    *       - Economy service
@@ -243,6 +243,7 @@ export const routes = (router: KoaRouter) => {
    *                 items:
    *                   type: string
    *                 description: List of invoice OCR numbers
+   *                 maxItems: 1000
    *     responses:
    *       '200':
    *         description: Notifications processed
@@ -273,7 +274,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/invoices/notifyBatch', async (ctx) => {
+  router.post('/invoices/notify-batch', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = ctx.request.body as { ocrs?: unknown }
 
@@ -290,93 +291,91 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    if (body.ocrs.length > 1000) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'ocrs must not exceed 1000 items',
+        ...metadata,
+      }
+      return
+    }
+
     const ocrs = body.ocrs as string[]
-    const sent: string[] = []
-    const failed: { ocr: string; error: string }[] = []
 
-    for (const ocr of ocrs) {
-      const [invoiceResult, pdfResult] = await Promise.all([
-        economyAdapter.getInvoiceByOcr(ocr),
-        economyAdapter.getInvoicePdf(ocr),
-      ])
+    const processOcr = async (
+      ocr: string
+    ): Promise<{ ocr: string; sent: boolean; error?: string }> => {
+      try {
+        const [invoiceResult, pdfResult] = await Promise.all([
+          economyAdapter.getInvoiceByOcr(ocr),
+          economyAdapter.getInvoicePdf(ocr),
+        ])
 
-      if (!invoiceResult.ok) {
-        failed.push({ ocr, error: invoiceResult.err })
-        continue
-      }
-      if (!pdfResult.ok) {
-        failed.push({ ocr, error: `pdf-${pdfResult.err}` })
-        continue
-      }
+        if (!invoiceResult.ok)
+          return { ocr, sent: false, error: invoiceResult.err }
+        if (!pdfResult.ok)
+          return { ocr, sent: false, error: `pdf-${pdfResult.err}` }
 
-      const invoice = invoiceResult.data
-      const leaseId = invoice.leaseIds[0]
-      if (!leaseId) {
-        failed.push({ ocr, error: 'no-lease-id' })
-        continue
-      }
+        const invoice = invoiceResult.data
+        const leaseId = invoice.leaseIds[0]
+        if (!leaseId) return { ocr, sent: false, error: 'no-lease-id' }
 
-      const lease = await leasingAdapter.getLease(leaseId)
-      if (!lease) {
-        failed.push({ ocr, error: 'lease-not-found' })
-        continue
-      }
+        const lease = await leasingAdapter.getLease(leaseId)
+        if (!lease) return { ocr, sent: false, error: 'lease-not-found' }
 
-      const contactCode = lease.tenantContactIds?.[0]
-      if (!contactCode) {
-        failed.push({ ocr, error: 'no-contact-code' })
-        continue
-      }
+        const contactCode = lease.tenantContactIds?.[0]
+        if (!contactCode) return { ocr, sent: false, error: 'no-contact-code' }
 
-      const contactResult =
-        await leasingAdapter.getContactByContactCode(contactCode)
-      if (!contactResult.ok) {
-        failed.push({ ocr, error: contactResult.err })
-        continue
-      }
+        const contactResult =
+          await leasingAdapter.getContactByContactCode(contactCode)
+        if (!contactResult.ok)
+          return { ocr, sent: false, error: contactResult.err }
 
-      const contact = contactResult.data
-      if (!contact.emailAddress) {
-        failed.push({ ocr, error: 'no-email' })
-        continue
-      }
+        const contact = contactResult.data
+        if (!contact.emailAddress)
+          return { ocr, sent: false, error: 'no-email' }
 
-      const emailTo =
-        process.env.NODE_ENV !== 'production'
-          ? config.emailAddresses.tenantDefault
-          : contact.emailAddress
+        if (!invoice.expirationDate)
+          return { ocr, sent: false, error: 'missing-expiration-date' }
+        const dueDate = String(invoice.expirationDate).split('T')[0]
 
-      const dueDate = invoice.expirationDate
-        ? String(invoice.expirationDate).split('T')[0]
-        : (() => {
-            const d = new Date()
-            d.setMonth(d.getMonth() + 1)
-            d.setDate(1)
-            return d.toISOString().split('T')[0]
-          })()
+        const emailTo =
+          process.env.NODE_ENV !== 'production'
+            ? config.emailAddresses.tenantDefault
+            : contact.emailAddress
 
-      const result = await communicationAdapter.sendInvoiceNotificationEmail({
-        to: emailTo,
-        firstName: contact.firstName,
-        address: lease.rentalObject?.address ?? '',
-        invoiceNumber: invoice.invoiceId,
-        dueDate,
-        totalAmount: String(invoice.amount),
-        attachments: [
-          {
-            filename: `faktura-${ocr}.pdf`,
-            content: pdfResult.data.data.toString('base64'),
-            contentType: 'application/pdf',
-          },
-        ],
-      })
+        const result = await communicationAdapter.sendInvoiceNotificationEmail({
+          to: emailTo,
+          firstName: contact.firstName,
+          address: lease.rentalObject?.address ?? '',
+          invoiceNumber: invoice.invoiceId,
+          dueDate,
+          totalAmount: String(invoice.amount),
+          attachments: [
+            {
+              filename: `faktura-${ocr}.pdf`,
+              content: pdfResult.data.data.toString('base64'),
+              contentType: 'application/pdf',
+            },
+          ],
+        })
 
-      if (result.ok) {
-        sent.push(ocr)
-      } else {
-        failed.push({ ocr, error: result.err })
+        if (result.ok) return { ocr, sent: true }
+        return { ocr, sent: false, error: result.err }
+      } catch (err) {
+        logger.error(
+          { ocr, err },
+          'economy-service.notifyBatch: unexpected error'
+        )
+        return { ocr, sent: false, error: 'unknown' }
       }
     }
+
+    const results = await Promise.all(ocrs.map(processOcr))
+    const sent = results.filter((r) => r.sent).map((r) => r.ocr)
+    const failed = results
+      .filter((r) => !r.sent)
+      .map((r) => ({ ocr: r.ocr, error: r.error ?? 'unknown' }))
 
     logger.info(
       { totalSent: sent.length, totalFailed: failed.length },

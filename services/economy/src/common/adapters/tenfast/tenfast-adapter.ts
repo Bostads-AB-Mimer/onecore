@@ -385,6 +385,9 @@ const transformToLease = (tenfastLease: TenfastLease): Lease => {
   }
 }
 
+// No state filter here — we want to match any invoice by OCR regardless of state,
+// since the notification flow needs to find the invoice before checking its validity.
+// recordPaymentForInvoice filters by state separately because it must only credit active invoices.
 export const getInvoiceByOcr = async (
   ocr: string
 ): Promise<AdapterResult<Invoice, string>> => {

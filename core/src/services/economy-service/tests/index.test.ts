@@ -84,7 +84,7 @@ describe('economy-service routes', () => {
     })
   })
 
-  describe('POST /invoices/notifyBatch', () => {
+  describe('POST /invoices/notify-batch', () => {
     const mockInvoice = {
       invoiceId: '552606001476999',
       leaseIds: ['705-024-01-0101/14'],
@@ -125,21 +125,28 @@ describe('economy-service routes', () => {
 
     it('returns 400 when ocrs is missing', async () => {
       const res = await request(app.callback())
-        .post('/invoices/notifyBatch')
+        .post('/invoices/notify-batch')
         .send({})
       expect(res.status).toBe(400)
     })
 
     it('returns 400 when ocrs is empty array', async () => {
       const res = await request(app.callback())
-        .post('/invoices/notifyBatch')
+        .post('/invoices/notify-batch')
         .send({ ocrs: [] })
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when ocrs exceeds 1000 items', async () => {
+      const res = await request(app.callback())
+        .post('/invoices/notify-batch')
+        .send({ ocrs: Array.from({ length: 1001 }, (_, i) => String(i)) })
       expect(res.status).toBe(400)
     })
 
     it('returns 400 when ocrs contains non-strings', async () => {
       const res = await request(app.callback())
-        .post('/invoices/notifyBatch')
+        .post('/invoices/notify-batch')
         .send({ ocrs: [123] })
       expect(res.status).toBe(400)
     })
@@ -148,7 +155,7 @@ describe('economy-service routes', () => {
       setupHappyPath()
 
       const res = await request(app.callback())
-        .post('/invoices/notifyBatch')
+        .post('/invoices/notify-batch')
         .send({ ocrs: ['552606001476999'] })
 
       expect(res.status).toBe(200)
@@ -167,7 +174,7 @@ describe('economy-service routes', () => {
         .mockResolvedValue({ ok: true, data: mockPdf })
 
       const res = await request(app.callback())
-        .post('/invoices/notifyBatch')
+        .post('/invoices/notify-batch')
         .send({ ocrs: ['MISSING'] })
 
       expect(res.status).toBe(200)
@@ -187,7 +194,7 @@ describe('economy-service routes', () => {
       jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(null)
 
       const res = await request(app.callback())
-        .post('/invoices/notifyBatch')
+        .post('/invoices/notify-batch')
         .send({ ocrs: ['552606001476999'] })
 
       expect(res.status).toBe(200)
@@ -210,12 +217,35 @@ describe('economy-service routes', () => {
       })
 
       const res = await request(app.callback())
-        .post('/invoices/notifyBatch')
+        .post('/invoices/notify-batch')
         .send({ ocrs: ['552606001476999'] })
 
       expect(res.status).toBe(200)
       expect(res.body.content.failed).toEqual([
         { ocr: '552606001476999', error: 'no-email' },
+      ])
+    })
+
+    it('adds to failed when invoice has no expiration date', async () => {
+      jest.spyOn(economyAdapter, 'getInvoiceByOcr').mockResolvedValue({
+        ok: true,
+        data: { ...mockInvoice, expirationDate: undefined } as any,
+      })
+      jest
+        .spyOn(economyAdapter, 'getInvoicePdf')
+        .mockResolvedValue({ ok: true, data: mockPdf })
+      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease as any)
+      jest
+        .spyOn(leasingAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: mockContact as any })
+
+      const res = await request(app.callback())
+        .post('/invoices/notify-batch')
+        .send({ ocrs: ['552606001476999'] })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.failed).toEqual([
+        { ocr: '552606001476999', error: 'missing-expiration-date' },
       ])
     })
 
@@ -237,7 +267,7 @@ describe('economy-service routes', () => {
         .mockResolvedValue({ ok: true, data: null })
 
       const res = await request(app.callback())
-        .post('/invoices/notifyBatch')
+        .post('/invoices/notify-batch')
         .send({ ocrs: ['552606001476999', 'MISSING'] })
 
       expect(res.status).toBe(200)

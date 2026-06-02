@@ -69,20 +69,26 @@ export async function getInvoiceByInvoiceId(
 export async function getInvoiceByOcr(
   ocr: string
 ): Promise<AdapterResult<Invoice, 'not-found' | 'unknown'>> {
-  const response = await axios.get(
-    `${config.economyService.url}/invoices/by-ocr/${ocr}`
-  )
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/invoices/by-ocr/${ocr}`,
+      { validateStatus: () => true }
+    )
 
-  if (response.status === 404) {
-    return { ok: false, err: 'not-found' }
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.getInvoiceByOcr')
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoiceByOcr')
+    return { ok: false, err: 'unknown' }
   }
-
-  if (response.status === 200) {
-    return { ok: true, data: response.data.content }
-  }
-
-  logger.error(response.data, 'economy-adapter.getInvoiceByOcr')
-  return { ok: false, err: 'unknown' }
 }
 
 export async function getInvoicePaymentEvents(
