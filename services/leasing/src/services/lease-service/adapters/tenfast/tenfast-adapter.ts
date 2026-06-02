@@ -219,7 +219,7 @@ export const importLease = async (
       betalningsOffset: '1d',
       betalasForskott: true,
       // this might be changed later to just pass entire rentalObject.hyror
-      hyror: rentalObject.hyror.map(({ _id, ...rest }) => ({
+      hyror: (rentalObject.hyror ?? []).map(({ _id, ...rest }) => ({
         ...rest,
         hyresobjekt: rentalObject._id,
       })),
