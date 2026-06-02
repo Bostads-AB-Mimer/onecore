@@ -179,7 +179,6 @@ export const getInvoicesForTenant = async (
       )
       return { ok: false, err: 'schema-error' }
     }
-
     return { ok: true, data: parsedResponse.data.map(transformToInvoice) }
   } catch (err: any) {
     logger.error(err)
@@ -714,5 +713,73 @@ const transformToInvoiceRow = (
     invoiceDate: '',
     invoiceDueDate: '',
     invoiceNumber: '',
+  }
+}
+
+export const getInvoicePdf = async (
+  ocr: string
+): Promise<
+  AdapterResult<
+    { data: Buffer; contentDisposition: string },
+    'not-found' | 'unknown'
+  >
+> => {
+  try {
+    const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
+      params: {
+        'filter[ocrNumber]': ocr,
+      },
+    })
+
+    if (lookupResult.status !== 200) {
+      logger.error(
+        { ocr, status: lookupResult.status },
+        'getInvoicePdf: OCR lookup failed'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = TenfastInvoicesByOcrResponseSchema.safeParse(
+      lookupResult.data
+    )
+    if (!parsed.success || !parsed.data.records[0]) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    const tenfastId = parsed.data.records[0]._id
+
+    const response = await axios.request({
+      baseURL: baseUrl,
+      url: `/v1/hyresvard/hyror/${tenfastId}/download-pdf`,
+      method: 'GET',
+      responseType: 'arraybuffer',
+      headers: {
+        'api-token': apiKey,
+      },
+      validateStatus: () => true,
+    })
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (response.status !== 200) {
+      logger.error(
+        { ocr, tenfastId, status: response.status },
+        'getInvoicePdf: PDF download failed'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return {
+      ok: true,
+      data: {
+        data: Buffer.from(response.data),
+        contentDisposition: response.headers['content-disposition'] ?? '',
+      },
+    }
+  } catch (err) {
+    logger.error({ err, ocr }, 'getInvoicePdf: failed')
+    return { ok: false, err: 'unknown' }
   }
 }

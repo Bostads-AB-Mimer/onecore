@@ -7,6 +7,7 @@ import {
   getInvoiceArticle,
   getActiveLeasesByRentalObjectCodes,
   recordPaymentForInvoice,
+  getInvoicePdf,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
@@ -562,6 +563,74 @@ describe(recordPaymentForInvoice, () => {
     mockAxios.request.mockRejectedValueOnce(new Error('Network error'))
 
     const result = await recordPaymentForInvoice(payment)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(getInvoicePdf, () => {
+  const ocr = '55123456'
+  const tenfastId = 'invoice-1'
+  const ocrLookupResponse = TenfastInvoicesByOcrResponseFactory.build({
+    records: [
+      { ...TenfastInvoiceFactory.build({ _id: tenfastId, ocrNumber: ocr }) },
+    ],
+  })
+
+  it('returns pdf data and content-disposition on success', async () => {
+    const pdfBuffer = Buffer.from('%PDF-1.4 mock')
+    mockAxios.request
+      .mockResolvedValueOnce({ status: 200, data: ocrLookupResponse })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: pdfBuffer,
+        headers: { 'content-disposition': 'attachment; filename=Hyresavi.pdf' },
+      })
+
+    const result = await getInvoicePdf(ocr)
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        data: Buffer.from(pdfBuffer),
+        contentDisposition: 'attachment; filename=Hyresavi.pdf',
+      },
+    })
+  })
+
+  it('returns not-found when OCR lookup returns no records', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [] },
+    })
+
+    const result = await getInvoicePdf(ocr)
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('returns not-found when download-pdf returns 404', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({ status: 200, data: ocrLookupResponse })
+      .mockResolvedValueOnce({ status: 404, data: {} })
+
+    const result = await getInvoicePdf(ocr)
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('returns unknown when OCR lookup fails with non-200', async () => {
+    mockAxios.request.mockResolvedValueOnce({ status: 500, data: {} })
+
+    const result = await getInvoicePdf(ocr)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown on thrown error', async () => {
+    mockAxios.request.mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await getInvoicePdf(ocr)
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
