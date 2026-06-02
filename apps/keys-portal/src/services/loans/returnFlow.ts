@@ -100,6 +100,8 @@ export async function partialReturnLoan(
   fellBackToReturnOnly?: boolean
   message?: string
 }> {
+  // Once the old loan is closed, a later failure leaves the unselected items orphaned.
+  let oldLoanClosed = false
   try {
     const allKeys = (loan.keysArray ?? []) as KeyDetails[]
     const allCards = (loan.keyCardsArray ?? []) as Card[]
@@ -127,6 +129,7 @@ export async function partialReturnLoan(
       opts,
       true
     )
+    oldLoanClosed = true
 
     // Tacked on: continuation loan with the unselected items, already active.
     // The continuation carries the parent loan's borrower verbatim.
@@ -157,7 +160,9 @@ export async function partialReturnLoan(
   } catch (err: any) {
     return {
       success: false,
-      message: err?.message || 'Kunde inte genomföra partiell retur.',
+      message: oldLoanClosed
+        ? 'Det gamla lånet stängdes men det nya lånet kunde inte skapas — de kvarvarande nycklarna saknar nu ett aktivt lån. Skapa ett nytt lån för dem.'
+        : err?.message || 'Kunde inte genomföra partiell retur.',
     }
   }
 }

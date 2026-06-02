@@ -5,6 +5,7 @@ import { CommentInput } from '@/components/shared/CommentInput'
 import { AvailabilityDatePicker } from '@/components/shared/AvailabilityDatePicker'
 import { useCommentWithSignature } from '@/hooks/useCommentWithSignature'
 import { useReturnKeys } from '@/hooks/useReturnKeys'
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 
 type Props = {
   open: boolean
@@ -41,6 +42,7 @@ export function ReturnKeysDialog({
     undefined
   )
   const [comment, setComment] = useState('')
+  const [confirmAllMissing, setConfirmAllMissing] = useState(false)
 
   const leaseEndDate = availability?.leaseEndDate
   useEffect(() => {
@@ -82,35 +84,72 @@ export function ReturnKeysDialog({
 
   const label = r.partialMode ? 'Partiell retur' : 'Återlämna'
 
+  // A full return where a loan has nothing checked closes it with every key marked
+  // missing/lost — legitimate, but confirm it first so it's never a silent surprise.
+  const requestAccept = () => {
+    if (r.loansClosingAllMissing.length > 0) setConfirmAllMissing(true)
+    else r.accept(opts())
+  }
+
+  const missingNames = r.loansClosingAllMissing.flatMap((g) => [
+    ...g.keys.filter((k) => !k.disposed).map((k) => k.keyName),
+    ...g.cards.map((c) => c.name || c.cardId),
+  ])
+
   return (
-    <ReturnKeysDialogBase
-      open={open}
-      onOpenChange={onOpenChange}
-      loanGroups={r.loanGroups}
-      loading={r.loading}
-      selectedKeyIds={r.selectedKeyIds}
-      selectedCardIds={r.selectedCardIds}
-      onToggleKey={r.toggleKey}
-      onToggleCard={r.toggleCard}
-      rightContent={rightContent}
-      isProcessing={r.isProcessing}
-      onAccept={() =>
-        r.partialMode ? r.partialAccept(opts()) : r.accept(opts())
-      }
-      acceptButtonText={label}
-      primaryLabel={label}
-      totalCount={r.partialMode ? r.selectedCount : r.totalCount}
-      secondaryAction={
-        r.partialMode
-          ? {
-              label: 'Retur med saknade nycklar',
-              onClick: () => r.accept(opts()),
-              variant: 'secondary',
-            }
-          : undefined
-      }
-      title="Återlämna nycklar och droppar"
-      description="Välj vilka nycklar och droppar som ska visas på kvittensen."
-    />
+    <>
+      <ReturnKeysDialogBase
+        open={open}
+        onOpenChange={onOpenChange}
+        loanGroups={r.loanGroups}
+        loading={r.loading}
+        selectedKeyIds={r.selectedKeyIds}
+        selectedCardIds={r.selectedCardIds}
+        onToggleKey={r.toggleKey}
+        onToggleCard={r.toggleCard}
+        rightContent={rightContent}
+        isProcessing={r.isProcessing}
+        onAccept={() =>
+          r.partialMode ? r.partialAccept(opts()) : requestAccept()
+        }
+        acceptButtonText={label}
+        primaryLabel={label}
+        totalCount={r.partialMode ? r.selectedCount : r.totalCount}
+        secondaryAction={
+          r.partialMode
+            ? {
+                label: 'Retur med saknade nycklar',
+                onClick: requestAccept,
+                variant: 'secondary',
+              }
+            : undefined
+        }
+        title="Återlämna nycklar och droppar"
+        description="Välj vilka nycklar och droppar som ska visas på kvittensen."
+      />
+
+      <ConfirmDialog
+        open={confirmAllMissing}
+        onOpenChange={(o) => {
+          if (!o) setConfirmAllMissing(false)
+        }}
+        title="Återlämna med alla nycklar saknade?"
+        description={
+          <p>
+            Inget är ikryssat för{' '}
+            {r.loansClosingAllMissing.length === 1 ? 'ett lån' : 'vissa lån'} —
+            följande återlämnas med <strong>alla markerade som saknade</strong>:
+            <br />
+            <br />
+            {missingNames.join(', ')}
+          </p>
+        }
+        confirmLabel="Återlämna ändå"
+        onConfirm={() => {
+          setConfirmAllMissing(false)
+          r.accept(opts())
+        }}
+      />
+    </>
   )
 }

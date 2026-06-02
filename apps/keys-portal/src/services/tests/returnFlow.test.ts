@@ -154,6 +154,16 @@ describe('partialReturnLoan', () => {
     expect(keyLoanService.update).not.toHaveBeenCalled()
   })
 
+  it('reports orphaned items when the continuation loan fails after the old loan is closed', async () => {
+    vi.mocked(keyLoanService.create).mockRejectedValue(new Error('network'))
+
+    const result = await partialReturnLoan(loan, selection, {})
+
+    expect(keyLoanService.update).toHaveBeenCalled() // old loan was closed
+    expect(result.success).toBe(false)
+    expect(result.message).toMatch(/saknar nu ett aktivt lån/i)
+  })
+
   it('merges the original loan receipt with the return PDF for the continuation loan', async () => {
     vi.mocked(receiptService.getByKeyLoan).mockResolvedValue([
       { id: 'old-loan-receipt', receiptType: 'LOAN', fileId: 'f1' },

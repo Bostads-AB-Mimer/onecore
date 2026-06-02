@@ -6,12 +6,12 @@ import type {
   KeyLoanWithDetails,
 } from '@/services/types'
 import { resolveActiveLoansForItems } from '@/services/loans/resolveActiveLoans'
+import { useToast } from '@/hooks/use-toast'
 import {
   partialReturnLoan,
   returnLoan,
   type ReturnOpts,
 } from '@/services/loans/returnFlow'
-import { useToast } from '@/hooks/use-toast'
 
 export type KeyForReturn = KeyDetails & { isOrphan: boolean }
 export type CardForReturn = CardDetails & { isOrphan: boolean }
@@ -54,6 +54,14 @@ export function useReturnKeys({
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
+
+  // Key the resolve on the dialog opening + the requested ids (serialized), NOT the
+  // array refs. Callers pass inline `.map()` / default `[]` arrays that change identity
+  // every render; depending on them would re-fire this effect (re-fetch + reset the
+  // selection) on every render. allKeys/allCards are read from the closure — they don't
+  // change while a dialog is open on the same items.
+  const keyIdsKey = keyIds.join(',')
+  const cardIdsKey = cardIds.join(',')
 
   useEffect(() => {
     if (!open) return
@@ -115,7 +123,8 @@ export function useReturnKeys({
     return () => {
       cancelled = true
     }
-  }, [open, keyIds, cardIds, allKeys, allCards])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, keyIdsKey, cardIdsKey])
 
   const toggle = (set: Set<string>, id: string, checked: boolean) => {
     const next = new Set(set)
@@ -141,6 +150,13 @@ export function useReturnKeys({
   const partialMode = loanGroups.some((g) => {
     const { total, selected } = loanSelectableCount(g)
     return selected > 0 && selected < total
+  })
+
+  // Loans whose (full) return would mark every selectable item missing — nothing checked
+  // but there are items to lose. The dialog confirms these before a non-partial return.
+  const loansClosingAllMissing = loanGroups.filter((g) => {
+    const { total, selected } = loanSelectableCount(g)
+    return total > 0 && selected === 0
   })
 
   const selectedCount = selectedKeyIds.size + selectedCardIds.size
@@ -194,6 +210,9 @@ export function useReturnKeys({
   }
 
   // Full return of every affected loan; unchecked non-disposed items are missing/lost.
+  // A loan with nothing selected closes entirely-missing — that's a legitimate "all keys
+  // lost" return, but the dialog confirms it first (see `loansClosingAllMissing`) so it's
+  // never silent.
   const accept = (opts: ReturnOpts) =>
     execute(
       async (loan) => {
@@ -241,6 +260,7 @@ export function useReturnKeys({
     toggleKey,
     toggleCard,
     partialMode,
+    loansClosingAllMissing,
     selectedCount,
     totalCount,
     accept,

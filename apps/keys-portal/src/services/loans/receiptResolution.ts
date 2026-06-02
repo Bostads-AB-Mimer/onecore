@@ -60,7 +60,9 @@ export function categorizeCards(
 /**
  * Resolves the loan's borrower(s) from its own contact codes (never the page lease)
  * so the receipt names who the loan is registered to. Reuses a knownTenants match to
- * skip the API; throws if a code is missing/unresolvable, which blocks the receipt.
+ * skip the API; throws if a code is missing/unresolvable. The throw deliberately blocks
+ * the whole action (print AND return) rather than printing a wrong/"Unknown" borrower on
+ * a legal receipt — so the messages name the borrower as the blocker, not the receipt.
  */
 export async function resolveBorrowers(
   loan: Pick<KeyLoan, 'contact' | 'contact2'>,
@@ -72,7 +74,9 @@ export async function resolveBorrowers(
   const uniqueCodes = [...new Set(codes.map((code) => code.toUpperCase()))]
 
   if (uniqueCodes.length === 0) {
-    throw new Error('Lånet saknar kontakt och kan inte få en kvittens.')
+    throw new Error(
+      'Lånet saknar en registrerad låntagare och kan därför inte hanteras.'
+    )
   }
 
   const knownByCode = new Map(
@@ -90,7 +94,9 @@ export async function resolveBorrowers(
     }
     const contact = await fetchContactByContactCode(code)
     if (!contact) {
-      throw new Error(`Kunde inte hämta kontakten (${code}) för kvittensen.`)
+      throw new Error(
+        `Kunde inte verifiera låntagaren (${code}) — försök igen om en stund.`
+      )
     }
     tenants.push(contact)
   }
