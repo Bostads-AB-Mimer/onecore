@@ -19,6 +19,7 @@ import {
   fetchPaymentEvents,
   getLeaseDetails,
   stralforsPostChannelLookup,
+  getAutogiroConsent,
 } from './service'
 import { getInvoiceDetails } from './service'
 import {
@@ -286,4 +287,26 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { ...metadata, message: error.message }
     }
   })
+
+  router.get(
+    '(.*)/autogiro-consent/:nationalRegistrationNumber',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { nationalRegistrationNumber } = ctx.params
+
+      try {
+        const results = await getAutogiroConsent(nationalRegistrationNumber)
+
+        ctx.status = 200
+        ctx.body = {
+          ...metadata,
+          content: results,
+        }
+      } catch (error: any) {
+        logger.error(error, 'Error getting autogiro consent')
+        ctx.status = 500
+        ctx.body = { ...metadata, message: error.message }
+      }
+    }
+  )
 }

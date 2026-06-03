@@ -56,6 +56,7 @@ import {
   getInvoicesByContactCode as getTenfastInvoicesByContactCode,
   getInvoicesForTenant,
   getTenantByContactCode,
+  getAutogiroConsentByNationalRegistrationNumber,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
 
@@ -1063,4 +1064,19 @@ export const stralforsPostChannelLookup = async (
   nationalRegistrationNumbers: string[]
 ) => {
   return await postChannelLookup(nationalRegistrationNumbers)
+}
+
+export const getAutogiroConsent = async (
+  nationalRegistrationNumber: string
+) => {
+  const autogiroConsentResult =
+    await getAutogiroConsentByNationalRegistrationNumber(
+      nationalRegistrationNumber
+    )
+
+  if (!autogiroConsentResult.ok) {
+    throw autogiroConsentResult.err
+  }
+
+  return autogiroConsentResult.data
 }

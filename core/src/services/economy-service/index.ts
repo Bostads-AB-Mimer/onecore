@@ -577,4 +577,111 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /autogiro-consent/{nationalRegistrationNumber}:
+   *   get:
+   *     tags:
+   *       - Economy service
+   *     summary: Get autogiro consent for tenant
+   *     description: Returns autogiro consent by national registration number.
+   *     parameters:
+   *       - in: path
+   *         name: nationalRegistrationNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The tenant's national registration number
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved autogiro consent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - content
+   *               properties:
+   *                 content:
+   *                   nullable: true
+   *                   type: object
+   *                   required:
+   *                     - _id
+   *                     - hyresgast
+   *                     - hyresvardBankgiro
+   *                     - payerNumber
+   *                     - fixedDueDay
+   *                     - isCompany
+   *                     - payerSSN
+   *                     - status
+   *                     - statusChangedAt
+   *                     - extra
+   *                     - payerBankAccountNumber
+   *                   properties:
+   *                     _id:
+   *                       type: string
+   *                     hyresgast:
+   *                       type: string
+   *                     hyresvardBankgiro:
+   *                       type: string
+   *                     payerNumber:
+   *                       type: integer
+   *                     fixedDueDay:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     isCompany:
+   *                       type: boolean
+   *                     payerSSN:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                       enum:
+   *                         - ACTIVE
+   *                         - MANUAL
+   *                     statusChangedAt:
+   *                       type: string
+   *                       format: date-time
+   *                     extra:
+   *                       type: object
+   *                       required:
+   *                         - nameAndAddress1
+   *                         - mismatch
+   *                       properties:
+   *                         nameAndAddress1:
+   *                           type: string
+   *                         mismatch:
+   *                           type: string
+   *                           nullable: true
+   *                     payerBankAccountNumber:
+   *                       type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   */
+  router.get('/autogiro-consent/:nationalRegistrationNumber', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { nationalRegistrationNumber } = ctx.params
+
+    const response = await economyAdapter.getAutogiroConsent(
+      nationalRegistrationNumber
+    )
+
+    if (response.ok) {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(response.data, metadata)
+    } else {
+      ctx.status = 500
+      ctx.body = {
+        error: response.err,
+      }
+    }
+  })
 }
