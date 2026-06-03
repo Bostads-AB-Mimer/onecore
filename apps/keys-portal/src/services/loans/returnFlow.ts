@@ -62,7 +62,11 @@ async function closeLoanWithReturnReceipt(
   await createReceiptWithPdf(loan.id, 'RETURN', blob, 'return')
   await keyLoanService.update(loan.id, {
     returnedAt: new Date().toISOString(),
-    availableToNextTenantFrom: opts.availableToNextTenantFrom ?? null,
+    // "Available to next tenant" is tenant-only; a maintenance loan has no next tenant.
+    availableToNextTenantFrom:
+      loan.loanType === 'TENANT'
+        ? (opts.availableToNextTenantFrom ?? null)
+        : null,
   } as UpdateKeyLoanRequest)
 
   return blob

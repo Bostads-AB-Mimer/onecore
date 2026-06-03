@@ -159,6 +159,10 @@ export function useReturnKeys({
     return total > 0 && selected === 0
   })
 
+  // The "available to next tenant" date is tenant-only — a maintenance loan returned from
+  // the tenant page must not show it. Driven by the resolved loan, not the call site.
+  const includesTenantLoan = loans.some((l) => l.loanType === 'TENANT')
+
   const selectedCount = selectedKeyIds.size + selectedCardIds.size
   const totalCount = loanGroups.reduce(
     (sum, g) => sum + g.keys.length + g.cards.length,
@@ -261,6 +265,7 @@ export function useReturnKeys({
     toggleCard,
     partialMode,
     loansClosingAllMissing,
+    includesTenantLoan,
     selectedCount,
     totalCount,
     accept,

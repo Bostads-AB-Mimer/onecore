@@ -59,8 +59,12 @@ export function ReturnKeysDialog({
     onSuccess,
   })
 
+  // The availability date is tenant-only: offered when the call site allows it AND the
+  // resolved loan is a tenant loan (so a maintenance loan on the tenant page won't show it).
+  const showAvailability = !!availability && r.includesTenantLoan
+
   const opts = () => ({
-    availableToNextTenantFrom: availability
+    availableToNextTenantFrom: showAvailability
       ? availableDate?.toISOString()
       : undefined,
     comment: addSignature(comment),
@@ -68,7 +72,7 @@ export function ReturnKeysDialog({
 
   const rightContent = (
     <div className="space-y-4">
-      {availability && (
+      {showAvailability && (
         <AvailabilityDatePicker
           availableDate={availableDate}
           onDateChange={setAvailableDate}

@@ -102,6 +102,22 @@ describe('returnLoan', () => {
     expect(resolveObjectOptions).not.toHaveBeenCalled()
   })
 
+  it('never sets an availability date on a maintenance return', async () => {
+    await returnLoan(
+      makeLoan({
+        id: 'M1',
+        loanType: 'MAINTENANCE',
+        keysArray: [makeKey({ id: 'k1' })],
+      }),
+      { selectedKeyIds: new Set(['k1']), selectedCardIds: new Set() },
+      { availableToNextTenantFrom: '2025-06-01T00:00:00Z' }
+    )
+    expect(keyLoanService.update).toHaveBeenCalledWith('M1', {
+      returnedAt: expect.any(String),
+      availableToNextTenantFrom: null,
+    })
+  })
+
   it('does not close the loan when the receipt cannot be produced', async () => {
     vi.mocked(buildReturnReceiptBlob).mockRejectedValue(new Error('no contact'))
     const result = await returnLoan(
