@@ -2,9 +2,8 @@ import { useMemo, useState } from 'react'
 
 import type { Lease, KeyDetails, CardDetails } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
-import { ToastAction } from '@/components/ui/toast'
+import { useDisposeWithUndo } from '@/hooks/useDisposeWithUndo'
 import { createPendingLoan } from '@/services/loans/createLoan'
-import { disposeKeys, undoDisposeKeys } from '@/services/disposeKeys'
 import {
   findExistingActiveLoansForTransfer,
   type ExistingLoanInfo,
@@ -39,6 +38,7 @@ export function useLeaseKeyActions({
   onKeysReturned,
 }: Args) {
   const { toast } = useToast()
+  const disposeWithUndo = useDisposeWithUndo()
   const [isProcessing, setIsProcessing] = useState(false)
   const [receipt, setReceipt] = useState<{
     open: boolean
@@ -121,41 +121,10 @@ export function useLeaseKeyActions({
 
   const onDispose = async (keyIds: string[]) => {
     setIsProcessing(true)
-    const result = await disposeKeys(keyIds)
-    if (result.success) {
-      await refreshStatuses()
-      keySelection.deselectAll()
-      toast({
-        title: result.title,
-        description: result.message,
-        duration: 10000,
-        variant: 'destructive',
-        className: '!w-full !p-4 !shadow-xl',
-        action: (
-          <ToastAction
-            altText="Ångra kasseringen"
-            className="!px-3 !text-sm !font-semibold !opacity-100"
-            onClick={async () => {
-              const undo = await undoDisposeKeys(keyIds)
-              await refreshStatuses()
-              const undoToast = toast({
-                title: undo.title,
-                description: undo.message,
-              })
-              setTimeout(() => undoToast.dismiss(), 3000)
-            }}
-          >
-            Ångra
-          </ToastAction>
-        ),
-      })
-    } else {
-      toast({
-        title: result.title,
-        description: result.message,
-        variant: 'destructive',
-      })
-    }
+    const ok = await disposeWithUndo(keyIds, {
+      onChanged: () => refreshStatuses(),
+    })
+    if (ok) keySelection.deselectAll()
     setIsProcessing(false)
   }
 

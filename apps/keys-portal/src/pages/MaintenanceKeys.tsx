@@ -342,6 +342,7 @@ export default function MaintenanceKeys() {
                   contactCode={searchResult.contact.contactCode}
                   activeLoans={activeLoans}
                   loansKeySystemMap={loansKeySystemMap}
+                  onChanged={() => setHasLoadedLoans(false)}
                   onBundleClick={(bundleId) => {
                     setHasLoadedLoans(false)
                     handleSearchByBundleId(bundleId)

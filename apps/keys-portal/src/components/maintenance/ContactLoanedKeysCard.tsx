@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Key } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   TableCell,
   TableHead,
@@ -19,6 +20,10 @@ import {
   KeyEventBadge,
   getLatestActiveEvent,
 } from '@/components/shared/tables/StatusBadges'
+import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
+import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
+import { useItemSelection } from '@/hooks/useItemSelection'
+import { useDisposeWithUndo } from '@/hooks/useDisposeWithUndo'
 import {
   getBundlesByContactWithLoanedKeys,
   getKeyBundleDetails,
@@ -44,21 +49,29 @@ type Props = {
   activeLoans: KeyLoanWithDetails[]
   loansKeySystemMap: Record<string, string>
   onBundleClick: (bundleId: string) => void
+  /** Refresh the parent's loans after a return/dispose here. */
+  onChanged?: () => void
 }
 
-const COLUMN_COUNT = 7
+const COLUMN_COUNT = 8
 
 export function ContactLoanedKeysCard({
   contactCode,
   activeLoans,
   loansKeySystemMap,
   onBundleClick,
+  onChanged,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [bundles, setBundles] = useState<BundleWithLoanedKeysInfo[]>([])
   const [bundleKeys, setBundleKeys] = useState<Record<string, KeyDetails[]>>({})
   const [loading, setLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const [showReturnDialog, setShowReturnDialog] = useState(false)
+
+  const selection = useItemSelection()
+  const disposeWithUndo = useDisposeWithUndo()
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Bundle name lookup
   const bundleNameMap = useMemo(() => {
@@ -162,6 +175,20 @@ export function ContactLoanedKeysCard({
   }, [bundleKeys, bundleNameMap, activeLoans])
 
   const totalCount = items.length
+  const allKeys = useMemo(() => items.map((i) => i.key), [items])
+
+  // Refetch this card's bundles and tell the parent to refresh its loans.
+  const refresh = () => {
+    setHasLoaded(false)
+    onChanged?.()
+  }
+
+  const handleDispose = async () => {
+    setIsProcessing(true)
+    const ok = await disposeWithUndo(selection.selectedIds, { onChanged: refresh })
+    if (ok) selection.deselectAll()
+    setIsProcessing(false)
+  }
 
   const getKeyUrl = (key: KeyDetails) => {
     const params = new URLSearchParams({
@@ -173,6 +200,10 @@ export function ContactLoanedKeysCard({
     }
     return `/Keys?${params.toString()}`
   }
+
+  const allSelected =
+    allKeys.length > 0 && allKeys.every((k) => selection.isSelected(k.id))
+  const selectedCount = selection.selectedIds.length
 
   return (
     <Card>
@@ -205,109 +236,171 @@ export function ContactLoanedKeysCard({
               Inga utlånade nycklar till denna kontakt
             </p>
           ) : (
-            <CollapsibleGroupTable
-              items={items}
-              getItemId={(item) => item.key.id}
-              columnCount={COLUMN_COUNT}
-              sectionBy={(item) => (item.bundleId ? 'bundled' : 'unbundled')}
-              sectionOrder={['bundled', 'unbundled']}
-              groupBy={(item) => item.bundleId || item.loanId || null}
-              initialExpanded="all"
-              renderSectionHeader={(section, sectionItems) => {
-                if (section === 'bundled') {
-                  return <span>Samlingar ({sectionItems.length} nycklar)</span>
-                }
-                if (section === 'unbundled') {
-                  return (
-                    <span>Saknar samling ({sectionItems.length} nycklar)</span>
-                  )
-                }
-                return null
-              }}
-              renderGroupHeader={(groupKey, groupItems) => {
-                const firstItem = groupItems[0]
+            <>
+              <div className="mb-4">
+                <KeyActionButtons
+                  selectedCount={selectedCount}
+                  isProcessing={isProcessing}
+                  returnAction={
+                    selectedCount > 0
+                      ? {
+                          label: 'Återlämna',
+                          count: selectedCount,
+                          onClick: () => setShowReturnDialog(true),
+                        }
+                      : undefined
+                  }
+                  disposeAction={
+                    selectedCount > 0
+                      ? { label: 'Kassera', onClick: handleDispose }
+                      : undefined
+                  }
+                />
+              </div>
 
-                // Bundle group
-                if (firstItem.bundleId) {
-                  return (
-                    <div className="flex items-center justify-between flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">
-                          {firstItem.bundleName}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {groupItems.length} nycklar
-                        </Badge>
+              <CollapsibleGroupTable
+                items={items}
+                getItemId={(item) => item.key.id}
+                columnCount={COLUMN_COUNT}
+                selection={{
+                  isSelected: (id) => selection.isSelected(id),
+                  toggle: (id) =>
+                    selection.isSelected(id)
+                      ? selection.deselect(id)
+                      : selection.select(id),
+                }}
+                sectionBy={(item) => (item.bundleId ? 'bundled' : 'unbundled')}
+                sectionOrder={['bundled', 'unbundled']}
+                groupBy={(item) => item.bundleId || item.loanId || null}
+                initialExpanded="all"
+                renderSectionHeader={(section, sectionItems) => {
+                  if (section === 'bundled') {
+                    return <span>Samlingar ({sectionItems.length} nycklar)</span>
+                  }
+                  if (section === 'unbundled') {
+                    return (
+                      <span>Saknar samling ({sectionItems.length} nycklar)</span>
+                    )
+                  }
+                  return null
+                }}
+                renderGroupHeader={(groupKey, groupItems) => {
+                  const firstItem = groupItems[0]
+
+                  // Bundle group
+                  if (firstItem.bundleId) {
+                    return (
+                      <div className="flex items-center justify-between flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">
+                            {firstItem.bundleName}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {groupItems.length} nycklar
+                          </Badge>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onBundleClick(firstItem.bundleId!)
+                          }}
+                          className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors shrink-0"
+                        >
+                          Visa samling
+                        </button>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onBundleClick(firstItem.bundleId!)
-                        }}
-                        className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors shrink-0"
-                      >
-                        Visa samling
-                      </button>
-                    </div>
-                  )
-                }
+                    )
+                  }
 
-                // Loan group (unbundled)
-                if (firstItem.loan) {
-                  return <DefaultLoanHeader loan={firstItem.loan} />
-                }
+                  // Loan group (unbundled)
+                  if (firstItem.loan) {
+                    return <DefaultLoanHeader loan={firstItem.loan} />
+                  }
 
-                return null
-              }}
-              renderHeader={() => (
-                <TableRow className="bg-background">
-                  <TableHead className="w-[22%]">Nyckelnamn</TableHead>
-                  <TableHead className="w-[8%]">Löpnr</TableHead>
-                  <TableHead className="w-[8%]">Flex</TableHead>
-                  <TableHead className="w-[15%]">Låssystem</TableHead>
-                  <TableHead className="w-[12%]">Typ</TableHead>
-                  <TableHead className="w-[15%]">Hyresobjekt</TableHead>
-                  <TableHead className="w-[12%]">Status</TableHead>
-                </TableRow>
-              )}
-              renderRow={(item: LoanedKeyItem, { indent }: RowRenderProps) => (
-                <TableRow key={item.key.id} className="bg-background h-12">
-                  <TableCell className={`w-[22%] ${indent ? 'pl-8' : ''}`}>
-                    <TableLink to={getKeyUrl(item.key)}>
-                      {item.key.keyName}
-                    </TableLink>
-                  </TableCell>
-                  <TableCell className="w-[8%]">
-                    {item.key.keySequenceNumber ?? '-'}
-                  </TableCell>
-                  <TableCell className="w-[8%]">
-                    {item.key.flexNumber ?? '-'}
-                  </TableCell>
-                  <TableCell className="w-[15%]">
-                    {item.key.keySystem?.systemCode ||
-                      (item.key.keySystemId
-                        ? loansKeySystemMap[item.key.keySystemId] || '-'
-                        : '-')}
-                  </TableCell>
-                  <TableCell className="w-[12%]">
-                    <KeyTypeBadge keyType={item.key.keyType} />
-                  </TableCell>
-                  <TableCell className="w-[15%]">
-                    {item.key.rentalObjectCode ?? '-'}
-                  </TableCell>
-                  <TableCell className="w-[12%]">
-                    {getLatestActiveEvent(item.key) ? (
-                      <KeyEventBadge event={getLatestActiveEvent(item.key)} />
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                </TableRow>
-              )}
-            />
+                  return null
+                }}
+                renderHeader={() => (
+                  <TableRow className="bg-background">
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(checked) =>
+                          checked
+                            ? selection.selectAll(allKeys.map((k) => k.id))
+                            : selection.deselectAll()
+                        }
+                        aria-label="Markera alla"
+                      />
+                    </TableHead>
+                    <TableHead className="w-[22%]">Nyckelnamn</TableHead>
+                    <TableHead className="w-[8%]">Löpnr</TableHead>
+                    <TableHead className="w-[8%]">Flex</TableHead>
+                    <TableHead className="w-[15%]">Låssystem</TableHead>
+                    <TableHead className="w-[12%]">Typ</TableHead>
+                    <TableHead className="w-[15%]">Hyresobjekt</TableHead>
+                    <TableHead className="w-[12%]">Status</TableHead>
+                  </TableRow>
+                )}
+                renderRow={(
+                  item: LoanedKeyItem,
+                  { indent, isSelected, onToggleSelect }: RowRenderProps
+                ) => (
+                  <TableRow key={item.key.id} className="bg-background h-12">
+                    <TableCell className="w-[40px]">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={onToggleSelect}
+                        aria-label={`Markera ${item.key.keyName}`}
+                      />
+                    </TableCell>
+                    <TableCell className={`w-[22%] ${indent ? 'pl-8' : ''}`}>
+                      <TableLink to={getKeyUrl(item.key)}>
+                        {item.key.keyName}
+                      </TableLink>
+                    </TableCell>
+                    <TableCell className="w-[8%]">
+                      {item.key.keySequenceNumber ?? '-'}
+                    </TableCell>
+                    <TableCell className="w-[8%]">
+                      {item.key.flexNumber ?? '-'}
+                    </TableCell>
+                    <TableCell className="w-[15%]">
+                      {item.key.keySystem?.systemCode ||
+                        (item.key.keySystemId
+                          ? loansKeySystemMap[item.key.keySystemId] || '-'
+                          : '-')}
+                    </TableCell>
+                    <TableCell className="w-[12%]">
+                      <KeyTypeBadge keyType={item.key.keyType} />
+                    </TableCell>
+                    <TableCell className="w-[15%]">
+                      {item.key.rentalObjectCode ?? '-'}
+                    </TableCell>
+                    <TableCell className="w-[12%]">
+                      {getLatestActiveEvent(item.key) ? (
+                        <KeyEventBadge event={getLatestActiveEvent(item.key)} />
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              />
+            </>
           )}
         </CardContent>
       )}
+
+      <ReturnKeysDialog
+        open={showReturnDialog}
+        onOpenChange={setShowReturnDialog}
+        keyIds={selection.selectedIds}
+        allKeys={allKeys}
+        onSuccess={() => {
+          selection.deselectAll()
+          refresh()
+        }}
+      />
     </Card>
   )
 }
