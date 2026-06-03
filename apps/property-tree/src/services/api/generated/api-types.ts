@@ -2232,6 +2232,52 @@ export interface paths {
       };
     };
   };
+  "/kvv-areas/{id}/responsible": {
+    /**
+     * Update the responsible kvartersvärd for a KVV area
+     * @description Sets `responsible_keycloak_user_id` for the given KVV area and stamps
+     * `updated_by`. Target-user role validation happens in core; this
+     * endpoint trusts the caller.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            keycloakUserId: string;
+            updatedBy: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated KVV area */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KvvArea"];
+            };
+          };
+        };
+        /** @description Invalid id or body */
+        400: {
+          content: never;
+        };
+        /** @description KVV area not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/components/analyze-image": {
     /**
      * Analyze component image(s) using AI
@@ -3893,6 +3939,20 @@ export interface components {
       propertyCode: string;
       /** Format: uuid */
       kvvAreaId: string;
+      updatedAt: string;
+      updatedBy: string | null;
+    };
+    KvvArea: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string | null;
+      /** Format: uuid */
+      costCenterId: string;
+      responsibleKeycloakUserId: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
       updatedAt: string;
       updatedBy: string | null;
     };
