@@ -3,9 +3,11 @@
  * Do not make direct changes to the file.
  */
 
+
 export interface paths {
-  openapi: {}
-  '/health': {
+  "openapi": {
+  };
+  "/health": {
     /**
      * Check system health status
      * @description Retrieves the health status of the system and its subsystems.
@@ -15,329 +17,329 @@ export interface paths {
         /** @description Successful response with system health status */
         200: {
           content: {
-            'application/json': {
+            "application/json": {
               /**
                * @description Name of the system.
                * @example inspection
                */
-              name?: string
+              name?: string;
               /**
                * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
                * @example active
                */
-              status?: string
-              subsystems?: {
-                /** @description Name of the subsystem. */
-                name?: string
-                /**
-                 * @description Status of the subsystem.
-                 * @enum {string}
-                 */
-                status?: 'active' | 'impaired' | 'failure' | 'unknown'
-                /** @description Additional details about the subsystem status. */
-                details?: string
-              }[]
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections/xpand': {
+              status?: string;
+              subsystems?: ({
+                  /** @description Name of the subsystem. */
+                  name?: string;
+                  /**
+                   * @description Status of the subsystem.
+                   * @enum {string}
+                   */
+                  status?: "active" | "impaired" | "failure" | "unknown";
+                  /** @description Additional details about the subsystem status. */
+                  details?: string;
+                })[];
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/xpand": {
     /** Get inspections from Xpand */
     get: {
       parameters: {
         query?: {
           /** @description Page number for pagination. */
-          page?: number
+          page?: number;
           /** @description Maximum number of records to return. */
-          limit?: number
+          limit?: number;
           /** @description Filter inspections by status (ongoing or completed). */
-          statusFilter?: 'ongoing' | 'completed'
+          statusFilter?: "ongoing" | "completed";
           /** @description Whether to sort the results in ascending order. */
-          sortAscending?: true | false
+          sortAscending?: true | false;
           /** @description Filter inspections by inspector name. */
-          inspector?: string
+          inspector?: string;
           /** @description Filter inspections by address. */
-          address?: string
-        }
-      }
+          address?: string;
+        };
+      };
       responses: {
         /** @description A paginated list of inspections from Xpand */
         200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['XpandInspection'][]
+            "application/json": {
+              content?: components["schemas"]["XpandInspection"][];
               _meta?: {
-                totalRecords?: number
-                page?: number
-                limit?: number
-                count?: number
-              }
+                totalRecords?: number;
+                page?: number;
+                limit?: number;
+                count?: number;
+              };
               _links?: {
-                href?: string
-                rel?: string
-              }[]
-            }
-          }
-        }
+                  href?: string;
+                  rel?: string;
+                }[];
+            };
+          };
+        };
         /** @description Internal Server Error - Failed to fetch inspections from Xpand */
         500: {
           content: {
-            'application/json': {
-              error?: string
+            "application/json": {
+              error?: string;
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections/xpand/residence/{residenceId}': {
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/xpand/residence/{residenceId}": {
     /** Get inspections from Xpand by residence ID */
     get: {
       parameters: {
         query?: {
           /** @description Filter inspections by status (ongoing or completed). */
-          statusFilter?: 'ongoing' | 'completed'
-        }
+          statusFilter?: "ongoing" | "completed";
+        };
         path: {
           /** @description The ID of the residence to fetch inspections for */
-          residenceId: string
-        }
-      }
+          residenceId: string;
+        };
+      };
       responses: {
         /** @description A list of inspections for the specified residence from Xpand */
         200: {
           content: {
-            'application/json': {
+            "application/json": {
               content?: {
-                inspections?: components['schemas']['XpandInspection'][]
-              }
+                inspections?: components["schemas"]["XpandInspection"][];
+              };
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
+              metadata?: Record<string, never>;
+            };
+          };
+        };
         /** @description Internal Server Error - Failed to fetch inspections from Xpand */
         500: {
           content: {
-            'application/json': {
-              error?: string
+            "application/json": {
+              error?: string;
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections/xpand/{inspectionId}': {
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/xpand/{inspectionId}": {
     /** Get a detailed inspection from Xpand by inspection ID */
     get: {
       parameters: {
         path: {
           /** @description The ID of the inspection to fetch */
-          inspectionId: string
-        }
-      }
+          inspectionId: string;
+        };
+      };
       responses: {
         /** @description The inspection details from Xpand */
         200: {
           content: {
-            'application/json': {
+            "application/json": {
               content?: {
-                inspection?: components['schemas']['DetailedXpandInspection']
-              }
+                inspection?: components["schemas"]["DetailedXpandInspection"];
+              };
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
+              metadata?: Record<string, never>;
+            };
+          };
+        };
         /** @description Internal Server Error - Failed to fetch inspections from Xpand */
         500: {
           content: {
-            'application/json': {
-              error?: string
+            "application/json": {
+              error?: string;
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections/internal/residence/{residenceId}': {
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/residence/{residenceId}": {
     /** Get inspections from local database by residence ID */
     get: {
       parameters: {
         query?: {
           /** @description Filter inspections by status (ongoing or completed). */
-          statusFilter?: 'ongoing' | 'completed'
-        }
+          statusFilter?: "ongoing" | "completed";
+        };
         path: {
           /** @description The ID of the residence to fetch inspections for */
-          residenceId: string
-        }
-      }
+          residenceId: string;
+        };
+      };
       responses: {
         /** @description A list of inspections for the specified residence from local database */
         200: {
           content: {
-            'application/json': {
+            "application/json": {
               content?: {
-                inspections?: components['schemas']['XpandInspection'][]
-              }
+                inspections?: components["schemas"]["XpandInspection"][];
+              };
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
+              metadata?: Record<string, never>;
+            };
+          };
+        };
         /** @description Internal Server Error - Failed to fetch inspections */
         500: {
           content: {
-            'application/json': {
-              error?: string
+            "application/json": {
+              error?: string;
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections/internal': {
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal": {
     /** Get inspections from local database */
     get: {
       parameters: {
         query?: {
           /** @description Page number for pagination. */
-          page?: number
+          page?: number;
           /** @description Maximum number of records to return. */
-          limit?: number
+          limit?: number;
           /** @description Filter inspections by status (ongoing or completed). */
-          statusFilter?: 'ongoing' | 'completed'
+          statusFilter?: "ongoing" | "completed";
           /** @description Whether to sort the results in ascending order. */
-          sortAscending?: true | false
+          sortAscending?: true | false;
           /** @description Filter inspections by inspector name. */
-          inspector?: string
+          inspector?: string;
           /** @description Filter inspections by address. */
-          address?: string
-        }
-      }
+          address?: string;
+        };
+      };
       responses: {
         /** @description A paginated list of inspections from local database */
         200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['XpandInspection'][]
+            "application/json": {
+              content?: components["schemas"]["XpandInspection"][];
               _meta?: {
-                totalRecords?: number
-                page?: number
-                limit?: number
-                count?: number
-              }
+                totalRecords?: number;
+                page?: number;
+                limit?: number;
+                count?: number;
+              };
               _links?: {
-                href?: string
-                rel?: string
-              }[]
-            }
-          }
-        }
+                  href?: string;
+                  rel?: string;
+                }[];
+            };
+          };
+        };
         /** @description Internal Server Error - Failed to fetch inspections */
         500: {
           content: {
-            'application/json': {
-              error?: string
+            "application/json": {
+              error?: string;
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections': {
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections": {
     /** Create a new inspection */
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateInspection']
-        }
-      }
+          "application/json": components["schemas"]["CreateInspection"];
+        };
+      };
       responses: {
         /** @description Inspection created successfully */
         201: {
           content: {
-            'application/json': {
+            "application/json": {
               content?: {
-                inspection?: components['schemas']['DetailedXpandInspection']
-              }
+                inspection?: components["schemas"]["DetailedXpandInspection"];
+              };
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
+              metadata?: Record<string, never>;
+            };
+          };
+        };
         /** @description Invalid request body */
         400: {
           content: {
-            'application/json': {
-              error?: string
-              details?: unknown[]
-              metadata?: Record<string, never>
-            }
-          }
-        }
+            "application/json": {
+              error?: string;
+              details?: unknown[];
+              metadata?: Record<string, never>;
+            };
+          };
+        };
         /** @description Internal server error */
         500: {
           content: {
-            'application/json': {
-              error?: string
-              metadata?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections/internal/{inspectionId}': {
+            "application/json": {
+              error?: string;
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}": {
     /** Get internal inspection by ID including draft room data */
     get: {
       parameters: {
         path: {
-          inspectionId: string
-        }
-      }
+          inspectionId: string;
+        };
+      };
       responses: {
         /** @description Internal inspection with draft room data */
         200: {
           content: {
-            'application/json': {
+            "application/json": {
               content?: {
-                inspection?: components['schemas']['InternalInspection']
-              }
-            }
-          }
-        }
+                inspection?: components["schemas"]["InternalInspection"];
+              };
+            };
+          };
+        };
         /** @description Inspection not found */
         404: {
           content: {
-            'application/json': {
-              error?: string
-            }
-          }
-        }
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
         /** @description Internal server error */
         500: {
           content: {
-            'application/json': {
-              error?: string
-            }
-          }
-        }
-      }
-    }
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
     /**
      * Update internal inspection
      * @description Updates an internal inspection. Supports updating status (with valid transitions Registrerad → Påbörjad → Genomförd) and/or inspector. At least one field must be provided.
@@ -346,501 +348,437 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the inspection to update */
-          inspectionId: string
-        }
-      }
+          inspectionId: string;
+        };
+      };
       requestBody: {
         content: {
-          'application/json': components['schemas']['UpdateInspectionStatus']
-        }
-      }
+          "application/json": components["schemas"]["UpdateInspectionStatus"];
+        };
+      };
       responses: {
         /** @description Inspection updated successfully */
         200: {
           content: {
-            'application/json': {
+            "application/json": {
               content?: {
-                inspection?: components['schemas']['InternalInspection']
-              }
+                inspection?: components["schemas"]["DetailedXpandInspection"];
+              };
               /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
+              metadata?: Record<string, never>;
+            };
+          };
+        };
         /** @description Invalid request body or invalid status transition */
         400: {
           content: {
-            'application/json': {
-              error?: string
-              metadata?: Record<string, never>
-            }
-          }
-        }
+            "application/json": {
+              error?: string;
+              metadata?: Record<string, never>;
+            };
+          };
+        };
         /** @description Inspection not found */
         404: {
           content: {
-            'application/json': {
-              error?: string
-              metadata?: Record<string, never>
-            }
-          }
-        }
+            "application/json": {
+              error?: string;
+              metadata?: Record<string, never>;
+            };
+          };
+        };
         /** @description Internal server error */
         500: {
           content: {
-            'application/json': {
-              error?: string
-              metadata?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections/internal/{inspectionId}/draft': {
+            "application/json": {
+              error?: string;
+              metadata?: Record<string, never>;
+            };
+          };
+        };
+      };
+    };
+  };
+  "/inspections/internal/{inspectionId}/draft": {
     /** Save inspection draft data (rooms and inspector name) */
     patch: {
       parameters: {
         path: {
-          inspectionId: string
-        }
-      }
+          inspectionId: string;
+        };
+      };
       requestBody: {
         content: {
-          'application/json': components['schemas']['SaveInspectionDraftRequest']
-        }
-      }
+          "application/json": components["schemas"]["SaveInspectionDraftRequest"];
+        };
+      };
       responses: {
         /** @description Draft saved successfully */
         200: {
           content: {
-            'application/json': Record<string, never>
-          }
-        }
+            "application/json": Record<string, never>;
+          };
+        };
         /** @description Invalid request body */
         400: {
           content: {
-            'application/json': {
-              error?: string
-            }
-          }
-        }
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
         /** @description Inspection not found */
         404: {
           content: {
-            'application/json': {
-              error?: string
-            }
-          }
-        }
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
         /** @description Internal server error */
         500: {
           content: {
-            'application/json': {
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/inspections/internal/{inspectionId}/added-rooms': {
-    /** Record a room added during the current inspection. */
-    post: {
-      parameters: {
-        path: {
-          inspectionId: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': {
-            xpandRoomId: string
-          }
-        }
-      }
-      responses: {
-        /** @description Created */
-        201: {
-          content: never
-        }
-        /** @description Invalid input */
-        400: {
-          content: never
-        }
-        /** @description Inspection not found */
-        404: {
-          content: never
-        }
-        /** @description Internal error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/inspections/internal/{inspectionId}/added-rooms/{roomId}': {
-    /** Drop the tracking row for a room added during the inspection. */
-    delete: {
-      parameters: {
-        path: {
-          inspectionId: string
-          roomId: string
-        }
-      }
-      responses: {
-        /** @description Tracking row dropped. */
-        204: {
-          content: never
-        }
-        /** @description Invalid inspectionId. */
-        400: {
-          content: never
-        }
-        /** @description No tracking row matched. */
-        404: {
-          content: never
-        }
-        /** @description Internal error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
+            "application/json": {
+              error?: string;
+            };
+          };
+        };
+      };
+    };
+  };
 }
 
-export type webhooks = Record<string, never>
+export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
     XpandInspection: {
-      id: string
-      status: string
+      id: string;
+      status: string;
       /** Format: date-time */
-      date: string
-      inspector: string
-      type: string
-      address: string
-      apartmentCode: string | null
-      leaseId: string
-      masterKeyAccess: string | null
-    }
+      date: string;
+      inspector: string;
+      type: string;
+      address: string;
+      apartmentCode: string | null;
+      leaseId: string;
+      masterKeyAccess: string | null;
+    };
     DetailedXpandInspection: {
-      id: string
-      status: string
+      id: string;
+      status: string;
       /** Format: date-time */
-      date: string
-      startedAt: string | null
-      endedAt: string | null
-      inspector: string
-      type: string
-      residenceId: string
-      address: string
-      apartmentCode: string | null
-      isFurnished: boolean
-      leaseId: string
-      isTenantPresent: boolean
-      isNewTenantPresent: boolean
-      masterKeyAccess: string | null
-      hasRemarks: boolean
-      notes: string | null
-      totalCost: number | null
-      remarkCount: number
-      rooms: {
-        room: string
-        remarks: {
-          remarkId: string
-          location: string | null
-          buildingComponent: string | null
-          notes: string | null
-          remarkGrade: number
-          remarkStatus: string | null
-          cost: number
-          /** @default null */
-          costResponsibility?: ('tenant' | 'landlord') | null
-          invoice: boolean
-          quantity: number
-          isMissing: boolean
-          fixedDate: string | null
-          workOrderCreated: boolean
-          workOrderStatus: number | null
-        }[]
-      }[]
-    }
+      date: string;
+      startedAt: string | null;
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string | null;
+      isFurnished: boolean;
+      leaseId: string;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+    };
     DetailedXpandInspectionRoom: {
-      room: string
-      remarks: {
-        remarkId: string
-        location: string | null
-        buildingComponent: string | null
-        notes: string | null
-        remarkGrade: number
-        remarkStatus: string | null
-        cost: number
-        /** @default null */
-        costResponsibility?: ('tenant' | 'landlord') | null
-        invoice: boolean
-        quantity: number
-        isMissing: boolean
-        fixedDate: string | null
-        workOrderCreated: boolean
-        workOrderStatus: number | null
-      }[]
-    }
-    DetailedXpandInspectionRemark: {
-      remarkId: string
-      location: string | null
-      buildingComponent: string | null
-      notes: string | null
-      remarkGrade: number
-      remarkStatus: string | null
-      cost: number
-      /** @default null */
-      costResponsibility?: ('tenant' | 'landlord') | null
-      invoice: boolean
-      quantity: number
-      isMissing: boolean
-      fixedDate: string | null
-      workOrderCreated: boolean
-      workOrderStatus: number | null
-    }
-    CreateInspection: {
-      status: string
+      id: string;
+      status: string;
       /** Format: date-time */
-      date: string
-      startedAt: string | null
-      endedAt: string | null
-      inspector: string
-      type: string
-      residenceId: string
-      address: string
-      apartmentCode: string | null
-      isFurnished: boolean
-      leaseId: string
-      isTenantPresent: boolean
-      isNewTenantPresent: boolean
-      masterKeyAccess: string | null
-      hasRemarks: boolean
-      notes: string | null
-      totalCost: number | null
-      rooms: {
-        room: string
-        remarks: {
-          remarkId: string
-          location: string | null
-          buildingComponent: string | null
-          notes: string | null
-          remarkGrade: number
-          remarkStatus: string | null
-          cost: number
-          invoice: boolean
-          quantity: number
-          isMissing: boolean
-          fixedDate: string | null
-          workOrderCreated: boolean
-          workOrderStatus: number | null
-        }[]
-      }[]
-    }
+      date: string;
+      startedAt: string | null;
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string | null;
+      isFurnished: boolean;
+      leaseId: string;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+    };
+    DetailedXpandInspectionRemark: {
+      id: string;
+      status: string;
+      /** Format: date-time */
+      date: string;
+      startedAt: string | null;
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string | null;
+      isFurnished: boolean;
+      leaseId: string;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      remarkCount: number;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+    };
+    CreateInspection: {
+      status: string;
+      /** Format: date-time */
+      date: string;
+      startedAt: string | null;
+      endedAt: string | null;
+      inspector: string;
+      type: string;
+      residenceId: string;
+      address: string;
+      apartmentCode: string | null;
+      isFurnished: boolean;
+      leaseId: string;
+      isTenantPresent: boolean;
+      isNewTenantPresent: boolean;
+      masterKeyAccess: string | null;
+      hasRemarks: boolean;
+      notes: string | null;
+      totalCost: number | null;
+      rooms: ({
+          room: string;
+          remarks: ({
+              remarkId: string;
+              location: string | null;
+              buildingComponent: string | null;
+              notes: string | null;
+              remarkGrade: number;
+              remarkStatus: string | null;
+              cost: number;
+              invoice: boolean;
+              quantity: number;
+              isMissing: boolean;
+              fixedDate: string | null;
+              workOrderCreated: boolean;
+              workOrderStatus: number | null;
+            })[];
+        })[];
+    };
     UpdateInspectionStatus: {
       /** @enum {string} */
-      status?: 'Registrerad' | 'Påbörjad' | 'Genomförd'
-      inspector?: string
-    }
-    InspectionComponent: {
-      componentId: string
-      label: string
-      condition: string
-      action: string[]
-      note: string
-      photos: string[]
-      cost?: number
-      /** @default null */
-      costResponsibility?: ('tenant' | 'landlord') | null
-    }
+      status?: "Registrerad" | "Påbörjad" | "Genomförd";
+      inspector?: string;
+    };
     InspectionRoom: {
-      roomId: string
-      name?: string
+      roomId: string;
       conditions: {
-        details: string
-      }
+        wall1: string;
+        wall2: string;
+        wall3: string;
+        wall4: string;
+        floor: string;
+        ceiling: string;
+        details: string;
+      };
       actions: {
-        details: string[]
-      }
+        wall1: string[];
+        wall2: string[];
+        wall3: string[];
+        wall4: string[];
+        floor: string[];
+        ceiling: string[];
+        details: string[];
+      };
       componentNotes: {
-        details: string
-      }
-      componentCosts: {
-        /** @default 0 */
-        details?: number
-      }
+        wall1: string;
+        wall2: string;
+        wall3: string;
+        wall4: string;
+        floor: string;
+        ceiling: string;
+        details: string;
+      };
       componentPhotos: {
-        details: string[]
-      }
-      componentCostResponsibilities: {
-        /** @default null */
-        details?: ('tenant' | 'landlord') | null
-      }
-      photos: string[]
-      isApproved: boolean
-      isHandled: boolean
-      /** @default [] */
-      detailComponents?: {
-        id: string
-        type: string
-        label: string
-        note: string
-      }[]
-      /** @default [] */
-      components?: {
-        componentId: string
-        label: string
-        condition: string
-        action: string[]
-        note: string
-        photos: string[]
-        cost?: number
-        /** @default null */
-        costResponsibility?: ('tenant' | 'landlord') | null
-      }[]
-      /** @default false */
-      isAddedInThisInspection?: boolean
-    }
+        wall1: string[];
+        wall2: string[];
+        wall3: string[];
+        wall4: string[];
+        floor: string[];
+        ceiling: string[];
+        details: string[];
+      };
+      photos: string[];
+      isApproved: boolean;
+      isHandled: boolean;
+    };
     InternalInspection: {
-      id: string
-      status: string
+      id: string;
+      status: string;
       /** Format: date-time */
-      date: string
-      inspector: string
-      type: string
-      address: string
-      apartmentCode: string | null
-      leaseId: string
-      masterKeyAccess: string | null
-      residenceId: string
-      isFurnished: boolean
-      startedAt: string | null
-      endedAt: string | null
-      isTenantPresent: boolean
-      isNewTenantPresent: boolean
-      hasRemarks: boolean
-      notes: string | null
-      totalCost: number | null
-      remarkCount: number
-      rooms:
-        | {
-            roomId: string
-            name?: string
-            conditions: {
-              details: string
-            }
-            actions: {
-              details: string[]
-            }
-            componentNotes: {
-              details: string
-            }
-            componentCosts: {
-              /** @default 0 */
-              details?: number
-            }
-            componentPhotos: {
-              details: string[]
-            }
-            componentCostResponsibilities: {
-              /** @default null */
-              details?: ('tenant' | 'landlord') | null
-            }
-            photos: string[]
-            isApproved: boolean
-            isHandled: boolean
-            /** @default [] */
-            detailComponents?: {
-              id: string
-              type: string
-              label: string
-              note: string
-            }[]
-            /** @default [] */
-            components?: {
-              componentId: string
-              label: string
-              condition: string
-              action: string[]
-              note: string
-              photos: string[]
-              cost?: number
-              /** @default null */
-              costResponsibility?: ('tenant' | 'landlord') | null
-            }[]
-            /** @default false */
-            isAddedInThisInspection?: boolean
-          }[]
-        | null
-    }
-    SaveInspectionDraftRequest: {
-      inspectorName: string
+      date: string;
+      inspector: string;
+      type: string;
+      address: string;
+      apartmentCode: string | null;
+      leaseId: string;
+      masterKeyAccess: string | null;
+      residenceId: string;
       rooms: {
-        roomId: string
-        name?: string
-        conditions: {
-          details: string
-        }
-        actions: {
-          details: string[]
-        }
-        componentNotes: {
-          details: string
-        }
-        componentCosts: {
-          /** @default 0 */
-          details?: number
-        }
-        componentPhotos: {
-          details: string[]
-        }
-        componentCostResponsibilities: {
-          /** @default null */
-          details?: ('tenant' | 'landlord') | null
-        }
-        photos: string[]
-        isApproved: boolean
-        isHandled: boolean
-        /** @default [] */
-        detailComponents?: {
-          id: string
-          type: string
-          label: string
-          note: string
-        }[]
-        /** @default [] */
-        components?: {
-          componentId: string
-          label: string
-          condition: string
-          action: string[]
-          note: string
-          photos: string[]
-          cost?: number
-          /** @default null */
-          costResponsibility?: ('tenant' | 'landlord') | null
-        }[]
-        /** @default false */
-        isAddedInThisInspection?: boolean
-      }[]
-      isFurnished: boolean
-    }
-  }
-  responses: never
-  parameters: never
-  requestBodies: never
-  headers: never
-  pathItems: never
+          roomId: string;
+          conditions: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          actions: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          componentNotes: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          componentPhotos: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          photos: string[];
+          isApproved: boolean;
+          isHandled: boolean;
+        }[] | null;
+    };
+    SaveInspectionDraftRequest: {
+      inspectorName: string;
+      rooms: {
+          roomId: string;
+          conditions: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          actions: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          componentNotes: {
+            wall1: string;
+            wall2: string;
+            wall3: string;
+            wall4: string;
+            floor: string;
+            ceiling: string;
+            details: string;
+          };
+          componentPhotos: {
+            wall1: string[];
+            wall2: string[];
+            wall3: string[];
+            wall4: string[];
+            floor: string[];
+            ceiling: string[];
+            details: string[];
+          };
+          photos: string[];
+          isApproved: boolean;
+          isHandled: boolean;
+        }[];
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 
-export type $defs = Record<string, never>
+export type $defs = Record<string, never>;
 
-export type external = Record<string, never>
+export type external = Record<string, never>;
 
-export type operations = Record<string, never>
+export type operations = Record<string, never>;
