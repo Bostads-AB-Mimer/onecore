@@ -198,10 +198,14 @@ export const syncLeases = async (
   // Re-read queue for the new-row loop's dedupe check.
   const queueForRun = await readQueue(queueFile)
 
+  let succeeded = 0
+  let failed = 0
   for (const lease of leases) {
     try {
       await syncLease(lease)
+      succeeded++
     } catch (err) {
+      failed++
       const entry: FailedRowEntry = {
         key: keyFor(lease),
         type: 'lease',
@@ -227,7 +231,10 @@ export const syncLeases = async (
     await saveLastTimestamp(stateFile, lease.timestamp)
   }
 
-  logger.info({ count: leases.length }, 'all leases processed')
+  logger.info(
+    { total: leases.length, succeeded, failed },
+    'sync-leases run complete'
+  )
 }
 
 if (require.main === module) {

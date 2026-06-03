@@ -175,10 +175,14 @@ export const syncContacts = async (
 
   const queueForRun = await readQueue(queueFile)
 
+  let succeeded = 0
+  let failed = 0
   for (const update of updates) {
     try {
       await syncContact(update)
+      succeeded++
     } catch (err) {
+      failed++
       const entry: FailedRowEntry = {
         key: keyFor(update),
         type: 'contact',
@@ -207,7 +211,10 @@ export const syncContacts = async (
     await saveLastTimestamp(stateFile, update.timestamp)
   }
 
-  logger.info({ count: updates.length }, 'all contacts processed')
+  logger.info(
+    { total: updates.length, succeeded, failed },
+    'sync-contacts run complete'
+  )
 }
 
 if (require.main === module) {
