@@ -10,6 +10,7 @@ import {
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
   PaymentStatus,
+  Tenant,
 } from '@onecore/types'
 
 export const mockedParkingSpace: ParkingSpace = {
@@ -159,6 +160,50 @@ export const mockedPaidInvoice: Invoice = {
   source: 'legacy',
   invoiceRows: [],
   credit: null,
+}
+
+const housingContractInSameArea: Lease = {
+  ...mockedLease,
+  type: LeaseType.HousingContract,
+  residentialArea: { code: 'TST', caption: 'Test' },
+}
+
+const housingContractInDifferentArea: Lease = {
+  ...mockedLease,
+  type: LeaseType.HousingContract,
+  residentialArea: { code: 'OTHER', caption: 'Annan' },
+}
+
+export const mockedTenantWithHousingContractInSameArea: Tenant = {
+  contactCode: 'P12345',
+  contactKey: 'ABC',
+  leaseIds: ['123-456-789/01', '789-456-123/02'],
+  address: {
+    street: 'Gata',
+    number: '2',
+    postalCode: '54321',
+    city: 'Västerås',
+  },
+  birthDate: new Date(),
+  firstName: 'Foo',
+  lastName: 'Bar',
+  fullName: 'Foo Bar',
+  nationalRegistrationNumber: '1212121212',
+  phoneNumbers: [],
+  emailAddress: 'test@mimer.nu',
+  protectedIdentity: false,
+  deceased: false,
+  emigrated: false,
+  noAdvertising: false,
+  housingContracts: [housingContractInSameArea],
+  isAboutToLeave: false,
+  currentHousingContract: housingContractInSameArea,
+}
+
+export const mockedTenantWithHousingContractInDifferentArea: Tenant = {
+  ...mockedTenantWithHousingContractInSameArea,
+  housingContracts: [housingContractInDifferentArea],
+  currentHousingContract: housingContractInDifferentArea,
 }
 
 export const mockedUnpaidInvoice: Invoice = {
