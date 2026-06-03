@@ -337,7 +337,9 @@ export const routes = (router: KoaRouter) => {
 
         if (!invoice.expirationDate)
           return { ocr, sent: false, error: 'missing-expiration-date' }
-        const dueDate = invoice.expirationDate.toISOString().split('T')[0]
+        const dueDate = new Date(invoice.expirationDate)
+          .toISOString()
+          .split('T')[0]
 
         const emailTo =
           process.env.NODE_ENV !== 'production'
