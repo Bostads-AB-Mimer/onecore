@@ -1451,6 +1451,39 @@ export interface paths {
       }
     }
   }
+  '/leases/keys-export': {
+    /**
+     * Export all leases for a property as Excel, enriched with key name(s)
+     * @description Returns an .xlsx file with one row per lease matching the property filter,
+     * enriched with the key name(s) from the keys service.
+     * Optional buildingCode filter narrows to a single building.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Property designation (fastighetsbeteckning), e.g. "ALLMOGEKULTUREN 1" */
+          property: string
+          buildingCode?: string
+        }
+      }
+      responses: {
+        /** @description Excel file */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/leases/building-managers': {
     /**
      * Get all building managers
@@ -1703,7 +1736,7 @@ export interface paths {
           address?: string
           /** @description Object types (e.g., residence, parking) */
           objectType?: string[]
-          /** @description Contract status filter */
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
           status?: string[]
           /** @description Lease type filter */
           leaseType?: string[]
@@ -6784,6 +6817,111 @@ export interface paths {
       }
     }
   }
+  '/inspections/internal/{inspectionId}/rooms': {
+    /**
+     * Add a room to a residence during an inspection.
+     * @description Creates a new room in Xpand (via property-base) for the residence
+     * associated with the inspection, then records the xpand-issued room id
+     * in the inspection's tracking table so the inspector sees the room as
+     * 'added during this inspection'.
+     *
+     * If the property write fails, no inspection state is touched. If the
+     * property write succeeds but the inspection-tracking write fails, the
+     * room exists in Xpand and is returned to the caller; the caller is
+     * expected to refresh the inspection to pick it up.
+     */
+    post: {
+      parameters: {
+        path: {
+          inspectionId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['AddInspectionRoomRequest']
+        }
+      }
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            'application/json': {
+              content?: {
+                room?: components['schemas']['Room']
+              }
+            }
+          }
+        }
+        /** @description Invalid request body or no residence linked to the inspection. */
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+        /** @description Inspection or residence not found. */
+        404: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/inspections/internal/{inspectionId}/rooms/{roomId}': {
+    /**
+     * Remove a room that was added during the current inspection.
+     * @description Symmetric to POST /inspections/internal/{inspectionId}/rooms.
+     * Verifies the room was added during this inspection (via the
+     * inspection_added_room tracking table) before deleting it from Xpand
+     * and dropping the tracking row.
+     *
+     * The isAddedInThisInspection check is authoritative — the frontend
+     * gate is just UX. Rooms that originated from the property system
+     * (isAddedInThisInspection: false) cannot be removed through this
+     * endpoint.
+     */
+    delete: {
+      parameters: {
+        path: {
+          inspectionId: string
+          roomId: string
+        }
+      }
+      responses: {
+        /** @description Room removed. */
+        204: {
+          content: never
+        }
+        /**
+         * @description Inspection not found, room not found in Xpand, or the room was
+         * not added during this inspection.
+         */
+        404: {
+          content: never
+        }
+        /** @description Room has installed components and cannot be removed. */
+        409: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/imd/process': {
     /**
      * Process IMD CSV data
@@ -6825,6 +6963,49 @@ export interface paths {
               reason?: 'invalid-csv'
             }
           }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/invoice-channels': {
+    /**
+     * Look up invoice channels for national registration numbers
+     * @description Returns the invoice delivery channel for each provided national registration number.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description List of national registration numbers to look up */
+            nationalRegistrationNumbers: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved invoice channels. */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                /** @enum {string} */
+                channel: 'Kivra' | 'Billo' | 'eInvoiceB2C' | 'eInvoiceB2B'
+                matchedCandidates: string[] | null
+                error: string | null
+              }[]
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
         }
         /** @description Internal server error. */
         500: {
@@ -9749,6 +9930,45 @@ export interface paths {
       }
     }
   }
+  '/v1/contacts/batch': {
+    /**
+     * Batch lookup of contacts by contact code
+     * @description Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, or `includeAddress` to include those joins. Missing contact codes are simply absent from the response.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Contact code(s) to look up. Repeat the parameter for multiple codes, e.g. ?code=P123&code=P456. */
+          code: string[]
+          /** @description Include phone numbers in the response. */
+          includePhone?: boolean
+          /** @description Include email addresses in the response. */
+          includeEmail?: boolean
+          /** @description Include addresses in the response. */
+          includeAddress?: boolean
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: components['schemas']['ContactV1'][]
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
   '/v1/contacts/{contactCode}': {
     /** Get a single contact by canonical id (contact code) */
     get: {
@@ -9905,6 +10125,35 @@ export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
+    CustomerScoreCardInfoSchema: {
+      object_ref_nr: string
+      division_1011: string
+      object_real_estate?: string
+      object_real_estate_year_construction?: number
+      object_real_estate_year_reconstruction?: number
+      real_estate_type: string
+      division_1048: string
+      division_1242: string
+      division_1140: string
+      object_type: string
+      object_street_1: string
+      object_zip: string
+      object_city: string
+      division_1501: string
+      respondent_name_first: string
+      respondent_name_last: string
+      respondent_email: string
+      respondent_phone: string
+      postal_street_1: string
+      postal_street_2?: string
+      postal_zip: string
+      postal_city: string
+      division_1038: string
+      division_1037?: string
+      contract_start_date: string
+      contract_end_date?: string
+      contract_type: string
+    }
     Lease: {
       leaseId: string
       leaseNumber: string
@@ -13119,601 +13368,27 @@ export interface components {
         workOrderCreated: boolean
         workOrderStatus: number | null
       }[]
-      lease: {
-        leaseId: string
-        leaseNumber: string
-        /** Format: date-time */
-        leaseStartDate: string
-        /** Format: date-time */
-        leaseEndDate?: string
-        /** @enum {string} */
-        status:
-          | 'Current'
-          | 'Upcoming'
-          | 'AboutToEnd'
-          | 'Ended'
-          | 'PreliminaryTerminated'
-          | 'PendingSignature'
-          | 'NotSent'
-        tenantContactIds?: string[]
-        rentalPropertyId: string
-        rentalObject?: {
-          rentalObjectCode: string
-          address: string
-          rent?: {
-            rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
-              amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
-            }[]
-          }
-          residentialAreaCaption: string
-          residentialAreaCode: string
-          objectTypeCaption: string
-          objectTypeCode: string
-          boaArea?: number
-          braArea?: number
-        }
-        rentalProperty?: {
-          rentalPropertyId: string
-          apartmentNumber: number
-          size: number
-          type: string
-          address?: {
-            street?: string
-            number: string
-            postalCode: string
-            city: string
-          }
-          rentalPropertyType: string
-          additionsIncludedInRent: string
-          otherInfo?: string
-          roomTypes?: {
-            roomTypeId: string
-            name: string
-          }[]
-          /** Format: date-time */
-          lastUpdated?: string
-        }
-        type: string
-        rentInfo?: {
-          currentRent: {
-            rentId?: string
-            leaseId?: string
-            currentRent: number
-            vat: number
-            additionalChargeDescription?: string
-            additionalChargeAmount?: number
-            /** Format: date-time */
-            rentStartDate?: string
-            /** Format: date-time */
-            rentEndDate?: string
-          }
-        }
-        address?: {
-          street?: string
-          number: string
-          postalCode: string
-          city: string
-        }
-        noticeGivenBy?: string
-        /** Format: date-time */
-        noticeDate?: string
-        noticeTimeTenant?: string | number
-        /** Format: date-time */
-        preferredMoveOutDate?: string
-        /** Format: date-time */
-        terminationDate?: string
-        /** Format: date-time */
-        contractDate?: string
-        /** Format: date-time */
-        lastDebitDate?: string
-        /** Format: date-time */
-        approvalDate?: string
-        residentialArea?: {
-          code: string
-          caption: string
-        }
-        rentRows?: {
-          id: string
-          amount: number
-          articleId: string
-          label: string
-          vat: number
-          from?: string
-          to?: string
-        }[]
-        tenants?: {
-          contactCode: string
-          contactKey: string
-          leaseIds?: string[]
-          firstName: string
-          lastName: string
-          fullName: string
-          nationalRegistrationNumber: string
-          /** Format: date-time */
-          birthDate: string
-          address?: {
-            street?: string
-            number: string
-            postalCode: string
-            city: string
-          }
-          phoneNumbers?: {
-            phoneNumber: string
-            type: string
-            isMainNumber: boolean
-          }[]
-          emailAddress?: string
-          isTenant: boolean
-          parkingSpaceWaitingList?: {
-            /** Format: date-time */
-            queueTime: string
-            queuePoints: number
-            type: number
-          }
-          specialAttention?: boolean
-          leaseContactType?: string
-        }[]
-      } | null
-      residence: {
-        id: string
-        code: string
-        name: string | null
-        /** @enum {string|null} */
-        status: 'VACANT' | 'LEASED' | null
-        entrance: string | null
-        location: string | null
-        floor: string | null
-        partNo: number | null
-        part: string | null
-        deleted: boolean
-        validityPeriod: {
-          /** Format: date-time */
-          fromDate: string
-          /** Format: date-time */
-          toDate: string
-        }
-        accessibility: {
-          wheelchairAccessible: boolean
-          elevator: boolean
-          residenceAdapted: boolean
-        }
-        features: {
-          hygieneFacility: string | null
-          balcony1?: {
-            location: string
-            type: string
-          }
-          balcony2?: {
-            location: string
-            type: string
-          }
-          patioLocation: string | null
-          sauna: boolean
-          extraToilet: boolean
-          sharedKitchen: boolean
-          petAllergyFree: boolean
-          /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean
-          smokeFree: boolean
-          asbestos: boolean
-        }
-        type: {
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-        }
-        residenceType: {
-          residenceTypeId: string
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-          systemStandard: number
-          checklistId: string | null
-          componentTypeActionId: string | null
-          statisticsGroupSCBId: string | null
-          statisticsGroup2Id: string | null
-          statisticsGroup3Id: string | null
-          statisticsGroup4Id: string | null
-          timestamp: string
-        }
-        rentalInformation: {
-          apartmentNumber: string | null
-          rentalId: string | null
-          type: {
-            code: string
-            name: string | null
-          }
-        } | null
-        propertyObject: {
-          energy: {
-            energyClass: number
-            /** Format: date-time */
-            energyRegistered?: string
-            /** Format: date-time */
-            energyReceived?: string
-            energyIndex?: number
-          }
-          rentalId: string | null
-          rentalInformation: {
-            type: {
-              code: string
-              name: string | null
-            }
-          } | null
-          rentalBlocks: {
-            id: string
-            blockReasonId: string | null
-            blockReason: string | null
-            /** Format: date-time */
-            fromDate: string
-            /** Format: date-time */
-            toDate: string | null
-            amount: number | null
-          }[]
-        }
-        property: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        building: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        staircase: {
-          id: string
-          code: string
-          name: string | null
-          features: {
-            floorPlan: string | null
-            accessibleByElevator: boolean
-          }
-          dates: {
-            /** Format: date-time */
-            from: string
-            /** Format: date-time */
-            to: string
-          }
-          property?: {
-            propertyId: string | null
-            propertyName: string | null
-            propertyCode: string | null
-          }
-          building?: {
-            buildingId: string | null
-            buildingName: string | null
-            buildingCode: string | null
-          }
-          deleted: boolean
-          timestamp: string
-        } | null
-        areaSize: number | null
-        malarEnergiFacilityId: string | null
-      } | null
     }
     DetailedInspectionRemark: {
       remarkId: string
       location: string | null
       buildingComponent: string | null
       notes: string | null
-      totalCost: number | null
-      remarkCount: number
-      rooms: {
-        room: string
-        remarks: {
-          remarkId: string
-          location: string | null
-          buildingComponent: string | null
-          notes: string | null
-          remarkGrade: number
-          remarkStatus: string | null
-          cost: number
-          invoice: boolean
-          quantity: number
-          isMissing: boolean
-          /** Format: date-time */
-          fixedDate: string | null
-          workOrderCreated: boolean
-          workOrderStatus: number | null
-        }[]
-      }[]
-      lease: {
-        leaseId: string
-        leaseNumber: string
-        /** Format: date-time */
-        leaseStartDate: string
-        /** Format: date-time */
-        leaseEndDate?: string
-        /** @enum {string} */
-        status:
-          | 'Current'
-          | 'Upcoming'
-          | 'AboutToEnd'
-          | 'Ended'
-          | 'PreliminaryTerminated'
-          | 'PendingSignature'
-          | 'NotSent'
-        tenantContactIds?: string[]
-        rentalPropertyId: string
-        rentalObject?: {
-          rentalObjectCode: string
-          address: string
-          rent?: {
-            rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
-              amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
-            }[]
-          }
-          residentialAreaCaption: string
-          residentialAreaCode: string
-          objectTypeCaption: string
-          objectTypeCode: string
-          boaArea?: number
-          braArea?: number
-        }
-        rentalProperty?: {
-          rentalPropertyId: string
-          apartmentNumber: number
-          size: number
-          type: string
-          address?: {
-            street?: string
-            number: string
-            postalCode: string
-            city: string
-          }
-          rentalPropertyType: string
-          additionsIncludedInRent: string
-          otherInfo?: string
-          roomTypes?: {
-            roomTypeId: string
-            name: string
-          }[]
-          /** Format: date-time */
-          lastUpdated?: string
-        }
-        type: string
-        rentInfo?: {
-          currentRent: {
-            rentId?: string
-            leaseId?: string
-            currentRent: number
-            vat: number
-            additionalChargeDescription?: string
-            additionalChargeAmount?: number
-            /** Format: date-time */
-            rentStartDate?: string
-            /** Format: date-time */
-            rentEndDate?: string
-          }
-        }
-        address?: {
-          street?: string
-          number: string
-          postalCode: string
-          city: string
-        }
-        noticeGivenBy?: string
-        /** Format: date-time */
-        noticeDate?: string
-        noticeTimeTenant?: string | number
-        /** Format: date-time */
-        preferredMoveOutDate?: string
-        /** Format: date-time */
-        terminationDate?: string
-        /** Format: date-time */
-        contractDate?: string
-        /** Format: date-time */
-        lastDebitDate?: string
-        /** Format: date-time */
-        approvalDate?: string
-        residentialArea?: {
-          code: string
-          caption: string
-        }
-        rentRows?: {
-          id: string
-          amount: number
-          articleId: string
-          label: string
-          vat: number
-          from?: string
-          to?: string
-        }[]
-        tenants?: {
-          contactCode: string
-          contactKey: string
-          leaseIds?: string[]
-          firstName: string
-          lastName: string
-          fullName: string
-          nationalRegistrationNumber: string
-          /** Format: date-time */
-          birthDate: string
-          address?: {
-            street?: string
-            number: string
-            postalCode: string
-            city: string
-          }
-          phoneNumbers?: {
-            phoneNumber: string
-            type: string
-            isMainNumber: boolean
-          }[]
-          emailAddress?: string
-          isTenant: boolean
-          parkingSpaceWaitingList?: {
-            /** Format: date-time */
-            queueTime: string
-            queuePoints: number
-            type: number
-          }
-          specialAttention?: boolean
-          leaseContactType?: string
-        }[]
-      } | null
-      residence: {
-        id: string
-        code: string
-        name: string | null
-        /** @enum {string|null} */
-        status: 'VACANT' | 'LEASED' | null
-        entrance: string | null
-        location: string | null
-        floor: string | null
-        partNo: number | null
-        part: string | null
-        deleted: boolean
-        validityPeriod: {
-          /** Format: date-time */
-          fromDate: string
-          /** Format: date-time */
-          toDate: string
-        }
-        accessibility: {
-          wheelchairAccessible: boolean
-          elevator: boolean
-          residenceAdapted: boolean
-        }
-        features: {
-          hygieneFacility: string | null
-          balcony1?: {
-            location: string
-            type: string
-          }
-          balcony2?: {
-            location: string
-            type: string
-          }
-          patioLocation: string | null
-          sauna: boolean
-          extraToilet: boolean
-          sharedKitchen: boolean
-          petAllergyFree: boolean
-          /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean
-          smokeFree: boolean
-          asbestos: boolean
-        }
-        type: {
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-        }
-        residenceType: {
-          residenceTypeId: string
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-          systemStandard: number
-          checklistId: string | null
-          componentTypeActionId: string | null
-          statisticsGroupSCBId: string | null
-          statisticsGroup2Id: string | null
-          statisticsGroup3Id: string | null
-          statisticsGroup4Id: string | null
-          timestamp: string
-        }
-        rentalInformation: {
-          apartmentNumber: string | null
-          rentalId: string | null
-          type: {
-            code: string
-            name: string | null
-          }
-        } | null
-        propertyObject: {
-          energy: {
-            energyClass: number
-            /** Format: date-time */
-            energyRegistered?: string
-            /** Format: date-time */
-            energyReceived?: string
-            energyIndex?: number
-          }
-          rentalId: string | null
-          rentalInformation: {
-            type: {
-              code: string
-              name: string | null
-            }
-          } | null
-          rentalBlocks: {
-            id: string
-            blockReasonId: string | null
-            blockReason: string | null
-            /** Format: date-time */
-            fromDate: string
-            /** Format: date-time */
-            toDate: string | null
-            amount: number | null
-          }[]
-        }
-        property: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        building: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        staircase: {
-          id: string
-          code: string
-          name: string | null
-          features: {
-            floorPlan: string | null
-            accessibleByElevator: boolean
-          }
-          dates: {
-            /** Format: date-time */
-            from: string
-            /** Format: date-time */
-            to: string
-          }
-          property?: {
-            propertyId: string | null
-            propertyName: string | null
-            propertyCode: string | null
-          }
-          building?: {
-            buildingId: string | null
-            buildingName: string | null
-            buildingCode: string | null
-          }
-          deleted: boolean
-          timestamp: string
-        } | null
-        areaSize: number | null
-        malarEnergiFacilityId: string | null
-      } | null
+      remarkGrade: number
+      remarkStatus: string | null
+      cost: number
+      /**
+       * @default null
+       * @enum {string|null}
+       */
+      costResponsibility?: 'tenant' | 'landlord' | null
+      invoice: boolean
+      quantity: number
+      isMissing: boolean
+      /** Format: date-time */
+      fixedDate: string | null
+      workOrderCreated: boolean
+      workOrderStatus: number | null
     }
     TenantContactsResponse: {
       inspection: {
@@ -14349,35 +14024,6 @@ export interface components {
             name: string
           }
         }
-    CustomerScoreCardInfoSchema: {
-      object_ref_nr: string
-      division_1011: string
-      object_real_estate?: string
-      object_real_estate_year_construction?: number
-      object_real_estate_year_reconstruction?: number
-      real_estate_type: string
-      division_1048: string
-      division_1242: string
-      division_1140: string
-      object_type: string
-      object_street_1: string
-      object_zip: string
-      object_city: string
-      division_1501: string
-      respondent_name_first: string
-      respondent_name_last: string
-      respondent_email: string
-      respondent_phone: string
-      postal_street_1: string
-      postal_street_2?: string
-      postal_zip: string
-      postal_city: string
-      division_1038: string
-      division_1037?: string
-      contract_start_date: string
-      contract_end_date?: string
-      contract_type: string
-    }
   }
   responses: never
   parameters: never

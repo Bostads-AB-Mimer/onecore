@@ -7,7 +7,7 @@ import {
   setExcelDownloadHeaders,
 } from '@onecore/utilities'
 import { z } from 'zod'
-import { leasing, LeaseStatusLabel } from '@onecore/types'
+import { LeaseStatusLabel, Lease } from '@onecore/types'
 
 import { KeysApi } from '../../adapters/keys-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -20,7 +20,7 @@ const querySchema = z.object({
 const KEYS_CONCURRENCY = 5
 const PAGE_SIZE = 100
 
-type EnrichedLease = leasing.v1.LeaseSearchResult & {
+type EnrichedLease = Lease & {
   keyName: string
 }
 
@@ -47,9 +47,7 @@ async function runWithConcurrency<T, R>(
   return results
 }
 
-async function enrichLeasesWithKeys(
-  leases: leasing.v1.LeaseSearchResult[]
-): Promise<EnrichedLease[]> {
+async function enrichLeasesWithKeys(leases: Lease[]): Promise<EnrichedLease[]> {
   const enriched: EnrichedLease[] = leases.map((lease) => ({
     ...lease,
     keyName: '',
@@ -63,13 +61,13 @@ async function enrichLeasesWithKeys(
   await runWithConcurrency(
     enriched,
     async (lease) => {
-      if (!lease.rentalObjectCode) return
+      if (!lease.rentalPropertyId) return
       attempted++
-      const result = await KeysApi.getByRentalObjectCode(lease.rentalObjectCode)
+      const result = await KeysApi.getByRentalObjectCode(lease.rentalPropertyId)
       if (!result.ok) {
         failed++
         logger.error(
-          { err: result.err, rentalObjectCode: lease.rentalObjectCode },
+          { err: result.err, rentalPropertyId: lease.rentalPropertyId },
           'leases-keys-export: keys lookup failed'
         )
         return
@@ -205,32 +203,25 @@ export const routes = (router: KoaRouter) => {
             { header: 'Årshyra', key: 'yearRent', width: 12 },
           ],
           rowMapper: (lease) => {
-            const contacts = lease.contacts ?? []
+            const contacts = lease.tenants ?? []
             const tenantOne = contacts[0]
             const tenantTwo = contacts[1]
             return {
               status: LeaseStatusLabel[lease.status] ?? '',
               leaseId: lease.leaseId,
               keyName: lease.keyName,
-              tenantOneName: tenantOne?.name ?? '',
+              tenantOneName: tenantOne?.fullName ?? '',
               tenantOneCode: tenantOne?.contactCode ?? '',
-              tenantOneEmail: tenantOne?.email ?? '',
-              tenantOnePhone: tenantOne?.phone ?? '',
-              tenantTwoName: tenantTwo?.name ?? '',
+              tenantOneEmail: tenantOne?.emailAddress ?? '',
+              tenantOnePhone: tenantOne?.phoneNumbers?.[0]?.phoneNumber ?? '',
+              tenantTwoName: tenantTwo?.fullName ?? '',
               tenantTwoCode: tenantTwo?.contactCode ?? '',
-              rentalObjectCode: lease.rentalObjectCode ?? '',
-              address: lease.address ?? '',
-              objectTypeCode: lease.objectTypeCode,
-              property: lease.property ?? '',
-              buildingCode: lease.buildingCode ?? '',
-              districtName: lease.districtName ?? '',
-              leaseType: lease.leaseType,
-              startDate: formatDateForExcel(lease.startDate),
-              lastDebitDate: formatDateForExcel(lease.lastDebitDate),
-              yearRent:
-                typeof lease.totalYearRent === 'number'
-                  ? Math.round(lease.totalYearRent)
-                  : '',
+              rentalObjectCode: lease.rentalPropertyId ?? '',
+              address: lease.rentalObject?.address ?? '',
+              objectTypeCode: lease.rentalObject?.objectTypeCode ?? '',
+              property: lease.rentalObject ?? '',
+              leaseType: lease.type,
+              startDate: formatDateForExcel(lease.leaseStartDate),
             }
           },
           batchSize: PAGE_SIZE,

@@ -44,11 +44,11 @@ jest.mock('@src/services/invoice-service/adapters/xpand-db-adapter', () =>
 
 // Mock the additional adapters used by getInvoiceDetails
 jest.mock('@src/services/common/adapters/xledger-adapter', () => ({
+  ...jest.requireActual('@src/services/common/adapters/xledger-adapter'),
   getInvoiceByInvoiceNumber: jest.fn(),
   uploadFile: jest.fn(),
   createCustomerLedgerRow: jest.fn(),
   transformAggregatedInvoiceRow: jest.fn(),
-  transformContact: jest.fn(),
 }))
 
 jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({

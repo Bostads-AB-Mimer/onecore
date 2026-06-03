@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef } from 'react'
 import {
   type BuildingManager,
   leaseSearchService,
+  LeaseStatusFilter,
 } from '@/services/api/core/leaseSearchService'
 
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
@@ -37,7 +38,7 @@ export function useLeaseFilters() {
     [urlSearchParams]
   )
   const selectedStatuses = useMemo(
-    () => urlSearchParams.getAll('status') as ('0' | '1' | '2' | '3')[],
+    () => urlSearchParams.getAll('status') as LeaseStatusFilter[],
     [urlSearchParams]
   )
   const selectedProperties = useMemo(

@@ -2,7 +2,6 @@ import { leasing } from '@onecore/types'
 import z from 'zod'
 
 import { GET } from './baseApi'
-
 import type { components } from './generated/api-types'
 
 export type Lease = components['schemas']['Lease']

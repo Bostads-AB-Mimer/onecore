@@ -889,6 +889,7 @@ function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
   }
 
   return {
+    slTransactionType: event.slTransactionType?.name ?? null,
     type: event.transactionHeader.transactionSource.code,
     invoiceId,
     matchId: event.matchId,
