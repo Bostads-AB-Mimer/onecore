@@ -2,6 +2,8 @@ import { useState } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
+import { type Checklist, CHECKLIST_DEFAULT } from '../constants/checklist'
+
 type Inspection = components['schemas']['InternalInspection']
 
 export interface InspectorInfo {
@@ -9,6 +11,9 @@ export interface InspectorInfo {
   inspectionTime: string
   needsMasterKey: boolean
   isFurnished: boolean
+  isTenantPresent: boolean
+  isNewTenantPresent: boolean
+  checklist: Checklist
 }
 
 export interface UseInspectorInfoReturn extends InspectorInfo {
@@ -16,7 +21,11 @@ export interface UseInspectorInfoReturn extends InspectorInfo {
   setInspectionTime: (time: string) => void
   setNeedsMasterKey: (value: boolean) => void
   setIsFurnished: (value: boolean) => void
+  setIsTenantPresent: (value: boolean) => void
+  setIsNewTenantPresent: (value: boolean) => void
+  setChecklistItem: (key: keyof Checklist, value: boolean) => void
   isValid: boolean
+  isChecklistComplete: boolean
 }
 
 export function useInspectorInfo(
@@ -48,6 +57,33 @@ export function useInspectorInfo(
     existingInspection?.isFurnished ?? true
   )
 
+  // Tenant presence is now captured during the inspection (MIM-1818) rather
+  // than at create time. Hydrate from the persisted inspection so reopening
+  // a draft restores the inspector's previous choice.
+  const [isTenantPresent, setIsTenantPresent] = useState(
+    existingInspection?.isTenantPresent ?? false
+  )
+  const [isNewTenantPresent, setIsNewTenantPresent] = useState(
+    existingInspection?.isNewTenantPresent ?? false
+  )
+
+  // The "Kontrollfrågor" safety checklist. Defaults to all-false; hydrated
+  // from the saved draft when reopening.
+  const [checklist, setChecklist] = useState<Checklist>(() => ({
+    ...CHECKLIST_DEFAULT,
+    ...(existingInspection?.checklist ?? {}),
+  }))
+
+  const setChecklistItem = (key: keyof Checklist, value: boolean) => {
+    setChecklist((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const isChecklistComplete =
+    checklist.groundFaultBreaker &&
+    checklist.smokeDetector &&
+    checklist.electricalSchema &&
+    checklist.electricalSystem
+
   // Validation: inspector name is required
   const isValid = Boolean(inspectorName.trim() && inspectionTime)
 
@@ -56,10 +92,17 @@ export function useInspectorInfo(
     inspectionTime,
     needsMasterKey,
     isFurnished,
+    isTenantPresent,
+    isNewTenantPresent,
+    checklist,
     setInspectorName,
     setInspectionTime,
     setNeedsMasterKey,
     setIsFurnished,
+    setIsTenantPresent,
+    setIsNewTenantPresent,
+    setChecklistItem,
     isValid,
+    isChecklistComplete,
   }
 }

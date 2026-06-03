@@ -38,6 +38,12 @@ interface RoomInspectionEditorProps {
   onDetailComponentAdd: (component: { type: string; label: string }) => void
   onDetailComponentRemove: (componentId: string) => void
   onDetailComponentNoteUpdate: (componentId: string, note: string) => void
+  onDetailComponentConditionUpdate: (componentId: string, value: string) => void
+  onDetailComponentCostUpdate: (componentId: string, cost: number) => void
+  onDetailComponentCostResponsibilityUpdate: (
+    componentId: string,
+    value: CostResponsibility
+  ) => void
   onFetchedComponentConditionUpdate: (
     componentId: string,
     label: string,
@@ -81,6 +87,9 @@ export function RoomInspectionEditor({
   onDetailComponentAdd,
   onDetailComponentRemove,
   onDetailComponentNoteUpdate,
+  onDetailComponentConditionUpdate,
+  onDetailComponentCostUpdate,
+  onDetailComponentCostResponsibilityUpdate,
   onFetchedComponentConditionUpdate,
   onFetchedComponentActionUpdate,
   onFetchedComponentNoteUpdate,
@@ -196,12 +205,16 @@ export function RoomInspectionEditor({
                 note={state.note}
                 photoCount={state.photos.length}
                 actions={state.action}
+                componentType={getActionComponentType(getTypeName(component))}
                 costResponsibility={state.costResponsibility ?? null}
                 onConditionChange={(value) =>
                   onFetchedComponentConditionUpdate(componentId, label, value)
                 }
                 onNoteChange={(note) =>
                   onFetchedComponentNoteUpdate(componentId, label, note)
+                }
+                onActionToggle={(action) =>
+                  onFetchedComponentActionUpdate(componentId, label, action)
                 }
                 onCostResponsibilityChange={(value) =>
                   onFetchedComponentCostResponsibilityUpdate(
@@ -238,6 +251,9 @@ export function RoomInspectionEditor({
           onAdd={onDetailComponentAdd}
           onRemove={onDetailComponentRemove}
           onNoteUpdate={onDetailComponentNoteUpdate}
+          onConditionUpdate={onDetailComponentConditionUpdate}
+          onCostUpdate={onDetailComponentCostUpdate}
+          onCostResponsibilityUpdate={onDetailComponentCostResponsibilityUpdate}
         />
 
         {(fetchedComponents ?? []).map((component) => {

@@ -515,6 +515,12 @@ describe('sendProtocolToTenants', () => {
     notes: null,
     totalCost: 0,
     remarkCount: 0,
+    checklist: {
+      groundFaultBreaker: false,
+      smokeDetector: false,
+      electricalSchema: false,
+      electricalSystem: false,
+    },
     rooms: [],
     lease: null,
     residence: null,

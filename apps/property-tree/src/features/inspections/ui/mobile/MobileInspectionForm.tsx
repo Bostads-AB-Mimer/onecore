@@ -15,7 +15,13 @@ import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
 import { ScrollArea } from '@/shared/ui/ScrollArea'
 
+import { FORM_STEP, type FormStep } from '../../constants/formSteps'
+import {
+  INSPECTION_TYPE_LABELS,
+  type InspectionType,
+} from '../../constants/inspectionTypes'
 import { useInspectionForm } from '../../hooks/useInspectionForm'
+import { InspectionChecklistStep } from '../InspectionChecklistStep'
 import { InspectionInfoSection } from '../InspectionInfoSection'
 import { InspectionMoreMenu } from '../InspectionMoreMenu'
 import { InspectionSummary } from '../InspectionSummary'
@@ -56,7 +62,7 @@ export function MobileInspectionForm({
 }: MobileInspectionFormProps) {
   const [currentRoomIndex, setCurrentRoomIndex] = useState(0)
   const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
-  const [step, setStep] = useState<'rooms' | 'summary'>('rooms')
+  const [step, setStep] = useState<FormStep>(FORM_STEP.ROOMS)
   // Show the inspector-selection landing screen for brand-new inspections
   // and for "start over" restarts. Continuing a draft has persisted room
   // data and skips straight into the form.
@@ -86,6 +92,9 @@ export function MobileInspectionForm({
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
+    handleDetailComponentConditionUpdate,
+    handleDetailComponentCostUpdate,
+    handleDetailComponentCostResponsibilityUpdate,
     handleComponentConditionUpdate,
     handleComponentActionUpdate,
     handleComponentNoteUpdateById,
@@ -95,6 +104,14 @@ export function MobileInspectionForm({
     handleComponentCostResponsibilityUpdateById,
     handleMarkRoomNoRemarks,
     handleRoomHandledSet,
+    isTenantPresent,
+    setIsTenantPresent,
+    isNewTenantPresent,
+    setIsNewTenantPresent,
+    checklist,
+    setChecklistItem,
+    isChecklistComplete,
+    validation,
   } = useInspectionForm(initialRooms, existingInspection)
 
   // After adding a server-issued room, jump to it so the inspector can start
@@ -112,7 +129,8 @@ export function MobileInspectionForm({
   ).length
   const isFirstRoom = currentRoomIndex === 0
   const isLastRoom = currentRoomIndex >= rooms.length - 1
-  const canComplete = !!inspectorName.trim() && completedRooms === rooms.length
+  // Delegates to the shared validation hook (includes MIM-1818 checklist gating).
+  const canComplete = validation.canComplete
 
   // Create tenant snapshot for saving
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
@@ -139,6 +157,9 @@ export function MobileInspectionForm({
     onSave(inspectorName, inspectionData, 'draft', {
       needsMasterKey,
       isFurnished,
+      isTenantPresent,
+      isNewTenantPresent,
+      checklist,
       tenant: createTenantSnapshot(),
     })
     setIsDraftConfirmOpen(false)
@@ -149,6 +170,9 @@ export function MobileInspectionForm({
       onSave(inspectorName, inspectionData, 'completed', {
         needsMasterKey,
         isFurnished,
+        isTenantPresent,
+        isNewTenantPresent,
+        checklist,
         tenant: createTenantSnapshot(),
       })
     }
@@ -169,7 +193,7 @@ export function MobileInspectionForm({
   // Keep the active room card visible in the horizontal nav strip whenever
   // currentRoomIndex changes (via card tap or the </> buttons).
   useEffect(() => {
-    if (step !== 'rooms') return
+    if (step !== FORM_STEP.ROOMS) return
     const currentId = rooms[currentRoomIndex]?.id
     if (!currentId) return
     const card = roomCardRefs.current[currentId]
@@ -180,6 +204,10 @@ export function MobileInspectionForm({
     })
   }, [currentRoomIndex, rooms, step])
 
+  const inspectionTypeLabel =
+    INSPECTION_TYPE_LABELS[existingInspection.type as InspectionType] ??
+    'Besiktning'
+
   if (showInspectorSelection) {
     return (
       <div className="h-full bg-background flex flex-col">
@@ -188,7 +216,7 @@ export function MobileInspectionForm({
             <Button variant="ghost" size="sm" onClick={onCancel}>
               Avbryt
             </Button>
-            <h1 className="text-lg font-semibold">Ny besiktning</h1>
+            <h1 className="text-lg font-semibold">{inspectionTypeLabel}</h1>
             <div className="w-16" />
           </div>
         </div>
@@ -225,10 +253,14 @@ export function MobileInspectionForm({
       <div className="sticky top-0 z-10 bg-background shadow-sm">
         <div className="border-b">
           <InspectionProgressIndicator
-            current={step === 'summary' ? rooms.length : completedRooms}
+            current={step === FORM_STEP.ROOMS ? completedRooms : rooms.length}
             total={rooms.length}
             currentRoomName={
-              step === 'summary' ? 'Sammanställning' : currentRoom.name
+              step === FORM_STEP.SUMMARY
+                ? 'Sammanställning'
+                : step === FORM_STEP.CHECKLIST
+                  ? 'Kontrollfrågor'
+                  : currentRoom.name
             }
           />
 
@@ -237,8 +269,11 @@ export function MobileInspectionForm({
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (step === 'summary') {
-                  setStep('rooms')
+                // Step back: summary → checklist → rooms → inspector landing.
+                if (step === FORM_STEP.SUMMARY) {
+                  setStep(FORM_STEP.CHECKLIST)
+                } else if (step === FORM_STEP.CHECKLIST) {
+                  setStep(FORM_STEP.ROOMS)
                 } else {
                   setShowInspectorSelection(true)
                 }
@@ -257,7 +292,7 @@ export function MobileInspectionForm({
           </div>
         </div>
 
-        {step === 'rooms' && (
+        {step === FORM_STEP.ROOMS && (
           /* Room Navigation Cards */
           <div className="px-4 py-2">
             <div
@@ -307,7 +342,7 @@ export function MobileInspectionForm({
       <div className="flex-1 min-h-0">
         <ScrollArea ref={scrollAreaRef} className="h-full">
           <div className="px-4 pb-4">
-            {step === 'rooms' && (
+            {step === FORM_STEP.ROOMS && (
               <RoomInspectionEditor
                 room={currentRoom}
                 inspectionData={inspectionData[currentRoom.id]}
@@ -323,6 +358,30 @@ export function MobileInspectionForm({
                     currentRoom.id,
                     componentId,
                     note
+                  )
+                }
+                onDetailComponentConditionUpdate={(componentId, value) =>
+                  handleDetailComponentConditionUpdate(
+                    currentRoom.id,
+                    componentId,
+                    value
+                  )
+                }
+                onDetailComponentCostUpdate={(componentId, cost) =>
+                  handleDetailComponentCostUpdate(
+                    currentRoom.id,
+                    componentId,
+                    cost
+                  )
+                }
+                onDetailComponentCostResponsibilityUpdate={(
+                  componentId,
+                  value
+                ) =>
+                  handleDetailComponentCostResponsibilityUpdate(
+                    currentRoom.id,
+                    componentId,
+                    value
                   )
                 }
                 onFetchedComponentConditionUpdate={(
@@ -390,7 +449,22 @@ export function MobileInspectionForm({
               />
             )}
 
-            {step === 'summary' && (
+            {step === FORM_STEP.CHECKLIST && (
+              <div className="pt-2">
+                <InspectionChecklistStep
+                  isTenantPresent={isTenantPresent}
+                  onIsTenantPresentChange={setIsTenantPresent}
+                  isNewTenantPresent={isNewTenantPresent}
+                  onIsNewTenantPresentChange={setIsNewTenantPresent}
+                  isFurnished={isFurnished}
+                  onIsFurnishedChange={setIsFurnished}
+                  checklist={checklist}
+                  onChecklistItemChange={setChecklistItem}
+                />
+              </div>
+            )}
+
+            {step === FORM_STEP.SUMMARY && (
               <div className="space-y-4 pt-2">
                 <InspectionSummary
                   inspectionData={inspectionData}
@@ -399,36 +473,11 @@ export function MobileInspectionForm({
                   onComponentCostResponsibilityByIdUpdate={
                     handleComponentCostResponsibilityUpdateById
                   }
+                  onDetailComponentCostUpdate={handleDetailComponentCostUpdate}
+                  onDetailComponentCostResponsibilityUpdate={
+                    handleDetailComponentCostResponsibilityUpdate
+                  }
                 />
-                <div
-                  className="p-4 border rounded-lg space-y-3"
-                  role="radiogroup"
-                  aria-label="Är bostaden möblerad vid besiktningstillfället?"
-                >
-                  <div className="text-sm font-medium">
-                    Är bostaden möblerad vid besiktningstillfället?
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      role="radio"
-                      aria-checked={isFurnished}
-                      variant={isFurnished ? 'default' : 'outline'}
-                      onClick={() => setIsFurnished(true)}
-                    >
-                      Ja
-                    </Button>
-                    <Button
-                      type="button"
-                      role="radio"
-                      aria-checked={!isFurnished}
-                      variant={!isFurnished ? 'default' : 'outline'}
-                      onClick={() => setIsFurnished(false)}
-                    >
-                      Nej
-                    </Button>
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -437,7 +486,7 @@ export function MobileInspectionForm({
 
       {/* Bottom Navigation */}
       <div className="sticky bottom-0 bg-background border-t px-4 py-3">
-        {step === 'rooms' ? (
+        {step === FORM_STEP.ROOMS && (
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -466,10 +515,10 @@ export function MobileInspectionForm({
 
             {isLastRoom ? (
               <Button
-                onClick={() => setStep('summary')}
+                onClick={() => setStep(FORM_STEP.CHECKLIST)}
                 disabled={!inspectorName.trim()}
               >
-                Sammanställning
+                Kontrollfrågor
               </Button>
             ) : (
               <Button
@@ -483,11 +532,39 @@ export function MobileInspectionForm({
               </Button>
             )}
           </div>
-        ) : (
+        )}
+
+        {step === FORM_STEP.CHECKLIST && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setStep('rooms')}>
+            <Button variant="outline" onClick={() => setStep(FORM_STEP.ROOMS)}>
               <ChevronLeft className="h-4 w-4 mr-1" />
               Rum
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setIsDraftConfirmOpen(true)}
+              disabled={!inspectorName.trim()}
+              className="flex-1"
+            >
+              Spara utkast
+            </Button>
+            <Button
+              onClick={() => setStep(FORM_STEP.SUMMARY)}
+              disabled={!isChecklistComplete}
+            >
+              Sammanställning
+            </Button>
+          </div>
+        )}
+
+        {step === FORM_STEP.SUMMARY && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setStep(FORM_STEP.CHECKLIST)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Kontrollfrågor
             </Button>
             <Button
               variant="secondary"

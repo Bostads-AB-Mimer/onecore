@@ -6,7 +6,6 @@ import type { Lease } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 
 import { Button } from '@/shared/ui/Button'
-import { Checkbox } from '@/shared/ui/Checkbox'
 import {
   Dialog,
   DialogContent,
@@ -108,8 +107,10 @@ export function CreateInspectionDialog({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   // Default to "avflytt" — the most common case at inspection time.
   const [type, setType] = useState<string>(INSPECTION_TYPE.MOVE_OUT)
-  const [isTenantPresent, setIsTenantPresent] = useState(false)
-  const [isNewTenantPresent, setIsNewTenantPresent] = useState(false)
+  // Tenant presence is now captured during the inspection (MIM-1818
+  // "Kontrollfrågor" step) rather than at create time. We still send
+  // booleans on creation because the DB columns are NOT NULL; the inspector
+  // sets the real values later in the conduct flow.
   const [masterKeyAccess, setMasterKeyAccess] = useState('')
   const [leaseValue, setLeaseValue] = useState<string>(defaultLeaseValue)
 
@@ -139,8 +140,9 @@ export function CreateInspectionDialog({
       // the source of truth.
       isFurnished: true,
       leaseId: submittedLeaseId,
-      isTenantPresent,
-      isNewTenantPresent,
+      // Real values are captured later in the "Kontrollfrågor" step.
+      isTenantPresent: false,
+      isNewTenantPresent: false,
       masterKeyAccess: masterKeyAccess.trim() || null,
       hasRemarks: false,
       notes: null,
@@ -161,8 +163,6 @@ export function CreateInspectionDialog({
     setInspector('')
     setDate(new Date().toISOString().slice(0, 10))
     setType(INSPECTION_TYPE.MOVE_OUT)
-    setIsTenantPresent(false)
-    setIsNewTenantPresent(false)
     setMasterKeyAccess('')
     setLeaseValue(defaultLeaseValue)
   }
@@ -265,32 +265,6 @@ export function CreateInspectionDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="isTenantPresent"
-                checked={isTenantPresent}
-                onCheckedChange={(checked) =>
-                  setIsTenantPresent(checked === true)
-                }
-              />
-              <Label htmlFor="isTenantPresent">Hyresgäst närvarande</Label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="isNewTenantPresent"
-                checked={isNewTenantPresent}
-                onCheckedChange={(checked) =>
-                  setIsNewTenantPresent(checked === true)
-                }
-              />
-              <Label htmlFor="isNewTenantPresent">
-                Ny hyresgäst närvarande
-              </Label>
-            </div>
           </div>
 
           <div className="space-y-2">

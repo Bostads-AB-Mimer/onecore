@@ -4,13 +4,6 @@ import type { Room } from '@/services/types'
 import { Badge } from '@/shared/ui/Badge'
 import { Input } from '@/shared/ui/Input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/Select'
-import {
   Table,
   TableBody,
   TableCell,
@@ -22,15 +15,11 @@ import {
 import { CONDITION_TYPE, getConditionConfig } from '../constants/conditions'
 import {
   COST_RESPONSIBILITY,
-  COST_RESPONSIBILITY_LABEL,
   type CostResponsibility,
 } from '../constants/costResponsibility'
+import { CostResponsibilitySelect } from './CostResponsibilitySelect'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
-
-// Sentinel used in the <Select> since shadcn's SelectItem disallows empty values.
-// Parsed back to `null` before reaching the handler.
-const UNSET = '__unset__'
 
 interface Remark {
   key: string
@@ -38,6 +27,10 @@ interface Remark {
   condition: string
   componentId: string
   rawLabel?: string
+  // Distinguishes detail-component remarks (added in DetailComponentsSection)
+  // from fetched-component remarks. Drives which update handler the row uses
+  // and which collection in roomData to look up cost/responsibility from.
+  source: 'component' | 'detail'
 }
 
 function isReportable(condition: string | undefined): boolean {
@@ -48,8 +41,8 @@ function isReportable(condition: string | undefined): boolean {
 }
 
 function getComponentRemarks(roomData: InspectionRoom | undefined): Remark[] {
-  if (!roomData?.components?.length) return []
-  return roomData.components
+  if (!roomData) return []
+  const componentRemarks: Remark[] = (roomData.components ?? [])
     .filter((c) => isReportable(c.condition))
     .map((c) => ({
       key: `component-${c.componentId}`,
@@ -59,39 +52,19 @@ function getComponentRemarks(roomData: InspectionRoom | undefined): Remark[] {
       rawLabel: c.label,
       componentId: c.componentId,
       condition: c.condition,
+      source: 'component',
     }))
-}
-
-function CostResponsibilitySelect({
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  value: CostResponsibility
-  onChange: (value: CostResponsibility) => void
-  ariaLabel: string
-}) {
-  return (
-    <Select
-      value={value ?? UNSET}
-      onValueChange={(v) =>
-        onChange(v === UNSET ? null : (v as Exclude<CostResponsibility, null>))
-      }
-    >
-      <SelectTrigger className="h-9" aria-label={ariaLabel}>
-        <SelectValue placeholder="—" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={UNSET}>—</SelectItem>
-        <SelectItem value={COST_RESPONSIBILITY.TENANT}>
-          {COST_RESPONSIBILITY_LABEL[COST_RESPONSIBILITY.TENANT]}
-        </SelectItem>
-        <SelectItem value={COST_RESPONSIBILITY.LANDLORD}>
-          {COST_RESPONSIBILITY_LABEL[COST_RESPONSIBILITY.LANDLORD]}
-        </SelectItem>
-      </SelectContent>
-    </Select>
-  )
+  const detailRemarks: Remark[] = (roomData.detailComponents ?? [])
+    .filter((d) => isReportable(d.condition))
+    .map((d) => ({
+      key: `detail-${d.id}`,
+      label: d.label || d.id,
+      rawLabel: d.label,
+      componentId: d.id,
+      condition: d.condition ?? '',
+      source: 'detail',
+    }))
+  return [...componentRemarks, ...detailRemarks]
 }
 
 function CostInput({
@@ -139,6 +112,16 @@ interface RoomSectionProps {
     label: string,
     value: CostResponsibility
   ) => void
+  onDetailComponentCostUpdate: (
+    roomId: string,
+    componentId: string,
+    cost: number
+  ) => void
+  onDetailComponentCostResponsibilityUpdate: (
+    roomId: string,
+    componentId: string,
+    value: CostResponsibility
+  ) => void
 }
 
 function RoomSummarySection({
@@ -146,6 +129,8 @@ function RoomSummarySection({
   roomData,
   onComponentCostByIdUpdate,
   onComponentCostResponsibilityByIdUpdate,
+  onDetailComponentCostUpdate,
+  onDetailComponentCostResponsibilityUpdate,
 }: RoomSectionProps) {
   const remarks = getComponentRemarks(roomData)
 
@@ -155,11 +140,21 @@ function RoomSummarySection({
   // desktop table can share the same conditional rules without diverging.
   const rows = remarks.map((remark) => {
     const conditionConfig = getConditionConfig(remark.condition)
-    const component = roomData?.components?.find(
-      (c) => c.componentId === remark.componentId
-    )
-    const costValue = component?.cost ?? 0
-    const costResponsibility = component?.costResponsibility ?? null
+    let costValue: number
+    let costResponsibility: CostResponsibility
+    if (remark.source === 'detail') {
+      const detail = roomData?.detailComponents?.find(
+        (d) => d.id === remark.componentId
+      )
+      costValue = detail?.cost ?? 0
+      costResponsibility = detail?.costResponsibility ?? null
+    } else {
+      const component = roomData?.components?.find(
+        (c) => c.componentId === remark.componentId
+      )
+      costValue = component?.cost ?? 0
+      costResponsibility = component?.costResponsibility ?? null
+    }
     // Cost responsibility only applies to Skadad — Ok rows are informational
     // and show no cost/responsibility inputs.
     const showResponsibility = remark.condition === CONDITION_TYPE.DAMAGED
@@ -167,20 +162,34 @@ function RoomSummarySection({
     // enter a kr amount.
     const showCost =
       showResponsibility && costResponsibility !== COST_RESPONSIBILITY.LANDLORD
-    const handleCostChange = (cost: number) =>
-      onComponentCostByIdUpdate(
-        room.id,
-        remark.componentId,
-        remark.rawLabel ?? remark.label,
-        cost
-      )
-    const handleResponsibilityChange = (value: CostResponsibility) =>
-      onComponentCostResponsibilityByIdUpdate(
-        room.id,
-        remark.componentId,
-        remark.rawLabel ?? remark.label,
-        value
-      )
+    const handleCostChange = (cost: number) => {
+      if (remark.source === 'detail') {
+        onDetailComponentCostUpdate(room.id, remark.componentId, cost)
+      } else {
+        onComponentCostByIdUpdate(
+          room.id,
+          remark.componentId,
+          remark.rawLabel ?? remark.label,
+          cost
+        )
+      }
+    }
+    const handleResponsibilityChange = (value: CostResponsibility) => {
+      if (remark.source === 'detail') {
+        onDetailComponentCostResponsibilityUpdate(
+          room.id,
+          remark.componentId,
+          value
+        )
+      } else {
+        onComponentCostResponsibilityByIdUpdate(
+          room.id,
+          remark.componentId,
+          remark.rawLabel ?? remark.label,
+          value
+        )
+      }
+    }
     return {
       remark,
       conditionConfig,
@@ -333,6 +342,16 @@ interface InspectionSummaryProps {
     label: string,
     value: CostResponsibility
   ) => void
+  onDetailComponentCostUpdate: (
+    roomId: string,
+    componentId: string,
+    cost: number
+  ) => void
+  onDetailComponentCostResponsibilityUpdate: (
+    roomId: string,
+    componentId: string,
+    value: CostResponsibility
+  ) => void
 }
 
 export function InspectionSummary({
@@ -340,13 +359,18 @@ export function InspectionSummary({
   rooms,
   onComponentCostByIdUpdate,
   onComponentCostResponsibilityByIdUpdate,
+  onDetailComponentCostUpdate,
+  onDetailComponentCostResponsibilityUpdate,
 }: InspectionSummaryProps) {
   const perRoom = rooms.map((room) => {
     const roomData = inspectionData[room.id]
-    const totalCount = (roomData?.components ?? []).filter((c) =>
+    const componentCount = (roomData?.components ?? []).filter((c) =>
       isReportable(c.condition)
     ).length
-    return { room, roomData, total: totalCount }
+    const detailCount = (roomData?.detailComponents ?? []).filter((d) =>
+      isReportable(d.condition)
+    ).length
+    return { room, roomData, total: componentCount + detailCount }
   })
 
   const roomsWithRemarks = perRoom.filter((r) => r.total > 0)
@@ -376,6 +400,10 @@ export function InspectionSummary({
           onComponentCostByIdUpdate={onComponentCostByIdUpdate}
           onComponentCostResponsibilityByIdUpdate={
             onComponentCostResponsibilityByIdUpdate
+          }
+          onDetailComponentCostUpdate={onDetailComponentCostUpdate}
+          onDetailComponentCostResponsibilityUpdate={
+            onDetailComponentCostResponsibilityUpdate
           }
         />
       ))}

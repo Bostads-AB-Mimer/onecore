@@ -16,6 +16,12 @@ import { Input } from '@/shared/ui/Input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 
 import { DETAIL_COMPONENT_OPTIONS } from '../constants'
+import { CONDITION_OPTIONS, CONDITION_TYPE } from '../constants/conditions'
+import {
+  COST_RESPONSIBILITY,
+  type CostResponsibility,
+} from '../constants/costResponsibility'
+import { CostResponsibilitySelect } from './CostResponsibilitySelect'
 
 type DetailComponent = NonNullable<
   components['schemas']['InspectionRoom']['detailComponents']
@@ -26,6 +32,12 @@ interface DetailComponentsSectionProps {
   onAdd: (component: { type: string; label: string }) => void
   onRemove: (componentId: string) => void
   onNoteUpdate: (componentId: string, note: string) => void
+  onConditionUpdate: (componentId: string, value: string) => void
+  onCostUpdate: (componentId: string, cost: number) => void
+  onCostResponsibilityUpdate: (
+    componentId: string,
+    value: CostResponsibility
+  ) => void
 }
 
 export function DetailComponentsSection({
@@ -33,6 +45,9 @@ export function DetailComponentsSection({
   onAdd,
   onRemove,
   onNoteUpdate,
+  onConditionUpdate,
+  onCostUpdate,
+  onCostResponsibilityUpdate,
 }: DetailComponentsSectionProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -132,39 +147,96 @@ export function DetailComponentsSection({
 
       {detailComponents.length > 0 && (
         <div className="rounded-md border border-border overflow-hidden">
-          <div className="grid grid-cols-[1fr_36px] items-center px-3 py-2 bg-muted/50 text-sm text-muted-foreground">
-            <span>Detalj</span>
-            <span></span>
-          </div>
-          {detailComponents.map((comp, index) => (
-            <div
-              key={comp.id}
-              className={`px-3 py-2 ${
-                index < detailComponents.length - 1
-                  ? 'border-b border-border'
-                  : ''
-              }`}
-            >
-              <div className="grid grid-cols-[1fr_36px] items-center">
-                <span className="text-sm font-medium">{comp.label}</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRemove(comp.id)}
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
+          {detailComponents.map((comp, index) => {
+            const condition = comp.condition ?? ''
+            const isDamaged = condition === CONDITION_TYPE.DAMAGED
+            const costResponsibility = comp.costResponsibility ?? null
+            const showCostInput =
+              isDamaged && costResponsibility !== COST_RESPONSIBILITY.LANDLORD
+            return (
+              <div
+                key={comp.id}
+                className={`px-3 py-3 space-y-2 ${
+                  index < detailComponents.length - 1
+                    ? 'border-b border-border'
+                    : ''
+                }`}
+              >
+                <div className="grid grid-cols-[1fr_36px] items-center">
+                  <span className="text-sm font-medium">{comp.label}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onRemove(comp.id)}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                {/* Condition buttons — same three-column grid as ComponentInspectionCard */}
+                <div className="grid grid-cols-3 gap-2">
+                  {CONDITION_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant={
+                        condition === option.value ? 'default' : 'outline'
+                      }
+                      size="sm"
+                      className={`h-9 text-sm font-medium ${
+                        condition === option.value ? option.buttonClassName : ''
+                      }`}
+                      onClick={() => onConditionUpdate(comp.id, option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Cost responsibility + cost — only shown for Skadad */}
+                {isDamaged && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <CostResponsibilitySelect
+                      value={costResponsibility}
+                      onChange={(value) =>
+                        onCostResponsibilityUpdate(comp.id, value)
+                      }
+                      ariaLabel={`Kostnadsansvar för ${comp.label}`}
+                    />
+                    {showCostInput && (
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={(comp.cost ?? 0) === 0 ? '' : comp.cost}
+                        placeholder="Kostnad (kr)"
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const raw = e.target.value
+                          const cost =
+                            raw === ''
+                              ? 0
+                              : Math.max(0, Math.trunc(Number(raw) || 0))
+                          onCostUpdate(comp.id, cost)
+                        }}
+                        aria-label={`Kostnad för ${comp.label}`}
+                        className="h-9"
+                      />
+                    )}
+                  </div>
+                )}
+
+                <Input
+                  placeholder="Anteckning..."
+                  value={comp.note || ''}
+                  onChange={(e) => onNoteUpdate(comp.id, e.target.value)}
+                  className="h-9 text-sm"
+                />
               </div>
-              <Input
-                placeholder="Anteckning..."
-                value={comp.note || ''}
-                onChange={(e) => onNoteUpdate(comp.id, e.target.value)}
-                className="mt-1.5 h-8 text-sm"
-              />
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

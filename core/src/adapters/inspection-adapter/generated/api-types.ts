@@ -547,6 +547,24 @@ export interface components {
       notes: string | null
       totalCost: number | null
       remarkCount: number
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
       rooms: {
         room: string
         remarks: {
@@ -691,6 +709,11 @@ export interface components {
         type: string
         label: string
         note: string
+        /** @default */
+        condition?: string
+        cost?: number
+        /** @default null */
+        costResponsibility?: ('tenant' | 'landlord') | null
       }[]
       /** @default [] */
       components?: {
@@ -728,6 +751,24 @@ export interface components {
       notes: string | null
       totalCost: number | null
       remarkCount: number
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
       rooms:
         | {
             roomId: string
@@ -761,6 +802,11 @@ export interface components {
               type: string
               label: string
               note: string
+              /** @default */
+              condition?: string
+              cost?: number
+              /** @default null */
+              costResponsibility?: ('tenant' | 'landlord') | null
             }[]
             /** @default [] */
             components?: {
@@ -813,6 +859,11 @@ export interface components {
           type: string
           label: string
           note: string
+          /** @default */
+          condition?: string
+          cost?: number
+          /** @default null */
+          costResponsibility?: ('tenant' | 'landlord') | null
         }[]
         /** @default [] */
         components?: {
@@ -830,6 +881,18 @@ export interface components {
         isAddedInThisInspection?: boolean
       }[]
       isFurnished: boolean
+      isTenantPresent?: boolean
+      isNewTenantPresent?: boolean
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
     }
   }
   responses: never

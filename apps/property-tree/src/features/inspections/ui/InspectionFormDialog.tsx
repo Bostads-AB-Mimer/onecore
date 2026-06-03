@@ -18,6 +18,10 @@ import {
   DialogTitle,
 } from '@/shared/ui/Dialog'
 
+import {
+  INSPECTION_TYPE_LABELS,
+  type InspectionType,
+} from '../constants/inspectionTypes'
 import { initialRoomData } from '../lib/initialFormData'
 import { InspectionForm } from './InspectionForm'
 import { MobileInspectionSheet } from './mobile/MobileInspectionSheet'
@@ -191,11 +195,15 @@ export function InspectionFormDialog({
     )
   }
 
+  const dialogTitle =
+    INSPECTION_TYPE_LABELS[existingInspection.type as InspectionType] ??
+    'Genomför besiktning'
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-[95vw] xl:max-w-7xl p-4 sm:p-6 max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader className="shrink-0 space-y-1">
-          <DialogTitle>Genomför besiktning</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>
             Gå igenom och bedöm skicket på alla rum
           </DialogDescription>

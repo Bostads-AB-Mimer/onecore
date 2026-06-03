@@ -35,6 +35,44 @@ function mapDbRemarkToResponse(r: DbInspectionRemark) {
   }
 }
 
+const DEFAULT_CHECKLIST: inspectionTypes.Checklist = {
+  groundFaultBreaker: false,
+  smokeDetector: false,
+  electricalSchema: false,
+  electricalSystem: false,
+}
+
+// Parses the JSON-encoded checklist column. Returns ChecklistSchema defaults
+// for missing or malformed payloads so a corrupt row doesn't deny reads.
+function parseChecklist(
+  inspectionId: string | number,
+  checklist: string | null | undefined
+): inspectionTypes.Checklist {
+  if (!checklist) return DEFAULT_CHECKLIST
+
+  let raw: unknown
+  try {
+    raw = JSON.parse(checklist)
+  } catch {
+    logger.error(
+      { inspectionId },
+      'Failed to parse checklist JSON for inspection'
+    )
+    return DEFAULT_CHECKLIST
+  }
+
+  const parsed = inspectionTypes.ChecklistSchema.safeParse(raw)
+  if (!parsed.success) {
+    logger.error(
+      { inspectionId, errors: parsed.error.errors },
+      'checklist payload does not match ChecklistSchema'
+    )
+    return DEFAULT_CHECKLIST
+  }
+
+  return parsed.data
+}
+
 // Base mapper shared by DetailedXpandInspection and InternalInspection responses
 // — both share every field except `rooms`, which differs by shape (xpand remarks
 // vs. internal room/component data) and nullability.
@@ -62,6 +100,7 @@ function mapDbInspectionToResponse<R>(
     notes: inspection.notes,
     totalCost: inspection.totalCost,
     remarkCount: inspection.remarkCount,
+    checklist: parseChecklist(inspection.id, inspection.checklist),
     rooms,
   }
 }
@@ -447,15 +486,28 @@ export async function saveInspectionDraft(
       return { ok: false, err: 'not-found' }
     }
 
-    await dbConnection('inspection')
-      .where('id', inspectionId)
-      .update({
-        inspector: params.inspectorName,
-        draftRooms: JSON.stringify(params.rooms),
-        isFurnished: params.isFurnished,
-        status: INSPECTION_STATUS.STARTED,
-        startedAt: new Date(),
-      })
+    // Build the update object — only include the optional MIM-1818 fields
+    // when they were supplied. Pre-1818 clients send no value for these,
+    // and we want to leave the previously persisted column alone in that
+    // case rather than overwrite with `undefined`.
+    const update: Record<string, unknown> = {
+      inspector: params.inspectorName,
+      draftRooms: JSON.stringify(params.rooms),
+      isFurnished: params.isFurnished,
+      status: INSPECTION_STATUS.STARTED,
+      startedAt: new Date(),
+    }
+    if (params.isTenantPresent !== undefined) {
+      update.isTenantPresent = params.isTenantPresent
+    }
+    if (params.isNewTenantPresent !== undefined) {
+      update.isNewTenantPresent = params.isNewTenantPresent
+    }
+    if (params.checklist !== undefined) {
+      update.checklist = JSON.stringify(params.checklist)
+    }
+
+    await dbConnection('inspection').where('id', inspectionId).update(update)
 
     return { ok: true, data: undefined }
   } catch (error) {
@@ -628,7 +680,8 @@ export async function getInspectionById(
         'notes',
         'totalCost',
         'remarkCount',
-        'draftRooms'
+        'draftRooms',
+        'checklist'
       )
       .from<DbInspection>('inspection')
       .where('id', inspectionId)

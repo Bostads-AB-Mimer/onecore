@@ -55,6 +55,13 @@ export interface ResidenceInfo {
   size: number | null
 }
 
+// Checklist is defined in constants/checklist.ts (derived from the generated
+// swagger types). Re-exported here for backward compatibility with existing
+// import paths.
+export type { Checklist } from '@/features/inspections/constants/checklist'
+
+import type { Checklist } from '@/features/inspections/constants/checklist'
+
 /**
  * Inspection submission data
  * Additional data needed when submitting an inspection
@@ -62,6 +69,9 @@ export interface ResidenceInfo {
 export interface InspectionSubmitData {
   needsMasterKey: boolean
   isFurnished: boolean
+  isTenantPresent: boolean
+  isNewTenantPresent: boolean
+  checklist: Checklist
   tenant?: TenantSnapshot
 }
 
