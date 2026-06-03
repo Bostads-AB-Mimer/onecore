@@ -1,3 +1,4 @@
+import { logger } from '@onecore/utilities'
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import type { CreateComponent, UpdateComponent } from '../types/component'
@@ -142,6 +143,28 @@ export const deleteComponent = async (id: string) => {
   await prisma.components.delete({
     where: { id },
   })
+}
+
+export const updateComponentInspectionState = async (
+  id: string,
+  data: { condition: string; lastInspectionDate: string }
+) => {
+  try {
+    const component = await prisma.components.update({
+      where: { id },
+      data: {
+        condition: data.condition,
+        lastInspectionDate: new Date(data.lastInspectionDate),
+      },
+    })
+    return trimStrings(component)
+  } catch (err) {
+    logger.error(
+      { err },
+      'component-instance-adapter.updateComponentInspectionState'
+    )
+    throw err
+  }
 }
 
 // ==================== COMPONENTS BY ROOM ====================

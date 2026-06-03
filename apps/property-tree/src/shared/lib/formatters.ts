@@ -37,5 +37,6 @@ export function generateAuthorAbbreviation(fullName: string): string {
 export const formatISODate = (isoDateString: string | null | undefined) => {
   if (!isoDateString) return '-'
   const date = new Date(isoDateString)
+  if (Number.isNaN(date.getTime())) return '-'
   return date.toLocaleDateString('sv-SE')
 }

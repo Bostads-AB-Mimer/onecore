@@ -1,6 +1,6 @@
 import { InspectionStatusFilter } from '@/shared/types/inspection'
 
-import { GET, PATCH, POST } from './baseApi'
+import { ApiError, DELETE, GET, PATCH, POST } from './baseApi'
 import { components } from './generated/api-types'
 
 type InspectionWithSource = components['schemas']['InspectionWithSource']
@@ -14,6 +14,9 @@ type UpdateInspectionStatusRequest =
   components['schemas']['UpdateInspectionStatusRequest']
 type SaveInspectionDraftRequest =
   components['schemas']['SaveInspectionDraftRequest']
+type AddInspectionRoomRequest =
+  components['schemas']['AddInspectionRoomRequest']
+type Room = components['schemas']['Room']
 
 export interface PaginatedInspectionsResponse {
   content: InspectionWithSource[]
@@ -81,34 +84,52 @@ export const inspectionService = {
 
   async getInspectionPdfBase64(
     inspectionId: string,
-    options?: { includeCosts?: boolean }
+    options?: { includeCosts?: boolean; source?: 'xpand' | 'internal' }
   ): Promise<string> {
-    const pdfResponse = await GET(
-      '/inspections/xpand/{inspectionId}/pdf' as any,
-      {
-        params: {
-          path: { inspectionId },
-          query: { includeCosts: options?.includeCosts ?? true },
-        },
-      }
-    )
+    const path =
+      options?.source === 'internal'
+        ? '/inspections/internal/{inspectionId}/pdf'
+        : '/inspections/xpand/{inspectionId}/pdf'
+    const pdfResponse = await GET(path, {
+      params: {
+        path: { inspectionId },
+        query: { includeCosts: options?.includeCosts ?? true },
+      },
+    })
     if (pdfResponse.error) throw pdfResponse.error
-    if (!(pdfResponse.data as any).content?.pdfBase64)
+    if (!pdfResponse.data?.content?.pdfBase64)
       throw new Error('No PDF data returned from API')
 
-    return (pdfResponse.data as any).content.pdfBase64
+    return pdfResponse.data.content.pdfBase64
   },
 
   async getTenantContacts(
-    inspectionId: string
+    inspectionId: string,
+    source: 'xpand' | 'internal' = 'xpand'
   ): Promise<TenantContactsResponse> {
-    const response = await GET('/inspections/{inspectionId}/tenant-contacts', {
+    const path =
+      source === 'internal'
+        ? '/inspections/internal/{inspectionId}/tenant-contacts'
+        : '/inspections/{inspectionId}/tenant-contacts'
+    const response = await GET(path, {
       params: { path: { inspectionId } },
     })
     if (response.error) throw response.error
-    if (!response.data.content) throw new Error('No data returned from API')
+    if (!response.data?.content) throw new Error('No data returned from API')
 
     return response.data.content as TenantContactsResponse
+  },
+
+  async getInternalInspectionDetails(
+    inspectionId: string
+  ): Promise<DetailedInspection> {
+    const response = await GET('/inspections/internal/{inspectionId}/details', {
+      params: { path: { inspectionId } },
+    })
+    if (response.error) throw response.error
+    if (!response.data?.content) throw new Error('No data returned from API')
+
+    return response.data.content
   },
 
   async createInspection(
@@ -125,7 +146,7 @@ export const inspectionService = {
   async updateInternalInspection(
     inspectionId: string,
     body: components['schemas']['UpdateInspectionStatusRequest']
-  ): Promise<DetailedInspection> {
+  ): Promise<InternalInspection> {
     const response = await PATCH('/inspections/internal/{inspectionId}', {
       params: { path: { inspectionId } },
       body,
@@ -139,14 +160,19 @@ export const inspectionService = {
 
   async sendProtocol(
     inspectionId: string,
-    recipient: 'new-tenant' | 'tenant'
+    recipient: 'new-tenant' | 'tenant',
+    source: 'xpand' | 'internal' = 'xpand'
   ): Promise<SendProtocolResponse> {
-    const response = await POST('/inspections/{inspectionId}/send-protocol', {
+    const path =
+      source === 'internal'
+        ? '/inspections/internal/{inspectionId}/send-protocol'
+        : '/inspections/{inspectionId}/send-protocol'
+    const response = await POST(path, {
       params: { path: { inspectionId } },
       body: { recipient } as SendProtocolRequest,
     })
     if (response.error) throw response.error
-    if (!response.data.content) throw new Error('No data returned from API')
+    if (!response.data?.content) throw new Error('No data returned from API')
 
     return response.data.content as SendProtocolResponse
   },
@@ -154,7 +180,10 @@ export const inspectionService = {
   async updateInspectionStatus(
     inspectionId: string,
     status: UpdateInspectionStatusRequest['status']
-  ): Promise<DetailedInspection> {
+  ): Promise<{
+    inspection: InternalInspection
+    componentWriteBackErrors: components['schemas']['ComponentWriteBackError'][]
+  }> {
     const response = await PATCH('/inspections/internal/{inspectionId}', {
       params: { path: { inspectionId } },
       body: { status },
@@ -163,7 +192,11 @@ export const inspectionService = {
     if (!response.data.content?.inspection)
       throw new Error('Failed to update inspection status')
 
-    return response.data.content.inspection
+    return {
+      inspection: response.data.content.inspection,
+      componentWriteBackErrors:
+        response.data.content.componentWriteBackErrors ?? [],
+    }
   },
 
   async getInternalInspectionById(
@@ -188,5 +221,38 @@ export const inspectionService = {
       body,
     })
     if (response.error) throw response.error
+  },
+
+  async addInspectionRoom(
+    inspectionId: string,
+    body: AddInspectionRoomRequest
+  ): Promise<Room> {
+    const response = await POST('/inspections/internal/{inspectionId}/rooms', {
+      params: { path: { inspectionId } },
+      body,
+    })
+    if (response.error) throw response.error
+    const room = response.data?.content?.room
+    if (!room) throw new Error('Failed to add inspection room')
+    return room
+  },
+
+  async removeInspectionRoom(
+    inspectionId: string,
+    roomId: string
+  ): Promise<void> {
+    const response = await DELETE(
+      '/inspections/internal/{inspectionId}/rooms/{roomId}',
+      { params: { path: { inspectionId, roomId } } }
+    )
+    const status = response.response.status
+    if (status === 204) return
+    if (status === 404) {
+      throw new ApiError(404, 'room-not-added-in-this-inspection')
+    }
+    if (status === 409) {
+      throw new ApiError(409, 'room-has-components')
+    }
+    throw new ApiError(status, `Failed to remove room (status ${status})`)
   },
 }

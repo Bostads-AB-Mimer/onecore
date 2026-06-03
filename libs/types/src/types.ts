@@ -23,7 +23,11 @@ import {
   RentInvoiceRowSchema,
   LeaseRentRowSchema,
 } from './schemas/v1'
-import { MiscellaneousInvoicePayload, MiscellaneousInvoiceRow } from './economy'
+import {
+  MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceRow,
+} from './economy'
 import { XledgerProjectSchema } from './schemas/v1/project'
 import { IdentityCheckContactSchema } from './leasing/v1'
 
@@ -486,6 +490,7 @@ export type {
   CommentType,
   Comment,
   MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceArticle,
   MiscellaneousInvoiceRow,
   LeaseRentRow,
   IdentityCheckContact,

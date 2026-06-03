@@ -18,13 +18,21 @@ import {
   PickupAvailabilityBadge,
   getLatestActiveEvent,
 } from './tables/StatusBadges'
-import type { KeyDetails, KeyLoanWithDetails } from '@/services/types'
+import type {
+  ContactV1,
+  KeyDetails,
+  KeyLoanWithDetails,
+} from '@/services/types'
 import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
+import {
+  getContactFullName,
+  getContactRegistrationNumber,
+} from '@/services/api/contactService'
 
 interface KeyBundleKeysListProps {
   /** Flat array of keys to display */
   keys: KeyDetails[]
-  companyNames: Record<string, string>
+  contactsByCode: Record<string, ContactV1>
   selectable?: boolean
   selectedKeys?: string[]
   onKeySelectionChange?: (keyId: string, checked: boolean) => void
@@ -43,7 +51,7 @@ interface KeyBundleKeysListProps {
  */
 export function KeyBundleKeysList({
   keys,
-  companyNames,
+  contactsByCode,
   selectable = false,
   selectedKeys = [],
   onKeySelectionChange,
@@ -188,12 +196,24 @@ export function KeyBundleKeysList({
         const firstKey = items[0]
         const latestLoan = getLatestLoan(firstKey)
 
+        // Format the contact display inline from the sidecar map.
+        // Format: "Name · Code · NationalRegistrationNumber". Falls back to
+        // the raw code if the contact isn't in the map (e.g. contacts
+        // service was down or the code isn't in the contacts DB).
+        const contact = contactsByCode[contactCode]
+        const contactDisplay = contact
+          ? (() => {
+              const parts = [getContactFullName(contact), contact.contactCode]
+              const nrn = getContactRegistrationNumber(contact)
+              if (nrn) parts.push(nrn)
+              return parts.join(' · ')
+            })()
+          : contactCode
+
         return (
           <div className="flex items-center justify-between flex-1">
             <div className="flex items-center gap-3">
-              <span className="font-semibold">
-                {companyNames[contactCode] || contactCode}
-              </span>
+              <span className="font-semibold">{contactDisplay}</span>
               {latestLoan && <DefaultLoanHeader loan={latestLoan} />}
             </div>
             {latestLoan && (

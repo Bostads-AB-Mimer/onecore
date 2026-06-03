@@ -6,6 +6,7 @@ import type {
   CreateKeyBundleRequest,
   UpdateKeyBundleRequest,
   PaginatedResponse,
+  ContactV1,
 } from '../types'
 
 /**
@@ -142,12 +143,16 @@ export async function getKeyBundleDetails(
     includeLoans?: boolean
     includeEvents?: boolean
     includeKeySystem?: boolean
+    includeContacts?: boolean
   }
-): Promise<KeyBundleDetailsResponse | null> {
+): Promise<
+  (KeyBundleDetailsResponse & { contacts?: Record<string, ContactV1> }) | null
+> {
   const queryParams: Record<string, boolean> = {}
   if (options?.includeLoans) queryParams.includeLoans = true
   if (options?.includeEvents) queryParams.includeEvents = true
   if (options?.includeKeySystem) queryParams.includeKeySystem = true
+  if (options?.includeContacts) queryParams.includeContacts = true
 
   const { data, error } = await GET('/key-bundles/{id}/keys-with-loan-status', {
     params: {
@@ -160,7 +165,12 @@ export async function getKeyBundleDetails(
     throw new Error('Failed to fetch key bundle with loan status')
   }
 
-  return (data?.content as KeyBundleDetailsResponse) ?? null
+  if (!data?.content) return null
+
+  return {
+    ...(data.content as KeyBundleDetailsResponse),
+    ...(data.contacts ? { contacts: data.contacts } : {}),
+  }
 }
 
 /**

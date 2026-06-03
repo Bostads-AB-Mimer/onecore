@@ -17,6 +17,13 @@ import {
 } from './schema'
 import { paginatedResponseSchema } from '@onecore/types'
 
+// TODO: Remove this helper once we have a request-validation middleware that
+// runs route Zod schemas against ctx.query and coerces string "true"/"false"
+// to real booleans. OkapiRouter today only uses schemas for OpenAPI docs, so
+// boolean query params arrive as raw strings — and `Boolean("false") === true`
+// would otherwise silently enable the include even when the caller said no.
+const isTrue = (v: unknown): boolean => v === true || v === 'true'
+
 export const routes = (
   router: OkapiRouter,
   { contactsRepository }: { contactsRepository: ContactsRepository }
@@ -166,6 +173,7 @@ export const routes = (
         .split(',')
         .map((c) => c.trim())
         .filter(Boolean)
+
       if (codes.length === 0) {
         ctx.status = 400
         ctx.body = {
@@ -179,6 +187,72 @@ export const routes = (
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody({ contacts }, metadata)
+    }
+  )
+
+  router.get(
+    '/contacts/batch',
+    {
+      summary: 'Batch lookup of contacts by contact code.',
+      description:
+        'Lean by default — returns base contact fields with empty phone/' +
+        'email/address arrays. Pass any combination of `includePhone`, ' +
+        '`includeEmail`, `includeAddress` to include those joins. Missing ' +
+        'contact codes are simply absent from the response.',
+      tags: ['Contacts'],
+      query: {
+        code: {
+          description:
+            'Contact code(s) to look up. Repeat the parameter for multiple ' +
+            'codes, e.g. ?code=P123&code=P456.',
+          schema: z.array(z.string()).min(1),
+        },
+        includePhone: {
+          description: 'Include phone numbers in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeEmail: {
+          description: 'Include email addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeAddress: {
+          description: 'Include addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+      },
+      response: {
+        200: GetContactsResponseBodySchema,
+        400: ONECoreHateOASResponseBodySchema.extend({ error: z.string() }),
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const rawCode = ctx.query.code
+      const codes = (Array.isArray(rawCode) ? rawCode : [rawCode]).filter(
+        (c): c is string => typeof c === 'string' && c.length > 0
+      )
+
+      if (codes.length === 0) {
+        ctx.status = 400
+        ctx.body = {
+          ...metadata,
+          error: 'At least one `code` query parameter is required.',
+        }
+        return
+      }
+
+      const contacts = await contactsRepository.getByContactCodeBatch(codes, {
+        includePhone: isTrue(ctx.query.includePhone),
+        includeEmail: isTrue(ctx.query.includeEmail),
+        includeAddress: isTrue(ctx.query.includeAddress),
+      })
+
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+        content: { contacts },
+      }
     }
   )
 

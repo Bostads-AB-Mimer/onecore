@@ -2,6 +2,7 @@ export {
   XpandDbInspectionFactory,
   XpandInspectionFactory,
   XpandDbDetailedInspectionFactory,
+  InternalInspectionFactory,
   DetailedXpandInspectionFactory,
   DetailedXpandInspectionRoomFactory,
   XpandDbDetailedInspectionRemarkFactory,

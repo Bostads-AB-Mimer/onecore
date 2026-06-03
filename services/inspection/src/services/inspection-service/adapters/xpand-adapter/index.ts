@@ -1,15 +1,8 @@
 import knex from 'knex'
 import { logger } from '@onecore/utilities'
+import { inspection } from '@onecore/types'
 import Config from '../../../../common/config'
 import { AdapterResult } from '../../types'
-import {
-  XpandInspection,
-  XpandInspectionSchema,
-  DetailedXpandInspection,
-  DetailedXpandInspectionSchema,
-  INSPECTION_STATUS_FILTER,
-  InspectionStatusFilter,
-} from '../../schemas'
 import {
   trimStrings,
   mapInspectionStatus,
@@ -75,6 +68,12 @@ export const db = knex({
   },
 })
 
+// Xpand uses 1 ("Genomförd") and 3 ("Besiktningsresultat skickat") for
+// inspections that are functionally complete from the inspector's perspective
+// — the result has been registered (1) or also dispatched to the tenant (3).
+// Both must be treated as "completed" so they appear under historical filters.
+const COMPLETED_XPAND_STATUSES = [1, 3] as const
+
 function buildBaseInspectionQuery() {
   return db<XpandDbInspection>('lbbes')
     .select(
@@ -107,12 +106,12 @@ export async function getInspections({
   page?: number
   limit?: number
   sortAscending?: boolean
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
   inspector?: string
   address?: string
 } = {}): Promise<
   AdapterResult<
-    { inspections: XpandInspection[]; totalRecords: number },
+    { inspections: inspection.XpandInspection[]; totalRecords: number },
     'schema-error' | 'unknown'
   >
 > {
@@ -121,10 +120,10 @@ export async function getInspections({
   try {
     const baseQuery = buildBaseInspectionQuery()
 
-    if (statusFilter === INSPECTION_STATUS_FILTER.ONGOING) {
-      baseQuery.whereNot('lbbes.status', 1)
-    } else if (statusFilter === INSPECTION_STATUS_FILTER.COMPLETED) {
-      baseQuery.where('lbbes.status', 1)
+    if (statusFilter === inspection.INSPECTION_STATUS_FILTER.ONGOING) {
+      baseQuery.whereNotIn('lbbes.status', [...COMPLETED_XPAND_STATUSES])
+    } else if (statusFilter === inspection.INSPECTION_STATUS_FILTER.COMPLETED) {
+      baseQuery.whereIn('lbbes.status', [...COMPLETED_XPAND_STATUSES])
     }
 
     if (inspector) {
@@ -151,7 +150,8 @@ export async function getInspections({
     const trimmedInspections = trimStrings(dbInspections)
     const inspections = mapInspectionStatus(trimmedInspections)
 
-    const parsed = XpandInspectionSchema.array().safeParse(inspections)
+    const parsed =
+      inspection.XpandInspectionSchema.array().safeParse(inspections)
     if (!parsed.success) {
       logger.error(
         { error: parsed.error.format() },
@@ -175,8 +175,10 @@ export async function getInspections({
 
 export async function getInspectionsByResidenceId(
   residenceId: string,
-  statusFilter?: InspectionStatusFilter
-): Promise<AdapterResult<XpandInspection[], 'schema-error' | 'unknown'>> {
+  statusFilter?: inspection.InspectionStatusFilter
+): Promise<
+  AdapterResult<inspection.XpandInspection[], 'schema-error' | 'unknown'>
+> {
   logger.info(`Getting inspections from Xpand for residenceId: ${residenceId}`)
 
   try {
@@ -185,10 +187,10 @@ export async function getInspectionsByResidenceId(
       residenceId
     )
 
-    if (statusFilter === INSPECTION_STATUS_FILTER.ONGOING) {
-      query.whereNot('lbbes.status', 1)
-    } else if (statusFilter === INSPECTION_STATUS_FILTER.COMPLETED) {
-      query.where('lbbes.status', 1)
+    if (statusFilter === inspection.INSPECTION_STATUS_FILTER.ONGOING) {
+      query.whereNotIn('lbbes.status', [...COMPLETED_XPAND_STATUSES])
+    } else if (statusFilter === inspection.INSPECTION_STATUS_FILTER.COMPLETED) {
+      query.whereIn('lbbes.status', [...COMPLETED_XPAND_STATUSES])
     }
 
     const dbInspections = await query.orderBy('lbbes.besdat', 'desc')
@@ -196,7 +198,8 @@ export async function getInspectionsByResidenceId(
     const trimmedInspections = trimStrings(dbInspections)
     const inspections = mapInspectionStatus(trimmedInspections)
 
-    const parsed = XpandInspectionSchema.array().safeParse(inspections)
+    const parsed =
+      inspection.XpandInspectionSchema.array().safeParse(inspections)
     if (!parsed.success) {
       logger.error(
         { error: parsed.error.format() },
@@ -222,7 +225,7 @@ export async function getInspectionById(
   inspectionId: string
 ): Promise<
   AdapterResult<
-    DetailedXpandInspection,
+    inspection.DetailedXpandInspection,
     'not-found' | 'schema-error' | 'unknown'
   >
 > {
@@ -303,7 +306,7 @@ export async function getInspectionById(
       rooms,
     }
 
-    const parsed = DetailedXpandInspectionSchema.safeParse(
+    const parsed = inspection.DetailedXpandInspectionSchema.safeParse(
       inspectionWithRemarks
     )
     if (!parsed.success) {

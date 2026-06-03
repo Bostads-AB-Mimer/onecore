@@ -4,6 +4,7 @@ import { z } from 'zod'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import * as schemas from './schemas'
 import { addComponent } from '../../processes/components'
 import { ProcessStatus } from '../../common/types'
@@ -82,7 +83,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component[],
+        content: schemas.ComponentSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -152,7 +153,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentCategory[],
+        content: schemas.ComponentCategorySchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -217,7 +218,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentCategory,
+        content: schemas.ComponentCategorySchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -277,7 +278,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentCategory,
+        content: schemas.ComponentCategorySchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -358,7 +359,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentCategory,
+        content: schemas.ComponentCategorySchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -498,7 +499,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentType[],
+        content: schemas.ComponentTypeSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -563,7 +564,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentType,
+        content: schemas.ComponentTypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -619,7 +620,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentType,
+        content: schemas.ComponentTypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -698,7 +699,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentType,
+        content: schemas.ComponentTypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -860,7 +861,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentSubtype[],
+        content: schemas.ComponentSubtypeSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -925,7 +926,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentSubtype,
+        content: schemas.ComponentSubtypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -983,7 +984,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentSubtype,
+        content: schemas.ComponentSubtypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1066,7 +1067,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentSubtype,
+        content: schemas.ComponentSubtypeSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1238,7 +1239,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel[],
+        content: schemas.ComponentModelSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1347,6 +1348,57 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+  /**
+   * @swagger
+   * /component-models/surface:
+   *   get:
+   *     summary: Get surface component models (Ytskikt hierarchy)
+   *     description: Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+   *     tags:
+   *       - Property-base/Components
+   *     responses:
+   *       200:
+   *         description: List of surface component models
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentModel'
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  // Registered before `/component-models/:id` so Koa router matches the
+  // literal path first; otherwise `surface` would be captured as the `:id`
+  // param.
+  router.get('(.*)/component-models/surface', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await propertyBaseAdapter.getSurfaceModels()
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: schemas.ComponentModelSchema.array().parse(result.data),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
   router.get('(.*)/component-models/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
@@ -1372,7 +1424,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel,
+        content: schemas.ComponentModelSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1428,7 +1480,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel,
+        content: schemas.ComponentModelSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1509,7 +1561,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentModel,
+        content: schemas.ComponentModelSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1671,7 +1723,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component[],
+        content: schemas.ComponentSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1736,7 +1788,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component,
+        content: schemas.ComponentSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1795,7 +1847,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component,
+        content: schemas.ComponentSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1881,7 +1933,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.Component,
+        content: schemas.ComponentSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -1957,6 +2009,97 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 204
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components/{id}/inspection-state:
+   *   put:
+   *     summary: Update component inspection state
+   *     description: Updates component condition and last inspection date
+   *     tags:
+   *       - Property-base/Components
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Component instance ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [condition, lastInspectionDate]
+   *             properties:
+   *               condition:
+   *                 type: string
+   *                 enum: [GOOD, FAIR, DAMAGED]
+   *               lastInspectionDate:
+   *                 type: string
+   *                 format: date-time
+   *     responses:
+   *       '200':
+   *         description: Component inspection state updated
+   *       '400':
+   *         description: Invalid request
+   *       '404':
+   *         description: Component not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put('(.*)/components/:id/inspection-state', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    const idValidation = z.string().uuid().safeParse(id)
+    if (!idValidation.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+
+    const body = property.UpdateComponentInspectionStateSchema.safeParse(
+      ctx.request.body
+    )
+
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.updateComponentInspectionState(
+        id,
+        body.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not_found'
+              ? 'Component not found'
+              : 'Internal server error',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: schemas.ComponentSchema.parse(result.data),
+        ...metadata,
+      }
     } catch (error) {
       logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500
@@ -2053,7 +2196,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentInstallation[],
+        content: schemas.ComponentInstallationSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2120,7 +2263,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentInstallation,
+        content: schemas.ComponentInstallationSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2201,7 +2344,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentInstallation,
+        content: schemas.ComponentInstallationSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2289,7 +2432,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.ComponentInstallation,
+        content: schemas.ComponentInstallationSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2747,7 +2890,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: result.data satisfies schemas.AIComponentAnalysis,
+        content: schemas.AIComponentAnalysisSchema.parse(result.data),
         ...metadata,
       }
     } catch (error) {

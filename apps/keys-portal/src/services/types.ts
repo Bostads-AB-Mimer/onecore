@@ -40,6 +40,9 @@ export type TenantAddress = NonNullable<
 // Contact type from registered Contact schema in OpenAPI
 export type Contact = components['schemas']['Contact']
 
+// v1 Contact (discriminated union by `type`) returned by the /v1/contacts/* routes
+export type ContactV1 = components['schemas']['ContactV1']
+
 // Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
 export type UpdateKeyRequest = components['schemas']['UpdateKeyRequest']
@@ -255,6 +258,10 @@ export interface ReceiptData {
   disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
   missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
+  // For PARTIAL RETURN: unchecked items aren't missing — they continue on the
+  // new continuation loan. Rendered as its own "NYCKLAR KVAR PÅ LÅN" section.
+  remainingLoanKeys?: KeyDetails[]
+  remainingLoanCards?: Card[]
   comment?: string // Optional comment for the receipt (max 280 chars)
 }
 
@@ -264,6 +271,7 @@ export interface MaintenanceReceiptData {
   contactPerson: string | null
   description?: string | null
   keys: KeyDetails[] // Keys with keySystem included for display
+  scopeByKeyId?: Record<string, string> // Per-key scope for the maintenance receipt's Tillhörighet column (rentalObjectCode → resolved address, or keySystem.name as fallback for HN master keys where rentalObjectCode is null).
   receiptType: 'LOAN' | 'RETURN'
   operationDate?: Date
   loanId?: string // Key loan UUID, used for QR code on printed receipt
@@ -271,4 +279,7 @@ export interface MaintenanceReceiptData {
   disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
   cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
   missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
+  // For PARTIAL RETURN (maintenance): unchecked items continue on a new loan.
+  remainingLoanKeys?: KeyDetails[]
+  remainingLoanCards?: Card[]
 }

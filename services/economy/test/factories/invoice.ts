@@ -68,5 +68,6 @@ export const InvoicePaymentEventFactory = Factory.define<InvoicePaymentEvent>(
     transactionSourceCode: 'foo',
     type: 'OCR',
     matchId: sequence,
+    slTransactionType: 'ELECTRONIC_PAYMENT',
   })
 )

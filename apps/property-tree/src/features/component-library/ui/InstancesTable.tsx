@@ -42,12 +42,11 @@ export const InstancesTable = ({
     rentalId: string | null | undefined,
     roomCode: string | null | undefined
   ) => {
-    if (rentalId) {
-      const url = roomCode
-        ? paths.room(rentalId, roomCode)
-        : paths.residence(rentalId)
-      window.open(url, '_blank')
-    }
+    if (!rentalId) return
+    const url = roomCode
+      ? `${paths.residence(rentalId)}?room=${encodeURIComponent(roomCode)}`
+      : paths.residence(rentalId)
+    window.open(url, '_blank')
   }
 
   const getStatusVariant = (
@@ -175,6 +174,15 @@ export const InstancesTable = ({
       render: (item) => (
         <span className="text-muted-foreground">
           {formatISODate(item.warrantyStartDate)}
+        </span>
+      ),
+    },
+    {
+      key: 'lastInspectionDate',
+      label: 'Senaste inspektion',
+      render: (item) => (
+        <span className="text-muted-foreground">
+          {formatISODate(item.lastInspectionDate)}
         </span>
       ),
     },

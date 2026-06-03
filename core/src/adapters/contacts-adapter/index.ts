@@ -8,6 +8,7 @@ import type {
 
 import { AdapterResult } from '@/adapters/types'
 import { AxiosResponse } from 'axios'
+import config from '../../common/config'
 
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
@@ -76,6 +77,32 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       return singleResponse(response)
     },
 
+    async getByContactCodeBatch(
+      contactCodes: string[],
+      options?: {
+        includePhone?: boolean
+        includeEmail?: boolean
+        includeAddress?: boolean
+      }
+    ): Promise<AdapterResult<Contact[], 'unknown'>> {
+      if (contactCodes.length === 0) return { ok: true, data: [] }
+
+      const { includePhone, includeEmail, includeAddress } = options ?? {}
+
+      const response = await axios<GetContactsResponseBody>(`/contacts/batch`, {
+        params: {
+          code: contactCodes,
+          includePhone,
+          includeEmail,
+          includeAddress,
+        },
+        // Required: contacts microservice uses Koa's default Node querystring
+        // parser (no koa-qs), which doesn't unpack `?code[]=A` into an array.
+        paramsSerializer: { indexes: null },
+      })
+      return listResponse(response)
+    },
+
     async getByTrusteeOfContactCode(
       contactCode: string
     ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
@@ -136,3 +163,10 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
     },
   }
 }
+
+/**
+ * Singleton contacts adapter wired to the configured contacts service URL.
+ * Use this anywhere in core that needs to call the contacts microservice
+ * without re-instantiating the adapter. Mirrors the leasingAdapter pattern.
+ */
+export const contactsAdapter = makeContactsAdapter(config.contactsService.url)

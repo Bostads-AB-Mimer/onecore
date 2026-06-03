@@ -39,6 +39,11 @@ const schemas = {
     name: 'Room',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.CreateRoomRequestSchema, {
+    name: 'CreateRoomRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
   ...zodToJsonSchema(types.CompanySchema, {
     name: 'Company',
     target: 'openApi3',

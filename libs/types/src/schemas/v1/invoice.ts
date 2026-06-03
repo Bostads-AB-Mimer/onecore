@@ -31,6 +31,10 @@ export const InvoicePaymentEventSchema = z.object({
   text: z.string().nullable(),
   // TODO: type these when we know what they are
   transactionSourceCode: z.string(),
+  // Semantic event type from Xledger (e.g. INVOICE, CREDIT_MEMO,
+  // ELECTRONIC_PAYMENT). Null when Xledger doesn't classify the row (e.g. raw
+  // GL adjustments like öresutjämning).
+  slTransactionType: z.string().nullable(),
 })
 
 export const InvoiceSchema = z.object({

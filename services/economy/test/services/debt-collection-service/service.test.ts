@@ -151,21 +151,31 @@ describe('Debt Collection Service', () => {
         }),
         createMockRentInvoiceRow({ printGroup: 'A', amount: 100 }),
         createMockRentInvoiceRow({ printGroup: 'A', amount: 200 }),
-        createMockRentInvoiceRow({ printGroup: null, amount: 300 }),
+        // Row with other printGroup (ungrouped)
+        createMockRentInvoiceRow({ printGroup: 'B', amount: 400 }),
+        // Row with null printGroup (ungrouped)
+        createMockRentInvoiceRow({ printGroup: null, amount: 500 }),
       ]
 
       const aggregated = aggregateRows(rows)
 
-      expect(aggregated).toHaveLength(3)
+      expect(aggregated).toHaveLength(4)
 
-      expect(aggregated[0].amount).toBe(1100) // 1000 + 0 + 100
+      // First group should sum amount + reduction
+      expect(aggregated[0].amount).toBe(1100)
       expect(aggregated[0].printGroup).toBe('N')
 
-      expect(aggregated[1].amount).toBe(300) // 100 + 200
+      // Second group
+      expect(aggregated[1].amount).toBe(300)
       expect(aggregated[1].printGroup).toBe('A')
 
-      expect(aggregated[2].amount).toBe(300)
-      expect(aggregated[2].printGroup).toBe(null)
+      // Ungrouped row
+      expect(aggregated[2].amount).toBe(400)
+      expect(aggregated[2].printGroup).toBe('B')
+
+      // Ungrouped row
+      expect(aggregated[3].amount).toBe(500)
+      expect(aggregated[3].printGroup).toBe(null)
     })
 
     it('should handle partially paid invoices correctly', async () => {

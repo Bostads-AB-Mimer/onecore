@@ -1,16 +1,10 @@
 import { Factory } from 'fishery'
+import { inspection } from '@onecore/types'
 import {
   XpandDbInspection,
   XpandDbDetailedInspection,
   XpandDbDetailedInspectionRemark,
 } from '../../adapters/xpand-adapter'
-import {
-  XpandInspection,
-  DetailedXpandInspection,
-  DetailedXpandInspectionRoom,
-  DetailedXpandInspectionRemark,
-  InspectionRoom,
-} from '../../schemas'
 import {
   CreateInspectionParams,
   SaveInspectionDraftParams,
@@ -31,17 +25,18 @@ export const XpandDbInspectionFactory = Factory.define<XpandDbInspection>(
   })
 )
 
-export const XpandInspectionFactory = Factory.define<XpandInspection>(() => ({
-  id: 'INSPECTION001',
-  status: 'Genomförd',
-  date: new Date('2023-01-01T10:00:00Z'),
-  inspector: 'INSPECTOR001',
-  type: 'Type A',
-  address: '123 Main St',
-  apartmentCode: 'APT001',
-  leaseId: 'LEASE001',
-  masterKeyAccess: 'Huvudnyckel',
-}))
+export const XpandInspectionFactory =
+  Factory.define<inspection.XpandInspection>(() => ({
+    id: 'INSPECTION001',
+    status: 'Genomförd',
+    date: new Date('2023-01-01T10:00:00Z'),
+    inspector: 'INSPECTOR001',
+    type: 'Type A',
+    address: '123 Main St',
+    apartmentCode: 'APT001',
+    leaseId: 'LEASE001',
+    masterKeyAccess: 'Huvudnyckel',
+  }))
 
 export const XpandDbDetailedInspectionFactory =
   Factory.define<XpandDbDetailedInspection>(() => ({
@@ -65,8 +60,32 @@ export const XpandDbDetailedInspectionFactory =
     totalCost: 1500,
   }))
 
+export const InternalInspectionFactory =
+  Factory.define<inspection.InternalInspection>(() => ({
+    id: 'INSPECTION001',
+    status: 'Genomförd',
+    date: new Date('2023-01-01T10:00:00Z'),
+    startedAt: new Date('2023-01-01T10:15:00Z'),
+    endedAt: new Date('2023-01-01T11:00:00Z'),
+    inspector: 'INSPECTOR001',
+    type: 'Type A',
+    residenceId: 'RESIDENCE001',
+    address: '123 Main St',
+    apartmentCode: 'APT001',
+    isFurnished: false,
+    leaseId: 'LEASE001',
+    isTenantPresent: true,
+    isNewTenantPresent: false,
+    masterKeyAccess: 'Huvudnyckel',
+    hasRemarks: true,
+    notes: 'Some notes about the inspection.',
+    totalCost: 1500,
+    remarkCount: 2,
+    rooms: [InspectionRoomFactory.build()],
+  }))
+
 export const DetailedXpandInspectionFactory =
-  Factory.define<DetailedXpandInspection>(() => ({
+  Factory.define<inspection.DetailedXpandInspection>(() => ({
     id: 'INSPECTION001',
     status: 'Genomförd',
     date: new Date('2023-01-01T10:00:00Z'),
@@ -109,7 +128,7 @@ export const DetailedXpandInspectionFactory =
   }))
 
 export const DetailedXpandInspectionRoomFactory =
-  Factory.define<DetailedXpandInspectionRoom>(() => ({
+  Factory.define<inspection.DetailedXpandInspectionRoom>(() => ({
     room: 'Living Room',
     remarks: [],
   }))
@@ -132,7 +151,7 @@ export const XpandDbDetailedInspectionRemarkFactory =
   }))
 
 export const DetailedXpandInspectionRemarkFactory =
-  Factory.define<DetailedXpandInspectionRemark>(() => ({
+  Factory.define<inspection.DetailedXpandInspectionRemark>(() => ({
     remarkId: 'REMARK001',
     location: 'Living Room',
     buildingComponent: 'Wall',
@@ -140,6 +159,7 @@ export const DetailedXpandInspectionRemarkFactory =
     remarkGrade: 2,
     remarkStatus: 'Open',
     cost: 500,
+    costResponsibility: null,
     invoice: true,
     quantity: 1,
     isMissing: false,
@@ -228,38 +248,42 @@ export const CreateInspectionParamsFactory =
   }))
 
 const emptyConditions = {
-  wall1: '',
-  wall2: '',
-  wall3: '',
-  wall4: '',
-  floor: '',
-  ceiling: '',
   details: '',
 }
 
 const emptyActions = {
-  wall1: [],
-  wall2: [],
-  wall3: [],
-  wall4: [],
-  floor: [],
-  ceiling: [],
   details: [],
 }
 
-export const InspectionRoomFactory = Factory.define<InspectionRoom>(() => ({
-  roomId: 'room-1',
-  conditions: { ...emptyConditions },
-  actions: { ...emptyActions },
-  componentNotes: { ...emptyConditions },
-  componentPhotos: { ...emptyActions },
-  photos: [],
-  isApproved: false,
-  isHandled: false,
-}))
+const emptyCosts = {
+  details: 0,
+}
+
+const emptyCostResponsibilities = {
+  details: null,
+}
+
+export const InspectionRoomFactory = Factory.define<inspection.InspectionRoom>(
+  () => ({
+    roomId: 'room-1',
+    conditions: { ...emptyConditions },
+    actions: { ...emptyActions },
+    componentNotes: { ...emptyConditions },
+    componentCosts: { ...emptyCosts },
+    componentPhotos: { ...emptyActions },
+    componentCostResponsibilities: { ...emptyCostResponsibilities },
+    photos: [],
+    isApproved: false,
+    isHandled: false,
+    detailComponents: [],
+    components: [],
+    isAddedInThisInspection: false,
+  })
+)
 
 export const SaveInspectionDraftParamsFactory =
   Factory.define<SaveInspectionDraftParams>(() => ({
     inspectorName: 'Test Inspector',
     rooms: [InspectionRoomFactory.build()],
+    isFurnished: false,
   }))

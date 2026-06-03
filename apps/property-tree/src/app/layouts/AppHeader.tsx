@@ -51,7 +51,7 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
   }
 
   return (
-    <nav className="h-14 border-b bg-background backdrop-blur supports-[backdrop-filter]:bg-background/95 fixed top-0 w-full z-[70] shadow-sm">
+    <nav className="h-14 border-b bg-background backdrop-blur supports-[backdrop-filter]:bg-background/95 fixed top-0 w-full z-30 shadow-sm">
       <div className="flex h-14 items-center justify-between mx-0 px-[16px]">
         <div className="flex items-center space-x-4">
           <Button
@@ -59,7 +59,7 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
             size="icon"
             onClick={handleMenuClick}
             onTouchStart={handleMenuTouch}
-            className="min-h-[44px] min-w-[44px] relative z-[71] touch-manipulation active:scale-95 transition-transform lg:hidden"
+            className="min-h-[44px] min-w-[44px] relative z-[31] touch-manipulation active:scale-95 transition-transform lg:hidden"
             style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             <Menu className="h-5 w-5" />
@@ -83,7 +83,7 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="sm:hidden min-h-[44px] min-w-[44px] relative z-[71] touch-manipulation active:scale-95 transition-transform"
+              className="sm:hidden min-h-[44px] min-w-[44px] relative z-[31] touch-manipulation active:scale-95 transition-transform"
               onClick={handleSearchClick}
               onTouchStart={handleSearchTouch}
               style={{ WebkitTapHighlightColor: 'transparent' }}

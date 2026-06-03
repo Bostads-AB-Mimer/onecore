@@ -20,6 +20,19 @@ const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   maximumFractionDigits: 2,
 })
 
+const paymentEventTypeLabels: Record<string, string> = {
+  INVOICE: 'Faktura',
+  CREDIT_MEMO: 'Kredit',
+  ELECTRONIC_PAYMENT: 'Inbetalning',
+  PAYMENT: 'Inbetalning',
+  REMINDER: 'Påminnelse',
+}
+
+const formatPaymentEventType = (slTransactionType: string | null) => {
+  if (!slTransactionType) return '-'
+  return paymentEventTypeLabels[slTransactionType] ?? slTransactionType
+}
+
 type Props = {
   invoices: Invoice[]
   onInvoiceRowClick: (invoiceId: string | null) => void
@@ -165,66 +178,6 @@ export const InvoicesTable = (props: Props) => {
     return <span>{formatDate(date)}</span>
   }
 
-  // TODO(AL): Move to backend
-  // Calculate payment date from payment events (when invoice was fully paid)
-  const calculatePaymentDate = (
-    events: InvoicePaymentEvent[] | undefined,
-    invoiceAmount: number
-  ): Date | null => {
-    if (!events || events.length === 0) {
-      console.log('calculatePaymentDate: No events')
-      return null
-    }
-
-    // Sort events by payment date
-    const sortedEvents = [...events].sort(
-      (a, b) =>
-        new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime()
-    )
-
-    console.log('calculatePaymentDate starting:', {
-      invoiceAmount,
-      eventsCount: sortedEvents.length,
-      events: sortedEvents,
-    })
-
-    // Start with the invoice amount, then add negative payment events until we reach 0
-    let remainingAmount = invoiceAmount
-    for (const event of sortedEvents) {
-      const eventAmount = Number(event.amount)
-      remainingAmount += eventAmount
-      console.log('After event:', {
-        eventAmount: event.amount,
-        eventAmountAsNumber: eventAmount,
-        remainingAmount,
-        paymentDate: event.paymentDate,
-        reached: remainingAmount <= 0,
-      })
-      if (remainingAmount <= 0) {
-        console.log('✅ Invoice fully paid on:', event.paymentDate)
-        return new Date(event.paymentDate)
-      }
-    }
-
-    console.log('❌ Invoice not fully paid. Final remaining:', remainingAmount)
-    return null
-  }
-
-  // Component to display payment date for paid invoices
-  const PaymentDateDisplay = ({
-    events,
-    invoiceAmount,
-  }: {
-    events: InvoicePaymentEvent[] | undefined
-    invoiceAmount: number
-  }) => {
-    const paymentDate = calculatePaymentDate(events, invoiceAmount)
-
-    if (!paymentDate) return <span>-</span>
-
-    return <span>{formatDate(paymentDate)}</span>
-  }
-
   // Component to display payment events table
   const InvoicePaymentEventsTable = ({
     events,
@@ -282,6 +235,7 @@ export const InvoicesTable = (props: Props) => {
         <table className="w-full">
           <thead>
             <tr className="border-b bg-muted/50">
+              <th className="text-left p-2 text-xs font-medium">Typ</th>
               <th className="text-left p-2 text-xs font-medium">Källa</th>
               <th className="text-left p-2 text-xs font-medium">Belopp</th>
               <th className="text-left p-2 text-xs font-medium">Text</th>
@@ -291,6 +245,9 @@ export const InvoicesTable = (props: Props) => {
           <tbody>
             {events.map((event, idx) => (
               <tr key={idx} className="border-b last:border-0">
+                <td className="p-2 text-sm">
+                  {formatPaymentEventType(event.slTransactionType)}
+                </td>
                 <td className="p-2 text-sm">{event.transactionSourceCode}</td>
                 <td className="p-2 text-sm">{formatCurrency(event.amount)}</td>
                 <td className="p-2 text-sm">{event.text || '-'}</td>
@@ -312,44 +269,11 @@ export const InvoicesTable = (props: Props) => {
     } = useInvoicePaymentEvents(invoice.invoiceId)
 
     return (
-      <>
-        {invoice.paidAmount !== undefined && (
-          <div className="mb-4 bg-success/5 rounded-lg p-4 border-l-4 border-success">
-            <div className="grid grid-cols-3 gap-4 text-sm mb-3">
-              <div>
-                <span className="text-muted-foreground block mb-1">
-                  Betaldatum:
-                </span>
-                <span className="font-semibold">
-                  <PaymentDateDisplay
-                    events={events}
-                    invoiceAmount={invoice.amount}
-                  />
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block mb-1">Källa:</span>
-                <span className="font-semibold">
-                  {formatSource(invoice.source)}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground block mb-1">
-                  Inbetalat belopp:
-                </span>
-                <span className="font-semibold text-success">
-                  {formatCurrency(invoice.paidAmount)}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-        <InvoicePaymentEventsTable
-          events={events}
-          isLoading={isLoading}
-          error={error}
-        />
-      </>
+      <InvoicePaymentEventsTable
+        events={events}
+        isLoading={isLoading}
+        error={error}
+      />
     )
   }
 

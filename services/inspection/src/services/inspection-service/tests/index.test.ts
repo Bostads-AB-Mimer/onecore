@@ -8,10 +8,11 @@ import * as xpandAdapter from '../adapters/xpand-adapter'
 import * as dbAdapter from '../adapters/db-adapter'
 import {
   XpandInspectionFactory,
+  InternalInspectionFactory,
   DetailedXpandInspectionFactory,
   InspectionRoomFactory,
   SaveInspectionDraftParamsFactory,
-} from './factories'
+} from './factories/index'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -226,7 +227,7 @@ describe('inspection-service', () => {
   describe('PATCH /inspections/internal/:inspectionId', () => {
     it('updates inspection status successfully', async () => {
       const inspectionId = '1'
-      const mockInspection = DetailedXpandInspectionFactory.build({
+      const mockInspection = InternalInspectionFactory.build({
         id: inspectionId,
         status: 'Påbörjad',
       })
@@ -246,7 +247,7 @@ describe('inspection-service', () => {
 
     it('updates inspector successfully', async () => {
       const inspectionId = '1'
-      const mockInspection = DetailedXpandInspectionFactory.build({
+      const mockInspection = InternalInspectionFactory.build({
         id: inspectionId,
         inspector: 'New Inspector',
       })
@@ -267,7 +268,7 @@ describe('inspection-service', () => {
 
     it('updates both status and inspector', async () => {
       const inspectionId = '1'
-      const mockInspection = DetailedXpandInspectionFactory.build({
+      const mockInspection = InternalInspectionFactory.build({
         id: inspectionId,
         status: 'Påbörjad',
         inspector: 'New Inspector',
@@ -400,11 +401,11 @@ describe('inspection-service', () => {
   describe('GET /inspections/internal/:inspectionId', () => {
     it('returns inspection with draft rooms', async () => {
       const inspectionId = '1'
-      const mockInspection = {
-        ...XpandInspectionFactory.build({ id: inspectionId }),
-        residenceId: 'RES001',
+      const mockInspection = InternalInspectionFactory.build({
+        id: inspectionId,
+        isFurnished: true,
         rooms: [InspectionRoomFactory.build({ isHandled: true })],
-      }
+      })
       jest
         .spyOn(dbAdapter, 'getInspectionById')
         .mockResolvedValueOnce({ ok: true, data: mockInspection })
@@ -416,6 +417,7 @@ describe('inspection-service', () => {
       expect(res.status).toBe(200)
       expect(res.body.content.inspection.id).toBe(inspectionId)
       expect(res.body.content.inspection.rooms).toHaveLength(1)
+      expect(res.body.content.inspection.isFurnished).toBe(true)
     })
 
     it('returns 404 when inspection not found', async () => {
@@ -443,10 +445,11 @@ describe('inspection-service', () => {
   describe('PATCH /inspections/internal/:inspectionId/draft', () => {
     const validDraftBody = SaveInspectionDraftParamsFactory.build({
       rooms: [InspectionRoomFactory.build({ isHandled: true })],
+      isFurnished: true,
     })
 
     it('saves draft successfully', async () => {
-      jest
+      const saveDraftSpy = jest
         .spyOn(dbAdapter, 'saveInspectionDraft')
         .mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -456,6 +459,11 @@ describe('inspection-service', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content.success).toBe(true)
+      expect(saveDraftSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        '1',
+        expect.objectContaining({ isFurnished: true })
+      )
     })
 
     it('returns 400 for invalid request body', async () => {

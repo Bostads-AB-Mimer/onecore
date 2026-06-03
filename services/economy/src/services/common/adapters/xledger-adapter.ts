@@ -7,6 +7,7 @@ import {
   Invoice,
   InvoicePaymentEvent,
   InvoiceTransactionType,
+  MiscellaneousInvoiceArticle,
   PaymentStatus,
   XledgerContact,
   XledgerProject,
@@ -630,6 +631,9 @@ export async function getInvoicePaymentEvents(
             amount
             text
             paymentDate
+            slTransactionType {
+              name
+            }
             transactionHeader {
               postedDate
               transactionSource {
@@ -649,8 +653,10 @@ export async function getInvoicePaymentEvents(
 
   const filtered = result.data.arTransactions.edges.filter(
     (edge: any) =>
-      edge.node.transactionHeader.transactionSource.code !== 'AR' &&
-      edge.node.transactionHeader.transactionSource.code !== 'OS'
+      (edge.node.transactionHeader.transactionSource.code !== 'AR' &&
+        edge.node.transactionHeader.transactionSource.code !== 'OS') ||
+      (edge.node.transactionHeader.transactionSource.code === 'AR' &&
+        edge.node.slTransactionType?.name === 'CREDIT_MEMO')
   )
 
   return filtered
@@ -681,6 +687,9 @@ export async function getAllInvoicePaymentEvents(
               amount
               text
               paymentDate
+              slTransactionType {
+                name
+              }
               transactionHeader {
                 postedDate
                 transactionSource {
@@ -708,8 +717,10 @@ export async function getAllInvoicePaymentEvents(
   }
   const filtered = result.data.arTransactions.edges.filter(
     (edge: any) =>
-      edge.node.transactionHeader.transactionSource.code !== 'AR' &&
-      edge.node.transactionHeader.transactionSource.code !== 'OS'
+      (edge.node.transactionHeader.transactionSource.code !== 'AR' &&
+        edge.node.transactionHeader.transactionSource.code !== 'OS') ||
+      (edge.node.transactionHeader.transactionSource.code === 'AR' &&
+        edge.node.slTransactionType?.name === 'CREDIT_MEMO')
   )
 
   const events = filtered.map((e: any) => mapToInvoicePaymentEvent(e.node))
@@ -849,6 +860,7 @@ function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
       : new Date(event.paymentDate),
     text: event.text,
     transactionSourceCode: event.transactionHeader.transactionSource.code,
+    slTransactionType: event.slTransactionType?.name ?? null,
   }
 }
 
@@ -1420,7 +1432,7 @@ export const healthCheck = async () => {
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
 ) => {
-  const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.articleName).join(', ')}`
+  const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.article.name).join(', ')}`
 
   const nodes = invoice.invoiceRows.map(
     (ir, index) => gql`
@@ -1429,9 +1441,9 @@ export const submitMiscellaneousInvoice = async (
           subledger: { code: ${JSON.stringify(invoice.contactCode)} }
           lineNumber: ${index}
           product: {
-            code: ${JSON.stringify(ir.articleId)}
+            code: ${JSON.stringify(ir.article.id)}
           }
-          text: ${JSON.stringify(`${ir.articleName}${ir.text ? `: ${ir.text}` : ''}`)}
+          text: ${JSON.stringify(`${ir.article.name}${ir.text ? `: ${ir.text}` : ''}`)}
           quantity: ${ir.amount}
           unitPrice: ${ir.price}
           glObject1: {
@@ -1501,8 +1513,7 @@ interface XledgerInvoiceRow {
   text?: string
   price: number
   amount: number
-  articleName: string
-  articleId: string
+  article: MiscellaneousInvoiceArticle
 }
 
 interface MiscellaneousInvoicePayload {

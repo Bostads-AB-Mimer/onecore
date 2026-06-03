@@ -13,10 +13,16 @@ export interface MiscellaneousInvoicePayload {
   attachment?: any // TODO Fix type, should be File
 }
 
+export interface MiscellaneousInvoiceArticle {
+  id: string
+  name: string
+  standardPrice: number
+  vatExcluded?: boolean
+}
+
 export interface MiscellaneousInvoiceRow {
   amount: number
   price: string
-  articleName: string
-  articleId: string
+  article?: MiscellaneousInvoiceArticle
   text?: string
 }

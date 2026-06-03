@@ -58,14 +58,17 @@ const importRentalInvoicesScript = async (
       logger.info({ batchId }, 'Creating contact file for batch')
       const contactsFilename = `${batchId}-${companyId}-contacts.ar.csv`
       const contactsCsv = await getBatchContactsCsv(batchId)
-      await fs.writeFile(
-        `${config.rentalInvoices.exportDirectory}${sep}${contactsFilename}`,
-        contactsCsv
-      )
-      if (!dryRun) {
-        await uploadInvoiceFile(contactsFilename, contactsCsv)
+
+      if (contactsCsv) {
+        await fs.writeFile(
+          `${config.rentalInvoices.exportDirectory}${sep}${contactsFilename}`,
+          contactsCsv
+        )
+        if (!dryRun) {
+          await uploadInvoiceFile(contactsFilename, contactsCsv)
+        }
+        logger.info({ contactsFilename }, 'Uploaded file')
       }
-      logger.info({ contactsFilename }, 'Uploaded file')
 
       if (companyId !== '006') {
         // No aggregate export for Björnklockan
@@ -88,18 +91,29 @@ const importRentalInvoicesScript = async (
       logger.info({ batchId }, 'Creating ledger file for batch')
       const ledgerFilename = `${batchId}-${companyId}-ledger.gl.csv`
       const ledgerCsv = await getBatchLedgerRowsCsv(batchId)
-      await fs.writeFile(
-        `${config.rentalInvoices.exportDirectory}${sep}${ledgerFilename}`,
-        ledgerCsv
-      )
 
-      if (!dryRun) {
-        await uploadInvoiceFile(ledgerFilename, ledgerCsv)
-        logger.info({ ledgerFilename }, 'Uploaded file')
+      if (ledgerCsv) {
+        await fs.writeFile(
+          `${config.rentalInvoices.exportDirectory}${sep}${ledgerFilename}`,
+          ledgerCsv
+        )
 
-        await markBatchAsProcessed(parseInt(batchId))
+        if (!dryRun) {
+          await uploadInvoiceFile(ledgerFilename, ledgerCsv)
+          logger.info({ ledgerFilename }, 'Uploaded file')
 
-        notification.push('Filer uppladdade till Xledger för import')
+          await markBatchAsProcessed(parseInt(batchId))
+
+          notification.push('Filer uppladdade till Xledger för import')
+        }
+      } else if (!dryRun) {
+        notification.push(
+          'Inga avier kunde laddas upp till Xledger. Batchen markeras inte som hanterad och kommer att försökas igen vid nästa körning.'
+        )
+        logger.warn(
+          { batchId, companyId },
+          'No ledger rows produced for batch — not marking as processed'
+        )
       }
     } else {
       notification.push('Inga nya avier hittade sen senaste importen')

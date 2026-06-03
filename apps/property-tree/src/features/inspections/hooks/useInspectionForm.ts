@@ -16,7 +16,10 @@ export function useInspectionForm(
   // Inspector metadata (name, time, master key)
   const inspectorInfo = useInspectorInfo(existingInspection)
 
-  // Inspection data state (rooms, conditions, actions, notes, photos)
+  // Inspection data state (rooms, conditions, actions, notes, photos). The
+  // `rooms` arg is the initial list; formState.rooms is the mutable version
+  // that includes any ad-hoc rooms added via the "Lägg till rum/utrymme"
+  // action and any ad-hoc rooms rehydrated from a persisted draft.
   const formState = useInspectionFormState(rooms, existingInspection)
 
   // Component operations (CRUD for conditions, actions, notes, photos)
@@ -48,12 +51,24 @@ export function useInspectionForm(
     setInspectionTime: inspectorInfo.setInspectionTime,
     needsMasterKey: inspectorInfo.needsMasterKey,
     setNeedsMasterKey: inspectorInfo.setNeedsMasterKey,
+    isFurnished: inspectorInfo.isFurnished,
+    setIsFurnished: inspectorInfo.setIsFurnished,
 
     // Form state
+    rooms: formState.rooms,
     inspectionData: formState.inspectionData,
     completedRooms: formState.completedRooms,
     totalRooms: formState.totalRooms,
     isAllRoomsComplete: formState.isAllRoomsComplete,
+
+    // Append a server-issued room to the local state. The room has already
+    // been created in Xpand by POST /inspections/internal/:id/rooms; this
+    // callback only updates the in-memory inspection form so the inspector
+    // can immediately fill it in.
+    handleAddRoom: formState.addServerRoom,
+    // Drop a server-deleted room from local state after a successful
+    // DELETE /inspections/internal/:id/rooms/:roomId.
+    handleRemoveRoom: formState.removeServerRoom,
 
     // Room operations
     expandedRoomIds: roomOps.expandedRoomIds,
@@ -63,8 +78,28 @@ export function useInspectionForm(
     handleConditionUpdate: componentOps.updateCondition,
     handleActionUpdate: componentOps.updateAction,
     handleComponentNoteUpdate: componentOps.updateNote,
+    handleComponentCostUpdate: componentOps.updateComponentCost,
     handleComponentPhotoAdd: componentOps.addPhoto,
     handleComponentPhotoRemove: componentOps.removePhoto,
+    handleComponentCostResponsibilityUpdate:
+      componentOps.updateComponentCostResponsibility,
+
+    // Detail component operations
+    handleDetailComponentAdd: componentOps.addDetailComponent,
+    handleDetailComponentRemove: componentOps.removeDetailComponent,
+    handleDetailComponentNoteUpdate: componentOps.updateDetailComponentNote,
+
+    // Fetched component operations (keyed by componentId)
+    handleComponentConditionUpdate: componentOps.updateComponentCondition,
+    handleComponentActionUpdate: componentOps.updateComponentAction,
+    handleComponentNoteUpdateById: componentOps.updateComponentNote,
+    handleComponentPhotoAddById: componentOps.addComponentPhoto,
+    handleComponentPhotoRemoveById: componentOps.removeComponentPhoto,
+    handleComponentCostUpdateById: componentOps.updateComponentCostById,
+    handleComponentCostResponsibilityUpdateById:
+      componentOps.updateComponentCostResponsibilityById,
+    handleMarkRoomNoRemarks: componentOps.markRoomNoRemarks,
+    handleRoomHandledSet: componentOps.setRoomHandled,
 
     // Legacy handlers
     handleCancel,

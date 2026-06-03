@@ -6,6 +6,7 @@ export const ContentBlockTypeSchema = z.enum([
   'subtitle',
   'text',
   'bullet_list',
+  'bold_text',
   'link',
 ])
 
@@ -29,6 +30,10 @@ export const ContentBlockSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('bullet_list'),
+    content: z.string(),
+  }),
+  z.object({
+    type: z.literal('bold_text'),
     content: z.string(),
   }),
   z.object({

@@ -13,7 +13,11 @@ export const useWorkOrders = (id: string, contextType: ContextType) => {
       case 'building':
         // id = building code
         return workOrderService.getWorkOrdersForBuilding(id)
+      // Staircase is currently bsent
+      // as there is no staircase-specific work order endpoint to fetch errands for .
       case 'residence':
+      case 'facility':
+      case 'parkingSpace':
         // id = rental object code
         return workOrderService.getWorkOrdersForResidence(id)
       case 'tenant':
@@ -30,6 +34,8 @@ export const useWorkOrders = (id: string, contextType: ContextType) => {
     contextType === 'property' ||
     contextType === 'building' ||
     contextType === 'residence' ||
+    contextType === 'facility' ||
+    contextType === 'parkingSpace' ||
     contextType === 'tenant' ||
     contextType === 'maintenanceUnit'
 

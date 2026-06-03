@@ -113,14 +113,6 @@ Install dependencies
 $ pnpm run install
 ```
 
-#### Prepare database
-
-Create the database schema by applying the `knex` migrations:
-
-```sh
-$ pnpm run migrate:up
-```
-
 ### Running in Development Mode
 
 When all installation steps have been completed and downstream services are running, a local development instance can be started using:

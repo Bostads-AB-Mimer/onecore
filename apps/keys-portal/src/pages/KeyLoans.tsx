@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { KeyLoansTable } from '@/components/key-loans/KeyLoansTable'
 import { EditKeyLoanForm } from '@/components/key-loans/EditKeyLoanForm'
 
-import { KeyLoan } from '@/services/types'
+import { KeyLoan, ContactV1 } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
@@ -14,6 +14,9 @@ import { useStaleGuard } from '@/hooks/useStaleGuard'
 export default function KeyLoans() {
   const pagination = useUrlPagination()
   const [keyLoans, setKeyLoans] = useState<KeyLoan[]>([])
+  const [contactsByCode, setContactsByCode] = useState<
+    Record<string, ContactV1>
+  >({})
   const [isLoading, setIsLoading] = useState(false)
   const [showEditForm, setShowEditForm] = useState(false)
   const [editingKeyLoan, setEditingKeyLoan] = useState<KeyLoan | null>(null)
@@ -129,12 +132,15 @@ export default function KeyLoans() {
         }
 
         // Always use search endpoint with pagination (even with empty params)
-        const response = await keyLoanService.search(params, page, limit)
+        const response = await keyLoanService.search(params, page, limit, {
+          includeContacts: true,
+        })
 
         // Ignore stale responses from earlier requests
         if (isStale()) return
 
         setKeyLoans(response.content)
+        setContactsByCode(response.contacts ?? {})
         pagination.setPaginationMeta(response._meta)
       } catch (error) {
         if (isStale()) return
@@ -425,6 +431,7 @@ export default function KeyLoans() {
 
       <KeyLoansTable
         keyLoans={keyLoans}
+        contactsByCode={contactsByCode}
         isLoading={isLoading}
         onRefresh={() =>
           loadKeyLoans(pagination.currentPage, pagination.currentLimit)

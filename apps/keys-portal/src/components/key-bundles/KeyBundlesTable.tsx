@@ -11,7 +11,7 @@ import {
   TableEmptyState,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { KeyBundle, KeyDetails } from '@/services/types'
+import { KeyBundle, KeyDetails, ContactV1 } from '@/services/types'
 import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
@@ -24,6 +24,7 @@ interface KeyBundlesTableProps {
   expandedBundleId: string | null
   onToggleExpand: (bundleId: string) => void
   keysForExpandedBundle: KeyDetails[]
+  contactsForExpandedBundle: Record<string, ContactV1>
   isLoadingKeys: boolean
   isLoading: boolean
   onRefresh: () => void
@@ -36,6 +37,7 @@ export function KeyBundlesTable({
   expandedBundleId,
   onToggleExpand,
   keysForExpandedBundle,
+  contactsForExpandedBundle,
   isLoadingKeys,
   isLoading,
   onRefresh,
@@ -101,6 +103,7 @@ export function KeyBundlesTable({
                     >
                       <KeyBundleKeysTable
                         keys={keysForExpandedBundle}
+                        contactsByCode={contactsForExpandedBundle}
                         bundleId={bundle.id}
                         onRefresh={onRefresh}
                       />

@@ -4,8 +4,14 @@ import { Camera, ChevronRight, MessageSquare, Wrench } from 'lucide-react'
 import { Button } from '@/shared/ui/Button'
 import { Textarea } from '@/shared/ui/Textarea'
 
-import { CONDITION_OPTIONS } from '../constants'
-import { PhotoCapture } from './PhotoCapture'
+import {
+  CONDITION_OPTIONS,
+  CONDITION_TYPE,
+  COST_RESPONSIBILITY,
+  COST_RESPONSIBILITY_LABEL,
+  type CostResponsibility,
+} from '../constants'
+import { PhotoCapture, type InspectionPhotoUploadContext } from './PhotoCapture'
 
 interface ComponentInspectionCardProps {
   componentKey: string
@@ -14,21 +20,28 @@ interface ComponentInspectionCardProps {
   note: string
   photoCount: number
   actions: string[]
+  costResponsibility: CostResponsibility
   onConditionChange: (value: string) => void
   onNoteChange: (value: string) => void
-  onPhotoCapture: (photoDataUrl: string) => void
+  onCostResponsibilityChange: (value: CostResponsibility) => void
+  onPhotoCaptured: (path: string) => void
+  uploadContext: InspectionPhotoUploadContext
   onOpenDetail: () => void
 }
 
 export function ComponentInspectionCard({
+  componentKey,
   label,
   condition,
   note,
   photoCount,
   actions,
+  costResponsibility,
   onConditionChange,
   onNoteChange,
-  onPhotoCapture,
+  onCostResponsibilityChange,
+  onPhotoCaptured,
+  uploadContext,
   onOpenDetail,
 }: ComponentInspectionCardProps) {
   const [isNoteFocused, setIsNoteFocused] = useState(false)
@@ -90,6 +103,32 @@ export function ComponentInspectionCard({
         ))}
       </div>
 
+      {/* Cost responsibility radio — only shown for Skadad */}
+      {condition === CONDITION_TYPE.DAMAGED && (
+        <div className="mb-3">
+          <p className="text-sm text-muted-foreground mb-2">Kostnadsansvar</p>
+          <div className="flex gap-4">
+            {[COST_RESPONSIBILITY.TENANT, COST_RESPONSIBILITY.LANDLORD].map(
+              (value) => (
+                <label
+                  key={value}
+                  className="flex items-center gap-2 text-sm cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name={`cost-${componentKey}`}
+                    value={value}
+                    checked={costResponsibility === value}
+                    onChange={() => onCostResponsibilityChange(value)}
+                  />
+                  {COST_RESPONSIBILITY_LABEL[value]}
+                </label>
+              )
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Note field and photo button */}
       <div className="flex gap-2 items-start">
         <Textarea
@@ -102,7 +141,10 @@ export function ComponentInspectionCard({
             isNoteFocused ? 'min-h-[80px]' : 'min-h-[40px] h-[40px]'
           }`}
         />
-        <PhotoCapture onPhotoCapture={onPhotoCapture} photoCount={0} />
+        <PhotoCapture
+          onPhotoCaptured={onPhotoCaptured}
+          uploadContext={uploadContext}
+        />
       </div>
     </div>
   )

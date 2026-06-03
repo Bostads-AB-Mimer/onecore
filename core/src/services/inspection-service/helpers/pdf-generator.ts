@@ -224,6 +224,73 @@ function renderHeader(doc: InstanceType<typeof PDFDocument>): void {
     .text('www.mimer.nu', { link: 'https://www.mimer.nu', underline: true })
 }
 
+// Standard boilerplate appended to every protocol. Module-scope so the array
+// isn't re-allocated on every PDF, and so the same source feeds both the
+// measure and render passes (no risk of drift).
+const CLOSING_NOTES: ReadonlyArray<{ title: string; body: string }> = [
+  {
+    title: 'Avflyttande hyresgäst/er',
+    body: 'Besiktningsprotokoll och ersättningsskyldighet godkänns av hyresgäst. Kostnader som påförts hyresgästen ska betalas innan nytt kontrakt kan tecknas. Samtliga nycklar ska lämnas tillbaka till Mimer.',
+  },
+  {
+    title: 'Besiktningsman',
+    body: 'Inga ytterligare ersättningskrav kommer ställas under förutsättning att inga dolda skador noteras vid besiktningen och inga nya skador uppkommer innan avflyttningen. Lägenheten, med tillhörande utrymmen, ska även ha lämnats väl rengjorda.',
+  },
+]
+
+/**
+ * Measures the height a closing-notes section will occupy, applying the same
+ * font/size the renderer uses. Centralized so render and measure can't drift —
+ * if you change the title or body font here, both passes pick it up.
+ */
+function measureClosingNotesSection(
+  doc: InstanceType<typeof PDFDocument>,
+  section: { title: string; body: string },
+  pageWidth: number
+): number {
+  doc.fontSize(FONT_SIZES.SMALL).font('Helvetica-Bold')
+  const titleHeight = doc.heightOfString(section.title, { width: pageWidth })
+  doc.fontSize(FONT_SIZES.SMALL).font('Helvetica')
+  const bodyHeight = doc.heightOfString(section.body, { width: pageWidth })
+  return titleHeight + bodyHeight + SPACING.SECTION_GAP
+}
+
+/**
+ * Renders the standard tenant + inspector acknowledgement paragraphs at the
+ * end of the protocol. Adds a new page first if the block won't fit on the
+ * current one so the headings never split across pages.
+ */
+function renderClosingNotes(
+  doc: InstanceType<typeof PDFDocument>,
+  pageWidth: number
+): void {
+  const totalHeight = CLOSING_NOTES.reduce(
+    (acc, section) => acc + measureClosingNotesSection(doc, section, pageWidth),
+    0
+  )
+
+  let currentY = doc.y + SPACING.SECTION_GAP
+  if (!fitsOnPage(doc, currentY, totalHeight)) {
+    doc.addPage()
+    currentY = LAYOUT.MARGIN
+  }
+
+  for (const section of CLOSING_NOTES) {
+    doc
+      .fontSize(FONT_SIZES.SMALL)
+      .fillColor(COLORS.BLACK)
+      .font('Helvetica-Bold')
+      .text(section.title, LAYOUT.MARGIN, currentY, { width: pageWidth })
+    currentY = doc.y
+
+    doc
+      .fontSize(FONT_SIZES.SMALL)
+      .font('Helvetica')
+      .text(section.body, LAYOUT.MARGIN, currentY, { width: pageWidth })
+    currentY = doc.y + SPACING.SECTION_GAP
+  }
+}
+
 /**
  * Renders the footer with page numbers and generation timestamp on all pages
  */
@@ -575,6 +642,11 @@ export async function generateInspectionProtocolPdf(
         includeCosts
       )
 
+      // Standard closing boilerplate (tenant + inspector acknowledgements).
+      // Must run before renderFooter so any page breaks it introduces are
+      // included in the final page numbering.
+      renderClosingNotes(doc, pageWidth)
+
       // Footer with generation timestamp
       renderFooter(doc, pageWidth)
 
@@ -771,7 +843,13 @@ function drawRemarksTable(
 
   // Draw header row
   currentY = drawRemarksTableHeader(doc, currentY, pageWidth, includeCosts)
-  let totalCost = 0
+  // Split totals by cost responsibility so the summary at the bottom can show
+  // what the tenant pays vs what the landlord pays. Xpand-sourced remarks have
+  // `costResponsibility === null` for everything, in which case we fall back
+  // to a single SUMMA below.
+  let tenantTotal = 0
+  let landlordTotal = 0
+  let unassignedTotal = 0
 
   // Data rows - validate rooms data
   const rooms = inspection.rooms || []
@@ -849,7 +927,13 @@ function drawRemarksTable(
         }
 
         const cost = remark.cost || 0
-        totalCost += cost
+        if (remark.costResponsibility === 'tenant') {
+          tenantTotal += cost
+        } else if (remark.costResponsibility === 'landlord') {
+          landlordTotal += cost
+        } else {
+          unassignedTotal += cost
+        }
 
         drawTableRow(
           doc,
@@ -869,13 +953,34 @@ function drawRemarksTable(
     }
   })
 
-  // Summary row (only when costs are included)
+  // Summary rows (only when costs are included). Internal inspections classify
+  // each cost as tenant- or landlord-paid; the PDF mirrors that classification
+  // so the reader can tell what Mimer owes vs what the tenant owes. Xpand
+  // remarks have no responsibility data — everything lands in `unassignedTotal`
+  // and we render a single legacy SUMMA row to preserve existing behavior.
   if (includeCosts) {
+    const hasResponsibilityData = tenantTotal > 0 || landlordTotal > 0
+    const summaryRows: Array<{ label: string; amount: number }> =
+      hasResponsibilityData
+        ? [
+            { label: 'SUMMA Hyresgäst', amount: tenantTotal },
+            { label: 'SUMMA Hyresvärd', amount: landlordTotal },
+            ...(unassignedTotal > 0
+              ? [{ label: 'SUMMA Ej angivet', amount: unassignedTotal }]
+              : []),
+            {
+              label: 'Totalt',
+              amount: tenantTotal + landlordTotal + unassignedTotal,
+            },
+          ]
+        : [{ label: 'SUMMA', amount: unassignedTotal }]
+
+    const totalSummaryHeight = TABLE.SUMMARY_HEIGHT * summaryRows.length
     if (
       !fitsOnPage(
         doc,
         currentY,
-        TABLE.SUMMARY_HEIGHT,
+        totalSummaryHeight,
         LAYOUT.PAGE_BOTTOM_THRESHOLD_SUMMARY
       )
     ) {
@@ -883,25 +988,33 @@ function drawRemarksTable(
       currentY = LAYOUT.MARGIN
     }
 
-    doc
-      .fillColor(COLORS.TABLE_HEADER)
-      .rect(LAYOUT.MARGIN, currentY, pageWidth, TABLE.SUMMARY_HEIGHT)
-      .fill()
+    summaryRows.forEach((row) => {
+      doc
+        .fillColor(COLORS.TABLE_HEADER)
+        .rect(LAYOUT.MARGIN, currentY, pageWidth, TABLE.SUMMARY_HEIGHT)
+        .fill()
 
-    doc
-      .fontSize(FONT_SIZES.MEDIUM)
-      .fillColor(COLORS.WHITE)
-      .font('Helvetica-Bold')
-      .text('SUMMA', LAYOUT.MARGIN + SPACING.CELL_PADDING_SMALL, currentY + 6)
-      .text(
-        totalCost.toString(),
-        getRemarksColumnX(4, includeCosts) + SPACING.CELL_PADDING_SMALL,
-        currentY + 6,
-        {
-          width: colWidths.cost - SPACING.CELL_PADDING_MEDIUM,
-          align: 'right',
-        }
-      )
+      doc
+        .fontSize(FONT_SIZES.MEDIUM)
+        .fillColor(COLORS.WHITE)
+        .font('Helvetica-Bold')
+        .text(
+          row.label,
+          LAYOUT.MARGIN + SPACING.CELL_PADDING_SMALL,
+          currentY + 6
+        )
+        .text(
+          row.amount.toString(),
+          getRemarksColumnX(4, includeCosts) + SPACING.CELL_PADDING_SMALL,
+          currentY + 6,
+          {
+            width: colWidths.cost - SPACING.CELL_PADDING_MEDIUM,
+            align: 'right',
+          }
+        )
+
+      currentY += TABLE.SUMMARY_HEIGHT
+    })
   }
 }
 

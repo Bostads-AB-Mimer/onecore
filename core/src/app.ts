@@ -70,6 +70,11 @@ app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/leases/for-csc') && ctx.method === 'GET') {
     return requireRole(['csc:get', 'api-access'])(ctx, next)
   }
+
+  if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
+    return requireRole(['api-access', 'contacts:read'])(ctx, next)
+  }
+
   return requireRole('api-access')(ctx, next)
 })
 

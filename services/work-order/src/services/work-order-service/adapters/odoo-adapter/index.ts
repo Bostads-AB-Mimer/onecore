@@ -399,14 +399,22 @@ const createWorkOrderRecord = async (
   details: CreateWorkOrderDetails
 ): Promise<number> => {
   try {
-    const supportedSpaceCodes = z.enum(['TV', 'BWC', 'KÖ'])
-    const captionForSpace: Record<
+    const supportedSpaceCodes = z.enum(['TV', 'BWC', 'KÖ', 'LGH', 'FÖR', 'KÄL'])
+    const odooSpaceCategory: Record<
       z.infer<typeof supportedSpaceCodes>,
       string
     > = {
       TV: 'Tvättstuga',
       BWC: 'Lägenhet',
       KÖ: 'Lägenhet',
+      LGH: 'Lägenhet',
+      FÖR: 'Lägenhet',
+      KÄL: 'Lägenhet',
+    }
+    const spaceInTitle: Record<z.infer<typeof supportedSpaceCodes>, string> = {
+      ...odooSpaceCategory,
+      FÖR: 'Förråd',
+      KÄL: 'Källare',
     }
 
     const uniqueSpaceCodes: z.infer<typeof supportedSpaceCodes>[] = []
@@ -416,7 +424,7 @@ const createWorkOrderRecord = async (
 
     details.Rows.forEach((row) => {
       const spaceCodeParseResult = supportedSpaceCodes.safeParse(
-        row.LocationCode
+        row.LocationCode.trim()
       )
       if (!spaceCodeParseResult.success) {
         throw new Error('Unsupported location code')
@@ -426,18 +434,19 @@ const createWorkOrderRecord = async (
       if (!uniqueSpaceCodes.includes(spaceCode)) {
         uniqueSpaceCodes.push(spaceCode)
 
-        if (!uniqueSpaceCaptions.includes(captionForSpace[spaceCode])) {
-          uniqueSpaceCaptions.push(captionForSpace[spaceCode])
+        if (!uniqueSpaceCaptions.includes(odooSpaceCategory[spaceCode])) {
+          uniqueSpaceCaptions.push(odooSpaceCategory[spaceCode])
         }
       }
 
-      if (!uniqueEquipmentCodes.includes(row.PartOfBuildingCode)) {
-        uniqueEquipmentCodes.push(row.PartOfBuildingCode)
+      const trimmedPartOfBuildingCode = row.PartOfBuildingCode.trim()
+      if (!uniqueEquipmentCodes.includes(trimmedPartOfBuildingCode)) {
+        uniqueEquipmentCodes.push(trimmedPartOfBuildingCode)
       }
 
       if (details.Rows.length > 1) {
         descriptions.push(
-          `${transformEquipmentCode(row.PartOfBuildingCode)}: ${row.Description}`
+          `${transformEquipmentCode(trimmedPartOfBuildingCode)}: ${row.Description}`
         )
       } else {
         descriptions.push(row.Description)
@@ -445,9 +454,12 @@ const createWorkOrderRecord = async (
     })
 
     const name =
-      uniqueEquipmentCodes.length > 1
-        ? `Felanmälda vitvaror - ${uniqueEquipmentCodes.map(transformEquipmentCode).join(', ')}`
-        : `Felanmäld ${captionForSpace[uniqueSpaceCodes[0]]} - ${transformEquipmentCode(uniqueEquipmentCodes[0])}`
+      uniqueEquipmentCodes.includes('SD') ||
+      uniqueEquipmentCodes.includes('DJUR')
+        ? `Felanmäld Skadedjur - ${[...new Set(uniqueSpaceCodes.map((c) => spaceInTitle[c]))].join(', ')}`
+        : uniqueEquipmentCodes.length > 1
+          ? `Felanmälda vitvaror - ${uniqueEquipmentCodes.map(transformEquipmentCode).join(', ')}`
+          : `Felanmäld ${spaceInTitle[uniqueSpaceCodes[0]]} - ${transformEquipmentCode(uniqueEquipmentCodes[0])}`
 
     return await odoo.create('maintenance.request', {
       rental_property_id: rentalPropertyRecord.toString(),
@@ -465,8 +477,10 @@ const createWorkOrderRecord = async (
       master_key: details.AccessOptions.Type === 0,
       space_caption: uniqueSpaceCaptions.join(', '),
       maintenance_team_id: maintenanceTeamId,
-      maintenance_request_category_id:
-        await getMaintenanceRequestCategoryId(uniqueSpaceCaptions),
+      maintenance_request_category_id: await getMaintenanceRequestCategoryId(
+        uniqueSpaceCaptions,
+        uniqueEquipmentCodes
+      ),
       creation_origin: 'mimer-nu',
     })
   } catch (error) {
@@ -493,10 +507,19 @@ const getMaintenanceTeamId = async (teamName: string): Promise<number> => {
 }
 
 const getMaintenanceRequestCategoryId = async (
-  uniqueSpaceCaptions: string[]
+  uniqueSpaceCaptions: string[],
+  uniqueEquipmentCodes: string[]
 ): Promise<number> => {
   try {
-    if (uniqueSpaceCaptions.includes('Tvättstuga')) {
+    if (
+      uniqueEquipmentCodes.includes('SD') ||
+      uniqueEquipmentCodes.includes('DJUR')
+    ) {
+      const categories = await odoo.search('maintenance.request.category', {
+        name: 'Skadedjur',
+      })
+      return categories[0]
+    } else if (uniqueSpaceCaptions.includes('Tvättstuga')) {
       const categories = await odoo.search('maintenance.request.category', {
         name: 'Tvättstuga',
       })

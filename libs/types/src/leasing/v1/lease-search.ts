@@ -95,6 +95,13 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .transform((val) => val === true || val === 'true')
     .optional(),
 
+  // When true, joins district + parking-type tables and always includes property/building/area fields
+  // regardless of which filters were used. Use when consuming the result for export-like purposes.
+  forExport: z
+    .union([z.string(), z.boolean()])
+    .transform((val) => val === true || val === 'true')
+    .optional(),
+
   // Sorting (tenantName removed since contacts are fetched separately)
   sortBy: z
     .enum([
@@ -145,6 +152,9 @@ export const LeaseSearchResultSchema = z.object({
   buildingManager: z.string().nullable().optional(),
   districtName: z.string().nullable().optional(),
   parkingSpaceType: z.string().nullable().optional(),
+
+  // Rent aggregate (only included when forExport=true triggers the join)
+  totalYearRent: z.number().nullable().optional(),
 })
 
 export type LeaseSearchResult = z.infer<typeof LeaseSearchResultSchema>

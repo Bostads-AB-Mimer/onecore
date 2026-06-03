@@ -41,6 +41,11 @@
     "test": "pnpm -r --no-bail run test",
     "typecheck": "pnpm -r --no-bail run typecheck"
   },
+  "pnpm": {
+    "overrides": {
+      "is-generator-function": "1.1.0"
+    }
+  },
   "dependencies": {
     "@azure/msal-node": "^2.9.2"
   },

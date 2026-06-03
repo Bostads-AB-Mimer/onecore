@@ -5,6 +5,7 @@ import {
   NationalIdNumber,
   PhoneNumber,
 } from '@src/domain/contact'
+import { ContactIncludeOptions } from './xpand/batch-query'
 
 /**
  * Parameters for listing contacts with optional filtering and pagination
@@ -62,6 +63,22 @@ export interface ContactsRepository {
    * @returns A promise that resolves to the Contact object if found,
    */
   getByContactCode: (contactCode: ContactCode) => Promise<Contact | null>
+
+  /**
+   * Batch lookup of contacts by their contact codes. Lean by default —
+   * returns only base contact fields with empty phone/email/address arrays
+   * unless any `include*` flag is set.
+   *
+   * @param contactCodes - The contact codes to look up.
+   * @param options - Optional include flags for phone/email/address joins.
+   *
+   * @returns A promise that resolves to an array of Contact objects in
+   *          unspecified order. Missing codes are simply absent from the result.
+   */
+  getByContactCodeBatch: (
+    contactCodes: ContactCode[],
+    options?: ContactIncludeOptions
+  ) => Promise<Contact[]>
 
   /**
    * Retrieves contacts by their national ID number.

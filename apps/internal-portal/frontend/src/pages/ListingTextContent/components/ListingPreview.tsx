@@ -125,6 +125,23 @@ export const ListingPreview = ({
           </Box>
         )
 
+      case 'bold_text':
+        return (
+          <Box key={index} sx={{ marginBottom: 0.5 }}>
+            {renderParagraphs(
+              block.content || '',
+              {
+                width: '100%',
+                fontSize: '1rem',
+                fontFamily: 'graphikRegular',
+                fontWeight: 700,
+                lineHeight: 1.7,
+              },
+              'Underrubrik 2...'
+            )}
+          </Box>
+        )
+
       case 'bullet_list':
         const items = (block.content || '')
           .split('\n')

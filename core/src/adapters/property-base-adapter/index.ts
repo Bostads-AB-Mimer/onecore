@@ -83,6 +83,27 @@ export async function searchResidences(
   }
 }
 
+type SearchStaircasesResponse = components['schemas']['Staircase'][]
+
+export async function searchStaircases(
+  q: string
+): Promise<AdapterResult<SearchStaircasesResponse, 'staircase-search-failed'>> {
+  try {
+    const response = await client().GET('/staircases/search', {
+      params: { query: { q } },
+    })
+
+    if (response.data) {
+      return { ok: true, data: response.data.content ?? [] }
+    }
+
+    return { ok: false, err: 'staircase-search-failed' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.searchStaircases')
+    return { ok: false, err: 'staircase-search-failed' }
+  }
+}
+
 type GetBuildingsResponse = components['schemas']['Building'][]
 
 export async function getBuildings(
@@ -343,12 +364,12 @@ export async function getStaircases(
 type GetRoomsResponse = components['schemas']['Room'][]
 
 export async function getRooms(
-  residenceId: string,
+  rentalId: string,
   roomCode?: string
 ): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/rooms', {
-      params: { query: { residenceId, roomCode } },
+      params: { query: { rentalId, roomCode } },
     })
 
     if (!fetchResponse.data?.content) {
@@ -865,6 +886,72 @@ export async function getBlockReasons(): Promise<
   }
 }
 
+type Room = components['schemas']['Room']
+type CreateRoomBody = components['schemas']['CreateRoomRequest']
+
+export async function createRoom(
+  body: CreateRoomBody
+): Promise<AdapterResult<Room, 'not-found' | 'validation' | 'unknown'>> {
+  try {
+    const response = await client().POST('/rooms', { body })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    const status = response.response?.status
+    if (status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (status === 400) {
+      return { ok: false, err: 'validation' }
+    }
+
+    logger.error(
+      { status, error: response.error },
+      'property-base-adapter.createRoom unexpected response'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createRoom')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteRoom(
+  roomId: string
+): Promise<AdapterResult<void, 'not-found' | 'has-components' | 'unknown'>> {
+  try {
+    const response = await client().DELETE('/rooms/{id}', {
+      params: { path: { id: roomId } },
+    })
+
+    const status = response.response?.status
+    if (status === 204) {
+      return { ok: true, data: undefined }
+    }
+    if (status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (status === 409) {
+      return { ok: false, err: 'has-components' }
+    }
+
+    logger.error(
+      { status, error: response.error, roomId },
+      'property-base-adapter.deleteRoom unexpected response'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err, roomId }, 'property-base-adapter.deleteRoom')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
+
+export { getApartmentTemperatures } from './apartment-temperatures'
+
 // ==================== COMPONENTS ====================
 
 export {
@@ -893,12 +980,14 @@ export {
   createComponentModel,
   updateComponentModel,
   deleteComponentModel,
+  getSurfaceModels,
   // Components
   getComponents,
   getComponentById,
   createComponent,
   updateComponent,
   deleteComponent,
+  updateComponentInspectionState,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

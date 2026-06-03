@@ -8,7 +8,6 @@ import {
   sendParkingSpaceAssignedToOther,
   sendWorkOrderEmail,
   sendParkingSpaceAcceptOffer,
-  sendInspectionProtocolEmail,
   sendBulkEmail,
   sendNonScoredParkingSpaceApproved,
   sendNonScoredParkingSpaceDenied,
@@ -35,7 +34,10 @@ import {
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import z from 'zod'
-import { sendEmailInfobipSdk } from './adapters/infobip-adapter'
+import {
+  sendEmailInfobipSdk,
+  sendInspectionProtocolEmail,
+} from './adapters/infobip-adapter'
 
 /**
  * Extract Swedish phone number from text that may contain names/labels
@@ -68,6 +70,27 @@ export const routes = (router: KoaRouter) => {
         subject: message.subject,
         text: message.text,
       })
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        error: error.message,
+        ...metadata,
+      }
+    }
+  })
+
+  router.post('(.*)/sendMessageWithAttachment', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const message = ctx.request.body
+    if (!isMessageEmail(message)) {
+      ctx.status = 400
+      ctx.body = { reason: 'Message is not an email object', ...metadata }
+      return
+    }
+    try {
+      const result = await sendEmail(message)
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (error: any) {

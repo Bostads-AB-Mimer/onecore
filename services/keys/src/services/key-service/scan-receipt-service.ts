@@ -5,7 +5,7 @@
  * All inputs go through the same batch pipeline:
  *
  * 1. Extract frames (pdfjs-dist for PDF, Jimp for other formats)
- * 2. Scan each frame for a QR code (jsQR)
+ * 2. Scan each frame for a QR code (zxing-wasm)
  * 3. Group frames by decoded UUID
  * 4. For each group: validate UUID, verify loan, create receipt
  * 5. Extract each group's pages as a separate PDF for storage
@@ -15,7 +15,6 @@
 
 import { Knex } from 'knex'
 import { Jimp } from 'jimp'
-import jsQR from 'jsqr'
 import { PDFDocument } from 'pdf-lib'
 import { logger } from '@onecore/utilities'
 import * as receiptsAdapter from './adapters/receipts-adapter'
@@ -111,14 +110,14 @@ async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i)
 
-    // Try scale 3.0 first, fall back to 6.0 if no QR found
+    // Try zxing at scale 3.0 first, fall back to scale 6.0 if no QR found
     let frame = await renderPdfPage(page, 3.0, createCanvas)
-    frame.qrData = scanFrameForQr(frame)
+    frame.qrData = await scanFrameForQrZxing(frame)
 
     if (!frame.qrData) {
       logger.info({ pageIndex: i - 1 }, 'No QR at scale 3.0, retrying at 6.0')
       frame = await renderPdfPage(page, 6.0, createCanvas)
-      frame.qrData = scanFrameForQr(frame)
+      frame.qrData = await scanFrameForQrZxing(frame)
     }
 
     frames.push(frame)
@@ -146,21 +145,23 @@ async function extractFrames(buffer: Buffer): Promise<Frame[]> {
     height,
     qrData: null,
   }
-  frame.qrData = scanFrameForQr(frame)
+  frame.qrData = await scanFrameForQrZxing(frame)
   return [frame]
 }
 
 /**
- * Scan a single frame for a QR code.
+ * Scan a single frame for a QR code using zxing-wasm.
  * Returns the decoded string or null if no QR found.
  */
-function scanFrameForQr(frame: Frame): string | null {
-  const result = jsQR(
-    new Uint8ClampedArray(frame.rgba),
-    frame.width,
-    frame.height
-  )
-  return result?.data || null
+async function scanFrameForQrZxing(frame: Frame): Promise<string | null> {
+  const { readBarcodes } = await import('zxing-wasm/reader')
+  const imageData = {
+    data: new Uint8ClampedArray(frame.rgba),
+    width: frame.width,
+    height: frame.height,
+  }
+  const results = await readBarcodes(imageData, { formats: ['QRCode'] })
+  return results[0]?.text || null
 }
 
 /**

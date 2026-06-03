@@ -4,25 +4,21 @@ import {
   logger,
   buildPaginatedResponse,
 } from '@onecore/utilities'
+import { inspection } from '@onecore/types'
+import { z } from 'zod'
 import { registerSchema } from '../../middlewares/swagger-middleware'
-import {
-  DetailedXpandInspectionSchema,
-  GetInspectionsFromXpandQuerySchema,
-  GetInspectionsByResidenceIdQuerySchema,
-  InspectionRoomSchema,
-  InternalInspectionSchema,
-  SaveInspectionDraftRequestSchema,
-  XpandInspectionSchema,
-} from './schemas'
 import * as xpandAdapter from './adapters/xpand-adapter'
 import * as dbAdapter from './adapters/db-adapter'
 import {
   CreateInspectionSchema,
-  SaveInspectionDraftSchema,
   UpdateInternalInspectionSchema,
   UpdateInspectionStatusSchema,
 } from './adapters/db-adapter/schemas'
 import { db } from './adapters/db'
+
+const AddedRoomRequestSchema = z.object({
+  xpandRoomId: z.string().min(1).max(15),
+})
 
 /**
  * @swagger
@@ -33,15 +29,28 @@ import { db } from './adapters/db'
  */
 
 export const routes = (router: KoaRouter) => {
-  registerSchema('XpandInspection', XpandInspectionSchema)
-  registerSchema('DetailedXpandInspection', DetailedXpandInspectionSchema)
-  registerSchema('DetailedXpandInspectionRoom', DetailedXpandInspectionSchema)
-  registerSchema('DetailedXpandInspectionRemark', DetailedXpandInspectionSchema)
+  registerSchema('XpandInspection', inspection.XpandInspectionSchema)
+  registerSchema(
+    'DetailedXpandInspection',
+    inspection.DetailedXpandInspectionSchema
+  )
+  registerSchema(
+    'DetailedXpandInspectionRoom',
+    inspection.DetailedXpandInspectionRoomSchema
+  )
+  registerSchema(
+    'DetailedXpandInspectionRemark',
+    inspection.DetailedXpandInspectionRemarkSchema
+  )
   registerSchema('CreateInspection', CreateInspectionSchema)
   registerSchema('UpdateInspectionStatus', UpdateInspectionStatusSchema)
-  registerSchema('InspectionRoom', InspectionRoomSchema)
-  registerSchema('InternalInspection', InternalInspectionSchema)
-  registerSchema('SaveInspectionDraftRequest', SaveInspectionDraftRequestSchema)
+  registerSchema('InspectionComponent', inspection.InspectionComponentSchema)
+  registerSchema('InspectionRoom', inspection.InspectionRoomSchema)
+  registerSchema('InternalInspection', inspection.InternalInspectionSchema)
+  registerSchema(
+    'SaveInspectionDraftRequest',
+    inspection.SaveInspectionDraftRequestSchema
+  )
 
   /**
    * @swagger
@@ -132,7 +141,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/inspections/xpand', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsedQuery = GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
+    const parsedQuery = inspection.GetInspectionsFromXpandQuerySchema.safeParse(
+      ctx.query
+    )
     if (!parsedQuery.success) {
       ctx.status = 400
       ctx.body = {
@@ -249,9 +260,8 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { residenceId } = ctx.params
 
-    const parsedQuery = GetInspectionsByResidenceIdQuerySchema.safeParse(
-      ctx.query
-    )
+    const parsedQuery =
+      inspection.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
     const statusFilter = parsedQuery.success
       ? parsedQuery.data.statusFilter
       : undefined
@@ -442,9 +452,8 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
       const { residenceId } = ctx.params
 
-      const parsedQuery = GetInspectionsByResidenceIdQuerySchema.safeParse(
-        ctx.query
-      )
+      const parsedQuery =
+        inspection.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
       const statusFilter = parsedQuery.success
         ? parsedQuery.data.statusFilter
         : undefined
@@ -578,7 +587,9 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/inspections/internal', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsedQuery = GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
+    const parsedQuery = inspection.GetInspectionsFromXpandQuerySchema.safeParse(
+      ctx.query
+    )
     if (!parsedQuery.success) {
       ctx.status = 400
       ctx.body = {
@@ -767,7 +778,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   properties:
    *                     inspection:
-   *                       $ref: '#/components/schemas/DetailedXpandInspection'
+   *                       $ref: '#/components/schemas/InternalInspection'
    *                 metadata:
    *                   type: object
    *                   description: Route metadata
@@ -938,9 +949,8 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { inspectionId } = ctx.params
 
-    const validationResult = SaveInspectionDraftSchema.safeParse(
-      ctx.request.body
-    )
+    const validationResult =
+      inspection.SaveInspectionDraftRequestSchema.safeParse(ctx.request.body)
     if (!validationResult.success) {
       ctx.status = 400
       ctx.body = {
@@ -983,6 +993,161 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: 'Internal server error', ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/added-rooms:
+   *   post:
+   *     tags:
+   *       - Inspection
+   *     summary: Record a room added during the current inspection.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [xpandRoomId]
+   *             properties:
+   *               xpandRoomId:
+   *                 type: string
+   *                 maxLength: 15
+   *     responses:
+   *       201:
+   *         description: Created
+   *       400:
+   *         description: Invalid input
+   *       404:
+   *         description: Inspection not found
+   *       500:
+   *         description: Internal error
+   */
+  router.post(
+    '(.*)/inspections/internal/:inspectionId/added-rooms',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const inspectionId = Number(ctx.params.inspectionId)
+      if (!Number.isInteger(inspectionId) || inspectionId <= 0) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'inspectionId must be a positive integer',
+          ...metadata,
+        }
+        return
+      }
+
+      const parsed = AddedRoomRequestSchema.safeParse(ctx.request.body)
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = { errors: parsed.error.errors, ...metadata }
+        return
+      }
+
+      try {
+        const result = await dbAdapter.addRoomToInspection(db, {
+          inspectionId,
+          xpandRoomId: parsed.data.xpandRoomId,
+        })
+
+        if (!result.ok) {
+          if (result.err === 'inspection-not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Inspection not found', ...metadata }
+            return
+          }
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.status = 201
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error) {
+        logger.error({ error, inspectionId }, 'Error adding room to inspection')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/added-rooms/{roomId}:
+   *   delete:
+   *     tags:
+   *       - Inspection
+   *     summary: Drop the tracking row for a room added during the inspection.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: path
+   *         name: roomId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       204:
+   *         description: Tracking row dropped.
+   *       400:
+   *         description: Invalid inspectionId.
+   *       404:
+   *         description: No tracking row matched.
+   *       500:
+   *         description: Internal error.
+   */
+  router.delete(
+    '(.*)/inspections/internal/:inspectionId/added-rooms/:roomId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const inspectionId = Number(ctx.params.inspectionId)
+      if (!Number.isInteger(inspectionId) || inspectionId <= 0) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'inspectionId must be a positive integer',
+          ...metadata,
+        }
+        return
+      }
+
+      const { roomId } = ctx.params
+
+      try {
+        const result = await dbAdapter.removeAddedRoomFromInspection(db, {
+          inspectionId,
+          xpandRoomId: roomId,
+        })
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Tracking row not found', ...metadata }
+            return
+          }
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.status = 204
+      } catch (error) {
+        logger.error(
+          { error, inspectionId, roomId },
+          'Error removing room from inspection'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   router.patch('(.*)/inspections/internal/:inspectionId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

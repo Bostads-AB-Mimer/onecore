@@ -441,6 +441,28 @@ export interface paths {
       };
     };
   };
+  "/component-models/surface": {
+    /**
+     * Get surface component models (Ytskikt hierarchy)
+     * @description Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+     */
+    get: {
+      responses: {
+        /** @description List of surface component models */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ComponentModel"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/component-models/by-name/{modelName}": {
     /**
      * Find component model by exact name
@@ -659,6 +681,52 @@ export interface paths {
       responses: {
         /** @description Component instance deleted */
         204: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/components/{id}/inspection-state": {
+    /**
+     * Update component inspection state
+     * @description Updates component condition and last inspection date. Only accepts the three condition values written back from inspections.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** @enum {string} */
+            condition: "GOOD" | "FAIR" | "DAMAGED";
+            /** Format: date-time */
+            lastInspectionDate: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Component inspection state updated */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Component"];
+            };
+          };
+        };
+        /** @description Invalid request */
+        400: {
+          content: never;
+        };
+        /** @description Component not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
           content: never;
         };
       };
@@ -1623,16 +1691,51 @@ export interface paths {
       };
     };
   };
+  "/staircases/search": {
+    /**
+     * Search staircases
+     * @description Searches for staircases by name (caption). The query is matched against
+     * the staircase name using a case-insensitive contains operation. Staircases
+     * with placeholder codes ('00', '99') are excluded to stay consistent with
+     * the sidebar navigation. Returns up to 10 results.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query. Matches against staircase name. */
+          q: string;
+        };
+      };
+      responses: {
+        /** @description Successfully retrieved the staircases. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Staircase"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/rooms": {
     /**
-     * Get rooms by residence id.
+     * Get rooms by rental id.
      * @description Returns all rooms belonging to a residence.
      */
     get: {
       parameters: {
         query: {
-          /** @description The id of the residence. */
-          residenceId: string;
+          /** @description The rental id of the residence. */
+          rentalId: string;
           /** @description The code of the room (optional). */
           roomCode?: string;
         };
@@ -1648,6 +1751,42 @@ export interface paths {
         };
         /** @description Invalid query parameters. */
         400: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Create a new room in Xpand for a residence.
+     * @description Performs a transactional 3-table write (cmobj, barum, babuf) in the
+     * Xpand DB. Returns the created room in the same shape as GET /rooms.
+     * The caller provides the parent rentalId and a curated roomTypeCode;
+     * code and caption default to auto-derived values if omitted.
+     */
+    post: {
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["CreateRoomRequest"];
+        };
+      };
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["Room"];
+            };
+          };
+        };
+        /** @description Validation failure (unknown roomTypeCode, invalid caption, etc.). */
+        400: {
+          content: never;
+        };
+        /** @description Residence not found for the supplied rentalId. */
+        404: {
           content: never;
         };
         /** @description Internal server error. */
@@ -1709,6 +1848,39 @@ export interface paths {
           content: never;
         };
         /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+    /**
+     * Delete a room in Xpand.
+     * @description Hard-deletes the room and its supporting rows (babuf, barum, cmobj)
+     * in a single transaction. Refuses with 409 if any committed
+     * componentInstallations still reference the room — orphaning those
+     * rows would break component reads.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the room to delete (barum.keybarum). */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Room deleted. */
+        204: {
+          content: never;
+        };
+        /** @description Room not found. */
+        404: {
+          content: never;
+        };
+        /** @description Room has installed components and cannot be deleted. */
+        409: {
+          content: never;
+        };
+        /** @description Internal server error. */
         500: {
           content: never;
         };
@@ -2117,6 +2289,53 @@ export interface paths {
       };
     };
   };
+  "/apartments/{objectNumber}/temperatures": {
+    /**
+     * Get indoor temperatures for an apartment
+     * @description Fetches indoor temperature time series for an apartment by its
+     * object number, sourced from the EcoGuard "Curves" platform.
+     * Aggregates per-sensor (sub-node) data into avg/min/max points
+     * per time bucket. Defaults to the last 24 hours at hourly intervals.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Unix timestamp (seconds) for range start. Defaults to `to - 86400`. */
+          from?: number;
+          /** @description Unix timestamp (seconds) for range end. Defaults to now. */
+          to?: number;
+          /** @description Aggregation bucket size. Defaults to "H" (hourly). */
+          interval?: "H" | "D";
+        };
+        path: {
+          /** @description Apartment object number (e.g. "806-032-01-0101"). */
+          objectNumber: string;
+        };
+      };
+      responses: {
+        /** @description Temperature series successfully retrieved. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["ApartmentTemperaturesResponse"];
+            };
+          };
+        };
+        /** @description Invalid query parameters. */
+        400: {
+          content: never;
+        };
+        /** @description No apartment node found for the given object number. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/health": {
     /**
      * Check system health status
@@ -2294,16 +2513,6 @@ export interface components {
           from: string;
           /** Format: date-time */
           to: string;
-        };
-        property?: {
-          propertyId: string | null;
-          propertyName: string | null;
-          propertyCode: string | null;
-        };
-        building?: {
-          buildingId: string | null;
-          buildingName: string | null;
-          buildingCode: string | null;
         };
         deleted: boolean;
         timestamp: string;
@@ -2489,18 +2698,18 @@ export interface components {
         /** Format: date-time */
         to: string;
       };
-      property?: {
-        propertyId: string | null;
-        propertyName: string | null;
-        propertyCode: string | null;
-      };
-      building?: {
-        buildingId: string | null;
-        buildingName: string | null;
-        buildingCode: string | null;
-      };
       deleted: boolean;
       timestamp: string;
+      property: {
+        propertyId: string;
+        propertyName: string | null;
+        propertyCode: string;
+      };
+      building: {
+        buildingId: string;
+        buildingName: string | null;
+        buildingCode: string;
+      };
     };
     Room: {
       id: string;
@@ -2544,6 +2753,24 @@ export interface components {
         timestamp: string;
       }) | null;
       area?: number;
+    };
+    CreateRoomRequest: {
+      rentalId: string;
+      /** @enum {string} */
+      roomTypeCode: "BAD" | "BAL" | "BRS" | "DUSCH" | "FÖR" | "GROV" | "HALL" | "KLÄD" | "KÖK" | "KOV" | "KV" | "MAT" | "PA" | "RUM" | "TRAPP" | "UP" | "VARD" | "WC" | "WC/DU1";
+      code?: string;
+      caption?: string;
+      features?: {
+        hasToilet?: boolean;
+        isHeated?: boolean;
+        hasThermostatValve?: boolean;
+        orientation?: number;
+      };
+      usage?: {
+        shared?: boolean;
+        allowPeriodicWorks?: boolean;
+        spaceType?: number;
+      };
     };
     Company: {
       id: string;
@@ -2714,16 +2941,6 @@ export interface components {
           /** Format: date-time */
           to: string;
         };
-        property?: {
-          propertyId: string | null;
-          propertyName: string | null;
-          propertyCode: string | null;
-        };
-        building?: {
-          buildingId: string | null;
-          buildingName: string | null;
-          buildingCode: string | null;
-        };
         deleted: boolean;
         timestamp: string;
       }) | null;
@@ -2887,16 +3104,6 @@ export interface components {
             from: string;
             /** Format: date-time */
             to: string;
-          };
-          property?: {
-            propertyId: string | null;
-            propertyName: string | null;
-            propertyCode: string | null;
-          };
-          building?: {
-            buildingId: string | null;
-            buildingName: string | null;
-            buildingCode: string | null;
           };
           deleted: boolean;
           timestamp: string;
@@ -3306,6 +3513,7 @@ export interface components {
       status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
       /** @enum {string|null} */
       condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+      lastInspectionDate?: string | null;
       quantity: number;
       economicLifespan: number;
       createdAt: string;
@@ -3425,6 +3633,7 @@ export interface components {
         status: "ACTIVE" | "INACTIVE" | "MAINTENANCE" | "DECOMMISSIONED";
         /** @enum {string|null} */
         condition?: "NEW" | "GOOD" | "FAIR" | "POOR" | "DAMAGED" | null;
+        lastInspectionDate?: string | null;
         quantity: number;
         economicLifespan: number;
         createdAt: string;
@@ -3691,6 +3900,40 @@ export interface components {
       ncsCode: string | null;
       additionalInformation: string | null;
       confidence: number;
+    };
+    ApartmentTemperaturePoint: {
+      /** @description Unix timestamp (seconds) at the start of the aggregation bucket. */
+      time?: number;
+      /** @description Average temperature for the bucket. */
+      avg?: number | null;
+      /** @description Minimum temperature for the bucket. */
+      min?: number | null;
+      /** @description Maximum temperature for the bucket. */
+      max?: number | null;
+    };
+    ApartmentTemperatureSeries: {
+      /** @description EcoGuard sub-node id (one per physical sensor under the apartment node). */
+      subNodeId?: number;
+      /** @description EcoGuard sub-node name. */
+      subNodeName?: string;
+      points?: components["schemas"]["ApartmentTemperaturePoint"][];
+    };
+    ApartmentTemperaturesResponse: {
+      objectNumber?: string;
+      /** @description EcoGuard apartment node id. */
+      nodeId?: number;
+      /** @description Unix timestamp (seconds) — inclusive start of the requested range. */
+      from?: number;
+      /** @description Unix timestamp (seconds) — inclusive end of the requested range. */
+      to?: number;
+      /**
+       * @description Aggregation bucket size (hourly or daily).
+       * @enum {string}
+       */
+      interval?: "H" | "D";
+      /** @description Temperature unit reported by EcoGuard (e.g. "cel"). */
+      unit?: string;
+      series?: components["schemas"]["ApartmentTemperatureSeries"][];
     };
   };
   responses: never;

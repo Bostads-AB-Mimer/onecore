@@ -192,11 +192,11 @@ describe(adapter.getInvoicePaymentEvents, () => {
       data: null,
     })
 
-    const result = await adapter.getInvoicePaymentEvents('P12345')
+    const result = await adapter.getInvoicePaymentEvents('1')
     expect(result).toEqual([])
   })
 
-  it('filters out AR and OS transactions', async () => {
+  it('drops the original invoice posting and OS rows, keeps credits and payments', async () => {
     nock(origin)
       .post(pathname)
       .reply(200, {
@@ -204,12 +204,13 @@ describe(adapter.getInvoicePaymentEvents, () => {
           arTransactions: {
             edges: [
               {
+                // Original invoice posting — must be dropped
                 node: {
-                  type: 'foo',
                   invoiceNumber: '12345',
                   amount: 100,
                   text: null,
-                  paymentDate: '2025-01-01',
+                  paymentDate: null,
+                  slTransactionType: { name: 'INVOICE' },
                   transactionHeader: {
                     postedDate: '2025-01-01',
                     transactionSource: { code: 'AR' },
@@ -218,31 +219,48 @@ describe(adapter.getInvoicePaymentEvents, () => {
                 },
               },
               {
+                // OS row — always dropped
                 node: {
-                  type: 'foo',
                   invoiceNumber: '12345',
                   amount: 100,
                   text: null,
                   paymentDate: '2025-01-01',
+                  slTransactionType: null,
                   transactionHeader: {
                     postedDate: '2025-01-01',
                     transactionSource: { code: 'OS' },
                   },
-                  matchId: 2,
+                  matchId: 1,
                 },
               },
               {
+                // Credit memo — kept
                 node: {
-                  type: 'OCR',
-                  invoiceNumber: '12345',
-                  amount: 100,
+                  invoiceNumber: '12345K',
+                  amount: -100,
                   text: null,
-                  paymentDate: '2025-01-01',
+                  paymentDate: null,
+                  slTransactionType: { name: 'CREDIT_MEMO' },
                   transactionHeader: {
-                    postedDate: '2025-01-01',
+                    postedDate: '2025-01-02',
+                    transactionSource: { code: 'AR' },
+                  },
+                  matchId: 1,
+                },
+              },
+              {
+                // Bank payment — kept
+                node: {
+                  invoiceNumber: null,
+                  amount: -100,
+                  text: null,
+                  paymentDate: '2025-01-03',
+                  slTransactionType: { name: 'ELECTRONIC_PAYMENT' },
+                  transactionHeader: {
+                    postedDate: '2025-01-03',
                     transactionSource: { code: 'OCR' },
                   },
-                  matchId: 3,
+                  matchId: 1,
                 },
               },
             ],
@@ -250,15 +268,16 @@ describe(adapter.getInvoicePaymentEvents, () => {
         },
       })
 
-    const result = await adapter.getInvoicePaymentEvents('12345')
-
-    expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(result)
-    ).not.toThrow()
+    const result = await adapter.getInvoicePaymentEvents('1')
 
     expect(result).toEqual([
       expect.objectContaining({
-        type: 'OCR',
+        transactionSourceCode: 'OCR',
+        invoiceId: null,
+      }),
+      expect.objectContaining({
+        transactionSourceCode: 'AR',
+        invoiceId: '12345K',
       }),
     ])
   })

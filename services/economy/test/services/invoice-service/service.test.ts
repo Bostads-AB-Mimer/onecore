@@ -1,6 +1,8 @@
 import {
   processInvoiceRows,
   getInvoiceDetails,
+  getBatchContactsCsv,
+  getBatchLedgerRowsCsv,
 } from '@src/services/invoice-service/service'
 
 let mockInvoiceDataRows = [
@@ -60,6 +62,8 @@ import {
   resetMocks as resetInvoiceDbMocks,
   addAccountInformation,
   setupDefaultMocks as setupDefaultInvoiceDbMocks,
+  getAllInvoiceRows,
+  getContacts,
 } from './__mocks__/invoice-data-db-adapter'
 
 import {
@@ -411,6 +415,78 @@ describe('Rental Invoice Service', () => {
           },
         ],
       })
+    })
+  })
+  describe('getBatchContactsCsv', () => {
+    beforeEach(() => {
+      setupDefaultInvoiceDbMocks()
+      setupDefaultXpandDbMocks()
+    })
+
+    afterEach(() => {
+      resetInvoiceDbMocks()
+      resetXpandDbMocks()
+      jest.clearAllMocks()
+    })
+
+    it('returns null when no contacts exist for the batch', async () => {
+      getContacts.mockResolvedValueOnce([])
+
+      const result = await getBatchContactsCsv('1337')
+
+      expect(result).toBeNull()
+    })
+
+    it('returns a CSV string with header when contacts exist', async () => {
+      getContacts.mockResolvedValueOnce([
+        {
+          contactCode: 'P12345',
+          contactKey: '1234',
+          firstName: 'Test',
+          lastName: 'Tenant',
+          fullName: 'Test Tenant',
+          nationalRegistrationNumber: '19900101-1234',
+          birthDate: new Date('1990-01-01'),
+          isTenant: true,
+          phoneNumbers: [],
+          address: {
+            street: 'Test 1',
+            postalCode: '12345',
+            city: 'Västerås',
+            number: '',
+          },
+          emailAddress: 'test@example.com',
+          autogiro: false,
+          invoiceDeliveryMethod: 'Email',
+        },
+      ])
+
+      const result = await getBatchContactsCsv('1337')
+
+      expect(result).not.toBeNull()
+      expect(result).toContain('Code;Description;Company No')
+      expect(result?.split('\n').length).toBe(2)
+    })
+  })
+
+  describe('getBatchLedgerRowsCsv', () => {
+    beforeEach(() => {
+      setupDefaultInvoiceDbMocks()
+      setupDefaultXpandDbMocks()
+    })
+
+    afterEach(() => {
+      resetInvoiceDbMocks()
+      resetXpandDbMocks()
+      jest.clearAllMocks()
+    })
+
+    it('returns null when the batch has no invoice rows', async () => {
+      getAllInvoiceRows.mockResolvedValueOnce([])
+
+      const result = await getBatchLedgerRowsCsv('1337')
+
+      expect(result).toBeNull()
     })
   })
 })

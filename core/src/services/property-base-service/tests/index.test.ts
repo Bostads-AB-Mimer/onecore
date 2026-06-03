@@ -449,7 +449,7 @@ describe('@onecore/property-service', () => {
         .mockResolvedValueOnce({ ok: true, data: roomsMock })
 
       const res = await request(app.callback()).get(
-        '/property/rooms?residenceId=foo'
+        '/property/rooms?rentalId=foo'
       )
 
       expect(res.status).toBe(200)

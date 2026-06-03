@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -15,6 +15,7 @@ import {
   createComponentModel,
   updateComponentModel,
   deleteComponentModel,
+  getSurfaceModels,
 } from '../adapters/component-adapter'
 
 export const routes = (router: KoaRouter) => {
@@ -122,6 +123,48 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /component-models/surface:
+   *   get:
+   *     summary: Get surface component models (Ytskikt hierarchy)
+   *     description: Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+   *     tags: [Component Models]
+   *     responses:
+   *       200:
+   *         description: List of surface component models
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentModel'
+   *       500:
+   *         description: Internal server error
+   */
+  // Registered before `/component-models/:id` so Koa router matches the
+  // literal path first; otherwise `surface` would be captured as the `:id`
+  // param.
+  router.get('(.*)/component-models/surface', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const models = await getSurfaceModels()
+      ctx.body = {
+        content: ComponentModelSchema.array().parse(models),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error({ err }, 'componentModels.getSurface')
+      ctx.status = 500
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      ctx.body = { error: errorMessage, ...metadata }
+    }
+  })
 
   /**
    * @swagger

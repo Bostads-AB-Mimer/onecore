@@ -5,10 +5,10 @@ import {
   PaginationMeta,
   PaginationLinks,
 } from '@onecore/utilities'
+import { inspection } from '@onecore/types'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
-import { InspectionStatusFilter } from '../../services/inspection-service/schemas'
 
 export type XpandInspection = components['schemas']['XpandInspection']
 export type DetailedXpandInspection =
@@ -32,7 +32,7 @@ export const getXpandInspections = async ({
 }: {
   page?: number
   limit?: number
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
   sortAscending?: boolean
   inspector?: string
   address?: string
@@ -73,7 +73,7 @@ export const getXpandInspections = async ({
 
 export const getXpandInspectionsByResidenceId = async (
   residenceId: string,
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
 ): Promise<AdapterResult<XpandInspection[], 'unknown' | 'not-found'>> => {
   try {
     const fetchResponse = await client().GET(
@@ -124,7 +124,7 @@ export const getXpandInspectionById = async (
     }
 
     if (!fetchResponse.data.content?.inspection) {
-      return { ok: false, err: 'not-found' }
+      return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
     return {
@@ -151,7 +151,7 @@ export const getInternalInspections = async ({
 }: {
   page?: number
   limit?: number
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
   sortAscending?: boolean
   inspector?: string
   address?: string
@@ -192,7 +192,7 @@ export const getInternalInspections = async ({
 
 export const getInternalInspectionsByResidenceId = async (
   residenceId: string,
-  statusFilter?: InspectionStatusFilter
+  statusFilter?: inspection.InspectionStatusFilter
 ): Promise<AdapterResult<XpandInspection[], 'unknown' | 'not-found'>> => {
   try {
     const fetchResponse = await client().GET(
@@ -271,7 +271,7 @@ export const getInternalInspectionById = async (
     }
 
     if (!fetchResponse.data.content?.inspection) {
-      return { ok: false, err: 'not-found' }
+      return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
     return {
@@ -315,10 +315,85 @@ export const saveInspectionDraft = async (
   }
 }
 
+export const removeAddedRoomFromInspection = async (
+  inspectionId: string,
+  xpandRoomId: string
+): Promise<AdapterResult<void, 'not-found' | 'unknown'>> => {
+  try {
+    const fetchResponse = await client().DELETE(
+      '/inspections/internal/{inspectionId}/added-rooms/{roomId}',
+      {
+        params: { path: { inspectionId, roomId: xpandRoomId } },
+      }
+    )
+
+    if (fetchResponse.response.status === 204) {
+      return { ok: true, data: undefined }
+    }
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    logger.error(
+      {
+        status: fetchResponse.response.status,
+        inspectionId,
+        xpandRoomId,
+      },
+      'inspection-adapter.removeAddedRoomFromInspection unexpected status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error(
+      { error, inspectionId, xpandRoomId },
+      'inspection-adapter.removeAddedRoomFromInspection'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const addRoomToInspection = async (
+  inspectionId: string,
+  xpandRoomId: string
+): Promise<AdapterResult<void, 'inspection-not-found' | 'unknown'>> => {
+  try {
+    const fetchResponse = await client().POST(
+      '/inspections/internal/{inspectionId}/added-rooms',
+      {
+        params: { path: { inspectionId } },
+        body: { xpandRoomId },
+      }
+    )
+
+    if (fetchResponse.response.status === 201) {
+      return { ok: true, data: undefined }
+    }
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'inspection-not-found' }
+    }
+
+    logger.error(
+      {
+        status: fetchResponse.response.status,
+        inspectionId,
+        xpandRoomId,
+      },
+      'inspection-adapter.addRoomToInspection unexpected status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error(
+      { error, inspectionId, xpandRoomId },
+      'inspection-adapter.addRoomToInspection'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const updateInspectionStatus = async (
   inspectionId: string,
   body: components['schemas']['UpdateInspectionStatus']
-): Promise<AdapterResult<DetailedXpandInspection, string>> => {
+): Promise<AdapterResult<InternalInspection, string>> => {
   try {
     const fetchResponse = await client().PATCH(
       '/inspections/internal/{inspectionId}',

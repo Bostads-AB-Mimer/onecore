@@ -111,6 +111,8 @@ Once the SQL container is running, you can create these by running:
 pnpm run db:init
 ```
 
+In the dev cluster, database creation is handled automatically by an init container in each service's pod spec.
+
 ### Local development
 
 [Turborepo](https://turborepo.com/) lets us run multiple packages simultaneously in a tidy manner using its "tui" configuration.

@@ -193,12 +193,13 @@ describe('GET /listings', () => {
       .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
 
     jest
-      .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
-      .mockResolvedValueOnce([
-        factory.lease.build({
-          residentialArea: { code: 'AREA123', caption: 'Area 123' },
+      .spyOn(tenantLeaseAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenant.build({
+          currentHousingContract: { residentialArea: { code: 'AREA123' } },
         }),
-      ])
+      })
 
     const res = await request(app.callback()).get(
       '/listings?validToRentForContactCode=abc123'
@@ -246,12 +247,13 @@ describe('GET /listings', () => {
       .mockResolvedValueOnce({ ok: true, data: parkingSpaces })
 
     jest
-      .spyOn(tenantLeaseAdapter, 'getLeasesForContactCode')
-      .mockResolvedValueOnce([
-        factory.lease.build({
-          residentialArea: { code: 'AREA123', caption: 'Area 123' },
+      .spyOn(tenantLeaseAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenant.build({
+          currentHousingContract: { residentialArea: { code: 'AREA123' } },
         }),
-      ])
+      })
 
     const res = await request(app.callback()).get(
       '/listings?validToRentForContactCode=abc123'

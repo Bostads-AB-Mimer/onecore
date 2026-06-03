@@ -535,6 +535,10 @@ export const getBatchContactsCsv = async (batchId: string) => {
   const invoiceContacts = await getInvoiceContacts(batchId)
   const contacts = invoiceContacts.map(transformContact)
 
+  if (contacts.length === 0) {
+    return null
+  }
+
   const csvContent: string[] = []
 
   csvContent.push(
@@ -552,7 +556,7 @@ export const getBatchContactsCsv = async (batchId: string) => {
 
 export const getBatchAggregatedRowsCsv = async (batchId: string) => {
   const transactionRows = await createAggregateRows(batchId)
-  if (transactionRows) {
+  if (transactionRows?.length) {
     const csvContent: string[] = []
 
     csvContent.push(
@@ -571,6 +575,10 @@ export const getBatchAggregatedRowsCsv = async (batchId: string) => {
 
 export const getBatchLedgerRowsCsv = async (batchId: string) => {
   const transactionRows = await createLedgerRows(batchId)
+
+  if (transactionRows.length === 0) {
+    return null
+  }
 
   const csvContent: string[] = []
 
