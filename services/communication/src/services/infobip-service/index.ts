@@ -535,7 +535,7 @@ export const routes = (router: KoaRouter) => {
       .optional(),
   })
   router.post(
-    '(.*)/sendInvoiceNotificationEmail',
+    '(.*)/send-invoice-notification-email',
     parseRequestBody(InvoiceNotificationEmailSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)

@@ -545,7 +545,7 @@ export const sendInvoiceNotificationEmail = async (
 ): Promise<AdapterResult<null, 'unknown'>> => {
   try {
     const result = await axios.post(
-      `${config.communicationService.url}/sendInvoiceNotificationEmail`,
+      `${config.communicationService.url}/send-invoice-notification-email`,
       email
     )
 

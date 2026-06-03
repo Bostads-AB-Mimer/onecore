@@ -308,7 +308,7 @@ describe('/sendBulkSms', () => {
   })
 })
 
-describe('/sendInvoiceNotificationEmail', () => {
+describe('/send-invoice-notification-email', () => {
   let sendInvoiceNotificationEmailSpy: jest.SpyInstance<
     Promise<any>,
     [email: InvoiceNotificationEmail],
@@ -336,7 +336,7 @@ describe('/sendInvoiceNotificationEmail', () => {
     sendInvoiceNotificationEmailSpy.mockResolvedValue({ data: {} })
 
     const res = await request(app.callback())
-      .post('/sendInvoiceNotificationEmail')
+      .post('/send-invoice-notification-email')
       .send(validBody)
 
     expect(res.status).toBe(204)
@@ -358,7 +358,7 @@ describe('/sendInvoiceNotificationEmail', () => {
     }
 
     const res = await request(app.callback())
-      .post('/sendInvoiceNotificationEmail')
+      .post('/send-invoice-notification-email')
       .send(body)
 
     expect(res.status).toBe(204)
@@ -367,7 +367,7 @@ describe('/sendInvoiceNotificationEmail', () => {
 
   it('should return 400 for missing required fields', async () => {
     const res = await request(app.callback())
-      .post('/sendInvoiceNotificationEmail')
+      .post('/send-invoice-notification-email')
       .send({ to: 'tenant@example.com' })
 
     expect(res.status).toBe(400)
@@ -376,7 +376,7 @@ describe('/sendInvoiceNotificationEmail', () => {
 
   it('should return 400 for invalid email address', async () => {
     const res = await request(app.callback())
-      .post('/sendInvoiceNotificationEmail')
+      .post('/send-invoice-notification-email')
       .send({ ...validBody, to: 'not-an-email' })
 
     expect(res.status).toBe(400)
@@ -389,7 +389,7 @@ describe('/sendInvoiceNotificationEmail', () => {
     )
 
     const res = await request(app.callback())
-      .post('/sendInvoiceNotificationEmail')
+      .post('/send-invoice-notification-email')
       .send(validBody)
 
     expect(res.status).toBe(500)
