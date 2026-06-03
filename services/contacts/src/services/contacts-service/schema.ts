@@ -97,3 +97,19 @@ export const GetContactsResponseBodySchema =
       contacts: z.array(ContactSchema),
     }),
   })
+
+export const SyncContactsResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({
+      contacts: z.array(
+        z.object({
+          contact: ContactSchema,
+          timestamp: z.string().datetime(),
+        })
+      ),
+    }),
+  })
+
+export const ErrorResponseBodySchema = z.object({
+  error: z.string(),
+})

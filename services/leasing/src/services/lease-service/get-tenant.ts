@@ -1,15 +1,19 @@
 import { Lease, Tenant } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import { AdapterResult } from './adapters/types'
 import * as estateCodeAdapter from './adapters/xpand/estate-code-adapter'
 import * as tenantLeaseAdapter from './adapters/xpand/tenant-lease-adapter'
+import * as tenfastAdapter from './adapters/tenfast/tenfast-adapter'
 import * as priorityListService from './priority-list-service'
-import { logger } from '@onecore/utilities'
+import { mapToOnecoreLease } from './helpers/tenfast'
 
 type GetTenantError =
   | 'get-contact'
   | 'contact-not-found'
   | 'contact-not-tenant'
+  | 'get-tenfast-tenant'
+  | 'tenfast-tenant-not-found'
   | 'get-contact-leases'
   | 'contact-leases-not-found'
   | 'get-residential-area'
@@ -52,30 +56,37 @@ async function fetchTenant(params: {
     return { ok: false, err: 'contact-not-tenant' }
   }
 
-  const leases = await tenantLeaseAdapter.getLeasesForContactCode(
-    contact.data.contactCode,
-    {
-      includeUpcomingLeases: true,
-      includeTerminatedLeases: false,
-      includeContacts: false,
-    }
+  const tenfastTenant = await tenfastAdapter.getTenantByContactCode(
+    contact.data.contactCode
   )
 
-  if (!leases.ok) {
-    return {
-      ok: false,
-      err: 'get-contact-leases',
-    }
+  if (!tenfastTenant.ok) {
+    return { ok: false, err: 'get-tenfast-tenant' }
+  }
+  if (!tenfastTenant.data) {
+    return { ok: false, err: 'tenfast-tenant-not-found' }
   }
 
-  if (!leases.data.length) {
+  const tenfastLeases = await tenfastAdapter.getLeasesByTenantId(
+    tenfastTenant.data._id
+  )
+
+  if (!tenfastLeases.ok) {
+    return { ok: false, err: 'get-contact-leases' }
+  }
+
+  const onecoreLeases = tenfastLeases.data.map((lease) =>
+    mapToOnecoreLease(lease)
+  )
+
+  if (!onecoreLeases.length) {
     return {
       ok: false,
       err: 'contact-leases-not-found',
     }
   }
 
-  const activeAndUpcomingLeases = leases.data.filter(
+  const activeAndUpcomingLeases = onecoreLeases.filter(
     priorityListService.isLeaseActiveOrUpcoming
   )
 
@@ -102,6 +113,7 @@ async function fetchTenant(params: {
   if (!leasesWithResidentialArea.ok) {
     return { ok: false, err: 'get-residential-area' }
   }
+
   const housingContracts = priorityListService.parseLeasesForHousingContracts(
     leasesWithResidentialArea.data
   )

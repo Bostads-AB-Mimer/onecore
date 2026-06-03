@@ -17,6 +17,7 @@ import {
   xledgerDateString,
   XpandContact,
 } from '@src/common/types'
+import { mapContactFlags } from '@src/services/common/adapters/xpand-db-adapter'
 import { match, P } from 'ts-pattern'
 
 type RentalSpecificRule = {
@@ -357,7 +358,10 @@ export const getContacts = async (
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
       'krknr.autogiro as autogiro',
-      'krknr.stopdate as autogiroCancelledAt'
+      'krknr.stopdate as autogiroCancelledAt',
+      'cmctc.avliden as deceased',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising'
     )
     .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
 
@@ -438,6 +442,9 @@ export const getContacts = async (
     const contactCode = contactRow.contactCode?.trimEnd()
     const emailAddress = getContactEmail(contactCode)
 
+    const { protectedIdentity, deceased, emigrated, noAdvertising } =
+      mapContactFlags(contactRow)
+
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
       contactKey: contactRow.contactKey?.trimEnd(),
@@ -458,6 +465,10 @@ export const getContacts = async (
         emailAddress !== ''
           ? InvoiceDeliveryMethod.Email
           : InvoiceDeliveryMethod.Other,
+      protectedIdentity,
+      deceased,
+      emigrated,
+      noAdvertising,
     }
   })
 
@@ -485,7 +496,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   return {
     reference: contactCode,
     invoiceId: row.invoiceId.trim(),
-    leaseId: row.leaseId?.trim(),
+    leaseIds: row.leaseId ? [row.leaseId.trim()] : [],
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
     fromDate: row.fromDate,
     toDate: row.toDate,
@@ -724,12 +735,8 @@ export const getInvoiceRows = async (
             : invoiceToDateString
 
         const invoice: InvoiceRow = {
-          account: trim(invoiceRow['p1']),
           amount: sumColumns(invoiceRow['rowAmount']),
-          company: trim(invoiceRow['company']),
-          contactCode: trim(invoiceRow['cmctckod']),
           deduction: sumColumns(invoiceRow['rowReduction']),
-          freeCode: trim(invoiceRow['p5']),
           fromDate: fromDateString,
           invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
           invoiceDueDate: xledgerDateString(
@@ -737,14 +744,10 @@ export const getInvoiceRows = async (
           ),
           invoiceNumber: trim(invoiceRow['invoice']),
           invoiceRowText: trim(invoiceRow['text']),
-          invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
           printGroup: trim(invoiceRow['printGroup']),
-          printGroupLabel: trim(invoiceRow['printGroupLabel']),
-          projectCode: trim(invoiceRow['p4']),
           rentArticle: trim(invoiceRow['rentArticle']),
           roundoff: sumColumns(invoiceRow['roundoff']),
           rowType: sumColumns(invoiceRow['rowtype']),
-          tenantName: trim(invoiceRow['cmctcben']),
           toDate: toDateString,
           totalAmount: sumColumns(
             invoiceRow['rowAmount'],
@@ -755,13 +758,10 @@ export const getInvoiceRows = async (
         }
 
         if (type === 2) {
-          // credit invoice, reverse signs
-          invoice.totalAmount = -invoice.totalAmount
           invoice.amount = -invoice.amount
           invoice.vat = -invoice.vat
           invoice.deduction = -invoice.deduction
           invoice.roundoff = -invoice.roundoff
-          invoice.invoiceTotalAmount = -invoice.invoiceTotalAmount
         }
 
         return invoice

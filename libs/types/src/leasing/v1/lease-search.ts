@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LeaseStatus } from '../../enums'
+import { LeaseStatus, LeaseType } from '../../enums'
 
 /**
  * Contact info schema - reusable for lease contacts
@@ -19,6 +19,10 @@ export type ContactInfo = z.infer<typeof ContactInfoSchema>
 export const LeaseSearchQueryParamsSchema = z.object({
   // Text search
   q: z.string().optional(),
+
+  // Explicit search fields (used by search)
+  name: z.string().optional(),
+  address: z.string().optional(),
 
   // Filters
   objectType: z
@@ -77,11 +81,13 @@ export const LeaseSearchQueryParamsSchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1)),
+    .transform((val) => (val ? parseInt(val, 10) : 1))
+    .refine((val) => !isNaN(val), { message: 'page must be a valid number' }),
   limit: z
     .string()
     .optional()
-    .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20)),
+    .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20))
+    .refine((val) => !isNaN(val), { message: 'limit must be a valid number' }),
 
   // When false (default), Upphört (status 3) is excluded. When true, all statuses are returned.
   includeEnded: z
@@ -114,6 +120,11 @@ export type LeaseSearchQueryParams = z.infer<
   typeof LeaseSearchQueryParamsSchema
 >
 
+/** Raw input type (before Zod transforms) — matches Koa ctx.query shape */
+export type LeaseSearchQueryParamsInput = z.input<
+  typeof LeaseSearchQueryParamsSchema
+>
+
 /**
  * Lease search result item schema
  */
@@ -121,9 +132,11 @@ export const LeaseSearchResultSchema = z.object({
   // Core lease fields (always returned)
   leaseId: z.string(),
   objectTypeCode: z.string(),
-  leaseType: z.string(),
+  leaseType: z.nativeEnum(LeaseType),
   contacts: z.array(ContactInfoSchema),
   address: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  city: z.string().nullable(),
   startDate: z.date().nullable(),
   lastDebitDate: z.date().nullable(),
   status: z.nativeEnum(LeaseStatus),

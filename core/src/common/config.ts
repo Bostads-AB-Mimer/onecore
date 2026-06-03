@@ -71,6 +71,16 @@ export interface Config {
     economy: string
     bosociala: string
     dev: string
+    xpandSync: string
+  }
+  homeInsurance: {
+    sftp: {
+      host: string
+      port: number
+      username: string
+      password: string
+      directory: string
+    }
   }
   scanner: {
     allowedIps: string[]
@@ -145,6 +155,16 @@ const config = configPackage({
       tenantDefault: '',
       economy: '',
       bosociala: '',
+      xpandSync: '',
+    },
+    homeInsurance: {
+      sftp: {
+        host: '',
+        port: 22,
+        username: '',
+        password: '',
+        directory: '',
+      },
     },
     scanner: {
       allowedIps: [],
@@ -213,4 +233,5 @@ export default {
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
   scanner: config.get('scanner'),
+  homeInsurance: config.get('homeInsurance'),
 } as Config

@@ -77,4 +77,5 @@ docs/
 examples/
 .envrc
 
+data
 runcommands.md

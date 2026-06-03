@@ -1,0 +1,593 @@
+import assert from 'node:assert'
+import { economy } from '@onecore/types'
+import type {
+  LeaseMatch,
+  MultipleLeaseMatch,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
+
+jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
+  getActiveLeasesByRentalObjectCodes: jest.fn(),
+}))
+
+import { getActiveLeasesByRentalObjectCodes } from '@src/common/adapters/tenfast/tenfast-adapter'
+import { imdService } from '.'
+
+const mockGetActiveLeases =
+  getActiveLeasesByRentalObjectCodes as jest.MockedFunction<
+    typeof getActiveLeasesByRentalObjectCodes
+  >
+
+const csv = `
+306-008-01-0201;2026-01-01;2026-01-31;VV;129,312;136,892;7,580;621,680;;82,016;m3;;;1
+306-008-01-0202;2026-01-01;2026-01-31;VV;50,608;52,702;2,094;171,740;;82,016;m3;;;1
+306-008-01-0203;2026-01-01;2026-01-31;VV;16,893;17,682;0,789;64,710;;82,016;m3;;;1
+`
+
+describe(imdService.parseCsv, () => {
+  it('parses csv', () => {
+    const result = imdService.parseCsv(csv)
+    assert(result.ok)
+
+    expect(() => economy.IMDRowSchema.array().parse(result.data)).not.toThrow()
+  })
+
+  it('returns invalid-csv when rows have different periods', () => {
+    const mixedPeriodCsv = `
+306-008-01-0201;2026-01-01;2026-01-31;VV;129,312;136,892;7,580;621,680;;82,016;m3;;;1
+306-008-01-0202;2026-02-01;2026-02-28;VV;50,608;52,702;2,094;171,740;;82,016;m3;;;1
+`
+    const result = imdService.parseCsv(mixedPeriodCsv)
+    expect(result.ok).toBe(false)
+  })
+})
+
+describe(imdService.enrichIMDRows, () => {
+  beforeEach(() => {
+    mockGetActiveLeases.mockReset()
+  })
+
+  it('maps lease ids to rows by rental object code', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
+        [
+          '306-008-01-0202',
+          { leaseId: '306-008-01-0202/01', leaseEndDate: null },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+      {
+        rentalObjectCode: '306-008-01-0202',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 2.094,
+        cost: 171.74,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.unprocessed).toHaveLength(0)
+    expect(result.data.enriched).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          leaseId: '306-008-01-0201/02',
+        }),
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0202',
+          leaseId: '306-008-01-0202/01',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as no-active-lease when rental object exists but has no lease', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
+        ['306-008-01-0299', null],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+      {
+        rentalObjectCode: '306-008-01-0299',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 3.0,
+        cost: 250.0,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          leaseId: '306-008-01-0201/02',
+        }),
+      ])
+    )
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0299',
+          reason: 'no-active-lease',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as no-rental-object when code is absent from results', async () => {
+    mockGetActiveLeases.mockResolvedValue(new Map<string, LeaseMatch | null>())
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: 'DOES-NOT-EXIST',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: 'DOES-NOT-EXIST',
+          reason: 'no-rental-object',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as amount-too-low when cost is under 15', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+      {
+        rentalObjectCode: '306-008-01-0202',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 0.1,
+        cost: 8.2,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(1)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0202',
+          reason: 'amount-too-low',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as unsupported-unit when unit has no mapping', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'UNKNOWN',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'kWh',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          reason: 'unsupported-unit',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as tenant-moved when lease ended before today', async () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: yesterday },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          reason: 'tenant-moved',
+        }),
+      ])
+    )
+  })
+
+  it('tags row as multiple-leases when two leases cover the period', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | MultipleLeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          {
+            leaseIds: ['306-008-01-0201/01', '306-008-01-0201/02'],
+          },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toHaveLength(0)
+    expect(result.data.unprocessed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          reason: 'multiple-leases',
+          leaseIds: ['306-008-01-0201/01', '306-008-01-0201/02'],
+        }),
+      ])
+    )
+  })
+
+  it('does not tag as tenant-moved when lease end date is in the future', async () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: tomorrow },
+        ],
+      ])
+    )
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    assert(result.ok)
+    expect(result.data.unprocessed).toHaveLength(0)
+    expect(result.data.enriched).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0201',
+          leaseId: '306-008-01-0201/02',
+        }),
+      ])
+    )
+  })
+
+  it('returns error when adapter throws', async () => {
+    mockGetActiveLeases.mockRejectedValue(new Error('db connection failed'))
+
+    const result = await imdService.enrichIMDRows([
+      {
+        rentalObjectCode: '306-008-01-0201',
+        from: new Date('2026-01-01'),
+        to: new Date('2026-01-31'),
+        unit: 'VV',
+        volume: 7.58,
+        cost: 621.68,
+        measurementUnit: 'm3',
+      },
+    ])
+
+    expect(result.ok).toBe(false)
+  })
+})
+
+const makeEnrichedRow = (
+  rentalObjectCode: string,
+  leaseId: string,
+  { cost = 100, unit = 'VV', measurementUnit = 'm3' } = {}
+) => ({
+  rentalObjectCode,
+  leaseId,
+  from: new Date('2026-01-01'),
+  to: new Date('2026-01-31'),
+  unit,
+  volume: 7.58,
+  cost,
+  measurementUnit,
+})
+
+// Parse a single RFC 4180 CSV line into fields
+function parseRow(line: string): string[] {
+  const fields: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(current)
+      current = ''
+    } else {
+      current += ch
+    }
+  }
+  fields.push(current)
+  return fields
+}
+
+describe(imdService.toTenfastCsv, () => {
+  it('maps VV to IMDM article and builds Avitext with Varmvatten', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', '306-008-01-0201/02', {
+        cost: 621.68,
+        unit: 'VV',
+      }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines[0]).toBe(
+      'Kontraktsnummer,Hyresartikel,Avitext,Fr.o.m,T.o.m,Årshyra,Summarad'
+    )
+    const cols = parseRow(lines[1])
+    expect(cols[0]).toBe('306-008-01-0201/02')
+    expect(cols[1]).toBe('IMDM')
+    expect(cols[2]).toBe('Varmvatten januari,7,58,m3(25% moms tillkommer)')
+    expect(cols[3]).toBe('2026-01-01')
+    expect(cols[4]).toBe('2026-01-31')
+    expect(cols[5]).toBe('7460,16')
+    expect(cols[6]).toBe('')
+  })
+
+  it('maps ELEC to IMDELM article and builds Avitext with El', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500, unit: 'ELEC' }),
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[1]).toBe('IMDELM')
+    expect(cols[2]).toBe('El januari,7,58,m3(25% moms tillkommer)')
+  })
+
+  it('maps VMM to VÄRMEENERGIM article and builds Avitext with Värmeenergi', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500, unit: 'VMM' }),
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[1]).toBe('VÄRMEENERGIM')
+    expect(cols[2]).toBe('Värmeenergi januari,7,58,m3(25% moms tillkommer)')
+  })
+
+  it('throws for unknown unit', () => {
+    expect(() =>
+      imdService.toTenfastCsv([
+        makeEnrichedRow('306-008-01-0201', 'L1', { unit: 'UNKNOWN' }),
+      ])
+    ).toThrow('Unknown unit "UNKNOWN"')
+  })
+
+  it('multiplies monthly cost by 12 for yearly rent', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500 }),
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[5]).toBe('6000,00')
+  })
+
+  it('handles mixed VV and VMM rows', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 100, unit: 'VV' }),
+      makeEnrichedRow('306-008-01-0202', 'L2', { cost: 200, unit: 'VMM' }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines).toHaveLength(3)
+
+    const vvCols = parseRow(lines[1])
+    expect(vvCols[1]).toBe('IMDM')
+    expect(vvCols[2]).toContain('Varmvatten')
+
+    const vmmCols = parseRow(lines[2])
+    expect(vmmCols[1]).toBe('VÄRMEENERGIM')
+    expect(vmmCols[2]).toContain('Värmeenergi')
+  })
+
+  it('outputs multiple rows', () => {
+    const csv = imdService.toTenfastCsv([
+      makeEnrichedRow('306-008-01-0201', 'L1', { cost: 100 }),
+      makeEnrichedRow('306-008-01-0202', 'L2', { cost: 200 }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines).toHaveLength(3)
+  })
+})
+
+const makeUnprocessedRow = (
+  rentalObjectCode: string,
+  reason:
+    | 'no-rental-object'
+    | 'no-active-lease'
+    | 'amount-too-low'
+    | 'unsupported-unit',
+  { cost = 100, unit = 'VV', measurementUnit = 'm3' } = {}
+) => ({
+  rentalObjectCode,
+  from: new Date('2026-01-01'),
+  to: new Date('2026-01-31'),
+  unit,
+  volume: 7.58,
+  cost,
+  measurementUnit,
+  reason,
+})
+
+describe(imdService.toUnprocessedCsv, () => {
+  it('includes header and original data with Swedish reason', () => {
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('306-008-01-0206', 'no-active-lease', { cost: 450.5 }),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines[0]).toBe(
+      'Hyresobjektskod,Fr.o.m,T.o.m,Enhet,Volym,Kostnad,Måttenhet,Orsak'
+    )
+    const cols = parseRow(lines[1])
+    expect(cols[0]).toBe('306-008-01-0206')
+    expect(cols[1]).toBe('2026-01-01')
+    expect(cols[2]).toBe('2026-01-31')
+    expect(cols[3]).toBe('VV')
+    expect(cols[4]).toBe('7,58')
+    expect(cols[5]).toBe('450,5')
+    expect(cols[6]).toBe('m3')
+    expect(cols[7]).toBe('Inget aktivt kontrakt i perioden')
+  })
+
+  it('uses correct reason for no-rental-object', () => {
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('UNKNOWN-CODE', 'no-rental-object'),
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[7]).toBe('Hyresobjekt saknas i Tenfast')
+  })
+
+  it('uses correct reason for amount-too-low', () => {
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('306-008-01-0201', 'amount-too-low', { cost: 8.2 }),
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[7]).toBe('Belopp under 15 kr')
+  })
+
+  it('uses correct reason for unsupported-unit', () => {
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('306-008-01-0201', 'unsupported-unit', {
+        unit: 'ELEC',
+      }),
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[7]).toBe('Enhet stöds ej: ELEC')
+  })
+
+  it('outputs multiple rows', () => {
+    const csv = imdService.toUnprocessedCsv([
+      makeUnprocessedRow('A', 'no-rental-object'),
+      makeUnprocessedRow('B', 'no-active-lease'),
+      makeUnprocessedRow('C', 'amount-too-low'),
+    ])
+
+    const lines = csv.split('\n')
+    expect(lines).toHaveLength(4)
+  })
+})

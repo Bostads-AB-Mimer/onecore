@@ -557,4 +557,78 @@ describe('work-order-service index', () => {
       )
     })
   })
+
+  describe('POST /contacts/:contactCode/sync', () => {
+    it('responds with 200 on successful sync', async () => {
+      const payload = factory.syncContactToWorkOrderPayload.build()
+
+      jest.spyOn(odooAdapter, 'syncContact').mockResolvedValueOnce({
+        ok: true,
+        data: { updatedCount: 2 },
+      })
+
+      const res = await request(app.callback())
+        .post(`/contacts/${payload.contactCode}/sync`)
+        .send(payload)
+
+      expect(res.status).toBe(200)
+    })
+
+    it('responds with 500 when odoo sync fails', async () => {
+      const payload = factory.syncContactToWorkOrderPayload.build()
+
+      jest.spyOn(odooAdapter, 'syncContact').mockResolvedValueOnce({
+        ok: false,
+        err: 'could-not-update-contact',
+      })
+
+      const res = await request(app.callback())
+        .post(`/contacts/${payload.contactCode}/sync`)
+        .send(payload)
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Failed to sync contact to Odoo')
+    })
+
+    it('responds with 200 and skipped:true when no tenant found in Odoo', async () => {
+      const payload = factory.syncContactToWorkOrderPayload.build()
+
+      jest.spyOn(odooAdapter, 'syncContact').mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      const res = await request(app.callback())
+        .post(`/contacts/${payload.contactCode}/sync`)
+        .send(payload)
+
+      expect(res.status).toBe(200)
+      expect(res.body.skipped).toBe(true)
+    })
+
+    it('responds with 200 and skipped:false when tenant is updated', async () => {
+      const payload = factory.syncContactToWorkOrderPayload.build()
+
+      jest.spyOn(odooAdapter, 'syncContact').mockResolvedValueOnce({
+        ok: true,
+        data: { updatedCount: 1 },
+      })
+
+      const res = await request(app.callback())
+        .post(`/contacts/${payload.contactCode}/sync`)
+        .send(payload)
+
+      expect(res.status).toBe(200)
+      expect(res.body.skipped).toBe(false)
+    })
+
+    it('responds with 400 when request body is invalid', async () => {
+      const res = await request(app.callback())
+        .post('/contacts/P12345/sync')
+        .send({ invalid: true })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+    })
+  })
 })

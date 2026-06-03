@@ -34,6 +34,9 @@ jest.mock('knex', () => () => ({
           queueName: 'Bilplats (intern)',
           queueTime: sub(new Date(), { days: 366 }),
           protectedIdentity: null,
+          deceased: null,
+          emigrated: null,
+          noAdvertising: null,
         },
       ])
     )
@@ -71,6 +74,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         birthDate: '1212-12-12',
         address: {
           street: 'Gatvägen 12',
+          street2: undefined,
           number: '',
           postalCode: '12345',
           city: null,
@@ -92,6 +96,10 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         },
         housingWaitingList: undefined,
         storageWaitingList: undefined,
+        protectedIdentity: false,
+        deceased: false,
+        emigrated: false,
+        noAdvertising: false,
       },
     })
   })
@@ -209,207 +217,26 @@ describe('isLeaseTerminated', () => {
   })
 })
 
-describe('filterLeasesByOptions', () => {
-  const futureDate = new Date()
-  futureDate.setDate(futureDate.getDate() + 1)
-  const pastDate = new Date()
-  pastDate.setDate(pastDate.getDate() - 1)
-
-  const activeLeases = [
-    lease
-      .params({
-        leaseStartDate: pastDate,
-        lastDebitDate: undefined,
-        terminationDate: undefined,
-      })
-      .build(),
-    lease
-      .params({
-        leaseStartDate: new Date(),
-        lastDebitDate: undefined,
-        terminationDate: undefined,
-      })
-      .build(),
-    lease
-      .params({
-        leaseStartDate: pastDate,
-        lastDebitDate: futureDate,
-        terminationDate: undefined,
-      })
-      .build(),
-  ]
-  const upcomingLeases = [
-    lease
-      .params({
-        leaseStartDate: futureDate,
-        lastDebitDate: undefined,
-        terminationDate: undefined,
-      })
-      .build(),
-    lease
-      .params({
-        leaseStartDate: futureDate,
-        lastDebitDate: futureDate,
-        terminationDate: undefined,
-      })
-      .build(),
-  ]
-
-  const terminatedLeases = [
-    lease
-      .params({
-        leaseStartDate: pastDate,
-        terminationDate: pastDate,
-      })
-      .build(),
-  ]
-
-  const leases = activeLeases.concat(upcomingLeases).concat(terminatedLeases)
-
-  it('should return only active leases', () => {
-    const filteredLeases = tenantLeaseAdapter.filterLeasesByOptions(leases, {
-      includeUpcomingLeases: false,
-      includeTerminatedLeases: false,
-      includeContacts: false,
-    })
-
-    expect(filteredLeases).toStrictEqual(activeLeases)
-  })
-  it('should return only active and upcoming leases', () => {
-    const filteredLeases = tenantLeaseAdapter.filterLeasesByOptions(leases, {
-      includeUpcomingLeases: true,
-      includeTerminatedLeases: false,
-      includeContacts: false,
-    })
-
-    expect(filteredLeases).toStrictEqual(activeLeases.concat(upcomingLeases))
-  })
-  it('should return only active and terminated leases', () => {
-    const filteredLeases = tenantLeaseAdapter.filterLeasesByOptions(leases, {
-      includeUpcomingLeases: false,
-      includeTerminatedLeases: true,
-      includeContacts: false,
-    })
-
-    expect(filteredLeases).toStrictEqual(activeLeases.concat(terminatedLeases))
-  })
-  it('should return all leases', () => {
-    const filteredLeases = tenantLeaseAdapter.filterLeasesByOptions(leases, {
-      includeUpcomingLeases: true,
-      includeTerminatedLeases: true,
-      includeContacts: false,
-    })
-
-    expect(filteredLeases).toStrictEqual(leases)
-  })
+const buildRow = (overrides = {}) => ({
+  contactCode: 'P123456',
+  contactKey: '_ADBAEC',
+  firstName: 'Test',
+  lastName: 'Testman',
+  fullName: 'Test Testman',
+  nationalRegistrationNumber: '121212121212',
+  birthDate: '1212-12-12',
+  street: 'Gatvägen 12',
+  street2: undefined,
+  postalCode: '12345',
+  city: 'Test City',
+  emailAddress: 'noreply@mimer.nu',
+  protectedIdentity: null,
+  deceased: null,
+  emigrated: null,
+  noAdvertising: null,
+  specialAttention: null,
+  ...overrides,
 })
-
-// describe('isLeaseActive', () => {
-//   const futureDate = new Date()
-//   futureDate.setDate(futureDate.getDate() + 1)
-//   const pastDate = new Date()
-//   pastDate.setDate(pastDate.getDate() - 1)
-
-//   it('should return true if lease is active', () => {
-//     const activeContract = lease
-//       .params({
-//         leaseStartDate: pastDate,
-//       })
-//       .build()
-
-//     expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
-//   })
-
-//   it('should return true if start date is today', () => {
-//     const activeContract = lease
-//       .params({
-//         leaseStartDate: new Date(),
-//       })
-//       .build()
-
-//     expect(tenantLeaseAdapter.isLeaseActive(activeContract)).toBe(true)
-//   })
-
-//   it('should return false if lease start date is in the future', () => {
-//     const upcomingContract = lease
-//       .params({
-//         leaseStartDate: futureDate,
-//       })
-//       .build()
-
-//     expect(tenantLeaseAdapter.isLeaseActive(upcomingContract)).toBe(false)
-//   })
-// })
-
-// describe('isLeaseActiveOrUpcoming', () => {
-//   const futureDate = new Date()
-//   futureDate.setDate(futureDate.getDate() + 1)
-//   const pastDate = new Date()
-//   pastDate.setDate(pastDate.getDate() - 1)
-
-//   it('should return true if lease is active', () => {
-//     const activeContract = lease
-//       .params({
-//         leaseStartDate: pastDate,
-//         lastDebitDate: futureDate,
-//       })
-//       .build()
-
-//     expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(activeContract)).toBe(
-//       true
-//     )
-//   })
-
-//   it('should return true if lease start date is in the future', () => {
-//     const upcomingContract = lease
-//       .params({
-//         leaseStartDate: futureDate,
-//       })
-//       .build()
-
-//     expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(upcomingContract)).toBe(
-//       true
-//     )
-//   })
-
-//   it('should return true if lease has last debit date today', () => {
-//     const activeContract = lease
-//       .params({
-//         leaseStartDate: pastDate,
-//         lastDebitDate: new Date(),
-//       })
-//       .build()
-
-//     expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(activeContract)).toBe(
-//       true
-//     )
-//   })
-
-//   it('should return false if lease has a termination date in the past', () => {
-//     const terminatedContract = lease
-//       .params({
-//         terminationDate: pastDate,
-//       })
-//       .build()
-
-//     expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(terminatedContract)).toBe(
-//       false
-//     )
-//   })
-
-//   it('should return true if termination date is in the future', () => {
-//     const activeContract = lease
-//       .params({
-//         leaseStartDate: pastDate,
-//         terminationDate: futureDate,
-//       })
-//       .build()
-
-//     expect(tenantLeaseAdapter.isLeaseActiveOrUpcoming(activeContract)).toBe(
-//       true
-//     )
-//   })
-// })
 
 describe('transformFromDbContact', () => {
   it('should handle protected identity correctly', () => {
@@ -483,5 +310,95 @@ describe('transformFromDbContact', () => {
     )
 
     expect(contact.specialAttention).toBe(true)
+  })
+
+  it('deceased is false when db value is null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ deceased: null })],
+      [],
+      [],
+      false
+    )
+    expect(contact.deceased).toBe(false)
+  })
+
+  it('deceased is true when db value is non-null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ deceased: '2024-01-01' })],
+      [],
+      [],
+      false
+    )
+    expect(contact.deceased).toBe(true)
+  })
+
+  it('emigrated is false when db value is null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ emigrated: null })],
+      [],
+      [],
+      false
+    )
+    expect(contact.emigrated).toBe(false)
+  })
+
+  it('emigrated is true when db value is non-null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ emigrated: '2024-01-01' })],
+      [],
+      [],
+      false
+    )
+    expect(contact.emigrated).toBe(true)
+  })
+
+  it('noAdvertising is false when db value is null', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ noAdvertising: null })],
+      [],
+      [],
+      false
+    )
+    expect(contact.noAdvertising).toBe(false)
+  })
+
+  it('noAdvertising is false when db value is 0', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ noAdvertising: 0 })],
+      [],
+      [],
+      false
+    )
+    expect(contact.noAdvertising).toBe(false)
+  })
+
+  it('noAdvertising is true when db value is non-zero', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ noAdvertising: 1 })],
+      [],
+      [],
+      false
+    )
+    expect(contact.noAdvertising).toBe(true)
+  })
+
+  it('maps street2 from db row', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ street2: 'c/o Någon' })],
+      [],
+      [],
+      false
+    )
+    expect(contact.address?.street2).toBe('c/o Någon')
+  })
+
+  it('street2 is undefined when db value is undefined', () => {
+    const contact = tenantLeaseAdapter.transformFromDbContact(
+      [buildRow({ street2: undefined })],
+      [],
+      [],
+      false
+    )
+    expect(contact.address?.street2).toBeUndefined()
   })
 })

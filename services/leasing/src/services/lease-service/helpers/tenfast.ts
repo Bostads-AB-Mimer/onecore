@@ -1,0 +1,162 @@
+import {
+  Lease,
+  LeaseStatus,
+  LeaseRentRow,
+  LeaseType,
+  RentalObject,
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
+
+import {
+  TenfastLease,
+  TenfastInvoiceRow,
+  TenfastRentalObject,
+} from '../adapters/tenfast/schemas'
+
+/**
+ * Map TenFAST rental object type to LeaseType enum.
+ * TenFAST uses lowercase Swedish: 'bostad', 'parkering', 'lokal', etc.
+ */
+const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
+  bostad: LeaseType.HousingContract,
+  parkering: LeaseType.ParkingSpaceContract,
+  lokal: LeaseType.CommercialTenantContract,
+  garage: LeaseType.GarageContract,
+  forrad: LeaseType.StorageContract,
+  mark: LeaseType.OtherContract,
+  ovrigt: LeaseType.OtherContract,
+}
+
+export const mapTenfastTypToLeaseType = (
+  typ: string | undefined
+): LeaseType => {
+  if (!typ) return LeaseType.OtherContract
+  return TENFAST_TYP_TO_LEASE_TYPE[typ.toLowerCase()] ?? LeaseType.OtherContract
+}
+
+export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
+  const { stage } = lease
+
+  switch (stage) {
+    case 'signingInProgress':
+      return LeaseStatus.PendingSignature
+    case 'upcoming':
+      return LeaseStatus.Upcoming
+    case 'active':
+      return LeaseStatus.Current
+    case 'preTermination':
+      return LeaseStatus.PreliminaryTerminated
+    case 'terminationScheduled':
+      return LeaseStatus.AboutToEnd
+    case 'archived':
+    case 'terminated':
+      return LeaseStatus.Ended
+    case 'draft':
+      return LeaseStatus.NotSent
+    default:
+      logger.warn(
+        { stage, leaseId: lease.externalId },
+        'calculateLeaseStatus: Unknown Tenfast stage'
+      )
+      return LeaseStatus.Ended
+  }
+}
+
+const mapToOnecoreRentalObject = (
+  rentalObject: TenfastRentalObject
+): RentalObject | undefined => {
+  // Only map if we have populated fields (not just a reference)
+  if (!rentalObject.postadress) {
+    return undefined
+  }
+
+  return {
+    rentalObjectCode: rentalObject.externalId,
+    address: rentalObject.postadress,
+    availabilityInfo: {
+      rentalObjectCode: rentalObject.externalId,
+      rentalTenureType: {
+        id: rentalObject.category.code,
+        name: rentalObject.category.label,
+      },
+      rent: {
+        amount: rentalObject.hyraExcludingVat ?? 0,
+        vat: rentalObject.hyraVat ?? 0,
+        rows: (rentalObject.hyror ?? []).map((row) => ({
+          code: row.article ?? '',
+          description: row.label ?? '',
+          amount: row.amount,
+          vatPercentage: row.vat,
+          fromDate: row.from ? new Date(row.from) : undefined,
+          toDate: row.to ? new Date(row.to) : undefined,
+        })),
+      },
+    },
+    residentialAreaCaption: rentalObject.stadsdel ?? '',
+    residentialAreaCode: rentalObject.stadsdel ?? '',
+    objectTypeCaption: rentalObject.subType ?? rentalObject.typ ?? '',
+    objectTypeCode: rentalObject.typ ?? '',
+    boaArea: rentalObject.kvm ?? undefined,
+    braArea: rentalObject.kvm ?? undefined,
+  }
+}
+
+// tenantContactIds: string[] | undefined // Kanske vi vill ha external id
+// tenants: Contact[] | undefined
+// // sublet: Information om andrahandsuthyrning
+// // hyresrader vill vi ha också
+// rentalPropertyId: string
+// type: string // Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
+// noticeGivenBy: string | undefined // Vem har gjort uppsägningen?
+// noticeDate: Date | undefined // När gjordes uppsägningen?
+// noticeTimeTenant: string | undefined // Uppsägningstid i antal månader
+// preferredMoveOutDate: Date | undefined // När vill den här hyresgästen flytta ut?
+// terminationDate: Date | undefined // När bekräftades uppsägningen av mimer?
+// contractDate: Date | undefined // När skapades kontraktet?
+// lastDebitDate: Date | undefined // Sista betaldatum
+// approvalDate: Date | undefined // När godkände mimer kontraktet?
+
+export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
+  const rentalObject = lease.hyresobjekt[0]
+
+  const stadsdel = rentalObject?.stadsdel ?? rentalObject?.fastighet?.stadsdel
+
+  return {
+    leaseId: lease.externalId,
+    leaseNumber: lease.externalId.split('/')[1],
+    leaseStartDate: lease.startDate,
+    leaseEndDate: lease.endDate ?? undefined,
+    status: calculateLeaseStatus(lease),
+    noticeGivenBy: lease.cancellation.cancelledByType ?? undefined,
+    noticeDate: lease.cancellation.handledAt ?? undefined,
+    noticeTimeTenant: lease.uppsagningstid,
+    preferredMoveOutDate: lease.cancellation.preferredMoveOutDate ?? undefined,
+    terminationDate: lease.cancellation.handledAt ?? undefined,
+    contractDate: lease.signedAt ?? undefined,
+    lastDebitDate: lease.endDate ?? undefined,
+    approvalDate: lease.signedAt ?? undefined,
+    residentialArea: stadsdel
+      ? { code: stadsdel, caption: stadsdel }
+      : undefined,
+    tenantContactIds: lease.hyresgaster.map((tenant) => tenant.externalId),
+    tenants: undefined,
+    rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
+    rentalObject: rentalObject
+      ? mapToOnecoreRentalObject(rentalObject)
+      : undefined,
+    type: mapTenfastTypToLeaseType(rentalObject?.typ),
+    rentRows: lease.hyror.map(mapToOnecoreRentRow),
+  }
+}
+
+export const mapToOnecoreRentRow = (row: TenfastInvoiceRow): LeaseRentRow => {
+  return {
+    id: row._id,
+    amount: row.amount,
+    articleId: row.article ?? '',
+    label: row.label ?? '',
+    vat: row.vat,
+    from: row.from ?? undefined,
+    to: row.to ?? undefined,
+  }
+}

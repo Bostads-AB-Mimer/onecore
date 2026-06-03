@@ -4,26 +4,24 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy, Invoice } from '@onecore/types'
+import { economy } from '@onecore/types'
 
 import {
   getAllInvoicesWithMatchIds,
-  getInvoiceByInvoiceNumber,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
-  getInvoicesByContactCode as getXledgerInvoicesByContactCode,
   submitMiscellaneousInvoice,
 } from '../common/adapters/xledger-adapter'
-import {
-  getInvoiceRows,
-  getInvoicesByContactCode as getXpandInvoicesByContactCode,
-} from './adapters/xpand-db-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
+  getInvoicesByContactCode,
   fetchInvoiceRows,
   fetchPaymentEvents,
   getLeaseDetails,
+  stralforsPostChannelLookup,
 } from './service'
+import { getInvoiceDetails } from './service'
+import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -40,75 +38,10 @@ export const routes = (router: KoaRouter) => {
     const from = queryParams.data?.from
     const contactCode = ctx.params.contactCode
     try {
-      const xledgerInvoices =
-        (await getXledgerInvoicesByContactCode(contactCode, { from: from })) ??
-        []
-      const xpandInvoices =
-        (await getXpandInvoicesByContactCode(contactCode, { from: from })) ?? []
-
-      const xledgerInvoiceIds = xledgerInvoices.map(
-        (invoice) => invoice.invoiceId
-      )
-
-      const regularInvoices: Invoice[] = []
-      const losses: Invoice[] = []
-
-      xledgerInvoices.forEach((i) => {
-        // A loss is recorded as a transaction on account 1529
-        if (i.accountCode === '1529') {
-          losses.push(i)
-        } else {
-          regularInvoices.push(i)
-        }
-      })
-
-      // An invoice is marked as an expected loss if there is a recorded loss with the same invoice number
-      regularInvoices.forEach((i) => {
-        const lossForInvoice = losses.find((l) => l.invoiceId === i.invoiceId)
-        if (lossForInvoice) {
-          i.expectedLoss = true
-        }
-      })
-
-      // If invoice exists in xpand, use period (fromDate, toDate) from xpand invoice
-      // Otherwise use period from xledger invoice
-      const invoices = regularInvoices
-        .map((invoice) => {
-          const xpandInvoice = xpandInvoices.find(
-            (v) => v.invoiceId === invoice.invoiceId
-          )
-
-          if (xpandInvoice?.fromDate && xpandInvoice.toDate) {
-            return {
-              ...invoice,
-              fromDate: xpandInvoice.fromDate,
-              toDate: xpandInvoice.toDate,
-            }
-          } else {
-            return invoice
-          }
-        })
-        .concat(
-          xpandInvoices.filter(
-            (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
-          )
-        )
-
-      const invoiceRows = await getInvoiceRows(
-        '001', // Mimer company id.
-        invoices.map((v) => v.invoiceId)
-      )
-
-      const invoicesWithRows = invoices.map((invoice) => {
-        const rows = invoiceRows.filter(
-          (row) => row.invoiceNumber === invoice.invoiceId
-        )
-
-        return { ...invoice, invoiceRows: rows }
-      })
+      const invoices = await getInvoicesByContactCode(contactCode, { from })
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(invoicesWithRows, metadata)
+      ctx.body = makeSuccessResponseBody(invoices, metadata)
     } catch (error: any) {
       logger.error(
         { error, contactCode: contactCode },
@@ -121,12 +54,29 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // TODO: This route doesn't take xpand into account
-  // Also doesn't get invoice rows
+  router.get('(.*)/invoices/:ocr/pdf', async (ctx) => {
+    const result = await getInvoicePdf(ctx.params.ocr)
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.set(
+      'Content-Disposition',
+      (
+        result.data.contentDisposition || 'attachment; filename="invoice.pdf"'
+      ).replace(/[\r\n]/g, '')
+    )
+    ctx.body = result.data.data
+  })
+
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const result = await getInvoiceByInvoiceNumber(ctx.params.invoiceNumber)
+      const result = await getInvoiceDetails(ctx.params.invoiceNumber)
       if (!result) {
         ctx.status = 404
         return
@@ -297,6 +247,27 @@ export const routes = (router: KoaRouter) => {
       ctx.body = {
         message: error.message,
       }
+    }
+  })
+
+  router.post('(.*)/invoice-channels', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { nationalRegistrationNumbers } = ctx.request.body
+
+    try {
+      const results = await stralforsPostChannelLookup(
+        nationalRegistrationNumbers
+      )
+
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+        content: results,
+      }
+    } catch (error: any) {
+      logger.error(error, 'Invoice channels lookup error')
+      ctx.status = 500
+      ctx.body = { ...metadata, message: error.message }
     }
   })
 }

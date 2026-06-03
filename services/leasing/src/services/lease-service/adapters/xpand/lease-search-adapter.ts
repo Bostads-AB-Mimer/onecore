@@ -6,6 +6,7 @@ import { logger } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 import { calculateStatus } from '../../helpers/transformFromXPandDb'
+import { parseLeaseType } from '../../helpers/lease-type-parser'
 import { analyzeSearchTerm } from '../../helpers/searchTermAnalyzer'
 
 /** Maps enum values to normalized status keys */
@@ -14,6 +15,9 @@ const STATUS_ENUM_MAP: Record<string, string> = {
   [LeaseStatus.Upcoming]: 'upcoming',
   [LeaseStatus.AboutToEnd]: 'abouttoend',
   [LeaseStatus.Ended]: 'ended',
+  [LeaseStatus.PreliminaryTerminated]: 'preliminary-terminated',
+  [LeaseStatus.PendingSignature]: 'pending-signature',
+  [LeaseStatus.NotSent]: 'not-sent',
 }
 
 /** Maps normalized status keys to SQL WHERE conditions */
@@ -454,7 +458,9 @@ export class LeaseSearchQueryBuilder {
       'cmobj.keycmobt as objectTypeCode',
       'hyhav.hyhavben as leaseType',
       'cmadr.adress1 as address',
-      'babuf.hyresid as rentalObjectCode'
+      'babuf.hyresid as rentalObjectCode',
+      'cmadr.adress3 as postalCode',
+      'cmadr.adress4 as city'
     )
 
     // Add JSON subquery to fetch contacts with email/phone in one go
@@ -598,8 +604,10 @@ export const transformRow = (
   const result: Omit<leasing.v1.LeaseSearchResult, 'contacts'> = {
     leaseId: trimmedRow.leaseId,
     objectTypeCode: getObjectTypeLabel(trimmedRow.objectTypeCode),
-    leaseType: trimmedRow.leaseType,
+    leaseType: parseLeaseType(trimmedRow.leaseType),
     address: trimmedRow.address || null,
+    postalCode: trimmedRow.postalCode || null,
+    city: trimmedRow.city || null,
     startDate: trimmedRow.startDate || null,
     lastDebitDate: trimmedRow.lastDebitDate || null,
     rentalObjectCode: trimmedRow.rentalObjectCode || null,
@@ -702,6 +710,90 @@ export const getParkingSpaceTypes = async (): Promise<
 }
 
 /**
+ * Get distinct rental object codes (hyresid) managed by
+ * the given building manager name(s).
+ *
+ * Used by the Tenfast search adapter to post-filter leases
+ * by building manager. Returns Xpand rental object IDs that
+ * match Tenfast's hyresobjekt externalId.
+ */
+export const getRentalObjectCodesByBuildingManager = async (
+  buildingManagers: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('bafen')
+    .innerJoin('babuf', 'babuf.fencode', 'bafen.code')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('bafen.omrade', buildingManagers)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given building code(s).
+ */
+export const getRentalObjectCodesByBuildingCodes = async (
+  buildingCodes: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('babuf.bygcode', buildingCodes)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given area code(s) (område).
+ *
+ * Join chain: babuf → bafst (property) → babya (area)
+ */
+export const getRentalObjectCodesByAreaCodes = async (
+  areaCodes: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .innerJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
+    .innerJoin('babya', 'babya.keybabya', 'bafst.keybabya')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('babya.code', areaCodes)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given district name(s).
+ *
+ * Join chain: babuf → bafen (neighborhood manager, which has district)
+ */
+export const getRentalObjectCodesByDistrictNames = async (
+  districtNames: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .innerJoin('bafen', 'bafen.code', 'babuf.fencode')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('bafen.distrikt', districtNames)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
  * Main search function with pagination
  */
 export const searchLeases = async (
@@ -727,13 +819,7 @@ export const searchLeases = async (
   const query = builder.getQuery()
 
   // Use pagination utility (pass totalCount to skip COUNT on pages 2+)
-  const paginatedResult = await paginateKnex<any>(
-    query,
-    ctx,
-    {},
-    params.limit,
-    options?.totalCount
-  )
+  const paginatedResult = await paginateKnex<any>(query, ctx, {}, params.limit)
 
   // Transform rows and parse contacts JSON
   const transformedContent = paginatedResult.content.map((row: any) => {

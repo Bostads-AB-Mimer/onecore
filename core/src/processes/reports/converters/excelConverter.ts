@@ -1,6 +1,6 @@
 import ExcelJs from 'exceljs'
 import { BosocialaObject, InvoicePaymentSummary } from '../types'
-import { LeaseStatus } from '@onecore/types'
+import { LeaseStatus, schemas } from '@onecore/types'
 
 const DateFormat = 'yyyy-mm-dd'
 const ColumnWidth = 20
@@ -175,6 +175,9 @@ const transformBosociala = (bosocial: BosocialaObject): BosocialaRow => {
     [LeaseStatus.Upcoming]: 'Kommande',
     [LeaseStatus.AboutToEnd]: 'Uppsagt',
     [LeaseStatus.Ended]: 'Uppsagt',
+    [LeaseStatus.PreliminaryTerminated]: 'Preliminärt uppsagt',
+    [LeaseStatus.PendingSignature]: 'Väntar på signering',
+    [LeaseStatus.NotSent]: 'Ej skickat',
   }
 
   return {
@@ -193,4 +196,65 @@ const transformBosociala = (bosocial: BosocialaObject): BosocialaRow => {
     tenantContactCode: bosocial.contact?.contactCode ?? '',
     address: bosocial.contact?.address?.street ?? '',
   }
+}
+
+const toDateString = (value: Date | null | undefined): string | null => {
+  if (!value) return null
+  return value.toISOString().slice(0, 10)
+}
+
+export const convertHomeInsuranceToXlsx = async (
+  rows: schemas.v1.HomeInsuranceExportRow[]
+): Promise<Buffer> => {
+  const workbook = new ExcelJs.Workbook()
+  const worksheet = workbook.addWorksheet('Hemförsäkring', {
+    properties: { defaultColWidth: ColumnWidth },
+  })
+
+  worksheet.addRow([
+    'Kontraktsnummer',
+    'Personnummer',
+    'Namn',
+    'Adress',
+    'Antal Rum',
+    'Kvadratmeter',
+    'Kontrakt Fr.o.m',
+    'Kontrakt T.o.m',
+    'Telefon',
+    'E-post',
+    'Fr.o.m.',
+    'T.o.m.',
+    'Årshyra',
+    'Hyresobjekt, hyresid',
+    'Status',
+    'Avitext',
+  ])
+
+  const headerRow = worksheet.getRow(1)
+  headerRow.font = { bold: true }
+  headerRow.commit()
+
+  rows.forEach((row) => {
+    worksheet.addRow([
+      row.leaseId,
+      row.nationalIdNumber,
+      row.fullName,
+      row.address,
+      row.numberOfRooms,
+      row.squareMeters,
+      toDateString(row.leaseFromDate),
+      toDateString(row.leaseToDate),
+      row.phoneNumber,
+      row.email,
+      toDateString(row.rowFromDate),
+      toDateString(row.rowToDate),
+      row.annualRent,
+      row.rentalObjectCode,
+      row.leaseStatus,
+      row.articleText,
+    ])
+  })
+
+  const buffer = await workbook.xlsx.writeBuffer()
+  return Buffer.from(buffer)
 }

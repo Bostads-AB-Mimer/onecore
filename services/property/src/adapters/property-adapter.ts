@@ -156,7 +156,7 @@ const searchProperties = (
     return prisma.property
       .findMany({
         where: {
-          designation: { contains: q },
+          designation: { contains: q.toUpperCase() },
         },
       })
       .then(trimStrings)

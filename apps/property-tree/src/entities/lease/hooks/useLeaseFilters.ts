@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from 'react'
 
 import {
   type BuildingManager,
+  type LeaseStatusFilter,
   leaseSearchService,
   type ParkingSpaceType,
 } from '@/services/api/core/leaseSearchService'
@@ -11,12 +12,13 @@ import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFi
 
 import { useLeaseSearch } from './useLeaseSearch'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 100
 
 const FILTER_KEYS = [
   'objectType',
   'status',
   'leaseType',
+  'tenantName',
   'property',
   'district',
   'buildingManager',
@@ -41,6 +43,25 @@ type ValidSortKey = (typeof VALID_SORT_KEYS)[number]
 const isValidSortKey = (v: string | null): v is ValidSortKey =>
   VALID_SORT_KEYS.includes(v as ValidSortKey)
 
+const LEASE_STATUS_VALUES: LeaseStatusFilter[] = [
+  'current',
+  'upcoming',
+  'abouttoend',
+  'ended',
+  'preliminaryterminated',
+  'pendingsignature',
+  'notsent',
+]
+const isLeaseStatusFilter = (v: string): v is LeaseStatusFilter =>
+  (LEASE_STATUS_VALUES as string[]).includes(v)
+
+// These filters only allow a single value at a time
+const SINGLE_SELECT_FILTERS = [
+  'property',
+  'district',
+  'buildingManager',
+] as const
+
 export function useLeaseFilters() {
   const filters = useUrlFilters({
     filterKeys: FILTER_KEYS,
@@ -49,18 +70,43 @@ export function useLeaseFilters() {
 
   const { searchParams: urlSearchParams } = filters
 
+  // Wrap setFilterValues to enforce single-select for certain filters
+  const setFilterValues = useCallback(
+    (key: string, values: string[]) => {
+      if (
+        SINGLE_SELECT_FILTERS.includes(
+          key as (typeof SINGLE_SELECT_FILTERS)[number]
+        )
+      ) {
+        // Single-select: keep only the newest value
+        const current = urlSearchParams.getAll(key)
+        const newValue = values.find((v) => !current.includes(v))
+        const singleValue = newValue ?? values[values.length - 1]
+
+        filters.setFilterValues(
+          key,
+          singleValue && values.length > 0 ? [singleValue] : []
+        )
+      } else {
+        filters.setFilterValues(key, values)
+      }
+    },
+    [urlSearchParams, filters]
+  )
+
   const selectedObjectTypes = useMemo(
     () => urlSearchParams.getAll('objectType'),
     [urlSearchParams]
   )
   const selectedStatuses = useMemo(
-    () => urlSearchParams.getAll('status') as ('0' | '1' | '2' | '3')[],
+    () => urlSearchParams.getAll('status').filter(isLeaseStatusFilter),
     [urlSearchParams]
   )
   const selectedLeaseTypes = useMemo(
     () => urlSearchParams.getAll('leaseType'),
     [urlSearchParams]
   )
+  const selectedTenantName = urlSearchParams.get('tenantName') || ''
   const selectedProperties = useMemo(
     () => urlSearchParams.getAll('property'),
     [urlSearchParams]
@@ -92,7 +138,11 @@ export function useLeaseFilters() {
 
   const searchParams = useMemo(
     () => ({
-      q: filters.debouncedSearch || undefined,
+      q:
+        filters.debouncedSearch && filters.debouncedSearch.length >= 3
+          ? filters.debouncedSearch
+          : undefined,
+      name: selectedTenantName || undefined,
       objectType:
         selectedObjectTypes.length > 0 ? selectedObjectTypes : undefined,
       status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
@@ -117,6 +167,7 @@ export function useLeaseFilters() {
     }),
     [
       filters.debouncedSearch,
+      selectedTenantName,
       selectedObjectTypes,
       selectedStatuses,
       selectedLeaseTypes,
@@ -197,12 +248,14 @@ export function useLeaseFilters() {
 
   return {
     ...filters,
+    setFilterValues, // Override with exclusive-filter-aware version
     pageSize: PAGE_SIZE,
 
     // Resolved filter values
     selectedObjectTypes,
     selectedStatuses,
     selectedLeaseTypes,
+    selectedTenantName,
     selectedProperties,
     selectedDistricts,
     selectedBuildingManagers,

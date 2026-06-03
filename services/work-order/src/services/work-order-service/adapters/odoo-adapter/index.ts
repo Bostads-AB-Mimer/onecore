@@ -1,5 +1,6 @@
 import Odoo from 'odoo-await'
 import striptags from 'striptags'
+import { logger } from '@onecore/utilities'
 import { groupBy } from 'lodash'
 import z from 'zod'
 import Config from '../../../../common/config'
@@ -21,6 +22,7 @@ import {
   WorkOrder,
   WorkOrderMessage,
 } from '../../schemas'
+import type { SyncContactToWorkOrderPayload } from '@onecore/types'
 
 const odoo = new Odoo({
   baseUrl: Config.odoo.url,
@@ -580,6 +582,52 @@ export const addMessageToWorkOrder = async (
   } catch (error) {
     console.error('Error adding message to work order:', error)
     throw error
+  }
+}
+
+export const syncContact = async (
+  payload: SyncContactToWorkOrderPayload
+): Promise<
+  AdapterResult<
+    { updatedCount: number } | null,
+    'could-not-update-contact' | 'unknown'
+  >
+> => {
+  try {
+    await odoo.connect()
+
+    const tenantIds: number[] = await odoo.search('maintenance.tenant', {
+      contact_code: payload.contactCode,
+    })
+
+    if (tenantIds.length === 0) {
+      logger.warn(
+        { contactCode: payload.contactCode },
+        'No tenant found in Odoo, skipping'
+      )
+      return { ok: true, data: null }
+    }
+
+    const updateData: Record<string, string> = {
+      name: payload.fullName,
+    }
+
+    if (payload.emailAddress != null) {
+      updateData.email_address = payload.emailAddress
+    }
+
+    if (payload.phoneNumber != null) {
+      updateData.phone_number = payload.phoneNumber
+    }
+
+    for (const tenantId of tenantIds) {
+      await odoo.update('maintenance.tenant', tenantId, updateData)
+    }
+
+    return { ok: true, data: { updatedCount: tenantIds.length } }
+  } catch (error) {
+    logger.error(error, 'Error syncing contact to Odoo')
+    return { ok: false, err: 'could-not-update-contact' }
   }
 }
 

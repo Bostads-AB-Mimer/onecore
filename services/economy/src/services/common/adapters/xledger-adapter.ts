@@ -228,7 +228,7 @@ const transformToInvoice = (invoiceData: any): Invoice => {
 
   const invoice: Omit<Invoice, 'paymentStatus'> = {
     invoiceId: invoiceData.node.invoiceNumber,
-    leaseId: 'missing',
+    leaseIds: [],
     reference: invoiceData.node.subledger.code,
     amount: parseFloat(invoiceData.node.amount),
     invoiceDate: dateFromString(invoiceData.node.invoiceDate),
@@ -319,7 +319,7 @@ const transformToCustomer = (customerData: any): XledgerCustomer => {
 const getCustomer = async (contactCode: string) => {
   const query = {
     query: `{
-      customers(first: 1, filter: { code: "${contactCode}" }) {
+      customers(first: 1, filter: { code: "${escapeGraphQLString(contactCode)}" }) {
         edges {
           node {
             code
@@ -349,6 +349,9 @@ const getCustomer = async (contactCode: string) => {
   return result.data?.customers?.edges?.[0]?.node ?? null
 }
 
+const escapeGraphQLString = (value: string): string =>
+  value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+
 const addContact = async (contact: any) => {
   const customerQuery = {
     query: `mutation AddCustomers {
@@ -356,11 +359,11 @@ const addContact = async (contact: any) => {
         {
           node: {
             company:{dbId: ${TENANT_COMPANY_DB_ID}},
-            code:"${contact.ContactCode}",
-            description:"${contact.FullName}",
-            streetAddress:"${contact.StreetAddress}",
-            zipCode:"${contact.PostalCode}",
-            place:"${contact.City}"
+            code:"${escapeGraphQLString(contact.ContactCode)}",
+            description:"${escapeGraphQLString(contact.FullName)}",
+            streetAddress:"${escapeGraphQLString(contact.StreetAddress)}",
+            zipCode:"${escapeGraphQLString(contact.PostalCode)}",
+            place:"${escapeGraphQLString(contact.City)}"
           }
         }
       ]) {
@@ -393,7 +396,7 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
     // Todo lookup/make sure tenant company exists.
     const customerQuery = {
       query: `mutation UpdateContact {
-        updateCustomer(dbId: "${xledgerContact.dbId}", description: "${dbContact.FullName}", streetAddress: "${dbContact.Street}", zipCode: "${dbContact.PostalCode}", place: "${dbContact.City}") {
+        updateCustomer(dbId: "${xledgerContact.dbId}", description: "${escapeGraphQLString(dbContact.FullName)}", streetAddress: "${escapeGraphQLString(dbContact.Street)}", zipCode: "${escapeGraphQLString(dbContact.PostalCode)}", place: "${escapeGraphQLString(dbContact.City)}", email: "${escapeGraphQLString(dbContact.Email)}") {
           dbId
         }
       }`,
@@ -411,7 +414,7 @@ const updateContact = async (xledgerContact: any, dbContact: any) => {
 const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
     query: `{
-      customers (first: 1, filter: { code: "${contactCode}" }) {
+      customers (first: 1, filter: { code: "${escapeGraphQLString(contactCode)}" }) {
         edges {
           node {
             code
@@ -734,9 +737,121 @@ export async function getAllInvoicePaymentEvents(
   return events
 }
 
+// headerTransactionSourceDbId values for payment types (used in GraphQL filter):
+// OCR = 5205, BAA = 49334581, BA = 611
+
+export async function getLatestPaymentCursor(): Promise<string | null> {
+  const query = {
+    query: gql`
+      query {
+        arTransactions(
+          last: 1
+          filter: { headerTransactionSourceDbId_in: [5205, 49334581, 611] }
+        ) {
+          edges {
+            cursor
+          }
+        }
+      }
+    `,
+  }
+
+  const result = await makeXledgerRequest(query)
+  const edges = result.data?.arTransactions?.edges
+  return edges?.length > 0 ? edges[0].cursor : null
+}
+
+export interface PaymentsSinceResult {
+  events: InvoicePaymentEvent[]
+  lastCursor: string | null
+}
+
+export async function getPaymentsSince(
+  afterCursor: string
+): Promise<PaymentsSinceResult> {
+  return fetchPaymentsPage({ after: afterCursor })
+}
+
+async function fetchPaymentsPage(params: {
+  after: string
+}): Promise<PaymentsSinceResult> {
+  const query = {
+    query: gql`
+      query ($after: String) {
+        arTransactions(
+          first: 1000
+          after: $after
+          filter: { headerTransactionSourceDbId_in: [5205, 49334581, 611] }
+        ) {
+          edges {
+            cursor
+            node {
+              matchId
+              invoiceNumber
+              extIdentifier
+              amount
+              text
+              paymentDate
+              lastPaymentDate
+              invoiceAmount
+              invoiceRemaining
+              transactionHeader {
+                transactionNumber
+                postedDate
+                transactionSource {
+                  dbId
+                  code
+                  description
+                }
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+          }
+        }
+      }
+    `,
+    variables: { after: params.after },
+  }
+
+  const result = await makeXledgerRequest(query)
+
+  logger.info(
+    {
+      after: params.after,
+      hasData: !!result.data?.arTransactions,
+      edgesCount: result.data?.arTransactions?.edges?.length ?? 0,
+      hasNextPage: result.data?.arTransactions?.pageInfo?.hasNextPage,
+    },
+    'xledger-adapter.fetchPaymentsPage: response'
+  )
+
+  if (!result.data?.arTransactions?.edges) {
+    return { events: [], lastCursor: null }
+  }
+
+  const edges = result.data.arTransactions.edges
+  const lastCursor: string | null =
+    edges.length > 0 ? edges.at(-1).cursor : null
+
+  const events = edges
+    .map((e: any) => mapToPaymentSyncEvent(e.node))
+    .filter(
+      (e: InvoicePaymentEvent | null): e is InvoicePaymentEvent => e !== null
+    )
+
+  if (result.data.arTransactions.pageInfo.hasNextPage && lastCursor) {
+    const next = await fetchPaymentsPage({ after: lastCursor })
+    return { events: [...events, ...next.events], lastCursor: next.lastCursor }
+  }
+
+  return { events, lastCursor }
+}
+
 function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
   return {
-    type: event.type,
+    type: event.transactionHeader.transactionSource.code,
     invoiceId: event.invoiceNumber,
     matchId: event.matchId,
     amount: parseFloat(event.amount),
@@ -746,6 +861,44 @@ function mapToInvoicePaymentEvent(event: any): InvoicePaymentEvent {
     text: event.text,
     transactionSourceCode: event.transactionHeader.transactionSource.code,
     slTransactionType: event.slTransactionType?.name ?? null,
+  }
+}
+
+// Resolves the invoice ID for payment sync based on source type per Magnus at View:
+// - OCR: original invoice is in extIdentifier
+// - BAA: original invoice is in invoiceNumber (extIdentifier also works)
+// - BA: may lack invoice reference — returns null so the event can be skipped
+function resolvePaymentSyncInvoiceId(event: any): string | null {
+  const code: string = event.transactionHeader.transactionSource.code
+  if (code === 'OCR') return event.extIdentifier ?? null
+  if (code === 'BAA') return event.invoiceNumber ?? event.extIdentifier ?? null
+  return event.invoiceNumber ?? event.extIdentifier ?? null
+}
+
+function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
+  const invoiceId = resolvePaymentSyncInvoiceId(event)
+  if (!invoiceId) {
+    logger.info(
+      {
+        matchId: event.matchId,
+        code: event.transactionHeader.transactionSource.code,
+      },
+      'xledger-adapter: skipping payment with no resolvable invoice reference'
+    )
+    return null
+  }
+
+  return {
+    slTransactionType: event.slTransactionType?.name ?? null,
+    type: event.transactionHeader.transactionSource.code,
+    invoiceId,
+    matchId: event.matchId,
+    amount: parseFloat(event.amount),
+    paymentDate: event.transactionHeader.postedDate
+      ? new Date(event.transactionHeader.postedDate)
+      : new Date(event.paymentDate),
+    text: event.text,
+    transactionSourceCode: event.transactionHeader.transactionSource.code,
   }
 }
 
@@ -970,8 +1123,40 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   }
 }
 
+export interface XledgerDbContact {
+  ContactCode: string
+  FullName: string
+  StreetAddress: string
+  Street: string
+  PostalCode: string
+  City: string
+  Email: string
+}
+
 export const syncContact = async (
-  dbContact: any
+  dbContact: XledgerDbContact
+): Promise<AdapterResult<any, 'could-not-update-contact' | 'unknown'>> => {
+  try {
+    const xledgerContact = await getCustomer(dbContact.ContactCode)
+
+    if (!xledgerContact) {
+      logger.warn(
+        { contactCode: dbContact.ContactCode },
+        'xledger-adapter.syncContact: contact not found in Xledger, skipping'
+      )
+      return { ok: true, data: null }
+    }
+
+    await updateContact(xledgerContact, dbContact)
+    return { ok: true, data: xledgerContact }
+  } catch (err: unknown) {
+    logger.error({ err }, 'xledger-adapter.syncContact')
+    return { ok: false, err: 'could-not-update-contact' }
+  }
+}
+
+export const createOrUpdateContact = async (
+  dbContact: XledgerDbContact
 ): Promise<AdapterResult<any, string>> => {
   const xledgerContact = await getCustomer(dbContact.ContactCode)
 

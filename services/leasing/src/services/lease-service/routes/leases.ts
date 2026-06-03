@@ -1,29 +1,34 @@
 import KoaRouter from '@koa/router'
-import {
-  getLease,
-  getLeases,
-  getLeasesForContactCode,
-  getLeasesForNationalRegistrationNumber,
-  getLeasesForPropertyId,
-  getContacts,
-} from '../adapters/xpand/tenant-lease-adapter'
-import { createLease } from '../adapters/xpand/xpand-soap-adapter'
-import {
-  searchLeases,
-  getBuildingManagers,
-  getParkingSpaceTypes,
-  getStatusLabel,
-} from '../adapters/xpand/lease-search-adapter'
+import { leasing, schemas } from '@onecore/types'
+import { mapLeasesToLfExportRows } from '../services/lf-export'
+import { z } from 'zod'
+import { getParkingSpaceTypes } from '../adapters/xpand/lease-search-adapter'
 import {
   logger,
   generateRouteMetadata,
   setExcelDownloadHeaders,
-  createExcelFromPaginated,
+  createExcelExport,
   joinField,
   formatDateForExcel,
+  makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { leasing } from '@onecore/types'
-import z from 'zod'
+
+import {
+  getContactByContactCode,
+  getContacts,
+  getLeases,
+} from '../adapters/xpand/tenant-lease-adapter'
+import {
+  searchLeases,
+  getBuildingManagers,
+} from '../adapters/xpand/lease-search-adapter'
+import { LeaseStatusLabel } from '@onecore/types'
+import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
+import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import * as tenfastHelpers from '../helpers/tenfast'
+import config from '../../../common/config'
+import { toYearMonthDayString } from '../adapters/tenfast/schemas'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -31,207 +36,18 @@ import z from 'zod'
  *   - name: Leases
  *     description: Endpoints related to lease operations
  */
+
 export const routes = (router: KoaRouter) => {
-  /**
-   * @swagger
-   * /leases/search:
-   *   get:
-   *     summary: Search and filter leases
-   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
-   *     tags: [Leases]
-   *     parameters:
-   *       - in: query
-   *         name: q
-   *         schema:
-   *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
-   *       - in: query
-   *         name: objectType
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Object type codes (balgh, babps, balok)
-   *       - in: query
-   *         name: status
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *             enum: [current, upcoming, aboutToEnd, ended, "0", "1", "2", "3"]
-   *         description: "Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)"
-   *       - in: query
-   *         name: startDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: startDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum last debit date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum last debit date (YYYY-MM-DD)
-   *       - in: query
-   *         name: property
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Property/estate names
-   *       - in: query
-   *         name: buildingCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building codes
-   *       - in: query
-   *         name: areaCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Area codes (Område)
-   *       - in: query
-   *         name: districtNames
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: District names
-   *       - in: query
-   *         name: buildingManager
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building manager names (Kvartersvärd)
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *         description: Page number
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           default: 20
-   *           maximum: 100
-   *         description: Items per page
-   *       - in: query
-   *         name: includeEnded
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Include Upphört (ended) contracts. Excluded by default for performance.
-   *       - in: query
-   *         name: sortBy
-   *         schema:
-   *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
-   *         description: Sort field
-   *       - in: query
-   *         name: sortOrder
-   *         schema:
-   *           type: string
-   *           enum: [asc, desc]
-   *           default: desc
-   *         description: Sort direction
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved lease search results with pagination
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       leaseId:
-   *                         type: string
-   *                       objectTypeCode:
-   *                         type: string
-   *                       leaseType:
-   *                         type: string
-   *                       contacts:
-   *                         type: array
-   *                         items:
-   *                           type: object
-   *                           properties:
-   *                             name:
-   *                               type: string
-   *                             contactCode:
-   *                               type: string
-   *                             email:
-   *                               type: string
-   *                               nullable: true
-   *                             phone:
-   *                               type: string
-   *                               nullable: true
-   *                       rentalObjectCode:
-   *                         type: string
-   *                         nullable: true
-   *                       address:
-   *                         type: string
-   *                         nullable: true
-   *                       startDate:
-   *                         type: string
-   *                         format: date
-   *                         nullable: true
-   *                       lastDebitDate:
-   *                         type: string
-   *                         format: date
-   *                         nullable: true
-   *                       status:
-   *                         type: integer
-   *                         enum: [0, 1, 2, 3]
-   *                         description: "LeaseStatus: 0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended"
-   *                 _meta:
-   *                   type: object
-   *                   properties:
-   *                     totalRecords:
-   *                       type: integer
-   *                     page:
-   *                       type: integer
-   *                     limit:
-   *                       type: integer
-   *                     count:
-   *                       type: integer
-   *                 _links:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *       400:
-   *         description: Invalid query parameters
-   *       500:
-   *         description: Internal server error
-   */
-  // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
-  router.get('(.*)/leases/building-managers', async (ctx) => {
+  // TODO: Move to new microservice governing organization. For now here just to make it available for the filter in /leases
+  router.get('/leases/building-managers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
       const result = await getBuildingManagers()
       ctx.status = 200
       ctx.body = { content: result, ...metadata }
-    } catch (error) {
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error fetching building managers')
       ctx.status = 500
       ctx.body = {
         error:
@@ -243,33 +59,6 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  /**
-   * @swagger
-   * /leases/parking-space-types:
-   *   get:
-   *     summary: Get all parking space types
-   *     tags: [Leases]
-   *     description: Returns a list of all parking space types (P-platstyper) from the babpt table.
-   *     responses:
-   *       '200':
-   *         description: List of parking space types
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       code:
-   *                         type: string
-   *                       caption:
-   *                         type: string
-   *       '500':
-   *         description: Internal server error
-   */
   router.get('(.*)/leases/parking-space-types', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -292,139 +81,6 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/search:
-   *   get:
-   *     summary: Search leases with filters, pagination and optional export columns
-   *     description: |
-   *       Paginated lease search. Filters use AND between groups and OR within a group.
-   *       Optional `forExport=true` joins district + parking-type tables and always
-   *       includes property/building/area/district fields in each row regardless of
-   *       which filters were used. Use it when downstream callers (Excel export,
-   *       cross-property aggregations) need the wider field set without applying
-   *       restrictive filters.
-   *     tags: [Leases]
-   *     parameters:
-   *       - in: query
-   *         name: q
-   *         schema: { type: string }
-   *         description: Free-text search (lease id, tenant name, PNR, contact code, address)
-   *       - in: query
-   *         name: property
-   *         schema: { type: array, items: { type: string } }
-   *         style: form
-   *         explode: true
-   *         description: Filter by property designation (babuf.fstcaption)
-   *       - in: query
-   *         name: buildingCodes
-   *         schema: { type: array, items: { type: string } }
-   *         style: form
-   *         explode: true
-   *         description: Filter by building code (babuf.bygcode)
-   *       - in: query
-   *         name: districtNames
-   *         schema: { type: array, items: { type: string } }
-   *         style: form
-   *         explode: true
-   *         description: Filter by district name (bafen.distrikt)
-   *       - in: query
-   *         name: status
-   *         schema: { type: array, items: { type: string } }
-   *         style: form
-   *         explode: true
-   *         description: LeaseStatus values as strings (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)
-   *       - in: query
-   *         name: includeEnded
-   *         schema: { type: boolean }
-   *         description: When false (default), Upphört (status 3) is excluded
-   *       - in: query
-   *         name: forExport
-   *         schema: { type: boolean }
-   *         description: |
-   *           When true, joins bafen + babpt and always selects property, buildingCode,
-   *           area, buildingManager, districtName and parkingSpaceType regardless of
-   *           which filters were used.
-   *       - in: query
-   *         name: page
-   *         schema: { type: integer, minimum: 1, default: 1 }
-   *       - in: query
-   *         name: limit
-   *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
-   *       - in: query
-   *         name: sortBy
-   *         schema: { type: string, enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode] }
-   *       - in: query
-   *         name: sortOrder
-   *         schema: { type: string, enum: [asc, desc] }
-   *     responses:
-   *       '200':
-   *         description: Paginated lease search results
-   *       '400':
-   *         description: Invalid query parameters
-   *       '500':
-   *         description: Internal server error
-   */
-  router.get('(.*)/leases/search', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'q',
-      'objectType',
-      'status',
-      'leaseType',
-      'startDateFrom',
-      'startDateTo',
-      'endDateFrom',
-      'endDateTo',
-      'property',
-      'buildingCodes',
-      'areaCodes',
-      'districtNames',
-      'buildingManager',
-      'parkingSpaceType',
-      'page',
-      'limit',
-      'sortBy',
-      'sortOrder',
-    ])
-
-    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
-      ctx.query
-    )
-
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Invalid query parameters',
-        details: queryParams.error.issues,
-        ...metadata,
-      }
-      return
-    }
-
-    try {
-      const result = await searchLeases(queryParams.data, ctx, {
-        forExport: queryParams.data.forExport === true,
-      })
-
-      ctx.status = 200
-      ctx.body = result
-    } catch (error: unknown) {
-      ctx.status = 500
-
-      if (error instanceof Error) {
-        ctx.body = {
-          error: error.message,
-          ...metadata,
-        }
-      } else {
-        ctx.body = {
-          error: 'Unknown error occurred during lease search',
-          ...metadata,
-        }
-      }
-    }
-  })
-
-  /**
-   * @swagger
    * /leases/export:
    *   get:
    *     summary: Export leases to Excel
@@ -435,7 +91,7 @@ export const routes = (router: KoaRouter) => {
    *         name: q
    *         schema:
    *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *         description: Free-text search (contract ID, PNR, contact code, tenant name, rental object address)
    *       - in: query
    *         name: objectType
    *         schema:
@@ -538,60 +194,49 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      // Create Excel using streaming - fetches pages incrementally
-      const buffer =
-        await createExcelFromPaginated<leasing.v1.LeaseSearchResult>(
-          async (page: number, limit: number, totalCount?: number) => {
-            // Use a derived context with overridden query instead of mutating ctx.query
-            const paginationCtx = Object.create(ctx)
-            paginationCtx.query = {
-              ...ctx.query,
-              page: String(page),
-              limit: String(limit),
-            }
+      // Fetch all matching leases using cursor-based pagination (O(n) API calls)
+      const allLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        queryParams.data,
+        ctx
+      )
 
-            return await searchLeases(queryParams.data, paginationCtx, {
-              forExport: true,
-              totalCount,
-            })
-          },
-          {
-            sheetName: 'Hyreskontrakt',
-            columns: [
-              { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-              { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
-              { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-              { header: 'Kundnummer', key: 'contactCode', width: 18 },
-              { header: 'E-post', key: 'email', width: 30 },
-              { header: 'Telefon', key: 'phone', width: 15 },
-              { header: 'Objekttyp', key: 'objectType', width: 12 },
-              { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-              { header: 'Adress', key: 'address', width: 35 },
-              { header: 'Fastighet', key: 'property', width: 20 },
-              { header: 'Distrikt', key: 'district', width: 15 },
-              { header: 'Startdatum', key: 'startDate', width: 12 },
-              { header: 'Slutdatum', key: 'endDate', width: 12 },
-              { header: 'Status', key: 'status', width: 15 },
-            ],
-            rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
-              leaseId: lease.leaseId,
-              rentalObjectCode: lease.rentalObjectCode || '',
-              tenantName: joinField(lease.contacts, (c) => c.name),
-              contactCode: joinField(lease.contacts, (c) => c.contactCode),
-              email: joinField(lease.contacts, (c) => c.email),
-              phone: joinField(lease.contacts, (c) => c.phone),
-              objectType: lease.parkingSpaceType || lease.objectTypeCode,
-              leaseType: lease.leaseType,
-              address: lease.address || '',
-              property: lease.property || '',
-              district: lease.districtName || '',
-              startDate: formatDateForExcel(lease.startDate),
-              endDate: formatDateForExcel(lease.lastDebitDate),
-              status: getStatusLabel(lease.status),
-            }),
-            batchSize: 500,
-          }
-        )
+      // Create Excel from the complete dataset
+      const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
+        sheetName: 'Hyreskontrakt',
+        columns: [
+          { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+          { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
+          { header: 'Hyresgäst', key: 'tenantName', width: 30 },
+          { header: 'Kundnummer', key: 'contactCode', width: 18 },
+          { header: 'E-post', key: 'email', width: 30 },
+          { header: 'Telefon', key: 'phone', width: 15 },
+          { header: 'Objekttyp', key: 'objectType', width: 12 },
+          { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
+          { header: 'Adress', key: 'address', width: 35 },
+          { header: 'Fastighet', key: 'property', width: 20 },
+          { header: 'Distrikt', key: 'district', width: 15 },
+          { header: 'Startdatum', key: 'startDate', width: 12 },
+          { header: 'Slutdatum', key: 'endDate', width: 12 },
+          { header: 'Status', key: 'status', width: 15 },
+        ],
+        data: allLeases,
+        rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
+          leaseId: lease.leaseId,
+          rentalObjectCode: lease.rentalObjectCode || '',
+          tenantName: joinField(lease.contacts, (c) => c.name),
+          contactCode: joinField(lease.contacts, (c) => c.contactCode),
+          email: joinField(lease.contacts, (c) => c.email),
+          phone: joinField(lease.contacts, (c) => c.phone),
+          objectType: lease.parkingSpaceType || lease.objectTypeCode,
+          leaseType: lease.leaseType,
+          address: lease.address || '',
+          property: lease.property || '',
+          district: lease.districtName || '',
+          startDate: formatDateForExcel(lease.startDate),
+          endDate: formatDateForExcel(lease.lastDebitDate),
+          status: LeaseStatusLabel[lease.status] ?? String(lease.status),
+        }),
+      })
 
       // 3. Set headers and return
       setExcelDownloadHeaders(ctx, 'hyreskontrakt')
@@ -602,6 +247,197 @@ export const routes = (router: KoaRouter) => {
       ctx.body = {
         error: error instanceof Error ? error.message : 'Export failed',
         ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/search:
+   *   get:
+   *     summary: Search and filter leases
+   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, PNR, contact code)
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Search by tenant name
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Search by rental object address
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object type codes (bostad, parkering, lokal, ovrigt)
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [current, active, upcoming, abouttoend, ended, pendingsignature, preliminaryterminated, notsent]
+   *         description: Contract status filter
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum end date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property designations (fastighetsbeteckning)
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names (stadsdel)
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *           maximum: 100
+   *         description: Items per page
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: desc
+   *         description: Sort direction
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved lease search results with pagination
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/LeaseSearchResult'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/leases/search', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'name',
+      'address',
+      'objectType',
+      'status',
+      'property',
+      'startDateFrom',
+      'startDateTo',
+      'endDateFrom',
+      'endDateTo',
+      'page',
+      'limit',
+      'sortBy',
+      'sortOrder',
+    ])
+
+    const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        queryParams.data,
+        ctx
+      )
+
+      ctx.status = 200
+      ctx.body = result
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      } else {
+        ctx.body = {
+          error: 'Unknown error occurred during lease search',
+          ...metadata,
+        }
       }
     }
   })
@@ -769,103 +605,7 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /leases/for/nationalRegistrationNumber/{pnr}:
-   *   get:
-   *     summary: Get leases by national registration number
-   *     description: Retrieve leases associated with a national registration number (pnr).
-   *     tags: [Leases]
-   *     parameters:
-   *       - in: path
-   *         name: pnr
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The national registration number (pnr) of the contact.
-   *       - in: query
-   *         name: includeTerminatedLeases
-   *         schema:
-   *           type: boolean
-   *         description: Include terminated leases in the result.
-   *       - in: query
-   *         name: includeContacts
-   *         schema:
-   *           type: boolean
-   *         description: Include contact information in the result.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved leases.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 data:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     description: Lease details.
-   *       500:
-   *         description: Internal server error. Failed to retrieve leases.
-   */
-
-  const getLeasesForPnrQueryParamSchema = z.object({
-    includeUpcomingLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeTerminatedLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeNonTenantLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeNonTenantContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-  })
-
-  router.get('(.*)/leases/for/nationalRegistrationNumber/:pnr', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-      'includeNonTenantLeases',
-      'includeNonTenantContacts',
-    ])
-
-    const queryParams = getLeasesForPnrQueryParamSchema.safeParse(ctx.query)
-    if (queryParams.success === false) {
-      ctx.status = 400
-      return
-    }
-
-    const responseData = await getLeasesForNationalRegistrationNumber(
-      ctx.params.pnr,
-      {
-        includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-        includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-        includeContacts: queryParams.data.includeContacts,
-        includeNonTenantLeases: queryParams.data.includeNonTenantLeases,
-        includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
-      }
-    )
-
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
-  })
-
-  /**
-   * @swagger
-   * /leases/for/contactCode/{contactCode}:
+   * /leases/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get leases by contact code
    *     description: Retrieve leases associated with a contact by contact code.
@@ -878,15 +618,10 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *         description: The contact code of the contact.
    *       - in: query
-   *         name: includeTerminatedLeases
+   *         name: status
    *         schema:
-   *           type: boolean
-   *         description: Include terminated leases in the result.
-   *       - in: query
-   *         name: includeContacts
-   *         schema:
-   *           type: boolean
-   *         description: Include contact information in the result.
+   *           type: string
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -895,7 +630,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 data:
+   *                 content:
    *                   type: array
    *                   items:
    *                     type: object
@@ -903,100 +638,101 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve leases.
    */
+  router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['status'])
 
-  const getLeasesForContactCodeQueryParamSchema = z.object({
-    includeUpcomingLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeTerminatedLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeNonTenantLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeNonTenantContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-  })
+    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
-  router.get('(.*)/leases/for/contactCode/:pnr', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-      'includeNonTenantLeases',
-      'includeNonTenantContacts',
-    ])
-
-    const queryParams = getLeasesForContactCodeQueryParamSchema.safeParse(
-      ctx.query
-    )
-    if (queryParams.success === false) {
+    if (!queryParams.success) {
+      logger.error(
+        { error: queryParams.error, metadata },
+        'Invalid query parameters for get leases by contact code'
+      )
       ctx.status = 400
+      ctx.body = { error: queryParams.error.issues, ...metadata }
       return
     }
 
-    const result = await getLeasesForContactCode(ctx.params.pnr, {
-      includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-      includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-      includeContacts: queryParams.data.includeContacts,
-      includeNonTenantLeases: queryParams.data.includeNonTenantLeases,
-      includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
-    })
-    if (!result.ok) {
+    // TODO: NON-TENANT-CONTACTS/LEASE
+    const contact = await tenfastAdapter.getTenantByContactCode(
+      ctx.params.contactCode
+    )
+
+    if (!contact.ok) {
+      logger.error(
+        { error: contact.err, metadata },
+        'Error fetching contact by contact code'
+      )
       ctx.status = 500
       ctx.body = {
-        error: result.err,
+        error: contact.err,
+        ...metadata,
+      }
+
+      return
+    }
+
+    if (!contact.data) {
+      logger.info(
+        { contactCode: ctx.params.contactCode },
+        'No contact found by contact code'
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody([], metadata)
+
+      return
+    }
+
+    const filters = queryParams.data?.status
+      ? { status: queryParams.data.status }
+      : undefined
+
+    const getLeases = await tenfastAdapter.getLeasesByTenantId(
+      contact.data._id,
+      filters
+    )
+
+    if (!getLeases.ok) {
+      logger.error(
+        { error: getLeases.err, metadata },
+        'Error fetching leases by tenant ID'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: getLeases.err,
         ...metadata,
       }
       return
     }
 
+    const onecoreLeases = getLeases.data.map((lease) =>
+      tenfastHelpers.mapToOnecoreLease(lease)
+    )
+
     ctx.status = 200
-    ctx.body = {
-      content: result.data,
-      ...metadata,
-    }
+    ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
   })
 
   /**
    * @swagger
-   * /leases/for/propertyId/{propertyId}:
+   * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
-   *     summary: Get leases by property ID
-   *     description: Retrieve leases associated with a property by property ID.
+   *     summary: Get leases by rental object code
+   *     description: Retrieve leases associated with a rental object by rental object code.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
-   *         name: propertyId
+   *         name: rentalObjectCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the property.
+   *         description: The code of the rental object.
    *       - in: query
-   *         name: includeTerminatedLeases
+   *         name: status
    *         schema:
-   *           type: boolean
-   *         description: Include terminated leases in the result.
-   *       - in: query
-   *         name: includeContacts
-   *         schema:
-   *           type: boolean
-   *         description: Include contact information in the result.
-   *       - in: query
-   *         name: includeRentInfo
-   *         schema:
-   *           type: boolean
-   *           default: true
-   *         description: Include rent information in the result. Defaults to true.
+   *           type: string
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -1005,7 +741,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 data:
+   *                 content:
    *                   type: array
    *                   items:
    *                     type: object
@@ -1013,59 +749,109 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve leases.
    */
+  router.get(
+    '(.*)/leases/by-rental-object-code/:rentalObjectCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ['status'])
 
-  const getLeasesForPropertyIdQueryParamSchema = z.object({
-    includeUpcomingLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeTerminatedLeases: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-    includeRentInfo: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value !== 'false'), // defaults to true
-    includeNonTenantContacts: z
-      .enum(['true', 'false'])
-      .optional()
-      .transform((value) => value === 'true'),
-  })
+      // TODO: NON-TENANT-CONTACTS/LEASES
+      const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
 
-  router.get('(.*)/leases/for/propertyId/:propertyId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeUpcomingLeases',
-      'includeTerminatedLeases',
-      'includeContacts',
-      'includeRentInfo',
-      'includeNonTenantContacts',
-    ])
+      if (!queryParams.success) {
+        ctx.status = 400
+        ctx.body = { error: queryParams.error.issues, ...metadata }
+        return
+      }
 
-    const queryParams = getLeasesForPropertyIdQueryParamSchema.safeParse(
-      ctx.query
-    )
-    if (queryParams.success === false) {
-      ctx.status = 400
+      // TODO: TenFAST route is coming to get avtal by hyresobjekt
+      // EDIT: or is it?
+      const property = await tenfastAdapter.getRentalObject(
+        ctx.params.rentalObjectCode
+      )
+
+      // TODO: Clean this up
+      if (!property.ok && property.err === 'could-not-find-rental-object') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Not found',
+          ...metadata,
+        }
+        return
+      }
+
+      if (property.ok && property.data === null) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Not found',
+          ...metadata,
+        }
+        return
+      }
+
+      if (!property.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: property.err,
+          ...metadata,
+        }
+        return
+      }
+
+      if (!property.data) {
+        throw 'ffs'
+      }
+
+      const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
+        property.data._id
+      )
+
+      if (!getLeases.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: getLeases.err,
+          ...metadata,
+        }
+        return
+      }
+
+      const onecoreLeases = getLeases.data.map((lease) =>
+        tenfastHelpers.mapToOnecoreLease(lease)
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(onecoreLeases, metadata)
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/lf-export:
+   *   get:
+   *     summary: Export home insurance data for Länsförsäkringar
+   *     description: Returns leases with a home insurance rent row in states active, upcoming, preTermination, and terminationScheduled, with all fields needed for the daily LF export.
+   *     tags: [Leases]
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved home insurance export data.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/leases/lf-export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await tenfastAdapter.getLeasesWithHomeInsurance()
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
       return
     }
 
-    const responseData = await getLeasesForPropertyId(ctx.params.propertyId, {
-      includeUpcomingLeases: queryParams.data.includeUpcomingLeases,
-      includeTerminatedLeases: queryParams.data.includeTerminatedLeases,
-      includeContacts: queryParams.data.includeContacts,
-      includeRentInfo: queryParams.data.includeRentInfo,
-      includeNonTenantContacts: queryParams.data.includeNonTenantContacts,
-    })
+    const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
+    const rows = mapLeasesToLfExportRows(result.data, articleId)
 
-    ctx.body = {
-      content: responseData,
-      ...metadata,
-    }
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(rows, metadata)
   })
 
   /**
@@ -1082,11 +868,6 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The ID of the lease.
-   *       - in: query
-   *         name: includeContacts
-   *         schema:
-   *           type: boolean
-   *         description: Include contact information in the result.
    *     responses:
    *       200:
    *         description: Successfully retrieved lease details.
@@ -1095,7 +876,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 data:
+   *                 content:
    *                   type: object
    *                   description: Lease details.
    *       404:
@@ -1103,20 +884,46 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error. Failed to retrieve lease details.
    */
-  router.get('(.*)/leases/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, [
-      'includeContacts',
-      'includeNonTenantContacts',
-    ])
-    const responseData = await getLease(
-      ctx.params.id,
-      ctx.query.includeContacts,
-      ctx.query.includeNonTenantContacts === 'true'
-    )
+  router.get('(.*)/leases/:leaseId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
 
-    ctx.body = {
-      content: responseData,
-      ...metadata,
+    try {
+      // TODO: NON-TENANT-CONTACTS/LEASE
+      const getLease = await tenfastAdapter.getLeaseByLeaseId(
+        ctx.params.leaseId
+      )
+
+      if (!getLease.ok) {
+        if (getLease.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+
+          return
+        } else {
+          ctx.status = 500
+          ctx.body = {
+            error: getLease.err,
+            ...metadata,
+          }
+
+          return
+        }
+      }
+
+      const onecoreLease = tenfastHelpers.mapToOnecoreLease(getLease.data)
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(onecoreLease, metadata)
+    } catch (error) {
+      logger.error(error, 'Error when getting lease')
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+        ...metadata,
+      }
     }
   })
 
@@ -1125,13 +932,14 @@ export const routes = (router: KoaRouter) => {
     contactCode: string
     fromDate: string
     companyCode: string
+    includeVAT: boolean
   }
 
   /**
    * @swagger
    * /leases:
    *   post:
-   *     summary: Create new lease in xpand for parking space
+   *     summary: Create new lease for parking space
    *     description: Create a new lease for a parking space.
    *     tags: [Leases]
    *     requestBody:
@@ -1159,6 +967,7 @@ export const routes = (router: KoaRouter) => {
    *               - contactCode
    *               - fromDate
    *               - companyCode
+   *               - includeVAT
    *     responses:
    *       200:
    *         description: Lease created successfully.
@@ -1178,29 +987,54 @@ export const routes = (router: KoaRouter) => {
     try {
       const request = <CreateLeaseRequest>ctx.request.body
 
-      const createLeaseResult = await createLease(
-        new Date(request.fromDate),
-        request.parkingSpaceId,
+      const contactResult = await getContactByContactCode(
         request.contactCode,
-        request.companyCode
+        false
       )
-      if (createLeaseResult.ok) {
-        ctx.body = {
-          content: createLeaseResult.data,
-          ...metadata,
-        }
-      } else if (createLeaseResult.err === 'create-lease-not-allowed') {
+
+      if (!contactResult.ok || !contactResult.data) {
+        logger.error(
+          {
+            contactCode: request.contactCode,
+            error: contactResult.ok ? undefined : contactResult.err,
+          },
+          'Could not retrieve contact to create tenFAST lease'
+        )
         ctx.status = 404
         ctx.body = {
-          error: 'Lease cannot be created on this rental object',
+          error: 'Contact not found',
           ...metadata,
         }
-      } else {
-        ctx.status = 500
+        return
+      }
+
+      const createLeaseTenfastResult = await tenfastAdapter.createLease(
+        contactResult.data,
+        request.parkingSpaceId,
+        new Date(request.fromDate),
+        request.includeVAT
+      )
+
+      if (createLeaseTenfastResult.ok) {
+        logger.info(
+          { result: createLeaseTenfastResult.data },
+          'Lease created in tenFAST'
+        )
         ctx.body = {
-          error: 'Unknown error when creating lease',
+          content: createLeaseTenfastResult.data,
           ...metadata,
         }
+        return
+      }
+
+      logger.error(
+        { error: createLeaseTenfastResult.err },
+        'Error creating lease in tenFAST'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: createLeaseTenfastResult.err,
+        ...metadata,
       }
     } catch (error: unknown) {
       ctx.status = 500
@@ -1254,4 +1088,419 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/home-insurance:
+   *   post:
+   *     summary: Add home insurance rent row to a lease
+   *     description: Add a home insurance rent row. The article, VAT, amount, and label are determined by the service.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       201:
+   *         description: Successfully added home insurance rent row.
+   *       404:
+   *         description: Lease not found.
+   *       422:
+   *         description: Home insurance rent row already exists for this lease.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.post(
+    '(.*)/leases/:leaseId/home-insurance',
+    parseRequestBody(leasing.v1.AddLeaseHomeInsuranceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const getCurrentLease = await tenfastAdapter.getLeaseByExternalId(
+        ctx.params.leaseId
+      )
+
+      if (!getCurrentLease.ok) {
+        if (getCurrentLease.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+
+          return
+        } else {
+          ctx.status = 500
+          ctx.body = {
+            error: getCurrentLease.err,
+            ...metadata,
+          }
+
+          return
+        }
+      }
+
+      const existingHomeInsurance = getCurrentLease.data.hyror.find(
+        (row) =>
+          row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+      )
+
+      if (existingHomeInsurance && existingHomeInsurance.to == null) {
+        ctx.status = 422
+        ctx.body = {
+          error:
+            'Home insurance already exists and is not cancelled for this lease',
+          ...metadata,
+        }
+
+        return
+      }
+
+      const updateHomeInsuranceResult =
+        await tenfastAdapter.updateLeaseInvoiceRows({
+          leaseId: ctx.params.leaseId,
+          rowsToDelete: existingHomeInsurance?._id
+            ? [existingHomeInsurance._id]
+            : [],
+          rowsToAdd: [
+            {
+              amount: ctx.request.body.monthlyAmount,
+              article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+              label: 'Hemförsäkring',
+              vat: 0, // No VAT on insurance
+              from: toYearMonthDayString(ctx.request.body.from),
+            },
+          ],
+        })
+
+      if (!updateHomeInsuranceResult.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: updateHomeInsuranceResult.err,
+          ...metadata,
+        }
+
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = makeSuccessResponseBody(
+        updateHomeInsuranceResult.data,
+        metadata
+      )
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/home-insurance:
+   *   get:
+   *     summary: Get home insurance for a lease
+   *     description: Returns home insurance details for a lease.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved home insurance.
+   *       404:
+   *         description: Lease or home insurance not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/leases/:leaseId/home-insurance', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const getCurrentLease = await tenfastAdapter.getLeaseByExternalId(
+      ctx.params.leaseId
+    )
+
+    if (!getCurrentLease.ok) {
+      if (getCurrentLease.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Lease not found',
+          ...metadata,
+        }
+
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        error: getCurrentLease.err,
+        ...metadata,
+      }
+
+      return
+    }
+
+    const homeInsuranceRow = getCurrentLease.data.hyror.find(
+      (row) =>
+        row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+    )
+
+    if (!homeInsuranceRow) {
+      ctx.status = 404
+      ctx.body = {
+        error: 'Home insurance not found',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody<
+      z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+    >(
+      {
+        monthlyAmount: homeInsuranceRow.amount,
+        from: homeInsuranceRow.from ?? undefined,
+        to: homeInsuranceRow.to ?? undefined,
+      },
+      metadata
+    )
+  })
+
+  /**
+   * @swagger
+   * /leases/{id}/home-insurance/cancel:
+   *   post:
+   *     summary: Cancel lease home insurance
+   *     description: Cancel lease home insurance.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - endDate
+   *             properties:
+   *               endDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: Desired end date for home insurance.
+   *     responses:
+   *       200:
+   *         description: Successfully deleted home insurance.
+   *       404:
+   *         description: Lease not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.post(
+    '(.*)/leases/:leaseId/home-insurance/cancel',
+    parseRequestBody(leasing.v1.CancelLeaseHomeInsuranceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const lease = await tenfastAdapter.getLeaseByExternalId(
+        ctx.params.leaseId
+      )
+      if (!lease.ok) {
+        if (lease.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Lease not found',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: lease.err,
+          ...metadata,
+        }
+        return
+      }
+
+      const homeInsuranceRow = lease.data.hyror.find(
+        (row) =>
+          row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+      )
+
+      if (!homeInsuranceRow || !homeInsuranceRow.article) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Home insurance not found',
+          ...metadata,
+        }
+        return
+      }
+
+      const replaceLeaseInvoiceRow =
+        await tenfastAdapter.updateLeaseInvoiceRows({
+          leaseId: ctx.params.leaseId,
+          rowsToDelete: [homeInsuranceRow._id],
+          rowsToAdd: [
+            {
+              amount: homeInsuranceRow.amount,
+              vat: homeInsuranceRow.vat,
+              article: homeInsuranceRow.article,
+              label: homeInsuranceRow.label,
+              from: homeInsuranceRow.from ?? undefined,
+              to: toYearMonthDayString(ctx.request.body.endDate),
+            },
+          ],
+        })
+
+      if (!replaceLeaseInvoiceRow.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: replaceLeaseInvoiceRow.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(null, metadata)
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/preliminary-termination:
+   *   post:
+   *     summary: Preliminary termination of a lease
+   *     description: Initiates a preliminary termination for the specified lease in tenfast.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The unique identifier of the lease to terminate.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - contractNumber
+   *               - contactCode
+   *               - lastDebitDate
+   *               - desiredMoveDate
+   *             properties:
+   *               contractNumber:
+   *                 type: string
+   *                 description: The contract number associated with the lease
+   *               contactCode:
+   *                 type: string
+   *                 description: The contact code of the tenant
+   *               lastDebitDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: The last debit date for the lease
+   *               desiredMoveDate:
+   *                 type: string
+   *                 format: date-time
+   *                 description: The desired move-out date
+   *     responses:
+   *       200:
+   *         description: Preliminary termination initiated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       400:
+   *         description: Invalid request body or tenant missing valid email address
+   *       404:
+   *         description: Lease not found
+   *       500:
+   *         description: Internal server error. Failed to terminate lease.
+   */
+
+  router.post(
+    '(.*)/leases/:leaseId/preliminary-termination',
+    parseRequestBody(leasing.v1.PreliminaryTerminateLeaseRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
+        .body as z.infer<
+        typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
+      >
+
+      const result = await tenfastAdapter.preliminaryTerminateLease(
+        ctx.params.leaseId,
+        contactCode,
+        new Date(lastDebitDate),
+        new Date(desiredMoveDate)
+      )
+
+      if (!result.ok) {
+        if (result.err === 'lease-not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: result.err,
+            message: 'Lease not found',
+            ...metadata,
+          }
+          return
+        }
+
+        if (result.err === 'tenant-email-missing') {
+          ctx.status = 400
+          ctx.body = {
+            error: result.err,
+            message: 'Tenant missing valid email address',
+            ...metadata,
+          }
+          return
+        }
+
+        if (result.err === 'termination-not-required') {
+          ctx.status = 400
+          ctx.body = {
+            error: result.err,
+            message:
+              'Lease expires within notice period, no termination required',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: result.err,
+          message: 'Failed to terminate lease',
+          ...metadata,
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          error: result.err,
+          message: 'Failed to terminate lease',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    }
+  )
 }

@@ -31,8 +31,6 @@ export function useTenantInfo(
     queryFn: () =>
       leaseService.getByRentalPropertyId(residenceId!, {
         includeContacts: true,
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: true,
       }),
     enabled: !!residenceId,
   })

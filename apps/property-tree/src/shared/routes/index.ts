@@ -26,6 +26,7 @@ export const routes = {
   rentalBlocks: '/sparrar',
   leases: '/hyreskontrakt',
   inspections: '/besiktningar',
+  imd: '/imd',
   components: '/komponenter',
   callback: '/callback',
 } as const

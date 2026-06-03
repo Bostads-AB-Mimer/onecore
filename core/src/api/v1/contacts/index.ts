@@ -31,16 +31,13 @@ export const routes = (router: OkapiRouter, config: Config) => {
     result: AdapterResult<any, any>,
     metadata: RouteMetadata
   ) => {
-    ctx.status =
-      result.statusCode == 404 || result.statusCode === 500
-        ? result.statusCode
-        : 500
+    ctx.status = !result.ok && result.err === 'not-found' ? 404 : 500
     ctx.body = { ...metadata }
   }
 
   const encodeSingleResponse = (
     ctx: ParameterizedContext,
-    result: AdapterResult<Contact, 'unknown'>
+    result: AdapterResult<Contact, 'not-found' | 'unknown'>
   ) => {
     const metadata = generateRouteMetadata(ctx)
     if (result.ok) {
@@ -124,6 +121,61 @@ export const routes = (router: OkapiRouter, config: Config) => {
       } else {
         const metadata = generateRouteMetadata(ctx)
         encodeError(ctx, response, metadata)
+      }
+    }
+  )
+
+  router.get(
+    '/v1/contacts/by-codes',
+    {
+      summary: 'Get multiple contacts by their contact codes',
+      description:
+        'Fetch a batch of contacts by providing a comma-separated list of contact codes.',
+      tags: ['Contacts'],
+      query: {
+        codes: {
+          description: 'Comma-separated list of contact codes',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: z.object({
+          content: z.array(ContactSchema),
+        }),
+        400: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const codesParam = ctx.query.codes as string | undefined
+
+      if (!codesParam) {
+        const metadata = generateRouteMetadata(ctx)
+        ctx.status = 400
+        ctx.body = { ...metadata }
+        return
+      }
+
+      const codes = codesParam
+        .split(',')
+        .map((c: string) => c.trim())
+        .filter(Boolean)
+      if (codes.length === 0) {
+        const metadata = generateRouteMetadata(ctx)
+        ctx.status = 400
+        ctx.body = { ...metadata }
+        return
+      }
+
+      const result = await contactsAdapter.getByContactCodes(codes)
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: transformContacts(result.data),
+        }
+      } else {
+        const metadata = generateRouteMetadata(ctx)
+        encodeError(ctx, result, metadata)
       }
     }
   )

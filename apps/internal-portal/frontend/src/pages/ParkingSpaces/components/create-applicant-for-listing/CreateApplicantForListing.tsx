@@ -362,7 +362,8 @@ export const CreateApplicantForListing = (props: Props) => {
                           parkingSpaceId: props.listing.rentalObjectCode,
                           listingId: props.listing.id,
                           startDate: calculateStartDate(
-                            props.listing.rentalObject.vacantFrom
+                            props.listing.rentalObject.availabilityInfo
+                              ?.vacantFrom
                           ),
                         })
                       }

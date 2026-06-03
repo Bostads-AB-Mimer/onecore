@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { SyncContactToWorkOrderSchema } from '@onecore/types'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
   CreateWorkOrderBodySchema,
@@ -1412,6 +1413,103 @@ export const routes = (router: KoaRouter) => {
           error: error.message,
           ...metadata,
         }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/sync:
+   *   post:
+   *     summary: Sync a contact to Odoo
+   *     description: Updates tenant records in Odoo that match the provided contact code. If no matching tenants are found, the operation is skipped.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to sync
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - contactCode
+   *               - fullName
+   *             properties:
+   *               contactCode:
+   *                 type: string
+   *               fullName:
+   *                 type: string
+   *               emailAddress:
+   *                 type: string
+   *                 nullable: true
+   *               phoneNumber:
+   *                 type: string
+   *                 nullable: true
+   *     responses:
+   *       200:
+   *         description: Contact synced successfully to Odoo
+   *       400:
+   *         description: Invalid request body
+   *       500:
+   *         description: Failed to sync contact to Odoo
+   */
+  router.post('(.*)/contacts/:contactCode/sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parseResult = SyncContactToWorkOrderSchema.safeParse(ctx.request.body)
+
+    if (!parseResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: parseResult.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    const body = parseResult.data
+    const { contactCode } = ctx.params as { contactCode: string }
+
+    if (body.contactCode !== contactCode) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Path contactCode must match body contactCode',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await odooAdapter.syncContact(body)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to sync contact to Odoo',
+          details: result.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        skipped: result.data === null,
+        ...metadata,
+      }
+    } catch (err: unknown) {
+      logger.error(err, 'Error syncing contact to Odoo')
+      ctx.status = 500
+      ctx.body = {
+        error: 'Internal server error',
+        ...metadata,
       }
     }
   })

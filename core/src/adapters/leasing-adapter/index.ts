@@ -7,25 +7,23 @@ import { AxiosError } from 'axios'
 import {
   ConsumerReport,
   Contact,
-  Lease,
   WaitingListType,
-  Applicant,
-  ApplicantStatus,
-  ApplicantWithListing,
-  DetailedApplicant,
   Tenant,
   leasing,
+  Lease,
+  IdentityCheckContact,
 } from '@onecore/types'
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
+import type { LeaseChange, SyncContactToLeasingPayload } from '@onecore/types'
 import config from '../../common/config'
-import { getListingByListingId } from './listings'
-import { getParkingSpaceByCode } from './rental-objects'
 
 //todo: move to global config or handle error statuses in middleware
+// Accept 2xx–4xx as resolved responses so adapters can inspect the status code directly.
+// 5xx falls outside this range and causes axios to throw, landing in catch blocks as 'unknown'.
 axios.defaults.validateStatus = function (status) {
-  return status >= 200 && status < 500 // override Axios throwing errors so that we can handle errors manually
+  return status >= 200 && status < 500
 }
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
@@ -39,15 +37,11 @@ interface GetLeasesOptions {
   includeNonTenantContacts?: boolean
 }
 
-type IdentityCheckContact = z.infer<
-  typeof leasing.v1.IdentityCheckContactSchema
->
-
 const getLease = async (
   leaseId: string,
   includeContacts: string | string[] | undefined
 ): Promise<Lease> => {
-  const leaseResponse = await axios(
+  const leaseResponse = await axios.get(
     tenantsLeasesServiceUrl +
       '/leases/' +
       encodeURIComponent(leaseId) +
@@ -115,7 +109,7 @@ const getLeasesForContactCode = async (
   })
 
   const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/for/contactCode/${contactCode}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/by-contact-code/${contactCode}?${queryParams.toString()}`
   )
 
   return leasesResponse.data.content
@@ -134,8 +128,8 @@ const getLeasesForPropertyId = async (
       includeNonTenantContacts: options.includeNonTenantContacts.toString(),
     }),
   })
-  const leasesResponse = await axios(
-    `${tenantsLeasesServiceUrl}/leases/for/propertyId/${propertyId}?${queryParams.toString()}`
+  const leasesResponse = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`
   )
   return leasesResponse.data.content
 }
@@ -157,16 +151,6 @@ const getLeasesBatch = async (leaseIds: string[]): Promise<Lease[]> => {
   return allLeases
 }
 
-// TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
-const getBuildingManagers = async (): Promise<
-  { code: string; name: string; district: string }[]
-> => {
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/building-managers`
-  )
-  return response.data.content
-}
-
 const getParkingSpaceTypes = async (): Promise<
   { code: string; caption: string }[]
 > => {
@@ -176,31 +160,10 @@ const getParkingSpaceTypes = async (): Promise<
   return response.data.content
 }
 
-const searchLeases = async (
-  queryParams: Record<string, string | string[] | undefined>
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const params = new URLSearchParams()
-
-  Object.entries(queryParams).forEach(([key, value]) => {
-    if (value === undefined) return
-    if (Array.isArray(value)) {
-      value.forEach((v) => params.append(key, v))
-    } else {
-      params.append(key, value)
-    }
-  })
-
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/search?${params.toString()}`
-  )
-
-  return response.data
-}
-
 const getContactForPnr = async (
   nationalRegistrationNumber: string
 ): Promise<Contact> => {
-  const contactResponse = await axios(
+  const contactResponse = await axios.get(
     tenantsLeasesServiceUrl +
       '/contacts/by-national-registration-number/' +
       nationalRegistrationNumber
@@ -401,7 +364,7 @@ const getContactByPhoneNumber = async (
   phoneNumber: string
 ): Promise<Contact | undefined> => {
   try {
-    const contactResponse = await axios(
+    const contactResponse = await axios.get(
       tenantsLeasesServiceUrl + '/contacts/by-phone-number/' + phoneNumber
     )
     return contactResponse.data.content
@@ -410,48 +373,10 @@ const getContactByPhoneNumber = async (
   }
 }
 
-const createLease = async (
-  objectId: string,
-  contactId: string,
-  fromDate: string,
-  companyCode: string
-): Promise<AdapterResult<string, 'create-lease-failed' | 'unknown'>> => {
-  const axiosOptions = {
-    method: 'POST',
-    data: {
-      parkingSpaceId: objectId,
-      contactCode: contactId,
-      fromDate,
-      companyCode,
-    },
-  }
-
-  const result = await axios(tenantsLeasesServiceUrl + '/leases', axiosOptions)
-
-  if (result.status == 200) {
-    return { ok: true, data: result.data.content }
-  } else if (
-    result.status == 404 &&
-    result.data.error === 'Lease cannot be created on this rental object'
-  ) {
-    logger.error(
-      { objectId, contactId, fromDate },
-      'Lease could not be created for rental object'
-    )
-    return { ok: false, err: 'create-lease-failed' }
-  } else {
-    logger.error(
-      { error: result.data.error },
-      'Unknown error when creating lease'
-    )
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 const getCreditInformation = async (
   nationalRegistrationNumber: string
 ): Promise<ConsumerReport> => {
-  const informationResponse = await axios(
+  const informationResponse = await axios.get(
     tenantsLeasesServiceUrl +
       '/cas/getConsumerReport/' +
       nationalRegistrationNumber
@@ -463,15 +388,9 @@ const addApplicantToWaitingList = async (
   contactCode: string,
   waitingListType: WaitingListType
 ) => {
-  const axiosOptions = {
-    method: 'POST',
-    data: {
-      waitingListType: waitingListType,
-    },
-  }
-  return await axios(
+  return await axios.post(
     tenantsLeasesServiceUrl + `/contacts/${contactCode}/waitingLists`,
-    axiosOptions
+    { waitingListType }
   )
 }
 
@@ -480,15 +399,9 @@ const resetWaitingList = async (
   waitingListType: WaitingListType
 ): Promise<AdapterResult<undefined, 'not-in-waiting-list' | 'unknown'>> => {
   try {
-    const axiosOptions = {
-      method: 'POST',
-      data: {
-        waitingListType: waitingListType,
-      },
-    }
-    const res = await axios(
+    const res = await axios.post(
       tenantsLeasesServiceUrl + `/contacts/${contactCode}/waitingLists/reset`,
-      axiosOptions
+      { waitingListType }
     )
 
     if (res.status == 200) return { ok: true, data: undefined }
@@ -501,294 +414,6 @@ const resetWaitingList = async (
       'Error resetting waiting list for applicant ' + contactCode
     )
     return { ok: false, err: 'unknown' }
-  }
-}
-
-const getApplicantsByContactCode = async (
-  contactCode: string
-): Promise<any[] | undefined> => {
-  try {
-    const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/`
-    )
-    return response.data.content
-  } catch (error) {
-    logger.error(error, 'Error fetching applicants by contact code:')
-    return undefined
-  }
-}
-
-const getApplicantsAndListingByContactCode = async (
-  contactCode: string
-): Promise<any[] | undefined> => {
-  try {
-    const applicantsResponse = (await getApplicantsByContactCode(
-      contactCode
-    )) as Applicant[]
-
-    if (!applicantsResponse || applicantsResponse.length === 0) {
-      return []
-    }
-
-    // Fetch all listings in parallel
-    const listingsPromises = applicantsResponse.map((applicant) =>
-      getListingByListingId(applicant.listingId)
-    )
-    const listingsResults = await Promise.all(listingsPromises)
-
-    // Create a map of listingId -> listing for easy lookup
-    const listingsMap = new Map()
-    listingsResults.forEach((listing, index) => {
-      if (listing) {
-        listingsMap.set(applicantsResponse[index].listingId, listing)
-      }
-    })
-
-    // Collect all rental object codes from listings
-    const rentalObjectCodes = Array.from(listingsMap.values())
-      .map((listing) => listing.rentalObjectCode)
-      .filter(Boolean)
-
-    // Fetch all parking spaces in parallel
-    const parkingSpacesPromises = rentalObjectCodes.map((code) =>
-      getParkingSpaceByCode(code)
-    )
-    const parkingSpacesResults = await Promise.all(parkingSpacesPromises)
-
-    // Create a map of rentalObjectCode -> parking space
-    const parkingSpacesMap = new Map()
-    parkingSpacesResults.forEach((result, index) => {
-      if (result.ok && result.data) {
-        parkingSpacesMap.set(rentalObjectCodes[index], result.data)
-      } else {
-        logger.info(
-          { rentalObjectCode: rentalObjectCodes[index] },
-          'getApplicantsAndListingByContactCode: Could not fetch rental object for listing'
-        )
-      }
-    })
-
-    // Build the final result with applicants, listings, and rental objects
-    const applicantsAndListings: ApplicantWithListing[] = []
-    for (const applicant of applicantsResponse) {
-      const listing = listingsMap.get(applicant.listingId)
-      if (listing) {
-        const rentalObject = parkingSpacesMap.get(listing.rentalObjectCode)
-        const listingWithRentalObject = rentalObject
-          ? { ...listing, rentalObject }
-          : listing
-
-        applicantsAndListings.push({
-          applicant,
-          listing: listingWithRentalObject,
-        })
-      }
-    }
-
-    return applicantsAndListings
-  } catch (error) {
-    logger.error(
-      error,
-      'Error fetching applicants and listings by contact code:'
-    )
-    return undefined
-  }
-}
-
-const getApplicantByContactCodeAndListingId = async (
-  contactCode: string,
-  listingId: string
-): Promise<any | undefined> => {
-  try {
-    return await axios.get(
-      `${tenantsLeasesServiceUrl}/applicants/${contactCode}/${listingId}`
-    )
-  } catch (error) {
-    logger.error(
-      error,
-      'Error fetching applicant by contact code and rental object code'
-    )
-    return undefined
-  }
-}
-
-const getDetailedApplicantsByListingId = async (
-  listingId: number
-): Promise<AdapterResult<DetailedApplicant[], 'unknown' | 'not-found'>> => {
-  try {
-    const response = await axios(
-      `${tenantsLeasesServiceUrl}/listing/${listingId}/applicants/details`
-    )
-
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(error, 'Error fetching detailed applicant data by listing id')
-
-    if (!(error instanceof AxiosError)) {
-      return { ok: false, err: 'unknown' }
-    }
-
-    if (error.response?.status === 404) {
-      return { ok: false, err: 'not-found' }
-    } else {
-      return { ok: false, err: 'unknown' }
-    }
-  }
-}
-
-const setApplicantStatusActive = async (
-  applicantId: string,
-  contactCode: string,
-  applicationType?: 'Replace' | 'Additional'
-): Promise<any> => {
-  try {
-    const response = await axios.patch(
-      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
-      {
-        status: ApplicantStatus.Active,
-        contactCode: contactCode,
-        applicationType,
-      }
-    )
-    return response.data
-  } catch (error) {
-    logger.error(
-      error,
-      `Error setting applicantStatus active on user with contactcode ${contactCode}`
-    )
-    throw new Error(`Failed to update status for applicant ${applicantId}`)
-  }
-}
-
-const withdrawApplicantByManager = async (
-  applicantId: string
-): Promise<any> => {
-  try {
-    const response = await axios.patch(
-      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
-      { status: ApplicantStatus.WithdrawnByManager }
-    )
-    return response.data
-  } catch (error) {
-    logger.error(error, 'Error patching applicant status:')
-    throw new Error(`Failed to update status for applicant ${applicantId}`)
-  }
-}
-
-const withdrawApplicantByUser = async (
-  applicantId: string,
-  contactCode: string
-): Promise<any> => {
-  try {
-    const response = await axios.patch(
-      `${tenantsLeasesServiceUrl}/applicants/${applicantId}/status`,
-      { status: ApplicantStatus.WithdrawnByUser, contactCode: contactCode }
-    )
-    return response.data
-  } catch (error) {
-    logger.error(error, 'Error withdrawing applicant by user:')
-    return undefined
-  }
-}
-
-const updateApplicantStatus = async (params: {
-  contactCode: string
-  applicantId: number
-  status: ApplicantStatus
-}) => {
-  try {
-    const response = await axios.patch(
-      `${tenantsLeasesServiceUrl}/applicants/${params.applicantId}/status`,
-      params
-    )
-    return response.data
-  } catch (err) {
-    logger.error(err, 'Error updating applicant status')
-    throw err
-  }
-}
-
-const validateResidentialAreaRentalRules = async (
-  contactCode: string,
-  districtCode: string
-): Promise<
-  AdapterResult<
-    { reason: string; applicationType: 'Replace' | 'Additional' },
-    {
-      tag: 'no-housing-contract-in-the-area' | 'not-found' | 'unknown'
-      data: unknown
-    }
-  >
-> => {
-  try {
-    const res = await axios(
-      `${tenantsLeasesServiceUrl}/applicants/validateResidentialAreaRentalRules/${contactCode}/${districtCode}`
-    )
-    if (res.status === 403) {
-      return {
-        ok: false,
-        err: { tag: 'no-housing-contract-in-the-area', data: res.data },
-      }
-    }
-
-    if (res.status === 404) {
-      return {
-        ok: false,
-        err: { tag: 'not-found', data: res.data },
-      }
-    }
-
-    if (res.status !== 200) {
-      return { ok: false, err: { tag: 'unknown', data: res.data } }
-    }
-
-    return { ok: true, data: res.data }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.validateResidentialAreaRentalRules')
-    return { ok: false, err: { tag: 'unknown', data: err } }
-  }
-}
-
-const validatePropertyRentalRules = async (
-  contactCode: string,
-  rentalObjectCode: string
-): Promise<
-  AdapterResult<
-    { reason: string; applicationType: 'Replace' | 'Additional' },
-    {
-      tag:
-        | 'not-tenant-in-the-property'
-        | 'not-a-parking-space'
-        | 'not-found'
-        | 'unknown'
-      data: unknown
-    }
-  >
-> => {
-  try {
-    const res = await axios(
-      `${tenantsLeasesServiceUrl}/applicants/validatePropertyRentalRules/${contactCode}/${rentalObjectCode}`
-    )
-
-    if (res.status === 404) {
-      return { ok: false, err: { tag: 'not-found', data: res.data } }
-    }
-
-    if (res.status === 400) {
-      return { ok: false, err: { tag: 'not-a-parking-space', data: res.data } }
-    }
-
-    if (res.status === 403) {
-      return {
-        ok: false,
-        err: { tag: 'not-tenant-in-the-property', data: res.data },
-      }
-    }
-
-    return { ok: true, data: res.data }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.validatePropertyRentalRules')
-    return { ok: false, err: { tag: 'unknown', data: err } }
   }
 }
 
@@ -975,6 +600,102 @@ const deleteListingTextContent = async (
     return { ok: false, err: 'unknown' }
   }
 }
+export type PreliminaryTerminateLeaseRequestParams = z.infer<
+  typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
+>
+
+export type PreliminaryTerminateLeaseResponseData = z.infer<
+  typeof leasing.v1.PreliminaryTerminateLeaseResponseSchema
+>
+
+const preliminaryTerminateLease = async (
+  leaseId: string,
+  params: PreliminaryTerminateLeaseRequestParams
+): Promise<
+  AdapterResult<
+    PreliminaryTerminateLeaseResponseData,
+    | 'lease-not-found'
+    | 'tenant-email-missing'
+    | 'termination-not-required'
+    | 'termination-failed'
+    | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/preliminary-termination`,
+      params
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    const errorType = response.data?.error
+
+    if (response.status === 404) {
+      return {
+        ok: false,
+        err: 'lease-not-found',
+      }
+    }
+
+    if (response.status === 400 && errorType === 'tenant-email-missing') {
+      return {
+        ok: false,
+        err: 'tenant-email-missing',
+      }
+    }
+
+    if (response.status === 400 && errorType === 'termination-not-required') {
+      return {
+        ok: false,
+        err: 'termination-not-required',
+      }
+    }
+
+    logger.error(
+      { status: response.status, data: response.data },
+      'Failed to preliminary terminate lease'
+    )
+    return { ok: false, err: 'termination-failed' }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response) {
+      const errorType = err.response.data?.error
+      const status = err.response.status
+
+      if (status === 404) {
+        return {
+          ok: false,
+          err: 'lease-not-found',
+        }
+      }
+
+      if (status === 400 && errorType === 'tenant-email-missing') {
+        return {
+          ok: false,
+          err: 'tenant-email-missing',
+        }
+      }
+
+      if (status === 400 && errorType === 'termination-not-required') {
+        return {
+          ok: false,
+          err: 'termination-not-required',
+        }
+      }
+
+      logger.error(
+        { status, error: errorType, leaseId },
+        'Error preliminary terminating lease'
+      )
+      return { ok: false, err: 'termination-failed' }
+    }
+
+    logger.error(err, `Error preliminary terminating lease: ${leaseId}`)
+    return { ok: false, err: 'unknown' }
+  }
+}
 
 const getContactsByFilters = async (
   queryParams: Record<string, string | string[] | undefined>
@@ -1036,14 +757,96 @@ const exportLeasesToExcel = async (
   }
 }
 
+const syncContactToLeasing = async (
+  payload: SyncContactToLeasingPayload
+): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/contacts/${payload.contactCode}/sync`,
+      payload
+    )
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: { skipped: response.data?.skipped === true } }
+    }
+
+    logger.error(response.data, 'leasing-adapter.syncContactToLeasing')
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      logger.error(
+        { status: err.response.status, data: err.response.data },
+        'leasing-adapter.syncContactToLeasing'
+      )
+      return { ok: false, err: 'sync-failed', statusCode: err.response.status }
+    }
+    logger.error({ err }, 'leasing-adapter.syncContactToLeasing')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const getUpdatedLeases = async (
+  since: Date | null
+): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
+  try {
+    const params = since ? { since: since.toISOString() } : {}
+    const response = await axios.get(`${tenantsLeasesServiceUrl}/leases/sync`, {
+      params,
+    })
+
+    if (response.status === 200) {
+      const content: LeaseChange[] = response.data.content.map(
+        (c: Omit<LeaseChange, 'timestamp'> & { timestamp: string }) => ({
+          ...c,
+          timestamp: new Date(c.timestamp),
+        })
+      )
+      return { ok: true, data: content }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getUpdatedLeases')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncLease = async (
+  leaseId: string,
+  contact: SyncContactToLeasingPayload | undefined,
+  action: 'create' | 'terminate' | 'void'
+): Promise<
+  AdapterResult<
+    {
+      action: 'created' | 'terminated' | 'voided' | 'skipped'
+      leaseId: string
+    },
+    'sync-failed' | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/sync`,
+      { leaseId, contact, action }
+    )
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'leasing-adapter.syncLease')
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncLease')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
-  createLease,
   exportLeasesToExcel,
+  syncContactToLeasing,
   getContactsByFilters,
-  getApplicantByContactCodeAndListingId,
-  getApplicantsAndListingByContactCode,
-  getApplicantsByContactCode,
   getApplicationProfileByContactCode,
   getContactByContactCode,
   getContactByPhoneNumber,
@@ -1053,31 +856,50 @@ export {
   getContactsForIdentityCheck,
   getContacts,
   getCreditInformation,
-  getLease,
   getLeases,
   getLeasesForPnr,
   getLeasesForContactCode,
   getLeasesForPropertyId,
   getLeasesBatch,
-  searchLeases,
-  getBuildingManagers,
   getParkingSpaceTypes,
-  getDetailedApplicantsByListingId,
   getTenantByContactCode,
+  preliminaryTerminateLease,
   resetWaitingList,
-  setApplicantStatusActive,
   createContactComment,
   createOrUpdateApplicationProfileByContactCode,
-  updateApplicantStatus,
-  validatePropertyRentalRules,
-  validateResidentialAreaRentalRules,
-  withdrawApplicantByManager,
-  withdrawApplicantByUser,
   getListingTextContentByRentalObjectCode,
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,
+  getUpdatedLeases,
+  syncLease,
 }
+
+export {
+  getDetailedApplicantsByListingId,
+  setApplicantStatusActive,
+  withdrawApplicantByManager,
+  withdrawApplicantByUser,
+  updateApplicantStatus,
+  validatePropertyRentalRules,
+  validateResidentialAreaRentalRules,
+  getApplicantByContactCodeAndListingId,
+  getApplicantsByContactCode,
+  getApplicantsAndListingByContactCode,
+} from './applicants'
+
+export {
+  createLease,
+  getLease,
+  getLeasesByContactCode,
+  getLeasesByRentalObjectCode,
+  addLeaseHomeInsurance,
+  getLeaseHomeInsurance,
+  cancelLeaseHomeInsurance,
+  getBuildingManagers,
+  searchLeases,
+  getHomeInsuranceExport,
+} from './leases'
 
 export {
   applyForListing,
@@ -1109,7 +931,8 @@ export { getCommentThread, addComment, removeComment } from './comments'
 
 export {
   getAllVacantParkingSpaces,
-  getParkingSpaceByRentalObjectCode,
   getParkingSpaceByCode,
   getParkingSpaces,
+  getRentalObjectAvailabilities,
+  getRentalObjectAvailabilityByCode,
 } from './rental-objects'

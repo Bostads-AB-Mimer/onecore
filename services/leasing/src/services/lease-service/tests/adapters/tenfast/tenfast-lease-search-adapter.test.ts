@@ -1,0 +1,1374 @@
+import { TenfastLease } from '../../../adapters/tenfast/schemas'
+import { TenfastLeaseFactory } from '../../factories/tenfast-lease'
+import { TenfastTenantFactory } from '../../factories/tenfast-tenant'
+import { TenfastRentalObjectFactory } from '../../factories/tenfast-rental-object'
+
+import * as tenfastLeaseSearchAdapter from '../../../adapters/tenfast/tenfast-lease-search-adapter'
+import * as tenfastApi from '../../../adapters/tenfast/tenfast-api'
+import * as xpandLeaseSearchAdapter from '../../../adapters/xpand/lease-search-adapter'
+
+jest.mock('../../../adapters/tenfast/tenfast-api')
+jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
+  getRentalObjectCodesByBuildingManager: jest.fn(),
+  getRentalObjectCodesByBuildingCodes: jest.fn(),
+  getRentalObjectCodesByAreaCodes: jest.fn(),
+  getRentalObjectCodesByDistrictNames: jest.fn(),
+}))
+jest.mock('../../../adapters/xpand/tenant-lease-adapter', () => ({
+  getContacts: jest.fn().mockResolvedValue([]),
+}))
+
+const mockedRequest = tenfastApi.request as jest.MockedFunction<
+  typeof tenfastApi.request
+>
+
+const mockedGetRentalObjectCodesByBuildingManager =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager
+  >
+
+const mockedGetRentalObjectCodesByBuildingCodes =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingCodes as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingCodes
+  >
+
+const mockedGetRentalObjectCodesByAreaCodes =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByAreaCodes as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByAreaCodes
+  >
+
+const mockedGetRentalObjectCodesByDistrictNames =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByDistrictNames as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByDistrictNames
+  >
+
+const buildLeaseWithTenants = (
+  overrides: Partial<TenfastLease> = {},
+  tenantOverrides: Parameters<typeof TenfastTenantFactory.build>[0] = {},
+  rentalObjectOverrides: Parameters<
+    typeof TenfastRentalObjectFactory.build
+  >[0] = {}
+): TenfastLease => {
+  return TenfastLeaseFactory.build({
+    hyresgaster: [TenfastTenantFactory.build(tenantOverrides)],
+    hyresobjekt: [
+      TenfastRentalObjectFactory.build({
+        subType: 'bostad',
+        postadress: 'Testgatan 1',
+        displayName: 'Testgatan 1, lgh 1001',
+        ...rentalObjectOverrides,
+      }),
+    ],
+    ...overrides,
+  })
+}
+
+describe('tenfast-lease-search-adapter', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  describe('analyzeSearchTermForApi', () => {
+    it('should detect contact code (letter + digits)', () => {
+      const result =
+        tenfastLeaseSearchAdapter.analyzeSearchTermForApi('P965339')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[hyresgaster][externalId]',
+          filterValue: 'P965339',
+        },
+      ])
+    })
+
+    it('should uppercase contact code', () => {
+      const result =
+        tenfastLeaseSearchAdapter.analyzeSearchTermForApi('p965339')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[hyresgaster][externalId]',
+          filterValue: 'P965339',
+        },
+      ])
+    })
+
+    it('should detect personnummer with dash (YYMMDD-XXXX)', () => {
+      const result =
+        tenfastLeaseSearchAdapter.analyzeSearchTermForApi('850101-1234')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[hyresgaster][idbeteckning]',
+          filterValue: '850101-1234',
+        },
+      ])
+    })
+
+    it('should detect personnummer with dash (YYYYMMDD-XXXX)', () => {
+      const result =
+        tenfastLeaseSearchAdapter.analyzeSearchTermForApi('19850101-1234')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[hyresgaster][idbeteckning]',
+          filterValue: '19850101-1234',
+        },
+      ])
+    })
+
+    it('should detect personnummer without dash (≥6 digits)', () => {
+      const result =
+        tenfastLeaseSearchAdapter.analyzeSearchTermForApi('198501011234')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[hyresgaster][idbeteckning]',
+          filterValue: '198501011234',
+        },
+      ])
+    })
+
+    it('should detect 4+ digit strings as personnummer', () => {
+      const result = tenfastLeaseSearchAdapter.analyzeSearchTermForApi('0022')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[hyresgaster][idbeteckning]',
+          filterValue: '0022',
+        },
+      ])
+    })
+
+    it('should detect 1-3 digit strings as contract number prefix', () => {
+      const result = tenfastLeaseSearchAdapter.analyzeSearchTermForApi('922')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[externalId]',
+          filterValue: '922',
+        },
+      ])
+    })
+
+    it('should detect dash-separated digits as contract number prefix', () => {
+      const result = tenfastLeaseSearchAdapter.analyzeSearchTermForApi('924-7')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[externalId]',
+          filterValue: '924-7',
+        },
+      ])
+    })
+
+    it('should detect lease ID containing /', () => {
+      const result =
+        tenfastLeaseSearchAdapter.analyzeSearchTermForApi('206-706-00-0005/04')
+      expect(result).toEqual([
+        {
+          filterKey: 'filter[externalId]',
+          filterValue: '206-706-00-0005/04',
+        },
+      ])
+    })
+
+    it('should default letters-only to address search', () => {
+      expect(tenfastLeaseSearchAdapter.analyzeSearchTermForApi('Anna')).toEqual(
+        [
+          {
+            filterKey: 'filter[hyresobjekt][postadress]',
+            filterValue: 'Anna',
+          },
+        ]
+      )
+    })
+
+    it('should default mixed alphanumeric to address search', () => {
+      expect(
+        tenfastLeaseSearchAdapter.analyzeSearchTermForApi('Kungsgatan 12')
+      ).toEqual([
+        {
+          filterKey: 'filter[hyresobjekt][postadress]',
+          filterValue: 'Kungsgatan 12',
+        },
+      ])
+    })
+
+    it('should return empty array for empty string', () => {
+      expect(tenfastLeaseSearchAdapter.analyzeSearchTermForApi('')).toEqual([])
+    })
+  })
+
+  describe('buildTenfastQueryParams', () => {
+    it('should always include isArchived filter', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[isArchived]')).toBe('false')
+      expect(params.get('populate')).toBe('hyresgaster,hyresobjekt')
+    })
+
+    it('should include date filters as comma-separated range params', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        startDateFrom: '2024-01-01',
+        startDateTo: '2024-12-31',
+        endDateFrom: '2025-01-01',
+        endDateTo: '2025-06-30',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[startDate]')).toBe('2024-01-01,2024-12-31')
+      expect(params.get('filter[endDate]')).toBe('2025-01-01,2025-06-30')
+    })
+
+    it('should handle startDateFrom only (open-ended range)', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        startDateFrom: '2024-01-01',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[startDate]')).toBe('2024-01-01,')
+    })
+
+    it('should handle startDateTo only (open-ended range)', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        startDateTo: '2024-12-31',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[startDate]')).toBe(',2024-12-31')
+    })
+
+    it('should pass consumer limit to Tenfast', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        page: 3,
+        limit: 10,
+      })
+
+      expect(params.get('limit')).toBe('10')
+    })
+
+    it('should not add any filter when free-text search is a name (use explicit name param)', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        q: 'Anna',
+        page: 1,
+        limit: 20,
+      })
+
+      // 'Anna' is not a recognized pattern — no filter added
+      expect(params.get('filter[hyresgaster][displayName]')).toBeNull()
+      expect(params.get('filter[hyresobjekt][displayName]')).toBeNull()
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should push explicit name param to hyresgaster displayName filter', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        name: 'Anna',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[hyresgaster][displayName]')).toBe('Anna')
+      expect(params.get('filter[hyresobjekt][displayName]')).toBeNull()
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should push explicit address param to hyresobjekt postadress filter', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        address: 'Kungsgatan 12',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[hyresobjekt][postadress]')).toBe(
+        'Kungsgatan 12'
+      )
+      expect(params.get('filter[hyresgaster][displayName]')).toBeNull()
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should support both name and address params simultaneously', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        name: 'Anna',
+        address: 'Kungsgatan',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[hyresgaster][displayName]')).toBe('Anna')
+      expect(params.get('filter[hyresobjekt][postadress]')).toBe('Kungsgatan')
+    })
+
+    it('should include limit when free-text search is a contact code', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        q: 'P965339',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[hyresgaster][externalId]')).toBe('P965339')
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should include limit when free-text search is a personnummer', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        q: '198501011234',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[hyresgaster][idbeteckning]')).toBe(
+        '198501011234'
+      )
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should include limit when free-text search is a lease ID', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        q: '206-706-00-0005/04',
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[externalId]')).toBe('206-706-00-0005/04')
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should not push district filter to Tenfast API (districts are Xpand-only)', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        districtNames: ['Distrikt Norr'],
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[hyresobjekt][stadsdel]')).toBeNull()
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should include limit when status maps to a known stage', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        status: ['current'],
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[stage]')).toBe('active')
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should include limit when objectType filter uses comma-separated values', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        objectType: ['bostad', 'parkering'],
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[hyresobjekt][typ]')).toBe('bostad,parkering')
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should include limit when single objectType is used', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        objectType: ['bostad'],
+        page: 2,
+        limit: 10,
+      })
+
+      expect(params.get('filter[hyresobjekt][typ]')).toBe('bostad')
+      expect(params.get('limit')).toBe('10')
+    })
+
+    it('should push stage filter for aboutToEnd status', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        status: ['abouttoend'],
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[stage]')).toBe('terminationScheduled')
+      expect(params.get('limit')).toBe('20')
+    })
+
+    it('should push stage filter for current status (maps to active)', () => {
+      const params = tenfastLeaseSearchAdapter.buildTenfastQueryParams({
+        status: ['current'],
+        page: 1,
+        limit: 20,
+      })
+
+      expect(params.get('filter[stage]')).toBe('active')
+      expect(params.get('limit')).toBe('20')
+    })
+  })
+
+  describe('fetchLeases', () => {
+    it('should return leases on success', async () => {
+      const leases = [buildLeaseWithTenants()]
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: leases,
+          next: null,
+          totalCount: 1,
+        },
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 1,
+        limit: 20,
+      })
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.leases).toHaveLength(1)
+        expect(result.data.totalCount).toBe(1)
+      }
+    })
+
+    it('should pass date filters as comma-separated range to the API URL', async () => {
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: [],
+          next: null,
+          totalCount: 0,
+        },
+      } as any)
+
+      await tenfastLeaseSearchAdapter.fetchLeases({
+        startDateFrom: '2024-01-01',
+        startDateTo: '2024-12-31',
+        page: 1,
+        limit: 20,
+      })
+
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[startDate]=2024-01-01,2024-12-31')
+    })
+
+    it('should return error on non-200 status', async () => {
+      mockedRequest.mockResolvedValueOnce({
+        status: 500,
+        data: { error: 'Internal Server Error' },
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 1,
+        limit: 20,
+      })
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+
+    it('should return parse error for invalid data', async () => {
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: [{ invalid: 'data' }],
+          next: null,
+          totalCount: 1,
+        },
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 1,
+        limit: 20,
+      })
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('could-not-parse-leases')
+      }
+    })
+
+    it('should skip forward through cursors to reach requested page', async () => {
+      const page1Leases = [
+        buildLeaseWithTenants({ externalId: 'lease-1' }),
+        buildLeaseWithTenants({ externalId: 'lease-2' }),
+      ]
+      const page2Leases = [buildLeaseWithTenants({ externalId: 'lease-3' })]
+
+      mockedRequest
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page1Leases,
+            next: 'cursor-abc',
+            totalCount: 3,
+          },
+        } as any)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page2Leases,
+            next: null,
+            totalCount: 3,
+          },
+        } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 2,
+        limit: 2,
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        // Should only return the target page's records, not all pages
+        expect(result.data.leases).toHaveLength(1)
+        expect(result.data.leases[0].externalId).toBe('lease-3')
+        expect(result.data.totalCount).toBe(3)
+      }
+
+      // Two API calls: page 1 (skip), page 2 (target)
+      expect(mockedRequest).toHaveBeenCalledTimes(2)
+      const secondCallUrl = mockedRequest.mock.calls[1][0].url as string
+      expect(secondCallUrl).toContain('paginate=cursor-abc')
+    })
+
+    it('should stop looping when there is no next cursor', async () => {
+      const leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: leases,
+          next: null,
+          totalCount: 1,
+        },
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 1,
+        limit: 20,
+      })
+
+      expect(result.ok).toBe(true)
+      expect(mockedRequest).toHaveBeenCalledTimes(1)
+    })
+
+    it('should return error if a mid-pagination request fails', async () => {
+      const page1Leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
+
+      mockedRequest
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page1Leases,
+            next: 'cursor-abc',
+            totalCount: 3,
+          },
+        } as any)
+        .mockResolvedValueOnce({
+          status: 500,
+          data: { error: 'Server error' },
+        } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 2,
+        limit: 1,
+      })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.err).toBe('unknown')
+      }
+    })
+
+    it('should return empty when requested page is beyond available data', async () => {
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: [buildLeaseWithTenants({ externalId: 'lease-1' })],
+          next: null,
+          totalCount: 1,
+        },
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.fetchLeases({
+        page: 5,
+        limit: 20,
+      })
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.data.leases).toHaveLength(0)
+        expect(result.data.totalCount).toBe(1)
+      }
+      // Only one call — cursor ran out before reaching page 5
+      expect(mockedRequest).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('searchLeases', () => {
+    const mockCtx = {
+      query: { page: '1', limit: '20' },
+      request: {
+        URL: new URL('http://localhost:5020/api/leases/search'),
+      },
+    } as any
+
+    const setupMockLeases = (
+      leases: TenfastLease[],
+      options?: { next?: string; totalCount?: number }
+    ) => {
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: leases,
+          next: options?.next ?? null,
+          totalCount: options?.totalCount ?? leases.length,
+        },
+      } as any)
+    }
+
+    it('should return paginated results', async () => {
+      const leases = [
+        buildLeaseWithTenants({ externalId: 'lease-1' }),
+        buildLeaseWithTenants({ externalId: 'lease-2' }),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(2)
+      expect(result._meta.totalRecords).toBe(2)
+      expect(result._meta.page).toBe(1)
+    })
+
+    it('should push digit search to API as idBeteckning filter', async () => {
+      const leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
+      setupMockLeases(leases)
+
+      await tenfastLeaseSearchAdapter.searchLeases(
+        { q: '0022', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // Verify the API was called with idbeteckning filter
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[hyresgaster][idbeteckning]=0022')
+    })
+
+    it('should search by address when q is a name', async () => {
+      const leases = [buildLeaseWithTenants({ externalId: 'lease-1' })]
+      setupMockLeases(leases)
+
+      await tenfastLeaseSearchAdapter.searchLeases(
+        { q: 'Anna', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // q='Anna' defaults to address search
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[hyresobjekt][postadress]=Anna')
+    })
+
+    it('should push explicit name param to API as displayName filter', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          { name: { first: 'Anna', last: 'Andersson' } }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      await tenfastLeaseSearchAdapter.searchLeases(
+        { name: 'Anna', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[hyresgaster][displayName]=Anna')
+    })
+
+    it('should push contact code search to API filter', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          { externalId: 'P965339' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { q: 'P965339', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // Verify the API was called with contact code filter
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[hyresgaster][externalId]=P965339')
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-1')
+    })
+
+    it('should push personnummer search to API filter', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          { idbeteckning: '198501011234' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { q: '850101-1234', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // Verify the API was called with idbeteckning filter (keeps original format with dash)
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain(
+        'filter[hyresgaster][idbeteckning]=850101-1234'
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-1')
+    })
+
+    it('should search by address when q is an address string', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          {},
+          { postadress: 'Kungsgatan 12' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      await tenfastLeaseSearchAdapter.searchLeases(
+        { q: 'Kungsgatan 12', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // q='Kungsgatan 12' defaults to address search
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain(
+        'filter[hyresobjekt][postadress]=Kungsgatan+12'
+      )
+    })
+
+    it('should push explicit address param to API as postadress filter', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          {},
+          { postadress: 'Kungsgatan 12' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      await tenfastLeaseSearchAdapter.searchLeases(
+        { address: 'Kungsgatan 12', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[hyresobjekt][postadress]=Kungsgatan')
+    })
+
+    it('should filter by status (current) via API stage filter', async () => {
+      // 'current' maps to stage 'active' and is pushed to the API.
+      // The mock simulates the API returning only matching leases.
+      const leases = [
+        buildLeaseWithTenants({
+          externalId: 'current-lease',
+          startDate: new Date('2020-01-01'),
+          endDate: null,
+        }),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { status: ['current'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // Verify the API was called with stage=active
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[stage]=active')
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('current-lease')
+    })
+
+    it('should filter by status (upcoming) via API stage filter', async () => {
+      const leases = [
+        buildLeaseWithTenants({
+          externalId: 'upcoming-lease',
+          startDate: new Date('2027-01-01'),
+          endDate: null,
+        }),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { status: ['upcoming'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // Verify the API was called with stage=upcoming
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[stage]=upcoming')
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('upcoming-lease')
+    })
+
+    it('should pass date filters as comma-separated range to Tenfast API', async () => {
+      const leases = [
+        buildLeaseWithTenants({
+          externalId: 'lease-2024',
+          startDate: new Date('2024-06-01'),
+        }),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          startDateFrom: '2024-01-01',
+          startDateTo: '2024-12-31',
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      // Verify the API was called with comma-separated date range
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[startDate]=2024-01-01,2024-12-31')
+
+      // The API returns pre-filtered results
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-2024')
+    })
+
+    it('should sort by leaseStartDate descending by default', async () => {
+      const leases = [
+        buildLeaseWithTenants({
+          externalId: 'older',
+          startDate: new Date('2020-01-01'),
+        }),
+        buildLeaseWithTenants({
+          externalId: 'newer',
+          startDate: new Date('2024-01-01'),
+        }),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content[0].leaseId).toBe('newer')
+      expect(result.content[1].leaseId).toBe('older')
+    })
+
+    it('should sort ascending when specified', async () => {
+      const leases = [
+        buildLeaseWithTenants({
+          externalId: 'older',
+          startDate: new Date('2020-01-01'),
+        }),
+        buildLeaseWithTenants({
+          externalId: 'newer',
+          startDate: new Date('2024-01-01'),
+        }),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { sortBy: 'leaseStartDate', sortOrder: 'asc', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content[0].leaseId).toBe('older')
+      expect(result.content[1].leaseId).toBe('newer')
+    })
+
+    it('should paginate results correctly', async () => {
+      const page1Leases = Array.from({ length: 2 }, (_, i) =>
+        buildLeaseWithTenants({
+          externalId: `lease-${i}`,
+          startDate: new Date(`202${i}-01-01`),
+        })
+      )
+      const page2Leases = Array.from({ length: 2 }, (_, i) =>
+        buildLeaseWithTenants({
+          externalId: `lease-${i + 2}`,
+          startDate: new Date(`202${i + 2}-01-01`),
+        })
+      )
+
+      // Page 1 (skipped), then page 2 (target)
+      mockedRequest
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page1Leases,
+            next: 'cursor-page2',
+            totalCount: 5,
+          },
+        } as any)
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: page2Leases,
+            next: 'cursor-page3',
+            totalCount: 5,
+          },
+        } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { page: 2, limit: 2 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(2)
+      expect(result._meta.totalRecords).toBe(5)
+      expect(result._meta.page).toBe(2)
+      expect(result._meta.limit).toBe(2)
+      expect(mockedRequest).toHaveBeenCalledTimes(2)
+    })
+
+    it('should transform tenants to contacts in results', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          {
+            displayName: 'Anna Andersson',
+            externalId: 'P965339',
+            phone: '0701234567',
+          }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content[0].contacts).toHaveLength(1)
+      expect(result.content[0].contacts[0].contactCode).toBe('P965339')
+      expect(result.content[0].contacts[0].name).toBe('Anna Andersson')
+    })
+
+    it('should include address from rental object', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'lease-1' },
+          {},
+          { postadress: 'Kungsgatan 12' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content[0].address).toBe('Kungsgatan 12')
+    })
+
+    it('should throw error when Tenfast request fails', async () => {
+      mockedRequest.mockResolvedValueOnce({
+        status: 500,
+        data: { error: 'Internal Server Error' },
+      } as any)
+
+      await expect(
+        tenfastLeaseSearchAdapter.searchLeases({ page: 1, limit: 20 }, mockCtx)
+      ).rejects.toThrow('Failed to fetch leases from Tenfast')
+    })
+
+    it('should filter by single object type via API', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'bostad-lease' },
+          {},
+          { subType: 'bostad' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { objectType: ['bostad'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // Verify the API was called with objectType filter
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[hyresobjekt][typ]=bostad')
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('bostad-lease')
+    })
+
+    it('should push multiple object types as comma-separated to API', async () => {
+      const leases = [
+        buildLeaseWithTenants(
+          { externalId: 'bostad-lease' },
+          {},
+          { subType: 'bostad' }
+        ),
+        buildLeaseWithTenants(
+          { externalId: 'parkering-lease' },
+          {},
+          { subType: 'parkering' }
+        ),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { objectType: ['bostad', 'parkering'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      // Verify comma-separated filter was pushed to API
+      const calledUrl = mockedRequest.mock.calls[0][0].url as string
+      expect(calledUrl).toContain('filter[hyresobjekt][typ]=bostad,parkering')
+
+      expect(result.content).toHaveLength(2)
+    })
+
+    it('should return all leases when no filters are applied', async () => {
+      const leases = [
+        buildLeaseWithTenants({ externalId: 'lease-1' }),
+        buildLeaseWithTenants({ externalId: 'lease-2' }),
+        buildLeaseWithTenants({ externalId: 'lease-3' }),
+      ]
+      setupMockLeases(leases)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(3)
+      expect(result._meta.totalRecords).toBe(3)
+    })
+
+    it('should filter by districtNames via batch-get', async () => {
+      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+        'ROC-500',
+      ])
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-500',
+            avtal: [
+              {
+                externalId: 'lease-dist-1',
+                startDate: '2024-01-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-500',
+                      displayName: 'District Tenant',
+                      idbeteckning: '199001011234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-500', postadress: 'Distriktsgatan 1' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { districtNames: ['Distrikt Norr'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByDistrictNames).toHaveBeenCalledWith([
+        'Distrikt Norr',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-dist-1')
+    })
+
+    it('should filter by buildingManager via batch-get', async () => {
+      mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
+        'ROC-001',
+        'ROC-002',
+      ])
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-001',
+            avtal: [
+              {
+                externalId: 'lease-1',
+                startDate: '2024-01-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-001',
+                      displayName: 'Anna Tenant',
+                      idbeteckning: '199001011234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-001', postadress: 'Testgatan 1' },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            externalId: 'ROC-002',
+            avtal: [
+              {
+                externalId: 'lease-2',
+                startDate: '2024-01-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-002',
+                      displayName: 'Bob Tenant',
+                      idbeteckning: '199002021234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-002', postadress: 'Testgatan 2' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { buildingManager: ['Anna Andersson'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByBuildingManager).toHaveBeenCalledWith([
+        'Anna Andersson',
+      ])
+      expect(result.content).toHaveLength(2)
+      expect(result._meta.totalRecords).toBe(2)
+    })
+
+    it('should return empty when buildingManager matches no rental objects', async () => {
+      mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { buildingManager: ['Unknown Manager'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(0)
+      expect(result._meta.totalRecords).toBe(0)
+      expect(mockedRequest).not.toHaveBeenCalled()
+    })
+
+    it('should filter by buildingCodes via batch-get', async () => {
+      mockedGetRentalObjectCodesByBuildingCodes.mockResolvedValueOnce([
+        'ROC-100',
+      ])
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-100',
+            avtal: [
+              {
+                externalId: 'lease-bc-1',
+                startDate: '2024-03-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-100',
+                      displayName: 'BC Tenant',
+                      idbeteckning: '199003031234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-100', postadress: 'Bygggatan 5' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { buildingCodes: ['BYG-001'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByBuildingCodes).toHaveBeenCalledWith([
+        'BYG-001',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-bc-1')
+    })
+
+    it('should filter by areaCodes via batch-get', async () => {
+      mockedGetRentalObjectCodesByAreaCodes.mockResolvedValueOnce(['ROC-200'])
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-200',
+            avtal: [
+              {
+                externalId: 'lease-ac-1',
+                startDate: '2024-04-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-200',
+                      displayName: 'AC Tenant',
+                      idbeteckning: '199004041234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-200', postadress: 'Områdesgatan 3' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { areaCodes: ['AREA-01'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByAreaCodes).toHaveBeenCalledWith([
+        'AREA-01',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-ac-1')
+    })
+
+    it('should intersect codes when multiple Xpand filters are active', async () => {
+      // buildingManager returns ROC-001, ROC-002
+      mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
+        'ROC-001',
+        'ROC-002',
+      ])
+      // buildingCodes returns ROC-002, ROC-003
+      mockedGetRentalObjectCodesByBuildingCodes.mockResolvedValueOnce([
+        'ROC-002',
+        'ROC-003',
+      ])
+
+      // Only ROC-002 is in the intersection
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-002',
+            avtal: [
+              {
+                externalId: 'lease-intersect',
+                startDate: '2024-05-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-300',
+                      displayName: 'Intersect Tenant',
+                      idbeteckning: '199005051234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-002', postadress: 'Korsningen 1' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          buildingManager: ['Anna Andersson'],
+          buildingCodes: ['BYG-002'],
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByBuildingManager).toHaveBeenCalledWith([
+        'Anna Andersson',
+      ])
+      expect(mockedGetRentalObjectCodesByBuildingCodes).toHaveBeenCalledWith([
+        'BYG-002',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-intersect')
+    })
+
+    it('should return empty when intersected codes are empty', async () => {
+      mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
+        'ROC-001',
+      ])
+      mockedGetRentalObjectCodesByBuildingCodes.mockResolvedValueOnce([
+        'ROC-999',
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          buildingManager: ['Anna Andersson'],
+          buildingCodes: ['BYG-999'],
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(0)
+      expect(result._meta.totalRecords).toBe(0)
+      // No batch-get call since intersection is empty
+      expect(mockedRequest).not.toHaveBeenCalled()
+    })
+  })
+})

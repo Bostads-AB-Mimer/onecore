@@ -283,6 +283,262 @@ describe(adapter.getInvoicePaymentEvents, () => {
   })
 })
 
+describe(adapter.getPaymentsSince, () => {
+  const makeArTransactionEdge = (overrides?: {
+    sourceCode?: string
+    postedDate?: string
+    cursor?: string
+    invoiceNumber?: string | null
+    extIdentifier?: string | null
+  }) => {
+    const sourceCode = overrides?.sourceCode ?? 'OCR'
+    return {
+      cursor: overrides?.cursor ?? 'cursor-1',
+      node: {
+        matchId: 42,
+        invoiceNumber:
+          overrides?.invoiceNumber !== undefined
+            ? overrides.invoiceNumber
+            : '55123456',
+        extIdentifier:
+          overrides?.extIdentifier !== undefined
+            ? overrides.extIdentifier
+            : '55123456',
+        amount: '1000.00',
+        text: 'Hyra',
+        paymentDate: '2026-04-01',
+        lastPaymentDate: '2026-04-01',
+        invoiceAmount: '1000.00',
+        invoiceRemaining: '0.00',
+        transactionHeader: {
+          transactionNumber: 1001,
+          postedDate: overrides?.postedDate ?? '2026-04-02',
+          transactionSource: {
+            dbId: 5205,
+            code: sourceCode,
+            description: 'OCR',
+          },
+        },
+      },
+    }
+  }
+
+  it('returns empty events and null cursor when no transactions exist', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+    expect(result).toEqual({ events: [], lastCursor: null })
+  })
+
+  it('returns payment events and lastCursor', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [makeArTransactionEdge({ cursor: 'cursor-42' })],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+
+    expect(result.lastCursor).toBe('cursor-42')
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]).toMatchObject({
+      invoiceId: '55123456',
+      matchId: 42,
+      amount: 1000,
+      paymentDate: new Date('2026-04-02'),
+      transactionSourceCode: 'OCR',
+    })
+    expect(() =>
+      schemas.v1.InvoicePaymentEventSchema.array().parse(result.events)
+    ).not.toThrow()
+  })
+
+  it('uses extIdentifier as invoiceId for OCR payments', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              makeArTransactionEdge({
+                sourceCode: 'OCR',
+                invoiceNumber: 'WRONG',
+                extIdentifier: 'CORRECT-EXT',
+              }),
+            ],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+
+    expect(result.events[0].invoiceId).toBe('CORRECT-EXT')
+  })
+
+  it('uses invoiceNumber as invoiceId for BAA payments', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              makeArTransactionEdge({
+                sourceCode: 'BAA',
+                invoiceNumber: 'BAA-INV',
+                extIdentifier: 'BAA-EXT',
+              }),
+            ],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+
+    expect(result.events[0].invoiceId).toBe('BAA-INV')
+  })
+
+  it('skips BA payments with no invoice reference', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              makeArTransactionEdge({
+                sourceCode: 'BA',
+                invoiceNumber: null,
+                extIdentifier: null,
+              }),
+              makeArTransactionEdge({ sourceCode: 'OCR' }),
+            ],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0].transactionSourceCode).toBe('OCR')
+  })
+
+  it('paginates through multiple pages using cursor', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [makeArTransactionEdge({ cursor: 'page1-cursor' })],
+            pageInfo: { hasNextPage: true },
+          },
+        },
+      })
+
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [makeArTransactionEdge({ cursor: 'page2-cursor' })],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+
+    expect(result.events).toHaveLength(2)
+    expect(result.lastCursor).toBe('page2-cursor')
+  })
+
+  it('falls back to paymentDate when postedDate is absent', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [makeArTransactionEdge({ postedDate: '' })],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    const result = await adapter.getPaymentsSince('some-cursor')
+
+    expect(result.events[0].paymentDate).toEqual(new Date('2026-04-01'))
+  })
+
+  it('sends cursor as after variable', async () => {
+    let capturedBody: any
+
+    nock(origin)
+      .post(pathname, (body) => {
+        capturedBody = body
+        return true
+      })
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      })
+
+    await adapter.getPaymentsSince('saved-cursor')
+
+    expect(capturedBody.variables.after).toBe('saved-cursor')
+  })
+})
+
+describe(adapter.getLatestPaymentCursor, () => {
+  it('returns the cursor of the latest payment transaction', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [{ cursor: 'latest-cursor-123' }],
+          },
+        },
+      })
+
+    const result = await adapter.getLatestPaymentCursor()
+    expect(result).toBe('latest-cursor-123')
+  })
+
+  it('returns null when there are no payment transactions', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [],
+          },
+        },
+      })
+
+    const result = await adapter.getLatestPaymentCursor()
+    expect(result).toBeNull()
+  })
+})
+
 describe(adapter.getInvoiceMatchId, () => {
   it('returns null when matchId is not found', async () => {
     nock(origin)

@@ -1,5 +1,6 @@
 import { Lease, LeaseStatus } from '@onecore/types'
 import { calculateRentInfoFromTotal } from './rent-calculation'
+import { parseLeaseType } from './lease-type-parser'
 
 const calculateStatus = (
   lastDebitDateString: string,
@@ -36,7 +37,7 @@ const toLease = (
     leaseId: row.leaseId,
     leaseNumber: leaseNumber,
     rentalPropertyId: rentalPropertyId,
-    type: row.leaseType,
+    type: parseLeaseType(row.leaseType),
     leaseStartDate: row.fromDate,
     leaseEndDate: row.toDate,
     status: calculateStatus(row.lastDebitDate, row.fromDate),
@@ -44,6 +45,7 @@ const toLease = (
     tenants,
     rentalProperty: undefined,
     rentInfo: calculateRentInfoFromTotal(row.totalYearRent),
+    rentRows: [],
     address: undefined,
     noticeGivenBy: row.noticeGivenBy,
     noticeDate: row.noticeDate,

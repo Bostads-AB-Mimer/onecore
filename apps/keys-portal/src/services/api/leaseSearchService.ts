@@ -41,7 +41,7 @@ export const equalPnr = (a?: string, b?: string) =>
 
 // ---------- queries ----------
 export async function fetchLeasesByRentalPropertyId(
-  rentalPropertyId: string,
+  rentalObjectCode: string,
   {
     includeUpcomingLeases = true,
     includeTerminatedLeases = true,
@@ -53,10 +53,10 @@ export async function fetchLeasesByRentalPropertyId(
   } = {}
 ): Promise<Lease[]> {
   const { data, error } = await GET(
-    '/leases/by-rental-property-id/{rentalPropertyId}',
+    '/leases/by-rental-object-code/{rentalObjectCode}',
     {
       params: {
-        path: { rentalPropertyId },
+        path: { rentalObjectCode },
         query: {
           includeUpcomingLeases,
           includeTerminatedLeases,

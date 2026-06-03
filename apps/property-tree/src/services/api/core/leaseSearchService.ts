@@ -1,5 +1,5 @@
 import { GET } from './baseApi'
-import type { components, paths } from './generated/api-types'
+import type { components } from './generated/api-types'
 
 export type LeaseSearchResult = components['schemas']['LeaseSearchResult']
 export type PaginationMeta = components['schemas']['PaginationMeta']
@@ -11,11 +11,40 @@ export type PaginatedResponse<T> = {
   _links: PaginationLinks[]
 }
 
-// Derived from generated types — single source of truth
-type SearchQuery = NonNullable<
-  paths['/leases/search']['get']['parameters']['query']
->
-export type LeaseSearchQueryParams = Omit<SearchQuery, 'page' | 'limit'>
+export type LeaseStatusFilter =
+  | 'current'
+  | 'upcoming'
+  | 'abouttoend'
+  | 'ended'
+  | 'preliminaryterminated'
+  | 'pendingsignature'
+  | 'notsent'
+
+export type LeaseSearchQueryParams = {
+  q?: string
+  name?: string
+  objectType?: string[]
+  status?: LeaseStatusFilter[]
+  leaseType?: string[]
+  parkingSpaceType?: string[]
+  startDateFrom?: string
+  startDateTo?: string
+  endDateFrom?: string
+  endDateTo?: string
+  property?: string[]
+  buildingCodes?: string[]
+  areaCodes?: string[]
+  districtNames?: string[]
+  buildingManager?: string[]
+  sortBy?:
+    | 'leaseStartDate'
+    | 'lastDebitDate'
+    | 'leaseId'
+    | 'address'
+    | 'objectType'
+    | 'rentalObjectCode'
+  sortOrder?: 'asc' | 'desc'
+}
 
 export type ContactInfo = {
   contactCode: string
@@ -41,16 +70,10 @@ async function search(
 
   if (error) throw error
 
-  const response = data as {
-    content?: LeaseSearchResult[]
-    _meta?: PaginationMeta
-    _links?: PaginationLinks[]
-  }
-
   return {
-    content: response.content ?? [],
-    _meta: response._meta!,
-    _links: response._links ?? [],
+    content: data.content ?? [],
+    _meta: data._meta!,
+    _links: data._links ?? [],
   }
 }
 
@@ -65,8 +88,11 @@ async function getBuildingManagers(): Promise<BuildingManager[]> {
 
   if (error) throw error
 
-  const response = data as { content?: BuildingManager[] }
-  return response.content ?? []
+  return (data.content ?? []).map((bm) => ({
+    code: bm.code ?? '',
+    name: bm.name ?? '',
+    district: bm.district ?? '',
+  }))
 }
 
 export type ParkingSpaceType = {
@@ -103,18 +129,41 @@ async function exportLeasesToExcel(
   params: LeaseSearchQueryParams
 ): Promise<Blob> {
   const { data, error } = await GET('/leases/export', {
-    params: { query: params },
+    params: {
+      query: params,
+    },
     parseAs: 'blob',
   })
 
   if (error) throw error
-  return data as Blob
+
+  return data
+}
+
+async function getContactsByCodes(codes: string[]): Promise<ContactInfo[]> {
+  if (codes.length === 0) return []
+
+  const { data, error } = await GET('/v1/contacts/by-codes', {
+    params: {
+      query: { codes: codes.join(',') },
+    },
+  })
+
+  if (error) return []
+
+  return (data.content ?? []).map((c) => ({
+    contactCode: c.contactCode,
+    name: 'personal' in c ? c.personal.fullName : c.organisation.name,
+    email: c.communication.emailAddresses[0]?.emailAddress ?? null,
+    phone: c.communication.phoneNumbers[0]?.phoneNumber ?? null,
+  }))
 }
 
 export const leaseSearchService = {
   search,
   getBuildingManagers,
   getParkingSpaceTypes,
+  getContactsByCodes,
   getContactsByFilters,
   exportLeasesToExcel,
 }

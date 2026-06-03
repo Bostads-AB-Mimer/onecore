@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { LeaseStatus, Tenant } from '@onecore/types'
+import { LeaseStatus, LeaseType, Tenant } from '@onecore/types'
 import { components } from '../../src/adapters/work-order-adapter/generated/api-types'
 
 export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
@@ -27,12 +27,6 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
   leaseIds: [`987-654-321/${sequence}`, `123-456-789/${sequence}`],
   currentHousingContract: {
     leaseId: `123-456-789/${sequence}`,
-    address: {
-      street: 'Gatustigen',
-      number: '123',
-      city: 'Västerås',
-      postalCode: '12345',
-    },
     approvalDate: undefined,
     contractDate: undefined,
     lastDebitDate: undefined,
@@ -43,34 +37,17 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
     noticeGivenBy: 'tenant',
     noticeTimeTenant: '',
     preferredMoveOutDate: undefined,
-    rentalProperty: undefined,
     rentalPropertyId: '123-456-789',
-    rentInfo: {
-      currentRent: {
-        currentRent: 123,
-        additionalChargeAmount: undefined,
-        additionalChargeDescription: undefined,
-        rentEndDate: undefined,
-        rentStartDate: undefined,
-        vat: 0,
-      },
-      futureRents: undefined,
-    },
+    rentRows: [],
     status: LeaseStatus.Current,
     tenantContactIds: [`P${158769 + sequence}`],
     tenants: undefined,
     terminationDate: undefined,
-    type: 'Bostadskontrakt',
+    type: LeaseType.HousingContract,
   },
   parkingSpaceContracts: [
     {
       leaseId: `987-654-321/${sequence}`,
-      address: {
-        street: 'Gatustigen',
-        number: '123',
-        city: 'Västerås',
-        postalCode: '12345',
-      },
       approvalDate: undefined,
       contractDate: undefined,
       lastDebitDate: undefined,
@@ -81,35 +58,18 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
       noticeGivenBy: 'tenant',
       noticeTimeTenant: '',
       preferredMoveOutDate: undefined,
-      rentalProperty: undefined,
       rentalPropertyId: '123-456-789',
-      rentInfo: {
-        currentRent: {
-          currentRent: 123,
-          additionalChargeAmount: undefined,
-          additionalChargeDescription: undefined,
-          rentEndDate: undefined,
-          rentStartDate: undefined,
-          vat: 0,
-        },
-        futureRents: undefined,
-      },
+      rentRows: [],
       status: LeaseStatus.Current,
       tenantContactIds: [`P${158769 + sequence}`],
       tenants: undefined,
       terminationDate: undefined,
-      type: 'P-Platskontrakt',
+      type: LeaseType.ParkingSpaceContract,
     },
   ],
   housingContracts: [
     {
       leaseId: `123-456-789/${sequence}`,
-      address: {
-        street: 'Gatustigen',
-        number: '123',
-        city: 'Västerås',
-        postalCode: '12345',
-      },
       approvalDate: undefined,
       contractDate: undefined,
       lastDebitDate: undefined,
@@ -120,27 +80,20 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
       noticeGivenBy: 'tenant',
       noticeTimeTenant: '',
       preferredMoveOutDate: undefined,
-      rentalProperty: undefined,
       rentalPropertyId: '123-456-789',
-      rentInfo: {
-        currentRent: {
-          currentRent: 123,
-          additionalChargeAmount: undefined,
-          additionalChargeDescription: undefined,
-          rentEndDate: undefined,
-          rentStartDate: undefined,
-          vat: 0,
-        },
-        futureRents: undefined,
-      },
+      rentRows: [],
       status: LeaseStatus.Current,
       tenantContactIds: [`P${158769 + sequence}`],
       tenants: undefined,
       terminationDate: undefined,
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
     },
   ],
   isAboutToLeave: false,
+  protectedIdentity: false,
+  deceased: false,
+  emigrated: false,
+  noAdvertising: false,
 }))
 
 export const WorkOrderTenantFactory = Factory.define<

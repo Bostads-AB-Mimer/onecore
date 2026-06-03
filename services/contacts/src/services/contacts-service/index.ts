@@ -2,15 +2,18 @@ import z from 'zod'
 import { OkapiRouter } from 'koa-okapi-router'
 import {
   generateRouteMetadata,
+  makeSuccessResponseBody,
   buildPaginatedResponse,
   parsePaginationParams,
 } from '@onecore/utilities'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
 import {
   ContactSchema,
+  ErrorResponseBodySchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
+  SyncContactsResponseBodySchema,
 } from './schema'
 import { paginatedResponseSchema } from '@onecore/types'
 
@@ -76,6 +79,114 @@ export const routes = (
           ...(ctx.query.type ? { type: String(ctx.query.type) } : {}),
         },
       })
+    }
+  )
+
+  router.get(
+    '/contacts/sync',
+    {
+      summary: 'Get contacts updated since a given timestamp',
+      description:
+        'Queries cmlog in Xpand for changes since the given timestamp. If no timestamp is provided, returns all matching rows.',
+      tags: ['Contacts'],
+      query: {
+        since: {
+          description: 'ISO 8601 timestamp to query changes from',
+          schema: z.optional(z.string()),
+        },
+      },
+      response: {
+        200: SyncContactsResponseBodySchema,
+        400: ErrorResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const sinceParam = ctx.query.since as string | undefined
+      const since = sinceParam ? new Date(sinceParam) : null
+
+      if (since && isNaN(since.getTime())) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid since parameter, expected ISO 8601 date',
+          ...metadata,
+        }
+        return
+      }
+
+      const changedCodes =
+        await contactsRepository.getChangedContactCodes(since)
+      const fetchedContacts = await contactsRepository.getByContactCodes(
+        changedCodes.map((c) => c.contactCode)
+      )
+      const contactByCode = new Map(
+        fetchedContacts.map((c) => [c.contactCode, c])
+      )
+
+      const contacts = changedCodes
+        .map((c) => {
+          const contact = contactByCode.get(c.contactCode)
+          return contact
+            ? { contact, timestamp: c.timestamp.toISOString() }
+            : null
+        })
+        .filter(
+          (
+            c
+          ): c is {
+            contact: (typeof fetchedContacts)[number]
+            timestamp: string
+          } => c !== null
+        )
+
+      ctx.status = 200
+      ctx.body = {
+        content: { contacts },
+        ...metadata,
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/by-codes',
+    {
+      summary: 'Get multiple contacts by their contact codes',
+      description:
+        'Fetch a batch of contacts by providing a comma-separated list of contact codes.',
+      tags: ['Contacts'],
+      query: {
+        codes: {
+          description: 'Comma-separated list of contact codes',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactsResponseBodySchema,
+        400: ErrorResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const codesParam = ctx.query.codes
+
+      const codes = codesParam
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean)
+
+      if (codes.length === 0) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'No valid contact codes provided',
+          ...metadata,
+        }
+        return
+      }
+
+      const contacts = await contactsRepository.getByContactCodes(codes)
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ contacts }, metadata)
     }
   )
 
