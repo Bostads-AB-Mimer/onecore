@@ -18,104 +18,115 @@ import {
 import {
   getPeriodInformationFromDateStrings,
   setInvoiceRowsTaxRule,
+  uploadFile,
 } from '../common/adapters/xledger-adapter'
 import { logger } from '@onecore/utilities'
-import {
-  getInvoicesNotExported,
-  markInvoicesAsExported,
-} from '@src/common/adapters/tenfast/tenfast-adapter'
+import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
 import config from '@src/common/config'
+
+export { markInvoicesAsExported } from '@src/common/adapters/tenfast/tenfast-adapter'
 
 /*
  *
  */
 export const exportRentalInvoicesAccounting = async (
-  companyId: string
+  companyId: string,
+  numberOfChunks: number = 1
 ): Promise<{
   invoices: InvoiceWithAccounting[]
   errors: { invoiceNumber: string; error: string }[]
 }> => {
   try {
     const errors: { invoiceNumber: string; error: string }[] = []
-    const CHUNK_SIZE = 100 // 100
-
+    const CHUNK_SIZE = 5 // 100
     const company = config.companies.find(
       (company) => company.xpandId.localeCompare(companyId) === 0
     )
+    const invoices: InvoiceWithAccounting[] = []
 
     if (!company) {
       throw new Error('Could not find company ' + companyId)
     }
 
-    const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE, company)
-    if (!invoicesResult.ok) {
-      logger.error(
-        { error: invoicesResult.err },
-        'Could not get rental invoices for export'
-      )
-      throw new Error(invoicesResult.err)
-    } else {
-      logger.info(
-        { invoicesToImport: invoicesResult.data.invoices.length },
-        'Importing invoices'
-      )
-    }
-
-    let invoices = invoicesResult.data.invoices
-    if (invoicesResult.data.errors) {
-      errors.push(...invoicesResult.data.errors)
-    }
-    const counterPartCustomers = await getCounterPartCustomers()
-
-    for (const invoice of invoices) {
-      try {
-        await enrichInvoiceWithAccounting(invoice)
-        await setInvoiceRowsTaxRule(invoice)
-      } catch (error) {
-        let message
-        if (error instanceof Error) {
-          message = error.message
-        } else {
-          message = String(error)
-        }
-        errors.push({ invoiceNumber: invoice.invoiceId, error: message })
-        continue
-      }
-
-      const counterPartCustomer = findCounterPartCustomer(
-        counterPartCustomers,
-        invoice.recipientName
-      )
-
-      if (counterPartCustomer) {
-        invoice.totalAccount = counterPartCustomer.totalAccount
-        invoice.ledgerAccount = counterPartCustomer.ledgerAccount
-        invoice.counterPartCode = counterPartCustomer.counterPartCode
+    for (let i = 0; i < numberOfChunks; i++) {
+      const invoicesResult = await getInvoicesNotExported(CHUNK_SIZE, company)
+      if (!invoicesResult.ok) {
+        logger.error(
+          { error: invoicesResult.err },
+          'Could not get rental invoices for export'
+        )
+        throw new Error(invoicesResult.err)
       } else {
-        invoice.totalAccount = TOTAL_ACCOUNT
-        invoice.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
+        logger.info(
+          { invoicesToImport: invoicesResult.data.invoices.length },
+          'Importing invoices'
+        )
       }
-    }
 
-    // Remove invoices with errors
-    if (errors && errors.length) {
-      const errorInvoiceNumbers = new Set(errors.map((e) => e.invoiceNumber))
-      invoices = invoices.filter(
-        (invoice) => !errorInvoiceNumbers.has(invoice.invoiceId)
+      let chunkInvoices = invoicesResult.data.invoices
+      if (invoicesResult.data.errors) {
+        errors.push(...invoicesResult.data.errors)
+      }
+      const counterPartCustomers = await getCounterPartCustomers()
+
+      for (const invoice of chunkInvoices) {
+        if (company.roundOffCostCode) {
+          invoice.roundOffCostCode = company.roundOffCostCode
+        }
+
+        try {
+          await enrichInvoiceWithAccounting(invoice)
+          await setInvoiceRowsTaxRule(invoice)
+        } catch (error) {
+          let message
+          if (error instanceof Error) {
+            message = error.message
+          } else {
+            message = String(error)
+          }
+          errors.push({ invoiceNumber: invoice.invoiceId, error: message })
+          continue
+        }
+
+        const counterPartCustomer = findCounterPartCustomer(
+          counterPartCustomers,
+          invoice.recipientName
+        )
+
+        if (counterPartCustomer) {
+          invoice.totalAccount = counterPartCustomer.totalAccount
+          invoice.ledgerAccount = counterPartCustomer.ledgerAccount
+          invoice.counterPartCode = counterPartCustomer.counterPartCode
+        } else {
+          invoice.totalAccount = TOTAL_ACCOUNT
+          invoice.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
+        }
+      }
+
+      // Remove invoices with errors
+      if (errors && errors.length) {
+        const errorInvoiceNumbers = new Set(errors.map((e) => e.invoiceNumber))
+        chunkInvoices = chunkInvoices.filter(
+          (invoice) => !errorInvoiceNumbers.has(invoice.invoiceId)
+        )
+      }
+
+      chunkInvoices.sort(
+        (a: InvoiceWithAccounting, b: InvoiceWithAccounting) => {
+          return (
+            a.ledgerAccount?.localeCompare(b.ledgerAccount ?? '') ||
+            a.totalAccount?.localeCompare(b.totalAccount ?? '') ||
+            dateString(a.fromDate)?.localeCompare(
+              dateString(b.fromDate) ?? ''
+            ) ||
+            dateString(a.toDate)?.localeCompare(dateString(b.toDate) ?? '') ||
+            0
+          )
+        }
       )
+
+      invoices.push(...chunkInvoices)
     }
-
-    invoices.sort((a: InvoiceWithAccounting, b: InvoiceWithAccounting) => {
-      return (
-        a.ledgerAccount?.localeCompare(b.ledgerAccount ?? '') ||
-        a.totalAccount?.localeCompare(b.totalAccount ?? '') ||
-        dateString(a.fromDate)?.localeCompare(dateString(b.fromDate) ?? '') ||
-        dateString(a.toDate)?.localeCompare(dateString(b.toDate) ?? '') ||
-        0
-      )
-    })
-
-    // await markInvoicesAsExported(invoices)
 
     return {
       invoices,
@@ -131,7 +142,8 @@ export const exportRentalInvoicesAccounting = async (
 export const createAccounting = async (
   invoices: InvoiceWithAccounting[]
 ): Promise<{
-  invoiceRows: ExportedInvoiceRow[]
+  aggregateAccountingCsv: string[]
+  ledgerAccountingCsv: string[]
   errors: { invoiceNumber: string; error: string }[]
 }> => {
   const invoiceRowsForExport = await getExportInvoiceRows(invoices)
@@ -152,7 +164,8 @@ export const createAccounting = async (
   console.log('---------')*/
 
   return {
-    invoiceRows: invoiceRowsForExport,
+    aggregateAccountingCsv,
+    ledgerAccountingCsv,
     errors: [],
   }
 }
@@ -213,7 +226,7 @@ const createRoundOffRow = async (
 
   return {
     account: roundOffInformation.account,
-    costCode: roundOffInformation.costCode,
+    costCode: invoice.roundOffCostCode ?? roundOffInformation.costCode,
     amount: invoice.roundoff as number,
     totalAmount: invoice.roundoff as number,
     rowTotalAmount: invoice.roundoff as number,
@@ -551,3 +564,24 @@ const convertToLedgerCsvRows = (ledgerRows: LedgerRow[]) => {
   return csvRows
 }
 //#endregion
+
+export const uploadCsvFiles = async (
+  companyId: string,
+  aggregateAccountingCsv: string[],
+  ledgerAccountingCsv: string[]
+) => {
+  const company = config.companies.find(
+    (company) => company.xpandId.localeCompare(companyId) === 0
+  )
+
+  if (!company) {
+    logger.error({ companyId }, 'Could not find company')
+    throw new Error('Could not find company ' + companyId)
+  }
+
+  const aggregateFilename = `${company.xpandId}/${Date.now()}-${company.xpandId}-aggregated.gl.csv`
+  await uploadFile(aggregateFilename, aggregateAccountingCsv.join('\n'))
+
+  const ledgerFilename = `${company.xpandId}/${Date.now()}-${company.xpandId}-ledger.gl.csv`
+  await uploadFile(ledgerFilename, ledgerAccountingCsv.join('\n'))
+}

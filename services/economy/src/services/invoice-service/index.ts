@@ -16,16 +16,27 @@ import {
   getInvoicesByContactCode as getXpandInvoicesByContactCode,
 } from './adapters/xpand-db-adapter'
 import { getInvoiceDetails } from './service'
-import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
-import { createAccounting, exportRentalInvoicesAccounting } from './servicev2'
+import {
+  createAccounting,
+  exportRentalInvoicesAccounting,
+  markInvoicesAsExported,
+  uploadCsvFiles,
+} from './servicev2'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/import/{:companyId}', async (ctx) => {
     try {
-      const invoicesResult = await exportRentalInvoicesAccounting(
-        ctx.params.companyId
+      const companyId = ctx.params.companyId
+      const invoicesResult = await exportRentalInvoicesAccounting(companyId)
+      const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
+        await createAccounting(invoicesResult.invoices)
+
+      await uploadCsvFiles(
+        companyId,
+        aggregateAccountingCsv,
+        ledgerAccountingCsv
       )
-      const exportInvoiceRows = await createAccounting(invoicesResult.invoices)
+      await markInvoicesAsExported(invoicesResult.invoices)
 
       ctx.status = 200
       ctx.body = {

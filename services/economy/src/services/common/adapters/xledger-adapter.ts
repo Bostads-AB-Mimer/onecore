@@ -1088,7 +1088,10 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     host: config.xledger.sftp.host,
     username: config.xledger.sftp.username,
     password: config.xledger.sftp.password,
+    port: config.xledger.sftp.port,
   }
+
+  console.log(config.xledger.sftp)
 
   if (config.xledger.sftp.useSshDss) {
     sftpConfig.algorithms = {
@@ -1110,6 +1113,8 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     throw new Error('Unknown file type, accepted types are .gl.csv and .ar.csv')
   }
 
+  console.log(sftpConfig, filename)
+
   const stream = new Readable()
   stream.push(csvFile)
   stream.push(null)
@@ -1119,6 +1124,7 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     await sftp.connect(sftpConfig)
     await sftp.put(stream, remoteDir + '/' + filename)
   } catch (err) {
+    logger.error({ err }, 'SFTP Error')
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
     await sftp.end()
