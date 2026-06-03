@@ -45,6 +45,22 @@ export type { NotePopoverProps } from './NotePopover'
 export { DefaultLoanHeader } from './DefaultLoanHeader'
 export type { DefaultLoanHeaderProps } from './DefaultLoanHeader'
 
+export {
+  loanableItemColumns,
+  nameColumn,
+  seqColumn,
+  flexColumn,
+  systemColumn,
+  typeColumn,
+  statusColumn,
+  disposedColumn,
+} from './loanableItemColumns'
+export type {
+  ItemColumn,
+  CardCellContext,
+  LoanableItemColumnsConfig,
+} from './loanableItemColumns'
+
 // Status Badges
 export {
   LoanStatusBadge,

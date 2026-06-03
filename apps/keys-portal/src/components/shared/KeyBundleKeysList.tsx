@@ -1,23 +1,20 @@
 import { useMemo } from 'react'
 import {
-  TableCell,
-  TableHead,
-  TableRow,
-  TableLink,
-} from '@/components/ui/table'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
   CollapsibleGroupTable,
   type TableSelectionProps,
 } from './tables/CollapsibleGroupTable'
 import { DefaultLoanHeader } from './tables/DefaultLoanHeader'
 import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
 import {
-  KeyTypeBadge,
-  KeyEventBadge,
-  PickupAvailabilityBadge,
-  getLatestActiveEvent,
-} from './tables/StatusBadges'
+  loanableItemColumns,
+  nameColumn,
+  seqColumn,
+  flexColumn,
+  systemColumn,
+  typeColumn,
+  statusColumn,
+} from './tables/loanableItemColumns'
+import { PickupAvailabilityBadge } from './tables/StatusBadges'
 import type {
   ContactV1,
   KeyDetails,
@@ -60,21 +57,6 @@ export function KeyBundleKeysList({
   onRefresh,
   onReturn,
 }: KeyBundleKeysListProps) {
-  // Build URL for key details page
-  const getKeyUrl = (key: KeyDetails) => {
-    const disposed = key.disposed ? 'true' : 'false'
-    const params = new URLSearchParams({
-      disposed,
-      editKeyId: key.id,
-    })
-    if (key.rentalObjectCode) {
-      params.set('rentalObjectCode', key.rentalObjectCode)
-    }
-    return `/Keys?${params.toString()}`
-  }
-
-  const columnCount = selectable ? 10 : 9
-
   // Calculate selection state for header checkbox
   const allKeyIds = useMemo(() => keys.map((key) => key.id), [keys])
   const selectedSet = useMemo(() => new Set(selectedKeys), [selectedKeys])
@@ -94,11 +76,42 @@ export function KeyBundleKeysList({
       }
     : undefined
 
+  const columns = loanableItemColumns({
+    checkboxWidth: 'w-[50px]',
+    selectable,
+    columns: [
+      nameColumn({ width: 'w-[18%]', label: 'Nyckelnamn' }),
+      seqColumn({ width: 'w-[6%]' }),
+      flexColumn({ width: 'w-[6%]' }),
+      systemColumn({ width: 'w-[10%]' }),
+      {
+        header: 'Tillhörighet',
+        width: 'w-[12%]',
+        key: (key) => key.keySystem?.name || '-',
+        card: () => '-',
+      },
+      typeColumn({ width: 'w-[12%]' }),
+      statusColumn,
+      {
+        header: 'Utlämning',
+        width: 'w-[18%]',
+        key: (key) => <PickupAvailabilityBadge itemData={key} />,
+        card: (card) => <PickupAvailabilityBadge itemData={card} />,
+      },
+      {
+        header: 'Hyresobjekt',
+        width: 'w-[18%]',
+        key: (key) => key.rentalObjectCode ?? '-',
+        card: () => '-',
+      },
+    ],
+  })
+
   return (
     <CollapsibleGroupTable
       items={keys}
       getItemId={(key) => key.id}
-      columnCount={columnCount}
+      columnCount={columns.columnCount}
       selection={selection}
       // Group by contact code (from latest loan - active or previous)
       // Use special marker for never-loaned keys so they get a group header too
@@ -112,76 +125,14 @@ export function KeyBundleKeysList({
         return activeLoan ? 'loaned' : 'unloaned'
       }}
       sectionOrder={['loaned', 'unloaned']}
-      renderHeader={() => (
-        <TableRow className="bg-background">
-          {selectable && (
-            <TableHead className="w-[50px] pl-8">
-              <Checkbox
-                checked={isIndeterminate ? 'indeterminate' : allSelected}
-                onCheckedChange={() => {
-                  if (allSelected) {
-                    onDeselectAll?.()
-                  } else {
-                    onSelectAll?.()
-                  }
-                }}
-              />
-            </TableHead>
-          )}
-          <TableHead className="w-[18%]">Nyckelnamn</TableHead>
-          <TableHead className="w-[6%]">Löpnr</TableHead>
-          <TableHead className="w-[6%]">Flex</TableHead>
-          <TableHead className="w-[10%]">Låssystem</TableHead>
-          <TableHead className="w-[12%]">Tillhörighet</TableHead>
-          <TableHead className="w-[12%]">Typ</TableHead>
-          <TableHead className="w-[12%]">Status</TableHead>
-          <TableHead className="w-[18%]">Utlämning</TableHead>
-          <TableHead className="w-[18%]">Hyresobjekt</TableHead>
-        </TableRow>
-      )}
-      renderRow={(key, { isSelected, onToggleSelect, indent }) => (
-        <TableRow key={key.id} className="bg-background h-12">
-          {selectable && (
-            <TableCell className={`w-[50px] ${indent ? 'pl-8' : ''}`}>
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onToggleSelect()}
-              />
-            </TableCell>
-          )}
-          <TableCell
-            className={`w-[18%] ${!selectable && indent ? 'pl-8' : ''}`}
-          >
-            <TableLink to={getKeyUrl(key)}>{key.keyName}</TableLink>
-          </TableCell>
-          <TableCell className="w-[6%]">
-            {key.keySequenceNumber ?? '-'}
-          </TableCell>
-          <TableCell className="w-[6%]">{key.flexNumber ?? '-'}</TableCell>
-          <TableCell className="w-[10%]">
-            {key.keySystem?.systemCode || '-'}
-          </TableCell>
-          <TableCell className="w-[12%]">
-            {key.keySystem?.name || '-'}
-          </TableCell>
-          <TableCell className="w-[12%]">
-            <KeyTypeBadge keyType={key.keyType} />
-          </TableCell>
-          <TableCell className="w-[12%]">
-            {getLatestActiveEvent(key) ? (
-              <KeyEventBadge event={getLatestActiveEvent(key)} />
-            ) : (
-              '-'
-            )}
-          </TableCell>
-          <TableCell className="w-[18%]">
-            <PickupAvailabilityBadge itemData={key} />
-          </TableCell>
-          <TableCell className="w-[18%]">
-            {key.rentalObjectCode ?? '-'}
-          </TableCell>
-        </TableRow>
-      )}
+      renderHeader={() =>
+        columns.header({
+          checked: isIndeterminate ? 'indeterminate' : allSelected,
+          onCheckedChange: () =>
+            allSelected ? onDeselectAll?.() : onSelectAll?.(),
+        })
+      }
+      renderRow={(key, state) => columns.keyRow(key, state)}
       renderGroupHeader={(contactCode, items) => {
         // Handle keys that have never been loaned
         if (contactCode === '__never_loaned__') {

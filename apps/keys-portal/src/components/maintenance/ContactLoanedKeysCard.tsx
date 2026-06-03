@@ -3,23 +3,18 @@ import { ChevronDown, ChevronUp, Key } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  TableCell,
-  TableHead,
-  TableRow,
-  TableLink,
-} from '@/components/ui/table'
-import {
-  CollapsibleGroupTable,
-  type RowRenderProps,
-} from '@/components/shared/tables/CollapsibleGroupTable'
+import { CollapsibleGroupTable } from '@/components/shared/tables/CollapsibleGroupTable'
 import { DefaultLoanHeader } from '@/components/shared/tables/DefaultLoanHeader'
 import {
-  KeyTypeBadge,
-  KeyEventBadge,
-  getLatestActiveEvent,
-} from '@/components/shared/tables/StatusBadges'
+  loanableItemColumns,
+  nameColumn,
+  seqColumn,
+  flexColumn,
+  systemColumn,
+  typeColumn,
+  statusColumn,
+  disposedColumn,
+} from '@/components/shared/tables/loanableItemColumns'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
 import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 import { useItemSelection } from '@/hooks/useItemSelection'
@@ -31,18 +26,27 @@ import {
 import { sortKeys } from '@/utils/sortKeys'
 import type {
   BundleWithLoanedKeysInfo,
+  Card as CardData,
   KeyDetails,
   KeyLoanWithDetails,
   KeyLoan,
 } from '@/services/types'
 
-type LoanedKeyItem = {
-  key: KeyDetails
-  bundleId: string | null
-  bundleName: string | null
-  loanId: string | null
-  loan: KeyLoan | null
-}
+type LoanedItem =
+  | {
+      itemType: 'key'
+      key: KeyDetails
+      bundleId: string | null
+      bundleName: string | null
+      loanId: string | null
+      loan: KeyLoan | null
+    }
+  | {
+      itemType: 'card'
+      card: CardData
+      loanId: string
+      loan: KeyLoan
+    }
 
 type Props = {
   contactCode: string
@@ -52,8 +56,6 @@ type Props = {
   /** Refresh the parent's loans after a return/dispose here. */
   onChanged?: () => void
 }
-
-const COLUMN_COUNT = 8
 
 export function ContactLoanedKeysCard({
   contactCode,
@@ -134,14 +136,15 @@ export function ContactLoanedKeysCard({
   }, [isOpen, hasLoaded, contactCode])
 
   // Build unified items list
-  const items = useMemo<LoanedKeyItem[]>(() => {
+  const items = useMemo<LoanedItem[]>(() => {
     // Bundled keys
-    const bundledItems: LoanedKeyItem[] = []
+    const bundledItems: LoanedItem[] = []
     const bundledKeyIds = new Set<string>()
 
     Object.entries(bundleKeys).forEach(([bundleId, keys]) => {
       sortKeys(keys).forEach((key) => {
         bundledItems.push({
+          itemType: 'key',
           key,
           bundleId,
           bundleName: bundleNameMap[bundleId] || bundleId,
@@ -153,7 +156,7 @@ export function ContactLoanedKeysCard({
     })
 
     // Unbundled keys from active loans
-    const unbundledItems: LoanedKeyItem[] = []
+    const unbundledItems: LoanedItem[] = []
     const seenKeyIds = new Set<string>()
 
     activeLoans.forEach((loan) => {
@@ -161,6 +164,7 @@ export function ContactLoanedKeysCard({
         if (!bundledKeyIds.has(key.id) && !seenKeyIds.has(key.id)) {
           seenKeyIds.add(key.id)
           unbundledItems.push({
+            itemType: 'key',
             key,
             bundleId: null,
             bundleName: null,
@@ -171,11 +175,47 @@ export function ContactLoanedKeysCard({
       })
     })
 
-    return [...bundledItems, ...unbundledItems]
+    // Cards from active loans — never bundled, grouped under their loan
+    const cardItems: LoanedItem[] = []
+    const seenCardIds = new Set<string>()
+
+    activeLoans.forEach((loan) => {
+      ;(loan.keyCardsArray || []).forEach((card) => {
+        if (!seenCardIds.has(card.cardId)) {
+          seenCardIds.add(card.cardId)
+          cardItems.push({
+            itemType: 'card',
+            card,
+            loanId: loan.id,
+            loan: loan as KeyLoan,
+          })
+        }
+      })
+    })
+
+    return [...bundledItems, ...unbundledItems, ...cardItems]
   }, [bundleKeys, bundleNameMap, activeLoans])
 
   const totalCount = items.length
-  const allKeys = useMemo(() => items.map((i) => i.key), [items])
+  const allKeys = useMemo(
+    () => items.flatMap((i) => (i.itemType === 'key' ? [i.key] : [])),
+    [items]
+  )
+  const allCards = useMemo(
+    () => items.flatMap((i) => (i.itemType === 'card' ? [i.card] : [])),
+    [items]
+  )
+  const allItemIds = useMemo(
+    () => [...allKeys.map((k) => k.id), ...allCards.map((c) => c.cardId)],
+    [allKeys, allCards]
+  )
+
+  // Cards are return-only; dispose stays keys-only.
+  const keyIdSet = useMemo(() => new Set(allKeys.map((k) => k.id)), [allKeys])
+  const selectedKeyIds = selection.selectedIds.filter((id) => keyIdSet.has(id))
+  const selectedCardIds = selection.selectedIds.filter(
+    (id) => !keyIdSet.has(id)
+  )
 
   // Refetch this card's bundles and tell the parent to refresh its loans.
   const refresh = () => {
@@ -185,25 +225,38 @@ export function ContactLoanedKeysCard({
 
   const handleDispose = async () => {
     setIsProcessing(true)
-    const ok = await disposeWithUndo(selection.selectedIds, { onChanged: refresh })
+    const ok = await disposeWithUndo(selectedKeyIds, { onChanged: refresh })
     if (ok) selection.deselectAll()
     setIsProcessing(false)
   }
 
-  const getKeyUrl = (key: KeyDetails) => {
-    const params = new URLSearchParams({
-      disposed: key.disposed ? 'true' : 'false',
-      editKeyId: key.id,
-    })
-    if (key.rentalObjectCode) {
-      params.set('rentalObjectCode', key.rentalObjectCode)
-    }
-    return `/Keys?${params.toString()}`
-  }
-
   const allSelected =
-    allKeys.length > 0 && allKeys.every((k) => selection.isSelected(k.id))
+    allItemIds.length > 0 && allItemIds.every((id) => selection.isSelected(id))
   const selectedCount = selection.selectedIds.length
+
+  const columns = loanableItemColumns({
+    checkboxWidth: 'w-[40px]',
+    columns: [
+      nameColumn({ width: 'w-[22%]', label: 'Nyckelnamn' }),
+      seqColumn({ width: 'w-[8%]' }),
+      flexColumn({ width: 'w-[8%]' }),
+      systemColumn({
+        width: 'w-[15%]',
+        label: (key) =>
+          key.keySystem?.systemCode ||
+          (key.keySystemId ? loansKeySystemMap[key.keySystemId] || '-' : '-'),
+      }),
+      typeColumn({ width: 'w-[12%]' }),
+      {
+        header: 'Hyresobjekt',
+        width: 'w-[15%]',
+        key: (key) => key.rentalObjectCode ?? '-',
+        card: () => '-',
+      },
+      statusColumn,
+      disposedColumn,
+    ],
+  })
 
   return (
     <Card>
@@ -251,7 +304,7 @@ export function ContactLoanedKeysCard({
                       : undefined
                   }
                   disposeAction={
-                    selectedCount > 0
+                    selectedKeyIds.length > 0 && selectedCardIds.length === 0
                       ? { label: 'Kassera', onClick: handleDispose }
                       : undefined
                   }
@@ -260,8 +313,10 @@ export function ContactLoanedKeysCard({
 
               <CollapsibleGroupTable
                 items={items}
-                getItemId={(item) => item.key.id}
-                columnCount={COLUMN_COUNT}
+                getItemId={(item) =>
+                  item.itemType === 'key' ? item.key.id : item.card.cardId
+                }
+                columnCount={columns.columnCount}
                 selection={{
                   isSelected: (id) => selection.isSelected(id),
                   toggle: (id) =>
@@ -269,26 +324,36 @@ export function ContactLoanedKeysCard({
                       ? selection.deselect(id)
                       : selection.select(id),
                 }}
-                sectionBy={(item) => (item.bundleId ? 'bundled' : 'unbundled')}
+                sectionBy={(item) =>
+                  item.itemType === 'key' && item.bundleId
+                    ? 'bundled'
+                    : 'unbundled'
+                }
                 sectionOrder={['bundled', 'unbundled']}
-                groupBy={(item) => item.bundleId || item.loanId || null}
+                groupBy={(item) =>
+                  item.itemType === 'key'
+                    ? item.bundleId || item.loanId || null
+                    : item.loanId
+                }
                 initialExpanded="all"
                 renderSectionHeader={(section, sectionItems) => {
                   if (section === 'bundled') {
-                    return <span>Samlingar ({sectionItems.length} nycklar)</span>
+                    return (
+                      <span>Samlingar ({sectionItems.length} nycklar)</span>
+                    )
                   }
                   if (section === 'unbundled') {
                     return (
-                      <span>Saknar samling ({sectionItems.length} nycklar)</span>
+                      <span>Saknar samling ({sectionItems.length} objekt)</span>
                     )
                   }
                   return null
                 }}
-                renderGroupHeader={(groupKey, groupItems) => {
+                renderGroupHeader={(_groupKey, groupItems) => {
                   const firstItem = groupItems[0]
 
                   // Bundle group
-                  if (firstItem.bundleId) {
+                  if (firstItem.itemType === 'key' && firstItem.bundleId) {
                     return (
                       <div className="flex items-center justify-between flex-1">
                         <div className="flex items-center gap-2">
@@ -312,79 +377,27 @@ export function ContactLoanedKeysCard({
                     )
                   }
 
-                  // Loan group (unbundled)
+                  // Loan group (unbundled keys and cards)
                   if (firstItem.loan) {
                     return <DefaultLoanHeader loan={firstItem.loan} />
                   }
 
                   return null
                 }}
-                renderHeader={() => (
-                  <TableRow className="bg-background">
-                    <TableHead className="w-[40px]">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={(checked) =>
-                          checked
-                            ? selection.selectAll(allKeys.map((k) => k.id))
-                            : selection.deselectAll()
-                        }
-                        aria-label="Markera alla"
-                      />
-                    </TableHead>
-                    <TableHead className="w-[22%]">Nyckelnamn</TableHead>
-                    <TableHead className="w-[8%]">Löpnr</TableHead>
-                    <TableHead className="w-[8%]">Flex</TableHead>
-                    <TableHead className="w-[15%]">Låssystem</TableHead>
-                    <TableHead className="w-[12%]">Typ</TableHead>
-                    <TableHead className="w-[15%]">Hyresobjekt</TableHead>
-                    <TableHead className="w-[12%]">Status</TableHead>
-                  </TableRow>
-                )}
-                renderRow={(
-                  item: LoanedKeyItem,
-                  { indent, isSelected, onToggleSelect }: RowRenderProps
-                ) => (
-                  <TableRow key={item.key.id} className="bg-background h-12">
-                    <TableCell className="w-[40px]">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={onToggleSelect}
-                        aria-label={`Markera ${item.key.keyName}`}
-                      />
-                    </TableCell>
-                    <TableCell className={`w-[22%] ${indent ? 'pl-8' : ''}`}>
-                      <TableLink to={getKeyUrl(item.key)}>
-                        {item.key.keyName}
-                      </TableLink>
-                    </TableCell>
-                    <TableCell className="w-[8%]">
-                      {item.key.keySequenceNumber ?? '-'}
-                    </TableCell>
-                    <TableCell className="w-[8%]">
-                      {item.key.flexNumber ?? '-'}
-                    </TableCell>
-                    <TableCell className="w-[15%]">
-                      {item.key.keySystem?.systemCode ||
-                        (item.key.keySystemId
-                          ? loansKeySystemMap[item.key.keySystemId] || '-'
-                          : '-')}
-                    </TableCell>
-                    <TableCell className="w-[12%]">
-                      <KeyTypeBadge keyType={item.key.keyType} />
-                    </TableCell>
-                    <TableCell className="w-[15%]">
-                      {item.key.rentalObjectCode ?? '-'}
-                    </TableCell>
-                    <TableCell className="w-[12%]">
-                      {getLatestActiveEvent(item.key) ? (
-                        <KeyEventBadge event={getLatestActiveEvent(item.key)} />
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )}
+                renderHeader={() =>
+                  columns.header({
+                    checked: allSelected,
+                    onCheckedChange: (checked) =>
+                      checked
+                        ? selection.selectAll(allItemIds)
+                        : selection.deselectAll(),
+                  })
+                }
+                renderRow={(item, state) =>
+                  item.itemType === 'card'
+                    ? columns.cardRow(item.card, state)
+                    : columns.keyRow(item.key, state)
+                }
               />
             </>
           )}
@@ -394,8 +407,10 @@ export function ContactLoanedKeysCard({
       <ReturnKeysDialog
         open={showReturnDialog}
         onOpenChange={setShowReturnDialog}
-        keyIds={selection.selectedIds}
+        keyIds={selectedKeyIds}
+        cardIds={selectedCardIds}
         allKeys={allKeys}
+        allCards={allCards}
         onSuccess={() => {
           selection.deselectAll()
           refresh()
