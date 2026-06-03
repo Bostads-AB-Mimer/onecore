@@ -5535,6 +5535,56 @@ export interface paths {
       };
     };
   };
+  "/kvv-areas/{id}/responsible": {
+    /**
+     * Update the responsible kvartersvärd for a KVV area
+     * @description Requires the `property-areas:write` realm role. The target user (by
+     * `keycloakUserId`) must hold the `property-manager` role in Keycloak;
+     * a 400 is returned otherwise. On success the updated area is returned
+     * with the new responsible user hydrated.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            keycloakUserId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated KVV area with hydrated responsible user */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["PatchedKvvArea"];
+            };
+          };
+        };
+        /** @description Invalid body or target user is not a property manager */
+        400: {
+          content: never;
+        };
+        /** @description Caller lacks the `property-areas:write` role */
+        403: {
+          content: never;
+        };
+        /** @description KVV area not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/properties/{propertyCode}/kvv-area": {
     /**
      * Set the KVV-area (förvaltningsområde) of a property
@@ -10678,6 +10728,21 @@ export interface components {
       kvvAreaId: string;
       updatedAt: string;
       updatedBy: string | null;
+    };
+    PatchedKvvArea: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string | null;
+      responsible: {
+        id: string;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        mobilePhone?: string;
+        employeeId?: string;
+      } | null;
     };
     Key: {
       /** Format: uuid */
