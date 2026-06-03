@@ -1,4 +1,9 @@
 import { Invoice, InvoicePaymentEvent, XledgerProject } from '@onecore/types'
+import {
+  AutogiroConsent,
+  AutogiroConsentResponse,
+  ChannelLookupResponse,
+} from '@onecore/types/src/economy'
 import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
 import { XledgerContact } from '@onecore/types/src/types'
 
@@ -45,6 +50,45 @@ async function getInvoicePaymentEvents(
   if (!response?.content) throw new Error('Response ok but missing content')
 
   return response.content as InvoicePaymentEvent[]
+}
+
+async function getInvoiceChannels(
+  nationalRegistrationNumber: string
+): Promise<ChannelLookupResponse> {
+  const { data, error } = await POST(`/invoice-channels`, {
+    body: {
+      nationalRegistrationNumbers: [nationalRegistrationNumber],
+    },
+  })
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content as ChannelLookupResponse
+}
+
+async function getAutogiroConsent(
+  nationalRegistrationNumber: string
+): Promise<AutogiroConsentResponse> {
+  const { data, error } = await GET(
+    // @ts-expect-error
+    `/autogiro-consent/${nationalRegistrationNumber}`,
+    {
+      params: {
+        path: nationalRegistrationNumber,
+      },
+    }
+  )
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+
+  return response.content as AutogiroConsentResponse
 }
 
 async function getMiscellaneousInvoiceDataForLease(
@@ -138,6 +182,8 @@ export const economyService = {
   getInvoicesByContactCode,
   getInvoicePaymentEvents,
   getMiscellaneousInvoiceDataForLease,
+  getInvoiceChannels,
+  getAutogiroConsent,
   submitMiscellaneousInvoice,
   getXledgerContacts,
   getXledgerProjects,
