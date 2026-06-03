@@ -10,9 +10,11 @@ import {
   getContactByContactCode,
   getCreditInformation,
   getActiveListingByRentalObjectCode,
+  getTenantByContactCode,
   getParkingSpaceByCode,
   updateListingStatus,
 } from '../../../adapters/leasing-adapter'
+import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from '../../../services/lease-service/helpers/lease'
 import { logger } from '@onecore/utilities'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
 import dayjs from 'dayjs'
@@ -176,7 +178,19 @@ export const createLeaseForExternalParkingSpace = async (
 
     if (creditCheck) {
       // Step 4A. Create lease
-      const includeVAT = applicantHasNoLease
+      const tenantResult = await getTenantByContactCode(
+        applicantContact.contactCode
+      )
+      const includeVAT =
+        !tenantResult.ok ||
+        !isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
+          rentalObject.residentialAreaCode,
+          tenantResult.data
+        )
+
+      log.push(
+        `Momsbedömning: ${includeVAT ? 'Moms inkluderas (inget bostadsavtal i samma område)' : 'Ingen moms (bostadsavtal finns i samma område)'}`
+      )
       const createLeaseResult = await createLease(
         listing.rentalObjectCode,
         applicantContact.contactCode,
@@ -210,10 +224,6 @@ export const createLeaseForExternalParkingSpace = async (
       const leaseId = createLeaseResult.data
 
       log.push(`Kontrakt skapat: ${leaseId}`)
-
-      log.push(
-        'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
-      )
 
       //update listing status
       const updateListingResult = await updateListingStatus(
