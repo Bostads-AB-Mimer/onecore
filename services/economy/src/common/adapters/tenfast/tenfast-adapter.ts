@@ -418,7 +418,7 @@ export const getInvoicesNotExported = async (
         hyresvard: company.tenfastId,
         /*paginate:
           'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
-        ocrNumber: '552606000000733',
+        //ocrNumber: '552606000000733',
       },
     })
 

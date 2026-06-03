@@ -44,6 +44,7 @@ export type InvoiceWithAccounting = Omit<Invoice, 'invoiceRows'> & {
   ledgerAccount?: string
   totalAccount?: string
   counterPartCode?: string
+  roundOffCostCode?: string
 }
 
 export type CounterPartCustomer = {
@@ -147,4 +148,5 @@ export type MimerCompany = {
   name: string
   xpandId: string
   tenfastId: string
+  roundOffCostCode?: string
 }
