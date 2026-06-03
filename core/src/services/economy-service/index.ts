@@ -4,7 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy, schemas } from '@onecore/types'
+import { economy } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as economyAdapter from '../../adapters/economy-adapter'
