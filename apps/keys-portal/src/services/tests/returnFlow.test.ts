@@ -160,6 +160,21 @@ describe('partialReturnLoan', () => {
     expect(result.newLoanId).toBe('loan-new')
   })
 
+  it('refuses a partial return on a loan that was never picked up', async () => {
+    const result = await partialReturnLoan(
+      makeLoan({
+        id: 'PENDING',
+        pickedUpAt: null,
+        keysArray: [makeKey({ id: 'k1' }), makeKey({ id: 'k2' })],
+      }),
+      { selectedKeyIds: new Set(['k1']), selectedCardIds: new Set() },
+      {}
+    )
+    expect(result.success).toBe(false)
+    expect(result.message).toMatch(/upphämtat/i)
+    expect(keyLoanService.update).not.toHaveBeenCalled() // nothing closed
+  })
+
   it('fails when nothing is left to continue', async () => {
     const result = await partialReturnLoan(
       makeLoan({ id: 'OLD', keysArray: [makeKey({ id: 'k1' })] }),

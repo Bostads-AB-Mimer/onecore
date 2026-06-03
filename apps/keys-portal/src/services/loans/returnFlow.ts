@@ -104,6 +104,16 @@ export async function partialReturnLoan(
   fellBackToReturnOnly?: boolean
   message?: string
 }> {
+  // Partial return only makes sense once the loan is picked up (signed receipt uploaded).
+  // On a pending loan it would force-activate the continuation without a signed receipt.
+  if (!loan.pickedUpAt) {
+    return {
+      success: false,
+      message:
+        'Partiell retur kräver ett upphämtat lån (signerad kvittens). Återlämna hela lånet eller ladda upp kvittensen först.',
+    }
+  }
+
   // Once the old loan is closed, a later failure leaves the unselected items orphaned.
   let oldLoanClosed = false
   try {

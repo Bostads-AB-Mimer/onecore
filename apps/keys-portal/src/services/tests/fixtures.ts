@@ -75,6 +75,7 @@ export function makeLoan(
     contact: 'P001',
     contact2: null,
     returnedAt: null,
+    pickedUpAt: '2025-01-01T00:00:00Z',
     keysArray: [],
     keyCardsArray: [],
     ...overrides,
