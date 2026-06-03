@@ -273,9 +273,16 @@ export const createWorkOrder = async (
     const newLeaseRecord = await createLeaseRecord(lease)
     const newTenantRecord = await createTenantRecord(tenant, details)
 
-    const newMaintenanceUnitRecord = rentalPropertyInfo.maintenanceUnits
+    const rowMaintenanceUnitCode = details.Rows[0].MaintenanceUnitCode
+    const targetMaintenanceUnit = rowMaintenanceUnitCode
+      ? rentalPropertyInfo.maintenanceUnits?.find(
+          (mu) => mu.code === rowMaintenanceUnitCode
+        )
+      : undefined
+
+    const newMaintenanceUnitRecord = targetMaintenanceUnit
       ? await createMaintenanceUnitRecord(
-          rentalPropertyInfo.maintenanceUnits[0],
+          targetMaintenanceUnit,
           details.Rows[0]
         )
       : undefined
