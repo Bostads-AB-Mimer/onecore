@@ -30,6 +30,7 @@ const makePaymentEvent = (
     matchId: number
     type: string
     text: string | null
+    slTransactionType: string | null
   }>
 ) => ({
   type: 'OCR',
@@ -39,6 +40,7 @@ const makePaymentEvent = (
   paymentDate: '2026-04-01T00:00:00.000Z',
   text: 'Hyra',
   transactionSourceCode: 'OCR',
+  slTransactionType: null,
   ...overrides,
 })
 
