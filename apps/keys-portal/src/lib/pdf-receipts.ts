@@ -894,7 +894,7 @@ const addPartyHeader = (doc: jsPDF, data: ReceiptData, y: number): number =>
     : addTenantInfo(doc, data, y)
 
 async function buildLoanDoc(data: ReceiptData) {
-  const doc = new jsPDF()
+  const doc = new jsPDF({ compress: true })
   registerCustomFonts(doc)
 
   let y = addTitle(doc, 'loan')
@@ -929,7 +929,7 @@ async function buildLoanDoc(data: ReceiptData) {
 }
 
 async function buildReturnDoc(data: ReceiptData) {
-  const doc = new jsPDF()
+  const doc = new jsPDF({ compress: true })
   registerCustomFonts(doc)
 
   let y = addTitle(doc, 'return')
