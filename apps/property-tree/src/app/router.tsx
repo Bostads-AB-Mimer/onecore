@@ -4,6 +4,7 @@ import BuildingView from '@/pages/BuildingPage'
 import { CompanyPage } from '@/pages/CompanyPage'
 import ComponentLibraryPage from '@/pages/ComponentLibraryPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { DocumentationPage } from '@/pages/DocumentationPage'
 import { EconomyPage } from '@/pages/EconomyPage'
 import { FacilityPage } from '@/pages/FacilityPage'
 import InspectionsView from '@/pages/InspectionsPage'
@@ -137,6 +138,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.inspections,
             element: <InspectionsView />,
             handle: { title: 'Besiktningar' },
+          },
+          {
+            path: routes.documentation,
+            element: <DocumentationPage />,
+            handle: { title: 'Dokumentation' },
           },
         ],
       },

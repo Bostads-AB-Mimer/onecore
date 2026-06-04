@@ -25,6 +25,9 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/api/, ''),
         },
       },
+      fs: {
+        allow: [path.resolve(__dirname, '../..')],
+      },
     },
     resolve: {
       alias: {

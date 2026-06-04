@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  BookOpen,
   Building,
   Calendar,
   ClipboardList,
@@ -163,6 +164,15 @@ export const dashboardCards: DashboardCard[] = [
     icon: Receipt,
     description: 'Skapa ströfakturor',
     path: '/economy',
+    isExternal: false,
+    isDisabled: false,
+  },
+  {
+    id: 'documentation',
+    title: 'Dokumentation',
+    icon: BookOpen,
+    description: 'Arkitekturöversikt och plattformsdokumentation',
+    path: routes.documentation,
     isExternal: false,
     isDisabled: false,
   },

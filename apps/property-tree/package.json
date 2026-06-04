@@ -16,7 +16,7 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "prepare:dotenv": "[ -f .env ] || cp .env.local.example .env",
-"prettier": "prettier --check ./src",
+    "prettier": "prettier --check ./src",
     "start": "vite",
     "start:server": "node --import tsx src/server/api.ts",
     "typecheck": "tsc --noEmit"
@@ -57,13 +57,17 @@
     "http-proxy-middleware": "^3.0.3",
     "lucide-react": "^0.462.0",
     "maplibre-gl": "5.7.0",
+    "mermaid": "^11.15.0",
     "nuqs": "^2.8.6",
     "react": "^18.3.1",
     "react-day-picker": "^9.13.0",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-map-gl": "^8.0.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.22.2",
+    "remark-gfm": "^4.0.1",
+    "svg-pan-zoom": "^3.6.2",
     "tailwind-merge": "^2.5.5",
     "ts-pattern": "^5.7.0",
     "vite": "^6.2.5",
@@ -71,12 +75,13 @@
   },
   "devDependencies": {
     "@eslint/js": "9.32.0",
-"@types/express": "^5.0.0",
-"@types/node": "^20.11.5",
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.11.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/svg-pan-zoom": "^3.4.0",
     "@vitejs/plugin-react": "^4.3.4",
-"autoprefixer": "^10.4.18",
+    "autoprefixer": "^10.4.18",
     "eslint": "^9.31.0",
     "eslint-import-resolver-typescript": "4.4.4",
     "eslint-plugin-boundaries": "^5.3.1",
@@ -89,6 +94,6 @@
     "tailwindcss": "^3.4.1",
     "tsx": "^4.19.2",
     "typescript": "^5.6.2",
-"wait-on": "^8.0.2"
+    "wait-on": "^8.0.2"
   }
 }
