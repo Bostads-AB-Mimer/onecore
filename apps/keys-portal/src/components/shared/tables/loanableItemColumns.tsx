@@ -202,14 +202,14 @@ export function loanableItemColumns({
   return {
     columnCount,
 
-    header({ checked, onCheckedChange }: HeaderState): ReactNode {
+    header(state?: HeaderState): ReactNode {
       return (
         <TableRow className="bg-background">
           {selectable && (
             <TableHead className={`${checkboxWidth} pl-8`}>
               <Checkbox
-                checked={checked}
-                onCheckedChange={onCheckedChange}
+                checked={state?.checked ?? false}
+                onCheckedChange={state?.onCheckedChange ?? (() => {})}
                 aria-label="Markera alla"
               />
             </TableHead>

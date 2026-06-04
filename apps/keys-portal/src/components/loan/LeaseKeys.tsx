@@ -4,6 +4,7 @@ import { KeyTypeLabels } from '@/services/types'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { useItemSelection } from '@/hooks/useItemSelection'
+import { itemTableSelection } from '@/components/shared/tables/itemTableSelection'
 import { useRentalObjectKeys } from '@/hooks/useRentalObjectKeys'
 import { useLeaseKeyActions } from '@/hooks/useLeaseKeyActions'
 import { deriveDisplayStatus } from '@/lib/lease-status'
@@ -13,13 +14,13 @@ import { AddKeyButton, AddKeyForm } from './AddKeyForm'
 import { ReceiptDialog } from './dialogs/ReceiptDialog'
 import { KeyLoanTransferDialog } from './dialogs/KeyLoanTransferDialog'
 import { ReturnKeysDialog } from './dialogs/ReturnKeysDialog'
-import { LeaseItemsList } from './LeaseItemsList'
+import { LeaseKeysTable } from './LeaseKeysTable'
 
 function getLeaseContactCodes(lease: Lease): string[] {
   return (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean)
 }
 
-export function LeaseKeyList({
+export function LeaseKeys({
   lease,
   onKeysLoaned,
   onKeysReturned,
@@ -30,8 +31,7 @@ export function LeaseKeyList({
   onKeysReturned?: () => void
   refreshTrigger?: number
 }) {
-  const keySelection = useItemSelection()
-  const cardSelection = useItemSelection()
+  const selection = useItemSelection()
   const [showAddKeyForm, setShowAddKeyForm] = useState(false)
 
   const { keys, cards, loading, refreshStatuses } = useRentalObjectKeys(
@@ -45,8 +45,7 @@ export function LeaseKeyList({
       keys,
       cards,
       refreshStatuses,
-      keySelection,
-      cardSelection,
+      selection,
       onKeysLoaned,
       onKeysReturned,
     })
@@ -75,6 +74,11 @@ export function LeaseKeyList({
     visibleKeys.forEach((k) => m.set(k.keyType, (m.get(k.keyType) ?? 0) + 1))
     return m
   }, [visibleKeys])
+
+  const t = itemTableSelection(selection, {
+    keyIds: visibleKeys.map((k) => k.id),
+    cardIds: visibleCards.map((c) => c.cardId),
+  })
 
   const handleKeysAdded = async () => {
     setShowAddKeyForm(false)
@@ -120,8 +124,8 @@ export function LeaseKeyList({
 
             <div className="flex flex-wrap gap-2">
               <KeyActionButtons
-                selectedKeys={keySelection.selectedIds}
-                selectedCards={cardSelection.selectedIds}
+                selectedKeys={t.selectedKeyIds}
+                selectedCards={t.selectedCardIds}
                 keysWithStatus={visibleKeys}
                 cardsWithStatus={visibleCards}
                 leaseIsNotPast={leaseIsNotPast}
@@ -146,7 +150,7 @@ export function LeaseKeyList({
         {showAddKeyForm && (
           <AddKeyForm
             keys={keys}
-            selectedKeyIds={keySelection.selectedIds}
+            selectedKeyIds={t.selectedKeyIds}
             rentalObjectCode={lease.rentalPropertyId}
             onComplete={handleKeysAdded}
             onCancel={() => setShowAddKeyForm(false)}
@@ -154,33 +158,14 @@ export function LeaseKeyList({
         )}
 
         {!isEmpty && (
-          <LeaseItemsList
+          <LeaseKeysTable
             keys={visibleKeys}
             cards={visibleCards}
             lease={lease}
             selectable={true}
-            selectedKeys={keySelection.selectedIds}
-            selectedCards={cardSelection.selectedIds}
-            onKeySelectionChange={(keyId, checked) =>
-              checked
-                ? keySelection.select(keyId)
-                : keySelection.deselect(keyId)
-            }
-            onCardSelectionChange={(cardId, checked) =>
-              checked
-                ? cardSelection.select(cardId)
-                : cardSelection.deselect(cardId)
-            }
+            selection={t}
             onRefresh={refreshStatuses}
             onReturn={onReturn}
-            onSelectAll={() => {
-              keySelection.selectAll(visibleKeys.map((k) => k.id))
-              cardSelection.selectAll(visibleCards.map((c) => c.cardId))
-            }}
-            onDeselectAll={() => {
-              keySelection.deselectAll()
-              cardSelection.deselectAll()
-            }}
           />
         )}
       </div>

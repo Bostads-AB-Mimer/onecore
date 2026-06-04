@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Key } from 'lucide-react'
+import { Key } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import {
   statusColumn,
   disposedColumn,
 } from '@/components/shared/tables/loanableItemColumns'
+import { itemTableSelection } from '@/components/shared/tables/itemTableSelection'
 import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
 import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 import { useItemSelection } from '@/hooks/useItemSelection'
@@ -57,14 +58,13 @@ type Props = {
   onChanged?: () => void
 }
 
-export function ContactLoanedKeysCard({
+export function ContactLoanedKeys({
   contactCode,
   activeLoans,
   loansKeySystemMap,
   onBundleClick,
   onChanged,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false)
   const [bundles, setBundles] = useState<BundleWithLoanedKeysInfo[]>([])
   const [bundleKeys, setBundleKeys] = useState<Record<string, KeyDetails[]>>({})
   const [loading, setLoading] = useState(false)
@@ -84,9 +84,9 @@ export function ContactLoanedKeysCard({
     return map
   }, [bundles])
 
-  // Fetch bundles and their keys on expand
+  // Fetch bundles and their keys
   useEffect(() => {
-    if (!isOpen || hasLoaded) return
+    if (hasLoaded) return
 
     const fetchData = async () => {
       setLoading(true)
@@ -133,7 +133,7 @@ export function ContactLoanedKeysCard({
     }
 
     fetchData()
-  }, [isOpen, hasLoaded, contactCode])
+  }, [hasLoaded, contactCode])
 
   // Build unified items list
   const items = useMemo<LoanedItem[]>(() => {
@@ -205,17 +205,11 @@ export function ContactLoanedKeysCard({
     () => items.flatMap((i) => (i.itemType === 'card' ? [i.card] : [])),
     [items]
   )
-  const allItemIds = useMemo(
-    () => [...allKeys.map((k) => k.id), ...allCards.map((c) => c.cardId)],
-    [allKeys, allCards]
-  )
-
-  // Cards are return-only; dispose stays keys-only.
-  const keyIdSet = useMemo(() => new Set(allKeys.map((k) => k.id)), [allKeys])
-  const selectedKeyIds = selection.selectedIds.filter((id) => keyIdSet.has(id))
-  const selectedCardIds = selection.selectedIds.filter(
-    (id) => !keyIdSet.has(id)
-  )
+  // Keys and cards share one selection; cards are return-only, dispose is keys-only.
+  const t = itemTableSelection(selection, {
+    keyIds: allKeys.map((k) => k.id),
+    cardIds: allCards.map((c) => c.cardId),
+  })
 
   // Refetch this card's bundles and tell the parent to refresh its loans.
   const refresh = () => {
@@ -225,14 +219,10 @@ export function ContactLoanedKeysCard({
 
   const handleDispose = async () => {
     setIsProcessing(true)
-    const ok = await disposeWithUndo(selectedKeyIds, { onChanged: refresh })
+    const ok = await disposeWithUndo(t.selectedKeyIds, { onChanged: refresh })
     if (ok) selection.deselectAll()
     setIsProcessing(false)
   }
-
-  const allSelected =
-    allItemIds.length > 0 && allItemIds.every((id) => selection.isSelected(id))
-  const selectedCount = selection.selectedIds.length
 
   const columns = loanableItemColumns({
     checkboxWidth: 'w-[40px]',
@@ -260,155 +250,127 @@ export function ContactLoanedKeysCard({
 
   return (
     <Card>
-      <CardHeader
-        className="cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            <CardTitle className="text-base">
-              Utlånade nycklar
-              {hasLoaded && totalCount > 0 && ` (${totalCount})`}
-            </CardTitle>
-          </div>
-          {isOpen ? (
-            <ChevronUp className="h-5 w-5 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-          )}
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Key className="h-5 w-5" />
+          <CardTitle className="text-base">
+            Utlånade nycklar
+            {hasLoaded && totalCount > 0 && ` (${totalCount})`}
+          </CardTitle>
         </div>
       </CardHeader>
 
-      {isOpen && (
-        <CardContent>
-          {loading ? (
-            <Spinner centered />
-          ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Inga utlånade nycklar till denna kontakt
-            </p>
-          ) : (
-            <>
-              <div className="mb-4">
-                <KeyActionButtons
-                  selectedCount={selectedCount}
-                  isProcessing={isProcessing}
-                  returnAction={
-                    selectedCount > 0
-                      ? {
-                          label: 'Återlämna',
-                          count: selectedCount,
-                          onClick: () => setShowReturnDialog(true),
-                        }
-                      : undefined
-                  }
-                  disposeAction={
-                    selectedKeyIds.length > 0 && selectedCardIds.length === 0
-                      ? { label: 'Kassera', onClick: handleDispose }
-                      : undefined
-                  }
-                />
-              </div>
-
-              <CollapsibleGroupTable
-                items={items}
-                getItemId={(item) =>
-                  item.itemType === 'key' ? item.key.id : item.card.cardId
+      <CardContent>
+        {loading ? (
+          <Spinner centered />
+        ) : items.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">
+            Inga utlånade nycklar till denna kontakt
+          </p>
+        ) : (
+          <>
+            <div className="mb-4">
+              <KeyActionButtons
+                selectedCount={t.selectedCount}
+                isProcessing={isProcessing}
+                returnAction={
+                  t.selectedCount > 0
+                    ? {
+                        label: 'Återlämna',
+                        count: t.selectedCount,
+                        onClick: () => setShowReturnDialog(true),
+                      }
+                    : undefined
                 }
-                columnCount={columns.columnCount}
-                selection={{
-                  isSelected: (id) => selection.isSelected(id),
-                  toggle: (id) =>
-                    selection.isSelected(id)
-                      ? selection.deselect(id)
-                      : selection.select(id),
-                }}
-                sectionBy={(item) =>
-                  item.itemType === 'key' && item.bundleId
-                    ? 'bundled'
-                    : 'unbundled'
-                }
-                sectionOrder={['bundled', 'unbundled']}
-                groupBy={(item) =>
-                  item.itemType === 'key'
-                    ? item.bundleId || item.loanId || null
-                    : item.loanId
-                }
-                initialExpanded="all"
-                renderSectionHeader={(section, sectionItems) => {
-                  if (section === 'bundled') {
-                    return (
-                      <span>Samlingar ({sectionItems.length} nycklar)</span>
-                    )
-                  }
-                  if (section === 'unbundled') {
-                    return (
-                      <span>Saknar samling ({sectionItems.length} objekt)</span>
-                    )
-                  }
-                  return null
-                }}
-                renderGroupHeader={(_groupKey, groupItems) => {
-                  const firstItem = groupItems[0]
-
-                  // Bundle group
-                  if (firstItem.itemType === 'key' && firstItem.bundleId) {
-                    return (
-                      <div className="flex items-center justify-between flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">
-                            {firstItem.bundleName}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {groupItems.length} nycklar
-                          </Badge>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onBundleClick(firstItem.bundleId!)
-                          }}
-                          className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors shrink-0"
-                        >
-                          Visa samling
-                        </button>
-                      </div>
-                    )
-                  }
-
-                  // Loan group (unbundled keys and cards)
-                  if (firstItem.loan) {
-                    return <DefaultLoanHeader loan={firstItem.loan} />
-                  }
-
-                  return null
-                }}
-                renderHeader={() =>
-                  columns.header({
-                    checked: allSelected,
-                    onCheckedChange: (checked) =>
-                      checked
-                        ? selection.selectAll(allItemIds)
-                        : selection.deselectAll(),
-                  })
-                }
-                renderRow={(item, state) =>
-                  item.itemType === 'card'
-                    ? columns.cardRow(item.card, state)
-                    : columns.keyRow(item.key, state)
+                disposeAction={
+                  t.selectedKeyIds.length > 0 && t.selectedCardIds.length === 0
+                    ? { label: 'Kassera', onClick: handleDispose }
+                    : undefined
                 }
               />
-            </>
-          )}
-        </CardContent>
-      )}
+            </div>
+
+            <CollapsibleGroupTable
+              items={items}
+              getItemId={(item) =>
+                item.itemType === 'key' ? item.key.id : item.card.cardId
+              }
+              columnCount={columns.columnCount}
+              selection={t.selection}
+              sectionBy={(item) =>
+                item.itemType === 'key' && item.bundleId
+                  ? 'bundled'
+                  : 'unbundled'
+              }
+              sectionOrder={['bundled', 'unbundled']}
+              groupBy={(item) =>
+                item.itemType === 'key'
+                  ? item.bundleId || item.loanId || null
+                  : item.loanId
+              }
+              initialExpanded="all"
+              renderSectionHeader={(section, sectionItems) => {
+                if (section === 'bundled') {
+                  return <span>Samlingar ({sectionItems.length} nycklar)</span>
+                }
+                if (section === 'unbundled') {
+                  return (
+                    <span>Saknar samling ({sectionItems.length} objekt)</span>
+                  )
+                }
+                return null
+              }}
+              renderGroupHeader={(_groupKey, groupItems) => {
+                const firstItem = groupItems[0]
+
+                // Bundle group
+                if (firstItem.itemType === 'key' && firstItem.bundleId) {
+                  return (
+                    <div className="flex items-center justify-between flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">
+                          {firstItem.bundleName}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {groupItems.length} nycklar
+                        </Badge>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onBundleClick(firstItem.bundleId!)
+                        }}
+                        className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded transition-colors shrink-0"
+                      >
+                        Visa samling
+                      </button>
+                    </div>
+                  )
+                }
+
+                // Loan group (unbundled keys and cards)
+                if (firstItem.loan) {
+                  return <DefaultLoanHeader loan={firstItem.loan} />
+                }
+
+                return null
+              }}
+              renderHeader={() => columns.header(t.header)}
+              renderRow={(item, state) =>
+                item.itemType === 'card'
+                  ? columns.cardRow(item.card, state)
+                  : columns.keyRow(item.key, state)
+              }
+            />
+          </>
+        )}
+      </CardContent>
 
       <ReturnKeysDialog
         open={showReturnDialog}
         onOpenChange={setShowReturnDialog}
-        keyIds={selectedKeyIds}
-        cardIds={selectedCardIds}
+        keyIds={t.selectedKeyIds}
+        cardIds={t.selectedCardIds}
         allKeys={allKeys}
         allCards={allCards}
         onSuccess={() => {

@@ -17,7 +17,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import type { Lease } from '@/services/types'
-import { LeaseKeyList } from './LeaseKeyList'
+import { LeaseKeys } from './LeaseKeys'
 import { KeyLoansHistory } from './KeyLoansHistory'
 import { RentalObjectNotes } from './RentalObjectNotes'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
@@ -216,7 +216,7 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
                 activeTab !== 'keys' ? 'hidden' : ''
               }`}
             >
-              <LeaseKeyList
+              <LeaseKeys
                 lease={lease}
                 refreshTrigger={keyStatusRefreshKey}
                 onKeysLoaned={() => {

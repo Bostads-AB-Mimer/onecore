@@ -61,6 +61,12 @@ export type {
   LoanableItemColumnsConfig,
 } from './loanableItemColumns'
 
+export { itemTableSelection } from './itemTableSelection'
+export type {
+  ItemTableSelection,
+  ItemTableSelectionHeader,
+} from './itemTableSelection'
+
 // Status Badges
 export {
   LoanStatusBadge,

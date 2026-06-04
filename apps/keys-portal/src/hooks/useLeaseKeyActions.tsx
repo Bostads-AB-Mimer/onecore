@@ -16,8 +16,7 @@ type Args = {
   keys: KeyDetails[]
   cards: CardDetails[]
   refreshStatuses: () => Promise<void>
-  keySelection: SelectionApi
-  cardSelection: SelectionApi
+  selection: SelectionApi
   onKeysLoaned?: () => void
   onKeysReturned?: () => void
 }
@@ -32,8 +31,7 @@ export function useLeaseKeyActions({
   keys,
   cards,
   refreshStatuses,
-  keySelection,
-  cardSelection,
+  selection,
   onKeysLoaned,
   onKeysReturned,
 }: Args) {
@@ -62,8 +60,7 @@ export function useLeaseKeyActions({
   )
 
   const clearSelection = () => {
-    keySelection.deselectAll()
-    cardSelection.deselectAll()
+    selection.deselectAll()
   }
 
   const createLoanAndShowReceipt = async (
@@ -124,7 +121,7 @@ export function useLeaseKeyActions({
     const ok = await disposeWithUndo(keyIds, {
       onChanged: () => refreshStatuses(),
     })
-    if (ok) keySelection.deselectAll()
+    if (ok) selection.deselectAll()
     setIsProcessing(false)
   }
 

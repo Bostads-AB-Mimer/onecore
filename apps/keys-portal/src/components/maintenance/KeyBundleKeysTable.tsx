@@ -1,366 +1,157 @@
-import { useMemo, useState } from 'react'
+import { CollapsibleGroupTable } from '@/components/shared/tables/CollapsibleGroupTable'
+import { DefaultLoanHeader } from '@/components/shared/tables/DefaultLoanHeader'
+import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
+import {
+  loanableItemColumns,
+  nameColumn,
+  seqColumn,
+  flexColumn,
+  systemColumn,
+  typeColumn,
+  statusColumn,
+} from '@/components/shared/tables/loanableItemColumns'
+import type { ItemTableSelection } from '@/components/shared/tables/itemTableSelection'
+import { PickupAvailabilityBadge } from '@/components/shared/tables/StatusBadges'
 import type {
   ContactV1,
   KeyDetails,
   KeyLoanWithDetails,
 } from '@/services/types'
-import { getActiveLoan } from '@/utils/loanHelpers'
-import { useItemSelection } from '@/hooks/useItemSelection'
-import { KeyActionButtons } from '@/components/shared/KeyActionButtons'
-import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
-import { LoanMaintenanceKeysDialog } from './dialogs/LoanMaintenanceKeysDialog'
-import { FlexMenu } from '@/components/loan/dialogs/FlexMenu'
-import { IncomingFlexMenu } from '@/components/loan/dialogs/IncomingFlexMenu'
-import { updateKeyBundle } from '@/services/api/keyBundleService'
-import { useToast } from '@/hooks/use-toast'
-import { Minus } from 'lucide-react'
-import { disposeKeys } from '@/services/disposeKeys'
-import { KeyBundleKeysList } from '@/components/shared/KeyBundleKeysList'
-import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
+import { getActiveLoan, getLatestLoan } from '@/utils/loanHelpers'
+import {
+  getContactFullName,
+  getContactRegistrationNumber,
+} from '@/services/api/contactService'
 
 interface KeyBundleKeysTableProps {
+  /** Flat array of keys to display */
   keys: KeyDetails[]
   contactsByCode: Record<string, ContactV1>
-  bundleId: string
-  onRefresh: () => void
+  selectable?: boolean
+  /** Selection bindings from itemTableSelection (required when selectable). */
+  selection?: ItemTableSelection
+  onRefresh?: () => void
+  onReturn?: (loan: KeyLoanWithDetails) => void
 }
 
+/**
+ * Component for displaying keys in key bundles, grouped by contact and loan with collapsible headers.
+ * Can optionally include checkboxes for key selection.
+ *
+ * Receives a flat array of keys and uses CollapsibleGroupTable to handle
+ * grouping by contact/loan and collapse behavior.
+ */
 export function KeyBundleKeysTable({
   keys,
   contactsByCode,
-  bundleId,
+  selectable = false,
+  selection,
   onRefresh,
+  onReturn,
 }: KeyBundleKeysTableProps) {
-  const { toast } = useToast()
-  const keySelection = useItemSelection()
-  const [isProcessing, setIsProcessing] = useState(false)
-
-  // Split keys into disposed and non-disposed
-  const nonDisposedKeys = useMemo(() => keys.filter((k) => !k.disposed), [keys])
-  const disposedKeys = useMemo(() => keys.filter((k) => k.disposed), [keys])
-
-  // Alert dialog state for removing keys with active loans
-  const [showRemoveWarning, setShowRemoveWarning] = useState(false)
-
-  // Dialog states
-  const [showReturnDialog, setShowReturnDialog] = useState(false)
-  const [showLoanDialog, setShowLoanDialog] = useState(false)
-  const [showFlexMenu, setShowFlexMenu] = useState(false)
-  const [showIncomingFlexMenu, setShowIncomingFlexMenu] = useState(false)
-
-  // Track key IDs for return from action menu (separate from selection-based return)
-  const [pendingReturnKeyIds, setPendingReturnKeyIds] = useState<string[]>([])
-
-  // Handler for returning keys from the loan action menu
-  const handleReturnFromMenu = (loan: KeyLoanWithDetails) => {
-    const keyIds = loan.keysArray?.map((k) => k.id) || []
-
-    // Check if keys have active MAINTENANCE loans
-    const keysToReturn = keys.filter((k) => keyIds.includes(k.id))
-    const hasReturnableMaintenance = keysToReturn.some((k) => {
-      const activeLoan = getActiveLoan(k)
-      return activeLoan !== null && activeLoan.loanType === 'MAINTENANCE'
-    })
-
-    if (!hasReturnableMaintenance) {
-      toast({
-        title: 'Kan inte återlämna här',
-        description:
-          'Detta är inte ett servicelån. Gå till utlåningssidan för kontraktet för att återlämna.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    setPendingReturnKeyIds(keyIds)
-    setShowReturnDialog(true)
-  }
-
-  if (keys.length === 0) {
-    return (
-      <p className="py-8 text-center text-muted-foreground">
-        Inga nycklar i denna nyckelsamling
-      </p>
-    )
-  }
-
-  const hasNonDisposed = nonDisposedKeys.length > 0
-  const hasDisposed = disposedKeys.length > 0
-
-  // Get selected keys data
-  const selectedKeysData = keys.filter((k) => keySelection.isSelected(k.id))
-
-  // Determine which keys can be returned (currently loaned with MAINTENANCE type)
-  const returnableKeys = selectedKeysData.filter((k) => {
-    const activeLoan = getActiveLoan(k)
-    return activeLoan !== null && activeLoan.loanType === 'MAINTENANCE'
+  const columns = loanableItemColumns({
+    checkboxWidth: 'w-[50px]',
+    selectable,
+    columns: [
+      nameColumn({ width: 'w-[18%]', label: 'Nyckelnamn' }),
+      seqColumn({ width: 'w-[6%]' }),
+      flexColumn({ width: 'w-[6%]' }),
+      systemColumn({ width: 'w-[10%]' }),
+      {
+        header: 'Tillhörighet',
+        width: 'w-[12%]',
+        key: (key) => key.keySystem?.name || '-',
+        card: () => '-',
+      },
+      typeColumn({ width: 'w-[12%]' }),
+      statusColumn,
+      {
+        header: 'Utlämning',
+        width: 'w-[18%]',
+        key: (key) => <PickupAvailabilityBadge itemData={key} />,
+        card: (card) => <PickupAvailabilityBadge itemData={card} />,
+      },
+      {
+        header: 'Hyresobjekt',
+        width: 'w-[18%]',
+        key: (key) => key.rentalObjectCode ?? '-',
+        card: () => '-',
+      },
+    ],
   })
-
-  // Determine which keys can be loaned (not currently loaned)
-  const loanableKeys = selectedKeysData.filter((k) => {
-    const activeLoan = getActiveLoan(k)
-    return activeLoan === null
-  })
-
-  // Keys with active loans among selected keys
-  const selectedKeysWithActiveLoans = selectedKeysData.filter(
-    (k) => getActiveLoan(k) !== null
-  )
-
-  // Action handlers
-  const handleRemoveFromBundleClick = () => {
-    if (selectedKeysWithActiveLoans.length > 0) {
-      setShowRemoveWarning(true)
-    } else {
-      handleRemoveFromBundle()
-    }
-  }
-
-  const handleRemoveFromBundle = async () => {
-    setShowRemoveWarning(false)
-    setIsProcessing(true)
-    try {
-      // Get current bundle keys
-      const currentKeyIds = keys.map((k) => k.id)
-      // Remove selected keys
-      const updatedKeyIds = currentKeyIds.filter(
-        (id) => !keySelection.isSelected(id)
-      )
-
-      await updateKeyBundle(bundleId, {
-        keys: updatedKeyIds,
-      })
-
-      toast({
-        title: 'Nycklar borttagna',
-        description: `${keySelection.selectedIds.length} ${keySelection.selectedIds.length === 1 ? 'nyckel' : 'nycklar'} borttagen från samlingen`,
-      })
-
-      keySelection.deselectAll()
-      onRefresh()
-    } catch (error) {
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte ta bort nycklar från samlingen',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleDispose = async () => {
-    setIsProcessing(true)
-    const result = await disposeKeys(keySelection.selectedIds)
-
-    if (result.success) {
-      toast({
-        title: result.title,
-        description: result.message,
-      })
-      keySelection.deselectAll()
-      onRefresh()
-    } else {
-      toast({
-        title: result.title,
-        description: result.message,
-        variant: 'destructive',
-      })
-    }
-    setIsProcessing(false)
-  }
 
   return (
-    <>
-      {/* Action buttons */}
-      <div className="mb-4">
-        <KeyActionButtons
-          selectedCount={keySelection.selectedIds.length}
-          isProcessing={isProcessing}
-          loanAction={
-            loanableKeys.length > 0
-              ? {
-                  label: 'Låna ut',
-                  count: loanableKeys.length,
-                  onClick: () => setShowLoanDialog(true),
-                }
-              : undefined
-          }
-          returnAction={
-            returnableKeys.length > 0
-              ? {
-                  label: 'Återlämna',
-                  count: returnableKeys.length,
-                  onClick: () => setShowReturnDialog(true),
-                }
-              : undefined
-          }
-          flexAction={{
-            label: 'Flex',
-            onClick: () => setShowFlexMenu(true),
-          }}
-          disposeAction={{
-            label: 'Kassera',
-            onClick: handleDispose,
-          }}
-          customActions={[
-            {
-              label: 'Ta bort från samling',
-              variant: 'outline',
-              icon: <Minus className="h-3 w-3" />,
-              onClick: handleRemoveFromBundleClick,
-            },
-          ]}
-        />
-      </div>
-
-      <div className="space-y-6">
-        {/* Aktiva nycklar table */}
-        {hasNonDisposed && (
-          <div>
-            <h3 className="text-lg font-semibold mb-3 text-green-600">
-              Aktiva nycklar
-            </h3>
-            <KeyBundleKeysList
-              keys={nonDisposedKeys}
-              contactsByCode={contactsByCode}
-              selectable={true}
-              selectedKeys={keySelection.selectedIds}
-              onKeySelectionChange={(keyId, checked) => {
-                if (checked) keySelection.select(keyId)
-                else keySelection.deselect(keyId)
-              }}
-              onSelectAll={() =>
-                keySelection.selectAll(nonDisposedKeys.map((k) => k.id))
-              }
-              onDeselectAll={() => keySelection.deselectAll()}
-              onRefresh={onRefresh}
-              onReturn={handleReturnFromMenu}
-            />
-          </div>
-        )}
-
-        {/* Kasserade nycklar table */}
-        {hasDisposed ? (
-          <div>
-            <h3 className="text-lg font-semibold mb-3 text-muted-foreground">
-              Kasserade nycklar
-            </h3>
-            <KeyBundleKeysList
-              keys={disposedKeys}
-              contactsByCode={contactsByCode}
-              selectable={true}
-              selectedKeys={keySelection.selectedIds}
-              onKeySelectionChange={(keyId, checked) => {
-                if (checked) keySelection.select(keyId)
-                else keySelection.deselect(keyId)
-              }}
-              onSelectAll={() =>
-                keySelection.selectAll(disposedKeys.map((k) => k.id))
-              }
-              onDeselectAll={() => keySelection.deselectAll()}
-              onRefresh={onRefresh}
-              onReturn={handleReturnFromMenu}
-            />
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground py-4">
-            Inga kasserade nycklar
-          </p>
-        )}
-      </div>
-
-      {/* Dialogs */}
-      <LoanMaintenanceKeysDialog
-        open={showLoanDialog}
-        onOpenChange={setShowLoanDialog}
-        keys={loanableKeys}
-        allBundleKeys={keys}
-        onSuccess={() => {
-          keySelection.deselectAll()
-          onRefresh()
-        }}
-      />
-
-      <ReturnKeysDialog
-        open={showReturnDialog}
-        onOpenChange={(open) => {
-          setShowReturnDialog(open)
-          if (!open) setPendingReturnKeyIds([])
-        }}
-        keyIds={
-          pendingReturnKeyIds.length > 0
-            ? pendingReturnKeyIds
-            : returnableKeys.map((k) => k.id)
+    <CollapsibleGroupTable
+      items={keys}
+      getItemId={(key) => key.id}
+      columnCount={columns.columnCount}
+      selection={selection?.selection}
+      // Group by contact code (from latest loan - active or previous)
+      // Use special marker for never-loaned keys so they get a group header too
+      groupBy={(key) => {
+        const latestLoan = getLatestLoan(key)
+        return latestLoan?.contact || '__never_loaned__'
+      }}
+      // Section by loan status
+      sectionBy={(key) => {
+        const activeLoan = getActiveLoan(key)
+        return activeLoan ? 'loaned' : 'unloaned'
+      }}
+      sectionOrder={['loaned', 'unloaned']}
+      renderHeader={() => columns.header(selection?.header)}
+      renderRow={(key, state) => columns.keyRow(key, state)}
+      renderGroupHeader={(contactCode, items) => {
+        // Handle keys that have never been loaned
+        if (contactCode === '__never_loaned__') {
+          return (
+            <span className="font-semibold text-muted-foreground">
+              Aldrig utlånad
+            </span>
+          )
         }
-        allKeys={keys}
-        onSuccess={() => {
-          keySelection.deselectAll()
-          setPendingReturnKeyIds([])
-          onRefresh()
-        }}
-      />
 
-      <FlexMenu
-        open={showFlexMenu}
-        onOpenChange={setShowFlexMenu}
-        selectedKeys={selectedKeysData}
-        onSuccess={onRefresh}
-        onKeysCreated={async (createdKeyIds) => {
-          // Add the newly created flex keys to the bundle
-          try {
-            const currentKeyIds = keys.map((k) => k.id)
-            const updatedKeyIds = [...currentKeyIds, ...createdKeyIds]
+        // Show the contact name and latest loan details
+        const firstKey = items[0]
+        const latestLoan = getLatestLoan(firstKey)
 
-            await updateKeyBundle(bundleId, {
-              keys: updatedKeyIds,
-            })
+        // Format the contact display inline from the sidecar map.
+        // Format: "Name · Code · NationalRegistrationNumber". Falls back to
+        // the raw code if the contact isn't in the map (e.g. contacts
+        // service was down or the code isn't in the contacts DB).
+        const contact = contactsByCode[contactCode]
+        const contactDisplay = contact
+          ? (() => {
+              const parts = [getContactFullName(contact), contact.contactCode]
+              const nrn = getContactRegistrationNumber(contact)
+              if (nrn) parts.push(nrn)
+              return parts.join(' · ')
+            })()
+          : contactCode
 
-            toast({
-              title: 'Flex-nycklar tillagda',
-              description: `${createdKeyIds.length} nya flex-nycklar har lagts till i samlingen`,
-            })
-          } catch (error) {
-            toast({
-              title: 'Kunde inte lägga till flex-nycklar',
-              description:
-                'Flex-nycklarna skapades men kunde inte läggas till i samlingen',
-              variant: 'destructive',
-            })
-          }
-        }}
-      />
-
-      <IncomingFlexMenu
-        open={showIncomingFlexMenu}
-        onOpenChange={setShowIncomingFlexMenu}
-        selectedKeys={selectedKeysData}
-        allKeys={keys}
-        onSuccess={onRefresh}
-      />
-
-      <ConfirmDialog
-        open={showRemoveWarning}
-        onOpenChange={setShowRemoveWarning}
-        title="Nycklar med aktiva lån"
-        description={
-          <div className="space-y-2">
-            <p>
-              {selectedKeysWithActiveLoans.length === 1
-                ? 'En av de valda nycklarna har ett aktivt lån:'
-                : `${selectedKeysWithActiveLoans.length} av de valda nycklarna har aktiva lån:`}
-            </p>
-            <ul className="list-disc pl-5 text-sm">
-              {selectedKeysWithActiveLoans.map((k) => (
-                <li key={k.id}>{k.keyName}</li>
-              ))}
-            </ul>
-            <p>Vill du ändå ta bort dem från samlingen?</p>
+        return (
+          <div className="flex items-center justify-between flex-1">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold">{contactDisplay}</span>
+              {latestLoan && <DefaultLoanHeader loan={latestLoan} />}
+            </div>
+            {latestLoan && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <LoanActionMenu
+                  loan={latestLoan}
+                  onRefresh={onRefresh}
+                  onReturn={onReturn}
+                />
+              </div>
+            )}
           </div>
+        )
+      }}
+      renderSectionHeader={(section) => {
+        if (section === 'loaned') {
+          return null // Loaned items are grouped by contact, no top-level section header needed
         }
-        confirmLabel="Ta bort ändå"
-        onConfirm={handleRemoveFromBundle}
-      />
-    </>
+        return <span className="font-semibold">Ej utlånade</span>
+      }}
+    />
   )
 }

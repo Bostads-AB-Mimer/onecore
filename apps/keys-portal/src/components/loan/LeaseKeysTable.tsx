@@ -1,8 +1,5 @@
 import { useMemo } from 'react'
-import {
-  CollapsibleGroupTable,
-  type TableSelectionProps,
-} from '@/components/shared/tables/CollapsibleGroupTable'
+import { CollapsibleGroupTable } from '@/components/shared/tables/CollapsibleGroupTable'
 import { DefaultLoanHeader } from '@/components/shared/tables/DefaultLoanHeader'
 import {
   loanableItemColumns,
@@ -14,6 +11,7 @@ import {
   statusColumn,
   disposedColumn,
 } from '@/components/shared/tables/loanableItemColumns'
+import type { ItemTableSelection } from '@/components/shared/tables/itemTableSelection'
 import { LoanActionMenu } from './LoanActionMenu'
 import { PickupAvailabilityBadge } from '@/components/shared/tables/StatusBadges'
 import type { KeyDetails, CardDetails, Lease } from '@/services/types'
@@ -23,35 +21,26 @@ type LeaseItem =
   | { itemType: 'key'; data: KeyDetails }
   | { itemType: 'card'; data: CardDetails }
 
-interface LeaseItemsListProps {
+interface LeaseKeysTableProps {
   keys: KeyDetails[]
   cards: CardDetails[]
   lease: Lease
   selectable?: boolean
-  selectedKeys?: string[]
-  selectedCards?: string[]
-  onKeySelectionChange?: (keyId: string, checked: boolean) => void
-  onCardSelectionChange?: (cardId: string, checked: boolean) => void
+  /** Selection bindings from itemTableSelection (required when selectable). */
+  selection?: ItemTableSelection
   onRefresh?: () => void
   onReturn?: (keyIds: string[], cardIds: string[]) => void
-  onSelectAll?: () => void
-  onDeselectAll?: () => void
 }
 
-export function LeaseItemsList({
+export function LeaseKeysTable({
   keys,
   cards,
   lease,
   selectable = true,
-  selectedKeys = [],
-  selectedCards = [],
-  onKeySelectionChange,
-  onCardSelectionChange,
+  selection,
   onRefresh,
   onReturn,
-  onSelectAll,
-  onDeselectAll,
-}: LeaseItemsListProps) {
+}: LeaseKeysTableProps) {
   const items: LeaseItem[] = useMemo(() => {
     const keyItems: LeaseItem[] = keys.map((k) => ({
       itemType: 'key',
@@ -68,38 +57,6 @@ export function LeaseItemsList({
     () => (lease.tenants ?? []).map((t) => t.contactCode).filter(Boolean),
     [lease]
   )
-
-  // Calculate selection state for header checkbox
-  const allItemIds = useMemo(
-    () =>
-      items.map((item) =>
-        item.itemType === 'key' ? item.data.id : item.data.cardId
-      ),
-    [items]
-  )
-  const selectedIds = [...selectedKeys, ...selectedCards]
-  const allSelected =
-    allItemIds.length > 0 && allItemIds.every((id) => selectedIds.includes(id))
-  const someSelected = selectedIds.length > 0
-  const isIndeterminate = someSelected && !allSelected
-
-  // Bridge dual key/card selection into a single TableSelectionProps
-  const keyIdSet = useMemo(() => new Set(keys.map((k) => k.id)), [keys])
-  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
-  const selection: TableSelectionProps | undefined = selectable
-    ? {
-        isSelected: (id) => selectedSet.has(id),
-        toggle: (id) => {
-          const isKey = keyIdSet.has(id)
-          const checked = !selectedSet.has(id)
-          if (isKey) {
-            onKeySelectionChange?.(id, checked)
-          } else {
-            onCardSelectionChange?.(id, checked)
-          }
-        },
-      }
-    : undefined
 
   const columns = loanableItemColumns({
     checkboxWidth: 'w-[50px]',
@@ -128,17 +85,11 @@ export function LeaseItemsList({
         item.itemType === 'key' ? item.data.id : item.data.cardId
       }
       columnCount={columns.columnCount}
-      selection={selection}
+      selection={selection?.selection}
       groupBy={(item) => getLatestLoan(item.data)?.id || '__never_loaned__'}
       sectionBy={(item) => (getActiveLoan(item.data) ? 'loaned' : 'unloaned')}
       sectionOrder={['loaned', 'unloaned']}
-      renderHeader={() =>
-        columns.header({
-          checked: isIndeterminate ? 'indeterminate' : allSelected,
-          onCheckedChange: () =>
-            allSelected ? onDeselectAll?.() : onSelectAll?.(),
-        })
-      }
+      renderHeader={() => columns.header(selection?.header)}
       renderRow={(item, state) =>
         item.itemType === 'card'
           ? columns.cardRow(item.data, state)
