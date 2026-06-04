@@ -9695,38 +9695,38 @@ export interface components {
         code: string;
         caption: string;
       };
-      tenants?: {
+      tenants?: ({
           contactCode: string;
           contactKey: string;
           leaseIds?: string[];
-          firstName: string;
-          lastName: string;
-          fullName: string;
+          firstName: string | null;
+          lastName: string | null;
+          fullName: string | null;
           nationalRegistrationNumber: string;
           /** Format: date-time */
-          birthDate: string;
+          birthDate: string | null;
           address?: {
             street?: string;
             number: string;
             postalCode: string;
             city: string;
-          };
+          } | null;
           phoneNumbers?: {
               phoneNumber: string;
               type: string;
               isMainNumber: boolean;
             }[];
-          emailAddress?: string;
+          emailAddress?: string | null;
           isTenant: boolean;
+          specialAttention?: boolean;
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string;
             queuePoints: number;
             type: number;
           };
-          specialAttention?: boolean;
           leaseContactType?: string;
-        }[];
+        })[];
     };
     IdentityCheckContact: {
       contactCode: string;
@@ -9785,18 +9785,18 @@ export interface components {
       nationalRegistrationNumber: string;
       /** Format: date-time */
       birthDate: string | null;
-      address: {
-        street: string;
+      address?: {
+        street?: string;
         number: string;
         postalCode: string;
         city: string;
       } | null;
-      phoneNumbers: {
+      phoneNumbers?: {
           phoneNumber: string;
           type: string;
           isMainNumber: boolean;
         }[];
-      emailAddress: string | null;
+      emailAddress?: string | null;
       isTenant: boolean;
       specialAttention?: boolean;
     };
@@ -12086,38 +12086,38 @@ export interface components {
           code: string;
           caption: string;
         };
-        tenants?: {
+        tenants?: ({
             contactCode: string;
             contactKey: string;
             leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
+            firstName: string | null;
+            lastName: string | null;
+            fullName: string | null;
             nationalRegistrationNumber: string;
             /** Format: date-time */
-            birthDate: string;
+            birthDate: string | null;
             address?: {
               street?: string;
               number: string;
               postalCode: string;
               city: string;
-            };
+            } | null;
             phoneNumbers?: {
                 phoneNumber: string;
                 type: string;
                 isMainNumber: boolean;
               }[];
-            emailAddress?: string;
+            emailAddress?: string | null;
             isTenant: boolean;
+            specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */
               queueTime: string;
               queuePoints: number;
               type: number;
             };
-            specialAttention?: boolean;
             leaseContactType?: string;
-          }[];
+          })[];
       }) | null;
       rooms: (({
           roomId: string;
@@ -12360,38 +12360,38 @@ export interface components {
           code: string;
           caption: string;
         };
-        tenants?: {
+        tenants?: ({
             contactCode: string;
             contactKey: string;
             leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
+            firstName: string | null;
+            lastName: string | null;
+            fullName: string | null;
             nationalRegistrationNumber: string;
             /** Format: date-time */
-            birthDate: string;
+            birthDate: string | null;
             address?: {
               street?: string;
               number: string;
               postalCode: string;
               city: string;
-            };
+            } | null;
             phoneNumbers?: {
                 phoneNumber: string;
                 type: string;
                 isMainNumber: boolean;
               }[];
-            emailAddress?: string;
+            emailAddress?: string | null;
             isTenant: boolean;
+            specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */
               queueTime: string;
               queuePoints: number;
               type: number;
             };
-            specialAttention?: boolean;
             leaseContactType?: string;
-          }[];
+          })[];
       }) | null;
       residence: ({
         id: string;
@@ -12744,38 +12744,38 @@ export interface components {
           code: string;
           caption: string;
         };
-        tenants?: {
+        tenants?: ({
             contactCode: string;
             contactKey: string;
             leaseIds?: string[];
-            firstName: string;
-            lastName: string;
-            fullName: string;
+            firstName: string | null;
+            lastName: string | null;
+            fullName: string | null;
             nationalRegistrationNumber: string;
             /** Format: date-time */
-            birthDate: string;
+            birthDate: string | null;
             address?: {
               street?: string;
               number: string;
               postalCode: string;
               city: string;
-            };
+            } | null;
             phoneNumbers?: {
                 phoneNumber: string;
                 type: string;
                 isMainNumber: boolean;
               }[];
-            emailAddress?: string;
+            emailAddress?: string | null;
             isTenant: boolean;
+            specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */
               queueTime: string;
               queuePoints: number;
               type: number;
             };
-            specialAttention?: boolean;
             leaseContactType?: string;
-          }[];
+          })[];
       }) | null;
     };
     InternalInspection: {

@@ -9,10 +9,10 @@ import {
 import { ContactInfoCard } from '@/components/loan/ContactInfoCard'
 import { MaintenanceLoansTable } from '@/components/maintenance/MaintenanceLoansTable'
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
-import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
+import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 import { CreateLoanWithKeysCard } from '@/components/maintenance/CreateLoanWithKeysCard'
-import { ContactLoanedKeysCard } from '@/components/maintenance/ContactLoanedKeysCard'
-import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
+import { ContactLoanedKeys } from '@/components/maintenance/ContactLoanedKeys'
+import { KeyBundleKeys } from '@/components/maintenance/KeyBundleKeys'
 import { AddKeysToBundleCard } from '@/components/bundles/AddKeysToBundleCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -338,10 +338,11 @@ export default function MaintenanceKeys() {
                     }}
                   />
                 </div>
-                <ContactLoanedKeysCard
+                <ContactLoanedKeys
                   contactCode={searchResult.contact.contactCode}
                   activeLoans={activeLoans}
                   loansKeySystemMap={loansKeySystemMap}
+                  onChanged={() => setHasLoadedLoans(false)}
                   onBundleClick={(bundleId) => {
                     setHasLoadedLoans(false)
                     handleSearchByBundleId(bundleId)
@@ -461,7 +462,7 @@ export default function MaintenanceKeys() {
                     </p>
                   </CardHeader>
                   <CardContent>
-                    <KeyBundleKeysTable
+                    <KeyBundleKeys
                       keys={bundleKeys}
                       contactsByCode={bundleContactsByCode}
                       bundleId={searchResult.bundle.id}
@@ -559,7 +560,7 @@ export default function MaintenanceKeys() {
 
       {/* Return Loan Dialog */}
       {returnLoan && (
-        <ReturnMaintenanceKeysDialog
+        <ReturnKeysDialog
           open={returnDialogOpen}
           onOpenChange={(open) => {
             setReturnDialogOpen(open)
