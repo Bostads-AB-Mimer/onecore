@@ -356,6 +356,40 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
       err: 'unknown',
     })
   })
+
+  it('filters records by hyresvardId when one is given', async () => {
+    // Tenfast's /hyresgaster/search ignores `hyresvard=` and returns every
+    // matching tenant across landlords; the same contactCode can legitimately
+    // exist under multiple hyresvärdar.
+    const tenantA = factory.tenfastTenant.build({ hyresvard: 'landlord-A' })
+    const tenantB = factory.tenfastTenant.build({ hyresvard: 'landlord-B' })
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { records: [tenantA, tenantB] },
+    })
+
+    const result = await tenfastAdapter.getTenantByContactCode(
+      'TENANT_CODE',
+      'landlord-B'
+    )
+
+    expect(result).toEqual({ ok: true, data: tenantB })
+  })
+
+  it('returns null when no record matches the given hyresvardId', async () => {
+    const tenantA = factory.tenfastTenant.build({ hyresvard: 'landlord-A' })
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { records: [tenantA] },
+    })
+
+    const result = await tenfastAdapter.getTenantByContactCode(
+      'TENANT_CODE',
+      'landlord-B'
+    )
+
+    expect(result).toEqual({ ok: true, data: null })
+  })
 })
 
 describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
@@ -799,6 +833,12 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTemplate,
     })
 
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: false,
       err: 'could-not-retrieve-tenant',
@@ -1083,6 +1123,12 @@ describe(tenfastAdapter.importLease, () => {
   })
 
   it('returns "could-not-retrieve-tenant" when getOrCreateTenant fails', async () => {
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: false,
       err: 'unknown',
@@ -1175,6 +1221,47 @@ describe(tenfastAdapter.importLease, () => {
     )
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('routes tenant lookup and lease POST to the rental object\'s hyresvärd', async () => {
+    const rentalObjectHyresvard = 'landlord-A'
+    const mockRentalObject = factory.tenfastRentalObject.build({
+      hyresvard: rentalObjectHyresvard,
+    })
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+
+    const mockTenant = factory.tenfastTenant.build({
+      hyresvard: rentalObjectHyresvard,
+    })
+    const tenantSpy = jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValue({ ok: true, data: mockTenant })
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 201,
+      data: { _id: 'lease-id' },
+    })
+
+    const payload = factory.syncTenantPayload.build()
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      payload,
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: true, data: { _id: 'lease-id' } })
+    expect(tenantSpy).toHaveBeenCalledWith(
+      payload.contactCode,
+      rentalObjectHyresvard
+    )
+
+    const postCall = (request as jest.Mock).mock.calls.find(
+      ([req]) => req.method === 'post'
+    )?.[0]
+    expect(postCall.url).toContain(`hyresvard=${rentalObjectHyresvard}`)
   })
 })
 
