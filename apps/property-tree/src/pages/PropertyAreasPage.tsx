@@ -190,9 +190,11 @@ export function PropertyAreasPage() {
     })
   }
 
-  // Without the manager list the dialog dropdown would be empty, so suppress
-  // the pencil entry-point until usePropertyManagers has resolved.
-  const onReassignArea = propertyManagers ? handleReassignArea : undefined
+  // Hide the pencil entry-point entirely when the user lacks
+  // `property-areas:write`, and also while usePropertyManagers is still loading
+  // (otherwise the dropdown would be empty on first click).
+  const onReassignArea =
+    canEdit && propertyManagers ? handleReassignArea : undefined
 
   const lead = tree ? formatUserName(tree.lead) : undefined
   const deputy = tree ? formatUserName(tree.deputy) : undefined
