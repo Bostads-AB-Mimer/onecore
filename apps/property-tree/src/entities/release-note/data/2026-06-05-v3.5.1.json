@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-06-05-v351-1",
+    "date": "2026-06-05",
+    "title": "SMS skickas nu via Tele2",
+    "description": "Alla SMS som skickas från ONECore går nu via Tele2 i stället för Infobip, kopplat till kommunens avtal. Meddelandena ser likadana ut för mottagaren och avsändaren \"Mimer\" är oförändrad. E-post skickas fortsatt via egen instans av Infobip.",
+    "category": "improvement"
+  }
+]
