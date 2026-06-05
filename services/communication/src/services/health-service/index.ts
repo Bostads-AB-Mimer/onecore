@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import config from '../../common/config'
 import { healthCheck as infobipHealthCheck } from '../infobip-service/adapters/email-adapter'
+import { tele2SmsHealthCheck } from '../infobip-service/adapters/sms-adapter'
 import { linearHealthCheck } from '../linear-service/adapters/linear-adapter'
 import {
   HealthCheckTarget,
@@ -19,6 +20,16 @@ const subsystems: HealthCheckTarget[] = [
         healthChecks,
         config.health.infobip.minimumMinutesBetweenRequests,
         infobipHealthCheck
+      )
+    },
+  },
+  {
+    probe: async (): Promise<SystemHealth> => {
+      return await probe(
+        config.health.tele2.systemName,
+        healthChecks,
+        config.health.tele2.minimumMinutesBetweenRequests,
+        tele2SmsHealthCheck
       )
     },
   },

@@ -9,8 +9,16 @@ export interface Config {
     apiKey: string
     parkingSpaceOfferTempalteId: number
   }
+  tele2: {
+    baseUrl: string
+    apiKey: string
+  }
   health: {
     infobip: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    tele2: {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
@@ -36,9 +44,17 @@ const config = configPackage({
       baseUrl: '',
       apiKey: '',
     },
+    tele2: {
+      baseUrl: '',
+      apiKey: '',
+    },
     health: {
       infobip: {
         systemName: 'infobip',
+        minimumMinutesBetweenRequests: 5,
+      },
+      tele2: {
+        systemName: 'tele2',
         minimumMinutesBetweenRequests: 5,
       },
       linear: {
@@ -59,6 +75,7 @@ const config = configPackage({
 export default {
   port: config.get('port'),
   infobip: config.get('infobip'),
+  tele2: config.get('tele2'),
   health: config.get('health'),
   linear: config.get('linear'),
 } as Config
