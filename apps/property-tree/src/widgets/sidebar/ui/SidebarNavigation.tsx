@@ -164,11 +164,13 @@ function SidebarNavigationContent() {
           icon={Settings}
           label="Administrera Komponenter"
         />
-        <SidebarNavLink
+        {/* Temporarily hidden from the nav while the feature is finalized.
+            The route still works, so the page is reachable via /forvaltningsomraden. */}
+        {/* <SidebarNavLink
           to={routes.propertyAreas}
           icon={LayoutGrid}
           label="Förvaltningsområden"
-        />
+        /> */}
       </SidebarContent>
     </Sidebar>
   )
