@@ -10,7 +10,6 @@ import {
 import { createLease } from '../adapters/xpand/xpand-soap-adapter'
 import {
   searchLeases,
-  getBuildingManagers,
   getParkingSpaceTypes,
   getStatusLabel,
 } from '../adapters/xpand/lease-search-adapter'
@@ -113,12 +112,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names
    *       - in: query
-   *         name: buildingManager
+   *         name: kvvAreaCodes
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names (Kvartersvärd)
+   *         description: KVV-area codes (bafen.code) — filters leases to those in the listed förvaltningsområden
    *       - in: query
    *         name: page
    *         schema:
@@ -223,26 +222,6 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
-  router.get('(.*)/leases/building-managers', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-
-    try {
-      const result = await getBuildingManagers()
-      ctx.status = 200
-      ctx.body = { content: result, ...metadata }
-    } catch (error) {
-      ctx.status = 500
-      ctx.body = {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unknown error occurred fetching building managers',
-        ...metadata,
-      }
-    }
-  })
-
   /**
    * @swagger
    * /leases/parking-space-types:
@@ -377,7 +356,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManager',
+      'kvvAreaCodes',
       'parkingSpaceType',
       'page',
       'limit',
@@ -517,7 +496,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManager',
+      'kvvAreaCodes',
       'parkingSpaceType',
       'sortBy',
       'sortOrder',
@@ -668,12 +647,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names
    *       - in: query
-   *         name: buildingManager
+   *         name: kvvAreaCodes
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names
+   *         description: KVV-area codes (bafen.code)
    *     responses:
    *       200:
    *         description: Unique contacts matching the filters
@@ -704,7 +683,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManager',
+      'kvvAreaCodes',
     ])
 
     const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(

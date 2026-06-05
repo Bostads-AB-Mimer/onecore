@@ -246,4 +246,84 @@ describe('keycloak-admin-adapter', () => {
       })
     })
   })
+
+  describe('listAllUsers', () => {
+    let listAllUsers: typeof import('../keycloak-admin-adapter').listAllUsers
+    beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      listAllUsers = require('../keycloak-admin-adapter').listAllUsers
+    })
+
+    it('returns paged users', async () => {
+      const usersUrl = `${url}/admin/realms/${realm}/users`
+      let page = 0
+      mockServer.use(
+        tokenHandler(),
+        http.get(usersUrl, () => {
+          page += 1
+          if (page === 1) {
+            // 100 users — full page → adapter requests next page
+            const fullPage = Array.from({ length: 100 }, (_, i) => ({
+              id: `u${i}`,
+              username: `user${i}`,
+            }))
+            return HttpResponse.json(fullPage)
+          }
+          return HttpResponse.json([{ id: 'u100', username: 'user100' }])
+        })
+      )
+
+      const result = await listAllUsers()
+      if (!result.ok) throw new Error('expected ok')
+      expect(result.data).toHaveLength(101)
+    })
+  })
+
+  describe('getUserById and updateUser', () => {
+    let getUserById: typeof import('../keycloak-admin-adapter').getUserById
+    let updateUser: typeof import('../keycloak-admin-adapter').updateUser
+    beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      getUserById = require('../keycloak-admin-adapter').getUserById
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      updateUser = require('../keycloak-admin-adapter').updateUser
+    })
+
+    it('fetches one user', async () => {
+      mockServer.use(
+        tokenHandler(),
+        http.get(`${url}/admin/realms/${realm}/users/u1`, () =>
+          HttpResponse.json({ id: 'u1', username: 'alice' })
+        )
+      )
+      const r = await getUserById('u1')
+      if (!r.ok) throw new Error('expected ok')
+      expect(r.data.id).toBe('u1')
+    })
+
+    it('sends full UserRepresentation on PUT', async () => {
+      let received: unknown
+      mockServer.use(
+        tokenHandler(),
+        http.put(
+          `${url}/admin/realms/${realm}/users/u1`,
+          async ({ request }) => {
+            received = await request.json()
+            return new HttpResponse(null, { status: 204 })
+          }
+        )
+      )
+      const r = await updateUser({
+        id: 'u1',
+        username: 'alice',
+        attributes: { employeeId: ['E42'] },
+      })
+      expect(r.ok).toBe(true)
+      expect(received).toMatchObject({
+        id: 'u1',
+        username: 'alice',
+        attributes: { employeeId: ['E42'] },
+      })
+    })
+  })
 })

@@ -3,6 +3,7 @@ import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
+import { useCostCenters } from '@/features/property-areas'
 
 import { useLeaseFilters } from '@/entities/lease'
 
@@ -55,19 +56,12 @@ const statusOptions = [
   { label: 'Upphörd', value: '3' },
 ] as const
 
-const districtOptions = [
-  'Distrikt Norr',
-  'Distrikt Väst',
-  'Distrikt Öst',
-  'Distrikt Mitt',
-  'Mimer Student',
-] as const
-
 const LeasesPage = () => {
   const cardRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
   const filters = useLeaseFilters()
   const searchProperties = usePropertySearch()
+  const { data: costCenters } = useCostCenters()
 
   // Client-side search over the static leaseTypeOptions list for the
   // MultiSelectSearchFilterDropdown pattern (no backend call needed)
@@ -256,7 +250,10 @@ const LeasesPage = () => {
               />
 
               <MultiSelectFilterDropdown
-                options={districtOptions.map((o) => ({ label: o, value: o }))}
+                options={(costCenters ?? []).map((cc) => ({
+                  label: cc.name ?? cc.code,
+                  value: cc.name ?? cc.code,
+                }))}
                 selectedValues={filters.selectedDistricts}
                 onSelectionChange={(vals) =>
                   filters.setFilterValues('district', vals)

@@ -51,6 +51,12 @@ export type {
 // Extract types from the generated schemas
 export type Company = components['schemas']['Company']
 export type CompanyDetails = components['schemas']['CompanyDetails']
+export type CostCenterSummary = components['schemas']['CostCenterSummary']
+export type CostCenterTree = components['schemas']['CostCenterTree']
+export type CostCenterTreeKvvArea =
+  components['schemas']['CostCenterTreeKvvArea']
+export type CostCenterTreeProperty =
+  components['schemas']['CostCenterTreeProperty']
 export type Property = components['schemas']['Property']
 export type Building = components['schemas']['Building']
 export type Staircase = components['schemas']['Staircase']

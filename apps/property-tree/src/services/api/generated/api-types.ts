@@ -1589,6 +1589,59 @@ export interface paths {
       };
     };
   };
+  "/properties/{code}/kvv-area": {
+    /**
+     * Set the KVV-area (förvaltningsområde) membership of a property
+     * @description Upserts the property → KVV-area link in `onecore_property_kvv_area`.
+     * Cross-cost-center moves are allowed without validation: the target
+     * KVV-area does not have to belong to the same cost center the property
+     * was previously associated with.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The property code (Xpand `Property.code`). */
+          code: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            kvvAreaId: string;
+            /**
+             * @description Identifier of the user performing the change. Stored in
+             * `updated_by` for audit. Typically the Keycloak
+             * preferred_username forwarded by core.
+             */
+            updatedBy?: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Link upserted successfully. */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["PropertyKvvAreaLink"];
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Property or KVV-area not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/parking-spaces/search": {
     /**
      * Search parking spaces
@@ -2214,6 +2267,144 @@ export interface paths {
           };
         };
         /** @description Facilities not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/cost-centers": {
+    /**
+     * List all cost centers
+     * @description Returns a minimal list of all OneCore cost centers, sorted by code. Used to populate select lists.
+     */
+    get: {
+      responses: {
+        /** @description List of cost centers */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterSummary"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/cost-centers/{id}/tree": {
+    /**
+     * Get the management tree for a cost center
+     * @description Returns the cost center, its KVV areas, properties (with addresses and
+     * aggregate counts) and the Keycloak user IDs for lead, deputy and
+     * responsible. Keycloak user details are NOT expanded here — that
+     * composition happens in core.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The cost center id */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Cost center tree */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterTree"];
+            };
+          };
+        };
+        /** @description Cost center not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/kvv-areas": {
+    /**
+     * List kvv-area codes filtered by responsible Keycloak users
+     * @description Returns the codes of kvv-areas (förvaltningsområden) whose
+     * responsibleKeycloakUserId is one of the provided user ids. Repeat the
+     * responsibleUserId query param for each user id. Returns an empty list
+     * if the param is omitted.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Keycloak user ids (repeatable) */
+          responsibleUserId?: string[];
+        };
+      };
+      responses: {
+        /** @description List of kvv-area codes */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KvvAreaSummary"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/kvv-areas/{id}/responsible": {
+    /**
+     * Update the responsible kvartersvärd for a KVV area
+     * @description Sets `responsible_keycloak_user_id` for the given KVV area and stamps
+     * `updated_by`. Target-user role validation happens in core; this
+     * endpoint trusts the caller.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            keycloakUserId: string;
+            updatedBy: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated KVV area */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KvvArea"];
+            };
+          };
+        };
+        /** @description Invalid id or body */
+        400: {
+          content: never;
+        };
+        /** @description KVV area not found */
         404: {
           content: never;
         };
@@ -3900,6 +4091,74 @@ export interface components {
       ncsCode: string | null;
       additionalInformation: string | null;
       confidence: number;
+    };
+    CostCenterTree: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+      leadKeycloakUserId: string | null;
+      deputyKeycloakUserId: string | null;
+      kvvAreas: ({
+          /** Format: uuid */
+          id: string;
+          code: string;
+          name: string | null;
+          responsibleKeycloakUserId: string | null;
+          properties: ({
+              code: string;
+              designation: string | null;
+              tract: string | null;
+              addresses: ({
+                  buildingCode: string;
+                  buildingName: string | null;
+                  buildingType: ({
+                    code: string | null;
+                    name: string | null;
+                  }) | null;
+                })[];
+              aggregates: {
+                residenceCount: number;
+                parkingCount: number;
+                entranceCount: number;
+              };
+            })[];
+        })[];
+    };
+    CostCenterSummary: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+    };
+    KvvAreaSummary: {
+      code: string;
+    };
+    PutPropertyKvvAreaBody: {
+      /** Format: uuid */
+      kvvAreaId: string;
+      updatedBy?: string;
+    };
+    PropertyKvvAreaLink: {
+      propertyCode: string;
+      /** Format: uuid */
+      kvvAreaId: string;
+      updatedAt: string;
+      updatedBy: string | null;
+    };
+    KvvArea: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string | null;
+      /** Format: uuid */
+      costCenterId: string;
+      responsibleKeycloakUserId: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      updatedBy: string | null;
     };
     ApartmentTemperaturePoint: {
       /** @description Unix timestamp (seconds) at the start of the aggregation bucket. */

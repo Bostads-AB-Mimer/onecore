@@ -1,0 +1,23 @@
+[
+  {
+    "id": "rn-2026-06-05-v350-1",
+    "date": "2026-06-05",
+    "title": "Förvaltningsområden",
+    "description": "Ny vy som visar varje kostnadsställe/distrikt med sina KVV-områden, ansvarig kvartersvärd och totaler för fastigheter, uppgångar, bostäder och bilplatser. Behöriga användare kan dra och släppa fastigheter mellan KVV-områden och byta ansvarig kvartersvärd. Hyreskontrakt kan nu också filtreras på kvartersvärd utifrån områdena.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-06-05-v350-2",
+    "date": "2026-06-05",
+    "title": "Rätt kund på nyckelkvittensen",
+    "description": "Nyckelkvittensen genereras nu utifrån den kund du sökt på, så att rätt kund alltid hamnar på kvittensen.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-06-05-v350-3",
+    "date": "2026-06-05",
+    "title": "Mindre nyckelkvittenser",
+    "description": "Nyckelkvittenser komprimeras nu när de genereras, vilket kraftigt minskar filstorleken och lagringsutrymmet.",
+    "category": "improvement"
+  }
+]

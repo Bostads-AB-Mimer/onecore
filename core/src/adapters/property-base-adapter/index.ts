@@ -284,6 +284,52 @@ export async function getPropertyDetails(
   }
 }
 
+export type PropertyKvvAreaLink = {
+  propertyCode: string
+  kvvAreaId: string
+  updatedAt: string
+  updatedBy: string | null
+}
+
+export async function updatePropertyKvvArea(
+  propertyCode: string,
+  body: { kvvAreaId: string; updatedBy?: string | null }
+): Promise<
+  AdapterResult<
+    PropertyKvvAreaLink,
+    'property-not-found' | 'kvv-area-not-found' | 'unknown'
+  >
+> {
+  try {
+    const response = await client().PUT('/properties/{code}/kvv-area', {
+      params: { path: { code: propertyCode } },
+      body: {
+        kvvAreaId: body.kvvAreaId,
+        ...(body.updatedBy ? { updatedBy: body.updatedBy } : {}),
+      },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      // services/property emits a discriminator `code` on 404 bodies. Switching
+      // on it keeps us decoupled from the human-readable `reason` text.
+      const errBody = response.error as { code?: string } | undefined
+      if (errBody?.code === 'KVV_AREA_NOT_FOUND') {
+        return { ok: false, err: 'kvv-area-not-found' }
+      }
+      return { ok: false, err: 'property-not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.updatePropertyKvvArea')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetResidencesResponse = components['schemas']['Residence'][]
 
 export async function getResidences(
@@ -918,6 +964,25 @@ export async function createRoom(
   }
 }
 
+type ListCostCentersResponse = components['schemas']['CostCenterSummary'][]
+
+export async function listCostCenters(): Promise<
+  AdapterResult<ListCostCentersResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/cost-centers')
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.listCostCenters')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function deleteRoom(
   roomId: string
 ): Promise<AdapterResult<void, 'not-found' | 'has-components' | 'unknown'>> {
@@ -948,9 +1013,86 @@ export async function deleteRoom(
   }
 }
 
+type GetCostCenterTreeResponse = components['schemas']['CostCenterTree']
+
+export async function getCostCenterTreeById(
+  id: string
+): Promise<AdapterResult<GetCostCenterTreeResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/cost-centers/{id}/tree', {
+      params: { path: { id } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getCostCenterTreeById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
 
 export { getApartmentTemperatures } from './apartment-temperatures'
+
+export async function findKvvAreaCodesByResponsibles(
+  userIds: string[]
+): Promise<AdapterResult<string[], 'unknown'>> {
+  if (userIds.length === 0) return { ok: true, data: [] }
+  try {
+    const fetchResponse = await client().GET('/kvv-areas', {
+      params: { query: { responsibleUserId: userIds } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content.map((r) => r.code) }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-base-adapter.findKvvAreaCodesByResponsibles'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type UpdateKvvAreaResponsibleResponse = components['schemas']['KvvArea']
+
+export async function updateKvvAreaResponsible(
+  id: string,
+  body: { keycloakUserId: string; updatedBy: string }
+): Promise<
+  AdapterResult<UpdateKvvAreaResponsibleResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().PATCH('/kvv-areas/{id}/responsible', {
+      params: { path: { id } },
+      body,
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateKvvAreaResponsible')
+    return { ok: false, err: 'unknown' }
+  }
+}
 
 // ==================== COMPONENTS ====================
 

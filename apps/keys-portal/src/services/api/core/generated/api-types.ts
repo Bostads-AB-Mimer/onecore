@@ -421,7 +421,7 @@ export interface paths {
           areaCodes?: string[];
           /** @description District names */
           districtNames?: string[];
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[];
           /** @description Page number */
           page?: number;
@@ -449,32 +449,6 @@ export interface paths {
         /** @description Invalid query parameters */
         400: {
           content: never;
-        };
-        /** @description Internal server error */
-        500: {
-          content: never;
-        };
-      };
-    };
-  };
-  "/leases/building-managers": {
-    /**
-     * Get all building managers
-     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
-     */
-    get: {
-      responses: {
-        /** @description List of building managers */
-        200: {
-          content: {
-            "application/json": {
-              content?: {
-                  code?: string;
-                  name?: string;
-                  district?: string;
-                }[];
-            };
-          };
         };
         /** @description Internal server error */
         500: {
@@ -538,7 +512,7 @@ export interface paths {
           areaCodes?: string[];
           /** @description District names */
           districtNames?: string[];
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[];
         };
       };
@@ -584,7 +558,7 @@ export interface paths {
           areaCodes?: string[];
           /** @description District names */
           districtNames?: string[];
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[];
         };
       };
@@ -4394,6 +4368,61 @@ export interface paths {
       };
     };
   };
+  "/cost-centers": {
+    /**
+     * List all cost centers
+     * @description Returns all OneCore cost centers in a minimal shape suitable for select lists.
+     */
+    get: {
+      responses: {
+        /** @description List of cost centers */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterSummary"][];
+            };
+          };
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/cost-centers/{id}/tree": {
+    /**
+     * Get a cost center management tree
+     * @description Returns the cost center with KVV areas, properties (addresses + aggregates)
+     * and Keycloak-expanded lead, deputy and responsible users. If Keycloak is
+     * unreachable, the tree is returned with user fields set to null.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Cost center tree */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CostCenterTree"];
+            };
+          };
+        };
+        /** @description Cost center not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/buildings": {
     /**
      * Get all buildings for a specific property
@@ -5645,6 +5674,137 @@ export interface paths {
           content: never;
         };
         /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/kvv-areas": {
+    /**
+     * List kvv-area codes filtered by responsible Keycloak users
+     * @description Returns the codes of kvv-areas (förvaltningsområden) whose
+     * responsibleKeycloakUserId is one of the provided user ids. Repeat the
+     * responsibleUserId query param for each user id. Returns an empty list
+     * if the param is omitted.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Keycloak user ids (repeatable) */
+          responsibleUserId?: string[];
+        };
+      };
+      responses: {
+        /** @description List of kvv-area codes */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["KvvAreaSummary"][];
+            };
+          };
+        };
+        /** @description Invalid query parameters */
+        400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/kvv-areas/{id}/responsible": {
+    /**
+     * Update the responsible kvartersvärd for a KVV area
+     * @description Requires the `property-areas:write` realm role. The target user (by
+     * `keycloakUserId`) must hold the `property-manager` role in Keycloak;
+     * a 400 is returned otherwise. On success the updated area is returned
+     * with the new responsible user hydrated.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            keycloakUserId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Updated KVV area with hydrated responsible user */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["PatchedKvvArea"];
+            };
+          };
+        };
+        /** @description Invalid body or target user is not a property manager */
+        400: {
+          content: never;
+        };
+        /** @description Caller lacks the `property-areas:write` role */
+        403: {
+          content: never;
+        };
+        /** @description KVV area not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/properties/{propertyCode}/kvv-area": {
+    /**
+     * Set the KVV-area (förvaltningsområde) of a property
+     * @description Sets the KVV-area a property belongs to. Cross-cost-center moves are
+     * allowed without validation. Requires the `property-areas:write` realm
+     * role (see MIM-1788).
+     */
+    put: {
+      parameters: {
+        path: {
+          propertyCode: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["PutPropertyKvvAreaBody"];
+        };
+      };
+      responses: {
+        /** @description Property → KVV-area link upserted */
+        200: {
+          content: {
+            "application/json": {
+              content?: components["schemas"]["PropertyKvvAreaLink"];
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description Missing `property-areas:write` role */
+        403: {
+          content: never;
+        };
+        /** @description Property or KVV-area not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
         500: {
           content: never;
         };
@@ -11073,6 +11233,158 @@ export interface components {
             })[];
         })[];
     };
+    KeycloakUserSummary: {
+      id: string;
+      username: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      mobilePhone?: string;
+      employeeId?: string;
+    };
+    CostCenterTreeAddress: {
+      buildingCode: string;
+      buildingName: string | null;
+      buildingType: ({
+        code: string | null;
+        name: string | null;
+      }) | null;
+    };
+    CostCenterTreeAggregates: {
+      residenceCount: number;
+      parkingCount: number;
+      entranceCount: number;
+    };
+    CostCenterTreeProperty: {
+      code: string;
+      designation: string | null;
+      tract: string | null;
+      addresses: ({
+          buildingCode: string;
+          buildingName: string | null;
+          buildingType: ({
+            code: string | null;
+            name: string | null;
+          }) | null;
+        })[];
+      aggregates: {
+        residenceCount: number;
+        parkingCount: number;
+        entranceCount: number;
+      };
+    };
+    CostCenterTreeKvvArea: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string | null;
+      responsible: {
+        id: string;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        mobilePhone?: string;
+        employeeId?: string;
+      } | null;
+      properties: ({
+          code: string;
+          designation: string | null;
+          tract: string | null;
+          addresses: ({
+              buildingCode: string;
+              buildingName: string | null;
+              buildingType: ({
+                code: string | null;
+                name: string | null;
+              }) | null;
+            })[];
+          aggregates: {
+            residenceCount: number;
+            parkingCount: number;
+            entranceCount: number;
+          };
+        })[];
+    };
+    CostCenterTree: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+      lead: {
+        id: string;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        mobilePhone?: string;
+        employeeId?: string;
+      } | null;
+      deputy: components["schemas"]["CostCenterTree"]["lead"] | null;
+      capabilities: {
+        canEdit: boolean;
+      };
+      kvvAreas: ({
+          /** Format: uuid */
+          id: string;
+          code: string;
+          name: string | null;
+          responsible: components["schemas"]["CostCenterTree"]["lead"] | null;
+          properties: ({
+              code: string;
+              designation: string | null;
+              tract: string | null;
+              addresses: ({
+                  buildingCode: string;
+                  buildingName: string | null;
+                  buildingType: ({
+                    code: string | null;
+                    name: string | null;
+                  }) | null;
+                })[];
+              aggregates: {
+                residenceCount: number;
+                parkingCount: number;
+                entranceCount: number;
+              };
+            })[];
+        })[];
+    };
+    CostCenterSummary: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+    };
+    KvvAreaSummary: {
+      code: string;
+    };
+    PutPropertyKvvAreaBody: {
+      /** Format: uuid */
+      kvvAreaId: string;
+    };
+    PropertyKvvAreaLink: {
+      propertyCode: string;
+      /** Format: uuid */
+      kvvAreaId: string;
+      updatedAt: string;
+      updatedBy: string | null;
+    };
+    PatchedKvvArea: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string | null;
+      responsible: {
+        id: string;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        mobilePhone?: string;
+        employeeId?: string;
+      } | null;
+    };
     Key: {
       /** Format: uuid */
       id: string;
@@ -13025,11 +13337,23 @@ export interface components {
       totalInvalid: number;
     };
     KeycloakUser: {
-      id?: string;
-      username?: string;
+      id: string;
+      username: string;
       firstName?: string;
       lastName?: string;
       email?: string;
+      emailVerified?: boolean;
+      /** @description Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings. */
+      attributes?: {
+        [key: string]: string[];
+      };
+      /** Format: int64 */
+      createdTimestamp?: number;
+      enabled?: boolean;
+      totp?: boolean;
+      disableableCredentialTypes?: string[];
+      requiredActions?: string[];
+      notBefore?: number;
     };
     RentalPropertyResponse: {
       content?: {

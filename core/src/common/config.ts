@@ -65,6 +65,11 @@ export interface Config {
       clientSecret: string
     }
   }
+  microsoftGraph: {
+    tenantId: string
+    clientId: string
+    clientSecret: string
+  }
   emailAddresses: {
     leasing: string
     tenantDefault: string
@@ -140,6 +145,11 @@ const config = configPackage({
         clientSecret: 'your-client-secret',
       },
     },
+    microsoftGraph: {
+      tenantId: '',
+      clientId: '',
+      clientSecret: '',
+    },
     emailAddresses: {
       leasing: '',
       tenantDefault: '',
@@ -208,6 +218,7 @@ export default {
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
+  microsoftGraph: config.get('microsoftGraph'),
   health: config.get('health'),
   propertyBaseService: config.get('propertyBaseService'),
   keysService: config.get('keysService'),

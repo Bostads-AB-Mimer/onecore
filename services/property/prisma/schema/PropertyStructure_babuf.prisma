@@ -69,6 +69,7 @@ model PropertyStructure {
   maintenanceUnit MaintenanceUnit? @relation(fields: [propertyObjectId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
   staircase       Staircase?       @relation(fields: [staircaseId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
   residence       Residence?       @relation(fields: [residenceId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
+  building        Building?        @relation(fields: [buildingId], references: [propertyObjectId], onDelete: NoAction, onUpdate: NoAction)
   rentalBlocks    RentalBlock[]
 
   // Ny relation baserad på maintenanceUnitCode

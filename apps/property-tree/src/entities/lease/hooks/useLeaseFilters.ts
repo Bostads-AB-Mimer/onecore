@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
 
+import { authService } from '@/services/api/core/authService'
 import {
-  type BuildingManager,
   leaseSearchService,
   type ParkingSpaceType,
 } from '@/services/api/core/leaseSearchService'
@@ -10,6 +10,10 @@ import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
 import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
 
 import { useLeaseSearch } from './useLeaseSearch'
+
+type PropertyManager = Awaited<
+  ReturnType<typeof authService.getUsersByRole>
+>[number]
 
 const PAGE_SIZE = 50
 
@@ -158,26 +162,29 @@ export function useLeaseFilters() {
     [updateUrlParams]
   )
 
-  // Building manager filter: fetch once, filter client-side
-  const buildingManagersRef = useRef<BuildingManager[] | null>(null)
+  // Building manager filter: fetch once from Keycloak (property-manager role), filter client-side
+  const propertyManagersRef = useRef<PropertyManager[] | null>(null)
+
   const searchBuildingManagers = useCallback(
     async (query: string): Promise<SearchFilterOption[]> => {
-      if (!buildingManagersRef.current) {
-        buildingManagersRef.current =
-          await leaseSearchService.getBuildingManagers()
+      if (!propertyManagersRef.current) {
+        propertyManagersRef.current =
+          await authService.getUsersByRole('property-manager')
       }
 
       const q = query.toLowerCase()
-      return buildingManagersRef.current
-        .filter(
-          (bm) =>
-            bm.name.toLowerCase().includes(q) ||
-            bm.district.toLowerCase().includes(q)
-        )
-        .map((bm) => ({
-          label: `${bm.name} (${bm.code})`,
-          value: bm.name,
-          description: bm.district,
+      return propertyManagersRef.current
+        .filter((u) => {
+          const fullName =
+            `${u.firstName ?? ''} ${u.lastName ?? ''}`.toLowerCase()
+          const employeeId = (u.attributes?.employeeId?.[0] ?? '').toLowerCase()
+          return fullName.includes(q) || employeeId.includes(q)
+        })
+        .map((u) => ({
+          label:
+            `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.username,
+          value: u.id,
+          description: u.attributes?.employeeId?.[0],
         }))
     },
     []

@@ -1152,3 +1152,106 @@ export const ApartmentTemperaturesResponseSchema =
 
 export type ApartmentTemperaturesResponse =
   property.ApartmentTemperaturesResponse
+
+export const KeycloakUserSummarySchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().optional(),
+  mobilePhone: z.string().optional(),
+  employeeId: z.string().optional(),
+})
+
+export const CostCenterTreeAddressSchema = z.object({
+  buildingCode: z.string(),
+  buildingName: z.string().nullable(),
+  buildingType: z
+    .object({
+      code: z.string().nullable(),
+      name: z.string().nullable(),
+    })
+    .nullable(),
+})
+
+export const CostCenterTreeAggregatesSchema = z.object({
+  residenceCount: z.number().int().nonnegative(),
+  parkingCount: z.number().int().nonnegative(),
+  entranceCount: z.number().int().nonnegative(),
+})
+
+export const CostCenterTreePropertySchema = z.object({
+  code: z.string(),
+  designation: z.string().nullable(),
+  tract: z.string().nullable(),
+  addresses: z.array(CostCenterTreeAddressSchema),
+  aggregates: CostCenterTreeAggregatesSchema,
+})
+
+export const CostCenterTreeKvvAreaSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+  properties: z.array(CostCenterTreePropertySchema),
+})
+
+export const CostCenterTreeCapabilitiesSchema = z.object({
+  canEdit: z.boolean(),
+})
+
+export const CostCenterTreeSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+  lead: KeycloakUserSummarySchema.nullable(),
+  deputy: KeycloakUserSummarySchema.nullable(),
+  capabilities: CostCenterTreeCapabilitiesSchema,
+  kvvAreas: z.array(CostCenterTreeKvvAreaSchema),
+})
+
+export type CostCenterTree = z.infer<typeof CostCenterTreeSchema>
+
+export const CostCenterSummarySchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+})
+
+export type CostCenterSummary = z.infer<typeof CostCenterSummarySchema>
+
+export const KvvAreaSummarySchema = z.object({
+  code: z.string(),
+})
+
+export type KvvAreaSummary = z.infer<typeof KvvAreaSummarySchema>
+
+export const PutPropertyKvvAreaBodySchema = z.object({
+  kvvAreaId: z.string().uuid(),
+})
+
+export type PutPropertyKvvAreaBody = z.infer<
+  typeof PutPropertyKvvAreaBodySchema
+>
+
+export const PropertyKvvAreaLinkSchema = z.object({
+  propertyCode: z.string(),
+  kvvAreaId: z.string().uuid(),
+  updatedAt: z.string(),
+  updatedBy: z.string().nullable(),
+})
+
+export type PropertyKvvAreaLink = z.infer<typeof PropertyKvvAreaLinkSchema>
+
+export const PatchKvvAreaResponsibleBodySchema = z.object({
+  keycloakUserId: z.string().uuid(),
+})
+
+export const PatchedKvvAreaSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+})
+
+export type PatchedKvvArea = z.infer<typeof PatchedKvvAreaSchema>

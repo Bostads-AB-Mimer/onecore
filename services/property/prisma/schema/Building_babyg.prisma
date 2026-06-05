@@ -53,7 +53,8 @@ model Building {
 
   // buildingType BuildingType? @relation(fields: [buildingTypeId], references: [buildingTypeId], onUpdate: NoAction, map: "fkbabygkeybabyt ")
 
-  Property Property[]
+  Property           Property[]
+  propertyStructures PropertyStructure[]
 
   // TODO: Uncomment and verify naming for these indexes when original schema is available
   // @@index([buildingMemoryClassificationId], map: "fkbabygbacls")

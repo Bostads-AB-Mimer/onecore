@@ -157,16 +157,6 @@ const getLeasesBatch = async (leaseIds: string[]): Promise<Lease[]> => {
   return allLeases
 }
 
-// TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
-const getBuildingManagers = async (): Promise<
-  { code: string; name: string; district: string }[]
-> => {
-  const response = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/building-managers`
-  )
-  return response.data.content
-}
-
 const getParkingSpaceTypes = async (): Promise<
   { code: string; caption: string }[]
 > => {
@@ -1060,7 +1050,6 @@ export {
   getLeasesForPropertyId,
   getLeasesBatch,
   searchLeases,
-  getBuildingManagers,
   getParkingSpaceTypes,
   getDetailedApplicantsByListingId,
   getTenantByContactCode,
