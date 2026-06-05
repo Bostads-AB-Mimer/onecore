@@ -43,7 +43,7 @@
     "knex": "^3.1.0"
   },
   "dependencies": {
-    "axios": "^1.9.0",
+    "axios": "^1.16.0",
     "koa": "^2.16.2",
     "pino": "^9.1.0",
     "pino-elasticsearch": "^8.0.0",
