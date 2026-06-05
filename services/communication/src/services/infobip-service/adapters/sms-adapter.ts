@@ -9,14 +9,16 @@ import he from 'he'
 // SMS sender ID registered with Infobip
 const SMS_SENDER = 'Mimer'
 
-// Infobip v3 SMS API helper
+// SMS is sent via the Tele2 instance of the Infobip SMS platform.
+// Same /sms/3/messages contract as Infobip, but uses the separate
+// Tele2 procurement credentials (config.tele2). Email still uses config.infobip.
 const sendSmsV3 = async (
   destinations: { to: string }[],
   text: string
 ): Promise<unknown> => {
-  const baseUrl = config.infobip.baseUrl.replace(/\/$/, '') // Remove trailing slash
+  const baseUrl = config.tele2.baseUrl.replace(/\/$/, '') // Remove trailing slash
   const url = `${baseUrl}/sms/3/messages`
-  const apiKey = config.infobip.apiKey
+  const apiKey = config.tele2.apiKey
   logger.info({ url }, 'Sending SMS via v3 API')
   const response = await fetch(url, {
     method: 'POST',
@@ -56,7 +58,7 @@ export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
 }
 
 export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
-  logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending work order sms')
+  logger.info({ baseUrl: config.tele2.baseUrl }, 'Sending work order sms')
   const message = he.decode(striptags(sms.text.replace(/<br\s*\/?>/gi, '\n')))
   const noreply = sms.externalContractorName
     ? `Hälsningar, ${sms.externalContractorName} i uppdrag från Mimer`
@@ -77,7 +79,7 @@ export const sendBulkSms = async (sms: BulkSms) => {
   logger.info(
     {
       recipientCount: sms.phoneNumbers.length,
-      baseUrl: config.infobip.baseUrl,
+      baseUrl: config.tele2.baseUrl,
     },
     'Sending bulk SMS'
   )
@@ -95,5 +97,37 @@ export const sendBulkSms = async (sms: BulkSms) => {
   } catch (error) {
     logger.error(error, 'Error sending bulk SMS')
     throw error
+  }
+}
+
+// Verifies connectivity to the Tele2 (Infobip) SMS API used for sending SMS.
+export const tele2SmsHealthCheck = async () => {
+  const baseUrl = config.tele2.baseUrl.replace(/\/$/, '')
+  const url = `${baseUrl}/sms/3/messages`
+  const apiKey = config.tele2.apiKey
+
+  // Send a minimal invalid request to verify API connectivity
+  // We expect a 400 validation error, which proves the API is reachable
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `App ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ messages: [] }),
+  })
+
+  // If we get 401/403, there's an auth problem
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(`Tele2 SMS authentication failed: ${response.status}`)
+  }
+
+  // If we get 400 (validation error), the API is reachable and working
+  // If we get 200 (shouldn't happen with empty messages), that's also fine
+  if (response.status !== 400 && response.status !== 200) {
+    const errorBody = await response.text()
+    throw new Error(
+      `Tele2 SMS health check failed: ${response.status} - ${errorBody}`
+    )
   }
 }
