@@ -55,13 +55,31 @@ export interface ResidenceInfo {
   size: number | null
 }
 
+// Checklist is defined in constants/checklist.ts (derived from the generated
+// swagger types). Re-exported here for backward compatibility with existing
+// import paths.
+export type { Checklist } from '@/features/inspections/constants/checklist'
+
+import type { Checklist } from '@/features/inspections/constants/checklist'
+
 /**
  * Inspection submission data
  * Additional data needed when submitting an inspection
+ *
+ * `date` carries the calendar day combined with the Klockslag (HH:MM) chosen
+ * in the conduct dialog's "Info om besiktning" card. `type` is the value
+ * behind the "Typ av besiktning" radio. Both flow through to the backend
+ * save-draft endpoint and update the inspection.date / inspection.type
+ * columns directly.
  */
 export interface InspectionSubmitData {
   needsMasterKey: boolean
   isFurnished: boolean
+  isTenantPresent: boolean
+  isNewTenantPresent: boolean
+  checklist: Checklist
+  date: string
+  type: string
   tenant?: TenantSnapshot
 }
 

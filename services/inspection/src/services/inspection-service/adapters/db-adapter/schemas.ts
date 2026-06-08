@@ -118,6 +118,16 @@ export type SaveInspectionDraftParams = {
   inspectorName: string
   rooms: InspectionRoom[]
   isFurnished: boolean
+  // Captured in the "Kontrollfrågor" step. Optional so older clients (or
+  // test fixtures) can omit them — the adapter only writes the columns when
+  // a value is provided, preserving the previously persisted value otherwise.
+  isTenantPresent?: boolean
+  isNewTenantPresent?: boolean
+  checklist?: inspection.Checklist
+  // Editable from the conduct-dialog "Info om besiktning" card. date carries
+  // the Klockslag (HH:MM) along with the day since the column is DATETIME.
+  date?: Date
+  type?: string
 }
 
 export type AddRoomToInspectionParams = {

@@ -46,6 +46,11 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateInspectionStatus', UpdateInspectionStatusSchema)
   registerSchema('InspectionComponent', inspection.InspectionComponentSchema)
   registerSchema('InspectionRoom', inspection.InspectionRoomSchema)
+  // Registered as a top-level component so both InternalInspection and
+  // SaveInspectionDraftRequest reference the same `Checklist` type in the
+  // generated swagger / TS bindings, avoiding inlined duplicates on the
+  // frontend.
+  registerSchema('Checklist', inspection.ChecklistSchema)
   registerSchema('InternalInspection', inspection.InternalInspectionSchema)
   registerSchema(
     'SaveInspectionDraftRequest',

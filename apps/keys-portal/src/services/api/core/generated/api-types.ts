@@ -12115,12 +12115,20 @@ export interface components {
           isApproved: boolean;
           isHandled: boolean;
           /** @default [] */
-          detailComponents?: {
+          detailComponents?: ({
               id: string;
               type: string;
               label: string;
               note: string;
-            }[];
+              /** @default */
+              condition?: string;
+              cost?: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
+            })[];
           /** @default [] */
           components?: ({
               componentId: string;
@@ -12184,12 +12192,20 @@ export interface components {
       isApproved: boolean;
       isHandled: boolean;
       /** @default [] */
-      detailComponents?: {
+      detailComponents?: ({
           id: string;
           type: string;
           label: string;
           note: string;
-        }[];
+          /** @default */
+          condition?: string;
+          cost?: number;
+          /**
+           * @default null
+           * @enum {string|null}
+           */
+          costResponsibility?: "tenant" | "landlord" | null;
+        })[];
       /** @default [] */
       components?: ({
           componentId: string;
@@ -12231,6 +12247,24 @@ export interface components {
       notes: string | null;
       totalCost: number | null;
       remarkCount: number;
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean;
+        /** @default false */
+        smokeDetector?: boolean;
+        /** @default false */
+        electricalSchema?: boolean;
+        /** @default false */
+        electricalSystem?: boolean;
+      };
       rooms: ({
           room: string;
           remarks: ({
@@ -12596,6 +12630,24 @@ export interface components {
       hasRemarks: boolean;
       notes: string | null;
       totalCost: number | null;
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean;
+        /** @default false */
+        smokeDetector?: boolean;
+        /** @default false */
+        electricalSchema?: boolean;
+        /** @default false */
+        electricalSystem?: boolean;
+      };
       rooms: ({
           room: string;
           remarks: ({
@@ -12767,6 +12819,24 @@ export interface components {
       notes: string | null;
       totalCost: number | null;
       remarkCount: number;
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean;
+        /** @default false */
+        smokeDetector?: boolean;
+        /** @default false */
+        electricalSchema?: boolean;
+        /** @default false */
+        electricalSystem?: boolean;
+      };
       rooms: (({
           roomId: string;
           name?: string;
@@ -12797,12 +12867,20 @@ export interface components {
           isApproved: boolean;
           isHandled: boolean;
           /** @default [] */
-          detailComponents?: {
+          detailComponents?: ({
               id: string;
               type: string;
               label: string;
               note: string;
-            }[];
+              /** @default */
+              condition?: string;
+              cost?: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
+            })[];
           /** @default [] */
           components?: ({
               componentId: string;
@@ -12854,12 +12932,20 @@ export interface components {
           isApproved: boolean;
           isHandled: boolean;
           /** @default [] */
-          detailComponents?: {
+          detailComponents?: ({
               id: string;
               type: string;
               label: string;
               note: string;
-            }[];
+              /** @default */
+              condition?: string;
+              cost?: number;
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: "tenant" | "landlord" | null;
+            })[];
           /** @default [] */
           components?: ({
               componentId: string;
@@ -12879,6 +12965,21 @@ export interface components {
           isAddedInThisInspection?: boolean;
         })[];
       isFurnished: boolean;
+      isTenantPresent?: boolean;
+      isNewTenantPresent?: boolean;
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean;
+        /** @default false */
+        smokeDetector?: boolean;
+        /** @default false */
+        electricalSchema?: boolean;
+        /** @default false */
+        electricalSystem?: boolean;
+      };
+      /** Format: date-time */
+      date?: string;
+      type?: string;
     };
     ComponentWriteBackError: {
       componentId: string;

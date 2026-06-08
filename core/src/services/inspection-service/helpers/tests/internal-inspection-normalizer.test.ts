@@ -288,6 +288,129 @@ describe('mapInternalRoomsToProtocolRooms', () => {
     })
   })
 
+  describe('detailComponents[] data model', () => {
+    it('emits a Skadad detail component as a remark with cost and responsibility', () => {
+      const room = baseRoom({
+        detailComponents: [
+          {
+            id: 'detail-1',
+            type: 'custom',
+            label: 'Persienn vardagsrum',
+            note: 'Trasig snöre',
+            condition: 'Skadad',
+            cost: 450,
+            costResponsibility: 'tenant',
+          },
+        ],
+      })
+
+      const [out] = mapInternalRoomsToProtocolRooms([room], [])
+      expect(out.remarks).toHaveLength(1)
+      const [remark] = out.remarks
+      expect(remark.buildingComponent).toBe('Persienn vardagsrum')
+      expect(remark.notes).toBe('Trasig snöre')
+      expect(remark.cost).toBe(450)
+      expect(remark.costResponsibility).toBe('tenant')
+      // Detail components have no actions yet, so the PDF Åtgärd column falls
+      // back to the user-facing condition label.
+      expect(remark.remarkStatus).toBe('Skadad')
+      // Stable per-inspection key with the detail- namespace so it doesn't
+      // collide with fetched components.
+      expect(remark.remarkId).toBe('room-1:detail-detail-1')
+    })
+
+    it('drops God detail components when no other reason to keep', () => {
+      const room = baseRoom({
+        detailComponents: [
+          {
+            id: 'detail-1',
+            type: 'custom',
+            label: 'Spegel hall',
+            note: '',
+            condition: 'God',
+            costResponsibility: null,
+          },
+        ],
+      })
+
+      const [out] = mapInternalRoomsToProtocolRooms([room], [])
+      expect(out.remarks).toHaveLength(0)
+    })
+
+    it('keeps a detail component with only a note (no condition, no cost)', () => {
+      const room = baseRoom({
+        detailComponents: [
+          {
+            id: 'detail-1',
+            type: 'custom',
+            label: 'Övrigt',
+            note: 'Liten skråma som inspektören flaggar',
+            condition: '',
+            costResponsibility: null,
+          },
+        ],
+      })
+
+      const [out] = mapInternalRoomsToProtocolRooms([room], [])
+      expect(out.remarks).toHaveLength(1)
+      expect(out.remarks[0].notes).toBe('Liten skråma som inspektören flaggar')
+    })
+
+    it('drops detail components with missing optional condition (legacy drafts)', () => {
+      const room = baseRoom({
+        detailComponents: [
+          {
+            id: 'detail-1',
+            type: 'custom',
+            label: 'Persienn',
+            note: '',
+            // Older drafts won't have condition/cost/costResponsibility.
+            // The schema defaults condition to '' and costResponsibility to null;
+            // with no note either, this should not produce a remark.
+            condition: '',
+            costResponsibility: null,
+          },
+        ],
+      })
+
+      const [out] = mapInternalRoomsToProtocolRooms([room], [])
+      expect(out.remarks).toHaveLength(0)
+    })
+
+    it('emits both fetched-component and detail-component remarks in the same room', () => {
+      const room = baseRoom({
+        components: [
+          {
+            componentId: 'c1',
+            label: 'Spis',
+            condition: 'Skadad',
+            action: [],
+            note: '',
+            photos: [],
+            cost: 1000,
+            costResponsibility: 'tenant',
+          },
+        ],
+        detailComponents: [
+          {
+            id: 'detail-1',
+            type: 'custom',
+            label: 'Persienn',
+            note: '',
+            condition: 'Skadad',
+            cost: 300,
+            costResponsibility: 'landlord',
+          },
+        ],
+      })
+
+      const [out] = mapInternalRoomsToProtocolRooms([room], [])
+      expect(out.remarks).toHaveLength(2)
+      const labels = out.remarks.map((r) => r.buildingComponent)
+      expect(labels).toEqual(expect.arrayContaining(['Spis', 'Persienn']))
+    })
+  })
+
   describe('costResponsibility propagation', () => {
     it('carries tenant/landlord/null through from components[]', () => {
       const room = baseRoom({

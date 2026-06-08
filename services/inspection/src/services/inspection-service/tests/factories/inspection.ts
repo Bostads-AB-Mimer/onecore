@@ -81,6 +81,12 @@ export const InternalInspectionFactory =
     notes: 'Some notes about the inspection.',
     totalCost: 1500,
     remarkCount: 2,
+    checklist: {
+      groundFaultBreaker: false,
+      smokeDetector: false,
+      electricalSchema: false,
+      electricalSystem: false,
+    },
     rooms: [InspectionRoomFactory.build()],
   }))
 
@@ -105,6 +111,12 @@ export const DetailedXpandInspectionFactory =
     notes: 'Some notes about the inspection.',
     totalCost: 1500,
     remarkCount: 2,
+    checklist: {
+      groundFaultBreaker: false,
+      smokeDetector: false,
+      electricalSchema: false,
+      electricalSystem: false,
+    },
     rooms: [
       {
         room: 'Living Room',
@@ -190,6 +202,10 @@ export const DbInspectionFactory = Factory.define<DbInspection>(
     totalCost: null,
     remarkCount: 0,
     draftRooms: null,
+    groundFaultBreaker: false,
+    smokeDetector: false,
+    electricalSchema: false,
+    electricalSystem: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   })

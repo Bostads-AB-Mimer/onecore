@@ -2072,10 +2072,14 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await inspectionAdapter.saveInspectionDraft(
-        inspectionId,
-        validationResult.data
-      )
+      // The schema uses z.coerce.date() so `date` arrives as a Date here, but
+      // the openapi-fetch adapter wants the JSON-serializable ISO string the
+      // OpenAPI spec advertises. Convert once at the boundary.
+      const { date, ...rest } = validationResult.data
+      const result = await inspectionAdapter.saveInspectionDraft(inspectionId, {
+        ...rest,
+        ...(date ? { date: date.toISOString() } : {}),
+      })
 
       if (!result.ok) {
         ctx.status = 500
