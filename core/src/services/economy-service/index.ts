@@ -196,7 +196,7 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Economy service
    *     summary: Set a grace period (anstånd) on an invoice
-   *     description: Registers a deferral (anstånd) for the given invoice in Tenfast, which then syncs the new due date to Xledger. On failure a Slack notification is sent via email.
+   *     description: Updates the due date in Xledger via updateArTransactions, then registers the grace period in Tenfast. If either call fails a Slack notification is sent via email to the economy team.
    *     parameters:
    *       - in: path
    *         name: invoiceId
@@ -227,7 +227,7 @@ export const routes = (router: KoaRouter) => {
    *                 description: Optional reason for the deferral
    *     responses:
    *       '200':
-   *         description: Grace period set successfully
+   *         description: Deferral set successfully in both Xledger and Tenfast
    *         content:
    *           application/json:
    *             schema:
@@ -240,10 +240,8 @@ export const routes = (router: KoaRouter) => {
    *                       type: boolean
    *       '400':
    *         description: Missing required fields
-   *       '404':
-   *         description: Invoice not found in Tenfast
    *       '500':
-   *         description: Failed to set grace period
+   *         description: One or both system calls failed
    *     security:
    *       - bearerAuth: []
    */
@@ -261,17 +259,52 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await economyAdapter.updateInvoiceDeferralDate({
-      invoiceId: ctx.params.invoiceId,
+    const invoiceId = ctx.params.invoiceId
+    const errors: string[] = []
+
+    const xledgerResult = await economyAdapter.updateXledgerDeferralDate(
+      invoiceId,
+      endDate
+    )
+    if (!xledgerResult.ok) {
+      errors.push('Xledger')
+    }
+
+    const tenfastResult = await economyAdapter.setTenfastGracePeriod({
+      invoiceId,
       endDate,
       madeByEmail,
       reason,
     })
+    if (!tenfastResult.ok) {
+      errors.push('Tenfast')
+    }
 
-    if (!result.ok) {
-      ctx.status = result.err === 'not-found' ? 404 : 500
+    if (errors.length > 0) {
+      if (config.emailAddresses.economy) {
+        try {
+          await communicationAdapter.sendEmail({
+            to: config.emailAddresses.economy,
+            subject: 'Fel: anstånd kunde inte registreras',
+            body: [
+              `Anstånd på faktura ${invoiceId} misslyckades i: ${errors.join(', ')}.`,
+              '',
+              `Nytt förfallodatum: ${endDate}`,
+              `Begärt av: ${madeByEmail}`,
+              reason ? `Anledning: ${reason}` : '',
+              '',
+              'Åtgärd krävs: registrera anståndet manuellt.',
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          })
+        } catch (emailErr) {
+          logger.error(emailErr, 'Failed to send deferral failure notification')
+        }
+      }
+      ctx.status = 500
       ctx.body = {
-        error: result.err === 'not-found' ? 'Not found' : 'Unknown error',
+        error: `Failed to set deferral in: ${errors.join(', ')}`,
       }
       return
     }

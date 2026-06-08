@@ -11,6 +11,7 @@ import {
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   submitMiscellaneousInvoice,
+  updateInvoiceDeferralDate,
 } from '../common/adapters/xledger-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
@@ -27,8 +28,6 @@ import {
   getInvoicePdf,
   setGracePeriod,
 } from '../../common/adapters/tenfast/tenfast-adapter'
-import { sendEmail } from '../../common/adapters/infobip-adapter'
-import config from '../../common/config'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -216,67 +215,71 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.put('(.*)/invoices/:invoiceNumber/deferral', async (ctx) => {
+  router.put('(.*)/invoices/:invoiceNumber/xledger-deferral', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { endDate, madeByEmail, reason } = ctx.request.body as {
-      endDate?: string
-      madeByEmail?: string
-      reason?: string
-    }
+    const { endDate } = ctx.request.body as { endDate?: string }
 
-    if (!endDate || !madeByEmail) {
+    if (!endDate) {
       ctx.status = 400
-      ctx.body = { message: 'endDate and madeByEmail are required' }
+      ctx.body = { message: 'endDate is required' }
       return
     }
 
-    const result = await setGracePeriod({
-      invoiceOcr: ctx.params.invoiceNumber,
-      endDate,
-      madeByEmail,
-      reason,
-    })
-
-    if (!result.ok) {
-      const notFound = result.err === 'not-found'
-      ctx.status = notFound ? 404 : 500
-      ctx.body = {
-        message: notFound
-          ? 'Invoice not found in Tenfast'
-          : 'Failed to set grace period',
-      }
-
-      if (!notFound && config.scriptNotificationEmailAddresses) {
-        try {
-          await sendEmail(
-            config.scriptNotificationEmailAddresses,
-            'Fel: anstånd kunde inte registreras',
-            [
-              `Anstånd på faktura ${ctx.params.invoiceNumber} kunde inte registreras i Tenfast/Xledger.`,
-              '',
-              `Nytt förfallodatum: ${endDate}`,
-              `Begärt av: ${madeByEmail}`,
-              reason ? `Anledning: ${reason}` : '',
-              '',
-              'Åtgärd krävs: registrera anståndet manuellt i Tenfast.',
-            ]
-              .filter((line) => line !== undefined)
-              .join('\n')
-          )
-        } catch (emailErr) {
-          logger.error(
-            emailErr,
-            'Failed to send grace period failure notification'
-          )
-        }
-      }
-
-      return
+    try {
+      await updateInvoiceDeferralDate(
+        ctx.params.invoiceNumber,
+        new Date(endDate)
+      )
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+    } catch (error: any) {
+      logger.error(
+        { error, invoiceNumber: ctx.params.invoiceNumber },
+        'Error updating invoice deferral date in Xledger'
+      )
+      ctx.status = 500
+      ctx.body = { message: error.message }
     }
-
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
   })
+
+  router.put(
+    '(.*)/invoices/:invoiceNumber/tenfast-grace-period',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { endDate, madeByEmail, reason } = ctx.request.body as {
+        endDate?: string
+        madeByEmail?: string
+        reason?: string
+      }
+
+      if (!endDate || !madeByEmail) {
+        ctx.status = 400
+        ctx.body = { message: 'endDate and madeByEmail are required' }
+        return
+      }
+
+      const result = await setGracePeriod({
+        invoiceOcr: ctx.params.invoiceNumber,
+        endDate,
+        madeByEmail,
+        reason,
+      })
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not-found' ? 404 : 500
+        ctx.body = {
+          message:
+            result.err === 'not-found'
+              ? 'Invoice not found in Tenfast'
+              : 'Failed to set grace period in Tenfast',
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+    }
+  )
 
   router.post('(.*)/rent-invoice-rows/batch', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

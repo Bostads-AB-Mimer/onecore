@@ -261,7 +261,29 @@ export async function getRentInvoiceRows(
   }
 }
 
-export async function updateInvoiceDeferralDate(params: {
+export async function updateXledgerDeferralDate(
+  invoiceId: string,
+  endDate: string
+): Promise<AdapterResult<boolean, 'unknown'>> {
+  try {
+    const response = await axios.put(
+      `${config.economyService.url}/invoices/${invoiceId}/xledger-deferral`,
+      { endDate }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: true }
+    }
+
+    logger.error(response.data, 'economy-adapter.updateXledgerDeferralDate')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.updateXledgerDeferralDate')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function setTenfastGracePeriod(params: {
   invoiceId: string
   endDate: string
   madeByEmail: string
@@ -269,7 +291,7 @@ export async function updateInvoiceDeferralDate(params: {
 }): Promise<AdapterResult<boolean, 'not-found' | 'unknown'>> {
   try {
     const response = await axios.put(
-      `${config.economyService.url}/invoices/${params.invoiceId}/deferral`,
+      `${config.economyService.url}/invoices/${params.invoiceId}/tenfast-grace-period`,
       {
         endDate: params.endDate,
         madeByEmail: params.madeByEmail,
@@ -284,13 +306,13 @@ export async function updateInvoiceDeferralDate(params: {
       return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
-    logger.error(response.data, 'economy-adapter.updateInvoiceDeferralDate')
+    logger.error(response.data, 'economy-adapter.setTenfastGracePeriod')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     if (axios.isAxiosError(err) && err.response?.status === 404) {
       return { ok: false, err: 'not-found', statusCode: 404 }
     }
-    logger.error(err, 'economy-adapter.updateInvoiceDeferralDate')
+    logger.error(err, 'economy-adapter.setTenfastGracePeriod')
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
