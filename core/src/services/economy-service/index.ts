@@ -191,22 +191,30 @@ export const routes = (router: KoaRouter) => {
 
   router.put('/invoices/:invoiceId/deferral', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { newDueDate } = ctx.request.body as { newDueDate?: string }
+    const { endDate, madeByEmail, reason } = ctx.request.body as {
+      endDate?: string
+      madeByEmail?: string
+      reason?: string
+    }
 
-    if (!newDueDate) {
+    if (!endDate || !madeByEmail) {
       ctx.status = 400
-      ctx.body = { error: 'newDueDate is required' }
+      ctx.body = { error: 'endDate and madeByEmail are required' }
       return
     }
 
-    const result = await economyAdapter.updateInvoiceDeferralDate(
-      ctx.params.invoiceId,
-      newDueDate
-    )
+    const result = await economyAdapter.updateInvoiceDeferralDate({
+      invoiceId: ctx.params.invoiceId,
+      endDate,
+      madeByEmail,
+      reason,
+    })
 
     if (!result.ok) {
       ctx.status = result.err === 'not-found' ? 404 : 500
-      ctx.body = { error: result.err === 'not-found' ? 'Not found' : 'Unknown error' }
+      ctx.body = {
+        error: result.err === 'not-found' ? 'Not found' : 'Unknown error',
+      }
       return
     }
 

@@ -4,6 +4,7 @@ import { FileText } from 'lucide-react'
 import { useState } from 'react'
 import { match, P } from 'ts-pattern'
 
+import { useUser } from '@/entities/user/hooks/useUser'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import {
@@ -21,6 +22,7 @@ import {
 } from '@/shared/ui/Dialog'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import { Textarea } from '@/shared/ui/Textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
@@ -61,15 +63,29 @@ const GrantDeferralDialog = ({
   contactCode: string
 }) => {
   const [open, setOpen] = useState(false)
-  const [newDueDate, setNewDueDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [reason, setReason] = useState('')
   const updateDeferral = useUpdateInvoiceDeferral()
+  const userState = useUser()
+  const userEmail =
+    userState.tag === 'success' ? userState.user.email : undefined
 
   const handleSubmit = () => {
-    if (!newDueDate) return
+    if (!endDate || !userEmail) return
     updateDeferral.mutate(
-      { invoiceId: invoice.invoiceId, contactCode, newDueDate },
       {
-        onSuccess: () => setOpen(false),
+        invoiceId: invoice.invoiceId,
+        contactCode,
+        endDate,
+        madeByEmail: userEmail,
+        reason: reason || undefined,
+      },
+      {
+        onSuccess: () => {
+          setOpen(false)
+          setEndDate('')
+          setReason('')
+        },
       }
     )
   }
@@ -85,18 +101,40 @@ const GrantDeferralDialog = ({
         <DialogHeader>
           <DialogTitle>Bevilja anstånd</DialogTitle>
           <DialogDescription>
-            Faktura {invoice.invoiceId} – ange nytt förfallodatum. Datumet
-            uppdateras i Xledger med texten &quot;Anstånd till [datum]&quot;.
+            Faktura {invoice.invoiceId} – ange nytt förfallodatum. Anståndet
+            registreras i Tenfast och förs sedan över till Xledger.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-2 py-2">
-          <Label htmlFor="new-due-date">Nytt förfallodatum</Label>
-          <Input
-            id="new-due-date"
-            type="date"
-            value={newDueDate}
-            onChange={(e) => setNewDueDate(e.target.value)}
-          />
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-2">
+            <Label htmlFor="deferral-end-date">Nytt förfallodatum</Label>
+            <Input
+              id="deferral-end-date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="deferral-reason">
+              Anledning{' '}
+              <span className="text-muted-foreground font-normal">
+                (valfritt)
+              </span>
+            </Label>
+            <Textarea
+              id="deferral-reason"
+              placeholder="T.ex. betalningsplan överenskommen med hyresgäst."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          {userEmail && (
+            <p className="text-xs text-muted-foreground">
+              Registreras av: {userEmail}
+            </p>
+          )}
         </div>
         {updateDeferral.isError && (
           <p className="text-sm text-destructive">
@@ -113,7 +151,7 @@ const GrantDeferralDialog = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!newDueDate || updateDeferral.isPending}
+            disabled={!endDate || !userEmail || updateDeferral.isPending}
           >
             {updateDeferral.isPending ? 'Sparar...' : 'Spara'}
           </Button>

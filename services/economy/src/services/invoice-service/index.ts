@@ -11,7 +11,6 @@ import {
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   submitMiscellaneousInvoice,
-  updateInvoiceDeferralDate,
 } from '../common/adapters/xledger-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
@@ -26,6 +25,7 @@ import { getInvoiceDetails } from './service'
 import {
   getInvoiceByOcr,
   getInvoicePdf,
+  setGracePeriod,
 } from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
@@ -216,33 +216,38 @@ export const routes = (router: KoaRouter) => {
 
   router.put('(.*)/invoices/:invoiceNumber/deferral', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { newDueDate } = ctx.request.body as { newDueDate?: string }
+    const { endDate, madeByEmail, reason } = ctx.request.body as {
+      endDate?: string
+      madeByEmail?: string
+      reason?: string
+    }
 
-    if (!newDueDate) {
+    if (!endDate || !madeByEmail) {
       ctx.status = 400
-      ctx.body = { message: 'newDueDate is required' }
+      ctx.body = { message: 'endDate and madeByEmail are required' }
       return
     }
 
-    const parsedDate = new Date(newDueDate)
-    if (isNaN(parsedDate.getTime())) {
-      ctx.status = 400
-      ctx.body = { message: 'newDueDate must be a valid ISO date string' }
+    const result = await setGracePeriod({
+      invoiceOcr: ctx.params.invoiceNumber,
+      endDate,
+      madeByEmail,
+      reason,
+    })
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      ctx.body = {
+        message:
+          result.err === 'not-found'
+            ? 'Invoice not found in Tenfast'
+            : 'Failed to set grace period',
+      }
       return
     }
 
-    try {
-      await updateInvoiceDeferralDate(ctx.params.invoiceNumber, parsedDate)
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
-    } catch (error: any) {
-      logger.error(
-        { error, invoiceNumber: ctx.params.invoiceNumber },
-        'Error updating invoice deferral date'
-      )
-      ctx.status = 500
-      ctx.body = { message: error.message }
-    }
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
   })
 
   router.post('(.*)/rent-invoice-rows/batch', async (ctx) => {

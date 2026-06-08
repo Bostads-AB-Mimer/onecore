@@ -161,15 +161,21 @@ async function getXledgerProjects(): Promise<XledgerProject[]> {
   return response.content as XledgerProject[]
 }
 
-async function updateInvoiceDeferralDate(
-  invoiceId: string,
-  newDueDate: string
-): Promise<void> {
+async function updateInvoiceDeferralDate(params: {
+  invoiceId: string
+  endDate: string
+  madeByEmail: string
+  reason?: string
+}): Promise<void> {
   const { error } = await PUT(
     // @ts-expect-error
-    `/invoices/${invoiceId}/deferral`,
+    `/invoices/${params.invoiceId}/deferral`,
     {
-      body: { newDueDate },
+      body: {
+        endDate: params.endDate,
+        madeByEmail: params.madeByEmail,
+        reason: params.reason,
+      },
     }
   )
 

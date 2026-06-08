@@ -482,6 +482,68 @@ const OcrLookupResponseSchema = z.object({
   records: z.array(z.object({ _id: z.string() }).passthrough()),
 })
 
+export const setGracePeriod = async (params: {
+  invoiceOcr: string
+  endDate: string
+  madeByEmail: string
+  reason?: string
+}): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
+  try {
+    const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
+      params: {
+        ocrNumber: params.invoiceOcr,
+        states: TENFAST_INVOICE_STATES.join(','),
+      },
+    })
+
+    if (lookupResult.status !== 200) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = OcrLookupResponseSchema.safeParse(lookupResult.data)
+    if (!parsed.success) {
+      logger.warn(
+        { ocr: params.invoiceOcr, errors: parsed.error.issues },
+        'tenfast-adapter.setGracePeriod: OCR lookup response failed schema validation'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const invoice = parsed.data.records[0]
+    if (!invoice) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    const res = await makeTenfastRequest(
+      `/v1/hyresvard/hyror/${invoice._id}/grace-period`,
+      {
+        method: 'POST',
+        data: {
+          endDate: params.endDate,
+          madeByEmail: params.madeByEmail,
+          ...(params.reason ? { reason: params.reason } : {}),
+        },
+      }
+    )
+
+    if (res.status === 200) {
+      return { ok: true, data: null }
+    }
+    if (res.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    logger.error(
+      { status: res.status, data: res.data, ocr: params.invoiceOcr },
+      'tenfast-adapter.setGracePeriod: unexpected status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    logger.error(err, 'tenfast-adapter.setGracePeriod')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const recordPaymentForInvoice = async (params: {
   ocr: string
   amount: number

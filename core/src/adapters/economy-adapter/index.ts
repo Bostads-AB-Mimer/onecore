@@ -261,14 +261,20 @@ export async function getRentInvoiceRows(
   }
 }
 
-export async function updateInvoiceDeferralDate(
-  invoiceId: string,
-  newDueDate: string
-): Promise<AdapterResult<boolean, 'not-found' | 'unknown'>> {
+export async function updateInvoiceDeferralDate(params: {
+  invoiceId: string
+  endDate: string
+  madeByEmail: string
+  reason?: string
+}): Promise<AdapterResult<boolean, 'not-found' | 'unknown'>> {
   try {
     const response = await axios.put(
-      `${config.economyService.url}/invoices/${invoiceId}/deferral`,
-      { newDueDate }
+      `${config.economyService.url}/invoices/${params.invoiceId}/deferral`,
+      {
+        endDate: params.endDate,
+        madeByEmail: params.madeByEmail,
+        reason: params.reason,
+      }
     )
 
     if (response.status === 200) {
