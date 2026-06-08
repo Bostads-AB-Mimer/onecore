@@ -84,6 +84,84 @@ describe('economy-service routes', () => {
     })
   })
 
+  describe('PUT /invoices/:invoiceId/deferral', () => {
+    const validBody = {
+      endDate: '2026-06-30',
+      madeByEmail: 'admin@mimer.nu',
+      reason: 'Betalningsplan överenskommen.',
+    }
+
+    it('returns 400 when endDate is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({ madeByEmail: 'admin@mimer.nu' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when madeByEmail is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({ endDate: '2026-06-30' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 200 when deferral is set successfully', async () => {
+      jest
+        .spyOn(economyAdapter, 'updateInvoiceDeferralDate')
+        .mockResolvedValueOnce({ ok: true, data: true })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({ ok: true })
+    })
+
+    it('calls updateInvoiceDeferralDate with invoiceId, endDate, madeByEmail and reason', async () => {
+      const spy = jest
+        .spyOn(economyAdapter, 'updateInvoiceDeferralDate')
+        .mockResolvedValueOnce({ ok: true, data: true })
+
+      await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(spy).toHaveBeenCalledWith({
+        invoiceId: '55123456',
+        endDate: validBody.endDate,
+        madeByEmail: validBody.madeByEmail,
+        reason: validBody.reason,
+      })
+    })
+
+    it('returns 404 when adapter returns not-found', async () => {
+      jest
+        .spyOn(economyAdapter, 'updateInvoiceDeferralDate')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found', statusCode: 404 })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 when adapter returns unknown error', async () => {
+      jest
+        .spyOn(economyAdapter, 'updateInvoiceDeferralDate')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown', statusCode: 500 })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   describe('POST /invoices/notify-batch', () => {
     const mockInvoice = {
       invoiceId: '552606001476999',

@@ -9,6 +9,7 @@ import {
   recordPaymentForInvoice,
   getInvoicePdf,
   getAutogiroConsentByNationalRegistrationNumber,
+  setGracePeriod,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
@@ -731,5 +732,144 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
 
     assert(!result.ok)
     expect(result.err).toBe('schema-error')
+  })
+})
+
+describe(setGracePeriod, () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  const params = {
+    invoiceOcr: '55123456',
+    endDate: '2026-06-30',
+    madeByEmail: 'admin@mimer.nu',
+    reason: 'Betalningsplan överenskommen.',
+  }
+
+  const invoiceRecord = { _id: 'tenfast-invoice-id-123' }
+
+  it('returns ok when grace period is set successfully', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [invoiceRecord] },
+      })
+      .mockResolvedValueOnce({ status: 200, data: {} })
+
+    const result = await setGracePeriod(params)
+
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it('calls grace-period endpoint with correct body', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [invoiceRecord] },
+      })
+      .mockResolvedValueOnce({ status: 200, data: {} })
+
+    await setGracePeriod(params)
+
+    expect(mockAxios.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: `/v1/hyresvard/hyror/${invoiceRecord._id}/grace-period`,
+        method: 'POST',
+        data: expect.objectContaining({
+          endDate: params.endDate,
+          madeByEmail: params.madeByEmail,
+          reason: params.reason,
+        }),
+      })
+    )
+  })
+
+  it('omits reason from body when not provided', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [invoiceRecord] },
+      })
+      .mockResolvedValueOnce({ status: 200, data: {} })
+
+    const { reason: _reason, ...paramsWithoutReason } = params
+    await setGracePeriod(paramsWithoutReason)
+
+    expect(mockAxios.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: `/v1/hyresvard/hyror/${invoiceRecord._id}/grace-period`,
+        method: 'POST',
+        data: {
+          endDate: params.endDate,
+          madeByEmail: params.madeByEmail,
+        },
+      })
+    )
+  })
+
+  it('returns not-found when OCR lookup returns no records', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [] },
+    })
+
+    const result = await setGracePeriod(params)
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+    expect(mockAxios.request).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns unknown when OCR lookup returns non-200', async () => {
+    mockAxios.request.mockResolvedValueOnce({ status: 500, data: {} })
+
+    const result = await setGracePeriod(params)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown when OCR lookup response fails schema parse', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { unexpected: true },
+    })
+
+    const result = await setGracePeriod(params)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns not-found when grace-period endpoint returns 404', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [invoiceRecord] },
+      })
+      .mockResolvedValueOnce({ status: 404, data: {} })
+
+    const result = await setGracePeriod(params)
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('returns unknown when grace-period endpoint returns unexpected status', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [invoiceRecord] },
+      })
+      .mockResolvedValueOnce({ status: 500, data: {} })
+
+    const result = await setGracePeriod(params)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown on thrown error', async () => {
+    mockAxios.request.mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await setGracePeriod(params)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })

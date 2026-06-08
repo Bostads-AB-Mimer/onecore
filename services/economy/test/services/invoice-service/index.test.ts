@@ -5,10 +5,15 @@ import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
+import * as infobipAdapter from '@src/common/adapters/infobip-adapter'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
 import { schemas } from '@onecore/types'
+
+jest.mock('@src/common/adapters/infobip-adapter', () => ({
+  sendEmail: jest.fn(),
+}))
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -225,6 +230,122 @@ describe('Invoice Service', () => {
       expect(() =>
         schemas.v1.InvoicePaymentEventSchema.array().parse(res.body.content)
       ).not.toThrow()
+    })
+  })
+
+  describe('PUT /invoices/:invoiceNumber/deferral', () => {
+    beforeEach(() => jest.clearAllMocks())
+
+    const validBody = {
+      endDate: '2026-06-30',
+      madeByEmail: 'admin@mimer.nu',
+      reason: 'Betalningsplan överenskommen.',
+    }
+
+    it('returns 400 when endDate is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({ madeByEmail: 'admin@mimer.nu' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when madeByEmail is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({ endDate: '2026-06-30' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 200 when grace period is set successfully', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'setGracePeriod')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({ ok: true })
+    })
+
+    it('calls setGracePeriod with the invoice OCR, endDate, madeByEmail and reason', async () => {
+      const spy = jest
+        .spyOn(tenfastAdapter, 'setGracePeriod')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(spy).toHaveBeenCalledWith({
+        invoiceOcr: '55123456',
+        endDate: validBody.endDate,
+        madeByEmail: validBody.madeByEmail,
+        reason: validBody.reason,
+      })
+    })
+
+    it('returns 404 when invoice not found in Tenfast', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'setGracePeriod')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 and sends failure email when setGracePeriod fails', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'setGracePeriod')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      const emailSpy = jest
+        .spyOn(infobipAdapter, 'sendEmail')
+        .mockResolvedValueOnce(undefined as any)
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(emailSpy).toHaveBeenCalledWith(
+        'slack-channel@mimer.nu',
+        'Fel: anstånd kunde inte registreras',
+        expect.stringContaining('55123456')
+      )
+    })
+
+    it('does not send failure email for 404 (invoice not found)', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'setGracePeriod')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+      const emailSpy = jest.spyOn(infobipAdapter, 'sendEmail')
+
+      await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(emailSpy).not.toHaveBeenCalled()
+    })
+
+    it('still returns 500 even if failure email itself throws', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'setGracePeriod')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      jest
+        .spyOn(infobipAdapter, 'sendEmail')
+        .mockRejectedValueOnce(new Error('email down'))
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
     })
   })
 

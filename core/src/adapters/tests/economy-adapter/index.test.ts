@@ -5,6 +5,10 @@ import * as economyAdapter from '../../economy-adapter'
 
 import { mockedInvoices } from './mocks'
 
+afterEach(() => {
+  nock.cleanAll()
+})
+
 describe('economy-adapter', () => {
   it('returns empty list if no problematic invoices', async () => {
     nock(config.economyService.url)
@@ -32,6 +36,73 @@ describe('economy-adapter', () => {
     expect(result).toStrictEqual({
       ok: true,
       data: JSON.parse(JSON.stringify(mockedProblematicInvoices)),
+    })
+  })
+
+  describe('updateInvoiceDeferralDate', () => {
+    const params = {
+      invoiceId: '55123456',
+      endDate: '2026-06-30',
+      madeByEmail: 'admin@mimer.nu',
+      reason: 'Betalningsplan överenskommen.',
+    }
+
+    it('returns ok when economy service responds 200', async () => {
+      nock(config.economyService.url)
+        .put(`/invoices/${params.invoiceId}/deferral`)
+        .reply(200, { content: { ok: true } })
+
+      const result = await economyAdapter.updateInvoiceDeferralDate(params)
+
+      expect(result).toEqual({ ok: true, data: true })
+    })
+
+    it('sends endDate, madeByEmail and reason in the request body', async () => {
+      let receivedBody: any
+      nock(config.economyService.url)
+        .put(`/invoices/${params.invoiceId}/deferral`, (body) => {
+          receivedBody = body
+          return true
+        })
+        .reply(200, { content: { ok: true } })
+
+      await economyAdapter.updateInvoiceDeferralDate(params)
+
+      expect(receivedBody).toMatchObject({
+        endDate: params.endDate,
+        madeByEmail: params.madeByEmail,
+        reason: params.reason,
+      })
+    })
+
+    it('returns not-found when economy service responds 404', async () => {
+      nock(config.economyService.url)
+        .put(`/invoices/${params.invoiceId}/deferral`)
+        .reply(404)
+
+      const result = await economyAdapter.updateInvoiceDeferralDate(params)
+
+      expect(result).toEqual({ ok: false, err: 'not-found', statusCode: 404 })
+    })
+
+    it('returns unknown when economy service responds with other error', async () => {
+      nock(config.economyService.url)
+        .put(`/invoices/${params.invoiceId}/deferral`)
+        .reply(500)
+
+      const result = await economyAdapter.updateInvoiceDeferralDate(params)
+
+      expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
+    })
+
+    it('returns unknown on network error', async () => {
+      nock(config.economyService.url)
+        .put(`/invoices/${params.invoiceId}/deferral`)
+        .replyWithError('Network error')
+
+      const result = await economyAdapter.updateInvoiceDeferralDate(params)
+
+      expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
     })
   })
 

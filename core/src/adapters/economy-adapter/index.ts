@@ -285,8 +285,11 @@ export async function updateInvoiceDeferralDate(params: {
     }
 
     logger.error(response.data, 'economy-adapter.updateInvoiceDeferralDate')
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
     logger.error(err, 'economy-adapter.updateInvoiceDeferralDate')
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
