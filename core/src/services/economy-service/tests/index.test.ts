@@ -184,7 +184,7 @@ describe('economy-service routes', () => {
       expect(res.status).toBe(500)
       expect(emailSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          subject: 'Fel: anstånd kunde inte registreras',
+          subject: 'Fel: anstånd kunde inte registreras i Xledger',
           body: expect.stringContaining('55123456'),
         })
       )

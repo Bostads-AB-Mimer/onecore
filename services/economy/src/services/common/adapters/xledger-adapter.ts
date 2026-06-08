@@ -1454,11 +1454,23 @@ const getArTransactionDbId = async (
   return result.data?.arTransactions?.edges?.[0]?.node?.dbId ?? null
 }
 
+const buildDeferralText = (
+  existingText: string | undefined,
+  dueDateString: string
+): string => {
+  const deferralPart = `Anstånd till ${dueDateString}`
+  return existingText ? `${existingText}, ${deferralPart}` : deferralPart
+}
+
 export const updateInvoiceDeferralDate = async (
   invoiceNumber: string,
   newDueDate: Date
 ): Promise<void> => {
-  const dbId = await getArTransactionDbId(invoiceNumber)
+  const [dbId, invoice] = await Promise.all([
+    getArTransactionDbId(invoiceNumber),
+    getInvoiceByInvoiceNumber(invoiceNumber),
+  ])
+
   if (!dbId) {
     throw new Error(
       `Could not find Xledger transaction for invoice ${invoiceNumber}`
@@ -1466,7 +1478,7 @@ export const updateInvoiceDeferralDate = async (
   }
 
   const dueDateString = dateToGraphQlDateString(newDueDate)
-  const text = `Anstånd till ${dueDateString}`
+  const text = buildDeferralText(invoice?.description, dueDateString)
 
   const mutation = {
     query: `mutation {

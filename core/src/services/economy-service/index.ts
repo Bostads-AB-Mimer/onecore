@@ -285,7 +285,7 @@ export const routes = (router: KoaRouter) => {
         try {
           await communicationAdapter.sendEmail({
             to: config.emailAddresses.economy,
-            subject: 'Fel: anstånd kunde inte registreras',
+            subject: `Fel: anstånd kunde inte registreras i ${errors.join(' och ')}`,
             body: [
               `Anstånd på faktura ${invoiceId} misslyckades i: ${errors.join(', ')}.`,
               '',
