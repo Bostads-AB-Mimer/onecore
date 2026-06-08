@@ -32,7 +32,8 @@ export function useInspectionForm(
   const validation = useInspectionValidation(
     inspectorInfo,
     formState.completedRooms,
-    formState.totalRooms
+    formState.totalRooms,
+    inspectorInfo.isChecklistComplete
   )
 
   // Legacy handleCancel for backward compatibility
@@ -49,10 +50,19 @@ export function useInspectionForm(
     setInspectorName: inspectorInfo.setInspectorName,
     inspectionTime: inspectorInfo.inspectionTime,
     setInspectionTime: inspectorInfo.setInspectionTime,
+    inspectionType: inspectorInfo.inspectionType,
+    setInspectionType: inspectorInfo.setInspectionType,
     needsMasterKey: inspectorInfo.needsMasterKey,
     setNeedsMasterKey: inspectorInfo.setNeedsMasterKey,
     isFurnished: inspectorInfo.isFurnished,
     setIsFurnished: inspectorInfo.setIsFurnished,
+    isTenantPresent: inspectorInfo.isTenantPresent,
+    setIsTenantPresent: inspectorInfo.setIsTenantPresent,
+    isNewTenantPresent: inspectorInfo.isNewTenantPresent,
+    setIsNewTenantPresent: inspectorInfo.setIsNewTenantPresent,
+    checklist: inspectorInfo.checklist,
+    setChecklistItem: inspectorInfo.setChecklistItem,
+    isChecklistComplete: inspectorInfo.isChecklistComplete,
 
     // Form state
     rooms: formState.rooms,
@@ -88,6 +98,11 @@ export function useInspectionForm(
     handleDetailComponentAdd: componentOps.addDetailComponent,
     handleDetailComponentRemove: componentOps.removeDetailComponent,
     handleDetailComponentNoteUpdate: componentOps.updateDetailComponentNote,
+    handleDetailComponentConditionUpdate:
+      componentOps.updateDetailComponentCondition,
+    handleDetailComponentCostUpdate: componentOps.updateDetailComponentCost,
+    handleDetailComponentCostResponsibilityUpdate:
+      componentOps.updateDetailComponentCostResponsibility,
 
     // Fetched component operations (keyed by componentId)
     handleComponentConditionUpdate: componentOps.updateComponentCondition,

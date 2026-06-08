@@ -59,6 +59,21 @@ export interface UseComponentInspectionReturn {
     componentId: string,
     note: string
   ) => void
+  updateDetailComponentCondition: (
+    roomId: string,
+    componentId: string,
+    value: string
+  ) => void
+  updateDetailComponentCost: (
+    roomId: string,
+    componentId: string,
+    cost: number
+  ) => void
+  updateDetailComponentCostResponsibility: (
+    roomId: string,
+    componentId: string,
+    value: CostResponsibility
+  ) => void
   updateComponentCondition: (
     roomId: string,
     componentId: string,
@@ -378,6 +393,80 @@ export function useComponentInspection(
   )
 
   /**
+   * Update condition for a detail component. Mirrors updateComponentCondition:
+   * when condition is anything other than Skadad, clear cost+responsibility so
+   * stale Skadad values don't get persisted into the draft.
+   */
+  const updateDetailComponentCondition = useCallback(
+    (roomId: string, componentId: string, value: string) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: (prev[roomId].detailComponents ?? []).map((c) =>
+            c.id === componentId
+              ? {
+                  ...c,
+                  condition: value,
+                  ...(value !== CONDITION_TYPE.DAMAGED
+                    ? { cost: 0, costResponsibility: null }
+                    : {}),
+                }
+              : c
+          ),
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  /**
+   * Update cost (kr) for a detail component.
+   */
+  const updateDetailComponentCost = useCallback(
+    (roomId: string, componentId: string, cost: number) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: (prev[roomId].detailComponents ?? []).map((c) =>
+            c.id === componentId ? { ...c, cost } : c
+          ),
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  /**
+   * Update cost responsibility for a detail component. Landlord-borne costs
+   * aren't entered by the inspector, so clear any previously entered cost when
+   * switching to landlord (mirrors updateComponentCostResponsibilityById).
+   */
+  const updateDetailComponentCostResponsibility = useCallback(
+    (roomId: string, componentId: string, value: CostResponsibility) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: (prev[roomId].detailComponents ?? []).map((c) =>
+            c.id === componentId
+              ? {
+                  ...c,
+                  costResponsibility: value,
+                  ...(value === COST_RESPONSIBILITY.LANDLORD
+                    ? { cost: 0 }
+                    : {}),
+                }
+              : c
+          ),
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  /**
    * Update condition for a fetched component (keyed by componentId).
    * Cost responsibility only applies to Skadad; clear it (and any cost) when
    * the condition becomes anything else so stale data isn't persisted. Mirrors
@@ -625,6 +714,9 @@ export function useComponentInspection(
     addDetailComponent,
     removeDetailComponent,
     updateDetailComponentNote,
+    updateDetailComponentCondition,
+    updateDetailComponentCost,
+    updateDetailComponentCostResponsibility,
     updateComponentCondition,
     updateComponentAction,
     updateComponentNote,

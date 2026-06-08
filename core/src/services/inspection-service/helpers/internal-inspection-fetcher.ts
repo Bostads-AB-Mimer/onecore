@@ -121,6 +121,7 @@ export const fetchEnrichedInternalInspection = async (
     notes: validated.notes,
     totalCost,
     remarkCount,
+    checklist: validated.checklist,
     rooms,
     lease,
     residence,

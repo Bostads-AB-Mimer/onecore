@@ -5,6 +5,23 @@ export const INSPECTION_STATUS_FILTER = {
   COMPLETED: 'completed',
 } as const
 
+// Inspector-driven safety/utility checks performed during the inspection.
+// Persisted as four BIT NOT NULL DEFAULT 0 columns on the inspection table
+// (groundFaultBreaker, smokeDetector, electricalSchema, electricalSystem).
+export const ChecklistSchema = z.object({
+  groundFaultBreaker: z.boolean().default(false),
+  smokeDetector: z.boolean().default(false),
+  electricalSchema: z.boolean().default(false),
+  electricalSystem: z.boolean().default(false),
+})
+
+export const CHECKLIST_DEFAULT = {
+  groundFaultBreaker: false,
+  smokeDetector: false,
+  electricalSchema: false,
+  electricalSystem: false,
+} as const
+
 export const XpandInspectionSchema = z.object({
   id: z.string(),
   status: z.string(),
@@ -63,6 +80,7 @@ export const DetailedXpandInspectionSchema = z.object({
   notes: z.string().nullable(),
   totalCost: z.number().nullable(),
   remarkCount: z.number(),
+  checklist: ChecklistSchema.optional().default(CHECKLIST_DEFAULT),
   rooms: DetailedXpandInspectionRoomSchema.array(),
 })
 
@@ -97,6 +115,10 @@ export const DetailComponentSchema = z.object({
   type: z.string(),
   label: z.string(),
   note: z.string(),
+  // Optional + defaults so older persisted drafts (no condition field) parse.
+  condition: z.string().optional().default(''),
+  cost: z.number().optional(),
+  costResponsibility: z.enum(['tenant', 'landlord']).nullable().default(null),
 })
 
 export const InspectionComponentSchema = z.object({
@@ -168,6 +190,7 @@ export const InternalInspectionSchema = XpandInspectionSchema.extend({
   notes: z.string().nullable(),
   totalCost: z.number().nullable(),
   remarkCount: z.number(),
+  checklist: ChecklistSchema.optional().default(CHECKLIST_DEFAULT),
   rooms: z.array(InspectionRoomSchema).nullable(),
 })
 
@@ -175,6 +198,17 @@ export const SaveInspectionDraftRequestSchema = z.object({
   inspectorName: z.string(),
   rooms: z.array(InspectionRoomSchema),
   isFurnished: z.boolean(),
+  // Captured in the new "Kontrollfrågor" step. Optional so older clients that
+  // haven't been updated yet still hit a valid save endpoint — the backend
+  // applies sensible defaults (false / current persisted value).
+  isTenantPresent: z.boolean().optional(),
+  isNewTenantPresent: z.boolean().optional(),
+  checklist: ChecklistSchema.optional(),
+  // Editable from the new conduct-dialog "Info om besiktning" card. The date
+  // carries both the calendar day and the Klockslag (HH:MM) since the column
+  // is DATETIME. Optional so older clients still parse.
+  date: z.coerce.date().optional(),
+  type: z.string().optional(),
 })
 
 // Per-component result attached to the inspection PATCH response when an
