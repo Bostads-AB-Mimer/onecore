@@ -50,11 +50,11 @@ function YesNoToggle({
 }
 
 /**
- * MIM-1818 "Kontrollfrågor" step — sits between the rooms walkthrough and the
- * summary. Consolidates three previously-scattered prompts:
+ * "Kontrollfrågor" step — sits between the rooms walkthrough and the summary.
+ * Consolidates three prompts:
  *   1. Tenant + (incoming) tenant presence — moved from CreateInspectionDialog
  *   2. Is the apartment furnished — moved from InspectionSummary footer
- *   3. Safety/utility checklist (4 checks) — new for MIM-1818
+ *   3. Safety/utility checklist (4 checks)
  *
  * The 4 checks are gating: "Slutför besiktning" is disabled until all four
  * are ticked.

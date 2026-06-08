@@ -1,10 +1,10 @@
 import type { components } from '@/services/api/core/generated/api-types'
 
 /**
- * Inspector-driven safety/utility checks captured in the MIM-1818
- * "Kontrollfrågor" step. Derived from the swagger so the shape stays in sync
- * with the backend schema — see registerSchema('Checklist', …) in
- * services/inspection. Once that registration ships, this becomes a direct
+ * Inspector-driven safety/utility checks captured in the "Kontrollfrågor"
+ * step. Derived from the swagger so the shape stays in sync with the backend
+ * schema — see registerSchema('Checklist', …) in services/inspection. Once
+ * that registration ships, this becomes a direct
  * `components['schemas']['Checklist']` reference; until then we derive it from
  * the field on InternalInspection where the type is inlined.
  *

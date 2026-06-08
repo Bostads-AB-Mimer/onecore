@@ -107,10 +107,10 @@ export function CreateInspectionDialog({
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   // Default to "avflytt" — the most common case at inspection time.
   const [type, setType] = useState<string>(INSPECTION_TYPE.MOVE_OUT)
-  // Tenant presence is now captured during the inspection (MIM-1818
-  // "Kontrollfrågor" step) rather than at create time. We still send
-  // booleans on creation because the DB columns are NOT NULL; the inspector
-  // sets the real values later in the conduct flow.
+  // Tenant presence is captured during the conduct flow ("Kontrollfrågor"
+  // step) rather than at create time. We still send booleans on creation
+  // because the DB columns are NOT NULL; the inspector sets the real values
+  // later.
   const [masterKeyAccess, setMasterKeyAccess] = useState('')
   const [leaseValue, setLeaseValue] = useState<string>(defaultLeaseValue)
 

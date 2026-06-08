@@ -118,10 +118,9 @@ export type SaveInspectionDraftParams = {
   inspectorName: string
   rooms: InspectionRoom[]
   isFurnished: boolean
-  // Captured in the new MIM-1818 "Kontrollfrågor" step. Optional so older
-  // clients (or test fixtures) can omit them — the adapter only writes the
-  // columns when a value is provided, preserving the previously persisted
-  // value otherwise.
+  // Captured in the "Kontrollfrågor" step. Optional so older clients (or
+  // test fixtures) can omit them — the adapter only writes the columns when
+  // a value is provided, preserving the previously persisted value otherwise.
   isTenantPresent?: boolean
   isNewTenantPresent?: boolean
   checklist?: inspection.Checklist

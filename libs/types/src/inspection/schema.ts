@@ -6,9 +6,8 @@ export const INSPECTION_STATUS_FILTER = {
 } as const
 
 // Inspector-driven safety/utility checks performed during the inspection.
-// Persisted as JSON in the inspection.checklist column. New (MIM-1818) and
-// therefore optional + default everywhere so drafts saved before the column
-// existed parse cleanly.
+// Persisted as four BIT NOT NULL DEFAULT 0 columns on the inspection table
+// (groundFaultBreaker, smokeDetector, electricalSchema, electricalSystem).
 export const ChecklistSchema = z.object({
   groundFaultBreaker: z.boolean().default(false),
   smokeDetector: z.boolean().default(false),
@@ -81,7 +80,6 @@ export const DetailedXpandInspectionSchema = z.object({
   notes: z.string().nullable(),
   totalCost: z.number().nullable(),
   remarkCount: z.number(),
-  // Optional + defaults so drafts created before MIM-1818 still parse.
   checklist: ChecklistSchema.optional().default(CHECKLIST_DEFAULT),
   rooms: DetailedXpandInspectionRoomSchema.array(),
 })
@@ -117,7 +115,7 @@ export const DetailComponentSchema = z.object({
   type: z.string(),
   label: z.string(),
   note: z.string(),
-  // Optional + defaults so drafts saved before MIM-1818 still parse cleanly.
+  // Optional + defaults so older persisted drafts (no condition field) parse.
   condition: z.string().optional().default(''),
   cost: z.number().optional(),
   costResponsibility: z.enum(['tenant', 'landlord']).nullable().default(null),
@@ -192,7 +190,6 @@ export const InternalInspectionSchema = XpandInspectionSchema.extend({
   notes: z.string().nullable(),
   totalCost: z.number().nullable(),
   remarkCount: z.number(),
-  // Optional + defaults so drafts saved before MIM-1818 still parse cleanly.
   checklist: ChecklistSchema.optional().default(CHECKLIST_DEFAULT),
   rooms: z.array(InspectionRoomSchema).nullable(),
 })

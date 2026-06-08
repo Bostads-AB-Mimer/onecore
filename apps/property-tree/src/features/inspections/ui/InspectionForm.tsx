@@ -119,7 +119,7 @@ export function InspectionForm({
   ).length
 
   // canComplete delegates to the shared validation hook so it stays in sync
-  // with the MIM-1818 checklist gating (all four checks required).
+  // with the checklist gating (all four checks required).
   const canComplete = validation.canComplete
 
   const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)

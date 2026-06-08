@@ -364,7 +364,7 @@ describe('mapInternalRoomsToProtocolRooms', () => {
             type: 'custom',
             label: 'Persienn',
             note: '',
-            // Pre-MIM-1818 drafts won't have condition/cost/costResponsibility.
+            // Older drafts won't have condition/cost/costResponsibility.
             // The schema defaults condition to '' and costResponsibility to null;
             // with no note either, this should not produce a remark.
             condition: '',

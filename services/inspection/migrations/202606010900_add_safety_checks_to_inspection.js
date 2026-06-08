@@ -1,8 +1,8 @@
 /**
- * Adds the four boolean safety-check columns captured in the new
- * "Kontrollfrågor" step (MIM-1818). NOT NULL with default 0 so the columns
- * are always present — keeps reads schemaful and avoids the parser/fallback
- * dance a JSON column would need.
+ * Adds the four boolean safety-check columns captured in the "Kontrollfrågor"
+ * step. NOT NULL with default 0 so the columns are always present — keeps
+ * reads schemaful and avoids the parser/fallback dance a JSON column would
+ * need.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }

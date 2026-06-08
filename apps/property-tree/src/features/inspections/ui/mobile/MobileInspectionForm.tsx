@@ -133,7 +133,7 @@ export function MobileInspectionForm({
   ).length
   const isFirstRoom = currentRoomIndex === 0
   const isLastRoom = currentRoomIndex >= rooms.length - 1
-  // Delegates to the shared validation hook (includes MIM-1818 checklist gating).
+  // Delegates to the shared validation hook (includes checklist gating).
   const canComplete = validation.canComplete
 
   // Create tenant snapshot for saving

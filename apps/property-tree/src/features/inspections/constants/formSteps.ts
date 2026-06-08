@@ -4,7 +4,7 @@
  * evolves.
  *
  * - rooms: walkthrough of each room
- * - checklist: MIM-1818 "Kontrollfrågor" (tenant + furniture + safety checks)
+ * - checklist: "Kontrollfrågor" (tenant + furniture + safety checks)
  * - summary: final remarks table before submitting
  */
 export const FORM_STEP = {

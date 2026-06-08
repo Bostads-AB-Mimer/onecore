@@ -453,10 +453,10 @@ export async function saveInspectionDraft(
       return { ok: false, err: 'not-found' }
     }
 
-    // Build the update object — only include the optional MIM-1818 fields
-    // when they were supplied. Pre-1818 clients send no value for these,
-    // and we want to leave the previously persisted column alone in that
-    // case rather than overwrite with `undefined`.
+    // Build the update object — only include the optional fields when they
+    // were supplied. Older clients send no value for these, and we want to
+    // leave the previously persisted column alone in that case rather than
+    // overwrite with `undefined`.
     const update: Record<string, unknown> = {
       inspector: params.inspectorName,
       draftRooms: JSON.stringify(params.rooms),

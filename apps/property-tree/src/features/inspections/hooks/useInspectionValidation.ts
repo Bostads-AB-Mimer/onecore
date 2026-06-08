@@ -26,7 +26,7 @@ export function useInspectionValidation(
     const canSaveDraft = inspectorInfo.inspectorName.trim().length > 0
 
     // Can complete only if all rooms are handled AND every checklist item in
-    // the MIM-1818 "Kontrollfrågor" step is checked.
+    // the "Kontrollfrågor" step is checked.
     const allRoomsHandled = completedRooms === totalRooms
     const canComplete = canSaveDraft && allRoomsHandled && isChecklistComplete
 

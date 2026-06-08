@@ -87,11 +87,11 @@ export function useInspectorInfo(
     existingInspection?.isFurnished ?? true
   )
 
-  // Tenant presence is now captured during the inspection (MIM-1818) rather
-  // than at create time. Hydrate from the persisted inspection so reopening
-  // a draft restores the inspector's previous choice. Default true for the
-  // outgoing tenant — same "common case" reasoning as isFurnished — and
-  // false for the new tenant, who is almost never on-site at avflytt.
+  // Tenant presence is captured during the conduct flow rather than at
+  // create time. Hydrate from the persisted inspection so reopening a draft
+  // restores the inspector's previous choice. Default true for the outgoing
+  // tenant — same "common case" reasoning as isFurnished — and false for the
+  // new tenant, who is almost never on-site at avflytt.
   const [isTenantPresent, setIsTenantPresent] = useState(
     existingInspection?.isTenantPresent ?? true
   )
