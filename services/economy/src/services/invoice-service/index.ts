@@ -264,7 +264,10 @@ export const routes = (router: KoaRouter) => {
               .join('\n')
           )
         } catch (emailErr) {
-          logger.error(emailErr, 'Failed to send grace period failure notification')
+          logger.error(
+            emailErr,
+            'Failed to send grace period failure notification'
+          )
         }
       }
 

@@ -1430,7 +1430,6 @@ export const healthCheck = async () => {
   return {}
 }
 
-
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
 ) => {
