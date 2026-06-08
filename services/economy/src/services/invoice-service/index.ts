@@ -11,6 +11,7 @@ import {
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   submitMiscellaneousInvoice,
+  updateInvoiceDeferralDate,
 } from '../common/adapters/xledger-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
@@ -210,6 +211,37 @@ export const routes = (router: KoaRouter) => {
       ctx.body = {
         message: error.message,
       }
+    }
+  })
+
+  router.put('(.*)/invoices/:invoiceNumber/deferral', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { newDueDate } = ctx.request.body as { newDueDate?: string }
+
+    if (!newDueDate) {
+      ctx.status = 400
+      ctx.body = { message: 'newDueDate is required' }
+      return
+    }
+
+    const parsedDate = new Date(newDueDate)
+    if (isNaN(parsedDate.getTime())) {
+      ctx.status = 400
+      ctx.body = { message: 'newDueDate must be a valid ISO date string' }
+      return
+    }
+
+    try {
+      await updateInvoiceDeferralDate(ctx.params.invoiceNumber, parsedDate)
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+    } catch (error: any) {
+      logger.error(
+        { error, invoiceNumber: ctx.params.invoiceNumber },
+        'Error updating invoice deferral date'
+      )
+      ctx.status = 500
+      ctx.body = { message: error.message }
     }
   })
 

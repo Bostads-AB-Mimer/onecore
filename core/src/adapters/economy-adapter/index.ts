@@ -261,6 +261,31 @@ export async function getRentInvoiceRows(
   }
 }
 
+export async function updateInvoiceDeferralDate(
+  invoiceId: string,
+  newDueDate: string
+): Promise<AdapterResult<boolean, 'not-found' | 'unknown'>> {
+  try {
+    const response = await axios.put(
+      `${config.economyService.url}/invoices/${invoiceId}/deferral`,
+      { newDueDate }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: true }
+    }
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+
+    logger.error(response.data, 'economy-adapter.updateInvoiceDeferralDate')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.updateInvoiceDeferralDate')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export async function getContacts(): Promise<
   AdapterResult<XledgerContact[], 'unknown'>
 > {

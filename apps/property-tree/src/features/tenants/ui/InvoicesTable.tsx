@@ -1,6 +1,7 @@
 import { Invoice, InvoicePaymentEvent, PaymentStatus } from '@onecore/types'
 import { format, parseISO } from 'date-fns'
 import { FileText } from 'lucide-react'
+import { useState } from 'react'
 import { match, P } from 'ts-pattern'
 
 import { Badge } from '@/shared/ui/Badge'
@@ -9,9 +10,21 @@ import {
   CollapsibleTable,
   CollapsibleTableColumn,
 } from '@/shared/ui/CollapsibleTable'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/shared/ui/Dialog'
+import { Input } from '@/shared/ui/Input'
+import { Label } from '@/shared/ui/Label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
+import { useUpdateInvoiceDeferral } from '../hooks/useUpdateInvoiceDeferral'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',
@@ -37,6 +50,77 @@ type Props = {
   invoices: Invoice[]
   onInvoiceRowClick: (invoiceId: string | null) => void
   expandedInvoiceId: string | null
+  contactCode?: string
+}
+
+const GrantDeferralDialog = ({
+  invoice,
+  contactCode,
+}: {
+  invoice: Invoice
+  contactCode: string
+}) => {
+  const [open, setOpen] = useState(false)
+  const [newDueDate, setNewDueDate] = useState('')
+  const updateDeferral = useUpdateInvoiceDeferral()
+
+  const handleSubmit = () => {
+    if (!newDueDate) return
+    updateDeferral.mutate(
+      { invoiceId: invoice.invoiceId, contactCode, newDueDate },
+      {
+        onSuccess: () => setOpen(false),
+      }
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+          Bevilja anstånd
+        </Button>
+      </DialogTrigger>
+      <DialogContent onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle>Bevilja anstånd</DialogTitle>
+          <DialogDescription>
+            Faktura {invoice.invoiceId} – ange nytt förfallodatum. Datumet
+            uppdateras i Xledger med texten &quot;Anstånd till [datum]&quot;.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2 py-2">
+          <Label htmlFor="new-due-date">Nytt förfallodatum</Label>
+          <Input
+            id="new-due-date"
+            type="date"
+            value={newDueDate}
+            onChange={(e) => setNewDueDate(e.target.value)}
+          />
+        </div>
+        {updateDeferral.isError && (
+          <p className="text-sm text-destructive">
+            {updateDeferral.error?.message ?? 'Något gick fel.'}
+          </p>
+        )}
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={updateDeferral.isPending}
+          >
+            Avbryt
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!newDueDate || updateDeferral.isPending}
+          >
+            {updateDeferral.isPending ? 'Sparar...' : 'Spara'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 export const InvoicesTable = (props: Props) => {
@@ -353,6 +437,12 @@ export const InvoicesTable = (props: Props) => {
 
   // Expanded content renderer
   const renderExpandedInvoiceContent = (invoice: Invoice) => {
+    const canGrantDeferral =
+      props.contactCode &&
+      invoice.source === 'next' &&
+      invoice.paymentStatus !== PaymentStatus.Paid &&
+      !invoice.credit
+
     return (
       <>
         {invoice.description && (
@@ -381,6 +471,14 @@ export const InvoicesTable = (props: Props) => {
               <FileText className="h-4 w-4 mr-2" />
               Se PDF
             </Button>
+          </div>
+        )}
+        {canGrantDeferral && (
+          <div className="mb-3">
+            <GrantDeferralDialog
+              invoice={invoice}
+              contactCode={props.contactCode!}
+            />
           </div>
         )}
         {invoice.invoiceRows.length > 0 && (

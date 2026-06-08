@@ -189,6 +189,31 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.put('/invoices/:invoiceId/deferral', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { newDueDate } = ctx.request.body as { newDueDate?: string }
+
+    if (!newDueDate) {
+      ctx.status = 400
+      ctx.body = { error: 'newDueDate is required' }
+      return
+    }
+
+    const result = await economyAdapter.updateInvoiceDeferralDate(
+      ctx.params.invoiceId,
+      newDueDate
+    )
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      ctx.body = { error: result.err === 'not-found' ? 'Not found' : 'Unknown error' }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+  })
+
   router.get('/xledger-contacts', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getContacts()

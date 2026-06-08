@@ -1430,6 +1430,68 @@ export const healthCheck = async () => {
   return {}
 }
 
+const getArTransactionDbId = async (
+  invoiceNumber: string
+): Promise<number | null> => {
+  const q = {
+    query: `query {
+      arTransactions(
+        first: 1
+        filter: {
+          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
+        }
+      ) {
+        edges {
+          node {
+            dbId
+          }
+        }
+      }
+    }`,
+  }
+
+  const result = await makeXledgerRequest(q)
+  return result.data?.arTransactions?.edges?.[0]?.node?.dbId ?? null
+}
+
+export const updateInvoiceDeferralDate = async (
+  invoiceNumber: string,
+  newDueDate: Date
+): Promise<void> => {
+  const dbId = await getArTransactionDbId(invoiceNumber)
+  if (!dbId) {
+    throw new Error(
+      `Could not find Xledger transaction for invoice ${invoiceNumber}`
+    )
+  }
+
+  const dueDateString = dateToGraphQlDateString(newDueDate)
+  const text = `Anstånd till ${dueDateString}`
+
+  const mutation = {
+    query: `mutation {
+      updateArTransactions(
+        inputs: {
+          node: {
+            dbId: ${dbId}
+            dueDate: "${dueDateString}"
+            deferredDueDate: "${dueDateString}"
+            text: "${text}"
+          }
+        }
+      ) {
+        edges {
+          node {
+            dbId
+          }
+        }
+      }
+    }`,
+  }
+
+  await makeXledgerRequest(mutation)
+}
+
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
 ) => {

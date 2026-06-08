@@ -122,6 +122,7 @@ const InvoicesCard = ({ contactCode }: { contactCode: string }) => {
               onInvoiceRowClick={setExpandedInvoiceId}
               expandedInvoiceId={expandedInvoiceId}
               invoices={invoices.data}
+              contactCode={contactCode}
             />
           )
         )}
