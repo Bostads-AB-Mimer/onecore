@@ -579,7 +579,13 @@ describe(adapter.updateInvoiceDeferralDate, () => {
     },
   })
 
-  it('sets text to "Anstånd till YYYY-MM-DD" when invoice has no existing text', async () => {
+  const mutationReply = {
+    data: {
+      updateArTransactions: { edges: [{ node: { dbId: 298929893 } }] },
+    },
+  }
+
+  it('sends "Anstånd till YYYY-MM-DD" as text variable when invoice has no existing text', async () => {
     let mutationBody: any
     nock(origin).post(pathname).reply(200, mockDbIdResponse)
     nock(origin).post(pathname).reply(200, mockInvoiceResponse(null))
@@ -588,20 +594,14 @@ describe(adapter.updateInvoiceDeferralDate, () => {
         mutationBody = body
         return true
       })
-      .reply(200, {
-        data: {
-          updateArTransactions: { edges: [{ node: { dbId: 298929893 } }] },
-        },
-      })
+      .reply(200, mutationReply)
 
     await adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
 
-    expect(mutationBody.query).toContain(
-      `text: "Anstånd till ${dueDateString}"`
-    )
+    expect(mutationBody.variables.text).toBe(`Anstånd till ${dueDateString}`)
   })
 
-  it('appends deferral with comma when invoice already has text', async () => {
+  it('appends deferral with comma when invoice already has other text', async () => {
     let mutationBody: any
     nock(origin).post(pathname).reply(200, mockDbIdResponse)
     nock(origin)
@@ -612,20 +612,34 @@ describe(adapter.updateInvoiceDeferralDate, () => {
         mutationBody = body
         return true
       })
-      .reply(200, {
-        data: {
-          updateArTransactions: { edges: [{ node: { dbId: 298929893 } }] },
-        },
-      })
+      .reply(200, mutationReply)
 
     await adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
 
-    expect(mutationBody.query).toContain(
-      `text: "Hyra för januari, Anstånd till ${dueDateString}"`
+    expect(mutationBody.variables.text).toBe(
+      `Hyra för januari, Anstånd till ${dueDateString}`
     )
   })
 
-  it('sets dueDate and deferredDueDate in the mutation', async () => {
+  it('replaces existing Anstånd segment instead of appending a second one', async () => {
+    let mutationBody: any
+    nock(origin).post(pathname).reply(200, mockDbIdResponse)
+    nock(origin)
+      .post(pathname)
+      .reply(200, mockInvoiceResponse('Anstånd till 2026-01-31'))
+    nock(origin)
+      .post(pathname, (body) => {
+        mutationBody = body
+        return true
+      })
+      .reply(200, mutationReply)
+
+    await adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
+
+    expect(mutationBody.variables.text).toBe(`Anstånd till ${dueDateString}`)
+  })
+
+  it('sends dueDate as a variable in the mutation', async () => {
     let mutationBody: any
     nock(origin).post(pathname).reply(200, mockDbIdResponse)
     nock(origin).post(pathname).reply(200, mockInvoiceResponse(null))
@@ -634,16 +648,11 @@ describe(adapter.updateInvoiceDeferralDate, () => {
         mutationBody = body
         return true
       })
-      .reply(200, {
-        data: {
-          updateArTransactions: { edges: [{ node: { dbId: 298929893 } }] },
-        },
-      })
+      .reply(200, mutationReply)
 
     await adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
 
-    expect(mutationBody.query).toContain(`dueDate: "${dueDateString}"`)
-    expect(mutationBody.query).toContain(`deferredDueDate: "${dueDateString}"`)
+    expect(mutationBody.variables.dueDate).toBe(dueDateString)
   })
 
   it('throws when invoice is not found in Xledger', async () => {

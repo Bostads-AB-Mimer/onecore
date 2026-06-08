@@ -245,73 +245,69 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('/invoices/:invoiceId/deferral', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { endDate, madeByEmail, reason } = ctx.request.body as {
-      endDate?: string
-      madeByEmail?: string
-      reason?: string
-    }
+  router.put(
+    '/invoices/:invoiceId/deferral',
+    parseRequestBody(economy.DeferralRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { endDate, madeByEmail, reason } = ctx.request.body
+      const invoiceId = ctx.params.invoiceId
+      const errors: string[] = []
 
-    if (!endDate || !madeByEmail) {
-      ctx.status = 400
-      ctx.body = { error: 'endDate and madeByEmail are required' }
-      return
-    }
+      const xledgerResult = await economyAdapter.updateXledgerDeferralDate(
+        invoiceId,
+        endDate
+      )
+      if (!xledgerResult.ok) {
+        errors.push('Xledger')
+      }
 
-    const invoiceId = ctx.params.invoiceId
-    const errors: string[] = []
+      const tenfastResult = await economyAdapter.setTenfastGracePeriod({
+        invoiceId,
+        endDate,
+        madeByEmail,
+        reason,
+      })
+      if (!tenfastResult.ok) {
+        errors.push('Tenfast')
+      }
 
-    const xledgerResult = await economyAdapter.updateXledgerDeferralDate(
-      invoiceId,
-      endDate
-    )
-    if (!xledgerResult.ok) {
-      errors.push('Xledger')
-    }
-
-    const tenfastResult = await economyAdapter.setTenfastGracePeriod({
-      invoiceId,
-      endDate,
-      madeByEmail,
-      reason,
-    })
-    if (!tenfastResult.ok) {
-      errors.push('Tenfast')
-    }
-
-    if (errors.length > 0) {
-      if (config.emailAddresses.economy) {
-        try {
-          await communicationAdapter.sendEmail({
-            to: config.emailAddresses.economy,
-            subject: `Fel: anstånd kunde inte registreras i ${errors.join(' och ')}`,
-            body: [
-              `Anstånd på faktura ${invoiceId} misslyckades i: ${errors.join(', ')}.`,
-              '',
-              `Nytt förfallodatum: ${endDate}`,
-              `Begärt av: ${madeByEmail}`,
-              reason ? `Anledning: ${reason}` : '',
-              '',
-              'Åtgärd krävs: registrera anståndet manuellt.',
-            ]
-              .filter(Boolean)
-              .join('\n'),
-          })
-        } catch (emailErr) {
-          logger.error(emailErr, 'Failed to send deferral failure notification')
+      if (errors.length > 0) {
+        if (config.emailAddresses.economy) {
+          try {
+            await communicationAdapter.sendEmail({
+              to: config.emailAddresses.economy,
+              subject: `Fel: anstånd kunde inte registreras i ${errors.join(' och ')}`,
+              body: [
+                `Anstånd på faktura ${invoiceId} misslyckades i: ${errors.join(', ')}.`,
+                '',
+                `Nytt förfallodatum: ${endDate}`,
+                `Begärt av: ${madeByEmail}`,
+                reason ? `Anledning: ${reason}` : '',
+                '',
+                'Åtgärd krävs: registrera anståndet manuellt.',
+              ]
+                .filter(Boolean)
+                .join('\n'),
+            })
+          } catch (emailErr) {
+            logger.error(
+              emailErr,
+              'Failed to send deferral failure notification'
+            )
+          }
         }
+        ctx.status = 500
+        ctx.body = {
+          error: `Failed to set deferral in: ${errors.join(', ')}`,
+        }
+        return
       }
-      ctx.status = 500
-      ctx.body = {
-        error: `Failed to set deferral in: ${errors.join(', ')}`,
-      }
-      return
-    }
 
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
-  })
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+    }
+  )
 
   router.get('/xledger-contacts', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

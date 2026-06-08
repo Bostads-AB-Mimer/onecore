@@ -93,7 +93,11 @@ const GrantDeferralDialog = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => e.stopPropagation()}
+        >
           Bevilja anstånd
         </Button>
       </DialogTrigger>

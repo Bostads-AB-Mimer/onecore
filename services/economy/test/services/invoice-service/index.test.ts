@@ -5,7 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
-import { routes } from '@src/services/invoice-service'
+import { routes } from '@src/services/invoice-service/index'
 
 import * as factory from '@test/factories'
 import { schemas } from '@onecore/types'

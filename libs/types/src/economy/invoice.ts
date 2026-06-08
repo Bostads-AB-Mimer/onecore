@@ -1,5 +1,17 @@
 import z from 'zod'
 
+const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
+
+export const XledgerDeferralRequestSchema = z.object({
+  endDate: z.string().regex(isoDateRegex, 'endDate must be YYYY-MM-DD'),
+})
+
+export const DeferralRequestSchema = z.object({
+  endDate: z.string().regex(isoDateRegex, 'endDate must be YYYY-MM-DD'),
+  madeByEmail: z.string().email(),
+  reason: z.string().optional(),
+})
+
 export const GetInvoicesByContactCodeQueryParams = z
   .object({ from: z.coerce.date().optional() })
   .optional()

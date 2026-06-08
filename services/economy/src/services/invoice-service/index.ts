@@ -217,18 +217,20 @@ export const routes = (router: KoaRouter) => {
 
   router.put('(.*)/invoices/:invoiceNumber/xledger-deferral', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { endDate } = ctx.request.body as { endDate?: string }
+    const body = economy.XledgerDeferralRequestSchema.safeParse(
+      ctx.request.body
+    )
 
-    if (!endDate) {
+    if (!body.success) {
       ctx.status = 400
-      ctx.body = { message: 'endDate is required' }
+      ctx.body = { message: body.error.issues[0]?.message ?? 'Invalid request' }
       return
     }
 
     try {
       await updateInvoiceDeferralDate(
         ctx.params.invoiceNumber,
-        new Date(endDate)
+        new Date(body.data.endDate)
       )
       ctx.status = 200
       ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
@@ -246,23 +248,21 @@ export const routes = (router: KoaRouter) => {
     '(.*)/invoices/:invoiceNumber/tenfast-grace-period',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { endDate, madeByEmail, reason } = ctx.request.body as {
-        endDate?: string
-        madeByEmail?: string
-        reason?: string
-      }
+      const body = economy.DeferralRequestSchema.safeParse(ctx.request.body)
 
-      if (!endDate || !madeByEmail) {
+      if (!body.success) {
         ctx.status = 400
-        ctx.body = { message: 'endDate and madeByEmail are required' }
+        ctx.body = {
+          message: body.error.issues[0]?.message ?? 'Invalid request',
+        }
         return
       }
 
       const result = await setGracePeriod({
         invoiceOcr: ctx.params.invoiceNumber,
-        endDate,
-        madeByEmail,
-        reason,
+        endDate: body.data.endDate,
+        madeByEmail: body.data.madeByEmail,
+        reason: body.data.reason,
       })
 
       if (!result.ok) {

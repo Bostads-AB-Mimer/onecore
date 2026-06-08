@@ -1434,32 +1434,41 @@ const getArTransactionDbId = async (
   invoiceNumber: string
 ): Promise<number | null> => {
   const q = {
-    query: `query {
-      arTransactions(
-        first: 1
-        filter: {
-          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
-        }
-      ) {
-        edges {
-          node {
-            dbId
+    query: gql`
+      query ($invoiceNumber: String!) {
+        arTransactions(
+          first: 1
+          filter: {
+            invoiceNumber: $invoiceNumber
+            headerTransactionSourceDbId_in: [600, 797, 3536]
+          }
+        ) {
+          edges {
+            node {
+              dbId
+            }
           }
         }
       }
-    }`,
+    `,
+    variables: { invoiceNumber },
   }
 
   const result = await makeXledgerRequest(q)
   return result.data?.arTransactions?.edges?.[0]?.node?.dbId ?? null
 }
 
+// Strips any existing "Anstånd till YYYY-MM-DD" segment before appending the
+// new one, so the getDefermentDate() regex always matches the latest date.
 const buildDeferralText = (
   existingText: string | undefined,
   dueDateString: string
 ): string => {
   const deferralPart = `Anstånd till ${dueDateString}`
-  return existingText ? `${existingText}, ${deferralPart}` : deferralPart
+  const stripped = existingText
+    ? existingText.replace(/,?\s*Anstånd till \d{4}-\d{2}-\d{2}/g, '').trim()
+    : undefined
+  return stripped ? `${stripped}, ${deferralPart}` : deferralPart
 }
 
 export const updateInvoiceDeferralDate = async (
@@ -1481,24 +1490,27 @@ export const updateInvoiceDeferralDate = async (
   const text = buildDeferralText(invoice?.description, dueDateString)
 
   const mutation = {
-    query: `mutation {
-      updateArTransactions(
-        inputs: {
-          node: {
-            dbId: ${dbId}
-            dueDate: "${dueDateString}"
-            deferredDueDate: "${dueDateString}"
-            text: "${text}"
+    query: gql`
+      mutation ($dbId: ID!, $dueDate: String!, $text: String!) {
+        updateArTransactions(
+          inputs: {
+            node: {
+              dbId: $dbId
+              dueDate: $dueDate
+              deferredDueDate: $dueDate
+              text: $text
+            }
           }
-        }
-      ) {
-        edges {
-          node {
-            dbId
+        ) {
+          edges {
+            node {
+              dbId
+            }
           }
         }
       }
-    }`,
+    `,
+    variables: { dbId, dueDate: dueDateString, text },
   }
 
   await makeXledgerRequest(mutation)

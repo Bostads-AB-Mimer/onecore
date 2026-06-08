@@ -29,7 +29,6 @@ import { routes } from '../index'
 import * as economyAdapter from '../../../adapters/economy-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
-import config from '../../../common/config'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -86,15 +85,8 @@ describe('economy-service routes', () => {
   })
 
   describe('PUT /invoices/:invoiceId/deferral', () => {
-    const originalEconomyEmail = config.emailAddresses.economy
-
     beforeEach(() => {
       jest.clearAllMocks()
-      config.emailAddresses.economy = 'economy@example.com'
-    })
-
-    afterEach(() => {
-      config.emailAddresses.economy = originalEconomyEmail
     })
 
     const validBody = {
