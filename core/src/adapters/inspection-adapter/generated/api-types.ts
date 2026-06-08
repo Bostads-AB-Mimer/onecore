@@ -730,6 +730,16 @@ export interface components {
       /** @default false */
       isAddedInThisInspection?: boolean
     }
+    Checklist: {
+      /** @default false */
+      groundFaultBreaker?: boolean
+      /** @default false */
+      smokeDetector?: boolean
+      /** @default false */
+      electricalSchema?: boolean
+      /** @default false */
+      electricalSystem?: boolean
+    }
     InternalInspection: {
       id: string
       status: string
@@ -893,6 +903,9 @@ export interface components {
         /** @default false */
         electricalSystem?: boolean
       }
+      /** Format: date-time */
+      date?: string
+      type?: string
     }
   }
   responses: never

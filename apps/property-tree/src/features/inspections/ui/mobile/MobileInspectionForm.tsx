@@ -17,7 +17,7 @@ import { ScrollArea } from '@/shared/ui/ScrollArea'
 
 import { FORM_STEP, type FormStep } from '../../constants/formSteps'
 import {
-  INSPECTION_TYPE_LABELS,
+  INSPECTION_TYPE_DIALOG_TITLE,
   type InspectionType,
 } from '../../constants/inspectionTypes'
 import { useInspectionForm } from '../../hooks/useInspectionForm'
@@ -77,6 +77,10 @@ export function MobileInspectionForm({
   const {
     inspectorName,
     setInspectorName,
+    inspectionTime,
+    setInspectionTime,
+    inspectionType,
+    setInspectionType,
     needsMasterKey,
     isFurnished,
     setIsFurnished,
@@ -141,6 +145,31 @@ export function MobileInspectionForm({
     }
   }
 
+  // Combines the existing inspection's calendar day with the picker's HH:MM
+  // — mirror of InspectionForm.composeInspectionDate.
+  const composeInspectionDate = (): string => {
+    const base = existingInspection?.date
+      ? new Date(existingInspection.date)
+      : new Date()
+    const [h, m] = inspectionTime.split(':').map((s) => Number(s))
+    base.setHours(Number.isFinite(h) ? h : 0)
+    base.setMinutes(Number.isFinite(m) ? m : 0)
+    base.setSeconds(0)
+    base.setMilliseconds(0)
+    return base.toISOString()
+  }
+
+  const buildSubmitData = (): InspectionSubmitData => ({
+    needsMasterKey,
+    isFurnished,
+    isTenantPresent,
+    isNewTenantPresent,
+    checklist,
+    date: composeInspectionDate(),
+    type: inspectionType,
+    tenant: createTenantSnapshot(),
+  })
+
   const handlePrevious = () => {
     if (!isFirstRoom) {
       setCurrentRoomIndex(currentRoomIndex - 1)
@@ -154,27 +183,13 @@ export function MobileInspectionForm({
   }
 
   const handleConfirmSaveDraft = () => {
-    onSave(inspectorName, inspectionData, 'draft', {
-      needsMasterKey,
-      isFurnished,
-      isTenantPresent,
-      isNewTenantPresent,
-      checklist,
-      tenant: createTenantSnapshot(),
-    })
+    onSave(inspectorName, inspectionData, 'draft', buildSubmitData())
     setIsDraftConfirmOpen(false)
   }
 
   const handleSubmit = () => {
     if (canComplete) {
-      onSave(inspectorName, inspectionData, 'completed', {
-        needsMasterKey,
-        isFurnished,
-        isTenantPresent,
-        isNewTenantPresent,
-        checklist,
-        tenant: createTenantSnapshot(),
-      })
+      onSave(inspectorName, inspectionData, 'completed', buildSubmitData())
     }
   }
 
@@ -205,7 +220,7 @@ export function MobileInspectionForm({
   }, [currentRoomIndex, rooms, step])
 
   const inspectionTypeLabel =
-    INSPECTION_TYPE_LABELS[existingInspection.type as InspectionType] ??
+    INSPECTION_TYPE_DIALOG_TITLE[existingInspection.type as InspectionType] ??
     'Besiktning'
 
   if (showInspectorSelection) {
@@ -226,6 +241,10 @@ export function MobileInspectionForm({
             <InspectionInfoSection
               inspectorName={inspectorName}
               setInspectorName={setInspectorName}
+              inspectionTime={inspectionTime}
+              setInspectionTime={setInspectionTime}
+              inspectionType={inspectionType}
+              setInspectionType={setInspectionType}
               tenant={tenant}
               address={address}
               apartmentCode={apartmentCode}

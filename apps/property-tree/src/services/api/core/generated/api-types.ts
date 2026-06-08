@@ -13141,6 +13141,9 @@ export interface components {
         /** @default false */
         electricalSystem?: boolean
       }
+      /** Format: date-time */
+      date?: string
+      type?: string
     }
     ComponentWriteBackError: {
       componentId: string

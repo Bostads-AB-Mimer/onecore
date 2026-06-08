@@ -125,6 +125,10 @@ export type SaveInspectionDraftParams = {
   isTenantPresent?: boolean
   isNewTenantPresent?: boolean
   checklist?: inspection.Checklist
+  // Editable from the conduct-dialog "Info om besiktning" card. date carries
+  // the Klockslag (HH:MM) along with the day since the column is DATETIME.
+  date?: Date
+  type?: string
 }
 
 export type AddRoomToInspectionParams = {

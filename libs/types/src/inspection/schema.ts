@@ -207,6 +207,11 @@ export const SaveInspectionDraftRequestSchema = z.object({
   isTenantPresent: z.boolean().optional(),
   isNewTenantPresent: z.boolean().optional(),
   checklist: ChecklistSchema.optional(),
+  // Editable from the new conduct-dialog "Info om besiktning" card. The date
+  // carries both the calendar day and the Klockslag (HH:MM) since the column
+  // is DATETIME. Optional so older clients still parse.
+  date: z.coerce.date().optional(),
+  type: z.string().optional(),
 })
 
 // Per-component result attached to the inspection PATCH response when an

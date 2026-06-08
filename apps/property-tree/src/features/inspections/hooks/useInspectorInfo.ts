@@ -3,12 +3,18 @@ import { useState } from 'react'
 import type { components } from '@/services/api/core/generated/api-types'
 
 import { type Checklist, CHECKLIST_DEFAULT } from '../constants/checklist'
+import {
+  INSPECTION_TYPE,
+  type InspectionType,
+  isValidInspectionType,
+} from '../constants/inspectionTypes'
 
 type Inspection = components['schemas']['InternalInspection']
 
 export interface InspectorInfo {
   inspectorName: string
   inspectionTime: string
+  inspectionType: InspectionType
   needsMasterKey: boolean
   isFurnished: boolean
   isTenantPresent: boolean
@@ -19,6 +25,7 @@ export interface InspectorInfo {
 export interface UseInspectorInfoReturn extends InspectorInfo {
   setInspectorName: (name: string) => void
   setInspectionTime: (time: string) => void
+  setInspectionType: (type: InspectionType) => void
   setNeedsMasterKey: (value: boolean) => void
   setIsFurnished: (value: boolean) => void
   setIsTenantPresent: (value: boolean) => void
@@ -28,6 +35,31 @@ export interface UseInspectorInfoReturn extends InspectorInfo {
   isChecklistComplete: boolean
 }
 
+const pad = (n: number) => n.toString().padStart(2, '0')
+
+// Derives the initial Klockslag for the conduct dialog. The 5-minute granular
+// fallback matches the picker's minute options — round-to-nearest avoids a
+// freshly-opened dialog showing a value the user can't re-select. We treat
+// *UTC* midnight as "no time set" because CreateInspectionDialog persists the
+// inspection at UTC midnight (`new Date('YYYY-MM-DD').toISOString()`); a real
+// scheduled time set via this picker is stored with a non-zero UTC component.
+function deriveInitialTime(date: Date | string | undefined | null): string {
+  if (date) {
+    const d = new Date(date)
+    const isCreateDialogSentinel =
+      d.getUTCHours() === 0 &&
+      d.getUTCMinutes() === 0 &&
+      d.getUTCSeconds() === 0
+    if (!Number.isNaN(d.getTime()) && !isCreateDialogSentinel) {
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    }
+  }
+  const now = new Date()
+  const rounded = Math.round(now.getMinutes() / 5) * 5
+  const hours = rounded === 60 ? (now.getHours() + 1) % 24 : now.getHours()
+  return `${pad(hours)}:${pad(rounded % 60)}`
+}
+
 export function useInspectorInfo(
   existingInspection?: Inspection
 ): UseInspectorInfoReturn {
@@ -35,15 +67,13 @@ export function useInspectorInfo(
     existingInspection?.inspector || ''
   )
 
-  const [inspectionTime, setInspectionTime] = useState(() => {
-    if (existingInspection?.date) {
-      // Try to extract time from existing inspection
-      return '10:00' // Default time if not available
-    }
-    const now = new Date()
-    const hours = now.getHours().toString().padStart(2, '0')
-    const minutes = now.getMinutes().toString().padStart(2, '0')
-    return `${hours}:${minutes}`
+  const [inspectionTime, setInspectionTime] = useState(() =>
+    deriveInitialTime(existingInspection?.date)
+  )
+
+  const [inspectionType, setInspectionType] = useState<InspectionType>(() => {
+    const raw = existingInspection?.type
+    return raw && isValidInspectionType(raw) ? raw : INSPECTION_TYPE.MOVE_OUT
   })
 
   const [needsMasterKey, setNeedsMasterKey] = useState(
@@ -90,6 +120,7 @@ export function useInspectorInfo(
   return {
     inspectorName,
     inspectionTime,
+    inspectionType,
     needsMasterKey,
     isFurnished,
     isTenantPresent,
@@ -97,6 +128,7 @@ export function useInspectorInfo(
     checklist,
     setInspectorName,
     setInspectionTime,
+    setInspectionType,
     setNeedsMasterKey,
     setIsFurnished,
     setIsTenantPresent,

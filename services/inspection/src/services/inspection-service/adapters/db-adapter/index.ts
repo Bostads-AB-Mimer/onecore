@@ -506,6 +506,12 @@ export async function saveInspectionDraft(
     if (params.checklist !== undefined) {
       update.checklist = JSON.stringify(params.checklist)
     }
+    if (params.date !== undefined) {
+      update.date = params.date
+    }
+    if (params.type !== undefined) {
+      update.type = params.type
+    }
 
     await dbConnection('inspection').where('id', inspectionId).update(update)
 

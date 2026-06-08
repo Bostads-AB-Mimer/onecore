@@ -65,6 +65,10 @@ export function InspectionForm({
   const {
     inspectorName,
     setInspectorName,
+    inspectionTime,
+    setInspectionTime,
+    inspectionType,
+    setInspectionType,
     needsMasterKey,
     setNeedsMasterKey,
     isFurnished,
@@ -185,28 +189,41 @@ export function InspectionForm({
     }
   }
 
+  // Combines the existing inspection's calendar day with the picker's HH:MM.
+  // We keep the day from `existingInspection.date` (set at create time) and
+  // only overwrite the time, so the inspector editing Klockslag doesn't
+  // accidentally re-schedule the inspection to today.
+  const composeInspectionDate = (): string => {
+    const base = existingInspection?.date
+      ? new Date(existingInspection.date)
+      : new Date()
+    const [h, m] = inspectionTime.split(':').map((s) => Number(s))
+    base.setHours(Number.isFinite(h) ? h : 0)
+    base.setMinutes(Number.isFinite(m) ? m : 0)
+    base.setSeconds(0)
+    base.setMilliseconds(0)
+    return base.toISOString()
+  }
+
+  const buildSubmitData = (): InspectionSubmitData => ({
+    needsMasterKey,
+    isFurnished,
+    isTenantPresent,
+    isNewTenantPresent,
+    checklist,
+    date: composeInspectionDate(),
+    type: inspectionType,
+    tenant: createTenantSnapshot(),
+  })
+
   const handleSubmit = () => {
     if (canComplete) {
-      onSave(inspectorName, inspectionData, 'completed', {
-        needsMasterKey,
-        isFurnished,
-        isTenantPresent,
-        isNewTenantPresent,
-        checklist,
-        tenant: createTenantSnapshot(),
-      })
+      onSave(inspectorName, inspectionData, 'completed', buildSubmitData())
     }
   }
 
   const handleConfirmSaveDraft = () => {
-    onSave(inspectorName, inspectionData, 'draft', {
-      needsMasterKey,
-      isFurnished,
-      isTenantPresent,
-      isNewTenantPresent,
-      checklist,
-      tenant: createTenantSnapshot(),
-    })
+    onSave(inspectorName, inspectionData, 'draft', buildSubmitData())
     setIsDraftConfirmOpen(false)
   }
 
@@ -220,6 +237,10 @@ export function InspectionForm({
         <InspectionInfoSection
           inspectorName={inspectorName}
           setInspectorName={setInspectorName}
+          inspectionTime={inspectionTime}
+          setInspectionTime={setInspectionTime}
+          inspectionType={inspectionType}
+          setInspectionType={setInspectionType}
           tenant={tenant}
           address={address}
           apartmentCode={apartmentCode}

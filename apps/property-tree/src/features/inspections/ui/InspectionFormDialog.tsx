@@ -19,7 +19,7 @@ import {
 } from '@/shared/ui/Dialog'
 
 import {
-  INSPECTION_TYPE_LABELS,
+  INSPECTION_TYPE_DIALOG_TITLE,
   type InspectionType,
 } from '../constants/inspectionTypes'
 import { initialRoomData } from '../lib/initialFormData'
@@ -196,7 +196,7 @@ export function InspectionFormDialog({
   }
 
   const dialogTitle =
-    INSPECTION_TYPE_LABELS[existingInspection.type as InspectionType] ??
+    INSPECTION_TYPE_DIALOG_TITLE[existingInspection.type as InspectionType] ??
     'Genomför besiktning'
 
   return (

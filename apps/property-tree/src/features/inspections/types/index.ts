@@ -65,6 +65,12 @@ import type { Checklist } from '@/features/inspections/constants/checklist'
 /**
  * Inspection submission data
  * Additional data needed when submitting an inspection
+ *
+ * `date` carries the calendar day combined with the Klockslag (HH:MM) chosen
+ * in the conduct dialog's "Info om besiktning" card. `type` is the value
+ * behind the "Typ av besiktning" radio. Both flow through to the backend
+ * save-draft endpoint and update the inspection.date / inspection.type
+ * columns directly.
  */
 export interface InspectionSubmitData {
   needsMasterKey: boolean
@@ -72,6 +78,8 @@ export interface InspectionSubmitData {
   isTenantPresent: boolean
   isNewTenantPresent: boolean
   checklist: Checklist
+  date: string
+  type: string
   tenant?: TenantSnapshot
 }
 
