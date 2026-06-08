@@ -10373,6 +10373,9 @@ export interface components {
         timestamp: string;
       }) | null;
       areaSize: number | null;
+      rent: {
+        currentRent: number | null;
+      };
       malarEnergiFacilityId: string | null;
     };
     ResidenceSummary: {
@@ -12842,6 +12845,9 @@ export interface components {
           timestamp: string;
         }) | null;
         areaSize: number | null;
+        rent: {
+          currentRent: number | null;
+        };
         malarEnergiFacilityId: string | null;
       }) | null;
     };

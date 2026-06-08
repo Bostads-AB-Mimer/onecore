@@ -5,6 +5,7 @@ import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
 import {
+  calculateMonthlyRentFromYearRentRows,
   calculateYearlyRentFromYearRentRows,
   calculateEstimatedHyresbortfall,
 } from '../utils/rent-calculation'
@@ -708,6 +709,30 @@ async function fetchRentDataBatched(
   }
 
   return rentByRentalId
+}
+
+/**
+ * Returns the rental object's current monthly rent (the rent valid today),
+ * derived from the Xpand debit rows for the given rentalId. The rows are
+ * date-filtered so historical/future rent periods are not summed together.
+ * Returns null when the object has no rent rows.
+ */
+export const getCurrentRentByRentalId = async (
+  rentalId: string
+): Promise<number | null> => {
+  try {
+    const rentByRentalId = await fetchRentDataBatched([rentalId])
+    const rentRows = rentByRentalId.get(rentalId.trim())
+
+    if (!rentRows || rentRows.length === 0) {
+      return null
+    }
+
+    return calculateMonthlyRentFromYearRentRows(rentRows, new Date())
+  } catch (err) {
+    logger.error({ err }, 'residenceAdapter.getCurrentRentByRentalId')
+    throw err
+  }
 }
 
 /**

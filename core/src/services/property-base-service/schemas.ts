@@ -345,6 +345,11 @@ export const ResidenceDetailsSchema = z.object({
   }),
   staircase: StaircaseSchema.nullable(),
   areaSize: z.number().nullable(),
+  // Current monthly rent of the rental object itself (valid today),
+  // derived from Xpand debit rows — not from any lease.
+  rent: z.object({
+    currentRent: z.number().nullable(),
+  }),
   malarEnergiFacilityId: z.string().nullable(),
 })
 

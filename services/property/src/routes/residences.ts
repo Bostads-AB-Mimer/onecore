@@ -10,6 +10,7 @@ import {
 import { z } from 'zod'
 
 import {
+  getCurrentRentByRentalId,
   getResidenceSizeByRentalId,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndStaircaseCode,
@@ -345,6 +346,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await getResidenceByRentalId(ctx.params.rentalId)
       const areaSize = await getResidenceSizeByRentalId(ctx.params.rentalId)
+      const currentRent = await getCurrentRentByRentalId(ctx.params.rentalId)
       const residence = result.propertyObject.residence
       const residenceType = residence.residenceType
 
@@ -486,6 +488,7 @@ export const routes = (router: KoaRouter) => {
               }
             : null,
           areaSize: areaSize?.value ?? null,
+          rent: { currentRent },
           malarEnergiFacilityId: residence.comments?.[0]?.text || null,
         },
         ...metadata,

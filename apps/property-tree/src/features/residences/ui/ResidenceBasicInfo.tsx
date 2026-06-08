@@ -20,13 +20,12 @@ interface ResidenceBasicInfoProps {
   lease: components['schemas']['Lease']
 }
 
-const getCurrentRent = (lease: components['schemas']['Lease'] | undefined) => {
-  // Extract rent from current lease
-  const currentRent = lease?.rentInfo?.currentRent?.currentRent
-    ? lease.rentInfo.currentRent.currentRent
-    : null
-
-  return currentRent
+const getCurrentRent = (
+  residence: components['schemas']['ResidenceDetails']
+) => {
+  // The rent of the rental object itself (valid today), derived in the
+  // property service from Xpand debit rows — not from any lease.
+  return residence.rent?.currentRent ?? null
 }
 
 const requiresSpecialHandling = (
@@ -76,7 +75,7 @@ export const ResidenceBasicInfo = ({
   // Check if this is a secondary rental based on tenant data
   const needsSpecialHandling = requiresSpecialHandling(lease)
   const hasPestIssues = requiresPestControl(residence)
-  const rent = getCurrentRent(lease)
+  const rent = getCurrentRent(residence)
 
   const currentRentalBlock = getCurrentRentalBlock(residence)
 

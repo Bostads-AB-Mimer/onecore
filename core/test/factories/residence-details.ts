@@ -99,6 +99,7 @@ export const ResidenceDetailsFactory = Factory.define<
     timestamp: '2024-01-01T00:00:00Z',
   },
   areaSize: 100,
+  rent: { currentRent: 9387 },
   malarEnergiFacilityId: '735999137000482621',
 }))
 
