@@ -27,6 +27,8 @@ import {
   getInvoicePdf,
   setGracePeriod,
 } from '../../common/adapters/tenfast/tenfast-adapter'
+import { sendEmail } from '../../common/adapters/infobip-adapter'
+import config from '../../common/config'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -236,13 +238,36 @@ export const routes = (router: KoaRouter) => {
     })
 
     if (!result.ok) {
-      ctx.status = result.err === 'not-found' ? 404 : 500
+      const notFound = result.err === 'not-found'
+      ctx.status = notFound ? 404 : 500
       ctx.body = {
-        message:
-          result.err === 'not-found'
-            ? 'Invoice not found in Tenfast'
-            : 'Failed to set grace period',
+        message: notFound
+          ? 'Invoice not found in Tenfast'
+          : 'Failed to set grace period',
       }
+
+      if (!notFound && config.scriptNotificationEmailAddresses) {
+        try {
+          await sendEmail(
+            config.scriptNotificationEmailAddresses,
+            'Fel: anstånd kunde inte registreras',
+            [
+              `Anstånd på faktura ${ctx.params.invoiceNumber} kunde inte registreras i Tenfast/Xledger.`,
+              '',
+              `Nytt förfallodatum: ${endDate}`,
+              `Begärt av: ${madeByEmail}`,
+              reason ? `Anledning: ${reason}` : '',
+              '',
+              'Åtgärd krävs: registrera anståndet manuellt i Tenfast.',
+            ]
+              .filter((line) => line !== undefined)
+              .join('\n')
+          )
+        } catch (emailErr) {
+          logger.error(emailErr, 'Failed to send grace period failure notification')
+        }
+      }
+
       return
     }
 
