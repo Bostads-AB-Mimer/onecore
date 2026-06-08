@@ -189,6 +189,64 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /invoices/{invoiceId}/deferral:
+   *   put:
+   *     tags:
+   *       - Economy service
+   *     summary: Set a grace period (anstånd) on an invoice
+   *     description: Registers a deferral (anstånd) for the given invoice in Tenfast, which then syncs the new due date to Xledger. On failure a Slack notification is sent via email.
+   *     parameters:
+   *       - in: path
+   *         name: invoiceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The invoice OCR number
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - endDate
+   *               - madeByEmail
+   *             properties:
+   *               endDate:
+   *                 type: string
+   *                 format: date
+   *                 description: New due date (YYYY-MM-DD)
+   *               madeByEmail:
+   *                 type: string
+   *                 format: email
+   *                 description: Email of the OneCore user granting the deferral
+   *               reason:
+   *                 type: string
+   *                 description: Optional reason for the deferral
+   *     responses:
+   *       '200':
+   *         description: Grace period set successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     ok:
+   *                       type: boolean
+   *       '400':
+   *         description: Missing required fields
+   *       '404':
+   *         description: Invoice not found in Tenfast
+   *       '500':
+   *         description: Failed to set grace period
+   *     security:
+   *       - bearerAuth: []
+   */
   router.put('/invoices/:invoiceId/deferral', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { endDate, madeByEmail, reason } = ctx.request.body as {

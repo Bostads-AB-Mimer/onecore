@@ -167,17 +167,14 @@ async function updateInvoiceDeferralDate(params: {
   madeByEmail: string
   reason?: string
 }): Promise<void> {
-  const { error } = await PUT(
-    // @ts-expect-error
-    `/invoices/${params.invoiceId}/deferral`,
-    {
-      body: {
-        endDate: params.endDate,
-        madeByEmail: params.madeByEmail,
-        reason: params.reason,
-      },
-    }
-  )
+  const { error } = await PUT('/invoices/{invoiceId}/deferral', {
+    params: { path: { invoiceId: params.invoiceId } },
+    body: {
+      endDate: params.endDate,
+      madeByEmail: params.madeByEmail,
+      reason: params.reason,
+    },
+  })
 
   if (error) throw error
 }
