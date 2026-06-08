@@ -158,8 +158,9 @@ function RoomSummarySection({
     // Cost responsibility only applies to Skadad — Ok rows are informational
     // and show no cost/responsibility inputs.
     const showResponsibility = remark.condition === CONDITION_TYPE.DAMAGED
-    // When the landlord (Hyresvärd) bears the cost, the inspector doesn't
-    // enter a kr amount.
+    // Kostnad is only relevant when the tenant pays — that kr value flows
+    // into the avflyttningsprotokoll as a billed charge. Landlord-paid repairs
+    // are handled by work-order/economy, not captured here.
     const showCost =
       showResponsibility && costResponsibility !== COST_RESPONSIBILITY.LANDLORD
     const handleCostChange = (cost: number) => {

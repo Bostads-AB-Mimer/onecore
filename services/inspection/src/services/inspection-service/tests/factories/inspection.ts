@@ -202,7 +202,10 @@ export const DbInspectionFactory = Factory.define<DbInspection>(
     totalCost: null,
     remarkCount: 0,
     draftRooms: null,
-    checklist: null,
+    groundFaultBreaker: false,
+    smokeDetector: false,
+    electricalSchema: false,
+    electricalSystem: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   })

@@ -20,10 +20,12 @@ export type DbInspection = {
   totalCost: number | null
   remarkCount: number
   draftRooms: string | null
-  // JSON-encoded { groundFaultBreaker, smokeDetector, electricalSchema, electricalSystem }
-  // booleans captured in the "Kontrollfrågor" step. Null on inspections created
-  // before MIM-1818 — readers must apply ChecklistSchema defaults.
-  checklist: string | null
+  // Four booleans captured in the "Kontrollfrågor" step. NOT NULL DEFAULT 0
+  // in the DB so every row carries a concrete value — no null handling.
+  groundFaultBreaker: boolean
+  smokeDetector: boolean
+  electricalSchema: boolean
+  electricalSystem: boolean
   createdAt: Date
   updatedAt: Date
 }

@@ -35,44 +35,6 @@ function mapDbRemarkToResponse(r: DbInspectionRemark) {
   }
 }
 
-const DEFAULT_CHECKLIST: inspectionTypes.Checklist = {
-  groundFaultBreaker: false,
-  smokeDetector: false,
-  electricalSchema: false,
-  electricalSystem: false,
-}
-
-// Parses the JSON-encoded checklist column. Returns ChecklistSchema defaults
-// for missing or malformed payloads so a corrupt row doesn't deny reads.
-function parseChecklist(
-  inspectionId: string | number,
-  checklist: string | null | undefined
-): inspectionTypes.Checklist {
-  if (!checklist) return DEFAULT_CHECKLIST
-
-  let raw: unknown
-  try {
-    raw = JSON.parse(checklist)
-  } catch {
-    logger.error(
-      { inspectionId },
-      'Failed to parse checklist JSON for inspection'
-    )
-    return DEFAULT_CHECKLIST
-  }
-
-  const parsed = inspectionTypes.ChecklistSchema.safeParse(raw)
-  if (!parsed.success) {
-    logger.error(
-      { inspectionId, errors: parsed.error.errors },
-      'checklist payload does not match ChecklistSchema'
-    )
-    return DEFAULT_CHECKLIST
-  }
-
-  return parsed.data
-}
-
 // Base mapper shared by DetailedXpandInspection and InternalInspection responses
 // — both share every field except `rooms`, which differs by shape (xpand remarks
 // vs. internal room/component data) and nullability.
@@ -100,7 +62,12 @@ function mapDbInspectionToResponse<R>(
     notes: inspection.notes,
     totalCost: inspection.totalCost,
     remarkCount: inspection.remarkCount,
-    checklist: parseChecklist(inspection.id, inspection.checklist),
+    checklist: {
+      groundFaultBreaker: inspection.groundFaultBreaker,
+      smokeDetector: inspection.smokeDetector,
+      electricalSchema: inspection.electricalSchema,
+      electricalSystem: inspection.electricalSystem,
+    },
     rooms,
   }
 }
@@ -504,7 +471,10 @@ export async function saveInspectionDraft(
       update.isNewTenantPresent = params.isNewTenantPresent
     }
     if (params.checklist !== undefined) {
-      update.checklist = JSON.stringify(params.checklist)
+      update.groundFaultBreaker = params.checklist.groundFaultBreaker
+      update.smokeDetector = params.checklist.smokeDetector
+      update.electricalSchema = params.checklist.electricalSchema
+      update.electricalSystem = params.checklist.electricalSystem
     }
     if (params.date !== undefined) {
       update.date = params.date
@@ -687,7 +657,10 @@ export async function getInspectionById(
         'totalCost',
         'remarkCount',
         'draftRooms',
-        'checklist'
+        'groundFaultBreaker',
+        'smokeDetector',
+        'electricalSchema',
+        'electricalSystem'
       )
       .from<DbInspection>('inspection')
       .where('id', inspectionId)
