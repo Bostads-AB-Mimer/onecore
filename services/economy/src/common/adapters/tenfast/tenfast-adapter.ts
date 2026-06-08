@@ -391,8 +391,7 @@ export const getInvoiceByOcr = async (
   try {
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
-        'filter[ocrNumber]': ocr,
-        states: TENFAST_INVOICE_STATES.join(','),
+        ocrNumber: ocr,
       },
     })
     if (result.status !== 200) {
@@ -491,7 +490,7 @@ export const recordPaymentForInvoice = async (params: {
   try {
     const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
-        'filter[ocrNumber]': params.ocr,
+        ocrNumber: params.ocr,
         states: TENFAST_INVOICE_STATES.join(','),
       },
     })
@@ -727,7 +726,7 @@ export const getInvoicePdf = async (
   try {
     const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
-        'filter[ocrNumber]': ocr,
+        ocrNumber: ocr,
       },
     })
 

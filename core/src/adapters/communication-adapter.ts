@@ -19,6 +19,7 @@ import {
   CreateLinearErrandRequest,
   LinearIssue,
   LinearLabel,
+  InvoiceNotificationEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from './types'
@@ -536,5 +537,32 @@ export const getLinearLabels = async (): Promise<
       return { ok: false, err: 'error', statusCode: err.response.status }
     }
     return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendInvoiceNotificationEmail = async (
+  email: InvoiceNotificationEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const result = await axios.post(
+      `${config.communicationService.url}/send-invoice-notification-email`,
+      email
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service when sending invoice notification'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending invoice notification email to ${email.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
