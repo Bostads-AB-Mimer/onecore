@@ -13,6 +13,7 @@ export * as leasing from './leasing'
 export * as economy from './economy'
 export * as inspection from './inspection'
 export * as property from './property'
+export * as communication from './communication'
 export * from './room'
 
 export * as schemas from './schemas'

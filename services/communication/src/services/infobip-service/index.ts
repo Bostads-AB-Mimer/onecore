@@ -55,6 +55,9 @@ function extractPhoneNumber(input: string): string {
   return input // Return original if no pattern found
 }
 
+// TODO: Migrate to OkapiRouter so these routes contribute to /swagger.
+// Each handler needs `{}` (or a real schema) added as the second arg.
+// See TODO in src/api.ts for the broader migration plan.
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendMessage', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

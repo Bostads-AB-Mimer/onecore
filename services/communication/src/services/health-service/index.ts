@@ -52,6 +52,9 @@ const subsystems: HealthCheckTarget[] = [
  *   - name: Health
  *     description: Operations related to service health
  */
+// TODO: Migrate to OkapiRouter so /health is included in /swagger and the
+// orphaned @swagger JSDoc below can be replaced with a real okapi schema.
+// See TODO in src/api.ts for the broader migration plan.
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
