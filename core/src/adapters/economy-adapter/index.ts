@@ -308,7 +308,7 @@ export async function setTenfastGracePeriod(params: {
 
     logger.error(response.data, 'economy-adapter.setTenfastGracePeriod')
     return { ok: false, err: 'unknown', statusCode: response.status }
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (axios.isAxiosError(err) && err.response?.status === 404) {
       return { ok: false, err: 'not-found', statusCode: 404 }
     }

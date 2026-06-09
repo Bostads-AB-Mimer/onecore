@@ -39,7 +39,7 @@ describe('economy-adapter', () => {
     })
   })
 
-  describe('updateXledgerDeferralDate', () => {
+  describe(economyAdapter.updateXledgerDeferralDate, () => {
     const invoiceId = '55123456'
     const endDate = '2026-06-30'
 
@@ -97,7 +97,7 @@ describe('economy-adapter', () => {
     })
   })
 
-  describe('setTenfastGracePeriod', () => {
+  describe(economyAdapter.setTenfastGracePeriod, () => {
     const params = {
       invoiceId: '55123456',
       endDate: '2026-06-30',

@@ -1,13 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { economyService } from '@/services/api/core/economyService'
+import type { paths } from '@/services/api/core/generated/api-types'
 
-interface UpdateDeferralParams {
+type DeferralBody =
+  paths['/invoices/{invoiceId}/deferral']['put']['requestBody']['content']['application/json']
+
+interface UpdateDeferralParams extends DeferralBody {
   invoiceId: string
   contactCode: string
-  endDate: string
-  madeByEmail: string
-  reason?: string
 }
 
 export const useUpdateInvoiceDeferral = () => {
