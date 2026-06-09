@@ -8,6 +8,8 @@ import { CalendarIcon, FileText } from 'lucide-react'
 import { match, P } from 'ts-pattern'
 import { z } from 'zod'
 
+import { INVOICE_DEFERRAL_ROLE, RequireRole } from '@/entities/user'
+
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -573,12 +575,14 @@ export const InvoicesTable = (props: Props) => {
           </div>
         )}
         {canGrantDeferral && (
-          <div className="mb-3">
-            <GrantDeferralDialog
-              invoice={invoice}
-              contactCode={props.contactCode!}
-            />
-          </div>
+          <RequireRole roles={[INVOICE_DEFERRAL_ROLE]}>
+            <div className="mb-3">
+              <GrantDeferralDialog
+                invoice={invoice}
+                contactCode={props.contactCode!}
+              />
+            </div>
+          </RequireRole>
         )}
         {invoice.invoiceRows.length > 0 && (
           <div className="bg-background rounded-lg p-3 shadow-sm mb-4">

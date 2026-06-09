@@ -25,23 +25,35 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { economy } from '@onecore/types'
 
+import { requireRole } from '../../../middlewares/keycloak-auth'
 import { routes } from '../index'
 import * as economyAdapter from '../../../adapters/economy-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 
+const INVOICE_DEFERRAL_ROLE = 'invoice-deferral'
+
 const TEST_USER = {
   email: 'admin@mimer.nu',
   name: 'Admin',
   preferred_username: 'admin',
+  realm_access: { roles: ['api-access', INVOICE_DEFERRAL_ROLE] },
 }
+
+let mockUser: typeof TEST_USER = TEST_USER
 
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
 app.use((ctx, next) => {
-  ctx.state.user = TEST_USER
+  ctx.state.user = mockUser
+  return next()
+})
+app.use(async (ctx, next) => {
+  if (ctx.method === 'PUT' && /^\/invoices\/[^/]+\/deferral$/.test(ctx.path)) {
+    return requireRole(INVOICE_DEFERRAL_ROLE)(ctx, next)
+  }
   return next()
 })
 app.use(router.routes())
@@ -97,6 +109,7 @@ describe('economy-service routes', () => {
   describe('PUT /invoices/:invoiceId/deferral', () => {
     beforeEach(() => {
       jest.clearAllMocks()
+      mockUser = TEST_USER
     })
 
     const validBody = {
@@ -127,6 +140,19 @@ describe('economy-service routes', () => {
         .send({ endDate: validBody.endDate })
 
       expect(res.status).toBe(400)
+    })
+
+    it('returns 403 when user lacks invoice-deferral role', async () => {
+      mockUser = {
+        ...TEST_USER,
+        realm_access: { roles: ['api-access'] },
+      }
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(403)
     })
 
     it('returns 200 when both Xledger and Tenfast succeed', async () => {
