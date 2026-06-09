@@ -15,6 +15,10 @@ import { logger } from '@onecore/utilities'
 
 import { EmailV4Message, EmailV4Response } from './types'
 
+// Response from POSTing to Infobip's /email/4/messages (outbound email send).
+// Order of `messages` matches the destinations array passed in.
+export type InfobipSendEmailResponse = EmailV4Response
+
 const AcceptParkingSpaceOfferTemplateId = 205000000030455
 const AdditionalParkingSpaceOfferTemplateId = 200000000092027
 const ReplaceParkingSpaceOfferTemplateId = 200000000094058
