@@ -5,7 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
-import { routes } from '@src/services/invoice-service/index'
+import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
 import { schemas } from '@onecore/types'
@@ -282,6 +282,14 @@ describe('Invoice Service', () => {
       const res = await request(app.callback())
         .put('/invoices/55123456/tenfast-grace-period')
         .send({ endDate: '2026-06-30' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when reason is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/tenfast-grace-period')
+        .send({ endDate: '2026-06-30', madeByEmail: 'admin@mimer.nu' })
 
       expect(res.status).toBe(400)
     })

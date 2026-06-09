@@ -78,9 +78,7 @@ describe(adapter.getInvoiceRows, () => {
   const pad = (n: number) => String(n).padStart(2, '0')
   const y = now.getFullYear()
   const m = pad(now.getMonth() + 1)
-  const lastDay = pad(
-    new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-  )
+  const lastDay = pad(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())
   const startOfCurrentMonthString = `${y}${m}01`
   const endOfCurrentMonthString = `${y}${m}${lastDay}`
 
@@ -260,7 +258,9 @@ describe(adapter.enrichInvoiceRows, () => {
     const result = await adapter.enrichInvoiceRows(rows, invoices)
 
     expect(result.rows).toHaveLength(2)
-    expect(result.rows.every((row) => row.invoiceNumber === 'INV-1')).toBe(true)
+    expect(
+      result.rows.every((row) => row.invoiceNumber === 'INV-1')
+    ).toBe(true)
     expect(result.errors).toHaveLength(1)
     expect(result.errors[0].invoiceNumber).toBe('INV-2')
   })
@@ -291,8 +291,8 @@ describe(adapter.enrichInvoiceRows, () => {
     const result = await adapter.enrichInvoiceRows(rows, invoices)
 
     expect(result.rows).toHaveLength(0)
-    expect(result.errors.some((e) => e.invoiceNumber === 'INV-MISSING')).toBe(
-      true
-    )
+    expect(
+      result.errors.some((e) => e.invoiceNumber === 'INV-MISSING')
+    ).toBe(true)
   })
 })
