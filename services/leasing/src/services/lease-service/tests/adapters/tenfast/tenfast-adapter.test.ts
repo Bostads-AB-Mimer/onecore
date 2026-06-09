@@ -1115,10 +1115,9 @@ describe(tenfastAdapter.importLease, () => {
       data: { _id: 'created-lease-id' },
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1153,10 +1152,9 @@ describe(tenfastAdapter.importLease, () => {
       err: 'unknown',
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1187,10 +1185,9 @@ describe(tenfastAdapter.importLease, () => {
       data: { _id: 'created-lease-id' },
     })
 
-    const payload = factory.syncTenantPayload.build({ contactCode: 'P12345' })
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1211,10 +1208,9 @@ describe(tenfastAdapter.importLease, () => {
       err: 'tenant-could-not-be-created',
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1234,10 +1230,9 @@ describe(tenfastAdapter.importLease, () => {
       err: 'could-not-find-rental-object',
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1263,10 +1258,9 @@ describe(tenfastAdapter.importLease, () => {
       data: { error: 'boom' },
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1288,10 +1282,9 @@ describe(tenfastAdapter.importLease, () => {
     })
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -2144,14 +2137,12 @@ describe(tenfastAdapter.syncTenant, () => {
   })
 
   it('should POST to /hyresvard/extras/contacts/{contactCode} with no body', async () => {
-    const payload = factory.syncTenantPayload.build({ contactCode: 'P12345' })
-
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 200,
       data: { updatedCount: 1 },
     })
 
-    const result = await tenfastAdapter.syncTenant(payload)
+    const result = await tenfastAdapter.syncTenant('P12345')
 
     expect(result).toEqual({ ok: true, data: { updatedCount: 1 } })
     expect(request).toHaveBeenCalledTimes(1)
@@ -2167,40 +2158,34 @@ describe(tenfastAdapter.syncTenant, () => {
   })
 
   it('should skip when Tenfast returns 404', async () => {
-    const payload = factory.syncTenantPayload.build()
-
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 404,
       data: { error: 'not found' },
     })
 
-    const result = await tenfastAdapter.syncTenant(payload)
+    const result = await tenfastAdapter.syncTenant('P12345')
 
     expect(result).toEqual({ ok: true, data: null })
   })
 
   it('should return error when update fails', async () => {
-    const payload = factory.syncTenantPayload.build()
-
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 500,
       data: { error: 'Internal server error' },
     })
 
-    const result = await tenfastAdapter.syncTenant(payload)
+    const result = await tenfastAdapter.syncTenant('P12345')
 
     expect(result).toEqual({ ok: false, err: 'could-not-update-tenant' })
   })
 
   it('should return ok with updatedCount:0 when response omits the field', async () => {
-    const payload = factory.syncTenantPayload.build()
-
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 200,
       data: {},
     })
 
-    const result = await tenfastAdapter.syncTenant(payload)
+    const result = await tenfastAdapter.syncTenant('P12345')
 
     expect(result).toEqual({ ok: true, data: { updatedCount: 0 } })
   })

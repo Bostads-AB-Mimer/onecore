@@ -1,14 +1,8 @@
 import { Factory } from 'fishery'
 import type {
-  SyncContactToLeasingPayload,
   SyncContactToEconomyPayload,
   SyncContactToWorkOrderPayload,
 } from '@onecore/types'
-
-export const SyncContactToLeasingPayloadFactory =
-  Factory.define<SyncContactToLeasingPayload>(({ sequence }) => ({
-    contactCode: `P${100000 + sequence}`,
-  }))
 
 export const SyncContactToEconomyPayloadFactory =
   Factory.define<SyncContactToEconomyPayload>(({ sequence }) => ({

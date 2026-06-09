@@ -1,9 +1,5 @@
 import { logger } from '@onecore/utilities'
-import {
-  Contact,
-  RentalObjectAvailabilityInfo,
-  SyncContactToLeasingPayload,
-} from '@onecore/types'
+import { Contact, RentalObjectAvailabilityInfo } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -175,7 +171,7 @@ export const createLease = async (
  */
 export const importLease = async (
   leaseId: string,
-  contact: SyncContactToLeasingPayload,
+  contactCode: string,
   rentalObjectCode: string,
   fromDate: Date
 ): Promise<
@@ -190,10 +186,10 @@ export const importLease = async (
 > => {
   try {
     logger.info(
-      { leaseId, contactCode: contact.contactCode, rentalObjectCode },
+      { leaseId, contactCode, rentalObjectCode },
       'tenfast-adapter.importLease: starting import'
     )
-    const existingTenant = await getTenantByContactCode(contact.contactCode)
+    const existingTenant = await getTenantByContactCode(contactCode)
     if (!existingTenant.ok)
       return { ok: false, err: 'could-not-retrieve-tenant' }
 
@@ -201,7 +197,7 @@ export const importLease = async (
     if (existingTenant.data) {
       tenant = existingTenant.data
     } else {
-      const importResult = await importContact(contact.contactCode)
+      const importResult = await importContact(contactCode)
       if (!importResult.ok) return { ok: false, err: 'could-not-create-tenant' }
       tenant = importResult.data
     }
@@ -901,7 +897,7 @@ function buildTenantRequestData(contact: Contact) {
 }
 
 export const syncTenant = async (
-  payload: SyncContactToLeasingPayload
+  contactCode: string
 ): Promise<
   AdapterResult<
     { updatedCount: number } | null,
@@ -911,12 +907,12 @@ export const syncTenant = async (
   try {
     const response = await tenfastApi.request({
       method: 'post',
-      url: `${tenfastBaseUrl}/v1/hyresvard/extras/contacts/${encodeURIComponent(payload.contactCode)}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/contacts/${encodeURIComponent(contactCode)}`,
     })
 
     if (response.status === 404) {
       logger.warn(
-        { contactCode: payload.contactCode },
+        { contactCode },
         'tenfast-adapter.syncTenant: tenant not found in Tenfast, skipping'
       )
       return { ok: true, data: null }

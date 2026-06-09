@@ -17,8 +17,6 @@ export * from './room'
 
 export * as schemas from './schemas'
 export {
-  SyncContactToLeasingSchema,
-  type SyncContactToLeasingPayload,
   SyncContactToEconomySchema,
   type SyncContactToEconomyPayload,
   SyncContactToWorkOrderSchema,

@@ -96,7 +96,7 @@ const notifyRecovery = async (entry: FailedRowEntry) => {
 const syncContact = async (update: ContactUpdate): Promise<void> => {
   const payload = toSyncPayload(update.contact)
   const [tenfastResult, xledgerResult, odooResult] = await Promise.all([
-    syncContactToLeasing({ contactCode: payload.contactCode }),
+    syncContactToLeasing(payload.contactCode),
     syncContactToEconomy(payload.contactCode, {
       fullName: payload.fullName,
       street: payload.street,

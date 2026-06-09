@@ -14,7 +14,6 @@ import {
 } from '../adapters/xpand/tenant-lease-adapter'
 
 import { syncTenant } from '../adapters/tenfast/tenfast-adapter'
-import { SyncContactToLeasingSchema } from '@onecore/types'
 import {
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
@@ -1136,63 +1135,34 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The contact code to sync
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - contactCode
-   *             properties:
-   *               contactCode:
-   *                 type: string
    *     responses:
    *       200:
    *         description: Contact synced successfully to tenFAST
    *       500:
    *         description: Failed to sync contact to tenFAST
    */
-  router.post(
-    '(.*)/contacts/:contactCode/sync',
-    parseRequestBody(SyncContactToLeasingSchema),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const body = ctx.request.body as z.infer<
-        typeof SyncContactToLeasingSchema
-      >
-      const { contactCode } = ctx.params
+  router.post('(.*)/contacts/:contactCode/sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { contactCode } = ctx.params
 
-      if (body.contactCode !== contactCode) {
-        ctx.status = 400
-        ctx.body = {
-          type: 'invalid-request',
-          title: 'Path contactCode must match body contactCode',
-          status: 400,
-          ...metadata,
-        } satisfies RouteErrorResponse
-        return
-      }
+    const result = await syncTenant(contactCode)
 
-      const result = await syncTenant(body)
-
-      if (!result.ok) {
-        ctx.status = 500
-        ctx.body = {
-          type: 'tenfast-error',
-          title: `Could not sync tenant to tenFAST: ${result.err}`,
-          status: 500,
-          ...metadata,
-        } satisfies RouteErrorResponse
-        return
-      }
-
-      ctx.status = 200
+    if (!result.ok) {
+      ctx.status = 500
       ctx.body = {
-        content: result.data,
-        skipped: result.data === null,
+        type: 'tenfast-error',
+        title: `Could not sync tenant to tenFAST: ${result.err}`,
+        status: 500,
         ...metadata,
-      }
+      } satisfies RouteErrorResponse
+      return
     }
-  )
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      skipped: result.data === null,
+      ...metadata,
+    }
+  })
 }

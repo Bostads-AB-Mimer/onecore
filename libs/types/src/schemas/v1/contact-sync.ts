@@ -1,13 +1,5 @@
 import { z } from 'zod'
 
-export const SyncContactToLeasingSchema = z.object({
-  contactCode: z.string(),
-})
-
-export type SyncContactToLeasingPayload = z.infer<
-  typeof SyncContactToLeasingSchema
->
-
 export const SyncContactToEconomySchema = z.object({
   contactCode: z.string(),
   fullName: z.string(),

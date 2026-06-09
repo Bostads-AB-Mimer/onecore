@@ -1,10 +1,6 @@
 import fs from 'fs/promises'
 import { logger } from '@onecore/utilities'
-import {
-  LeaseChange,
-  RentalPropertyInfo,
-  SyncContactToLeasingPayload,
-} from '@onecore/types'
+import { LeaseChange, RentalPropertyInfo } from '@onecore/types'
 import config from '../../common/config'
 import { sendEmail } from '../../adapters/communication-adapter'
 import {
@@ -125,15 +121,13 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
     return
   }
 
-  const contact: SyncContactToLeasingPayload | undefined =
-    lease.action === 'create'
-      ? { contactCode: lease.contactCode }
-      : undefined
+  const contactCode =
+    lease.action === 'create' ? lease.contactCode : undefined
 
   logger.info({ leaseId: lease.leaseId, action: lease.action }, 'syncing lease')
   const syncResult = await syncLeaseToTenfast(
     lease.leaseId,
-    contact,
+    contactCode,
     lease.action
   )
   if (!syncResult.ok) {

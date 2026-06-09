@@ -81,7 +81,7 @@ describe('POST /leases/sync', () => {
   it('returns 400 when leaseId is missing', async () => {
     const res = await request(app.callback())
       .post('/leases/sync')
-      .send({ contact: factory.syncTenantPayload.build(), action: 'create' })
+      .send({ contactCode: 'P12345', action: 'create' })
 
     expect(res.status).toBe(400)
   })
@@ -89,7 +89,7 @@ describe('POST /leases/sync', () => {
   it('returns 400 when action is missing', async () => {
     const res = await request(app.callback()).post('/leases/sync').send({
       leaseId: '123-456/01',
-      contact: factory.syncTenantPayload.build(),
+      contactCode: 'P12345',
     })
 
     expect(res.status).toBe(400)
@@ -98,7 +98,7 @@ describe('POST /leases/sync', () => {
   it('returns 400 when action is not in the enum', async () => {
     const res = await request(app.callback()).post('/leases/sync').send({
       leaseId: '123-456/01',
-      contact: factory.syncTenantPayload.build(),
+      contactCode: 'P12345',
       action: 'patch',
     })
 
@@ -106,12 +106,12 @@ describe('POST /leases/sync', () => {
   })
 
   describe('action: create', () => {
-    it('returns 400 when contact is missing for create', async () => {
+    it('returns 400 when contactCode is missing for create', async () => {
       const res = await request(app.callback())
         .post('/leases/sync')
         .send({ leaseId: '123-456/01', action: 'create' })
       expect(res.status).toBe(400)
-      expect(res.body.error).toBe('contact is required for action "create"')
+      expect(res.body.error).toBe('contactCode is required for action "create"')
     })
 
     it('returns 201 with action "created" on successful create', async () => {
@@ -128,7 +128,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'create',
       })
 
@@ -144,7 +144,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'create',
       })
 
@@ -162,7 +162,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'create',
       })
 
@@ -184,7 +184,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'create',
       })
 
@@ -227,7 +227,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'terminate',
       })
 
@@ -243,7 +243,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'terminate',
       })
 
@@ -261,7 +261,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'terminate',
       })
 
@@ -283,7 +283,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'terminate',
       })
 
@@ -308,7 +308,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'terminate',
       })
 
@@ -333,7 +333,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'terminate',
       })
 
@@ -364,7 +364,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'void',
       })
 
@@ -380,7 +380,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'void',
       })
 
@@ -396,7 +396,7 @@ describe('POST /leases/sync', () => {
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
-        contact: factory.syncTenantPayload.build(),
+        contactCode: 'P12345',
         action: 'void',
       })
 
