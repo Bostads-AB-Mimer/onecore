@@ -492,7 +492,6 @@ export const setGracePeriod = async (params: {
     const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         ocrNumber: params.invoiceOcr,
-        states: TENFAST_INVOICE_STATES.join(','),
       },
     })
 
@@ -555,7 +554,6 @@ export const recordPaymentForInvoice = async (params: {
     const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         ocrNumber: params.ocr,
-        states: TENFAST_INVOICE_STATES.join(','),
       },
     })
 
