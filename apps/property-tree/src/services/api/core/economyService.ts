@@ -165,7 +165,6 @@ async function getXledgerProjects(): Promise<XledgerProject[]> {
 type DeferralResponses =
   paths['/invoices/{invoiceId}/deferral']['put']['responses']
 export type DeferralError =
-  | DeferralResponses[400]['content']['application/json']
   | DeferralResponses[404]['content']['application/json']
   | DeferralResponses[500]['content']['application/json']
 
@@ -182,7 +181,7 @@ async function updateInvoiceDeferralDate(params: {
     },
   })
 
-  if (error) throw { code: error }
+  if (error) throw error
 }
 
 export const economyService = {

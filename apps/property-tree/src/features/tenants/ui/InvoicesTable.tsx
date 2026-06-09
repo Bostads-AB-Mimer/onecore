@@ -76,7 +76,6 @@ const deferralFormSchema = z.object({
 type DeferralFormValues = z.infer<typeof deferralFormSchema>
 
 const deferralErrorMessages: Record<DeferralError['code'], string> = {
-  'validation-error': 'Ogiltigt datum.',
   'invoice-not-found': 'Fakturan hittades inte i Tenfast.',
   'xledger-failed':
     'Anståndet registrerades i Tenfast men misslyckades i Xledger. Ekonomiteamet har notifierats.',

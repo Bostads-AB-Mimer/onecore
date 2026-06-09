@@ -283,51 +283,27 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const [xledgerResult, tenfastResult] = await Promise.allSettled([
-        economyAdapter.updateXledgerDeferralDate(invoiceId, endDate),
-        economyAdapter.setTenfastGracePeriod({
-          invoiceId,
-          endDate,
-          madeByEmail,
-          reason,
-        }),
-      ])
+      const tenfastResult = await economyAdapter.setTenfastGracePeriod({
+        invoiceId,
+        endDate,
+        madeByEmail,
+        reason,
+      })
 
-      const xledgerOk =
-        xledgerResult.status === 'fulfilled' && xledgerResult.value.ok
-      const tenfastOk =
-        tenfastResult.status === 'fulfilled' && tenfastResult.value.ok
-      const tenfastNotFound =
-        tenfastResult.status === 'fulfilled' &&
-        !tenfastResult.value.ok &&
-        tenfastResult.value.err === 'not-found'
-
-      if (tenfastNotFound) {
-        ctx.status = 404
-        ctx.body = { code: 'invoice-not-found' }
-        return
-      }
-
-      if (!xledgerOk || !tenfastOk) {
-        const failedSystems = [
-          !xledgerOk && 'Xledger',
-          !tenfastOk && 'Tenfast',
-        ].filter(Boolean) as string[]
-
-        const errorCode =
-          !xledgerOk && !tenfastOk
-            ? 'both-failed'
-            : !xledgerOk
-              ? 'xledger-failed'
-              : 'tenfast-failed'
+      if (!tenfastResult.ok) {
+        if (tenfastResult.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { code: 'invoice-not-found' }
+          return
+        }
 
         if (config.emailAddresses.economy) {
           try {
             await communicationAdapter.sendEmail({
               to: config.emailAddresses.economy,
-              subject: `Fel: anstånd kunde inte registreras i ${failedSystems.join(' och ')}`,
+              subject: 'Fel: anstånd kunde inte registreras i Tenfast',
               body: [
-                `Anstånd på faktura ${invoiceId} misslyckades i: ${failedSystems.join(', ')}.`,
+                `Anstånd på faktura ${invoiceId} misslyckades i: Tenfast.`,
                 '',
                 `Nytt förfallodatum: ${endDate}`,
                 `Begärt av: ${madeByEmail}`,
@@ -347,7 +323,43 @@ export const routes = (router: KoaRouter) => {
         }
 
         ctx.status = 500
-        ctx.body = { code: errorCode }
+        ctx.body = { code: 'tenfast-failed' }
+        return
+      }
+
+      const xledgerResult = await economyAdapter.updateXledgerDeferralDate(
+        invoiceId,
+        endDate
+      )
+
+      if (!xledgerResult.ok) {
+        if (config.emailAddresses.economy) {
+          try {
+            await communicationAdapter.sendEmail({
+              to: config.emailAddresses.economy,
+              subject: 'Fel: anstånd kunde inte registreras i Xledger',
+              body: [
+                `Anstånd på faktura ${invoiceId} misslyckades i: Xledger.`,
+                '',
+                `Nytt förfallodatum: ${endDate}`,
+                `Begärt av: ${madeByEmail}`,
+                reason ? `Anledning: ${reason}` : '',
+                '',
+                'Åtgärd krävs: registrera anståndet manuellt.',
+              ]
+                .filter(Boolean)
+                .join('\n'),
+            })
+          } catch (emailErr) {
+            logger.error(
+              emailErr,
+              'Failed to send deferral failure notification'
+            )
+          }
+        }
+
+        ctx.status = 500
+        ctx.body = { code: 'xledger-failed' }
         return
       }
 

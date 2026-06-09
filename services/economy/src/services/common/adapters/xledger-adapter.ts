@@ -1052,20 +1052,24 @@ export const getAllInvoicesWithMatchIds = async ({
 
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
   const q = {
-    query: `query {
-      arTransactions(
-        first: 1
-        filter: {
-          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
-        }
-      ) {
+    query: gql`
+      query ($invoiceNumber: String!) {
+        arTransactions(
+          first: 1
+          filter: {
+            invoiceNumber: $invoiceNumber
+            headerTransactionSourceDbId_in: [600, 797, 3536]
+          }
+        ) {
           edges {
             node {
               ${invoiceNodeFragment}
             }
           }
         }
-    }`,
+      }
+    `,
+    variables: { invoiceNumber },
   }
 
   try {
@@ -1086,20 +1090,24 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
 
 export async function getInvoiceMatchId(invoiceNumber: string) {
   const q = {
-    query: `query {
-      arTransactions(
-        first: 1
-        filter: {
-          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
-        }
-      ) {
+    query: gql`
+      query ($invoiceNumber: String!) {
+        arTransactions(
+          first: 1
+          filter: {
+            invoiceNumber: $invoiceNumber
+            headerTransactionSourceDbId_in: [600, 797, 3536]
+          }
+        ) {
           edges {
             node {
               matchId
             }
           }
         }
-    }`,
+      }
+    `,
+    variables: { invoiceNumber },
   }
 
   try {

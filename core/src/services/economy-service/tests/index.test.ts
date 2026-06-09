@@ -186,9 +186,6 @@ describe('economy-service routes', () => {
 
     it('returns 500 with code tenfast-failed and sends notification when Tenfast fails', async () => {
       jest
-        .spyOn(economyAdapter, 'updateXledgerDeferralDate')
-        .mockResolvedValue({ ok: true, data: true })
-      jest
         .spyOn(economyAdapter, 'setTenfastGracePeriod')
         .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
       const emailSpy = jest
@@ -204,29 +201,23 @@ describe('economy-service routes', () => {
       expect(emailSpy).toHaveBeenCalled()
     })
 
-    it('returns 500 with code both-failed when both systems fail', async () => {
-      jest
-        .spyOn(economyAdapter, 'updateXledgerDeferralDate')
-        .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
+    it('does not call Xledger when Tenfast fails', async () => {
       jest
         .spyOn(economyAdapter, 'setTenfastGracePeriod')
         .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
       jest
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null })
+      const xledgerSpy = jest.spyOn(economyAdapter, 'updateXledgerDeferralDate')
 
-      const res = await request(app.callback())
+      await request(app.callback())
         .put('/invoices/55123456/deferral')
         .send(validBody)
 
-      expect(res.status).toBe(500)
-      expect(res.body.code).toBe('both-failed')
+      expect(xledgerSpy).not.toHaveBeenCalled()
     })
 
     it('returns 404 with code invoice-not-found when Tenfast returns not-found', async () => {
-      jest
-        .spyOn(economyAdapter, 'updateXledgerDeferralDate')
-        .mockResolvedValue({ ok: true, data: true })
       jest
         .spyOn(economyAdapter, 'setTenfastGracePeriod')
         .mockResolvedValue({ ok: false, err: 'not-found', statusCode: 404 })
@@ -241,11 +232,11 @@ describe('economy-service routes', () => {
 
     it('still returns 500 even if notification email itself fails', async () => {
       jest
-        .spyOn(economyAdapter, 'updateXledgerDeferralDate')
-        .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
-      jest
         .spyOn(economyAdapter, 'setTenfastGracePeriod')
         .mockResolvedValue({ ok: true, data: true })
+      jest
+        .spyOn(economyAdapter, 'updateXledgerDeferralDate')
+        .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
       jest
         .spyOn(communicationAdapter, 'sendEmail')
         .mockRejectedValue(new Error('email down'))
