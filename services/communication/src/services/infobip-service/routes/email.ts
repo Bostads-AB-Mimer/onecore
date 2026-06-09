@@ -30,7 +30,7 @@ import {
   sendInspectionProtocolEmail,
 } from '../adapters/infobip-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import { logOutboundDispatch } from '../../communication-log-service/adapters/db-adapter'
+import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
 
 // Email sender used for fromAddress when logging outbound email dispatches.
 // Mirrors the constant in email-adapter.ts (kept private there).

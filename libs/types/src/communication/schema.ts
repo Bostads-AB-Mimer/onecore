@@ -92,3 +92,14 @@ export const LogOutboundParamsSchema = z.object({
   templateId: z.string().uuid().optional(),
   recipients: z.array(LogOutboundRecipientSchema),
 })
+
+// Read-side response shapes
+export const DispatchWithRecipientsSchema = z.object({
+  dispatch: DispatchSchema,
+  recipients: z.array(MessageRecipientSchema),
+})
+
+export const CustomerMessageSchema = z.object({
+  dispatch: DispatchSchema,
+  recipient: MessageRecipientSchema,
+})

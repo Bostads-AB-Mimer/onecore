@@ -10,7 +10,7 @@ import {
   sendBulkSms,
 } from '../adapters/sms-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import { logOutboundDispatch } from '../../communication-log-service/adapters/db-adapter'
+import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
 
 // SMS sender used for fromAddress when logging outbound SMS dispatches.
 // Mirrors the constant in sms-adapter.ts (kept private there).
