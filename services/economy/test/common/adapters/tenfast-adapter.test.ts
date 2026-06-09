@@ -785,29 +785,6 @@ describe(setGracePeriod, () => {
     )
   })
 
-  it('omits reason from body when not provided', async () => {
-    mockAxios.request
-      .mockResolvedValueOnce({
-        status: 200,
-        data: { records: [invoiceRecord] },
-      })
-      .mockResolvedValueOnce({ status: 200, data: {} })
-
-    const { reason: _reason, ...paramsWithoutReason } = params
-    await setGracePeriod(paramsWithoutReason)
-
-    expect(mockAxios.request).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        url: `/v1/hyresvard/hyror/${invoiceRecord._id}/grace-period`,
-        method: 'POST',
-        data: {
-          endDate: params.endDate,
-          madeByEmail: params.madeByEmail,
-        },
-      })
-    )
-  })
-
   it('returns not-found when OCR lookup returns no records', async () => {
     mockAxios.request.mockResolvedValueOnce({
       status: 200,

@@ -70,7 +70,7 @@ type Props = {
 
 const deferralFormSchema = z.object({
   endDate: z.date({ required_error: 'Välj ett förfallodatum' }),
-  reason: z.string().optional(),
+  reason: z.string().min(1, 'Ange en anledning'),
 })
 
 type DeferralFormValues = z.infer<typeof deferralFormSchema>
@@ -112,7 +112,7 @@ const GrantDeferralDialog = ({
         invoiceId: invoice.invoiceId,
         contactCode,
         endDate: format(values.endDate, 'yyyy-MM-dd'),
-        reason: values.reason || undefined,
+        reason: values.reason,
       },
       { onSuccess: () => handleOpenChange(false) }
     )
@@ -184,12 +184,7 @@ const GrantDeferralDialog = ({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Anledning{' '}
-                    <span className="text-muted-foreground font-normal">
-                      (valfritt)
-                    </span>
-                  </FormLabel>
+                  <FormLabel>Anledning</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="T.ex. betalningsplan överenskommen med hyresgäst."

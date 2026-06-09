@@ -291,7 +291,7 @@ export async function setTenfastGracePeriod(params: {
   invoiceId: string
   endDate: string
   madeByEmail: string
-  reason?: string
+  reason: string
 }): Promise<AdapterResult<boolean, 'not-found' | 'unknown'>> {
   try {
     const response = await axios.put(

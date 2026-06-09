@@ -211,6 +211,7 @@ export const routes = (router: KoaRouter) => {
    *             type: object
    *             required:
    *               - endDate
+   *               - reason
    *             properties:
    *               endDate:
    *                 type: string
@@ -218,7 +219,7 @@ export const routes = (router: KoaRouter) => {
    *                 description: New due date (YYYY-MM-DD)
    *               reason:
    *                 type: string
-   *                 description: Optional reason for the deferral
+   *                 description: Reason for the deferral (required by Tenfast)
    *     responses:
    *       '200':
    *         description: Deferral set successfully in both Xledger and Tenfast

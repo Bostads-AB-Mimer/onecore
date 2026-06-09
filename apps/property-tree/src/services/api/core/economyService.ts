@@ -171,7 +171,7 @@ export type DeferralError =
 async function updateInvoiceDeferralDate(params: {
   invoiceId: string
   endDate: string
-  reason?: string
+  reason: string
 }): Promise<void> {
   const { error } = await PUT('/invoices/{invoiceId}/deferral', {
     params: { path: { invoiceId: params.invoiceId } },

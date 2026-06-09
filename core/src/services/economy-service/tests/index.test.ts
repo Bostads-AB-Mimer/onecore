@@ -121,6 +121,14 @@ describe('economy-service routes', () => {
       expect(res.status).toBe(400)
     })
 
+    it('returns 400 when reason is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({ endDate: validBody.endDate })
+
+      expect(res.status).toBe(400)
+    })
+
     it('returns 200 when both Xledger and Tenfast succeed', async () => {
       mockSuccess()
 

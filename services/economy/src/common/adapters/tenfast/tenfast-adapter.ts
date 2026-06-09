@@ -486,7 +486,7 @@ export const setGracePeriod = async (params: {
   invoiceOcr: string
   endDate: string
   madeByEmail: string
-  reason?: string
+  reason: string
 }): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
   try {
     const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
@@ -521,7 +521,7 @@ export const setGracePeriod = async (params: {
         data: {
           endDate: params.endDate,
           madeByEmail: params.madeByEmail,
-          ...(params.reason ? { reason: params.reason } : {}),
+          reason: params.reason,
         },
       }
     )
