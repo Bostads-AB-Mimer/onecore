@@ -80,9 +80,7 @@ const deferralErrorMessages: Record<DeferralError['code'], string> = {
   'xledger-failed':
     'Anståndet registrerades i Tenfast men misslyckades i Xledger. Ekonomiteamet har notifierats.',
   'tenfast-failed':
-    'Anståndet registrerades i Xledger men misslyckades i Tenfast. Ekonomiteamet har notifierats.',
-  'both-failed':
-    'Anståndet misslyckades i både Xledger och Tenfast. Ekonomiteamet har notifierats.',
+    'Anståndet kunde inte registreras i Tenfast. Ekonomiteamet har notifierats.',
 }
 
 const GrantDeferralDialog = ({

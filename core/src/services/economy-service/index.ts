@@ -195,7 +195,7 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Economy service
    *     summary: Set a grace period (anstånd) on an invoice
-   *     description: Updates the due date in Xledger via updateArTransactions, then registers the grace period in Tenfast. If either call fails a Slack notification is sent via email to the economy team.
+   *     description: Registers the grace period in Tenfast first, then updates the due date in Xledger via updateArTransactions. If either call fails a notification email is sent to the economy team.
    *     parameters:
    *       - in: path
    *         name: invoiceId
@@ -233,16 +233,7 @@ export const routes = (router: KoaRouter) => {
    *                     ok:
    *                       type: boolean
    *       '400':
-   *         description: Missing required fields
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               required: [code]
-   *               properties:
-   *                 code:
-   *                   type: string
-   *                   enum: [validation-error]
+   *         description: Invalid request body
    *       '404':
    *         description: Invoice not found
    *         content:
@@ -264,7 +255,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 code:
    *                   type: string
-   *                   enum: [xledger-failed, tenfast-failed, both-failed]
+   *                   enum: [xledger-failed, tenfast-failed]
    *     security:
    *       - bearerAuth: []
    */
