@@ -193,13 +193,18 @@ export const importLease = async (
       { leaseId, contactCode: contact.contactCode, rentalObjectCode },
       'tenfast-adapter.importLease: starting import'
     )
-    const tenantResult = await getOrCreateTenant(
-      contact.contactCode,
-      buildTenantRequestDataFromPayload(contact)
-    )
-    if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
-    if (!tenantResult.data)
+    const existingTenant = await getTenantByContactCode(contact.contactCode)
+    if (!existingTenant.ok)
       return { ok: false, err: 'could-not-retrieve-tenant' }
+
+    let tenant: TenfastTenant
+    if (existingTenant.data) {
+      tenant = existingTenant.data
+    } else {
+      const importResult = await importContact(contact.contactCode)
+      if (!importResult.ok) return { ok: false, err: 'could-not-create-tenant' }
+      tenant = importResult.data
+    }
 
     const rentalObjectResponse = await getRentalObject(rentalObjectCode)
     if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
@@ -210,7 +215,7 @@ export const importLease = async (
       // up this lease via GET /extras/avtal/{externalId} (see
       // getLeaseByExternalId, used by terminateLease and voidLease).
       externalId: leaseId,
-      hyresgaster: [tenantResult.data._id],
+      hyresgaster: [tenant._id],
       hyresobjekt: [rentalObject._id],
       startDate: fromDate.toISOString(),
       avtalsbyggare: false,
@@ -727,6 +732,46 @@ export const getTenantByContactCode = async (
   }
 }
 
+export const importContact = async (
+  contactCode: string
+): Promise<
+  AdapterResult<
+    TenfastTenant,
+    | 'tenant-could-not-be-created'
+    | 'tenant-could-not-be-parsed'
+    | 'import-contact-bad-request'
+    | 'unknown'
+  >
+> => {
+  try {
+    const response = await tenfastApi.request({
+      method: 'post',
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/import-contact?hyresvard=${tenfastCompanyId}`,
+      data: { contactCode },
+    })
+
+    if (response.status === 400)
+      return handleTenfastError(
+        response.data?.error,
+        'import-contact-bad-request'
+      )
+
+    if (response.status !== 200 && response.status !== 201)
+      return handleTenfastError(
+        { error: response.data?.error, status: response.status },
+        'tenant-could-not-be-created'
+      )
+
+    const parsed = TenfastTenantSchema.safeParse(response.data)
+    if (!parsed.success)
+      return handleTenfastError(parsed.error, 'tenant-could-not-be-parsed')
+
+    return { ok: true, data: parsed.data }
+  } catch (err: unknown) {
+    return handleTenfastError(err, 'unknown')
+  }
+}
+
 const createTenantRequest = async (
   requestData: object
 ): Promise<
@@ -855,44 +900,21 @@ function buildTenantRequestData(contact: Contact) {
   }
 }
 
-function buildTenantRequestDataFromPayload(
-  payload: SyncContactToLeasingPayload
-) {
-  return {
-    externalId: payload.contactCode,
-    idbeteckning: payload.nationalRegistrationNumber ?? '',
-    isCompany: false,
-    name: {
-      first: payload.firstName ?? '',
-      last: payload.lastName ?? '',
-    },
-    email: payload.emailAddress ?? '',
-    phone: payload.phoneNumber ?? '',
-    postadress: payload.street ?? '',
-    postnummer: payload.zipCode ?? '',
-    stad: payload.city ?? '',
-  }
-}
-
 export const syncTenant = async (
   payload: SyncContactToLeasingPayload
 ): Promise<
   AdapterResult<
-    TenfastTenant | null,
-    | 'could-not-retrieve-tenant'
-    | 'could-not-update-tenant'
-    | 'tenant-could-not-be-parsed'
-    | 'unknown'
+    { updatedCount: number } | null,
+    'could-not-update-tenant' | 'unknown'
   >
 > => {
   try {
-    const existingTenant = await getTenantByContactCode(payload.contactCode)
+    const response = await tenfastApi.request({
+      method: 'post',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/contacts/${encodeURIComponent(payload.contactCode)}`,
+    })
 
-    if (!existingTenant.ok) {
-      return { ok: false, err: 'could-not-retrieve-tenant' }
-    }
-
-    if (!existingTenant.data) {
+    if (response.status === 404) {
       logger.warn(
         { contactCode: payload.contactCode },
         'tenfast-adapter.syncTenant: tenant not found in Tenfast, skipping'
@@ -900,25 +922,18 @@ export const syncTenant = async (
       return { ok: true, data: null }
     }
 
-    const requestData = buildTenantRequestDataFromPayload(payload)
-
-    const tenantResponse = await tenfastApi.request({
-      method: 'patch',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${existingTenant.data._id}?hyresvard=${tenfastCompanyId}`,
-      data: requestData,
-    })
-
-    if (tenantResponse.status !== 200 && tenantResponse.status !== 201) {
+    if (response.status !== 200 && response.status !== 201) {
       return handleTenfastError(
-        { error: tenantResponse.data.error, status: tenantResponse.status },
+        { error: response.data?.error, status: response.status },
         'could-not-update-tenant'
       )
     }
 
-    const parsed = TenfastTenantSchema.safeParse(tenantResponse.data)
-    if (!parsed.success)
-      return handleTenfastError(parsed.error, 'tenant-could-not-be-parsed')
-    return { ok: true, data: parsed.data }
+    const updatedCount =
+      typeof response.data?.updatedCount === 'number'
+        ? response.data.updatedCount
+        : 0
+    return { ok: true, data: { updatedCount } }
   } catch (err: unknown) {
     return handleTenfastError(err, 'unknown')
   }

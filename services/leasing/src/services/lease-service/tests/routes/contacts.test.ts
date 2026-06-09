@@ -405,11 +405,11 @@ describe('GET /contacts/:contactCode/tenant', () => {
 describe('POST /contacts/:contactCode/sync', () => {
   it('responds with 200 and skipped:false on successful sync', async () => {
     const syncPayload = factory.syncTenantPayload.build()
-    const mockTenant = factory.tenfastTenant.build()
+    const syncResult = { updatedCount: 1 }
 
     jest.spyOn(tenfastAdapter, 'syncTenant').mockResolvedValueOnce({
       ok: true,
-      data: mockTenant,
+      data: syncResult,
     })
 
     const res = await request(app.callback())
@@ -417,7 +417,7 @@ describe('POST /contacts/:contactCode/sync', () => {
       .send(syncPayload)
 
     expect(res.status).toBe(200)
-    expect(res.body.content).toEqual(mockTenant)
+    expect(res.body.content).toEqual(syncResult)
     expect(res.body.skipped).toBe(false)
   })
 

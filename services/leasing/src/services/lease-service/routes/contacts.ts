@@ -1127,7 +1127,7 @@ export const routes = (router: KoaRouter) => {
    * /contacts/{contactCode}/sync:
    *   post:
    *     summary: Sync a contact to tenFAST
-   *     description: Creates or updates a tenant in tenFAST based on the provided contact data. If the tenant already exists (matched by contactCode/externalId), it is updated. Otherwise, a new tenant is created.
+   *     description: Triggers tenFAST to pull the latest contact data from ONECore and update the matching hyresgast (and any relations referencing the externalId).
    *     tags: [Contacts]
    *     parameters:
    *       - in: path
@@ -1144,36 +1144,9 @@ export const routes = (router: KoaRouter) => {
    *             type: object
    *             required:
    *               - contactCode
-   *               - fullName
    *             properties:
    *               contactCode:
    *                 type: string
-   *               firstName:
-   *                 type: string
-   *                 nullable: true
-   *               lastName:
-   *                 type: string
-   *                 nullable: true
-   *               fullName:
-   *                 type: string
-   *               nationalRegistrationNumber:
-   *                 type: string
-   *                 nullable: true
-   *               emailAddress:
-   *                 type: string
-   *                 nullable: true
-   *               phoneNumber:
-   *                 type: string
-   *                 nullable: true
-   *               street:
-   *                 type: string
-   *                 nullable: true
-   *               zipCode:
-   *                 type: string
-   *                 nullable: true
-   *               city:
-   *                 type: string
-   *                 nullable: true
    *     responses:
    *       200:
    *         description: Contact synced successfully to tenFAST

@@ -1,13 +1,11 @@
 import fs from 'fs/promises'
 import { logger } from '@onecore/utilities'
-import { toSyncLeasingPayload } from './to-sync-leasing-payload'
 import {
   LeaseChange,
   RentalPropertyInfo,
   SyncContactToLeasingPayload,
 } from '@onecore/types'
 import config from '../../common/config'
-import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { sendEmail } from '../../adapters/communication-adapter'
 import {
   getUpdatedLeases,
@@ -127,19 +125,10 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
     return
   }
 
-  let contact: SyncContactToLeasingPayload | undefined = undefined
-  if (lease.action === 'create') {
-    const contactsAdapter = makeContactsAdapter(config.contactsService.url)
-    const contactResult = await contactsAdapter.getByContactCode(
-      lease.contactCode
-    )
-    if (!contactResult.ok) {
-      throw new Error(
-        `Failed to get contact ${lease.contactCode} for lease ${lease.leaseId}: ${contactResult.err}`
-      )
-    }
-    contact = toSyncLeasingPayload(contactResult.data)
-  }
+  const contact: SyncContactToLeasingPayload | undefined =
+    lease.action === 'create'
+      ? { contactCode: lease.contactCode }
+      : undefined
 
   logger.info({ leaseId: lease.leaseId, action: lease.action }, 'syncing lease')
   const syncResult = await syncLeaseToTenfast(
