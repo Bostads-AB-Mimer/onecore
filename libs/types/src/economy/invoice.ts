@@ -8,6 +8,11 @@ export const XledgerDeferralRequestSchema = z.object({
 
 export const DeferralRequestSchema = z.object({
   endDate: z.string().regex(isoDateRegex, 'endDate must be YYYY-MM-DD'),
+  reason: z.string().optional(),
+})
+
+export const TenfastGracePeriodRequestSchema = z.object({
+  endDate: z.string().regex(isoDateRegex, 'endDate must be YYYY-MM-DD'),
   madeByEmail: z.string().email(),
   reason: z.string().optional(),
 })

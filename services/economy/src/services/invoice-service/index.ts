@@ -248,7 +248,9 @@ export const routes = (router: KoaRouter) => {
     '(.*)/invoices/:invoiceNumber/tenfast-grace-period',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const body = economy.DeferralRequestSchema.safeParse(ctx.request.body)
+      const body = economy.TenfastGracePeriodRequestSchema.safeParse(
+        ctx.request.body
+      )
 
       if (!body.success) {
         ctx.status = 400

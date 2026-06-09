@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import type { DeferralError } from '@/services/api/core/economyService'
 import { economyService } from '@/services/api/core/economyService'
 import type { paths } from '@/services/api/core/generated/api-types'
 
@@ -11,17 +12,14 @@ interface UpdateDeferralParams extends DeferralBody {
   contactCode: string
 }
 
+export type { DeferralError }
+
 export const useUpdateInvoiceDeferral = () => {
   const queryClient = useQueryClient()
 
-  return useMutation<void, Error, UpdateDeferralParams>({
-    mutationFn: ({ invoiceId, endDate, madeByEmail, reason }) =>
-      economyService.updateInvoiceDeferralDate({
-        invoiceId,
-        endDate,
-        madeByEmail,
-        reason,
-      }),
+  return useMutation<void, DeferralError, UpdateDeferralParams>({
+    mutationFn: ({ invoiceId, endDate, reason }) =>
+      economyService.updateInvoiceDeferralDate({ invoiceId, endDate, reason }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['tenant-invoices', variables.contactCode],

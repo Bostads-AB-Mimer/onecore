@@ -1,12 +1,17 @@
-import { Invoice, InvoicePaymentEvent, PaymentStatus } from '@onecore/types'
-import { format, parseISO } from 'date-fns'
-import { FileText } from 'lucide-react'
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Invoice, InvoicePaymentEvent, PaymentStatus } from '@onecore/types'
+import { format, parseISO, startOfToday } from 'date-fns'
+import { sv } from 'date-fns/locale'
+import { CalendarIcon, FileText } from 'lucide-react'
 import { match, P } from 'ts-pattern'
+import { z } from 'zod'
 
-import { useUser } from '@/entities/user/hooks/useUser'
+import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
+import { Calendar } from '@/shared/ui/Calendar'
 import {
   CollapsibleTable,
   CollapsibleTableColumn,
@@ -20,12 +25,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/ui/Dialog'
-import { Input } from '@/shared/ui/Input'
-import { Label } from '@/shared/ui/Label'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/shared/ui/Form'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 import { Textarea } from '@/shared/ui/Textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
+import type { DeferralError } from '../hooks/useUpdateInvoiceDeferral'
 import { useUpdateInvoiceDeferral } from '../hooks/useUpdateInvoiceDeferral'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
@@ -55,6 +68,24 @@ type Props = {
   contactCode?: string
 }
 
+const deferralFormSchema = z.object({
+  endDate: z.date({ required_error: 'Välj ett förfallodatum' }),
+  reason: z.string().optional(),
+})
+
+type DeferralFormValues = z.infer<typeof deferralFormSchema>
+
+const deferralErrorMessages: Record<DeferralError['code'], string> = {
+  'validation-error': 'Ogiltigt datum.',
+  'invoice-not-found': 'Fakturan hittades inte i Tenfast.',
+  'xledger-failed':
+    'Anståndet registrerades i Tenfast men misslyckades i Xledger. Ekonomiteamet har notifierats.',
+  'tenfast-failed':
+    'Anståndet registrerades i Xledger men misslyckades i Tenfast. Ekonomiteamet har notifierats.',
+  'both-failed':
+    'Anståndet misslyckades i både Xledger och Tenfast. Ekonomiteamet har notifierats.',
+}
+
 const GrantDeferralDialog = ({
   invoice,
   contactCode,
@@ -63,35 +94,35 @@ const GrantDeferralDialog = ({
   contactCode: string
 }) => {
   const [open, setOpen] = useState(false)
-  const [endDate, setEndDate] = useState('')
-  const [reason, setReason] = useState('')
   const updateDeferral = useUpdateInvoiceDeferral()
-  const userState = useUser()
-  const userEmail =
-    userState.tag === 'success' ? userState.user.email : undefined
 
-  const handleSubmit = () => {
-    if (!endDate || !userEmail) return
+  const form = useForm<DeferralFormValues>({
+    resolver: zodResolver(deferralFormSchema),
+    defaultValues: { reason: '' },
+  })
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) {
+      form.reset()
+      updateDeferral.reset()
+    }
+  }
+
+  const onSubmit = (values: DeferralFormValues) => {
     updateDeferral.mutate(
       {
         invoiceId: invoice.invoiceId,
         contactCode,
-        endDate,
-        madeByEmail: userEmail,
-        reason: reason || undefined,
+        endDate: format(values.endDate, 'yyyy-MM-dd'),
+        reason: values.reason || undefined,
       },
-      {
-        onSuccess: () => {
-          setOpen(false)
-          setEndDate('')
-          setReason('')
-        },
-      }
+      { onSuccess: () => handleOpenChange(false) }
     )
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
@@ -109,57 +140,91 @@ const GrantDeferralDialog = ({
             registreras i Tenfast och förs sedan över till Xledger.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-2">
-          <div className="grid gap-2">
-            <Label htmlFor="deferral-end-date">Nytt förfallodatum</Label>
-            <Input
-              id="deferral-end-date"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="deferral-reason">
-              Anledning{' '}
-              <span className="text-muted-foreground font-normal">
-                (valfritt)
-              </span>
-            </Label>
-            <Textarea
-              id="deferral-reason"
-              placeholder="T.ex. betalningsplan överenskommen med hyresgäst."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-            />
-          </div>
-          {userEmail && (
-            <p className="text-xs text-muted-foreground">
-              Registreras av: {userEmail}
-            </p>
-          )}
-        </div>
-        {updateDeferral.isError && (
-          <p className="text-sm text-destructive">
-            {updateDeferral.error?.message ?? 'Något gick fel.'}
-          </p>
-        )}
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={updateDeferral.isPending}
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid gap-4 py-2"
           >
-            Avbryt
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!endDate || !userEmail || updateDeferral.isPending}
-          >
-            {updateDeferral.isPending ? 'Sparar...' : 'Spara'}
-          </Button>
-        </DialogFooter>
+            <FormField
+              control={form.control}
+              name="endDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Nytt förfallodatum</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            'w-full justify-start text-left font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value
+                            ? format(field.value, 'd MMMM yyyy', { locale: sv })
+                            : 'Välj datum'}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < startOfToday()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="reason"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Anledning{' '}
+                    <span className="text-muted-foreground font-normal">
+                      (valfritt)
+                    </span>
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="T.ex. betalningsplan överenskommen med hyresgäst."
+                      rows={3}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {updateDeferral.error && (
+              <p className="text-sm text-destructive">
+                {deferralErrorMessages[updateDeferral.error.code] ??
+                  'Något gick fel.'}
+              </p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={updateDeferral.isPending}
+              >
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={updateDeferral.isPending}>
+                {updateDeferral.isPending ? 'Sparar...' : 'Spara'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )

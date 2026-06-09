@@ -5,7 +5,6 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy } from '@onecore/types'
-
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as economyAdapter from '../../adapters/economy-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -212,16 +211,11 @@ export const routes = (router: KoaRouter) => {
    *             type: object
    *             required:
    *               - endDate
-   *               - madeByEmail
    *             properties:
    *               endDate:
    *                 type: string
    *                 format: date
    *                 description: New due date (YYYY-MM-DD)
-   *               madeByEmail:
-   *                 type: string
-   *                 format: email
-   *                 description: Email of the OneCore user granting the deferral
    *               reason:
    *                 type: string
    *                 description: Optional reason for the deferral
@@ -240,8 +234,37 @@ export const routes = (router: KoaRouter) => {
    *                       type: boolean
    *       '400':
    *         description: Missing required fields
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [code]
+   *               properties:
+   *                 code:
+   *                   type: string
+   *                   enum: [validation-error]
+   *       '404':
+   *         description: Invoice not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [code]
+   *               properties:
+   *                 code:
+   *                   type: string
+   *                   enum: [invoice-not-found]
    *       '500':
    *         description: One or both system calls failed
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [code]
+   *               properties:
+   *                 code:
+   *                   type: string
+   *                   enum: [xledger-failed, tenfast-failed, both-failed]
    *     security:
    *       - bearerAuth: []
    */
@@ -250,36 +273,61 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(economy.DeferralRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { endDate, madeByEmail, reason } = ctx.request.body
+      const { endDate, reason } = ctx.request.body
       const invoiceId = ctx.params.invoiceId
-      const errors: string[] = []
+      const madeByEmail = ctx.state.user?.email
 
-      const xledgerResult = await economyAdapter.updateXledgerDeferralDate(
-        invoiceId,
-        endDate
-      )
-      if (!xledgerResult.ok) {
-        errors.push('Xledger')
+      if (!madeByEmail) {
+        ctx.status = 401
+        ctx.body = { code: 'unauthorized' }
+        return
       }
 
-      const tenfastResult = await economyAdapter.setTenfastGracePeriod({
-        invoiceId,
-        endDate,
-        madeByEmail,
-        reason,
-      })
-      if (!tenfastResult.ok) {
-        errors.push('Tenfast')
+      const [xledgerResult, tenfastResult] = await Promise.allSettled([
+        economyAdapter.updateXledgerDeferralDate(invoiceId, endDate),
+        economyAdapter.setTenfastGracePeriod({
+          invoiceId,
+          endDate,
+          madeByEmail,
+          reason,
+        }),
+      ])
+
+      const xledgerOk =
+        xledgerResult.status === 'fulfilled' && xledgerResult.value.ok
+      const tenfastOk =
+        tenfastResult.status === 'fulfilled' && tenfastResult.value.ok
+      const tenfastNotFound =
+        tenfastResult.status === 'fulfilled' &&
+        !tenfastResult.value.ok &&
+        tenfastResult.value.err === 'not-found'
+
+      if (tenfastNotFound) {
+        ctx.status = 404
+        ctx.body = { code: 'invoice-not-found' }
+        return
       }
 
-      if (errors.length > 0) {
+      if (!xledgerOk || !tenfastOk) {
+        const failedSystems = [
+          !xledgerOk && 'Xledger',
+          !tenfastOk && 'Tenfast',
+        ].filter(Boolean) as string[]
+
+        const errorCode =
+          !xledgerOk && !tenfastOk
+            ? 'both-failed'
+            : !xledgerOk
+              ? 'xledger-failed'
+              : 'tenfast-failed'
+
         if (config.emailAddresses.economy) {
           try {
             await communicationAdapter.sendEmail({
               to: config.emailAddresses.economy,
-              subject: `Fel: anstånd kunde inte registreras i ${errors.join(' och ')}`,
+              subject: `Fel: anstånd kunde inte registreras i ${failedSystems.join(' och ')}`,
               body: [
-                `Anstånd på faktura ${invoiceId} misslyckades i: ${errors.join(', ')}.`,
+                `Anstånd på faktura ${invoiceId} misslyckades i: ${failedSystems.join(', ')}.`,
                 '',
                 `Nytt förfallodatum: ${endDate}`,
                 `Begärt av: ${madeByEmail}`,
@@ -297,10 +345,9 @@ export const routes = (router: KoaRouter) => {
             )
           }
         }
+
         ctx.status = 500
-        ctx.body = {
-          error: `Failed to set deferral in: ${errors.join(', ')}`,
-        }
+        ctx.body = { code: errorCode }
         return
       }
 

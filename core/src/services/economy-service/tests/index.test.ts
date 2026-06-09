@@ -30,10 +30,20 @@ import * as economyAdapter from '../../../adapters/economy-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 
+const TEST_USER = {
+  email: 'admin@mimer.nu',
+  name: 'Admin',
+  preferred_username: 'admin',
+}
+
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
+app.use((ctx, next) => {
+  ctx.state.user = TEST_USER
+  return next()
+})
 app.use(router.routes())
 
 describe('economy-service routes', () => {
@@ -91,7 +101,6 @@ describe('economy-service routes', () => {
 
     const validBody = {
       endDate: '2026-06-30',
-      madeByEmail: 'admin@mimer.nu',
       reason: 'Betalningsplan överenskommen.',
     }
 
@@ -107,15 +116,7 @@ describe('economy-service routes', () => {
     it('returns 400 when endDate is missing', async () => {
       const res = await request(app.callback())
         .put('/invoices/55123456/deferral')
-        .send({ madeByEmail: 'admin@mimer.nu' })
-
-      expect(res.status).toBe(400)
-    })
-
-    it('returns 400 when madeByEmail is missing', async () => {
-      const res = await request(app.callback())
-        .put('/invoices/55123456/deferral')
-        .send({ endDate: '2026-06-30' })
+        .send({})
 
       expect(res.status).toBe(400)
     })
@@ -142,7 +143,7 @@ describe('economy-service routes', () => {
       expect(spy).toHaveBeenCalledWith('55123456', validBody.endDate)
     })
 
-    it('calls Tenfast with invoiceId, endDate, madeByEmail and reason', async () => {
+    it('calls Tenfast with invoiceId, endDate, madeByEmail from token and reason', async () => {
       mockSuccess()
       const spy = jest.spyOn(economyAdapter, 'setTenfastGracePeriod')
 
@@ -153,12 +154,12 @@ describe('economy-service routes', () => {
       expect(spy).toHaveBeenCalledWith({
         invoiceId: '55123456',
         endDate: validBody.endDate,
-        madeByEmail: validBody.madeByEmail,
+        madeByEmail: TEST_USER.email,
         reason: validBody.reason,
       })
     })
 
-    it('returns 500 and sends notification email when Xledger fails', async () => {
+    it('returns 500 with code xledger-failed and sends notification when Xledger fails', async () => {
       jest
         .spyOn(economyAdapter, 'updateXledgerDeferralDate')
         .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
@@ -174,6 +175,7 @@ describe('economy-service routes', () => {
         .send(validBody)
 
       expect(res.status).toBe(500)
+      expect(res.body.code).toBe('xledger-failed')
       expect(emailSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           subject: 'Fel: anstånd kunde inte registreras i Xledger',
@@ -182,7 +184,7 @@ describe('economy-service routes', () => {
       )
     })
 
-    it('returns 500 and sends notification email when Tenfast fails', async () => {
+    it('returns 500 with code tenfast-failed and sends notification when Tenfast fails', async () => {
       jest
         .spyOn(economyAdapter, 'updateXledgerDeferralDate')
         .mockResolvedValue({ ok: true, data: true })
@@ -198,7 +200,43 @@ describe('economy-service routes', () => {
         .send(validBody)
 
       expect(res.status).toBe(500)
+      expect(res.body.code).toBe('tenfast-failed')
       expect(emailSpy).toHaveBeenCalled()
+    })
+
+    it('returns 500 with code both-failed when both systems fail', async () => {
+      jest
+        .spyOn(economyAdapter, 'updateXledgerDeferralDate')
+        .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
+      jest
+        .spyOn(economyAdapter, 'setTenfastGracePeriod')
+        .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
+      jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.code).toBe('both-failed')
+    })
+
+    it('returns 404 with code invoice-not-found when Tenfast returns not-found', async () => {
+      jest
+        .spyOn(economyAdapter, 'updateXledgerDeferralDate')
+        .mockResolvedValue({ ok: true, data: true })
+      jest
+        .spyOn(economyAdapter, 'setTenfastGracePeriod')
+        .mockResolvedValue({ ok: false, err: 'not-found', statusCode: 404 })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(404)
+      expect(res.body.code).toBe('invoice-not-found')
     })
 
     it('still returns 500 even if notification email itself fails', async () => {
@@ -217,24 +255,6 @@ describe('economy-service routes', () => {
         .send(validBody)
 
       expect(res.status).toBe(500)
-    })
-
-    it('still calls Tenfast even when Xledger fails', async () => {
-      jest
-        .spyOn(economyAdapter, 'updateXledgerDeferralDate')
-        .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
-      const tenfastSpy = jest
-        .spyOn(economyAdapter, 'setTenfastGracePeriod')
-        .mockResolvedValue({ ok: true, data: true })
-      jest
-        .spyOn(communicationAdapter, 'sendEmail')
-        .mockResolvedValue({ ok: true, data: null })
-
-      await request(app.callback())
-        .put('/invoices/55123456/deferral')
-        .send(validBody)
-
-      expect(tenfastSpy).toHaveBeenCalled()
     })
   })
 

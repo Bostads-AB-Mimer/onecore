@@ -3,6 +3,7 @@ import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscella
 import { XledgerContact } from '@onecore/types/src/types'
 
 import { GET, POST, PUT } from './baseApi'
+import type { paths } from './generated/api-types'
 
 // TODO: Fix the @ts-expect-error by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(
@@ -161,22 +162,27 @@ async function getXledgerProjects(): Promise<XledgerProject[]> {
   return response.content as XledgerProject[]
 }
 
+type DeferralResponses =
+  paths['/invoices/{invoiceId}/deferral']['put']['responses']
+export type DeferralError =
+  | DeferralResponses[400]['content']['application/json']
+  | DeferralResponses[404]['content']['application/json']
+  | DeferralResponses[500]['content']['application/json']
+
 async function updateInvoiceDeferralDate(params: {
   invoiceId: string
   endDate: string
-  madeByEmail: string
   reason?: string
 }): Promise<void> {
   const { error } = await PUT('/invoices/{invoiceId}/deferral', {
     params: { path: { invoiceId: params.invoiceId } },
     body: {
       endDate: params.endDate,
-      madeByEmail: params.madeByEmail,
       reason: params.reason,
     },
   })
 
-  if (error) throw error
+  if (error) throw { code: error }
 }
 
 export const economyService = {
