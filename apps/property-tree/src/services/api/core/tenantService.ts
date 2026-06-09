@@ -51,11 +51,11 @@ async function searchContacts(query: string): Promise<ContactSearchResult[]> {
 }
 
 async function sendBulkSms(
-  phoneNumbers: string[],
+  recipients: { kundId?: string; phoneNumber: string }[],
   text: string
 ): Promise<BulkSmsResult> {
   const { data, error } = await POST('/sendBulkSms', {
-    body: { phoneNumbers, text },
+    body: { recipients, text },
   })
 
   if (error) throw error
@@ -65,12 +65,12 @@ async function sendBulkSms(
 }
 
 async function sendBulkEmail(
-  emails: string[],
+  recipients: { kundId?: string; emailAddress: string }[],
   subject: string,
   text: string
 ): Promise<BulkEmailResult> {
   const { data, error } = await POST('/sendBulkEmail', {
-    body: { emails, subject, text },
+    body: { recipients, subject, text },
   })
 
   if (error) throw error

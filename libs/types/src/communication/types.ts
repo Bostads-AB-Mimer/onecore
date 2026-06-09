@@ -25,5 +25,7 @@ export type Template = z.infer<typeof TemplateSchema>
 export type LogOutboundRecipient = z.infer<typeof LogOutboundRecipientSchema>
 export type LogOutboundParams = z.infer<typeof LogOutboundParamsSchema>
 
-export type DispatchWithRecipients = z.infer<typeof DispatchWithRecipientsSchema>
+export type DispatchWithRecipients = z.infer<
+  typeof DispatchWithRecipientsSchema
+>
 export type CustomerMessage = z.infer<typeof CustomerMessageSchema>

@@ -33,15 +33,38 @@ interface WorkOrderSms extends Sms {
   externalContractorName?: string
 }
 
-interface BulkSms {
-  phoneNumbers: string[]
-  text: string
+// Sidecar meta on bulk-send requests; shapes the dispatch row, not the send itself.
+interface CommunicationLogMeta {
+  triggeredByUser?: string
+  audienceCriteria?: Record<string, unknown>
+  templateId?: string
 }
 
+interface BulkSmsRecipient {
+  kundId?: string
+  phoneNumber: string
+}
+
+interface BulkEmailRecipient {
+  kundId?: string
+  emailAddress: string
+}
+
+// Either phoneNumbers or recipients required.
+interface BulkSms {
+  phoneNumbers?: string[]
+  recipients?: BulkSmsRecipient[]
+  text: string
+  logMeta?: CommunicationLogMeta
+}
+
+// Either emails or recipients required.
 interface BulkEmail {
-  emails: string[]
+  emails?: string[]
+  recipients?: BulkEmailRecipient[]
   subject: string
   text: string
+  logMeta?: CommunicationLogMeta
 }
 
 interface BulkSmsResult {
@@ -100,8 +123,11 @@ export type {
   WorkOrderSms,
   WorkOrderEmail,
   InspectionProtocolEmail,
+  CommunicationLogMeta,
   BulkSms,
+  BulkSmsRecipient,
   BulkEmail,
+  BulkEmailRecipient,
   BulkSmsResult,
   BulkEmailResult,
   NonScoredParkingSpaceApprovedEmail,

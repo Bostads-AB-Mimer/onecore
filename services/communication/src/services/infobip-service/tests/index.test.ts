@@ -223,7 +223,11 @@ describe('isValidWorkOrderSms', () => {
 })
 
 describe('/sendBulkSms', () => {
-  let sendBulkSmsSpy: jest.SpyInstance<Promise<any>, [sms: BulkSms], any>
+  let sendBulkSmsSpy: jest.SpyInstance<
+    Promise<any>,
+    [sms: { phoneNumbers: string[]; text: string }],
+    any
+  >
 
   beforeEach(() => {
     sendBulkSmsSpy = jest.spyOn(smsAdapter, 'sendBulkSms')

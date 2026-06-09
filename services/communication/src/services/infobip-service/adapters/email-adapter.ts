@@ -322,7 +322,11 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
   }
 }
 
-export const sendBulkEmail = async (email: BulkEmail) => {
+export const sendBulkEmail = async (email: {
+  emails: string[]
+  subject: string
+  text: string
+}) => {
   logger.info(
     { recipientCount: email.emails.length, baseUrl: config.infobip.baseUrl },
     'Sending bulk email'

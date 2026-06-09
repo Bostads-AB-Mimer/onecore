@@ -1,7 +1,7 @@
 // fetch is stable in Node.js 20 LTS but eslint-plugin-n still flags it as experimental
 /* eslint-disable n/no-unsupported-features/node-builtins */
 import config from '../../../common/config'
-import { ParkingSpaceOfferSms, WorkOrderSms, BulkSms } from '@onecore/types'
+import { ParkingSpaceOfferSms, WorkOrderSms } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
 import he from 'he'
@@ -90,7 +90,10 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
   }
 }
 
-export const sendBulkSms = async (sms: BulkSms) => {
+export const sendBulkSms = async (sms: {
+  phoneNumbers: string[]
+  text: string
+}) => {
   logger.info(
     {
       recipientCount: sms.phoneNumbers.length,

@@ -399,14 +399,13 @@ export const sendInspectionProtocolEmail = async (
   }
 }
 
-export const sendBulkSms = async ({
-  phoneNumbers,
-  text,
-}: BulkSms): Promise<AdapterResult<BulkSmsResult, 'error'>> => {
+export const sendBulkSms = async (
+  body: BulkSms
+): Promise<AdapterResult<BulkSmsResult, 'error'>> => {
   try {
     const result = await axios.post(
       `${config.communicationService.url}/sendBulkSms`,
-      { phoneNumbers, text }
+      body
     )
 
     return { ok: true, data: result.data.content }
@@ -418,15 +417,13 @@ export const sendBulkSms = async ({
   }
 }
 
-export const sendBulkEmail = async ({
-  emails,
-  subject,
-  text,
-}: BulkEmail): Promise<AdapterResult<BulkEmailResult, 'error'>> => {
+export const sendBulkEmail = async (
+  body: BulkEmail
+): Promise<AdapterResult<BulkEmailResult, 'error'>> => {
   try {
     const result = await axios.post(
       `${config.communicationService.url}/sendBulkEmail`,
-      { emails, subject, text }
+      body
     )
 
     return { ok: true, data: result.data.content }

@@ -124,9 +124,13 @@ export const routes = (router: KoaRouter) => {
       )
       .optional(),
     text: z.string().min(1).max(1600),
-    triggeredByUser: z.string().optional(),
-    audienceCriteria: z.object({}).passthrough().optional(),
-    templateId: z.string().uuid().optional(),
+    logMeta: z
+      .object({
+        triggeredByUser: z.string().optional(),
+        audienceCriteria: z.object({}).passthrough().optional(),
+        templateId: z.string().uuid().optional(),
+      })
+      .optional(),
   })
   type SendBulkSmsBody = z.infer<typeof SendBulkSmsSchema>
 
@@ -210,9 +214,9 @@ export const routes = (router: KoaRouter) => {
           body: body.text,
           messageType: 'bulk_sms',
           provider: SMS_PROVIDER,
-          triggeredByUser: body.triggeredByUser,
-          audienceCriteria: body.audienceCriteria,
-          templateId: body.templateId,
+          triggeredByUser: body.logMeta?.triggeredByUser,
+          audienceCriteria: body.logMeta?.audienceCriteria,
+          templateId: body.logMeta?.templateId,
           recipients: validRecipients.map((r, i) => ({
             kundId: r.kundId,
             toAddress: r.normalizedPhone,

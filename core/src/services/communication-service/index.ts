@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { BulkSms, BulkEmail } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { registerSchema } from '../../utils/openapi'
@@ -46,7 +47,7 @@ export const routes = (router: KoaRouter) => {
    * /sendBulkSms:
    *   post:
    *     summary: Send SMS to multiple contacts
-   *     description: Send SMS messages to multiple phone numbers
+   *     description: Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with kundId) for per-customer audit logging.
    *     tags:
    *       - Communication service
    *     requestBody:
@@ -56,17 +57,33 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - phoneNumbers
    *               - text
    *             properties:
    *               phoneNumbers:
    *                 type: array
    *                 items:
    *                   type: string
-   *                 description: Array of phone numbers
+   *               recipients:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - phoneNumber
+   *                   properties:
+   *                     kundId:
+   *                       type: string
+   *                     phoneNumber:
+   *                       type: string
    *               text:
    *                 type: string
-   *                 description: SMS message content
+   *               logMeta:
+   *                 type: object
+   *                 properties:
+   *                   audienceCriteria:
+   *                     type: object
+   *                     additionalProperties: true
+   *                   templateId:
+   *                     type: string
    *     responses:
    *       '200':
    *         description: SMS sent successfully
@@ -86,7 +103,14 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/sendBulkSms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await communicationAdapter.sendBulkSms(ctx.request.body)
+    const body = ctx.request.body as BulkSms
+    const triggeredByUser =
+      ctx.state.user?.preferred_username ?? ctx.state.user?.name
+
+    const result = await communicationAdapter.sendBulkSms({
+      ...body,
+      logMeta: { ...body.logMeta, triggeredByUser },
+    })
 
     if (result.ok) {
       ctx.status = 200
@@ -102,7 +126,7 @@ export const routes = (router: KoaRouter) => {
    * /sendBulkEmail:
    *   post:
    *     summary: Send email to multiple contacts
-   *     description: Send email messages to multiple email addresses
+   *     description: Either `emails` or `recipients` is required. Pass `recipients` (with kundId) for per-customer audit logging.
    *     tags:
    *       - Communication service
    *     requestBody:
@@ -112,7 +136,6 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - emails
    *               - subject
    *               - text
    *             properties:
@@ -120,13 +143,29 @@ export const routes = (router: KoaRouter) => {
    *                 type: array
    *                 items:
    *                   type: string
-   *                 description: Array of email addresses
+   *               recipients:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - emailAddress
+   *                   properties:
+   *                     kundId:
+   *                       type: string
+   *                     emailAddress:
+   *                       type: string
    *               subject:
    *                 type: string
-   *                 description: Email subject
    *               text:
    *                 type: string
-   *                 description: Email message content
+   *               logMeta:
+   *                 type: object
+   *                 properties:
+   *                   audienceCriteria:
+   *                     type: object
+   *                     additionalProperties: true
+   *                   templateId:
+   *                     type: string
    *     responses:
    *       '200':
    *         description: Email sent successfully
@@ -146,7 +185,14 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/sendBulkEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await communicationAdapter.sendBulkEmail(ctx.request.body)
+    const body = ctx.request.body as BulkEmail
+    const triggeredByUser =
+      ctx.state.user?.preferred_username ?? ctx.state.user?.name
+
+    const result = await communicationAdapter.sendBulkEmail({
+      ...body,
+      logMeta: { ...body.logMeta, triggeredByUser },
+    })
 
     if (result.ok) {
       ctx.status = 200

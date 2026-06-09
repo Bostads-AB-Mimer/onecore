@@ -6,11 +6,12 @@ interface SingleSmsState {
   open: boolean
   recipientName: string
   phoneNumber: string
+  kundId?: string
 }
 
 interface UseSingleSmsOptions {
   sendSms: (
-    phoneNumbers: string[],
+    recipients: { kundId?: string; phoneNumber: string }[],
     message: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
 }
@@ -24,8 +25,8 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   })
 
   const openSmsModal = useCallback(
-    (recipientName: string, phoneNumber: string) => {
-      setState({ open: true, recipientName, phoneNumber })
+    (recipientName: string, phoneNumber: string, kundId?: string) => {
+      setState({ open: true, recipientName, phoneNumber, kundId })
     },
     []
   )
@@ -39,7 +40,10 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const handleSendSms = useCallback(
     async (message: string) => {
       try {
-        const result = await sendSms([state.phoneNumber], message)
+        const result = await sendSms(
+          [{ kundId: state.kundId, phoneNumber: state.phoneNumber }],
+          message
+        )
 
         toast({
           title: 'SMS skickat',
@@ -60,7 +64,7 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
         })
       }
     },
-    [state.phoneNumber, sendSms, toast]
+    [state.phoneNumber, state.kundId, sendSms, toast]
   )
 
   return {

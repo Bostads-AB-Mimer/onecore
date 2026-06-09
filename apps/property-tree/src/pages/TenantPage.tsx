@@ -146,13 +146,15 @@ export function TenantPage() {
                 onSendSms={(phone) =>
                   sms.openSmsModal(
                     `${tenant.firstName} ${tenant.lastName}`,
-                    phone
+                    phone,
+                    tenant.contactCode
                   )
                 }
                 onSendEmail={(addr) =>
                   email.openEmailModal(
                     `${tenant.firstName} ${tenant.lastName}`,
-                    addr
+                    addr,
+                    tenant.contactCode
                   )
                 }
               />

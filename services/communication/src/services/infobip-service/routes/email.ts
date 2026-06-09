@@ -353,9 +353,13 @@ export const routes = (router: KoaRouter) => {
       .optional(),
     subject: z.string().min(1),
     text: z.string().min(1),
-    triggeredByUser: z.string().optional(),
-    audienceCriteria: z.object({}).passthrough().optional(),
-    templateId: z.string().uuid().optional(),
+    logMeta: z
+      .object({
+        triggeredByUser: z.string().optional(),
+        audienceCriteria: z.object({}).passthrough().optional(),
+        templateId: z.string().uuid().optional(),
+      })
+      .optional(),
   })
   type SendBulkEmailBody = z.infer<typeof SendBulkEmailSchema>
 
@@ -424,9 +428,9 @@ export const routes = (router: KoaRouter) => {
           body: body.text,
           messageType: 'bulk_email',
           provider: EMAIL_PROVIDER,
-          triggeredByUser: body.triggeredByUser,
-          audienceCriteria: body.audienceCriteria,
-          templateId: body.templateId,
+          triggeredByUser: body.logMeta?.triggeredByUser,
+          audienceCriteria: body.logMeta?.audienceCriteria,
+          templateId: body.logMeta?.templateId,
           recipients: validRecipients.map((r, i) => ({
             kundId: r.kundId,
             toAddress: r.emailAddress,
