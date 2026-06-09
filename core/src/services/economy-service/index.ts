@@ -288,29 +288,24 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        if (config.emailAddresses.economy) {
-          try {
-            await communicationAdapter.sendEmail({
-              to: config.emailAddresses.economy,
-              subject: 'Fel: anstånd kunde inte registreras i Tenfast',
-              body: [
-                `Anstånd på faktura ${invoiceId} misslyckades i: Tenfast.`,
-                '',
-                `Nytt förfallodatum: ${endDate}`,
-                `Begärt av: ${madeByEmail}`,
-                reason ? `Anledning: ${reason}` : '',
-                '',
-                'Åtgärd krävs: registrera anståndet manuellt.',
-              ]
-                .filter(Boolean)
-                .join('\n'),
-            })
-          } catch (emailErr) {
-            logger.error(
-              emailErr,
-              'Failed to send deferral failure notification'
-            )
-          }
+        try {
+          await communicationAdapter.sendEmail({
+            to: config.emailAddresses.economy,
+            subject: 'Fel: anstånd kunde inte registreras i Tenfast',
+            body: [
+              `Anstånd på faktura ${invoiceId} misslyckades i: Tenfast.`,
+              '',
+              `Nytt förfallodatum: ${endDate}`,
+              `Begärt av: ${madeByEmail}`,
+              reason ? `Anledning: ${reason}` : '',
+              '',
+              'Åtgärd krävs: registrera anståndet manuellt.',
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          })
+        } catch (emailErr) {
+          logger.error(emailErr, 'Failed to send deferral failure notification')
         }
 
         ctx.status = 500
@@ -324,29 +319,24 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!xledgerResult.ok) {
-        if (config.emailAddresses.economy) {
-          try {
-            await communicationAdapter.sendEmail({
-              to: config.emailAddresses.economy,
-              subject: 'Fel: anstånd kunde inte registreras i Xledger',
-              body: [
-                `Anstånd på faktura ${invoiceId} misslyckades i: Xledger.`,
-                '',
-                `Nytt förfallodatum: ${endDate}`,
-                `Begärt av: ${madeByEmail}`,
-                reason ? `Anledning: ${reason}` : '',
-                '',
-                'Åtgärd krävs: registrera anståndet manuellt.',
-              ]
-                .filter(Boolean)
-                .join('\n'),
-            })
-          } catch (emailErr) {
-            logger.error(
-              emailErr,
-              'Failed to send deferral failure notification'
-            )
-          }
+        try {
+          await communicationAdapter.sendEmail({
+            to: config.emailAddresses.economy,
+            subject: 'Fel: anstånd kunde inte registreras i Xledger',
+            body: [
+              `Anstånd på faktura ${invoiceId} misslyckades i: Xledger.`,
+              '',
+              `Nytt förfallodatum: ${endDate}`,
+              `Begärt av: ${madeByEmail}`,
+              reason ? `Anledning: ${reason}` : '',
+              '',
+              'Åtgärd krävs: registrera anståndet manuellt.',
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          })
+        } catch (emailErr) {
+          logger.error(emailErr, 'Failed to send deferral failure notification')
         }
 
         ctx.status = 500
