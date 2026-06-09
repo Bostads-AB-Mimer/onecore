@@ -277,9 +277,13 @@ export async function updateXledgerDeferralDate(
 
     logger.error(response.data, 'economy-adapter.updateXledgerDeferralDate')
     return { ok: false, err: 'unknown', statusCode: response.status }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const statusCode =
+      axios.isAxiosError(err) && err.response?.status
+        ? err.response.status
+        : 500
     logger.error(err, 'economy-adapter.updateXledgerDeferralDate')
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return { ok: false, err: 'unknown', statusCode }
   }
 }
 
