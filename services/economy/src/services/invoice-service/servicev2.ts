@@ -26,6 +26,7 @@ import config from '@src/common/config'
 
 export { markInvoicesAsExported } from '@src/common/adapters/tenfast/tenfast-adapter'
 
+//#region Rental Invoice Accounting
 /*
  *
  */
@@ -38,7 +39,7 @@ export const exportRentalInvoicesAccounting = async (
 }> => {
   try {
     const errors: { invoiceNumber: string; error: string }[] = []
-    const CHUNK_SIZE = 5 // 100
+    const CHUNK_SIZE = 100 // 100
     const company = config.companies.find(
       (company) => company.xpandId.localeCompare(companyId) === 0
     )
@@ -63,7 +64,11 @@ export const exportRentalInvoicesAccounting = async (
         )
       }
 
-      let chunkInvoices = invoicesResult.data.invoices
+      // TODO: add logic for internal customers instead of filtering them out.
+      let chunkInvoices = invoicesResult.data.invoices.filter((invoice) => {
+        return !invoice.recipientContactCode?.startsWith('I')
+      })
+
       if (invoicesResult.data.errors) {
         errors.push(...invoicesResult.data.errors)
       }
@@ -244,7 +249,7 @@ const createRoundOffRow = async (
   }
 }
 
-//#region Aggregate
+//#region Rental Aggregate Accounting
 const createAggregateCsv = async (invoiceRows: ExportedInvoiceRow[]) => {
   const aggregateRows = await createAggregateRows(invoiceRows)
   const aggregateRowsCsv = convertToAggregateCsvRows(aggregateRows)
@@ -459,7 +464,7 @@ const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
 }
 //#endregion
 
-//#region Ledger
+//#region Rental Ledger Accounting
 const createLedgerCsv = async (invoices: InvoiceWithAccounting[]) => {
   const ledgerRows = await createLedgerRows(invoices)
   const ledgerCsvRows = convertToLedgerCsvRows(ledgerRows)
@@ -563,6 +568,12 @@ const convertToLedgerCsvRows = (ledgerRows: LedgerRow[]) => {
 
   return csvRows
 }
+//#endregion
+
+//#endregion
+
+//#region Rental Loss Accounting
+export const exportRentalLossAccounting = async (companyId: string) => {}
 //#endregion
 
 export const uploadCsvFiles = async (

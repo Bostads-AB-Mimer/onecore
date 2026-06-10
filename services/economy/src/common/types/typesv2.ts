@@ -25,6 +25,7 @@ export type ArticleAccountConfiguration = {
   debitType: string
   costCenter: string
   property: string
+  projectCode: string
   freeText: string
 }
 
