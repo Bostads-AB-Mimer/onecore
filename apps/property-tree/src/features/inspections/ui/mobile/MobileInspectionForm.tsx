@@ -21,6 +21,8 @@ import {
   type InspectionType,
 } from '../../constants/inspectionTypes'
 import { useInspectionForm } from '../../hooks/useInspectionForm'
+import { useInspectionWorkOrders } from '../../hooks/useInspectionWorkOrders'
+import { CreateInspectionWorkOrdersDialog } from '../CreateInspectionWorkOrdersDialog'
 import { InspectionChecklistStep } from '../InspectionChecklistStep'
 import { InspectionInfoSection } from '../InspectionInfoSection'
 import { InspectionMoreMenu } from '../InspectionMoreMenu'
@@ -135,6 +137,14 @@ export function MobileInspectionForm({
   const isLastRoom = currentRoomIndex >= rooms.length - 1
   // Delegates to the shared validation hook (includes checklist gating).
   const canComplete = validation.canComplete
+
+  // Resursgrupp assignment + work-order creation on the summary step.
+  const workOrders = useInspectionWorkOrders({
+    inspectionData,
+    rooms,
+    meta: { id: existingInspection.id, address },
+    rentalId,
+  })
 
   // Create tenant snapshot for saving
   const createTenantSnapshot = (): TenantSnapshot | undefined => {
@@ -488,6 +498,9 @@ export function MobileInspectionForm({
                 <InspectionSummary
                   inspectionData={inspectionData}
                   rooms={rooms}
+                  teams={workOrders.teams}
+                  assignments={workOrders.assignments}
+                  onAssignTeam={workOrders.assignTeam}
                   onComponentCostByIdUpdate={handleComponentCostUpdateById}
                   onComponentCostResponsibilityByIdUpdate={
                     handleComponentCostResponsibilityUpdateById
@@ -593,7 +606,14 @@ export function MobileInspectionForm({
             >
               Spara utkast
             </Button>
-            <Button onClick={handleSubmit} disabled={!canComplete}>
+            <Button
+              onClick={() =>
+                workOrders.damaged.length > 0
+                  ? workOrders.openConfirm()
+                  : handleSubmit()
+              }
+              disabled={!canComplete}
+            >
               Slutför besiktning
             </Button>
           </div>
@@ -604,6 +624,24 @@ export function MobileInspectionForm({
         open={isDraftConfirmOpen}
         onOpenChange={setIsDraftConfirmOpen}
         onConfirm={handleConfirmSaveDraft}
+      />
+
+      <CreateInspectionWorkOrdersDialog
+        open={workOrders.isConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open) workOrders.closeConfirm()
+        }}
+        groups={workOrders.groups}
+        unassignedCount={workOrders.unassignedCount}
+        createdTeamIds={workOrders.createdTeamIds}
+        isCreating={workOrders.isCreating}
+        onConfirm={async () => {
+          const ok = await workOrders.createWorkOrders()
+          if (ok) {
+            workOrders.closeConfirm()
+            handleSubmit()
+          }
+        }}
       />
     </div>
   )

@@ -2,6 +2,7 @@ import Odoo from 'odoo-await'
 import striptags from 'striptags'
 import { groupBy } from 'lodash'
 import z from 'zod'
+import { logger } from '@onecore/utilities'
 import Config from '../../../../common/config'
 import {
   transformWorkOrder,
@@ -10,9 +11,12 @@ import {
 } from './utils'
 import { AdapterResult } from '../../types'
 import {
+  CreateInspectionWorkOrderGroup,
+  CreateInspectionWorkOrderResult,
   CreateWorkOrderDetails,
   CreateWorkOrderRow,
   Lease,
+  MaintenanceTeam,
   MaintenanceUnit,
   OdooWorkOrder,
   OdooWorkOrderMessage,
@@ -21,6 +25,11 @@ import {
   WorkOrder,
   WorkOrderMessage,
 } from '../../schemas'
+
+// Inspection-origin work orders all use this category + space; resolved by name
+// at runtime because Odoo ids differ per environment.
+const INSPECTION_WORK_ORDER_CATEGORY = 'Besiktning'
+const INSPECTION_SPACE_CAPTION = 'Lägenhet'
 
 const odoo = new Odoo({
   baseUrl: Config.odoo.url,
@@ -538,6 +547,110 @@ const getMaintenanceRequestCategoryId = async (
   } catch (error) {
     console.error('Error getting maintenance request category id:', error)
     throw error
+  }
+}
+
+const getMaintenanceRequestCategoryIdByName = async (
+  name: string
+): Promise<number> => {
+  const categories: number[] = await odoo.search(
+    'maintenance.request.category',
+    { name }
+  )
+  if (categories.length === 0) {
+    throw new Error(`Maintenance request category "${name}" not found`)
+  }
+  return categories[0]
+}
+
+// Lists the selectable resursgrupper (maintenance teams) for the inspection UI.
+export const getMaintenanceTeams = async (): Promise<
+  AdapterResult<MaintenanceTeam[], unknown>
+> => {
+  try {
+    await odoo.connect()
+    const teams = await odoo.searchRead<MaintenanceTeam>(
+      'maintenance.team',
+      [],
+      ['id', 'name']
+    )
+    return { ok: true, data: teams }
+  } catch (error) {
+    logger.error({ err: error }, 'odooAdapter.getMaintenanceTeams')
+    return { ok: false, err: error }
+  }
+}
+
+/**
+ * Creates one work order per resursgrupp from an inspection. For each group we
+ * replicate what the Odoo create form's Save does server-side (its field
+ * population is @api.onchange UI-only and does not run on XML-RPC create):
+ * create a per-request maintenance.rental.property child from the residence
+ * info, then the maintenance.request with the chosen team + Besiktning category,
+ * then back-ref the child so it cascade-deletes with the request.
+ *
+ * Each group is an independent Odoo commit, so one failure does not abort the
+ * rest — the per-group outcome is returned to the caller.
+ */
+export const createInspectionWorkOrders = async (
+  rentalProperty: RentalProperty,
+  groups: CreateInspectionWorkOrderGroup[]
+): Promise<AdapterResult<CreateInspectionWorkOrderResult[], unknown>> => {
+  try {
+    await odoo.connect()
+    const categoryId = await getMaintenanceRequestCategoryIdByName(
+      INSPECTION_WORK_ORDER_CATEGORY
+    )
+
+    const results: CreateInspectionWorkOrderResult[] = []
+    for (const group of groups) {
+      try {
+        // One rental-property child per request (it cascade-deletes with it).
+        const rentalPropertyRecord =
+          await createRentalPropertyRecord(rentalProperty)
+
+        const workOrderId = await odoo.create('maintenance.request', {
+          name: `Besiktning ${rentalProperty.id} – ${group.maintenanceTeamName}`,
+          space_caption: INSPECTION_SPACE_CAPTION,
+          description: group.descriptionHtml,
+          rental_property_id: rentalPropertyRecord.toString(),
+          maintenance_team_id: group.maintenanceTeamId,
+          maintenance_request_category_id: categoryId,
+          priority_expanded: '7',
+          search_type: 'rentalObjectId',
+          search_value: rentalProperty.id,
+          // creation_origin: 'inspection' is intentionally omitted — Odoo rejects
+          // Selection values not in CREATION_ORIGINS. Re-add once the Odoo side
+          // adds the 'inspection' origin (the field is nullable, so omitting is safe).
+        })
+
+        // Back-ref so the child cascade-deletes with the request (matches Save).
+        await odoo.update('maintenance.rental.property', rentalPropertyRecord, {
+          maintenance_request_id: workOrderId,
+        })
+
+        results.push({
+          maintenanceTeamId: group.maintenanceTeamId,
+          ok: true,
+          workOrderId,
+        })
+      } catch (error) {
+        logger.error(
+          { err: error, maintenanceTeamId: group.maintenanceTeamId },
+          'odooAdapter.createInspectionWorkOrders.group'
+        )
+        results.push({
+          maintenanceTeamId: group.maintenanceTeamId,
+          ok: false,
+          err: error instanceof Error ? error.message : 'unknown',
+        })
+      }
+    }
+
+    return { ok: true, data: results }
+  } catch (error) {
+    logger.error({ err: error }, 'odooAdapter.createInspectionWorkOrders')
+    return { ok: false, err: error }
   }
 }
 

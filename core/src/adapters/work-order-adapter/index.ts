@@ -1,10 +1,15 @@
 import createClient from 'openapi-fetch'
+import { z } from 'zod'
 import { logger } from '@onecore/utilities'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import {
+  CreateInspectionWorkOrdersResponse,
+  CreateInspectionWorkOrdersResponseSchema,
   CreateWorkOrderResponse,
   CreateWorkOrderResponseSchema,
+  MaintenanceTeam,
+  MaintenanceTeamSchema,
 } from '../../services/work-order-service/schemas'
 import { components, paths } from './generated/api-types'
 
@@ -428,6 +433,63 @@ export const createWorkOrder = async (
     logger.error({ error }, 'work-order-adapter.createWorkOrder')
     const errorMessage = error instanceof Error ? error.message : 'unknown'
     return { ok: false, err: errorMessage }
+  }
+}
+
+export const getMaintenanceTeams = async (): Promise<
+  AdapterResult<
+    MaintenanceTeam[],
+    'request-failed' | 'schema-error' | 'request-error'
+  >
+> => {
+  try {
+    const fetchResponse = await client().GET('/workOrders/maintenanceTeams', {})
+
+    if (fetchResponse.error) {
+      return { ok: false, err: 'request-failed' }
+    }
+
+    const parsed = z
+      .array(MaintenanceTeamSchema)
+      .safeParse(fetchResponse.data?.content)
+    if (!parsed.success) {
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: parsed.data }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getMaintenanceTeams')
+    return { ok: false, err: 'request-error' }
+  }
+}
+
+export const createInspectionWorkOrders = async (
+  body: components['schemas']['CreateInspectionWorkOrdersBody']
+): Promise<
+  AdapterResult<
+    CreateInspectionWorkOrdersResponse,
+    'request-failed' | 'schema-error' | 'request-error'
+  >
+> => {
+  try {
+    const fetchResponse = await client().POST('/workOrders/fromInspection', {
+      body,
+    })
+
+    if (fetchResponse.data?.content) {
+      const parsed = CreateInspectionWorkOrdersResponseSchema.safeParse(
+        fetchResponse.data.content
+      )
+      if (!parsed.success) {
+        return { ok: false, err: 'schema-error' }
+      }
+      return { ok: true, data: parsed.data }
+    }
+
+    return { ok: false, err: 'request-failed' }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.createInspectionWorkOrders')
+    return { ok: false, err: 'request-error' }
   }
 }
 

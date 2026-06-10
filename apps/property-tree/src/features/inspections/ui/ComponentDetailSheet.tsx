@@ -111,26 +111,6 @@ export function ComponentDetailSheet({
               className="min-h-[100px]"
             />
           </div>
-
-          {/* History Section - hidden until dynamic data is available */}
-          {/* <Separator />
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-medium">Historik</h3>
-            </div>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>• 2024-01-15: God (Anna A.)</p>
-              <p>• 2023-06-20: God (Erik E.)</p>
-            </div>
-          </div> */}
-
-          {/* Create Order Button - hidden until dynamic data is available */}
-          {/* <Separator />
-          <Button className="w-full" variant="outline">
-            <FileText className="h-4 w-4 mr-2" />
-            Skapa ärende
-          </Button> */}
         </div>
       </SheetContent>
     </Sheet>

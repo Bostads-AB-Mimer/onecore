@@ -184,6 +184,38 @@ export const CreateWorkOrderBodySchema = z.object({
   details: CreateWorkOrderDetailsSchema,
 })
 
+// Odoo "Resursgrupp" (maintenance.team) — the board a work order is routed to.
+export const MaintenanceTeamSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+})
+
+// One work order per resursgrupp: the components an inspector assigned to a
+// team are aggregated into `descriptionHtml` (HTML, <br>-joined).
+export const CreateInspectionWorkOrderGroupSchema = z.object({
+  maintenanceTeamId: z.number(),
+  maintenanceTeamName: z.string(),
+  descriptionHtml: z.string(),
+})
+
+export const CreateInspectionWorkOrdersBodySchema = z.object({
+  rentalProperty: RentalPropertySchema,
+  groups: z.array(CreateInspectionWorkOrderGroupSchema).min(1),
+})
+
+// Per-group outcome — the batch is N separate Odoo commits, not a transaction,
+// so each group succeeds or fails independently.
+export const CreateInspectionWorkOrderResultSchema = z.object({
+  maintenanceTeamId: z.number(),
+  ok: z.boolean(),
+  workOrderId: z.number().optional(),
+  err: z.string().optional(),
+})
+
+export const CreateInspectionWorkOrdersResponseSchema = z.object({
+  results: z.array(CreateInspectionWorkOrderResultSchema),
+})
+
 export const GetWorkOrdersFromXpandQuerySchema = z.object({
   skip: z.coerce.number().optional(),
   limit: z.coerce.number().optional(),
@@ -208,3 +240,16 @@ export type CreateWorkOrderDetails = z.infer<
 >
 export type CreateWorkOrderRow = z.infer<typeof CreateWorkOrderRowSchema>
 export type CreateWorkOrderBody = z.infer<typeof CreateWorkOrderBodySchema>
+export type MaintenanceTeam = z.infer<typeof MaintenanceTeamSchema>
+export type CreateInspectionWorkOrderGroup = z.infer<
+  typeof CreateInspectionWorkOrderGroupSchema
+>
+export type CreateInspectionWorkOrdersBody = z.infer<
+  typeof CreateInspectionWorkOrdersBodySchema
+>
+export type CreateInspectionWorkOrderResult = z.infer<
+  typeof CreateInspectionWorkOrderResultSchema
+>
+export type CreateInspectionWorkOrdersResponse = z.infer<
+  typeof CreateInspectionWorkOrdersResponseSchema
+>
