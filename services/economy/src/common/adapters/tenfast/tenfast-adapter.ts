@@ -21,8 +21,10 @@ import {
   TenfastLeaseSearchResponseSchema,
   TenfastOutboundExportSchema,
   TenfastOutboundExportListSchema,
-  type TenfastOutboundExport,
+  TenfastOutboundExport,
 } from './schemas'
+
+export type { TenfastOutboundExport }
 import {
   Contact,
   Invoice,

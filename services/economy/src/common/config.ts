@@ -73,6 +73,10 @@ export interface Config {
     apiKey: string
     companyId: string
   }
+  stralforsExport: {
+    sftp: SftpConfig
+    notificationEmail: string
+  }
   health: {
     xledger: {
       systemName: string
@@ -181,6 +185,16 @@ const config = configPackage({
         minimumMinutesBetweenRequests: 5,
       },
     },
+    stralforsExport: {
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        port: 22,
+        directory: '',
+      },
+      notificationEmail: '',
+    },
   },
 })
 
@@ -198,5 +212,6 @@ export default {
   ),
   infobip: config.get('infobip'),
   tenfast: config.get('tenfast'),
+  stralforsExport: config.get('stralforsExport'),
   health: config.get('health'),
 } as Config
