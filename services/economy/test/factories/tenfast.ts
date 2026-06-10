@@ -237,3 +237,10 @@ export const TenfastAutogiroConsentFactory =
     },
     payerBankAccountNumber: '12345678',
   }))
+export const TenfastInvoiceByOcrResponseFactory =
+  Factory.define<TenfastInvoice>(() =>
+    TenfastInvoiceFactory.build({
+      amountPaid: 500,
+      hyror: [TenfastInvoiceRowFactory.build()],
+    })
+  )

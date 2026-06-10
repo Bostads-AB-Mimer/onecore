@@ -220,11 +220,6 @@ export const TenfastLeaseSearchResponseSchema = z.object({
   totalCount: z.number(),
 })
 
-// Getting invoices by OCR from Tenfast returns a list of full Lease objects,
-export const TenfastInvoicesByOcrResponseSchema = z.object({
-  records: TenfastInvoiceSchema.array(),
-})
-
 export const TenfastInvoicesByTenantIdResponseSchema =
   z.array(TenfastInvoiceSchema)
 
@@ -365,9 +360,6 @@ export const TenfastAutogiroConsentResponseSchema = z.object({
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
-export type TenfastInvoicesByOcrResponse = z.infer<
-  typeof TenfastInvoicesByOcrResponseSchema
->
 export type TenfastInvoicesByTenantIdResponse = z.infer<
   typeof TenfastInvoicesByTenantIdResponseSchema
 >

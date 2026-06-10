@@ -15,7 +15,7 @@ import { PaymentStatus } from '@onecore/types'
 import {
   TenfastTenantByContactCodeResponseFactory,
   TenfastInvoicesByTenantIdResponseFactory,
-  TenfastInvoicesByOcrResponseFactory,
+  TenfastInvoiceByOcrResponseFactory,
   TenfastRentArticleFactory,
   TenfastInvoiceFactory,
   TenfastInvoiceRowFactory,
@@ -32,6 +32,7 @@ jest.mock('@src/common/config', () => ({
   tenfast: {
     baseUrl: 'https://test-api.tenfast.com',
     apiKey: 'test-api-key',
+    companyId: 'test-hyresvard-id',
   },
 }))
 
@@ -184,29 +185,37 @@ describe('Tenfast Adapter', () => {
   })
 
   describe(getInvoiceByOcr, () => {
+    const ocr = '55123456'
+    const mockInvoice = TenfastInvoiceByOcrResponseFactory.build()
+
     it('should return transformed invoice data when found', async () => {
-      const mockResponse = TenfastInvoicesByOcrResponseFactory.build()
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: mockResponse,
+        data: mockInvoice,
       })
 
-      const result = await getInvoiceByOcr('55123456')
+      const result = await getInvoiceByOcr(ocr)
 
       assert(result.ok)
       expect(result.data).toMatchObject({
         amount: 1000,
         paidAmount: 500,
         remainingAmount: 500,
-        invoiceId: '55123456',
+        invoiceId: ocr,
         paymentStatus: PaymentStatus.Unpaid,
       })
+      expect(mockAxios.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: `/v1/hyresvard/extras/hyror/${ocr}`,
+          params: { hyresvard: 'test-hyresvard-id' },
+        })
+      )
     })
 
     it('should return error when no invoice is found', async () => {
       mockAxios.request.mockResolvedValue({
-        status: 200,
-        data: { records: [] },
+        status: 404,
+        data: {},
       })
 
       const result = await getInvoiceByOcr('NONEXISTENT')
@@ -223,7 +232,7 @@ describe('Tenfast Adapter', () => {
         data: { invalid: true },
       })
 
-      const result = await getInvoiceByOcr('55123456')
+      const result = await getInvoiceByOcr(ocr)
 
       assert(!result.ok)
       expect(result.err).toBe('schema-error')
@@ -488,10 +497,10 @@ describe(recordPaymentForInvoice, () => {
     method: 'bank',
   }
 
-  it('returns not-found when OCR lookup returns no records', async () => {
+  it('returns not-found when OCR lookup returns 404', async () => {
     mockAxios.request.mockResolvedValueOnce({
-      status: 200,
-      data: { records: [] },
+      status: 404,
+      data: {},
     })
 
     const result = await recordPaymentForInvoice(payment)
@@ -527,7 +536,7 @@ describe(recordPaymentForInvoice, () => {
     mockAxios.request
       .mockResolvedValueOnce({
         status: 200,
-        data: { records: [{ ...invoice, avtal: [] }] },
+        data: invoice,
       })
       .mockResolvedValueOnce({
         status: 201,
@@ -538,6 +547,12 @@ describe(recordPaymentForInvoice, () => {
 
     expect(result).toEqual({ ok: true, data: null })
     expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    expect(mockAxios.request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        url: `/v1/hyresvard/extras/hyror/${payment.ocr}`,
+      })
+    )
     expect(mockAxios.request).toHaveBeenLastCalledWith(
       expect.objectContaining({
         url: expect.stringContaining('/v1/hyresvard/transactions'),
@@ -558,7 +573,7 @@ describe(recordPaymentForInvoice, () => {
     mockAxios.request
       .mockResolvedValueOnce({
         status: 200,
-        data: { records: [{ ...invoice, avtal: [] }] },
+        data: invoice,
       })
       .mockResolvedValueOnce({
         status: 404,
@@ -576,7 +591,7 @@ describe(recordPaymentForInvoice, () => {
     mockAxios.request
       .mockResolvedValueOnce({
         status: 200,
-        data: { records: [{ ...invoice, avtal: [] }] },
+        data: invoice,
       })
       .mockResolvedValueOnce({
         status: 500,
@@ -600,16 +615,15 @@ describe(recordPaymentForInvoice, () => {
 describe(getInvoicePdf, () => {
   const ocr = '55123456'
   const tenfastId = 'invoice-1'
-  const ocrLookupResponse = TenfastInvoicesByOcrResponseFactory.build({
-    records: [
-      { ...TenfastInvoiceFactory.build({ _id: tenfastId, ocrNumber: ocr }) },
-    ],
+  const mockInvoice = TenfastInvoiceFactory.build({
+    _id: tenfastId,
+    ocrNumber: ocr,
   })
 
   it('returns pdf data and content-disposition on success', async () => {
     const pdfBuffer = Buffer.from('%PDF-1.4 mock')
     mockAxios.request
-      .mockResolvedValueOnce({ status: 200, data: ocrLookupResponse })
+      .mockResolvedValueOnce({ status: 200, data: mockInvoice })
       .mockResolvedValueOnce({
         status: 200,
         data: pdfBuffer,
@@ -627,10 +641,10 @@ describe(getInvoicePdf, () => {
     })
   })
 
-  it('returns not-found when OCR lookup returns no records', async () => {
+  it('returns not-found when OCR lookup returns 404', async () => {
     mockAxios.request.mockResolvedValueOnce({
-      status: 200,
-      data: { records: [] },
+      status: 404,
+      data: {},
     })
 
     const result = await getInvoicePdf(ocr)
@@ -640,7 +654,7 @@ describe(getInvoicePdf, () => {
 
   it('returns not-found when download-pdf returns 404', async () => {
     mockAxios.request
-      .mockResolvedValueOnce({ status: 200, data: ocrLookupResponse })
+      .mockResolvedValueOnce({ status: 200, data: mockInvoice })
       .mockResolvedValueOnce({ status: 404, data: {} })
 
     const result = await getInvoicePdf(ocr)
@@ -773,13 +787,16 @@ describe(setGracePeriod, () => {
     reason: 'Betalningsplan överenskommen.',
   }
 
-  const invoiceRecord = { _id: 'tenfast-invoice-id-123' }
+  const invoiceRecord = TenfastInvoiceFactory.build({
+    _id: 'tenfast-invoice-id-123',
+    ocrNumber: params.invoiceOcr,
+  })
 
   it('returns ok when grace period is set successfully', async () => {
     mockAxios.request
       .mockResolvedValueOnce({
         status: 200,
-        data: { records: [invoiceRecord] },
+        data: invoiceRecord,
       })
       .mockResolvedValueOnce({ status: 200, data: {} })
 
@@ -788,16 +805,22 @@ describe(setGracePeriod, () => {
     expect(result).toEqual({ ok: true, data: null })
   })
 
-  it('calls grace-period endpoint with correct body', async () => {
+  it('calls extras hyror lookup then grace-period endpoint with correct body', async () => {
     mockAxios.request
       .mockResolvedValueOnce({
         status: 200,
-        data: { records: [invoiceRecord] },
+        data: invoiceRecord,
       })
       .mockResolvedValueOnce({ status: 200, data: {} })
 
     await setGracePeriod(params)
 
+    expect(mockAxios.request).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        url: `/v1/hyresvard/extras/hyror/${params.invoiceOcr}`,
+      })
+    )
     expect(mockAxios.request).toHaveBeenLastCalledWith(
       expect.objectContaining({
         url: `/v1/hyresvard/hyror/${invoiceRecord._id}/grace-period`,
@@ -811,10 +834,10 @@ describe(setGracePeriod, () => {
     )
   })
 
-  it('returns not-found when OCR lookup returns no records', async () => {
+  it('returns not-found when OCR lookup returns 404', async () => {
     mockAxios.request.mockResolvedValueOnce({
-      status: 200,
-      data: { records: [] },
+      status: 404,
+      data: {},
     })
 
     const result = await setGracePeriod(params)
@@ -846,7 +869,7 @@ describe(setGracePeriod, () => {
     mockAxios.request
       .mockResolvedValueOnce({
         status: 200,
-        data: { records: [invoiceRecord] },
+        data: invoiceRecord,
       })
       .mockResolvedValueOnce({ status: 404, data: {} })
 
@@ -859,7 +882,7 @@ describe(setGracePeriod, () => {
     mockAxios.request
       .mockResolvedValueOnce({
         status: 200,
-        data: { records: [invoiceRecord] },
+        data: invoiceRecord,
       })
       .mockResolvedValueOnce({ status: 500, data: {} })
 

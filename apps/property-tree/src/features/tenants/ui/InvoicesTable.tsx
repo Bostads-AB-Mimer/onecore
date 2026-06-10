@@ -136,7 +136,7 @@ const GrantDeferralDialog = ({
           <DialogTitle>Bevilja anstånd</DialogTitle>
           <DialogDescription>
             Faktura {invoice.invoiceId} – ange nytt förfallodatum. Anståndet
-            registreras i Tenfast och förs sedan över till Xledger.
+            registreras både i Tenfast och Xledger.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
