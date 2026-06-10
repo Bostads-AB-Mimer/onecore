@@ -66,9 +66,15 @@ app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/scan-receipt')) {
     return requireRole('scanner-upload')(ctx, next)
   }
+
   // All routes under /leases/for-csc require csc:get or api-access
   if (ctx.path.startsWith('/leases/for-csc') && ctx.method === 'GET') {
     return requireRole(['csc:get', 'api-access'])(ctx, next)
+  }
+
+  // All routes under invoices/notify-batch require invoice-notify:post or api-access
+  if (ctx.path.startsWith('/invoices/notify-batch') && ctx.method === 'POST') {
+    return requireRole(['invoice-notify:post', 'api-access'])(ctx, next)
   }
 
   if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
