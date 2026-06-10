@@ -268,4 +268,46 @@ describe('Invoice Service', () => {
       expect(res.status).toBe(500)
     })
   })
+
+  describe('GET /autogiro-consent/:nationalRegistrationNumber', () => {
+    const mockConsent = factory.TenfastAutogiroConsentFactory.build()
+
+    it('responds with consent when found', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: true, data: mockConsent })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toMatchObject({ _id: mockConsent._id })
+    })
+
+    it('responds with null when no consent found', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toBeNull()
+    })
+
+    it('responds with 500 when tenfast returns error', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: false, err: 'API error' })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
 })

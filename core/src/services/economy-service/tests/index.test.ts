@@ -415,4 +415,65 @@ describe('economy-service routes', () => {
       expect(res.body.error).toBe('unknown')
     })
   })
+
+  describe('GET /autogiro-consent/:nationalRegistrationNumber', () => {
+    const mockConsent = {
+      _id: 'abc123',
+      hyresgast: '191212121212',
+      hyresvardBankgiro: '5050-1005',
+      payerNumber: 12345,
+      fixedDueDay: null,
+      isCompany: false,
+      payerSSN: '191212121212',
+      status: 'ACTIVE',
+      statusChangedAt: '2024-01-01T00:00:00.000Z',
+      extra: { nameAndAddress1: 'Test Testsson', mismatch: null },
+      payerBankAccountNumber: '83059876',
+    }
+
+    it('returns 200 with consent data on success', async () => {
+      jest.spyOn(economyAdapter, 'getAutogiroConsent').mockResolvedValue({
+        ok: true,
+        data: mockConsent as any,
+      })
+
+      const res = await request(app.callback()).get(
+        '/autogiro-consent/191212121212'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(mockConsent)
+      expect(economyAdapter.getAutogiroConsent).toHaveBeenCalledWith(
+        '191212121212'
+      )
+    })
+
+    it('returns 200 with null when no consent found', async () => {
+      jest.spyOn(economyAdapter, 'getAutogiroConsent').mockResolvedValue({
+        ok: true,
+        data: null,
+      })
+
+      const res = await request(app.callback()).get(
+        '/autogiro-consent/191212121212'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toBeNull()
+    })
+
+    it('returns 500 when adapter returns error', async () => {
+      jest.spyOn(economyAdapter, 'getAutogiroConsent').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback()).get(
+        '/autogiro-consent/191212121212'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('unknown')
+    })
+  })
 })
