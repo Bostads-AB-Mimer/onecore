@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 
 import { workOrderService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
@@ -39,7 +40,6 @@ export const useInspectionWorkOrders = ({
 
   const [assignments, setAssignments] = useState<Record<string, number>>({})
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
   // Teams whose work order was already created — excluded on retry so a
   // partially failed batch never duplicates the errands that succeeded.
   const [createdTeamIds, setCreatedTeamIds] = useState<Set<number>>(new Set())
@@ -67,6 +67,39 @@ export const useInspectionWorkOrders = ({
   const assignedCount = damaged.filter((c) => assignments[c.key]).length
   const unassignedCount = damaged.length - assignedCount
 
+  const createMutation = useMutation({
+    mutationFn: workOrderService.createInspectionWorkOrders,
+    onSuccess: ({ results }) => {
+      const succeededTeamIds = results
+        .filter((result) => result.ok)
+        .map((result) => result.maintenanceTeamId)
+      if (succeededTeamIds.length > 0) {
+        setCreatedTeamIds((prev) => new Set([...prev, ...succeededTeamIds]))
+      }
+
+      const failed = results.length - succeededTeamIds.length
+      if (failed === 0) {
+        toast({
+          title: 'Ärenden skapade',
+          description: `${succeededTeamIds.length} ärende(n) skapades i Odoo.`,
+        })
+      } else {
+        toast({
+          title: 'Vissa ärenden kunde inte skapas',
+          description: `${succeededTeamIds.length} skapades, ${failed} misslyckades. Försök igen.`,
+          variant: 'destructive',
+        })
+      }
+    },
+    onError: () => {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte skapa ärenden i Odoo.',
+        variant: 'destructive',
+      })
+    },
+  })
+
   /**
    * Creates the assigned work orders in Odoo. Returns true when there was
    * nothing to create or everything succeeded; false if any group failed (so
@@ -79,9 +112,8 @@ export const useInspectionWorkOrders = ({
     )
     if (!rentalId || pendingGroups.length === 0) return true
 
-    setIsCreating(true)
     try {
-      const { results } = await workOrderService.createInspectionWorkOrders({
+      const { results } = await createMutation.mutateAsync({
         rentalObjectCode: rentalId,
         groups: pendingGroups.map((group) => ({
           maintenanceTeamId: group.maintenanceTeamId,
@@ -89,58 +121,25 @@ export const useInspectionWorkOrders = ({
           descriptionHtml: group.descriptionHtml,
         })),
       })
-
-      const succeededTeamIds = results
-        .filter((result) => result.ok)
-        .map((result) => result.maintenanceTeamId)
-      if (succeededTeamIds.length > 0) {
-        setCreatedTeamIds((prev) => new Set([...prev, ...succeededTeamIds]))
-      }
-
-      const failed = results.filter((result) => !result.ok)
-      const succeeded = results.length - failed.length
-
-      if (failed.length === 0) {
-        toast({
-          title: 'Ärenden skapade',
-          description: `${succeeded} ärende(n) skapades i Odoo.`,
-        })
-        return true
-      }
-
-      toast({
-        title: 'Vissa ärenden kunde inte skapas',
-        description: `${succeeded} skapades, ${failed.length} misslyckades. Försök igen.`,
-        variant: 'destructive',
-      })
+      return results.every((result) => result.ok)
+    } catch {
+      // Toast already shown by onError; the caller only needs the outcome.
       return false
-    } catch (error) {
-      console.error('Failed to create inspection work orders:', error)
-      toast({
-        title: 'Fel',
-        description: 'Kunde inte skapa ärenden i Odoo.',
-        variant: 'destructive',
-      })
-      return false
-    } finally {
-      setIsCreating(false)
     }
   }
 
   return {
     teams,
-    isLoadingTeams: teamsQuery.isLoading,
     assignments,
     assignTeam,
     damaged,
     groups,
-    assignedCount,
     unassignedCount,
     createdTeamIds,
     isConfirmOpen,
     openConfirm: () => setIsConfirmOpen(true),
     closeConfirm: () => setIsConfirmOpen(false),
-    isCreating,
+    isCreating: createMutation.isPending,
     createWorkOrders,
   }
 }

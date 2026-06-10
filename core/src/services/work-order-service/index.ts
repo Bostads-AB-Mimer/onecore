@@ -14,6 +14,18 @@ interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
 }
 
+/*
+  Work-order creation requires apartment fields (maintenance.rental.property in
+  Odoo). We know rentalPropertyInfo.property is of type ApartmentInfo when the
+  type is 'Lägenhet', but that is not reflected in the RentalPropertyInfo type,
+  so we do a little narrowing.
+*/
+const rentalPropertyIsApartment = (
+  rentalPropertyInfo: RentalPropertyInfo
+): rentalPropertyInfo is RentalPropertyInfo & {
+  property: ApartmentInfo
+} => rentalPropertyInfo.type === 'Lägenhet'
+
 /**
  * @swagger
  * openapi: 3.0.0
@@ -1597,16 +1609,6 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      /*
-        We know that rentalPropertyInfo.property is of type ApartmentInfo here,
-        but that is not reflected in the RentalPropertyInfo type, so we do a little narrowing
-      */
-      const rentalPropertyIsApartment = (
-        rentalPropertyInfo: RentalPropertyInfo
-      ): rentalPropertyInfo is RentalPropertyInfo & {
-        property: ApartmentInfo
-      } => rentalPropertyInfo.type === 'Lägenhet'
-
       if (!rentalPropertyIsApartment(rentalPropertyInfo)) {
         ctx.status = 400
         ctx.body = {
@@ -1761,7 +1763,7 @@ export const routes = (router: KoaRouter) => {
       )
       if (!parsed.success) {
         ctx.status = 400
-        ctx.body = { error: 'Invalid request body', ...metadata }
+        ctx.body = { reason: 'Invalid request body', ...metadata }
         return
       }
 
@@ -1774,13 +1776,6 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { reason: 'Rental property not found', ...metadata }
         return
       }
-
-      // maintenance.rental.property needs apartment fields; inspections are
-      // always apartments, so narrow the type (mirrors POST /work-orders).
-      const rentalPropertyIsApartment = (
-        info: RentalPropertyInfo
-      ): info is RentalPropertyInfo & { property: ApartmentInfo } =>
-        info.type === 'Lägenhet'
 
       if (!rentalPropertyIsApartment(rentalPropertyInfo)) {
         ctx.status = 400
@@ -1812,7 +1807,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (error) {
-      logger.error(error, 'Error creating inspection work orders')
+      logger.error({ err: error }, 'Error creating inspection work orders')
       ctx.status = 500
       ctx.body = {
         error: 'Failed to create inspection work orders',

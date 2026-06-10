@@ -8,7 +8,44 @@ import {
   DialogTitle,
 } from '@/shared/ui/Dialog'
 
+import type { useInspectionWorkOrders } from '../hooks/useInspectionWorkOrders'
 import type { InspectionWorkOrderGroup } from '../lib/buildInspectionWorkOrderGroups'
+
+interface InspectionWorkOrdersConfirmFlowProps {
+  workOrders: ReturnType<typeof useInspectionWorkOrders>
+  onCompleted: () => void
+}
+
+/**
+ * Wires the confirm dialog to the useInspectionWorkOrders hook: creates the
+ * work orders on confirm and, once everything succeeded (or there was nothing
+ * to create), closes the dialog and completes the inspection. Shared by the
+ * desktop and mobile inspection forms.
+ */
+export function InspectionWorkOrdersConfirmFlow({
+  workOrders,
+  onCompleted,
+}: InspectionWorkOrdersConfirmFlowProps) {
+  return (
+    <CreateInspectionWorkOrdersDialog
+      open={workOrders.isConfirmOpen}
+      onOpenChange={(open) => {
+        if (!open) workOrders.closeConfirm()
+      }}
+      groups={workOrders.groups}
+      unassignedCount={workOrders.unassignedCount}
+      createdTeamIds={workOrders.createdTeamIds}
+      isCreating={workOrders.isCreating}
+      onConfirm={async () => {
+        const ok = await workOrders.createWorkOrders()
+        if (ok) {
+          workOrders.closeConfirm()
+          onCompleted()
+        }
+      }}
+    />
+  )
+}
 
 interface CreateInspectionWorkOrdersDialogProps {
   open: boolean
