@@ -1355,13 +1355,17 @@ export const routes = (router: KoaRouter) => {
         }
       }
     } catch (error: unknown) {
+      logger.error(
+        { err: error },
+        'work-order-service.createInspectionWorkOrders'
+      )
       ctx.status = 500
-
-      if (error instanceof Error) {
-        ctx.body = {
-          error: error.message,
-          ...metadata,
-        }
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to create inspection work orders',
+        ...metadata,
       }
     }
   })

@@ -22,7 +22,7 @@ import { Button } from '@/shared/ui/Button'
 import { FORM_STEP, type FormStep } from '../constants/formSteps'
 import { useInspectionForm } from '../hooks/useInspectionForm'
 import { useInspectionWorkOrders } from '../hooks/useInspectionWorkOrders'
-import { CreateInspectionWorkOrdersDialog } from './CreateInspectionWorkOrdersDialog'
+import { InspectionWorkOrdersConfirmFlow } from './CreateInspectionWorkOrdersDialog'
 import { InspectionChecklistStep } from './InspectionChecklistStep'
 import { InspectionInfoSection } from './InspectionInfoSection'
 import { InspectionMoreMenu } from './InspectionMoreMenu'
@@ -597,22 +597,9 @@ export function InspectionForm({
         onConfirm={handleConfirmSaveDraft}
       />
 
-      <CreateInspectionWorkOrdersDialog
-        open={workOrders.isConfirmOpen}
-        onOpenChange={(open) => {
-          if (!open) workOrders.closeConfirm()
-        }}
-        groups={workOrders.groups}
-        unassignedCount={workOrders.unassignedCount}
-        createdTeamIds={workOrders.createdTeamIds}
-        isCreating={workOrders.isCreating}
-        onConfirm={async () => {
-          const ok = await workOrders.createWorkOrders()
-          if (ok) {
-            workOrders.closeConfirm()
-            handleSubmit()
-          }
-        }}
+      <InspectionWorkOrdersConfirmFlow
+        workOrders={workOrders}
+        onCompleted={handleSubmit}
       />
 
       <RemoveInspectionRoomDialog

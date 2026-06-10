@@ -617,6 +617,9 @@ export const createInspectionWorkOrders = async (
           maintenance_team_id: group.maintenanceTeamId,
           maintenance_request_category_id: categoryId,
           priority_expanded: '7',
+          // search_type/search_value mirror what the Odoo create form stores
+          // when an agent looks up the property — odoo-onecore uses them to
+          // show how the request was matched to the rental object.
           search_type: 'rentalObjectId',
           search_value: rentalProperty.id,
           // creation_origin: 'inspection' is intentionally omitted — Odoo rejects
