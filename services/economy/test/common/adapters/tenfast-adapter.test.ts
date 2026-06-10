@@ -519,7 +519,7 @@ describe(recordPaymentForInvoice, () => {
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 
-  it('returns unknown when OCR lookup response fails schema parse', async () => {
+  it('returns schema-error when OCR lookup response fails schema parse', async () => {
     mockAxios.request.mockResolvedValueOnce({
       status: 200,
       data: { unexpected: true },
@@ -527,7 +527,7 @@ describe(recordPaymentForInvoice, () => {
 
     const result = await recordPaymentForInvoice(payment)
 
-    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(result).toEqual({ ok: false, err: 'schema-error' })
   })
 
   it('records the payment and returns ok', async () => {
@@ -854,7 +854,7 @@ describe(setGracePeriod, () => {
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 
-  it('returns unknown when OCR lookup response fails schema parse', async () => {
+  it('returns schema-error when OCR lookup response fails schema parse', async () => {
     mockAxios.request.mockResolvedValueOnce({
       status: 200,
       data: { unexpected: true },
@@ -862,7 +862,7 @@ describe(setGracePeriod, () => {
 
     const result = await setGracePeriod(params)
 
-    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(result).toEqual({ ok: false, err: 'schema-error' })
   })
 
   it('returns not-found when grace-period endpoint returns 404', async () => {
