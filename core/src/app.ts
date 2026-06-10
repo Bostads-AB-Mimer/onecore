@@ -75,6 +75,10 @@ app.use(async (ctx, next) => {
     return requireRole(['api-access', 'contacts:read'])(ctx, next)
   }
 
+  if (ctx.path.startsWith('/invoice-channels')) {
+    return requireRole(['invoice-channels:read', 'api-access'])(ctx, next)
+  }
+
   return requireRole('api-access')(ctx, next)
 })
 
