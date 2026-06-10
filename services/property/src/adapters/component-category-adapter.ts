@@ -1,5 +1,6 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
+import { logger } from '@onecore/utilities'
 import type {
   CreateComponentCategory,
   UpdateComponentCategory,
@@ -34,14 +35,24 @@ export const getComponentCategories = async (
 }
 
 export const getComponentCategoryById = async (id: string) => {
-  const category = await prisma.componentCategories.findUnique({
-    where: { id },
-    include: {
-      componentTypes: true,
-    },
-  })
+  try {
+    const category = await prisma.componentCategories.findUnique({
+      where: { id },
+      include: {
+        // Deterministic order so consumers (e.g. the AI analysis prompt)
+        // produce reproducible output across environments
+        componentTypes: { orderBy: { typeName: 'asc' } },
+      },
+    })
 
-  return category ? trimStrings(category) : null
+    return category ? trimStrings(category) : null
+  } catch (err) {
+    logger.error(
+      { err, id },
+      'component-category-adapter.getComponentCategoryById'
+    )
+    throw err
+  }
 }
 
 export const createComponentCategory = async (

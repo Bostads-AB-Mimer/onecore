@@ -14,7 +14,9 @@ import { ProcessStatus } from '../../../common/types'
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
-app.use(bodyParser())
+// Match the real app's 50mb limit (core/src/app.ts) — koa-bodyparser's
+// default 1mb would 413 large-image bodies before Zod validation runs
+app.use(bodyParser({ jsonLimit: '50mb' }))
 app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
@@ -168,6 +170,9 @@ describe('Component Categories API', () => {
   describe('DELETE /component-categories/:id', () => {
     it('returns 204 on success', async () => {
       jest
+        .spyOn(propertyBaseAdapter, 'getComponentTypes')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
         .spyOn(propertyBaseAdapter, 'deleteComponentCategory')
         .mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -179,6 +184,9 @@ describe('Component Categories API', () => {
     })
 
     it('returns 404 when not found', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentTypes')
+        .mockResolvedValueOnce({ ok: true, data: [] })
       jest
         .spyOn(propertyBaseAdapter, 'deleteComponentCategory')
         .mockResolvedValueOnce({ ok: false, err: 'not_found' })
@@ -335,6 +343,9 @@ describe('Component Types API', () => {
   describe('DELETE /component-types/:id', () => {
     it('returns 204 on success', async () => {
       jest
+        .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
         .spyOn(propertyBaseAdapter, 'deleteComponentType')
         .mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -346,6 +357,9 @@ describe('Component Types API', () => {
     })
 
     it('returns 404 when not found', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
+        .mockResolvedValueOnce({ ok: true, data: [] })
       jest
         .spyOn(propertyBaseAdapter, 'deleteComponentType')
         .mockResolvedValueOnce({ ok: false, err: 'not_found' })
@@ -526,6 +540,9 @@ describe('Component Subtypes API', () => {
   describe('DELETE /component-subtypes/:id', () => {
     it('returns 204 on success', async () => {
       jest
+        .spyOn(propertyBaseAdapter, 'getComponentModels')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
         .spyOn(propertyBaseAdapter, 'deleteComponentSubtype')
         .mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -537,6 +554,9 @@ describe('Component Subtypes API', () => {
     })
 
     it('returns 404 when not found', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentModels')
+        .mockResolvedValueOnce({ ok: true, data: [] })
       jest
         .spyOn(propertyBaseAdapter, 'deleteComponentSubtype')
         .mockResolvedValueOnce({ ok: false, err: 'not_found' })
@@ -719,6 +739,9 @@ describe('Component Models API', () => {
   describe('DELETE /component-models/:id', () => {
     it('returns 204 on success', async () => {
       jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
         .spyOn(propertyBaseAdapter, 'deleteComponentModel')
         .mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -730,6 +753,9 @@ describe('Component Models API', () => {
     })
 
     it('returns 404 when not found', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: [] })
       jest
         .spyOn(propertyBaseAdapter, 'deleteComponentModel')
         .mockResolvedValueOnce({ ok: false, err: 'not_found' })
@@ -959,6 +985,9 @@ describe('Components API', () => {
   describe('DELETE /components/:id', () => {
     it('returns 204 on success', async () => {
       jest
+        .spyOn(propertyBaseAdapter, 'getComponentInstallations')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
         .spyOn(propertyBaseAdapter, 'deleteComponent')
         .mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -970,6 +999,9 @@ describe('Components API', () => {
     })
 
     it('returns 404 when not found', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentInstallations')
+        .mockResolvedValueOnce({ ok: true, data: [] })
       jest
         .spyOn(propertyBaseAdapter, 'deleteComponent')
         .mockResolvedValueOnce({ ok: false, err: 'not_found' })
@@ -1397,6 +1429,43 @@ describe('POST /components/analyze-image', () => {
       image: 'base64imagedata',
       additionalImage: 'base64additionaldata',
     })
+  })
+
+  it('accepts a base64 image above 10MiB up to the shared 14M character limit', async () => {
+    const analysis = {
+      componentCategory: null,
+      componentType: null,
+      componentSubtype: null,
+      manufacturer: null,
+      model: null,
+      serialNumber: null,
+      estimatedAge: null,
+      condition: null,
+      specifications: null,
+      dimensions: null,
+      warrantyMonths: null,
+      ncsCode: null,
+      additionalInformation: null,
+      confidence: 0,
+    }
+    jest
+      .spyOn(propertyBaseAdapter, 'analyzeComponentImage')
+      .mockResolvedValueOnce({ ok: true, data: analysis })
+
+    const res = await request(app.callback())
+      .post('/components/analyze-image')
+      // Above core's old 10 * 1024 * 1024 limit, below property's 14_000_000
+      .send({ image: 'a'.repeat(11_000_000) })
+
+    expect(res.status).toBe(200)
+  })
+
+  it('rejects a base64 image above the shared 14M character limit', async () => {
+    const res = await request(app.callback())
+      .post('/components/analyze-image')
+      .send({ image: 'a'.repeat(14_000_001) })
+
+    expect(res.status).toBe(400)
   })
 
   it('returns 500 when analysis fails', async () => {

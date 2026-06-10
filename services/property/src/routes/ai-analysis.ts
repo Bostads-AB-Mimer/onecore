@@ -1,12 +1,10 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequest } from '../middleware/parse-request'
-import {
-  AnalyzeComponentImageRequestSchema,
-  AIComponentAnalysisSchema,
-} from '../types/component'
+import { AnalyzeComponentImageRequestSchema } from '../types/component'
 import { analyzeComponentImage } from '../adapters/berget-adapter'
 import { getComponentCategoryById } from '../adapters/component-category-adapter'
+import { hasDedicatedPrompt } from '../prompts/component-analysis'
 
 /**
  * @swagger
@@ -135,18 +133,37 @@ export const routes = (router: KoaRouter) => {
           | { categoryName: string; availableTypes: string[] }
           | undefined
         if (categoryId) {
-          const category = await getComponentCategoryById(categoryId)
-          if (category) {
-            taxonomy = {
-              categoryName: category.categoryName,
-              availableTypes: category.componentTypes.map(
-                (type) => type.typeName
-              ),
+          try {
+            const category = await getComponentCategoryById(categoryId)
+            if (category) {
+              taxonomy = {
+                categoryName: category.categoryName,
+                availableTypes: category.componentTypes.map(
+                  (type) => type.typeName
+                ),
+              }
+              if (!hasDedicatedPrompt(category.categoryName)) {
+                // Normal for most categories — but if a category that HAS a
+                // dedicated overlay (e.g. "Vitvaror") is renamed in the
+                // component library, this is the only signal that its
+                // analyses silently degraded to the general prompt.
+                logger.info(
+                  { categoryId, categoryName: category.categoryName },
+                  'components.analyze-image: no dedicated prompt for category, using general prompt'
+                )
+              }
+            } else {
+              logger.warn(
+                { categoryId },
+                'components.analyze-image: unknown categoryId, using general prompt'
+              )
             }
-          } else {
+          } catch (err) {
+            // The taxonomy is an enhancement — a failed lookup must not abort
+            // the analysis (or leak the underlying error to the client).
             logger.warn(
-              { categoryId },
-              'components.analyze-image: unknown categoryId, using general prompt'
+              { err, categoryId },
+              'components.analyze-image: category lookup failed, using general prompt'
             )
           }
         }

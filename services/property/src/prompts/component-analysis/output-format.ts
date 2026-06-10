@@ -1,6 +1,6 @@
 // Shared JSON output contract for component image analysis.
 // This is the SINGLE source of the response format and must stay in sync with
-// AIComponentAnalysisSchema in ../../types/ai-analysis.ts. Category-specific
+// AIComponentAnalysisSchema in @onecore/types (libs/types/src/property/schema.ts). Category-specific
 // prompts only describe domain guidance; the resolver appends this block so the
 // 14-field contract is never duplicated (and never drifts) across prompt files.
 export const OUTPUT_FORMAT = `Svara ENDAST med JSON i följande format (inget annat text):

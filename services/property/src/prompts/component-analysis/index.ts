@@ -13,6 +13,23 @@ const OVERLAYS: Record<string, string> = {
   vitvaror: vitvarorPrompt,
 }
 
+const resolveOverlay = (categoryName?: string): string | undefined => {
+  const key = categoryName?.trim().toLowerCase()
+  return key && Object.prototype.hasOwnProperty.call(OVERLAYS, key)
+    ? OVERLAYS[key]
+    : undefined
+}
+
+/**
+ * True when the category has a dedicated prompt overlay (i.e. does not fall
+ * back to the general prompt). Exposed so callers can log when a selected
+ * category resolves to the general prompt — e.g. after a category with a
+ * dedicated overlay is renamed in the component library admin UI, which
+ * silently stops the overlay from matching.
+ */
+export const hasDedicatedPrompt = (categoryName?: string): boolean =>
+  resolveOverlay(categoryName) !== undefined
+
 /**
  * Builds the optional taxonomy-constraint block. When the selected category is
  * known we pin componentCategory to it, and when its component types are known
@@ -54,8 +71,7 @@ export const resolveComponentAnalysisPrompt = (
   categoryName?: string,
   availableTypes?: string[]
 ): string => {
-  const key = categoryName?.trim().toLowerCase()
-  const domain = (key && OVERLAYS[key]) || generalPrompt
+  const domain = resolveOverlay(categoryName) ?? generalPrompt
   const constraint = buildTaxonomyConstraint(categoryName, availableTypes)
 
   return [domain, BASE_INSTRUCTIONS, constraint, OUTPUT_FORMAT]

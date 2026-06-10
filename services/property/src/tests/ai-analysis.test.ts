@@ -2,6 +2,7 @@ import request from 'supertest'
 import app from '../app'
 import * as bergetAdapter from '../adapters/berget-adapter'
 import * as componentCategoryAdapter from '../adapters/component-category-adapter'
+import { logger } from '@onecore/utilities'
 
 beforeEach(jest.restoreAllMocks)
 
@@ -44,6 +45,22 @@ describe('AI Analysis API', () => {
       })
     })
 
+    it('accepts image payloads larger than the 1mb koa-body default', async () => {
+      jest
+        .spyOn(bergetAdapter, 'analyzeComponentImage')
+        .mockResolvedValueOnce(mockAnalysisResult)
+
+      // ~2MB base64 image — rejected with 413 before jsonLimit was raised
+      const largeBase64Image = `data:image/jpeg;base64,${'A'.repeat(2_000_000)}`
+
+      const res = await request(app.callback())
+        .post('/components/analyze-image')
+        .send({ image: largeBase64Image })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.componentCategory).toBe('Vitvara')
+    })
+
     it('returns 200 with analysis when both images provided', async () => {
       const analyzeSpy = jest
         .spyOn(bergetAdapter, 'analyzeComponentImage')
@@ -65,6 +82,7 @@ describe('AI Analysis API', () => {
     })
 
     it('looks up the category and forwards its name and types to the analyzer', async () => {
+      const infoSpy = jest.spyOn(logger, 'info')
       const categoryId = '11111111-1111-1111-1111-111111111111'
       const date = new Date()
       jest
@@ -107,6 +125,39 @@ describe('AI Analysis API', () => {
         categoryName: 'Vitvaror',
         availableTypes: ['Kylskåp', 'Diskmaskin'],
       })
+      expect(infoSpy).not.toHaveBeenCalledWith(
+        expect.anything(),
+        'components.analyze-image: no dedicated prompt for category, using general prompt'
+      )
+    })
+
+    it('logs when the selected category has no dedicated prompt', async () => {
+      const infoSpy = jest.spyOn(logger, 'info')
+      const categoryId = '44444444-4444-4444-4444-444444444444'
+      const date = new Date()
+      jest
+        .spyOn(componentCategoryAdapter, 'getComponentCategoryById')
+        .mockResolvedValueOnce({
+          id: categoryId,
+          categoryName: 'VVS',
+          description: '',
+          createdAt: date,
+          updatedAt: date,
+          componentTypes: [],
+        })
+      jest
+        .spyOn(bergetAdapter, 'analyzeComponentImage')
+        .mockResolvedValueOnce(mockAnalysisResult)
+
+      const res = await request(app.callback())
+        .post('/components/analyze-image')
+        .send({ image: validBase64Image, categoryId })
+
+      expect(res.status).toBe(200)
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ categoryName: 'VVS' }),
+        'components.analyze-image: no dedicated prompt for category, using general prompt'
+      )
     })
 
     it('falls back to the general prompt when categoryId is unknown', async () => {
@@ -130,6 +181,36 @@ describe('AI Analysis API', () => {
         undefined,
         undefined
       )
+    })
+
+    it('falls back to the general prompt when the category lookup fails', async () => {
+      jest
+        .spyOn(componentCategoryAdapter, 'getComponentCategoryById')
+        .mockRejectedValueOnce(new Error('db connection refused'))
+      const analyzeSpy = jest
+        .spyOn(bergetAdapter, 'analyzeComponentImage')
+        .mockResolvedValueOnce(mockAnalysisResult)
+
+      const res = await request(app.callback())
+        .post('/components/analyze-image')
+        .send({
+          image: validBase64Image,
+          categoryId: '33333333-3333-3333-3333-333333333333',
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toMatchObject({
+        componentCategory: 'Vitvara',
+        componentType: 'Kylskåp',
+        confidence: 0.85,
+      })
+      expect(analyzeSpy).toHaveBeenCalledWith(
+        validBase64Image,
+        undefined,
+        undefined
+      )
+      // The DB error must not leak to the client
+      expect(JSON.stringify(res.body)).not.toContain('db connection refused')
     })
 
     it('returns 400 when image is missing', async () => {

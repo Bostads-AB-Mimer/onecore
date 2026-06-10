@@ -1,4 +1,4 @@
-import { resolveComponentAnalysisPrompt } from './index'
+import { resolveComponentAnalysisPrompt, hasDedicatedPrompt } from './index'
 import { BASE_INSTRUCTIONS } from './base'
 import { vitvarorPrompt } from './vitvaror'
 import { generalPrompt } from './general'
@@ -55,5 +55,19 @@ describe('resolveComponentAnalysisPrompt', () => {
     const prompt = resolveComponentAnalysisPrompt(undefined, ['Kylskåp'])
     expect(prompt).not.toContain('tillhör kategorin')
     expect(prompt).not.toContain('Välj componentType EXAKT')
+  })
+})
+
+describe('hasDedicatedPrompt', () => {
+  it('is true for categories with a dedicated overlay, case-insensitively', () => {
+    expect(hasDedicatedPrompt('Vitvaror')).toBe(true)
+    expect(hasDedicatedPrompt('  vitVAROR ')).toBe(true)
+  })
+
+  it('is false for categories without an overlay and for missing names', () => {
+    expect(hasDedicatedPrompt('VVS')).toBe(false)
+    expect(hasDedicatedPrompt(undefined)).toBe(false)
+    expect(hasDedicatedPrompt('')).toBe(false)
+    expect(hasDedicatedPrompt('   ')).toBe(false)
   })
 })
