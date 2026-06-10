@@ -1,6 +1,7 @@
 import request from 'supertest'
 import app from '../app'
 import * as bergetAdapter from '../adapters/berget-adapter'
+import * as componentCategoryAdapter from '../adapters/component-category-adapter'
 
 beforeEach(jest.restoreAllMocks)
 
@@ -58,7 +59,76 @@ describe('AI Analysis API', () => {
       expect(res.status).toBe(200)
       expect(analyzeSpy).toHaveBeenCalledWith(
         validBase64Image,
-        validBase64Image
+        validBase64Image,
+        undefined
+      )
+    })
+
+    it('looks up the category and forwards its name and types to the analyzer', async () => {
+      const categoryId = '11111111-1111-1111-1111-111111111111'
+      const date = new Date()
+      jest
+        .spyOn(componentCategoryAdapter, 'getComponentCategoryById')
+        .mockResolvedValueOnce({
+          id: categoryId,
+          categoryName: 'Vitvaror',
+          description: '',
+          createdAt: date,
+          updatedAt: date,
+          componentTypes: [
+            {
+              id: 't1',
+              typeName: 'Kylskåp',
+              categoryId,
+              description: null,
+              createdAt: date,
+              updatedAt: date,
+            },
+            {
+              id: 't2',
+              typeName: 'Diskmaskin',
+              categoryId,
+              description: null,
+              createdAt: date,
+              updatedAt: date,
+            },
+          ],
+        })
+      const analyzeSpy = jest
+        .spyOn(bergetAdapter, 'analyzeComponentImage')
+        .mockResolvedValueOnce(mockAnalysisResult)
+
+      const res = await request(app.callback())
+        .post('/components/analyze-image')
+        .send({ image: validBase64Image, categoryId })
+
+      expect(res.status).toBe(200)
+      expect(analyzeSpy).toHaveBeenCalledWith(validBase64Image, undefined, {
+        categoryName: 'Vitvaror',
+        availableTypes: ['Kylskåp', 'Diskmaskin'],
+      })
+    })
+
+    it('falls back to the general prompt when categoryId is unknown', async () => {
+      jest
+        .spyOn(componentCategoryAdapter, 'getComponentCategoryById')
+        .mockResolvedValueOnce(null)
+      const analyzeSpy = jest
+        .spyOn(bergetAdapter, 'analyzeComponentImage')
+        .mockResolvedValueOnce(mockAnalysisResult)
+
+      const res = await request(app.callback())
+        .post('/components/analyze-image')
+        .send({
+          image: validBase64Image,
+          categoryId: '22222222-2222-2222-2222-222222222222',
+        })
+
+      expect(res.status).toBe(200)
+      expect(analyzeSpy).toHaveBeenCalledWith(
+        validBase64Image,
+        undefined,
+        undefined
       )
     })
 

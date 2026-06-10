@@ -980,9 +980,14 @@ export const AnalyzeComponentImageRequestSchema = z.object({
     .string()
     .max(10 * 1024 * 1024)
     .optional(),
+  // Component category id from the component library. The property service uses
+  // it to select the analysis prompt and constrain the classification to the
+  // types under that category. Falls back to a general prompt when omitted.
+  categoryId: z.string().uuid().optional(),
 })
 
 export const AIComponentAnalysisSchema = z.object({
+  componentCategory: z.string().nullable(),
   componentType: z.string().nullable(),
   componentSubtype: z.string().nullable(),
   manufacturer: z.string().nullable(),

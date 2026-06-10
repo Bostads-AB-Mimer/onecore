@@ -14,6 +14,10 @@ export const AnalyzeComponentImageRequestSchema = z.object({
     .string()
     .max(14_000_000, 'Additional image too large (max 10MB)')
     .optional(),
+  // Component category id from the component library. The service looks up the
+  // category (selects the analysis prompt) and its component types (constrains
+  // the classification). Falls back to a general prompt when omitted.
+  categoryId: z.string().uuid().optional(),
 })
 
 // MVP: Core AI analysis fields focused on Swedish appliances (vitvaror)

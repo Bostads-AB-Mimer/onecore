@@ -1,2 +1,4 @@
 src/adapters/property-base-adapter/generated/api-types.ts
 src/adapters/work-order-adapter/generated/api-types.ts
+src/adapters/inspection-adapter/generated/api-types.ts
+src/adapters/keys-adapter/generated/api-types.ts

@@ -6,6 +6,7 @@ import {
   AIComponentAnalysisSchema,
 } from '../types/component'
 import { analyzeComponentImage } from '../adapters/berget-adapter'
+import { getComponentCategoryById } from '../adapters/component-category-adapter'
 
 /**
  * @swagger
@@ -41,6 +42,10 @@ export const routes = (router: KoaRouter) => {
    *               additionalImage:
    *                 type: string
    *                 description: Optional additional base64 encoded image (max 10MB) - combine typeplate + product photo for best results
+   *               categoryId:
+   *                 type: string
+   *                 format: uuid
+   *                 description: Optional component category id from the component library - the service uses it to select the analysis prompt and to constrain the classification to the component types under that category (falls back to a general prompt when omitted or unknown)
    *     responses:
    *       200:
    *         description: Component analysis successful
@@ -121,9 +126,43 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const { image, additionalImage } = ctx.request.parsedBody
-        const analysis = await analyzeComponentImage(image, additionalImage)
+        const { image, additionalImage, categoryId } = ctx.request.parsedBody
 
+        // When a category is selected, look up its name (selects the prompt)
+        // and the component types under it (constrains the classification).
+        // An unknown id falls back to the general prompt rather than failing.
+        let taxonomy:
+          | { categoryName: string; availableTypes: string[] }
+          | undefined
+        if (categoryId) {
+          const category = await getComponentCategoryById(categoryId)
+          if (category) {
+            taxonomy = {
+              categoryName: category.categoryName,
+              availableTypes: category.componentTypes.map(
+                (type) => type.typeName
+              ),
+            }
+          } else {
+            logger.warn(
+              { categoryId },
+              'components.analyze-image: unknown categoryId, using general prompt'
+            )
+          }
+        }
+
+        const analysis = await analyzeComponentImage(
+          image,
+          additionalImage,
+          taxonomy
+        )
+
+        // TODO: type-id mapping (next step). The AI returns componentType as a
+        // name constrained to the category's types. Map it back to the matching
+        // category.componentTypes[].id and return a componentTypeId so Odoo can
+        // link directly to the type. Requires keeping the {id, typeName} pairs
+        // here (not just typeName) and adding componentTypeId to the response
+        // schema in both property and core.
         ctx.status = 200
         ctx.body = {
           content: analysis,
