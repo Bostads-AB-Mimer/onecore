@@ -115,10 +115,24 @@ export const TenfastInvoiceStateSchema = z.enum([
   'forsenad',
   'delvis-betald',
   'krediterad',
-  'anstand',
+  'makulerad',
+  'draft',
+  'pamind',
+  'gracePeriod',
 ])
 
 export type TenfastInvoiceState = z.infer<typeof TenfastInvoiceStateSchema>
+
+/** Tenfast invoice states parsed but not exposed as Invoice. */
+export const EXCLUDED_TENFAST_INVOICE_STATES: readonly TenfastInvoiceState[] = [
+  'draft',
+]
+
+export function isVisibleTenfastInvoice(invoice: {
+  state: TenfastInvoiceState
+}): boolean {
+  return !EXCLUDED_TENFAST_INVOICE_STATES.includes(invoice.state)
+}
 
 export const TenfastInvoiceSchema = z.object({
   interval: z.object({

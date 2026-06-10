@@ -8,8 +8,8 @@ import {
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
   TenfastInvoicesByOcrResponseSchema,
-  TenfastInvoiceStateSchema,
   TenfastInvoice,
+  isVisibleTenfastInvoice,
   TenfastInvoiceRow,
   TenfastRentArticleSchema,
   TenfastRentArticle,
@@ -37,8 +37,6 @@ import {
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
 const companyId = config.tenfast.companyId
-
-const TENFAST_INVOICE_STATES = TenfastInvoiceStateSchema.options
 
 const makeTenfastRequest = async (
   url: string,
@@ -181,7 +179,12 @@ export const getInvoicesForTenant = async (
       )
       return { ok: false, err: 'schema-error' }
     }
-    return { ok: true, data: parsedResponse.data.map(transformToInvoice) }
+    return {
+      ok: true,
+      data: parsedResponse.data
+        .filter(isVisibleTenfastInvoice)
+        .map(transformToInvoice),
+    }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -408,7 +411,8 @@ export const getInvoiceByOcr = async (
       return { ok: false, err: 'schema-error' }
     }
 
-    if (!parsedResponse.data.records[0]) {
+    const invoice = parsedResponse.data.records[0]
+    if (!isVisibleTenfastInvoice(invoice)) {
       return {
         ok: false,
         err: `Invoice with ocr ${ocr} not found`,
@@ -417,7 +421,7 @@ export const getInvoiceByOcr = async (
 
     return {
       ok: true,
-      data: transformToInvoice(parsedResponse.data.records[0]),
+      data: transformToInvoice(invoice),
     }
   } catch (err: any) {
     logger.error(err)
@@ -458,7 +462,7 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     toDate: new Date(tenfastInvoice.interval.to),
     invoiceDate: tenfastInvoice.activatedAt
       ? new Date(tenfastInvoice.activatedAt)
-      : new Date(tenfastInvoice.expectedInvoiceDate), // If tenfastInvoice.state == 'draft', activatedAt will be null
+      : new Date(tenfastInvoice.expectedInvoiceDate),
     expirationDate: new Date(tenfastInvoice.due),
     paidAmount: tenfastInvoice.amountPaid,
     remainingAmount,

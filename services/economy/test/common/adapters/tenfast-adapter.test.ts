@@ -155,6 +155,32 @@ describe('Tenfast Adapter', () => {
       expect(result.data[0].paymentStatus).toBe(PaymentStatus.Paid)
       expect(result.data[0].remainingAmount).toBe(0)
     })
+
+    it('parses draft invoices but excludes them from results', async () => {
+      const invoices = [
+        TenfastInvoiceFactory.build({
+          state: 'ny',
+          ocrNumber: '55123456',
+          hyror: [TenfastInvoiceRowFactory.build()],
+        }),
+        TenfastInvoiceFactory.build({
+          state: 'draft',
+          ocrNumber: '55999999',
+          hyror: [TenfastInvoiceRowFactory.build()],
+        }),
+      ]
+
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: invoices,
+      })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      assert(result.ok)
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].invoiceId).toBe('55123456')
+    })
   })
 
   describe(getInvoiceByOcr, () => {
