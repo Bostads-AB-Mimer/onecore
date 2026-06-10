@@ -423,6 +423,7 @@ describe('Rental Invoice Service', () => {
       })
     })
   })
+
   describe('getBatchContactsCsv', () => {
     beforeEach(() => {
       setupDefaultInvoiceDbMocks()
@@ -443,84 +444,85 @@ describe('Rental Invoice Service', () => {
       expect(result).toBeNull()
     })
 
-    describe('getAutogiroConsent', () => {
-      beforeEach(() => {
-        mockGetAutogiroConsent.mockReset()
-      })
-
-      it('returns consent data when tenfast returns ok result', async () => {
-        const mockConsent = TenfastAutogiroConsentFactory.build()
-        mockGetAutogiroConsent.mockResolvedValue({
-          ok: true,
-          data: mockConsent,
-        })
-
-        const result = await getAutogiroConsent('198001011234')
-
-        expect(mockGetAutogiroConsent).toHaveBeenCalledWith('198001011234')
-        expect(result).toEqual(mockConsent)
-      })
-
-      it('returns null when no consent found', async () => {
-        mockGetAutogiroConsent.mockResolvedValue({ ok: true, data: null })
-
-        const result = await getAutogiroConsent('198001011234')
-
-        expect(result).toBeNull()
-      })
-
-      it('returns a CSV string with header when contacts exist', async () => {
-        getContacts.mockResolvedValueOnce([
-          {
-            contactCode: 'P12345',
-            contactKey: '1234',
-            firstName: 'Test',
-            lastName: 'Tenant',
-            fullName: 'Test Tenant',
-            nationalRegistrationNumber: '19900101-1234',
-            birthDate: new Date('1990-01-01'),
-            isTenant: true,
-            phoneNumbers: [],
-            address: {
-              street: 'Test 1',
-              postalCode: '12345',
-              city: 'Västerås',
-              number: '',
-            },
-            emailAddress: 'test@example.com',
-            autogiro: false,
-            invoiceDeliveryMethod: 'Email',
+    it('returns a CSV string with header when contacts exist', async () => {
+      getContacts.mockResolvedValueOnce([
+        {
+          contactCode: 'P12345',
+          contactKey: '1234',
+          firstName: 'Test',
+          lastName: 'Tenant',
+          fullName: 'Test Tenant',
+          nationalRegistrationNumber: '19900101-1234',
+          birthDate: new Date('1990-01-01'),
+          isTenant: true,
+          phoneNumbers: [],
+          address: {
+            street: 'Test 1',
+            postalCode: '12345',
+            city: 'Västerås',
+            number: '',
           },
-        ])
+          emailAddress: 'test@example.com',
+          autogiro: false,
+          invoiceDeliveryMethod: 'Email',
+        },
+      ])
 
-        const result = await getBatchContactsCsv('1337')
+      const result = await getBatchContactsCsv('1337')
 
-        expect(result).not.toBeNull()
-        expect(result).toContain('Code;Description;Company No')
-        expect(result?.split('\n').length).toBe(2)
-      })
+      expect(result).not.toBeNull()
+      expect(result).toContain('Code;Description;Company No')
+      expect(result?.split('\n').length).toBe(2)
+    })
+  })
+
+  describe('getBatchLedgerRowsCsv', () => {
+    beforeEach(() => {
+      setupDefaultInvoiceDbMocks()
+      setupDefaultXpandDbMocks()
     })
 
-    describe('getBatchLedgerRowsCsv', () => {
-      beforeEach(() => {
-        setupDefaultInvoiceDbMocks()
-        setupDefaultXpandDbMocks()
-      })
-
-      afterEach(() => {
-        resetInvoiceDbMocks()
-        resetXpandDbMocks()
-        jest.clearAllMocks()
-      })
-
-      it('returns null when the batch has no invoice rows', async () => {
-        getAllInvoiceRows.mockResolvedValueOnce([])
-
-        const result = await getBatchLedgerRowsCsv('1337')
-
-        expect(result).toBeNull()
-      })
+    afterEach(() => {
+      resetInvoiceDbMocks()
+      resetXpandDbMocks()
+      jest.clearAllMocks()
     })
+
+    it('returns null when the batch has no invoice rows', async () => {
+      getAllInvoiceRows.mockResolvedValueOnce([])
+
+      const result = await getBatchLedgerRowsCsv('1337')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('getAutogiroConsent', () => {
+    beforeEach(() => {
+      mockGetAutogiroConsent.mockReset()
+    })
+
+    it('returns consent data when tenfast returns ok result', async () => {
+      const mockConsent = TenfastAutogiroConsentFactory.build()
+      mockGetAutogiroConsent.mockResolvedValue({
+        ok: true,
+        data: mockConsent,
+      })
+
+      const result = await getAutogiroConsent('198001011234')
+
+      expect(mockGetAutogiroConsent).toHaveBeenCalledWith('198001011234')
+      expect(result).toEqual(mockConsent)
+    })
+
+    it('returns null when no consent found', async () => {
+      mockGetAutogiroConsent.mockResolvedValue({ ok: true, data: null })
+
+      const result = await getAutogiroConsent('198001011234')
+
+      expect(result).toBeNull()
+    })
+
     it('throws when tenfast returns error', async () => {
       mockGetAutogiroConsent.mockResolvedValue({
         ok: false,
