@@ -7030,7 +7030,7 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content: ({
+              content: {
                 _id: string;
                 hyresgast: string;
                 hyresvardBankgiro: string;
@@ -7048,7 +7048,15 @@ export interface paths {
                   mismatch: string | null;
                 };
                 payerBankAccountNumber: string;
-              }) | null;
+              };
+            };
+          };
+        };
+        /** @description No autogiro consent found for the given national registration number. */
+        404: {
+          content: {
+            "application/json": {
+              error?: string;
             };
           };
         };

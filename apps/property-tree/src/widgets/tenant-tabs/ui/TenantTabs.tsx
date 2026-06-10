@@ -58,6 +58,7 @@ export const TenantTabs = ({
         rentalProperties={rentalProperties}
         contactCode={contactCode}
         tenantName={tenantName}
+        nationalRegistrationNumber={nationalRegistrationNumber}
         isLoadingLeases={isLoadingLeases}
         isLoadingProperties={isLoadingProperties}
       />
