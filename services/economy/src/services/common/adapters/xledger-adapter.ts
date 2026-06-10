@@ -1499,7 +1499,7 @@ export const updateInvoiceDeferralDate = async (
 
   const mutation = {
     query: gql`
-      mutation ($dbId: ID!, $dueDate: String!, $text: String!) {
+      mutation ($dbId: Int!, $dueDate: DateString!, $text: String!) {
         updateArTransactions(
           inputs: {
             node: {
