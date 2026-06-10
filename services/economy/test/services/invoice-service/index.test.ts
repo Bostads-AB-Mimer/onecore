@@ -285,7 +285,7 @@ describe('Invoice Service', () => {
       expect(res.body.content).toMatchObject({ _id: mockConsent._id })
     })
 
-    it('responds with null when no consent found', async () => {
+    it('responds with 404 when no consent found', async () => {
       jest
         .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
         .mockResolvedValueOnce({ ok: true, data: null })
@@ -294,8 +294,8 @@ describe('Invoice Service', () => {
         `/autogiro-consent/198001011234`
       )
 
-      expect(res.status).toBe(200)
-      expect(res.body.content).toBeNull()
+      expect(res.status).toBe(404)
+      expect(res.body).toMatchObject({ message: 'No autogiro consent found' })
     })
 
     it('responds with 500 when tenfast returns error', async () => {

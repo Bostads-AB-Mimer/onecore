@@ -604,7 +604,6 @@ export const routes = (router: KoaRouter) => {
    *                 - content
    *               properties:
    *                 content:
-   *                   nullable: true
    *                   type: object
    *                   required:
    *                     - _id
@@ -656,6 +655,15 @@ export const routes = (router: KoaRouter) => {
    *                           nullable: true
    *                     payerBankAccountNumber:
    *                       type: string
+   *       '404':
+   *         description: No autogiro consent found for the given national registration number.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
    *       '500':
    *         description: Internal server error.
    *         content:
@@ -677,10 +685,16 @@ export const routes = (router: KoaRouter) => {
     if (response.ok) {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(response.data, metadata)
+      return
+    }
+
+    if (response.err === 'not-found') {
+      ctx.status = 404
+      ctx.body = { error: 'Not found' }
     } else {
       ctx.status = 500
       ctx.body = {
-        error: response.err,
+        error: 'Unknown error',
       }
     }
   })

@@ -400,7 +400,9 @@ export async function getInvoiceChannels(
 
 export async function getAutogiroConsent(
   nationalRegistrationNumber: string
-): Promise<AdapterResult<economy.AutogiroConsentResponse, string>> {
+): Promise<
+  AdapterResult<economy.AutogiroConsentResponse, 'not-found' | 'unknown'>
+> {
   try {
     const response = await axios.get(
       `${config.economyService.url}/autogiro-consent/${nationalRegistrationNumber}`
@@ -414,7 +416,9 @@ export async function getAutogiroConsent(
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getAutogiroConsent')
     if (err instanceof AxiosError) {
-      return { ok: false, err: err.response?.data.message }
+      if (err.response?.status === 404) {
+        return { ok: false, err: 'not-found', statusCode: 404 }
+      }
     }
 
     return { ok: false, err: 'unknown' }

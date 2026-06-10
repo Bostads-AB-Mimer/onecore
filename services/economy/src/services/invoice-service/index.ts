@@ -297,6 +297,12 @@ export const routes = (router: KoaRouter) => {
       try {
         const results = await getAutogiroConsent(nationalRegistrationNumber)
 
+        if (results === null) {
+          ctx.status = 404
+          ctx.body = { ...metadata, message: 'No autogiro consent found' }
+          return
+        }
+
         ctx.status = 200
         ctx.body = {
           ...metadata,

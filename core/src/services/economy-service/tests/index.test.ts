@@ -448,18 +448,17 @@ describe('economy-service routes', () => {
       )
     })
 
-    it('returns 200 with null when no consent found', async () => {
+    it('returns 404 when no consent found', async () => {
       jest.spyOn(economyAdapter, 'getAutogiroConsent').mockResolvedValue({
-        ok: true,
-        data: null,
+        ok: false,
+        err: 'not-found',
       })
 
       const res = await request(app.callback()).get(
         '/autogiro-consent/191212121212'
       )
 
-      expect(res.status).toBe(200)
-      expect(res.body.content).toBeNull()
+      expect(res.status).toBe(404)
     })
 
     it('returns 500 when adapter returns error', async () => {
@@ -473,7 +472,7 @@ describe('economy-service routes', () => {
       )
 
       expect(res.status).toBe(500)
-      expect(res.body.error).toBe('unknown')
+      expect(res.body.error).toBe('Unknown error')
     })
   })
 })
