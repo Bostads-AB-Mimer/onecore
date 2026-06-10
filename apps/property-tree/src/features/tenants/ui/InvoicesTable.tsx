@@ -10,6 +10,7 @@ import { z } from 'zod'
 
 import { INVOICE_DEFERRAL_ROLE, RequireRole } from '@/entities/user'
 
+import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -93,6 +94,7 @@ const GrantDeferralDialog = ({
   contactCode: string
 }) => {
   const [open, setOpen] = useState(false)
+  const { toast } = useToast()
   const updateDeferral = useUpdateInvoiceDeferral()
 
   const form = useForm<DeferralFormValues>({
@@ -116,7 +118,16 @@ const GrantDeferralDialog = ({
         endDate: format(values.endDate, 'yyyy-MM-dd'),
         reason: values.reason,
       },
-      { onSuccess: () => handleOpenChange(false) }
+      {
+        onSuccess: () => {
+          handleOpenChange(false)
+          toast({
+            title: 'Anstånd registrerat',
+            description:
+              'Förfallodatumet har uppdaterats i Tenfast och Xledger.',
+          })
+        },
+      }
     )
   }
 
