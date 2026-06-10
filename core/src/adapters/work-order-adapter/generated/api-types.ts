@@ -310,67 +310,6 @@ export interface paths {
       }
     }
   }
-  '/workOrders/id/{id}': {
-    /**
-     * Get a single work order by its Odoo id
-     * @description Retrieves a single work order (errand) by its numeric Odoo id.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The numeric Odoo id of the work order. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the work order. */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                workOrder?: components['schemas']['WorkOrder']
-              }
-              /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-        /** @description Bad request. The id is not a valid number. */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Invalid id */
-              error?: string
-              /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-        /** @description Work order not found. */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Work order not found */
-              error?: string
-              /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-        /** @description Internal server error. Failed to retrieve the work order. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-              /** @description Route metadata */
-              metadata?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
   '/workOrders/xpand/residenceId/{residenceId}': {
     /**
      * Get work orders by residence id from xpand
@@ -662,6 +601,59 @@ export interface paths {
               metadata?: Record<string, never>
             }
           }
+        }
+      }
+    }
+  }
+  '/workOrders/maintenanceTeams': {
+    /**
+     * List maintenance teams (resursgrupper)
+     * @description Returns the selectable Odoo maintenance teams (resursgrupper).
+     */
+    get: {
+      responses: {
+        /** @description Maintenance teams retrieved successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceTeam'][]
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/workOrders/fromInspection': {
+    /**
+     * Create work orders from an inspection (one per resursgrupp)
+     * @description Creates one maintenance.request per resursgrupp group. Each group is an independent Odoo commit, so the response reports per-group success/failure.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateInspectionWorkOrdersBody']
+        }
+      }
+      responses: {
+        /** @description Work orders processed (see per-group results) */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CreateInspectionWorkOrdersResponse']
+            }
+          }
+        }
+        /** @description Bad request. Invalid body. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
         }
       }
     }
@@ -988,6 +980,51 @@ export interface components {
         type: string
         estateCode: string | null
         estate: string | null
+      }[]
+    }
+    MaintenanceTeam: {
+      id: number
+      name: string
+    }
+    CreateInspectionWorkOrdersBody: {
+      rentalProperty: {
+        id: string
+        type: string
+        property: {
+          address: string
+          code: string
+          entrance: string
+          floor: string
+          hasElevator: boolean
+          washSpace: string | null
+          area: number
+          estateCode: string | null
+          estate: string | null
+          buildingCode: string
+          building: string
+        }
+        maintenanceUnits?: {
+          id: string
+          rentalPropertyId: string
+          code: string
+          caption: string
+          type: string
+          estateCode: string | null
+          estate: string | null
+        }[]
+      }
+      groups: {
+        maintenanceTeamId: number
+        maintenanceTeamName: string
+        descriptionHtml: string
+      }[]
+    }
+    CreateInspectionWorkOrdersResponse: {
+      results: {
+        maintenanceTeamId: number
+        ok: boolean
+        workOrderId?: number
+        err?: string
       }[]
     }
   }

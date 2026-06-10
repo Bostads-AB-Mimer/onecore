@@ -75,6 +75,36 @@ export const CreateWorkOrderResponseSchema = z.object({
   newWorkOrderId: z.number(),
 })
 
+// Odoo "Resursgrupp" (maintenance team) shown in the inspection picker.
+export const MaintenanceTeamSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+})
+
+// Frontend → core: the inspector groups damaged components by resursgrupp. Core
+// resolves the rental property from `rentalObjectCode` before calling the service.
+export const CreateInspectionWorkOrdersGroupSchema = z.object({
+  maintenanceTeamId: z.number(),
+  maintenanceTeamName: z.string(),
+  descriptionHtml: z.string(),
+})
+
+export const CreateInspectionWorkOrdersRequestSchema = z.object({
+  rentalObjectCode: z.string(),
+  groups: z.array(CreateInspectionWorkOrdersGroupSchema).min(1),
+})
+
+export const CreateInspectionWorkOrderResultSchema = z.object({
+  maintenanceTeamId: z.number(),
+  ok: z.boolean(),
+  workOrderId: z.number().optional(),
+  err: z.string().optional(),
+})
+
+export const CreateInspectionWorkOrdersResponseSchema = z.object({
+  results: z.array(CreateInspectionWorkOrderResultSchema),
+})
+
 export const GetWorkOrdersFromXpandQuerySchema = z.object({
   skip: z.coerce.number().optional(),
   limit: z.coerce.number().optional(),
@@ -92,4 +122,11 @@ export type CoreXpandWorkOrderDetails = z.infer<
 >
 export type CreateWorkOrderResponse = z.infer<
   typeof CreateWorkOrderResponseSchema
+>
+export type MaintenanceTeam = z.infer<typeof MaintenanceTeamSchema>
+export type CreateInspectionWorkOrdersRequest = z.infer<
+  typeof CreateInspectionWorkOrdersRequestSchema
+>
+export type CreateInspectionWorkOrdersResponse = z.infer<
+  typeof CreateInspectionWorkOrdersResponseSchema
 >

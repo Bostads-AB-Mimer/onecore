@@ -21,6 +21,8 @@ import { Button } from '@/shared/ui/Button'
 
 import { FORM_STEP, type FormStep } from '../constants/formSteps'
 import { useInspectionForm } from '../hooks/useInspectionForm'
+import { useInspectionWorkOrders } from '../hooks/useInspectionWorkOrders'
+import { CreateInspectionWorkOrdersDialog } from './CreateInspectionWorkOrdersDialog'
 import { InspectionChecklistStep } from './InspectionChecklistStep'
 import { InspectionInfoSection } from './InspectionInfoSection'
 import { InspectionMoreMenu } from './InspectionMoreMenu'
@@ -121,6 +123,14 @@ export function InspectionForm({
   // canComplete delegates to the shared validation hook so it stays in sync
   // with the checklist gating (all four checks required).
   const canComplete = validation.canComplete
+
+  // Resursgrupp assignment + work-order creation on the summary step.
+  const workOrders = useInspectionWorkOrders({
+    inspectionData,
+    rooms,
+    meta: { id: existingInspection.id, address },
+    rentalId,
+  })
 
   const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
   const [step, setStep] = useState<FormStep>(FORM_STEP.ROOMS)
@@ -514,6 +524,9 @@ export function InspectionForm({
             <InspectionSummary
               inspectionData={inspectionData}
               rooms={rooms}
+              teams={workOrders.teams}
+              assignments={workOrders.assignments}
+              onAssignTeam={workOrders.assignTeam}
               onComponentCostByIdUpdate={handleComponentCostUpdateById}
               onComponentCostResponsibilityByIdUpdate={
                 handleComponentCostResponsibilityUpdateById
@@ -564,7 +577,14 @@ export function InspectionForm({
             </Button>
           )}
           {step === FORM_STEP.SUMMARY && (
-            <Button onClick={handleSubmit} disabled={!canComplete}>
+            <Button
+              onClick={() =>
+                workOrders.damaged.length > 0
+                  ? workOrders.openConfirm()
+                  : handleSubmit()
+              }
+              disabled={!canComplete}
+            >
               Slutför besiktning
             </Button>
           )}
@@ -575,6 +595,24 @@ export function InspectionForm({
         open={isDraftConfirmOpen}
         onOpenChange={setIsDraftConfirmOpen}
         onConfirm={handleConfirmSaveDraft}
+      />
+
+      <CreateInspectionWorkOrdersDialog
+        open={workOrders.isConfirmOpen}
+        onOpenChange={(open) => {
+          if (!open) workOrders.closeConfirm()
+        }}
+        groups={workOrders.groups}
+        unassignedCount={workOrders.unassignedCount}
+        createdTeamIds={workOrders.createdTeamIds}
+        isCreating={workOrders.isCreating}
+        onConfirm={async () => {
+          const ok = await workOrders.createWorkOrders()
+          if (ok) {
+            workOrders.closeConfirm()
+            handleSubmit()
+          }
+        }}
       />
 
       <RemoveInspectionRoomDialog

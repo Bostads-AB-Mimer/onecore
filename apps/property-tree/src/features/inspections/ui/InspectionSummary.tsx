@@ -1,8 +1,16 @@
+import type { MaintenanceTeam } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
 import { Badge } from '@/shared/ui/Badge'
 import { Input } from '@/shared/ui/Input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
 import {
   Table,
   TableBody,
@@ -17,6 +25,7 @@ import {
   COST_RESPONSIBILITY,
   type CostResponsibility,
 } from '../constants/costResponsibility'
+import { componentAssignmentKey } from '../lib/buildInspectionWorkOrderGroups'
 import { CostResponsibilitySelect } from './CostResponsibilitySelect'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
@@ -97,9 +106,42 @@ function CostInput({
   )
 }
 
+function ResursgruppSelect({
+  teams,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  teams: MaintenanceTeam[]
+  value: number | undefined
+  onChange: (teamId: number | null) => void
+  ariaLabel: string
+}) {
+  return (
+    <Select
+      value={value?.toString() ?? ''}
+      onValueChange={(v) => onChange(v ? Number(v) : null)}
+    >
+      <SelectTrigger aria-label={ariaLabel}>
+        <SelectValue placeholder="Välj resursgrupp" />
+      </SelectTrigger>
+      <SelectContent>
+        {teams.map((team) => (
+          <SelectItem key={team.id} value={team.id.toString()}>
+            {team.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
 interface RoomSectionProps {
   room: Room
   roomData: InspectionRoom | undefined
+  teams: MaintenanceTeam[]
+  assignments: Record<string, number>
+  onAssignTeam: (key: string, teamId: number | null) => void
   onComponentCostByIdUpdate: (
     roomId: string,
     componentId: string,
@@ -127,6 +169,9 @@ interface RoomSectionProps {
 function RoomSummarySection({
   room,
   roomData,
+  teams,
+  assignments,
+  onAssignTeam,
   onComponentCostByIdUpdate,
   onComponentCostResponsibilityByIdUpdate,
   onDetailComponentCostUpdate,
@@ -140,6 +185,11 @@ function RoomSummarySection({
   // desktop table can share the same conditional rules without diverging.
   const rows = remarks.map((remark) => {
     const conditionConfig = getConditionConfig(remark.condition)
+    const assignmentKey = componentAssignmentKey(
+      room.id,
+      remark.source,
+      remark.componentId
+    )
     let costValue: number
     let costResponsibility: CostResponsibility
     if (remark.source === 'detail') {
@@ -194,6 +244,7 @@ function RoomSummarySection({
     return {
       remark,
       conditionConfig,
+      assignmentKey,
       costValue,
       costResponsibility,
       showResponsibility,
@@ -214,6 +265,7 @@ function RoomSummarySection({
           ({
             remark,
             conditionConfig,
+            assignmentKey,
             costValue,
             costResponsibility,
             showResponsibility,
@@ -260,6 +312,19 @@ function RoomSummarySection({
                   />
                 </div>
               )}
+              {showResponsibility && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Resursgrupp
+                  </label>
+                  <ResursgruppSelect
+                    teams={teams}
+                    value={assignments[assignmentKey]}
+                    onChange={(teamId) => onAssignTeam(assignmentKey, teamId)}
+                    ariaLabel={`Resursgrupp för ${remark.label}`}
+                  />
+                </div>
+              )}
             </div>
           )
         )}
@@ -274,6 +339,7 @@ function RoomSummarySection({
               <TableHead>Status</TableHead>
               <TableHead className="w-40">Kostnad (kr)</TableHead>
               <TableHead className="w-44">Kostnadsansvar</TableHead>
+              <TableHead className="w-48">Resursgrupp</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -281,6 +347,7 @@ function RoomSummarySection({
               ({
                 remark,
                 conditionConfig,
+                assignmentKey,
                 costValue,
                 costResponsibility,
                 showResponsibility,
@@ -318,6 +385,18 @@ function RoomSummarySection({
                       />
                     )}
                   </TableCell>
+                  <TableCell>
+                    {showResponsibility && (
+                      <ResursgruppSelect
+                        teams={teams}
+                        value={assignments[assignmentKey]}
+                        onChange={(teamId) =>
+                          onAssignTeam(assignmentKey, teamId)
+                        }
+                        ariaLabel={`Resursgrupp för ${remark.label}`}
+                      />
+                    )}
+                  </TableCell>
                 </TableRow>
               )
             )}
@@ -331,6 +410,9 @@ function RoomSummarySection({
 interface InspectionSummaryProps {
   inspectionData: Record<string, InspectionRoom>
   rooms: Room[]
+  teams: MaintenanceTeam[]
+  assignments: Record<string, number>
+  onAssignTeam: (key: string, teamId: number | null) => void
   onComponentCostByIdUpdate: (
     roomId: string,
     componentId: string,
@@ -358,6 +440,9 @@ interface InspectionSummaryProps {
 export function InspectionSummary({
   inspectionData,
   rooms,
+  teams,
+  assignments,
+  onAssignTeam,
   onComponentCostByIdUpdate,
   onComponentCostResponsibilityByIdUpdate,
   onDetailComponentCostUpdate,
@@ -398,6 +483,9 @@ export function InspectionSummary({
           key={room.id}
           room={room}
           roomData={roomData}
+          teams={teams}
+          assignments={assignments}
+          onAssignTeam={onAssignTeam}
           onComponentCostByIdUpdate={onComponentCostByIdUpdate}
           onComponentCostResponsibilityByIdUpdate={
             onComponentCostResponsibilityByIdUpdate
