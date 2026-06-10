@@ -1091,8 +1091,6 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     port: config.xledger.sftp.port,
   }
 
-  console.log(config.xledger.sftp)
-
   if (config.xledger.sftp.useSshDss) {
     sftpConfig.algorithms = {
       serverHostKey: ['ssh-dss'],
@@ -1112,8 +1110,6 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     )
     throw new Error('Unknown file type, accepted types are .gl.csv and .ar.csv')
   }
-
-  console.log(sftpConfig, filename)
 
   const stream = new Readable()
   stream.push(csvFile)

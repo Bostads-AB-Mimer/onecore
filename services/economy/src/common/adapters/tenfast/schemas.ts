@@ -240,6 +240,7 @@ export const TenfastAccountConfigurationSchema = z.object({
   costCenter: z.string(),
   property: z.string(),
   freeText: z.string(),
+  projectCode: z.string(),
 })
 
 export type TenfastAccountConfiguration = z.infer<

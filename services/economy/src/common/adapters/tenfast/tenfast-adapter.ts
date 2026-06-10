@@ -331,6 +331,19 @@ const enrichInvoiceRowsWithAccounting = async (
     const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
       ...invoiceRow,
     }
+
+    if (!invoiceRow.rentalObject) {
+      logger.error(
+        { invoiceId: invoice.invoiceId },
+        'Minst en hyresrad på avin saknar hyresobjekt'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: `Minst en hyresrad på avin saknar hyresobjekt`,
+      })
+      continue
+    }
+
     if (invoiceRow.rentArticle) {
       const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
 
@@ -359,6 +372,11 @@ const enrichInvoiceRowsWithAccounting = async (
               accountConfiguration.property &&
               accountConfiguration.property !== ''
                 ? accountConfiguration.property
+                : undefined
+            invoiceRowWithAccounting.projectCode =
+              accountConfiguration.projectCode &&
+              accountConfiguration.projectCode !== ''
+                ? accountConfiguration.projectCode
                 : undefined
 
             invoiceRowWithAccounting.freeCode = accountConfiguration.freeText

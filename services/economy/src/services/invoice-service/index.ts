@@ -19,14 +19,21 @@ import { getInvoiceDetails } from './service'
 import {
   createAccounting,
   exportRentalInvoicesAccounting,
+  exportRentalLossAccounting,
   markInvoicesAsExported,
   uploadCsvFiles,
 } from './servicev2'
 
 export const routes = (router: KoaRouter) => {
-  router.get('(.*)/invoices/import/{:companyId}', async (ctx) => {
+  router.post('(.*)/accounting/import-invoices/{:companyId}', async (ctx) => {
     try {
       const companyId = ctx.params.companyId
+
+      if (!companyId) {
+        ctx.status = 400
+        ctx.body = 'Company with specified ID could not be found'
+      }
+
       const invoicesResult = await exportRentalInvoicesAccounting(companyId)
       const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
         await createAccounting(invoicesResult.invoices)
@@ -36,7 +43,7 @@ export const routes = (router: KoaRouter) => {
         aggregateAccountingCsv,
         ledgerAccountingCsv
       )
-      await markInvoicesAsExported(invoicesResult.invoices)
+      //await markInvoicesAsExported(invoicesResult.invoices)
 
       ctx.status = 200
       ctx.body = {
@@ -50,6 +57,22 @@ export const routes = (router: KoaRouter) => {
       ctx.body = 'Could not export invoices ' + (error as any).message
     }
   })
+
+  router.post(
+    '(.*)/acccounting/import-rental-loss/{:companyId}',
+    async (ctx) => {
+      const companyId = ctx.params.companyId
+
+      if (!companyId) {
+        ctx.status = 400
+        ctx.body = 'Company with specified ID could not be found'
+      }
+
+      await exportRentalLossAccounting(companyId)
+
+      ctx.status = 200
+    }
+  )
 
   // TODO: Remove this route after feature completion
   router.get('(.*)/invoices/invoices-for-import', async (ctx) => {
