@@ -244,12 +244,6 @@ export type MaintenanceTeam = z.infer<typeof MaintenanceTeamSchema>
 export type CreateInspectionWorkOrderGroup = z.infer<
   typeof CreateInspectionWorkOrderGroupSchema
 >
-export type CreateInspectionWorkOrdersBody = z.infer<
-  typeof CreateInspectionWorkOrdersBodySchema
->
 export type CreateInspectionWorkOrderResult = z.infer<
   typeof CreateInspectionWorkOrderResultSchema
->
-export type CreateInspectionWorkOrdersResponse = z.infer<
-  typeof CreateInspectionWorkOrdersResponseSchema
 >

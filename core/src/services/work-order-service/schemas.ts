@@ -83,7 +83,7 @@ export const MaintenanceTeamSchema = z.object({
 
 // Frontend → core: the inspector groups damaged components by resursgrupp. Core
 // resolves the rental property from `rentalObjectCode` before calling the service.
-export const CreateInspectionWorkOrdersGroupSchema = z.object({
+const CreateInspectionWorkOrdersGroupSchema = z.object({
   maintenanceTeamId: z.number(),
   maintenanceTeamName: z.string(),
   descriptionHtml: z.string(),
@@ -94,7 +94,7 @@ export const CreateInspectionWorkOrdersRequestSchema = z.object({
   groups: z.array(CreateInspectionWorkOrdersGroupSchema).min(1),
 })
 
-export const CreateInspectionWorkOrderResultSchema = z.object({
+const CreateInspectionWorkOrderResultSchema = z.object({
   maintenanceTeamId: z.number(),
   ok: z.boolean(),
   workOrderId: z.number().optional(),
@@ -124,9 +124,6 @@ export type CreateWorkOrderResponse = z.infer<
   typeof CreateWorkOrderResponseSchema
 >
 export type MaintenanceTeam = z.infer<typeof MaintenanceTeamSchema>
-export type CreateInspectionWorkOrdersRequest = z.infer<
-  typeof CreateInspectionWorkOrdersRequestSchema
->
 export type CreateInspectionWorkOrdersResponse = z.infer<
   typeof CreateInspectionWorkOrdersResponseSchema
 >
