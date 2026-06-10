@@ -113,7 +113,7 @@ describe('stralforsAdapter', () => {
         expect.objectContaining({
           method: 'POST',
           data: {
-            channels: ['Kivra', 'Billo', 'eInvoiceB2C'],
+            channels: ['Kivra', 'eInvoiceB2C'],
             candidates: ['191212121212', '198112172385'],
           },
         })
