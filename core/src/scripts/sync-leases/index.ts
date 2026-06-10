@@ -121,8 +121,7 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
     return
   }
 
-  const contactCode =
-    lease.action === 'create' ? lease.contactCode : undefined
+  const contactCode = lease.action === 'create' ? lease.contactCode : undefined
 
   logger.info({ leaseId: lease.leaseId, action: lease.action }, 'syncing lease')
   const syncResult = await syncLeaseToTenfast(

@@ -2149,9 +2149,7 @@ describe(tenfastAdapter.syncTenant, () => {
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'post',
-        url: expect.stringContaining(
-          '/v1/hyresvard/extras/contacts/P12345'
-        ),
+        url: expect.stringContaining('/v1/hyresvard/extras/contacts/P12345'),
       })
     )
     expect((request as jest.Mock).mock.calls[0][0].data).toBeUndefined()
