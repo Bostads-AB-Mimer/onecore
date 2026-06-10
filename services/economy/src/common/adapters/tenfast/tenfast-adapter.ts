@@ -398,7 +398,7 @@ const fetchTenfastInvoiceByOcr = async (
     const result = await makeTenfastRequest(
       `/v1/hyresvard/extras/hyror/${encodeURIComponent(ocr)}`,
       {
-        params: { hyresvard: companyId },
+        params: { hyresvard: companyId, populate: 'avtal' },
       }
     )
 

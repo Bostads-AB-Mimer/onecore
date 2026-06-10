@@ -207,7 +207,7 @@ describe('Tenfast Adapter', () => {
       expect(mockAxios.request).toHaveBeenCalledWith(
         expect.objectContaining({
           url: `/v1/hyresvard/extras/hyror/${ocr}`,
-          params: { hyresvard: 'test-hyresvard-id' },
+          params: { hyresvard: 'test-hyresvard-id', populate: 'avtal' },
         })
       )
     })
