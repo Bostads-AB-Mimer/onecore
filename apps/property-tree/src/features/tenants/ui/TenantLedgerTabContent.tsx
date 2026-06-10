@@ -69,7 +69,7 @@ const PaymentInformation = ({
   const invoiceChannels = useTenantInvoiceChannels(nationalRegistrationNumber)
   const autogiroConsent = useTenantAutogiroConsent(nationalRegistrationNumber)
 
-  const isLoading = invoiceChannels.isLoading && autogiroConsent.isLoading
+  const isLoading = invoiceChannels.isLoading || autogiroConsent.isLoading
 
   return (
     <Card>
