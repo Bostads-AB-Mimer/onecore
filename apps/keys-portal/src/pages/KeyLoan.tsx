@@ -95,9 +95,7 @@ export default function KeyLoan() {
           helpText={
             <>
               <p>Personnummer: YYYYMMDD-XXXX (t.ex. 19850315-1234)</p>
-              <p>
-                Kundnummer: PXXXXXX eller FXXXXXX (t.ex. P053602 eller F123456)
-              </p>
+              <p>Kundnummer: t.ex. P053602, F123456 eller K010000</p>
               <p>Hyresobjekt: XXX-XXX-XX-XXX (t.ex. 705-011-03-1234)</p>
             </>
           }
