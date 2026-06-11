@@ -2,6 +2,7 @@ import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
 import transformFromXPandDb from './../../helpers/transformFromXPandDb'
 
 import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
+import { Knex } from 'knex'
 import { Context } from 'koa'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
@@ -459,6 +460,24 @@ const getResidentialAreaByRentalPropertyId = async (
   }
 }
 
+// Xpand contact code prefixes: P = private person, F = company,
+// K = municipal/public-sector customer (e.g. K010000 Västerås Stad).
+// Both F and K count as companies when filtering search results.
+const applyContactTypeFilter = (
+  qb: Knex.QueryBuilder,
+  contactType?: 'company' | 'person'
+) => {
+  if (contactType === 'company') {
+    qb.andWhere((builder) => {
+      builder
+        .where('cmctc.cmctckod', 'like', 'F%')
+        .orWhere('cmctc.cmctckod', 'like', 'K%')
+    })
+  } else if (contactType === 'person') {
+    qb.andWhere('cmctc.cmctckod', 'like', 'P%')
+  }
+}
+
 const getContactsDataBySearchQuery = async (
   q: string,
   contactType?: 'company' | 'person'
@@ -489,12 +508,7 @@ const getContactsDataBySearchQuery = async (
             .from('cmeml')
             .where('cmemlben', 'like', `${q}%`)
         )
-        .modify((qb) => {
-          if (contactType === 'company')
-            qb.andWhere('cmctc.cmctckod', 'like', 'F%')
-          else if (contactType === 'person')
-            qb.andWhere('cmctc.cmctckod', 'like', 'P%')
-        })
+        .modify((qb) => applyContactTypeFilter(qb, contactType))
         .limit(10)
 
       return {
@@ -520,12 +534,7 @@ const getContactsDataBySearchQuery = async (
             .where('cmtelben', 'like', `${q}%`)
         )
         .where('cmctc.deletemark', '=', '0')
-        .modify((qb) => {
-          if (contactType === 'company')
-            qb.andWhere('cmctc.cmctckod', 'like', 'F%')
-          else if (contactType === 'person')
-            qb.andWhere('cmctc.cmctckod', 'like', 'P%')
-        })
+        .modify((qb) => applyContactTypeFilter(qb, contactType))
         .limit(10)
 
       return {
@@ -553,12 +562,7 @@ const getContactsDataBySearchQuery = async (
           builder.orWhereRaw('CONTAINS(cmctc.cmctcben, ?)', [searchTerms])
         }
       })
-      .modify((qb) => {
-        if (contactType === 'company')
-          qb.andWhere('cmctc.cmctckod', 'like', 'F%')
-        else if (contactType === 'person')
-          qb.andWhere('cmctc.cmctckod', 'like', 'P%')
-      })
+      .modify((qb) => applyContactTypeFilter(qb, contactType))
       .limit(10)
 
     return {
