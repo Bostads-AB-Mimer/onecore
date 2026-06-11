@@ -2,6 +2,7 @@ import Odoo from 'odoo-await'
 import striptags from 'striptags'
 import { groupBy } from 'lodash'
 import z from 'zod'
+import { logger } from '@onecore/utilities'
 import Config from '../../../../common/config'
 import {
   transformWorkOrder,
@@ -274,15 +275,27 @@ export const createWorkOrder = async (
     const newTenantRecord = await createTenantRecord(tenant, details)
 
     const rowMaintenanceUnitCode = details.Rows[0].MaintenanceUnitCode
-    const targetMaintenanceUnit = rowMaintenanceUnitCode
+    const selectedMaintenanceUnit = rowMaintenanceUnitCode
       ? rentalPropertyInfo.maintenanceUnits?.find(
           (mu) => mu.code === rowMaintenanceUnitCode
         )
       : undefined
 
-    const newMaintenanceUnitRecord = targetMaintenanceUnit
+    if (rowMaintenanceUnitCode && !selectedMaintenanceUnit) {
+      logger.warn(
+        {
+          rowMaintenanceUnitCode,
+          rentalPropertyId: rentalPropertyInfo.id,
+          availableMaintenanceUnitCodes:
+            rentalPropertyInfo.maintenanceUnits?.map((mu) => mu.code) ?? [],
+        },
+        'createWorkOrder: maintenance unit code provided but not found on rental property'
+      )
+    }
+
+    const newMaintenanceUnitRecord = selectedMaintenanceUnit
       ? await createMaintenanceUnitRecord(
-          targetMaintenanceUnit,
+          selectedMaintenanceUnit,
           details.Rows[0]
         )
       : undefined
