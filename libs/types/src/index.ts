@@ -28,5 +28,11 @@ export {
   LeaseChangeSchema,
   type LeaseChange,
 } from './schemas/v1/lease-sync'
+export {
+  RelatedContactSchema,
+  RelatedContactRoleSchema,
+  type RelatedContact,
+  type RelatedContactRole,
+} from './schemas/v1/related-contact'
 export { paginatedResponseSchema } from './schemas/pagination'
 export * as fileStorageSchemas from './schemas/file-storage'
