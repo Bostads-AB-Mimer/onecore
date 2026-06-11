@@ -58,6 +58,7 @@ describe('/contacts/:contactCode', () => {
           fullName: 'Fiktivsson Exempel',
           nationalId: null,
         },
+        relatedContacts: [],
         communication: {
           emailAddresses: [],
           phoneNumbers: [

@@ -19,6 +19,12 @@ import {
 import { contactsByCodesQuery, ContactIncludeOptions } from './batch-query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
+import {
+  guardianRelations,
+  wardRelations,
+  relatedContactsFor,
+  relatedContactsForMany,
+} from './guardian-query'
 
 /**
  * Creates a ContactsRepository that interacts with the Xpand database,
@@ -77,7 +83,17 @@ export const xpandContactsRepository = (
         .hasContactCode(contactCode)
         .getOne(db.get())
 
-      return transformDbContactRows(dbContactRows)[0]
+      const contact = transformDbContactRows(dbContactRows)[0]
+      if (!contact) return null
+      // Only individuals participate in guardianship relations; skip the two
+      // extra queries for organisations (relatedContacts already defaults to []).
+      if (contact.type === 'individual') {
+        contact.relatedContacts = await relatedContactsFor(
+          db.get(),
+          contact.contactCode
+        )
+      }
+      return contact
     },
 
     /**
@@ -92,7 +108,35 @@ export const xpandContactsRepository = (
       if (contactCodes.length === 0) return []
 
       const rows = await contactsByCodesQuery(db.get(), contactCodes, options)
-      return transformDbContactRows(rows)
+      const contacts = transformDbContactRows(rows)
+
+      if (options?.includeRelations) {
+        const byCode = await relatedContactsForMany(
+          db.get(),
+          contacts.map((c) => c.contactCode)
+        )
+        for (const c of contacts) {
+          c.relatedContacts = byCode.get(c.contactCode) ?? []
+        }
+      }
+
+      return contacts
+    },
+
+    getGuardians: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianRelations(
+        db.get(),
+        contactCode
+      )
+      return subjectExists ? related : null
+    },
+
+    getGuardianWards: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await wardRelations(
+        db.get(),
+        contactCode
+      )
+      return subjectExists ? related : null
     },
 
     /**
@@ -107,7 +151,17 @@ export const xpandContactsRepository = (
         .hasNationalId(nid.replaceAll(/[^0-9]/g, ''))
         .getOne(db.get())
 
-      return transformDbContactRows(dbContactRows)[0]
+      const contact = transformDbContactRows(dbContactRows)[0]
+      if (!contact) return null
+      // Only individuals participate in guardianship relations; skip the two
+      // extra queries for organisations (relatedContacts already defaults to []).
+      if (contact.type === 'individual') {
+        contact.relatedContacts = await relatedContactsFor(
+          db.get(),
+          contact.contactCode
+        )
+      }
+      return contact
     },
 
     /**
