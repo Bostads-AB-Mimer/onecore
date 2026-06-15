@@ -290,6 +290,55 @@ export interface paths {
       };
     };
   };
+  "/communication-log/customers/{kundId}/messages": {
+    /**
+     * Get the communication timeline for a customer
+     * @description Returns every message_recipient row owned by the given kundId, each paired with its parent dispatch. Newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Customer id (contactCode) */
+          kundId: string;
+        };
+      };
+      responses: {
+        /** @description Array of (dispatch + recipient) pairs, newest first */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/communication-log/dispatches/{id}": {
+    /** Get a dispatch and its recipients by dispatch id */
+    get: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Dispatch + recipients */
+        200: {
+          content: never;
+        };
+        /** @description Dispatch not found */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/getLinearTickets": {
     /**
      * Get Linear tickets with mimer-visible label

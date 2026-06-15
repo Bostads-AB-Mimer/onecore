@@ -205,6 +205,84 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /communication-log/customers/{kundId}/messages:
+   *   get:
+   *     summary: Get the communication timeline for a customer
+   *     description: Returns every message_recipient row owned by the given kundId, each paired with its parent dispatch. Newest first.
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: kundId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Customer id (contactCode)
+   *     responses:
+   *       '200':
+   *         description: Array of (dispatch + recipient) pairs, newest first
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/communication-log/customers/:kundId/messages',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await communicationAdapter.getCustomerMessages(
+        ctx.params.kundId
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /communication-log/dispatches/{id}:
+   *   get:
+   *     summary: Get a dispatch and its recipients by dispatch id
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Dispatch id (UUID)
+   *     responses:
+   *       '200':
+   *         description: Dispatch + recipients
+   *       '404':
+   *         description: Dispatch not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/communication-log/dispatches/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.getDispatchById(ctx.params.id)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /getLinearTickets:
    *   get:
    *     summary: Get Linear tickets with mimer-visible label
