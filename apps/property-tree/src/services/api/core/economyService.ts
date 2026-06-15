@@ -85,6 +85,7 @@ async function getAutogiroConsent(
 
   // Type assertion needed because generated types are incomplete
   const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
 
   return response.content as AutogiroConsent
 }
