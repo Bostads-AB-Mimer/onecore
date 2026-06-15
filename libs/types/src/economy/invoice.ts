@@ -1,6 +1,29 @@
 import z from 'zod'
 
+import { PaymentStatus } from '../enums'
+
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
+
+export const DeferralErrorCodes = [
+  'invoice-not-found',
+  'invoice-not-eligible',
+  'xledger-failed',
+  'tenfast-failed',
+] as const
+
+export type DeferralErrorCode = (typeof DeferralErrorCodes)[number]
+
+export function isInvoiceEligibleForDeferral(invoice: {
+  source: 'legacy' | 'next'
+  paymentStatus: PaymentStatus
+  credit: { originalInvoiceId: string } | null
+}): boolean {
+  return (
+    invoice.source === 'next' &&
+    invoice.paymentStatus !== PaymentStatus.Paid &&
+    invoice.credit === null
+  )
+}
 
 export const XledgerDeferralRequestSchema = z.object({
   endDate: z.string().regex(isoDateRegex, 'endDate must be YYYY-MM-DD'),
@@ -16,6 +39,9 @@ export const TenfastGracePeriodRequestSchema = z.object({
   madeByEmail: z.string().email(),
   reason: z.string().min(1, 'reason is required'),
 })
+
+/** Request body for economy's internal deferral use-case. */
+export const EconomyDeferralRequestSchema = TenfastGracePeriodRequestSchema
 
 export const GetInvoicesByContactCodeQueryParams = z
   .object({ from: z.coerce.date().optional() })

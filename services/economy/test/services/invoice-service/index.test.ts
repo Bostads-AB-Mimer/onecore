@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
+import * as invoiceService from '@src/services/invoice-service/service'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
@@ -228,42 +229,7 @@ describe('Invoice Service', () => {
     })
   })
 
-  describe('PUT /invoices/:invoiceNumber/xledger-deferral', () => {
-    it('returns 400 when endDate is missing', async () => {
-      const res = await request(app.callback())
-        .put('/invoices/55123456/xledger-deferral')
-        .send({})
-
-      expect(res.status).toBe(400)
-    })
-
-    it('returns 200 and calls updateInvoiceDeferralDate with correct args', async () => {
-      const spy = jest
-        .spyOn(xledgerAdapter, 'updateInvoiceDeferralDate')
-        .mockResolvedValueOnce(undefined)
-
-      const res = await request(app.callback())
-        .put('/invoices/55123456/xledger-deferral')
-        .send({ endDate: '2026-06-30' })
-
-      expect(res.status).toBe(200)
-      expect(spy).toHaveBeenCalledWith('55123456', new Date('2026-06-30'))
-    })
-
-    it('returns 500 when updateInvoiceDeferralDate throws', async () => {
-      jest
-        .spyOn(xledgerAdapter, 'updateInvoiceDeferralDate')
-        .mockRejectedValueOnce(new Error('Xledger error'))
-
-      const res = await request(app.callback())
-        .put('/invoices/55123456/xledger-deferral')
-        .send({ endDate: '2026-06-30' })
-
-      expect(res.status).toBe(500)
-    })
-  })
-
-  describe('PUT /invoices/:invoiceNumber/tenfast-grace-period', () => {
+  describe('PUT /invoices/:invoiceNumber/deferral', () => {
     const validBody = {
       endDate: '2026-06-30',
       madeByEmail: 'admin@mimer.nu',
@@ -272,35 +238,19 @@ describe('Invoice Service', () => {
 
     it('returns 400 when endDate is missing', async () => {
       const res = await request(app.callback())
-        .put('/invoices/55123456/tenfast-grace-period')
-        .send({ madeByEmail: 'admin@mimer.nu' })
+        .put('/invoices/55123456/deferral')
+        .send({ madeByEmail: 'admin@mimer.nu', reason: 'test' })
 
       expect(res.status).toBe(400)
     })
 
-    it('returns 400 when madeByEmail is missing', async () => {
-      const res = await request(app.callback())
-        .put('/invoices/55123456/tenfast-grace-period')
-        .send({ endDate: '2026-06-30' })
-
-      expect(res.status).toBe(400)
-    })
-
-    it('returns 400 when reason is missing', async () => {
-      const res = await request(app.callback())
-        .put('/invoices/55123456/tenfast-grace-period')
-        .send({ endDate: '2026-06-30', madeByEmail: 'admin@mimer.nu' })
-
-      expect(res.status).toBe(400)
-    })
-
-    it('returns 200 and calls setGracePeriod with correct args', async () => {
+    it('returns 200 and calls deferInvoice with correct args', async () => {
       const spy = jest
-        .spyOn(tenfastAdapter, 'setGracePeriod')
-        .mockResolvedValueOnce({ ok: true, data: null })
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: true })
 
       const res = await request(app.callback())
-        .put('/invoices/55123456/tenfast-grace-period')
+        .put('/invoices/55123456/deferral')
         .send(validBody)
 
       expect(res.status).toBe(200)
@@ -312,28 +262,56 @@ describe('Invoice Service', () => {
       })
     })
 
-    it('returns 404 when invoice not found in Tenfast', async () => {
+    it('returns 422 with invoice-not-eligible when deferral is rejected', async () => {
       jest
-        .spyOn(tenfastAdapter, 'setGracePeriod')
-        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'invoice-not-eligible' })
 
       const res = await request(app.callback())
-        .put('/invoices/55123456/tenfast-grace-period')
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(422)
+      expect(res.body.code).toBe('invoice-not-eligible')
+    })
+
+    it('returns 404 with invoice-not-found when invoice is missing', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'invoice-not-found' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
         .send(validBody)
 
       expect(res.status).toBe(404)
+      expect(res.body.code).toBe('invoice-not-found')
     })
 
-    it('returns 500 on unknown Tenfast error', async () => {
+    it('returns 500 with tenfast-failed when Tenfast update fails', async () => {
       jest
-        .spyOn(tenfastAdapter, 'setGracePeriod')
-        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'tenfast-failed' })
 
       const res = await request(app.callback())
-        .put('/invoices/55123456/tenfast-grace-period')
+        .put('/invoices/55123456/deferral')
         .send(validBody)
 
       expect(res.status).toBe(500)
+      expect(res.body.code).toBe('tenfast-failed')
+    })
+
+    it('returns 500 with xledger-failed when Xledger update fails', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'xledger-failed' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.code).toBe('xledger-failed')
     })
   })
 

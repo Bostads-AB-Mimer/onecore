@@ -195,7 +195,7 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Economy service
    *     summary: Set a grace period (anstånd) on an invoice
-   *     description: Registers the grace period in Tenfast first, then updates the due date in Xledger via updateArTransactions. If either call fails a notification email is sent to the economy team.
+   *     description: Delegates deferral to the economy service (eligibility check, Tenfast grace period, then Xledger due date). Sends a notification email to the economy team if Tenfast or Xledger fails.
    *     parameters:
    *       - in: path
    *         name: invoiceId
@@ -235,6 +235,17 @@ export const routes = (router: KoaRouter) => {
    *                       type: boolean
    *       '400':
    *         description: Invalid request body
+   *       '422':
+   *         description: Invoice not eligible for deferral
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [code]
+   *               properties:
+   *                 code:
+   *                   type: string
+   *                   enum: [invoice-not-eligible]
    *       '404':
    *         description: Invoice not found
    *         content:
@@ -275,73 +286,59 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const tenfastResult = await economyAdapter.setTenfastGracePeriod({
+      const deferralResult = await economyAdapter.deferInvoice({
         invoiceId,
         endDate,
         madeByEmail,
         reason,
       })
 
-      if (!tenfastResult.ok) {
-        if (tenfastResult.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { code: 'invoice-not-found' }
+      if (!deferralResult.ok) {
+        if (
+          deferralResult.err === 'invoice-not-found' ||
+          deferralResult.err === 'invoice-not-eligible'
+        ) {
+          ctx.status = deferralResult.statusCode ?? 400
+          ctx.body = { code: deferralResult.err }
           return
         }
 
-        try {
-          await communicationAdapter.sendEmail({
-            to: config.emailAddresses.economy,
-            subject: 'Fel: anstånd kunde inte registreras i Tenfast',
-            body: [
-              `Anstånd på faktura ${invoiceId} misslyckades i: Tenfast.`,
-              '',
-              `Nytt förfallodatum: ${endDate}`,
-              `Begärt av: ${madeByEmail}`,
-              reason ? `Anledning: ${reason}` : '',
-              '',
-              'Åtgärd krävs: registrera anståndet manuellt.',
-            ]
-              .filter(Boolean)
-              .join('\n'),
-          })
-        } catch (emailErr) {
-          logger.error(emailErr, 'Failed to send deferral failure notification')
+        if (
+          deferralResult.err === 'tenfast-failed' ||
+          deferralResult.err === 'xledger-failed'
+        ) {
+          const failedSystem =
+            deferralResult.err === 'tenfast-failed' ? 'Tenfast' : 'Xledger'
+
+          try {
+            await communicationAdapter.sendEmail({
+              to: config.emailAddresses.economy,
+              subject: `Fel: anstånd kunde inte registreras i ${failedSystem}`,
+              body: [
+                `Anstånd på faktura ${invoiceId} misslyckades i: ${failedSystem}.`,
+                '',
+                `Nytt förfallodatum: ${endDate}`,
+                `Begärt av: ${madeByEmail}`,
+                reason ? `Anledning: ${reason}` : '',
+                '',
+                'Åtgärd krävs: registrera anståndet manuellt.',
+              ]
+                .filter(Boolean)
+                .join('\n'),
+            })
+          } catch (emailErr) {
+            logger.error(
+              emailErr,
+              'Failed to send deferral failure notification'
+            )
+          }
+
+          ctx.status = 500
+          ctx.body = { code: deferralResult.err }
+          return
         }
 
         ctx.status = 500
-        ctx.body = { code: 'tenfast-failed' }
-        return
-      }
-
-      const xledgerResult = await economyAdapter.updateXledgerDeferralDate(
-        invoiceId,
-        endDate
-      )
-
-      if (!xledgerResult.ok) {
-        try {
-          await communicationAdapter.sendEmail({
-            to: config.emailAddresses.economy,
-            subject: 'Fel: anstånd kunde inte registreras i Xledger',
-            body: [
-              `Anstånd på faktura ${invoiceId} misslyckades i: Xledger.`,
-              '',
-              `Nytt förfallodatum: ${endDate}`,
-              `Begärt av: ${madeByEmail}`,
-              reason ? `Anledning: ${reason}` : '',
-              '',
-              'Åtgärd krävs: registrera anståndet manuellt.',
-            ]
-              .filter(Boolean)
-              .join('\n'),
-          })
-        } catch (emailErr) {
-          logger.error(emailErr, 'Failed to send deferral failure notification')
-        }
-
-        ctx.status = 500
-        ctx.body = { code: 'xledger-failed' }
         return
       }
 

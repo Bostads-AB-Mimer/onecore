@@ -8,7 +8,6 @@ import {
   TenfastTenant,
   TenfastInvoiceSchema,
   TenfastInvoice,
-  isVisibleTenfastInvoice,
   TenfastInvoiceRow,
   TenfastRentArticleSchema,
   TenfastRentArticle,
@@ -20,6 +19,7 @@ import {
   TenfastLeaseSearchResponseSchema,
   TenfastAutogiroConsentResponseSchema,
   TenfastAutogiroConsent,
+  isVisibleTenfastInvoice,
 } from './schemas'
 import {
   Contact,

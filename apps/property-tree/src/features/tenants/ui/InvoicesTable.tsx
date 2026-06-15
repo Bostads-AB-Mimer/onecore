@@ -80,6 +80,8 @@ type DeferralFormValues = z.infer<typeof deferralFormSchema>
 
 const deferralErrorMessages: Record<DeferralError['code'], string> = {
   'invoice-not-found': 'Fakturan hittades inte i Tenfast.',
+  'invoice-not-eligible':
+    'Fakturan kan inte beviljas anstånd i nuvarande status.',
   'xledger-failed':
     'Anståndet registrerades i Tenfast men misslyckades i Xledger. Ekonomiteamet har notifierats.',
   'tenfast-failed':
@@ -550,7 +552,7 @@ export const InvoicesTable = (props: Props) => {
   // Expanded content renderer
   const renderExpandedInvoiceContent = (invoice: Invoice) => {
     const canGrantDeferral =
-      props.contactCode &&
+      !!props.contactCode &&
       invoice.source === 'next' &&
       invoice.paymentStatus !== PaymentStatus.Paid &&
       !invoice.credit

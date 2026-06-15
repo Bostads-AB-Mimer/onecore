@@ -39,65 +39,7 @@ describe('economy-adapter', () => {
     })
   })
 
-  describe(economyAdapter.updateXledgerDeferralDate, () => {
-    const invoiceId = '55123456'
-    const endDate = '2026-06-30'
-
-    it('returns ok when economy service responds 200', async () => {
-      nock(config.economyService.url)
-        .put(`/invoices/${invoiceId}/xledger-deferral`)
-        .reply(200, { content: { ok: true } })
-
-      const result = await economyAdapter.updateXledgerDeferralDate(
-        invoiceId,
-        endDate
-      )
-
-      expect(result).toEqual({ ok: true, data: true })
-    })
-
-    it('sends endDate in the request body', async () => {
-      let receivedBody: any
-      nock(config.economyService.url)
-        .put(`/invoices/${invoiceId}/xledger-deferral`, (body) => {
-          receivedBody = body
-          return true
-        })
-        .reply(200, { content: { ok: true } })
-
-      await economyAdapter.updateXledgerDeferralDate(invoiceId, endDate)
-
-      expect(receivedBody).toMatchObject({ endDate })
-    })
-
-    it('returns unknown when economy service responds with error', async () => {
-      nock(config.economyService.url)
-        .put(`/invoices/${invoiceId}/xledger-deferral`)
-        .reply(500)
-
-      const result = await economyAdapter.updateXledgerDeferralDate(
-        invoiceId,
-        endDate
-      )
-
-      expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
-    })
-
-    it('returns unknown on network error', async () => {
-      nock(config.economyService.url)
-        .put(`/invoices/${invoiceId}/xledger-deferral`)
-        .replyWithError('Network error')
-
-      const result = await economyAdapter.updateXledgerDeferralDate(
-        invoiceId,
-        endDate
-      )
-
-      expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
-    })
-  })
-
-  describe(economyAdapter.setTenfastGracePeriod, () => {
+  describe(economyAdapter.deferInvoice, () => {
     const params = {
       invoiceId: '55123456',
       endDate: '2026-06-30',
@@ -107,10 +49,10 @@ describe('economy-adapter', () => {
 
     it('returns ok when economy service responds 200', async () => {
       nock(config.economyService.url)
-        .put(`/invoices/${params.invoiceId}/tenfast-grace-period`)
+        .put(`/invoices/${params.invoiceId}/deferral`)
         .reply(200, { content: { ok: true } })
 
-      const result = await economyAdapter.setTenfastGracePeriod(params)
+      const result = await economyAdapter.deferInvoice(params)
 
       expect(result).toEqual({ ok: true, data: true })
     })
@@ -118,13 +60,13 @@ describe('economy-adapter', () => {
     it('sends endDate, madeByEmail and reason in the request body', async () => {
       let receivedBody: any
       nock(config.economyService.url)
-        .put(`/invoices/${params.invoiceId}/tenfast-grace-period`, (body) => {
+        .put(`/invoices/${params.invoiceId}/deferral`, (body) => {
           receivedBody = body
           return true
         })
         .reply(200, { content: { ok: true } })
 
-      await economyAdapter.setTenfastGracePeriod(params)
+      await economyAdapter.deferInvoice(params)
 
       expect(receivedBody).toMatchObject({
         endDate: params.endDate,
@@ -133,32 +75,54 @@ describe('economy-adapter', () => {
       })
     })
 
-    it('returns not-found when economy service responds 404', async () => {
+    it('returns invoice-not-found when economy service responds 404', async () => {
       nock(config.economyService.url)
-        .put(`/invoices/${params.invoiceId}/tenfast-grace-period`)
-        .reply(404)
+        .put(`/invoices/${params.invoiceId}/deferral`)
+        .reply(404, { code: 'invoice-not-found' })
 
-      const result = await economyAdapter.setTenfastGracePeriod(params)
+      const result = await economyAdapter.deferInvoice(params)
 
-      expect(result).toEqual({ ok: false, err: 'not-found', statusCode: 404 })
+      expect(result).toEqual({
+        ok: false,
+        err: 'invoice-not-found',
+        statusCode: 404,
+      })
     })
 
-    it('returns unknown when economy service responds with other error', async () => {
+    it('returns invoice-not-eligible when economy service responds 422', async () => {
       nock(config.economyService.url)
-        .put(`/invoices/${params.invoiceId}/tenfast-grace-period`)
-        .reply(500)
+        .put(`/invoices/${params.invoiceId}/deferral`)
+        .reply(422, { code: 'invoice-not-eligible' })
 
-      const result = await economyAdapter.setTenfastGracePeriod(params)
+      const result = await economyAdapter.deferInvoice(params)
 
-      expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
+      expect(result).toEqual({
+        ok: false,
+        err: 'invoice-not-eligible',
+        statusCode: 422,
+      })
+    })
+
+    it('returns tenfast-failed when economy service responds 500 with that code', async () => {
+      nock(config.economyService.url)
+        .put(`/invoices/${params.invoiceId}/deferral`)
+        .reply(500, { code: 'tenfast-failed' })
+
+      const result = await economyAdapter.deferInvoice(params)
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'tenfast-failed',
+        statusCode: 500,
+      })
     })
 
     it('returns unknown on network error', async () => {
       nock(config.economyService.url)
-        .put(`/invoices/${params.invoiceId}/tenfast-grace-period`)
+        .put(`/invoices/${params.invoiceId}/deferral`)
         .replyWithError('Network error')
 
-      const result = await economyAdapter.setTenfastGracePeriod(params)
+      const result = await economyAdapter.deferInvoice(params)
 
       expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
     })

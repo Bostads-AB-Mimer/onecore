@@ -11,7 +11,6 @@ import {
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   submitMiscellaneousInvoice,
-  updateInvoiceDeferralDate,
 } from '../common/adapters/xledger-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
@@ -22,11 +21,10 @@ import {
   stralforsPostChannelLookup,
   getAutogiroConsent,
 } from './service'
-import { getInvoiceDetails } from './service'
+import * as invoiceService from './service'
 import {
   getInvoiceByOcr,
   getInvoicePdf,
-  setGracePeriod,
 } from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
@@ -95,7 +93,9 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const result = await getInvoiceDetails(ctx.params.invoiceNumber)
+      const result = await invoiceService.getInvoiceDetails(
+        ctx.params.invoiceNumber
+      )
       if (!result) {
         ctx.status = 404
         return
@@ -215,73 +215,42 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.put('(.*)/invoices/:invoiceNumber/xledger-deferral', async (ctx) => {
+  router.put('(.*)/invoices/:invoiceNumber/deferral', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const body = economy.XledgerDeferralRequestSchema.safeParse(
+    const body = economy.TenfastGracePeriodRequestSchema.safeParse(
       ctx.request.body
     )
 
     if (!body.success) {
       ctx.status = 400
-      ctx.body = { message: body.error.issues[0]?.message ?? 'Invalid request' }
+      ctx.body = {
+        message: body.error.issues[0]?.message ?? 'Invalid request',
+      }
       return
     }
 
-    try {
-      await updateInvoiceDeferralDate(
-        ctx.params.invoiceNumber,
-        new Date(body.data.endDate)
-      )
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
-    } catch (error: any) {
-      logger.error(
-        { error, invoiceNumber: ctx.params.invoiceNumber },
-        'Error updating invoice deferral date in Xledger'
-      )
-      ctx.status = 500
-      ctx.body = { message: error.message }
+    const result = await invoiceService.deferInvoice({
+      invoiceOcr: ctx.params.invoiceNumber,
+      endDate: body.data.endDate,
+      madeByEmail: body.data.madeByEmail,
+      reason: body.data.reason,
+    })
+
+    if (!result.ok) {
+      if (result.err === 'invoice-not-found') {
+        ctx.status = 404
+      } else if (result.err === 'invoice-not-eligible') {
+        ctx.status = 422
+      } else {
+        ctx.status = 500
+      }
+      ctx.body = { code: result.err }
+      return
     }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
   })
-
-  router.put(
-    '(.*)/invoices/:invoiceNumber/tenfast-grace-period',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const body = economy.TenfastGracePeriodRequestSchema.safeParse(
-        ctx.request.body
-      )
-
-      if (!body.success) {
-        ctx.status = 400
-        ctx.body = {
-          message: body.error.issues[0]?.message ?? 'Invalid request',
-        }
-        return
-      }
-
-      const result = await setGracePeriod({
-        invoiceOcr: ctx.params.invoiceNumber,
-        endDate: body.data.endDate,
-        madeByEmail: body.data.madeByEmail,
-        reason: body.data.reason,
-      })
-
-      if (!result.ok) {
-        ctx.status = result.err === 'not-found' ? 404 : 500
-        ctx.body = {
-          message:
-            result.err === 'not-found'
-              ? 'Invoice not found in Tenfast'
-              : 'Failed to set grace period in Tenfast',
-        }
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
-    }
-  )
 
   router.post('(.*)/rent-invoice-rows/batch', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

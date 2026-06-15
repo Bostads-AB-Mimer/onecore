@@ -261,62 +261,45 @@ export async function getRentInvoiceRows(
   }
 }
 
-export async function updateXledgerDeferralDate(
-  invoiceId: string,
-  endDate: string
-): Promise<AdapterResult<boolean, 'unknown'>> {
-  try {
-    const response = await axios.put(
-      `${config.economyService.url}/invoices/${invoiceId}/xledger-deferral`,
-      { endDate }
-    )
-
-    if (response.status === 200) {
-      return { ok: true, data: true }
-    }
-
-    logger.error(response.data, 'economy-adapter.updateXledgerDeferralDate')
-    return { ok: false, err: 'unknown', statusCode: response.status }
-  } catch (err: unknown) {
-    const statusCode =
-      axios.isAxiosError(err) && err.response?.status
-        ? err.response.status
-        : 500
-    logger.error(err, 'economy-adapter.updateXledgerDeferralDate')
-    return { ok: false, err: 'unknown', statusCode }
-  }
-}
-
-export async function setTenfastGracePeriod(params: {
+export async function deferInvoice(params: {
   invoiceId: string
   endDate: string
   madeByEmail: string
   reason: string
-}): Promise<AdapterResult<boolean, 'not-found' | 'unknown'>> {
+}): Promise<AdapterResult<true, economy.DeferralErrorCode | 'unknown'>> {
   try {
     const response = await axios.put(
-      `${config.economyService.url}/invoices/${params.invoiceId}/tenfast-grace-period`,
+      `${config.economyService.url}/invoices/${params.invoiceId}/deferral`,
       {
         endDate: params.endDate,
         madeByEmail: params.madeByEmail,
         reason: params.reason,
-      }
+      },
+      { validateStatus: () => true }
     )
 
     if (response.status === 200) {
       return { ok: true, data: true }
     }
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
+
+    const code = response.data?.code as economy.DeferralErrorCode | undefined
+    if (response.status === 404 && code === 'invoice-not-found') {
+      return { ok: false, err: 'invoice-not-found', statusCode: 404 }
+    }
+    if (response.status === 422 && code === 'invoice-not-eligible') {
+      return { ok: false, err: 'invoice-not-eligible', statusCode: 422 }
+    }
+    if (response.status === 500 && code === 'tenfast-failed') {
+      return { ok: false, err: 'tenfast-failed', statusCode: 500 }
+    }
+    if (response.status === 500 && code === 'xledger-failed') {
+      return { ok: false, err: 'xledger-failed', statusCode: 500 }
     }
 
-    logger.error(response.data, 'economy-adapter.setTenfastGracePeriod')
+    logger.error(response.data, 'economy-adapter.deferInvoice')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: unknown) {
-    if (axios.isAxiosError(err) && err.response?.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
-    }
-    logger.error(err, 'economy-adapter.setTenfastGracePeriod')
+    logger.error(err, 'economy-adapter.deferInvoice')
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
