@@ -15,9 +15,8 @@ import { logOutboundDispatch } from '../../communication-log-service/adapters/db
 // SMS sender used for fromAddress when logging outbound SMS dispatches.
 // Mirrors the constant in sms-adapter.ts (kept private there).
 const SMS_SENDER = 'Mimer'
-// SMS currently runs through Tele2's Infobip instance; the platform is still
-// Infobip for log purposes.
-const SMS_PROVIDER = 'infobip'
+// SMS runs through Tele2's procurement (same Infobip platform, but billed/auth'd via Tele2).
+const SMS_PROVIDER = 'tele2'
 
 export const MAX_BULK_SMS_RECIPIENTS = 15000
 
