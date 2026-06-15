@@ -5,6 +5,7 @@ import {
   Clock,
   Filter,
   Inbox,
+  Info,
   Mail,
   MessageSquare,
   Search,
@@ -225,6 +226,12 @@ export function TenantCommunicationTabContent({
       error={error as Error | null}
       errorMessage="Kunde inte ladda kommunikationsloggen"
     >
+      <p className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+        <Info className="h-4 w-4 shrink-0" />
+        För tillfället syns endast meddelanden skickade från ONECore i
+        kommunikationsloggen.
+      </p>
+
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="flex flex-col sm:flex-row gap-4">
