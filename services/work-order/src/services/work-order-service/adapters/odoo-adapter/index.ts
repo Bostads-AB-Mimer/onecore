@@ -121,9 +121,9 @@ export const getWorkOrdersByResidenceId = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByResidenceId')
+    throw err
   }
 }
 
@@ -153,9 +153,9 @@ export const getWorkOrdersByContactCode = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByContactCode')
+    throw err
   }
 }
 
@@ -193,9 +193,9 @@ export const getWorkOrdersByPropertyId = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByPropertyId')
+    throw err
   }
 }
 
@@ -233,9 +233,9 @@ export const getWorkOrdersByBuildingId = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByBuildingId')
+    throw err
   }
 }
 
@@ -268,9 +268,9 @@ export const getWorkOrdersByMaintenanceUnitCode = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByMaintenanceUnitCode')
+    throw err
   }
 }
 
@@ -325,9 +325,9 @@ export const createWorkOrder = async (
     )
 
     return { ok: true, data: newWorkOrderId }
-  } catch (error) {
-    console.error('Error creating work order:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createWorkOrder')
+    throw err
   }
 }
 
@@ -351,9 +351,9 @@ const createRentalPropertyRecord = async (
       building_code: apartmentProperty.buildingCode,
       building: apartmentProperty.building,
     })
-  } catch (error) {
-    console.error('Error creating rental property record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createRentalPropertyRecord')
+    throw err
   }
 }
 
@@ -369,9 +369,9 @@ const createLeaseRecord = async (lease: Lease): Promise<number> => {
       contract_date: lease.contractDate || false,
       approval_date: lease.approvalDate || false,
     })
-  } catch (error) {
-    console.error('Error creating lease record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createLeaseRecord')
+    throw err
   }
 }
 
@@ -397,9 +397,9 @@ const createTenantRecord = async (
         (tenant.phoneNumbers ? tenant.phoneNumbers[0].phoneNumber : ''),
       is_tenant: true,
     })
-  } catch (error) {
-    console.error('Error creating tenant record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createTenantRecord')
+    throw err
   }
 }
 
@@ -417,9 +417,9 @@ const createMaintenanceUnitRecord = async (
       type: maintenanceUnit.type,
       code: code || maintenanceUnit.code,
     })
-  } catch (error) {
-    console.error('Error creating maintenance unit record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createMaintenanceUnitRecord')
+    throw err
   }
 }
 
@@ -516,9 +516,9 @@ const createWorkOrderRecord = async (
       ),
       creation_origin: 'mimer-nu',
     })
-  } catch (error) {
-    console.error('Error creating work order record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createWorkOrderRecord')
+    throw err
   }
 }
 
@@ -533,9 +533,9 @@ const getMaintenanceTeamId = async (teamName: string): Promise<number> => {
     }
 
     return team[0]
-  } catch (error) {
-    console.error('Error getting maintenance team id:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getMaintenanceTeamId')
+    throw err
   }
 }
 
@@ -563,9 +563,9 @@ const getMaintenanceRequestCategoryId = async (
       })
       return categories[0]
     }
-  } catch (error) {
-    console.error('Error getting maintenance request category id:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getMaintenanceRequestCategoryId')
+    throw err
   }
 }
 
@@ -591,9 +591,9 @@ export const closeWorkOrder = async (workOrderId: number): Promise<boolean> => {
     return await odoo.update('maintenance.request', workOrderId, {
       stage_id: doneMaintenanceStages[0].id,
     })
-  } catch (error) {
-    console.error('Error closing work order:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.closeWorkOrder')
+    throw err
   }
 }
 
@@ -612,9 +612,9 @@ export const addMessageToWorkOrder = async (
         body_is_html: true,
       },
     ])
-  } catch (error) {
-    console.error('Error adding message to work order:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.addMessageToWorkOrder')
+    throw err
   }
 }
 
