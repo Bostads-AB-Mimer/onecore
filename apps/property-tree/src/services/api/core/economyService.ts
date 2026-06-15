@@ -73,11 +73,10 @@ async function getAutogiroConsent(
   nationalRegistrationNumber: string
 ): Promise<AutogiroConsent> {
   const { data, error } = await GET(
-    // @ts-expect-error
-    `/autogiro-consent/${nationalRegistrationNumber}`,
+    '/autogiro-consent/{nationalRegistrationNumber}',
     {
       params: {
-        path: nationalRegistrationNumber,
+        path: { nationalRegistrationNumber },
       },
     }
   )
