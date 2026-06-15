@@ -40,7 +40,13 @@ import {
   updateInvoiceDeferralDate,
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
-import { Contact, economy, Invoice, InvoiceRow, PaymentStatus } from '@onecore/types'
+import {
+  Contact,
+  economy,
+  Invoice,
+  InvoiceRow,
+  PaymentStatus,
+} from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import {
   getInvoiceRows,
