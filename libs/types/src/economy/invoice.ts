@@ -1,7 +1,5 @@
 import z from 'zod'
 
-import { PaymentStatus } from '../enums'
-
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
 
 export const DeferralErrorCodes = [
@@ -13,16 +11,10 @@ export const DeferralErrorCodes = [
 
 export type DeferralErrorCode = (typeof DeferralErrorCodes)[number]
 
-export function isInvoiceEligibleForDeferral(invoice: {
-  source: 'legacy' | 'next'
-  paymentStatus: PaymentStatus
-  credit: { originalInvoiceId: string } | null
-}): boolean {
-  return (
-    invoice.source === 'next' &&
-    invoice.paymentStatus !== PaymentStatus.Paid &&
-    invoice.credit === null
-  )
+export function isDeferralErrorCode(
+  value: unknown
+): value is DeferralErrorCode {
+  return DeferralErrorCodes.some((code) => code === value)
 }
 
 export const XledgerDeferralRequestSchema = z.object({

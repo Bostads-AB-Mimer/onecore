@@ -282,18 +282,20 @@ export async function deferInvoice(params: {
       return { ok: true, data: true }
     }
 
-    const code = response.data?.code as economy.DeferralErrorCode | undefined
-    if (response.status === 404 && code === 'invoice-not-found') {
-      return { ok: false, err: 'invoice-not-found', statusCode: 404 }
-    }
-    if (response.status === 422 && code === 'invoice-not-eligible') {
-      return { ok: false, err: 'invoice-not-eligible', statusCode: 422 }
-    }
-    if (response.status === 500 && code === 'tenfast-failed') {
-      return { ok: false, err: 'tenfast-failed', statusCode: 500 }
-    }
-    if (response.status === 500 && code === 'xledger-failed') {
-      return { ok: false, err: 'xledger-failed', statusCode: 500 }
+    const code = response.data?.code
+    if (economy.isDeferralErrorCode(code)) {
+      if (response.status === 404 && code === 'invoice-not-found') {
+        return { ok: false, err: 'invoice-not-found', statusCode: 404 }
+      }
+      if (response.status === 422 && code === 'invoice-not-eligible') {
+        return { ok: false, err: 'invoice-not-eligible', statusCode: 422 }
+      }
+      if (response.status === 500 && code === 'tenfast-failed') {
+        return { ok: false, err: 'tenfast-failed', statusCode: 500 }
+      }
+      if (response.status === 500 && code === 'xledger-failed') {
+        return { ok: false, err: 'xledger-failed', statusCode: 500 }
+      }
     }
 
     logger.error(response.data, 'economy-adapter.deferInvoice')

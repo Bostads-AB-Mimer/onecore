@@ -40,7 +40,7 @@ import {
   updateInvoiceDeferralDate,
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
-import { Contact, economy, Invoice, InvoiceRow } from '@onecore/types'
+import { Contact, economy, Invoice, InvoiceRow, PaymentStatus } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import {
   getInvoiceRows,
@@ -953,6 +953,11 @@ export const getInvoicesByContactCode = async (
 
 type DeferInvoiceError = economy.DeferralErrorCode | 'unknown'
 
+const isInvoiceEligibleForDeferral = (invoice: Invoice): boolean =>
+  invoice.source === 'next' &&
+  invoice.paymentStatus !== PaymentStatus.Paid &&
+  invoice.credit === null
+
 const checkInvoiceDeferralEligibility = async (
   invoiceOcr: string
 ): Promise<
@@ -964,7 +969,7 @@ const checkInvoiceDeferralEligibility = async (
     return { ok: false, err: 'invoice-not-found' }
   }
 
-  if (!economy.isInvoiceEligibleForDeferral(xledgerInvoice)) {
+  if (!isInvoiceEligibleForDeferral(xledgerInvoice)) {
     return { ok: false, err: 'invoice-not-eligible' }
   }
 
