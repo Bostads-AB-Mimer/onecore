@@ -148,24 +148,29 @@ async function expandGroupTree(
   token: string
 ): Promise<string[]> {
   const visited = new Set<string>()
-  const queue: string[] = []
+  let frontier: string[] = []
 
   for (const id of rootGroupIds) {
     if (!visited.has(id)) {
       visited.add(id)
-      queue.push(id)
+      frontier.push(id)
     }
   }
 
-  while (queue.length > 0) {
-    const id = queue.shift() as string
-    const children = await fetchAllChildren(id, token)
-    for (const child of children) {
-      if (!visited.has(child.id)) {
-        visited.add(child.id)
-        queue.push(child.id)
+  while (frontier.length > 0) {
+    const childrenPerGroup = await Promise.all(
+      frontier.map((id) => fetchAllChildren(id, token))
+    )
+    const nextFrontier: string[] = []
+    for (const children of childrenPerGroup) {
+      for (const child of children) {
+        if (!visited.has(child.id)) {
+          visited.add(child.id)
+          nextFrontier.push(child.id)
+        }
       }
     }
+    frontier = nextFrontier
   }
 
   return Array.from(visited)
