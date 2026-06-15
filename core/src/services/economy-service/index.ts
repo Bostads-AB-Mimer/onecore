@@ -195,7 +195,7 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Economy service
    *     summary: Set a grace period (anstånd) on an invoice
-   *     description: Delegates deferral to the economy service (eligibility check, Tenfast grace period, then Xledger due date). Sends a notification email to the economy team if Tenfast or Xledger fails.
+   *     description: Grant an invoice deferral by setting a new due date and reason. Requires the invoice-deferral role.
    *     parameters:
    *       - in: path
    *         name: invoiceId
@@ -219,10 +219,10 @@ export const routes = (router: KoaRouter) => {
    *                 description: New due date (YYYY-MM-DD)
    *               reason:
    *                 type: string
-   *                 description: Reason for the deferral (required by Tenfast)
+   *                 description: Reason for the deferral
    *     responses:
    *       '200':
-   *         description: Deferral set successfully in both Xledger and Tenfast
+   *         description: Deferral registered successfully
    *         content:
    *           application/json:
    *             schema:
@@ -258,7 +258,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   enum: [invoice-not-found]
    *       '500':
-   *         description: One or both system calls failed
+   *         description: Deferral could not be completed
    *         content:
    *           application/json:
    *             schema:
