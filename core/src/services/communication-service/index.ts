@@ -110,7 +110,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const body = ctx.request.body as BulkSms
     const triggeredByUser =
-      ctx.state.user?.preferred_username ?? ctx.state.user?.name
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
 
     const result = await communicationAdapter.sendBulkSms({
       ...body,
@@ -192,7 +192,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const body = ctx.request.body as BulkEmail
     const triggeredByUser =
-      ctx.state.user?.preferred_username ?? ctx.state.user?.name
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
 
     const result = await communicationAdapter.sendBulkEmail({
       ...body,
