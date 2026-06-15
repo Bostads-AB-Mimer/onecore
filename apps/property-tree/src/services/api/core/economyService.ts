@@ -1,6 +1,5 @@
 import { Invoice, InvoicePaymentEvent, XledgerProject } from '@onecore/types'
 import {
-  AutogiroConsent,
   AutogiroConsentResponse,
   ChannelLookupResponse,
 } from '@onecore/types/src/economy'
