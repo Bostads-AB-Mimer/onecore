@@ -6991,7 +6991,7 @@ export interface paths {
             "application/json": {
               content: ({
                   /** @enum {string} */
-                  channel: "Kivra" | "Billo" | "eInvoiceB2C" | "eInvoiceB2B";
+                  channel: "Kivra" | "eInvoiceB2C";
                   matchedCandidates: string[] | null;
                   error: string | null;
                 })[];

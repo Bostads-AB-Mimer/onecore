@@ -532,9 +532,7 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                         enum:
    *                           - Kivra
-   *                           - Billo
    *                           - eInvoiceB2C
-   *                           - eInvoiceB2B
    *                       matchedCandidates:
    *                         type: array
    *                         items:
