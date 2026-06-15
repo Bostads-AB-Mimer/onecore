@@ -19,9 +19,4 @@ export const AutogiroConsentSchema = z.object({
   payerBankAccountNumber: z.string(),
 })
 
-export const AutogiroConsentResponseSchema = AutogiroConsentSchema.nullable()
-
 export type AutogiroConsent = z.infer<typeof AutogiroConsentSchema>
-export type AutogiroConsentResponse = z.infer<
-  typeof AutogiroConsentResponseSchema
->

@@ -1,6 +1,6 @@
 import { Invoice, InvoicePaymentEvent, XledgerProject } from '@onecore/types'
 import {
-  AutogiroConsentResponse,
+  AutogiroConsent,
   ChannelLookupResponse,
 } from '@onecore/types/src/economy'
 import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
@@ -71,7 +71,7 @@ async function getInvoiceChannels(
 
 async function getAutogiroConsent(
   nationalRegistrationNumber: string
-): Promise<AutogiroConsentResponse> {
+): Promise<AutogiroConsent> {
   const { data, error } = await GET(
     // @ts-expect-error
     `/autogiro-consent/${nationalRegistrationNumber}`,
@@ -87,7 +87,7 @@ async function getAutogiroConsent(
   // Type assertion needed because generated types are incomplete
   const response = data as any
 
-  return response.content as AutogiroConsentResponse
+  return response.content as AutogiroConsent
 }
 
 async function getMiscellaneousInvoiceDataForLease(
