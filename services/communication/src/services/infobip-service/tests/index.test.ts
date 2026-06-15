@@ -18,10 +18,19 @@ jest.mock('@onecore/utilities', () => {
       error: () => {
         return
       },
+      warn: () => {
+        return
+      },
     },
     generateRouteMetadata: jest.fn(() => ({})),
   }
 })
+
+// Skip the real DB-backed logging adapter — these route tests assert HTTP
+// behavior, not persistence. The dedicated db-adapter tests cover that path.
+jest.mock('../../communication-log-service/adapters/db', () => ({
+  logOutboundDispatch: jest.fn().mockResolvedValue({ dispatchId: 'test-id' }),
+}))
 
 const app = new Koa()
 const router = new KoaRouter()

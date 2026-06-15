@@ -222,7 +222,7 @@ export const routes = (router: KoaRouter) => {
           recipients: validRecipients.map((r, i) => ({
             kundId: r.kundId,
             toAddress: r.normalizedPhone,
-            externalMessageId: sendResult.messages[i]?.messageId,
+            externalMessageId: sendResult.messages?.[i]?.messageId,
             status: 'pending',
           })),
         })
