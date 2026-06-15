@@ -409,16 +409,15 @@ export async function getAutogiroConsent(
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+
     logger.error(response.data, 'economy-adapter.getAutogiroConsent')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getAutogiroConsent')
-    if (err instanceof AxiosError) {
-      if (err.response?.status === 404) {
-        return { ok: false, err: 'not-found', statusCode: 404 }
-      }
-    }
-
     return { ok: false, err: 'unknown' }
   }
 }
