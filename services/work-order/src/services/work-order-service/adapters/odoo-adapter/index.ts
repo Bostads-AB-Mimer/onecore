@@ -45,6 +45,7 @@ const WORK_ORDER_FIELDS: string[] = [
   'space_code',
   'equipment_code',
   'estate_code',
+  'property_code', // Mirrors `estate_code` for property-level maintenance requests; both fields hold the same value
   'building_code',
   'rental_property_id',
   'create_date',
@@ -95,7 +96,11 @@ export const getWorkOrdersByResidenceId = async (
 
     const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
-      ['rental_property_id', '=', residenceId],
+      [
+        ['rental_property_id', '=', residenceId],
+        ['building_code', '=', false],
+        ['maintenance_unit_code', '=', false],
+      ],
       WORK_ORDER_FIELDS
     )
 
@@ -162,7 +167,12 @@ export const getWorkOrdersByPropertyId = async (
 
     const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
-      ['estate_code', '=', propertyId],
+      [
+        ['property_code', '=', propertyId],
+        ['rental_property_id', '=', false],
+        ['building_code', '=', false],
+        ['maintenance_unit_code', '=', false],
+      ],
       WORK_ORDER_FIELDS
     )
 
@@ -197,7 +207,12 @@ export const getWorkOrdersByBuildingId = async (
 
     const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
-      ['building_code', '=', buildingId],
+      [
+        ['building_code', '=', buildingId],
+        ['rental_property_id', '=', false],
+        ['maintenance_unit_code', '=', false],
+      ],
+
       WORK_ORDER_FIELDS
     )
 
