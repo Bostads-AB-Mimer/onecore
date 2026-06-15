@@ -13,5 +13,6 @@ export { getTenantRoles, isOrganization } from './lib/classification'
 // Hooks
 export { useTenant } from './hooks/useTenant'
 export { useTenantComments } from './hooks/useTenantComments'
+export { useTenantCommunication } from './hooks/useTenantCommunication'
 export { useTenantInvoices } from './hooks/useTenantInvoices'
 export { useTenantSearch } from './hooks/useTenantSearch'

@@ -3,12 +3,14 @@ import {
   FileText,
   Home,
   Key,
+  Mail,
   MessageSquare,
   Receipt,
   StickyNote,
 } from 'lucide-react'
 
 import {
+  TenantCommunicationTabContent,
   TenantKeyLoans,
   TenantLeasesTabContent,
   TenantLedgerTabContent,
@@ -89,6 +91,12 @@ export const TenantTabsMobile = ({
       icon: StickyNote,
       title: 'Noteringar',
       content: <TenantNotesTabContent contactCode={contactCode} />,
+    },
+    {
+      id: 'communication',
+      icon: Mail,
+      title: 'Kommunikationslogg',
+      content: <TenantCommunicationTabContent contactCode={contactCode} />,
     },
     {
       id: 'keys',

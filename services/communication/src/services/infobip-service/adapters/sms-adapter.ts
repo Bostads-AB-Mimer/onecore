@@ -1,7 +1,7 @@
 // fetch is stable in Node.js 20 LTS but eslint-plugin-n still flags it as experimental
 /* eslint-disable n/no-unsupported-features/node-builtins */
 import config from '../../../common/config'
-import { ParkingSpaceOfferSms, WorkOrderSms, BulkSms } from '@onecore/types'
+import { ParkingSpaceOfferSms, WorkOrderSms } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
 import he from 'he'
@@ -9,13 +9,28 @@ import he from 'he'
 // SMS sender ID registered with Infobip
 const SMS_SENDER = 'Mimer'
 
+// Response from POSTing to Infobip's /sms/3/messages (outbound SMS send).
+export type InfobipSendSmsResponse = {
+  messages: Array<{
+    to: string
+    messageId: string
+    status: {
+      groupId: number
+      groupName: string
+      id: number
+      name: string
+      description: string
+    }
+  }>
+}
+
 // SMS is sent via the Tele2 instance of the Infobip SMS platform.
 // Same /sms/3/messages contract as Infobip, but uses the separate
 // Tele2 procurement credentials (config.tele2). Email still uses config.infobip.
 const sendSmsV3 = async (
   destinations: { to: string }[],
   text: string
-): Promise<unknown> => {
+): Promise<InfobipSendSmsResponse> => {
   const baseUrl = config.tele2.baseUrl.replace(/\/$/, '') // Remove trailing slash
   const url = `${baseUrl}/sms/3/messages`
   const apiKey = config.tele2.apiKey
@@ -42,7 +57,7 @@ const sendSmsV3 = async (
     throw new Error(`Infobip SMS API error: ${response.status} - ${errorBody}`)
   }
 
-  return response.json()
+  return response.json() as Promise<InfobipSendSmsResponse>
 }
 
 export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
@@ -75,7 +90,10 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
   }
 }
 
-export const sendBulkSms = async (sms: BulkSms) => {
+export const sendBulkSms = async (sms: {
+  phoneNumbers: string[]
+  text: string
+}) => {
   logger.info(
     {
       recipientCount: sms.phoneNumbers.length,

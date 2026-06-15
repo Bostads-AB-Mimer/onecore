@@ -204,16 +204,24 @@ export interface paths {
   "/sendBulkSms": {
     /**
      * Send SMS to multiple contacts
-     * @description Send SMS messages to multiple phone numbers
+     * @description Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with kundId) for per-customer audit logging.
      */
     post: {
       requestBody: {
         content: {
           "application/json": {
-            /** @description Array of phone numbers */
-            phoneNumbers: string[];
-            /** @description SMS message content */
+            phoneNumbers?: string[];
+            recipients?: {
+                kundId?: string;
+                phoneNumber: string;
+              }[];
             text: string;
+            logMeta?: {
+              audienceCriteria?: {
+                [key: string]: unknown;
+              };
+              templateId?: string;
+            };
           };
         };
       };
@@ -240,18 +248,25 @@ export interface paths {
   "/sendBulkEmail": {
     /**
      * Send email to multiple contacts
-     * @description Send email messages to multiple email addresses
+     * @description Either `emails` or `recipients` is required. Pass `recipients` (with kundId) for per-customer audit logging.
      */
     post: {
       requestBody: {
         content: {
           "application/json": {
-            /** @description Array of email addresses */
-            emails: string[];
-            /** @description Email subject */
+            emails?: string[];
+            recipients?: {
+                kundId?: string;
+                emailAddress: string;
+              }[];
             subject: string;
-            /** @description Email message content */
             text: string;
+            logMeta?: {
+              audienceCriteria?: {
+                [key: string]: unknown;
+              };
+              templateId?: string;
+            };
           };
         };
       };
@@ -266,6 +281,55 @@ export interface paths {
         };
         /** @description Invalid request */
         400: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/communication-log/customers/{kundId}/messages": {
+    /**
+     * Get the communication timeline for a customer
+     * @description Returns every message_recipient row owned by the given kundId, each paired with its parent dispatch. Newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Customer id (contactCode) */
+          kundId: string;
+        };
+      };
+      responses: {
+        /** @description Array of (dispatch + recipient) pairs, newest first */
+        200: {
+          content: never;
+        };
+        /** @description Internal server error */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
+  "/communication-log/dispatches/{id}": {
+    /** Get a dispatch and its recipients by dispatch id */
+    get: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string;
+        };
+      };
+      responses: {
+        /** @description Dispatch + recipients */
+        200: {
+          content: never;
+        };
+        /** @description Dispatch not found */
+        404: {
           content: never;
         };
         /** @description Internal server error */
