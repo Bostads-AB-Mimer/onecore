@@ -8,7 +8,6 @@ export function useTenantAutogiroConsent(nationalRegistrationNumber: string) {
     queryFn: async () => {
       return await economyService.getAutogiroConsent(nationalRegistrationNumber)
     },
-    enabled: !!nationalRegistrationNumber,
   })
 
   const isLoading = autogiroConsentQuery.isLoading

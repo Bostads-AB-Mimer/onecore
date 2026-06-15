@@ -8,7 +8,6 @@ export function useTenantInvoiceChannels(nationalRegistrationNumber: string) {
     queryFn: async () => {
       return await economyService.getInvoiceChannels(nationalRegistrationNumber)
     },
-    enabled: !!nationalRegistrationNumber,
   })
 
   const isLoading = invoiceChannelsQuery.isLoading
