@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
-import { BulkSms, BulkEmail } from '@onecore/types'
+import { BulkSms, BulkEmail, communication } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { registerSchema } from '../../utils/openapi'
@@ -41,6 +41,11 @@ const BulkEmailResult = z.object({
 export const routes = (router: KoaRouter) => {
   registerSchema('BulkSmsResult', BulkSmsResult)
   registerSchema('BulkEmailResult', BulkEmailResult)
+  registerSchema('CustomerMessage', communication.CustomerMessageSchema)
+  registerSchema(
+    'DispatchWithRecipients',
+    communication.DispatchWithRecipientsSchema
+  )
 
   /**
    * @swagger
@@ -221,6 +226,15 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '200':
    *         description: Array of (dispatch + recipient) pairs, newest first
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/CustomerMessage'
    *       '500':
    *         description: Internal server error
    *     security:
@@ -261,6 +275,13 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '200':
    *         description: Dispatch + recipients
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DispatchWithRecipients'
    *       '404':
    *         description: Dispatch not found
    *       '500':

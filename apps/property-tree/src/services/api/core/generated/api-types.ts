@@ -305,7 +305,11 @@ export interface paths {
       responses: {
         /** @description Array of (dispatch + recipient) pairs, newest first */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: components["schemas"]["CustomerMessage"][];
+            };
+          };
         };
         /** @description Internal server error */
         500: {
@@ -326,7 +330,11 @@ export interface paths {
       responses: {
         /** @description Dispatch + recipients */
         200: {
-          content: never;
+          content: {
+            "application/json": {
+              content?: components["schemas"]["DispatchWithRecipients"];
+            };
+          };
         };
         /** @description Dispatch not found */
         404: {
@@ -13399,6 +13407,90 @@ export interface components {
       invalid: string[];
       totalSent: number;
       totalInvalid: number;
+    };
+    CustomerMessage: {
+      dispatch: {
+        /** Format: uuid */
+        id: string;
+        /** @enum {string} */
+        direction: "outbound" | "inbound";
+        /** @enum {string} */
+        channel: "sms" | "email";
+        fromAddress: string;
+        subject: string | null;
+        body: string;
+        messageType: string;
+        provider: string;
+        triggeredByUser: string | null;
+        /** Format: date-time */
+        triggeredAt: string;
+        recipientCount: number;
+        audienceCriteria: string | null;
+        /** Format: uuid */
+        inReplyToDispatchId: string | null;
+        /** Format: uuid */
+        templateId: string | null;
+        /** Format: date-time */
+        createdAt: string;
+      };
+      recipient: {
+        /** Format: uuid */
+        id: string;
+        /** Format: uuid */
+        dispatchId: string;
+        kundId: string | null;
+        toAddress: string;
+        /** @enum {string} */
+        status: "pending" | "sent" | "delivered" | "failed" | "bounced" | "received";
+        /** Format: date-time */
+        statusUpdatedAt: string;
+        externalMessageId: string | null;
+        error: string | null;
+        /** Format: date-time */
+        createdAt: string;
+      };
+    };
+    DispatchWithRecipients: {
+      dispatch: {
+        /** Format: uuid */
+        id: string;
+        /** @enum {string} */
+        direction: "outbound" | "inbound";
+        /** @enum {string} */
+        channel: "sms" | "email";
+        fromAddress: string;
+        subject: string | null;
+        body: string;
+        messageType: string;
+        provider: string;
+        triggeredByUser: string | null;
+        /** Format: date-time */
+        triggeredAt: string;
+        recipientCount: number;
+        audienceCriteria: string | null;
+        /** Format: uuid */
+        inReplyToDispatchId: string | null;
+        /** Format: uuid */
+        templateId: string | null;
+        /** Format: date-time */
+        createdAt: string;
+      };
+      recipients: ({
+          /** Format: uuid */
+          id: string;
+          /** Format: uuid */
+          dispatchId: string;
+          kundId: string | null;
+          toAddress: string;
+          /** @enum {string} */
+          status: "pending" | "sent" | "delivered" | "failed" | "bounced" | "received";
+          /** Format: date-time */
+          statusUpdatedAt: string;
+          externalMessageId: string | null;
+          error: string | null;
+          /** Format: date-time */
+          createdAt: string;
+        })[];
     };
     KeycloakUser: {
       id: string;
