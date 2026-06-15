@@ -1,48 +1,18 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { Invoice, InvoicePaymentEvent, PaymentStatus } from '@onecore/types'
-import { format, parseISO, startOfToday } from 'date-fns'
-import { sv } from 'date-fns/locale'
-import { CalendarIcon, FileText } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { FileText } from 'lucide-react'
 import { match, P } from 'ts-pattern'
-import { z } from 'zod'
 
-import { INVOICE_DEFERRAL_ROLE, RequireRole } from '@/entities/user'
-
-import { useToast } from '@/shared/hooks/useToast'
-import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
-import { Calendar } from '@/shared/ui/Calendar'
 import {
   CollapsibleTable,
   CollapsibleTableColumn,
 } from '@/shared/ui/CollapsibleTable'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/Dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/shared/ui/Form'
-import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
-import { Textarea } from '@/shared/ui/Textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
-import type { DeferralError } from '../hooks/useUpdateInvoiceDeferral'
-import { useUpdateInvoiceDeferral } from '../hooks/useUpdateInvoiceDeferral'
+import { InvoiceDeferralAction } from './InvoiceDeferralAction'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',
@@ -69,172 +39,6 @@ type Props = {
   onInvoiceRowClick: (invoiceId: string | null) => void
   expandedInvoiceId: string | null
   contactCode?: string
-}
-
-const deferralFormSchema = z.object({
-  endDate: z.date({ required_error: 'Välj ett förfallodatum' }),
-  reason: z.string().min(1, 'Ange en anledning'),
-})
-
-type DeferralFormValues = z.infer<typeof deferralFormSchema>
-
-const deferralErrorMessages: Record<DeferralError['code'], string> = {
-  'invoice-not-found': 'Fakturan hittades inte i Tenfast.',
-  'invoice-not-eligible':
-    'Fakturan kan inte beviljas anstånd i nuvarande status.',
-  'xledger-failed':
-    'Anståndet registrerades i Tenfast men misslyckades i Xledger. Ekonomiteamet har notifierats.',
-  'tenfast-failed':
-    'Anståndet kunde inte registreras i Tenfast. Ekonomiteamet har notifierats.',
-}
-
-const GrantDeferralDialog = ({
-  invoice,
-  contactCode,
-}: {
-  invoice: Invoice
-  contactCode: string
-}) => {
-  const [open, setOpen] = useState(false)
-  const { toast } = useToast()
-  const updateDeferral = useUpdateInvoiceDeferral()
-
-  const form = useForm<DeferralFormValues>({
-    resolver: zodResolver(deferralFormSchema),
-    defaultValues: { reason: '' },
-  })
-
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next)
-    if (!next) {
-      form.reset()
-      updateDeferral.reset()
-    }
-  }
-
-  const onSubmit = (values: DeferralFormValues) => {
-    updateDeferral.mutate(
-      {
-        invoiceId: invoice.invoiceId,
-        contactCode,
-        endDate: format(values.endDate, 'yyyy-MM-dd'),
-        reason: values.reason,
-      },
-      {
-        onSuccess: () => {
-          handleOpenChange(false)
-          toast({
-            title: 'Anstånd registrerat',
-            description:
-              'Förfallodatumet har uppdaterats i Tenfast och Xledger.',
-          })
-        },
-      }
-    )
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Bevilja anstånd
-        </Button>
-      </DialogTrigger>
-      <DialogContent onClick={(e) => e.stopPropagation()}>
-        <DialogHeader>
-          <DialogTitle>Bevilja anstånd</DialogTitle>
-          <DialogDescription>
-            Faktura {invoice.invoiceId} – ange nytt förfallodatum. Anståndet
-            registreras både i Tenfast och Xledger.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="grid gap-4 py-2"
-          >
-            <FormField
-              control={form.control}
-              name="endDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Nytt förfallodatum</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            'w-full justify-start text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value
-                            ? format(field.value, 'd MMMM yyyy', { locale: sv })
-                            : 'Välj datum'}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < startOfToday()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Anledning</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="T.ex. betalningsplan överenskommen med hyresgäst."
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {updateDeferral.error && (
-              <p className="text-sm text-destructive">
-                {deferralErrorMessages[updateDeferral.error.code] ??
-                  'Något gick fel.'}
-              </p>
-            )}
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleOpenChange(false)}
-                disabled={updateDeferral.isPending}
-              >
-                Avbryt
-              </Button>
-              <Button type="submit" disabled={updateDeferral.isPending}>
-                {updateDeferral.isPending ? 'Sparar...' : 'Spara'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  )
 }
 
 export const InvoicesTable = (props: Props) => {
@@ -551,12 +355,6 @@ export const InvoicesTable = (props: Props) => {
 
   // Expanded content renderer
   const renderExpandedInvoiceContent = (invoice: Invoice) => {
-    const canGrantDeferral =
-      !!props.contactCode &&
-      invoice.source === 'next' &&
-      invoice.paymentStatus !== PaymentStatus.Paid &&
-      !invoice.credit
-
     return (
       <>
         {invoice.description && (
@@ -587,15 +385,11 @@ export const InvoicesTable = (props: Props) => {
             </Button>
           </div>
         )}
-        {canGrantDeferral && (
-          <RequireRole roles={[INVOICE_DEFERRAL_ROLE]}>
-            <div className="mb-3">
-              <GrantDeferralDialog
-                invoice={invoice}
-                contactCode={props.contactCode!}
-              />
-            </div>
-          </RequireRole>
+        {props.contactCode && (
+          <InvoiceDeferralAction
+            invoice={invoice}
+            contactCode={props.contactCode}
+          />
         )}
         {invoice.invoiceRows.length > 0 && (
           <div className="bg-background rounded-lg p-3 shadow-sm mb-4">
