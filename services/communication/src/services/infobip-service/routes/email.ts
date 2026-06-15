@@ -431,11 +431,14 @@ export const routes = (router: KoaRouter) => {
           triggeredByUser: body.logMeta?.triggeredByUser,
           audienceCriteria: body.logMeta?.audienceCriteria,
           templateId: body.logMeta?.templateId,
+          // TODO: log-before-send. Today we log after Infobip's 200 ACK, so an API
+          // rejection leaves no audit row. Flip to: insert pending → call Infobip
+          // → update to failed if rejected. Webhook still handles delivered/failed.
           recipients: validRecipients.map((r, i) => ({
             kundId: r.kundId,
             toAddress: r.emailAddress,
             externalMessageId: sendResult.data.messages?.[i]?.messageId,
-            status: 'sent',
+            status: 'pending',
           })),
         })
 
