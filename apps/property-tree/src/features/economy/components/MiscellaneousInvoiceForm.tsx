@@ -314,11 +314,13 @@ export function MiscellaneousInvoiceForm() {
                     <SelectValue placeholder="Välj referens" />
                   </SelectTrigger>
                   <SelectContent>
-                    {contacts?.map((contact) => (
-                      <SelectItem key={contact.dbId} value={contact.dbId}>
-                        {contact.fullName}
-                      </SelectItem>
-                    ))}
+                    {contacts
+                      ?.sort((a, b) => a.fullName.localeCompare(b.fullName))
+                      .map((contact) => (
+                        <SelectItem key={contact.dbId} value={contact.dbId}>
+                          {contact.fullName}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               )}
