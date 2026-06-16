@@ -1089,6 +1089,7 @@ const getContacts = async (contactCodes: string[]) => {
             : row.emailAddress
           : 'redacted',
       isTenant: false,
+      protectedIdentity,
       specialAttention: !!row.specialAttention,
     }
   })
