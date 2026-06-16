@@ -125,6 +125,7 @@ const transformFromDbContact = (
     parkingSpaceWaitingList: getParkingSpaceWaitingList(rows),
     housingWaitingList: getHousingWaitingList(rows),
     storageWaitingList: getStorageWaitingList(rows),
+    protectedIdentity,
     specialAttention: !!row.specialAttention,
   }
 
