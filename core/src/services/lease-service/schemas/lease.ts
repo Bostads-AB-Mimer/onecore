@@ -44,6 +44,7 @@ export const Contact = z.object({
     .optional(),
   emailAddress: z.string().nullable().optional(),
   isTenant: z.boolean(),
+  protectedIdentity: z.boolean().optional(),
   specialAttention: z.boolean().optional(),
 })
 
@@ -154,6 +155,7 @@ export const Lease = z.object({
           .optional(),
         emailAddress: z.string().nullable().optional(),
         isTenant: z.boolean(),
+        protectedIdentity: z.boolean().optional(),
         specialAttention: z.boolean().optional(),
         // --- tenant-only additions (not part of Contact) ---
         parkingSpaceWaitingList: z
