@@ -139,6 +139,34 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "ward"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "type": {
                                 "type": "string",
                                 "enum": ["individual"]
@@ -311,6 +339,34 @@
                                     "city",
                                     "region",
                                     "country"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "ward"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -597,6 +653,34 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "ward"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "type": {
                                 "type": "string",
                                 "enum": ["individual"]
@@ -773,6 +857,34 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "ward"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "type": {
                                 "type": "string",
                                 "enum": ["organisation"]
@@ -841,7 +953,7 @@
     "/v1/contacts/batch": {
       "get": {
         "summary": "Batch lookup of contacts by contact code",
-        "description": "Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, or `includeAddress` to include those joins. Missing contact codes are simply absent from the response.",
+        "description": "Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, `includeAddress`, or `includeRelations` to include those joins. Missing contact codes are simply absent from the response.",
         "tags": ["Contacts"],
         "responses": {
           "200": {
@@ -973,6 +1085,34 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "ward"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "type": {
                                 "type": "string",
                                 "enum": ["individual"]
@@ -1149,6 +1289,34 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "ward"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "type": {
                                 "type": "string",
                                 "enum": ["organisation"]
@@ -1238,6 +1406,15 @@
           {
             "name": "includeAddress",
             "description": "Include addresses in the response.",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "includeRelations",
+            "description": "Include related contacts (guardians/wards) in the response.",
             "in": "query",
             "required": false,
             "schema": {
@@ -1376,6 +1553,26 @@
                                   "region",
                                   "country"
                                 ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
                                 "additionalProperties": false
                               }
                             },
@@ -1552,6 +1749,26 @@
                                   "region",
                                   "country"
                                 ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
                                 "additionalProperties": false
                               }
                             },
@@ -1751,6 +1968,26 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": ["individual"]
@@ -1924,6 +2161,26 @@
                                   "region",
                                   "country"
                                 ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
                                 "additionalProperties": false
                               }
                             },
@@ -2123,6 +2380,26 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": ["individual"]
@@ -2296,6 +2573,26 @@
                                   "region",
                                   "country"
                                 ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
                                 "additionalProperties": false
                               }
                             },
@@ -2495,6 +2792,26 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": ["individual"]
@@ -2668,6 +2985,26 @@
                                   "region",
                                   "country"
                                 ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
                                 "additionalProperties": false
                               }
                             },
@@ -2867,6 +3204,26 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": ["individual"]
@@ -3040,6 +3397,26 @@
                                   "region",
                                   "country"
                                 ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": ["trustee", "administrator", "ward"]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["contactCode", "role", "fullName"],
                                 "additionalProperties": false
                               }
                             },
@@ -3221,6 +3598,26 @@
                   "additionalProperties": false
                 }
               },
+              "relatedContacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "contactCode": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": ["trustee", "administrator", "ward"]
+                    },
+                    "fullName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["contactCode", "role", "fullName"],
+                  "additionalProperties": false
+                }
+              },
               "type": {
                 "type": "string",
                 "enum": ["individual"]
@@ -3386,6 +3783,26 @@
                     "region",
                     "country"
                   ],
+                  "additionalProperties": false
+                }
+              },
+              "relatedContacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "contactCode": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": ["trustee", "administrator", "ward"]
+                    },
+                    "fullName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["contactCode", "role", "fullName"],
                   "additionalProperties": false
                 }
               },
