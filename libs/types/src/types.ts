@@ -45,6 +45,7 @@ interface Contact {
   parkingSpaceWaitingList?: WaitingList
   housingWaitingList?: WaitingList
   storageWaitingList?: WaitingList
+  protectedIdentity?: boolean //cmctc.lagsokt — set when contact has skyddad identitet
   specialAttention?: boolean
 }
 
