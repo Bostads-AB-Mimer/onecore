@@ -217,7 +217,12 @@ VALUES
   -- BEGIN cmeml ROWS
   ('_0XG120TO7     ', 'mail           ', '_0J4157JJ1     ', 'o.kontaktbarsson@test.example.se                                ', 1, NULL, NULL, '_0XG120TO8'),
 
-  ('_0J415815F     ', 'mail           ', '_0J4158KK1     ', 'valle.von.testberg@test.se', 1, NULL, NULL, '14-06564  ')
+  ('_0J415815F     ', 'mail           ', '_0J4158KK1     ', 'valle.von.testberg@test.se', 1, NULL, NULL, '14-06564  '),
+
+  -- P000555 (object key _0J4157EE1) — has both a phone (above) and an email,
+  -- plus a förvaltare (P000444), so the by-phone-number and by-email-address
+  -- lookups can assert relatedContacts is surfaced.
+  ('_0J4157EE9     ', 'mail           ', '_0J4157EE1     ', 'fiktiv.personsson@test.example.se', 1, NULL, NULL, '_0J4157EE8')
   -- END cmeml ROWS
 ;
 

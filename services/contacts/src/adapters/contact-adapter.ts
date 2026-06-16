@@ -150,8 +150,13 @@ export interface ContactsRepository {
    * Retrieves full Contact objects for the given list of contact codes in a single batch.
    *
    * @param codes - The contact codes to fetch.
+   * @param options - When `includeRelations` is set, each contact is populated
+   *                  with its god man/förvaltare/ward relations.
    *
    * @returns A promise that resolves to an array of Contact objects.
    */
-  getByContactCodes: (codes: ContactCode[]) => Promise<Contact[]>
+  getByContactCodes: (
+    codes: ContactCode[],
+    options?: { includeRelations?: boolean }
+  ) => Promise<Contact[]>
 }

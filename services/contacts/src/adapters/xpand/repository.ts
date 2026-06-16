@@ -27,6 +27,25 @@ import {
 } from './guardian-query'
 
 /**
+ * Populates `relatedContacts` on a batch of contacts using a single grouped
+ * relation query (not N+1). Contacts with no relations get an empty array.
+ */
+const withRelatedContacts = async (
+  db: knex.Knex,
+  contacts: Contact[]
+): Promise<Contact[]> => {
+  if (contacts.length === 0) return contacts
+  const byCode = await relatedContactsForMany(
+    db,
+    contacts.map((c) => c.contactCode)
+  )
+  for (const c of contacts) {
+    c.relatedContacts = byCode.get(c.contactCode) ?? []
+  }
+  return contacts
+}
+
+/**
  * Creates a ContactsRepository that interacts with the Xpand database,
  * using the provided Knex database resource.
  *
@@ -106,17 +125,9 @@ export const xpandContactsRepository = (
       const rows = await contactsByCodesQuery(db.get(), contactCodes, options)
       const contacts = transformDbContactRows(rows)
 
-      if (options?.includeRelations) {
-        const byCode = await relatedContactsForMany(
-          db.get(),
-          contacts.map((c) => c.contactCode)
-        )
-        for (const c of contacts) {
-          c.relatedContacts = byCode.get(c.contactCode) ?? []
-        }
-      }
-
-      return contacts
+      return options?.includeRelations
+        ? withRelatedContacts(db.get(), contacts)
+        : contacts
     },
 
     getGuardians: async (contactCode: ContactCode) => {
@@ -181,7 +192,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return transformDbContactRows(rows)
+        return withRelatedContacts(db.get(), transformDbContactRows(rows))
       }
 
       return []
@@ -211,7 +222,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return transformDbContactRows(rows)
+        return withRelatedContacts(db.get(), transformDbContactRows(rows))
       }
 
       return []
@@ -223,12 +234,18 @@ export const xpandContactsRepository = (
      * @param codes - The contact codes to fetch.
      * @returns A promise that resolves to an array of Contact objects.
      */
-    getByContactCodes: async (codes: ContactCode[]): Promise<Contact[]> => {
+    getByContactCodes: async (
+      codes: ContactCode[],
+      options?: { includeRelations?: boolean }
+    ): Promise<Contact[]> => {
       if (codes.length === 0) return []
       const rows = await contactsQuery()
         .withContactCodeIn(codes)
         .getPage(db.get(), { page: 0, pageSize: codes.length })
-      return transformDbContactRows(rows)
+      const contacts = transformDbContactRows(rows)
+      return options?.includeRelations
+        ? withRelatedContacts(db.get(), contacts)
+        : contacts
     },
 
     /**

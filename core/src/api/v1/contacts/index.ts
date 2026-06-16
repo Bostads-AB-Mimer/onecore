@@ -186,9 +186,9 @@ export const routes = (router: OkapiRouter, config: Config) => {
       summary: 'Batch lookup of contacts by contact code',
       description:
         'Lean by default — returns base contact fields with empty phone/' +
-        'email/address arrays. Set `includePhone`, `includeEmail`, or ' +
-        '`includeAddress` to include those joins. Missing contact codes are ' +
-        'simply absent from the response.',
+        'email/address arrays. Set `includePhone`, `includeEmail`, ' +
+        '`includeAddress`, or `includeRelations` to include those joins. ' +
+        'Missing contact codes are simply absent from the response.',
       tags: ['Contacts'],
       query: {
         code: {
@@ -209,6 +209,11 @@ export const routes = (router: OkapiRouter, config: Config) => {
           description: 'Include addresses in the response.',
           schema: z.optional(z.boolean()),
         },
+        includeRelations: {
+          description:
+            'Include related contacts (guardians/wards) in the response.',
+          schema: z.optional(z.boolean()),
+        },
       },
       response: {
         200: GetContactsListResponseBodySchema,
@@ -216,12 +221,19 @@ export const routes = (router: OkapiRouter, config: Config) => {
       },
     },
     async (ctx) => {
-      const { code, includePhone, includeEmail, includeAddress } = ctx.query
+      const {
+        code,
+        includePhone,
+        includeEmail,
+        includeAddress,
+        includeRelations,
+      } = ctx.query
 
       const response = await contactsAdapter.getByContactCodeBatch(code, {
         includePhone,
         includeEmail,
         includeAddress,
+        includeRelations,
       })
 
       encodeListResponse(ctx, response)

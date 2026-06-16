@@ -184,7 +184,9 @@ export const routes = (
         return
       }
 
-      const contacts = await contactsRepository.getByContactCodes(codes)
+      const contacts = await contactsRepository.getByContactCodes(codes, {
+        includeRelations: true,
+      })
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody({ contacts }, metadata)
