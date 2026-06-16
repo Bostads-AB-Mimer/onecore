@@ -9878,6 +9878,7 @@ export interface components {
             }[];
           emailAddress?: string | null;
           isTenant: boolean;
+          protectedIdentity?: boolean;
           specialAttention?: boolean;
           parkingSpaceWaitingList?: {
             /** Format: date-time */
@@ -9958,6 +9959,7 @@ export interface components {
         }[];
       emailAddress?: string | null;
       isTenant: boolean;
+      protectedIdentity?: boolean;
       specialAttention?: boolean;
     };
     ListingTextContent: {
@@ -12421,6 +12423,7 @@ export interface components {
               }[];
             emailAddress?: string | null;
             isTenant: boolean;
+            protectedIdentity?: boolean;
             specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */
@@ -12695,6 +12698,7 @@ export interface components {
               }[];
             emailAddress?: string | null;
             isTenant: boolean;
+            protectedIdentity?: boolean;
             specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */
@@ -13079,6 +13083,7 @@ export interface components {
               }[];
             emailAddress?: string | null;
             isTenant: boolean;
+            protectedIdentity?: boolean;
             specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */
