@@ -63,7 +63,11 @@ export async function logOutboundDispatch(
     const dispatchId = inserted.id
 
     if (params.recipients.length > 0) {
-      await trx('message_recipient').insert(
+      // batchInsert chunks the rows; needed because MSSQL caps a single
+      // statement at 2100 parameters and `message_recipient` has 6 inserted
+      // columns → ~262 rows max per INSERT. 200 is the safe chunk size.
+      await trx.batchInsert(
+        'message_recipient',
         params.recipients.map((r) => ({
           dispatchId,
           kundId: r.kundId ?? null,
@@ -71,7 +75,8 @@ export async function logOutboundDispatch(
           status: r.status ?? 'sent',
           externalMessageId: r.externalMessageId ?? null,
           error: r.error ?? null,
-        }))
+        })),
+        200
       )
     }
 
