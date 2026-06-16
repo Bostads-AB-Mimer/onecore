@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from './useToast'
 
@@ -19,6 +20,7 @@ interface UseSingleEmailOptions {
 
 export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [state, setState] = useState<SingleEmailState>({
     open: false,
     recipientName: '',
@@ -47,6 +49,9 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
           body
         )
 
+        // Refresh any open tenant communication log so the new message appears.
+        queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
+
         toast({
           title: 'Mejl skickat',
           description: `Skickades till ${result.totalSent} mottagare${
@@ -66,7 +71,7 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
         })
       }
     },
-    [state.emailAddress, state.kundId, sendEmail, toast]
+    [state.emailAddress, state.kundId, sendEmail, toast, queryClient]
   )
 
   return {

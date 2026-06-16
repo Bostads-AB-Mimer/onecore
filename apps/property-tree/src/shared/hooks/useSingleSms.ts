@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from './useToast'
 
@@ -18,6 +19,7 @@ interface UseSingleSmsOptions {
 
 export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [state, setState] = useState<SingleSmsState>({
     open: false,
     recipientName: '',
@@ -45,6 +47,9 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
           message
         )
 
+        // Refresh any open tenant communication log so the new message appears.
+        queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
+
         toast({
           title: 'SMS skickat',
           description: `Skickades till ${result.totalSent} mottagare${
@@ -64,7 +69,7 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
         })
       }
     },
-    [state.phoneNumber, state.kundId, sendSms, toast]
+    [state.phoneNumber, state.kundId, sendSms, toast, queryClient]
   )
 
   return {
