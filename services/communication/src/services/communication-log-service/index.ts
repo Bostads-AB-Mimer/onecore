@@ -87,16 +87,16 @@ export const routes = (router: OkapiRouter) => {
   )
 
   router.get(
-    '/communication-log/customers/:kundId/messages',
+    '/communication-log/customers/:contactCode/messages',
     {
       summary: 'Get the communication timeline for a customer',
       description:
-        'Returns every message_recipient row owned by the given kundId, ' +
+        'Returns every message_recipient row owned by the given contactCode, ' +
         'each paired with its parent dispatch. Newest first. Empty array ' +
         'when the customer has no logged communications.',
       tags: ['Communication log'],
       params: {
-        kundId: { description: 'Customer id', schema: z.string().min(1) },
+        contactCode: { description: 'Customer id', schema: z.string().min(1) },
       },
       response: {
         200: z.array(communication.CustomerMessageSchema),
@@ -105,7 +105,7 @@ export const routes = (router: OkapiRouter) => {
     },
     async (ctx) => {
       try {
-        const result = await getCustomerMessages(ctx.params.kundId)
+        const result = await getCustomerMessages(ctx.params.contactCode)
         ctx.status = 200
         ctx.body = result
       } catch (error) {

@@ -201,7 +201,7 @@ export interface paths {
   '/sendBulkSms': {
     /**
      * Send SMS to multiple contacts
-     * @description Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with kundId) for per-customer audit logging.
+     * @description Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
      */
     post: {
       requestBody: {
@@ -209,7 +209,7 @@ export interface paths {
           'application/json': {
             phoneNumbers?: string[]
             recipients?: {
-              kundId?: string
+              contactCode?: string
               phoneNumber: string
             }[]
             text: string
@@ -245,7 +245,7 @@ export interface paths {
   '/sendBulkEmail': {
     /**
      * Send email to multiple contacts
-     * @description Either `emails` or `recipients` is required. Pass `recipients` (with kundId) for per-customer audit logging.
+     * @description Either `emails` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
      */
     post: {
       requestBody: {
@@ -253,7 +253,7 @@ export interface paths {
           'application/json': {
             emails?: string[]
             recipients?: {
-              kundId?: string
+              contactCode?: string
               emailAddress: string
             }[]
             subject: string
@@ -287,16 +287,16 @@ export interface paths {
       }
     }
   }
-  '/communication-log/customers/{kundId}/messages': {
+  '/communication-log/customers/{contactCode}/messages': {
     /**
      * Get the communication timeline for a customer
-     * @description Returns every message_recipient row owned by the given kundId, each paired with its parent dispatch. Newest first.
+     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
      */
     get: {
       parameters: {
         path: {
           /** @description Customer id (contactCode) */
-          kundId: string
+          contactCode: string
         }
       }
       responses: {
