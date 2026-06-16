@@ -6,12 +6,11 @@ export type DispatchWithRecipients =
   components['schemas']['DispatchWithRecipients']
 
 export const communicationService = {
-  // `kundId` is the tenant's contactCode (see core swagger path-param docs).
   async getCustomerMessages(contactCode: string): Promise<CustomerMessage[]> {
     const { data, error } = await GET(
-      '/communication-log/customers/{kundId}/messages',
+      '/communication-log/customers/{contactCode}/messages',
       {
-        params: { path: { kundId: contactCode } },
+        params: { path: { contactCode } },
       }
     )
     if (error) throw error

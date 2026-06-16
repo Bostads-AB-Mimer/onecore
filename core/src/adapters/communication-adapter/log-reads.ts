@@ -5,11 +5,11 @@ import config from '../../common/config'
 import { AdapterResult } from '../types'
 
 export const getCustomerMessages = async (
-  kundId: string
+  contactCode: string
 ): Promise<AdapterResult<communication.CustomerMessage[], 'error'>> => {
   try {
     const result = await axios.get(
-      `${config.communicationService.url}/communication-log/customers/${encodeURIComponent(kundId)}/messages`
+      `${config.communicationService.url}/communication-log/customers/${encodeURIComponent(contactCode)}/messages`
     )
     return { ok: true, data: result.data }
   } catch (err) {

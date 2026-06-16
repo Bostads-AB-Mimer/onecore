@@ -7,12 +7,12 @@ interface SingleSmsState {
   open: boolean
   recipientName: string
   phoneNumber: string
-  kundId?: string
+  contactCode?: string
 }
 
 interface UseSingleSmsOptions {
   sendSms: (
-    recipients: { kundId?: string; phoneNumber: string }[],
+    recipients: { contactCode?: string; phoneNumber: string }[],
     message: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
 }
@@ -27,8 +27,8 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   })
 
   const openSmsModal = useCallback(
-    (recipientName: string, phoneNumber: string, kundId?: string) => {
-      setState({ open: true, recipientName, phoneNumber, kundId })
+    (recipientName: string, phoneNumber: string, contactCode?: string) => {
+      setState({ open: true, recipientName, phoneNumber, contactCode })
     },
     []
   )
@@ -43,7 +43,7 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
     async (message: string) => {
       try {
         const result = await sendSms(
-          [{ kundId: state.kundId, phoneNumber: state.phoneNumber }],
+          [{ contactCode: state.contactCode, phoneNumber: state.phoneNumber }],
           message
         )
 
@@ -69,7 +69,7 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
         })
       }
     },
-    [state.phoneNumber, state.kundId, sendSms, toast, queryClient]
+    [state.phoneNumber, state.contactCode, sendSms, toast, queryClient]
   )
 
   return {

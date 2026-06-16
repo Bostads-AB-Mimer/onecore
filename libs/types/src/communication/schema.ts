@@ -36,7 +36,7 @@ export const DispatchSchema = z.object({
 export const MessageRecipientSchema = z.object({
   id: z.string().uuid(),
   dispatchId: z.string().uuid(),
-  kundId: z.string().nullable(),
+  contactCode: z.string().nullable(),
   toAddress: z.string(),
   status: RecipientStatusSchema,
   statusUpdatedAt: z.coerce.date(),
@@ -71,7 +71,7 @@ export const TemplateSchema = z.object({
 // Input shape for the logging adapter. Any route that wants to persist an
 // outbound message calls this after the provider has accepted the send.
 export const LogOutboundRecipientSchema = z.object({
-  kundId: z.string().optional(),
+  contactCode: z.string().optional(),
   toAddress: z.string(),
   externalMessageId: z.string().optional(),
   status: z.enum(['pending', 'sent', 'failed']).optional(),

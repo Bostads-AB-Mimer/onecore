@@ -41,12 +41,12 @@ interface CommunicationLogMeta {
 }
 
 interface BulkSmsRecipient {
-  kundId?: string
+  contactCode?: string
   phoneNumber: string
 }
 
 interface BulkEmailRecipient {
-  kundId?: string
+  contactCode?: string
   emailAddress: string
 }
 

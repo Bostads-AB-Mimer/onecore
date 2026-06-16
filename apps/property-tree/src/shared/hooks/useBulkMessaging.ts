@@ -24,12 +24,12 @@ export interface UseBulkMessagingOptions<TItem> {
   fetchAllContacts?: () => Promise<Contact[]>
   /** Send bulk SMS - returns result with totalSent/totalInvalid */
   sendBulkSms: (
-    recipients: { kundId?: string; phoneNumber: string }[],
+    recipients: { contactCode?: string; phoneNumber: string }[],
     message: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
   /** Send bulk email - returns result with totalSent/totalInvalid */
   sendBulkEmail: (
-    recipients: { kundId?: string; emailAddress: string }[],
+    recipients: { contactCode?: string; emailAddress: string }[],
     subject: string,
     body: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
@@ -258,7 +258,7 @@ export function useBulkMessaging<TItem>({
           .filter(
             (r): r is SmsRecipient & { phone: string } => r.phone !== null
           )
-          .map((r) => ({ kundId: r.id, phoneNumber: r.phone }))
+          .map((r) => ({ contactCode: r.id, phoneNumber: r.phone }))
 
         const result = await sendBulkSms(recipients, message)
 
@@ -297,7 +297,7 @@ export function useBulkMessaging<TItem>({
           .filter(
             (r): r is EmailRecipient & { email: string } => r.email !== null
           )
-          .map((r) => ({ kundId: r.id, emailAddress: r.email }))
+          .map((r) => ({ contactCode: r.id, emailAddress: r.email }))
 
         const result = await sendBulkEmail(recipients, subject, body)
 

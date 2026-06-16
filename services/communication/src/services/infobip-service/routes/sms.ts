@@ -109,7 +109,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   // Accepts either the legacy shape (phoneNumbers: string[]) or the new
-  // richer shape (recipients: [{kundId?, phoneNumber}]). The recipient
+  // richer shape (recipients: [{contactCode?, phoneNumber}]). The recipient
   // count cap is enforced in the handler so we can return the existing
   // TOO_MANY_RECIPIENTS custom error format the UI already understands.
   const SendBulkSmsSchema = z.object({
@@ -117,7 +117,7 @@ export const routes = (router: KoaRouter) => {
     recipients: z
       .array(
         z.object({
-          kundId: z.string().optional(),
+          contactCode: z.string().optional(),
           phoneNumber: z.string(),
         })
       )
@@ -143,7 +143,7 @@ export const routes = (router: KoaRouter) => {
         const body = ctx.request.body as SendBulkSmsBody
 
         const inputRecipients: Array<{
-          kundId?: string
+          contactCode?: string
           phoneNumber: string
         }> =
           body.recipients ??
@@ -170,9 +170,9 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        // Validate and normalize phone numbers, preserving kundId association.
+        // Validate and normalize phone numbers, preserving contactCode association.
         const validRecipients: Array<{
-          kundId?: string
+          contactCode?: string
           normalizedPhone: string
         }> = []
         const invalidPhones: string[] = []
@@ -181,7 +181,7 @@ export const routes = (router: KoaRouter) => {
           const extracted = extractPhoneNumber(r.phoneNumber)
           if (phoneValidator(extracted)) {
             validRecipients.push({
-              kundId: r.kundId,
+              contactCode: r.contactCode,
               normalizedPhone: '46' + normalize(extracted).slice(1),
             })
           } else {
@@ -220,7 +220,7 @@ export const routes = (router: KoaRouter) => {
           // rejection leaves no audit row. Flip to: insert pending → call Infobip
           // → update to failed if rejected. Webhook still handles delivered/failed.
           recipients: validRecipients.map((r, i) => ({
-            kundId: r.kundId,
+            contactCode: r.contactCode,
             toAddress: r.normalizedPhone,
             externalMessageId: sendResult.messages?.[i]?.messageId,
             status: 'pending',

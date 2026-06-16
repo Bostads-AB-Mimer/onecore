@@ -339,14 +339,14 @@ export const routes = (router: KoaRouter) => {
   })
 
   // Accepts either the legacy shape (emails: string[]) or the new richer
-  // shape (recipients: [{kundId?, emailAddress}]). Logging preserves the
-  // kundId association when callers pass it.
+  // shape (recipients: [{contactCode?, emailAddress}]). Logging preserves the
+  // contactCode association when callers pass it.
   const SendBulkEmailSchema = z.object({
     emails: z.array(z.string()).optional(),
     recipients: z
       .array(
         z.object({
-          kundId: z.string().optional(),
+          contactCode: z.string().optional(),
           emailAddress: z.string(),
         })
       )
@@ -373,7 +373,7 @@ export const routes = (router: KoaRouter) => {
         const body = ctx.request.body as SendBulkEmailBody
 
         const inputRecipients: Array<{
-          kundId?: string
+          contactCode?: string
           emailAddress: string
         }> =
           body.recipients ??
@@ -389,7 +389,7 @@ export const routes = (router: KoaRouter) => {
         }
 
         const validRecipients: Array<{
-          kundId?: string
+          contactCode?: string
           emailAddress: string
         }> = []
         const invalidEmails: string[] = []
@@ -435,7 +435,7 @@ export const routes = (router: KoaRouter) => {
           // rejection leaves no audit row. Flip to: insert pending → call Infobip
           // → update to failed if rejected. Webhook still handles delivered/failed.
           recipients: validRecipients.map((r, i) => ({
-            kundId: r.kundId,
+            contactCode: r.contactCode,
             toAddress: r.emailAddress,
             externalMessageId: sendResult.data.messages?.[i]?.messageId,
             status: 'pending',

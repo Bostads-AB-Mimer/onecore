@@ -70,7 +70,7 @@ export async function logOutboundDispatch(
         'message_recipient',
         params.recipients.map((r) => ({
           dispatchId,
-          kundId: r.kundId ?? null,
+          contactCode: r.contactCode ?? null,
           toAddress: r.toAddress,
           status: r.status ?? 'sent',
           externalMessageId: r.externalMessageId ?? null,
@@ -137,16 +137,16 @@ export async function getDispatchById(
 
 /**
  * Per-customer communication timeline: one row per message_recipient owned
- * by `kundId`, joined to its dispatch. Newest first. Direction-agnostic —
+ * by `contactCode`, joined to its dispatch. Newest first. Direction-agnostic —
  * once inbound logging is added, replies surface here next to outbound
  * messages without query changes.
  */
 export async function getCustomerMessages(
-  kundId: string
+  contactCode: string
 ): Promise<CustomerMessage[]> {
   const recipients = await db<MessageRecipient>('message_recipient').where(
-    'kundId',
-    kundId
+    'contactCode',
+    contactCode
   )
 
   if (recipients.length === 0) return []
