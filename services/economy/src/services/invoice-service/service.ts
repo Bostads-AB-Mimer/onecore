@@ -960,7 +960,7 @@ export const getInvoiceDetails = async (
   const tenfastInvoiceResult = await getInvoiceByOcr(result.invoiceId)
 
   if (!tenfastInvoiceResult.ok) {
-    throw tenfastInvoiceResult.err
+    throw new Error(tenfastInvoiceResult.err)
   }
 
   if (tenfastInvoiceResult.data) {
@@ -1075,7 +1075,7 @@ export const getAutogiroConsent = async (
     )
 
   if (!autogiroConsentResult.ok) {
-    throw autogiroConsentResult.err
+    throw new Error(autogiroConsentResult.err)
   }
 
   return autogiroConsentResult.data

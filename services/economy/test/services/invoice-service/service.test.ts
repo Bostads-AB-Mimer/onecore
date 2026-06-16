@@ -269,9 +269,9 @@ describe('Rental Invoice Service', () => {
         err: mockTenfastError,
       })
 
-      await expect(getInvoiceDetails('55123456')).rejects.toEqual(
-        mockTenfastError
-      )
+      await expect(getInvoiceDetails('55123456')).rejects.toMatchObject({
+        message: mockTenfastError,
+      })
 
       expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('55123456')
       expect(getInvoiceByOcr).toHaveBeenCalledWith('test-invoice-id')
@@ -529,9 +529,9 @@ describe('Rental Invoice Service', () => {
         err: 'API error',
       })
 
-      await expect(getAutogiroConsent('198001011234')).rejects.toEqual(
-        'API error'
-      )
+      await expect(getAutogiroConsent('198001011234')).rejects.toMatchObject({
+        message: 'API error',
+      })
     })
   })
 })
