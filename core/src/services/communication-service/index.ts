@@ -52,7 +52,7 @@ export const routes = (router: KoaRouter) => {
    * /sendBulkSms:
    *   post:
    *     summary: Send SMS to multiple contacts
-   *     description: Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with kundId) for per-customer audit logging.
+   *     description: Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
    *     tags:
    *       - Communication service
    *     requestBody:
@@ -75,7 +75,7 @@ export const routes = (router: KoaRouter) => {
    *                   required:
    *                     - phoneNumber
    *                   properties:
-   *                     kundId:
+   *                     contactCode:
    *                       type: string
    *                     phoneNumber:
    *                       type: string
@@ -131,7 +131,7 @@ export const routes = (router: KoaRouter) => {
    * /sendBulkEmail:
    *   post:
    *     summary: Send email to multiple contacts
-   *     description: Either `emails` or `recipients` is required. Pass `recipients` (with kundId) for per-customer audit logging.
+   *     description: Either `emails` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
    *     tags:
    *       - Communication service
    *     requestBody:
@@ -155,7 +155,7 @@ export const routes = (router: KoaRouter) => {
    *                   required:
    *                     - emailAddress
    *                   properties:
-   *                     kundId:
+   *                     contactCode:
    *                       type: string
    *                     emailAddress:
    *                       type: string
@@ -210,15 +210,15 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /communication-log/customers/{kundId}/messages:
+   * /communication-log/customers/{contactCode}/messages:
    *   get:
    *     summary: Get the communication timeline for a customer
-   *     description: Returns every message_recipient row owned by the given kundId, each paired with its parent dispatch. Newest first.
+   *     description: Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
    *     tags:
    *       - Communication service
    *     parameters:
    *       - in: path
-   *         name: kundId
+   *         name: contactCode
    *         required: true
    *         schema:
    *           type: string
@@ -241,11 +241,11 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '(.*)/communication-log/customers/:kundId/messages',
+    '(.*)/communication-log/customers/:contactCode/messages',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const result = await communicationAdapter.getCustomerMessages(
-        ctx.params.kundId
+        ctx.params.contactCode
       )
 
       if (result.ok) {

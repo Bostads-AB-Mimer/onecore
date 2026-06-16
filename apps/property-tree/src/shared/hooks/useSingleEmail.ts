@@ -7,12 +7,12 @@ interface SingleEmailState {
   open: boolean
   recipientName: string
   emailAddress: string
-  kundId?: string
+  contactCode?: string
 }
 
 interface UseSingleEmailOptions {
   sendEmail: (
-    recipients: { kundId?: string; emailAddress: string }[],
+    recipients: { contactCode?: string; emailAddress: string }[],
     subject: string,
     text: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
@@ -28,8 +28,8 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
   })
 
   const openEmailModal = useCallback(
-    (recipientName: string, emailAddress: string, kundId?: string) => {
-      setState({ open: true, recipientName, emailAddress, kundId })
+    (recipientName: string, emailAddress: string, contactCode?: string) => {
+      setState({ open: true, recipientName, emailAddress, contactCode })
     },
     []
   )
@@ -44,7 +44,7 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
     async (subject: string, body: string) => {
       try {
         const result = await sendEmail(
-          [{ kundId: state.kundId, emailAddress: state.emailAddress }],
+          [{ contactCode: state.contactCode, emailAddress: state.emailAddress }],
           subject,
           body
         )
@@ -71,7 +71,7 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
         })
       }
     },
-    [state.emailAddress, state.kundId, sendEmail, toast, queryClient]
+    [state.emailAddress, state.contactCode, sendEmail, toast, queryClient]
   )
 
   return {
