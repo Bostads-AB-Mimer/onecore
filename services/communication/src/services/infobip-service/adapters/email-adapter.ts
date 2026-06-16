@@ -7,7 +7,6 @@ import {
   ParkingSpaceNotificationEmail,
   WorkOrderEmail,
   ParkingSpaceAcceptOfferEmail,
-  BulkEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
 } from '@onecore/types'
