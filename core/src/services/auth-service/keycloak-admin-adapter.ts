@@ -105,6 +105,77 @@ async function fetchGroupMembers(groupId: string, token: string) {
   )
 }
 
+// Keycloak's role-mapping is set on a single group, but users in its subgroups
+// inherit the role too. `/groups/{id}/members` returns only direct members and
+// has no flag to descend, so we walk the hierarchy via `/groups/{id}/children`
+// and collect every descendant group id ourselves.
+async function fetchGroupChildren(
+  groupId: string,
+  token: string,
+  first: number
+) {
+  const { url, realm } = config.auth.keycloak
+  return loggedAxios.get(
+    `${url}/admin/realms/${realm}/groups/${encodeURIComponent(groupId)}/children`,
+    {
+      params: { first, max: GROUP_CHILDREN_PAGE_SIZE },
+      headers: { Authorization: `Bearer ${token}` },
+      validateStatus: (status) => status >= 200 && status < 300,
+    }
+  )
+}
+
+const GROUP_CHILDREN_PAGE_SIZE = 100
+
+async function fetchAllChildren(
+  groupId: string,
+  token: string
+): Promise<{ id: string }[]> {
+  const children: { id: string }[] = []
+  let first = 0
+  while (true) {
+    const res = await fetchGroupChildren(groupId, token, first)
+    const page: { id: string }[] = Array.isArray(res.data) ? res.data : []
+    children.push(...page)
+    if (page.length < GROUP_CHILDREN_PAGE_SIZE) break
+    first += GROUP_CHILDREN_PAGE_SIZE
+  }
+  return children
+}
+
+async function expandGroupTree(
+  rootGroupIds: string[],
+  token: string
+): Promise<string[]> {
+  const visited = new Set<string>()
+  let frontier: string[] = []
+
+  for (const id of rootGroupIds) {
+    if (!visited.has(id)) {
+      visited.add(id)
+      frontier.push(id)
+    }
+  }
+
+  while (frontier.length > 0) {
+    const childrenPerGroup = await Promise.all(
+      frontier.map((id) => fetchAllChildren(id, token))
+    )
+    const nextFrontier: string[] = []
+    for (const children of childrenPerGroup) {
+      for (const child of children) {
+        if (!visited.has(child.id)) {
+          visited.add(child.id)
+          nextFrontier.push(child.id)
+        }
+      }
+    }
+    frontier = nextFrontier
+  }
+
+  return Array.from(visited)
+}
+
 async function fetchUsersByRoleViaGroups(roleName: string, token: string) {
   const groupsRes = await fetchGroupsByRole(roleName, token)
   const groups: { id: string }[] = Array.isArray(groupsRes.data)
@@ -113,8 +184,13 @@ async function fetchUsersByRoleViaGroups(roleName: string, token: string) {
 
   if (groups.length === 0) return []
 
+  const allGroupIds = await expandGroupTree(
+    groups.map((g) => g.id),
+    token
+  )
+
   const memberResults = await Promise.all(
-    groups.map((group) => fetchGroupMembers(group.id, token))
+    allGroupIds.map((id) => fetchGroupMembers(id, token))
   )
 
   const seen = new Set<string>()
