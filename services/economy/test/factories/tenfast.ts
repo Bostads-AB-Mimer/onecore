@@ -9,6 +9,7 @@ import {
   TenfastTenantByContactCodeResponse,
   TenfastInvoicesByTenantIdResponse,
   TenfastInvoicesByOcrResponse,
+  type TenfastAutogiroConsent,
 } from '@src/common/adapters/tenfast/schemas'
 
 export const TenfastTenantFactory = Factory.define<TenfastTenant>(
@@ -216,4 +217,23 @@ export const TenfastInvoicesByOcrResponseFactory =
         }),
       },
     ],
+  }))
+
+export const TenfastAutogiroConsentFactory =
+  Factory.define<TenfastAutogiroConsent>(({ sequence }) => ({
+    _id: `consent-${sequence}`,
+    hyresgast: `tenant-${sequence}`,
+    hyresvard: 'hyresvard-123',
+    hyresvardBankgiro: '123-4567',
+    payerNumber: sequence,
+    fixedDueDay: null,
+    isCompany: false,
+    payerSSN: '199001011234',
+    status: 'ACTIVE',
+    statusChangedAt: new Date('2024-01-01T00:00:00Z'),
+    extra: {
+      nameAndAddress1: 'Test Persson',
+      mismatch: null,
+    },
+    payerBankAccountNumber: '12345678',
   }))

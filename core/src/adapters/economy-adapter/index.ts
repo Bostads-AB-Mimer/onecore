@@ -397,6 +397,39 @@ export async function getInvoiceChannels(
     return { ok: false, err: 'unknown' }
   }
 }
+
+const AutogiroConsentSchema = z.object({
+  payerSSN: z.string(),
+  status: z.enum(['ACTIVE', 'MANUAL']),
+})
+
+type AutogiroConsent = z.infer<typeof AutogiroConsentSchema>
+
+export async function getAutogiroConsent(
+  nationalRegistrationNumber: string
+): Promise<AdapterResult<AutogiroConsent, 'not-found' | 'unknown'>> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/autogiro-consent/${nationalRegistrationNumber}`
+    )
+
+    if (response.status === 200) {
+      const parsed = AutogiroConsentSchema.parse(response.data.content)
+      return { ok: true, data: parsed }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+
+    logger.error(response.data, 'economy-adapter.getAutogiroConsent')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getAutogiroConsent')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const PaymentsSinceResultSchema = z.object({
   events: schemas.v1.InvoicePaymentEventSchema.array(),
   lastCursor: z.string().nullable(),

@@ -323,6 +323,32 @@ export const TenfastBatchGetRentalObjectsResponseSchema = z.array(
   TenfastBatchGetRentalObjectSchema
 )
 
+// No schema for this in Tenfast docs currently, this is guesswork based on response
+export const TenfastAutogiroConsentSchema = z.object({
+  _id: z.string(),
+  hyresgast: z.string(),
+  hyresvard: z.string(),
+  hyresvardBankgiro: z.string(),
+  payerNumber: z.number(),
+  fixedDueDay: z.coerce.date().nullable(), // TODO is this a date string?
+  isCompany: z.boolean(),
+  payerSSN: z.string(),
+  status: z.enum(['ACTIVE', 'MANUAL']), // TODO are there more possible statuses?
+  statusChangedAt: z.coerce.date(),
+  extra: z.object({
+    nameAndAddress1: z.string(),
+    mismatch: z.string().nullable(), // TODO is this a string?
+  }),
+  payerBankAccountNumber: z.string(),
+})
+
+export const TenfastAutogiroConsentResponseSchema = z.object({
+  records: z.array(TenfastAutogiroConsentSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
 export type TenfastInvoicesByOcrResponse = z.infer<
@@ -346,3 +372,7 @@ export type TenfastBatchGetRentalObjectsResponse = z.infer<
 >
 
 export type TenfastRentalProperty = z.infer<typeof TenfastRentalPropertySchema>
+
+export type TenfastAutogiroConsent = z.infer<
+  typeof TenfastAutogiroConsentSchema
+>

@@ -47,6 +47,33 @@ async function getInvoicePaymentEvents(
   return response.content as InvoicePaymentEvent[]
 }
 
+async function getInvoiceChannels(nationalRegistrationNumber: string) {
+  const { data, error } = await POST('/invoice-channels', {
+    body: {
+      nationalRegistrationNumbers: [nationalRegistrationNumber],
+    },
+  })
+
+  if (error) throw error
+
+  return data.content
+}
+
+async function getAutogiroConsent(nationalRegistrationNumber: string) {
+  const { data, error } = await GET(
+    '/autogiro-consent/{nationalRegistrationNumber}',
+    {
+      params: {
+        path: { nationalRegistrationNumber },
+      },
+    }
+  )
+
+  if (error) throw error
+
+  return data.content
+}
+
 async function getMiscellaneousInvoiceDataForLease(
   leaseId: string
 ): Promise<{ costCentre: string; propertyCode: string } | null> {
@@ -138,6 +165,8 @@ export const economyService = {
   getInvoicesByContactCode,
   getInvoicePaymentEvents,
   getMiscellaneousInvoiceDataForLease,
+  getInvoiceChannels,
+  getAutogiroConsent,
   submitMiscellaneousInvoice,
   getXledgerContacts,
   getXledgerProjects,

@@ -8,6 +8,7 @@ import {
   getActiveLeasesByRentalObjectCodes,
   recordPaymentForInvoice,
   getInvoicePdf,
+  getAutogiroConsentByNationalRegistrationNumber,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
@@ -18,6 +19,7 @@ import {
   TenfastInvoiceFactory,
   TenfastInvoiceRowFactory,
   TenfastLeaseFactory,
+  TenfastAutogiroConsentFactory,
 } from '../../factories'
 
 // Mock axios
@@ -633,5 +635,101 @@ describe(getInvoicePdf, () => {
     const result = await getInvoicePdf(ocr)
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(getAutogiroConsentByNationalRegistrationNumber, () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('returns consent when found', async () => {
+    const consent = TenfastAutogiroConsentFactory.build({
+      payerSSN: '199001011234',
+    })
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [consent], prev: null, next: null, totalCount: 1 },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(result).toEqual({ ok: true, data: consent })
+  })
+
+  it('returns null when no consent found', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [], prev: null, next: null, totalCount: 0 },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001019999')
+
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it('formats nationalRegistrationNumber without dash before sending', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [], prev: null, next: null, totalCount: 0 },
+    })
+
+    await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({
+          'filter[payerSSN]': '19900101-1234',
+        }),
+      })
+    )
+  })
+
+  it('does not reformat nationalRegistrationNumber that already has dash', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [], prev: null, next: null, totalCount: 0 },
+    })
+
+    await getAutogiroConsentByNationalRegistrationNumber('19900101-1234')
+
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({
+          'filter[payerSSN]': '19900101-1234',
+        }),
+      })
+    )
+  })
+
+  it('returns error on non-200 response', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 503,
+      statusText: 'Service Unavailable',
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(result).toEqual({
+      ok: false,
+      err: 'Service Unavailable',
+      statusCode: 503,
+    })
+  })
+
+  it('returns schema-error on invalid response format', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { invalid: true },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    assert(!result.ok)
+    expect(result.err).toBe('schema-error')
   })
 })

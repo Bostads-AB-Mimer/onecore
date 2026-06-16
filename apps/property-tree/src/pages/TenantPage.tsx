@@ -93,6 +93,7 @@ function TenantTabsSection({
       leases={leases ?? []}
       rentalProperties={rentalProperties ?? {}}
       contactCode={tenant.contactCode}
+      nationalRegistrationNumber={tenant.nationalRegistrationNumber}
       tenantName={`${tenant.firstName} ${tenant.lastName}`}
       isLoadingLeases={leasesLoading}
       isLoadingProperties={rentalPropertiesLoading}

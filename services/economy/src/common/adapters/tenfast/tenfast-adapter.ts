@@ -19,6 +19,8 @@ import {
   TenfastRentalPropertySearchResponseSchema,
   TenfastRentalProperty,
   TenfastLeaseSearchResponseSchema,
+  TenfastAutogiroConsentResponseSchema,
+  TenfastAutogiroConsent,
 } from './schemas'
 import {
   Contact,
@@ -780,5 +782,50 @@ export const getInvoicePdf = async (
   } catch (err) {
     logger.error({ err, ocr }, 'getInvoicePdf: failed')
     return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getAutogiroConsentByNationalRegistrationNumber = async (
+  nationalRegistrationNumber: string
+): Promise<AdapterResult<TenfastAutogiroConsent | null, string>> => {
+  try {
+    // payerSSN in autogiro consent has a dash before the last 4 digits, we need to add it to nationalRegistrationNumber if missing
+    const formattedNationalRegistrationNumber =
+      nationalRegistrationNumber.includes('-')
+        ? nationalRegistrationNumber
+        : `${nationalRegistrationNumber.slice(0, -4)}-${nationalRegistrationNumber.slice(-4)}`
+
+    const autogiroConsentResponse = await makeTenfastRequest(
+      '/v1/hyresvard/autogiro/consents/search',
+      {
+        params: {
+          'filter[payerSSN]': formattedNationalRegistrationNumber,
+          limit: 1,
+        },
+      }
+    )
+    if (autogiroConsentResponse.status !== 200) {
+      return {
+        ok: false,
+        err: autogiroConsentResponse.statusText,
+        statusCode: autogiroConsentResponse.status,
+      }
+    }
+
+    const parsedResponse = TenfastAutogiroConsentResponseSchema.safeParse(
+      autogiroConsentResponse.data
+    )
+    if (!parsedResponse.success) {
+      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return {
+      ok: true,
+      data: parsedResponse.data.records[0] ?? null,
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
   }
 }
