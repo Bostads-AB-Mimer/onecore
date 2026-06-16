@@ -85,14 +85,10 @@ export const xpandContactsRepository = (
 
       const contact = transformDbContactRows(dbContactRows)[0]
       if (!contact) return null
-      // Only individuals participate in guardianship relations; skip the two
-      // extra queries for organisations (relatedContacts already defaults to []).
-      if (contact.type === 'individual') {
-        contact.relatedContacts = await relatedContactsFor(
-          db.get(),
-          contact.contactCode
-        )
-      }
+      contact.relatedContacts = await relatedContactsFor(
+        db.get(),
+        contact.contactCode
+      )
       return contact
     },
 
@@ -153,14 +149,10 @@ export const xpandContactsRepository = (
 
       const contact = transformDbContactRows(dbContactRows)[0]
       if (!contact) return null
-      // Only individuals participate in guardianship relations; skip the two
-      // extra queries for organisations (relatedContacts already defaults to []).
-      if (contact.type === 'individual') {
-        contact.relatedContacts = await relatedContactsFor(
-          db.get(),
-          contact.contactCode
-        )
-      }
+      contact.relatedContacts = await relatedContactsFor(
+        db.get(),
+        contact.contactCode
+      )
       return contact
     },
 

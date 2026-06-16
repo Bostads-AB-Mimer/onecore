@@ -149,6 +149,13 @@ describe('förvaltare endpoints', () => {
       expect(response.data.content.relatedContacts).toEqual([])
     })
 
+    it('is an empty array for an organisation with no relations', async () => {
+      const response = await httpClient.get('/contacts/F111111')
+      expect(response.status).toBe(200)
+      expect(response.data.content.type).toBe('organisation')
+      expect(response.data.content.relatedContacts).toEqual([])
+    })
+
     it('includes the god man with role trustee on the ward contact', async () => {
       const response = await httpClient.get('/contacts/P000666')
       expect(response.status).toBe(200)
