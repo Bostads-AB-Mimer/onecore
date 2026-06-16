@@ -13,6 +13,13 @@ export interface Config {
     baseUrl: string
     apiKey: string
   }
+  communicationDatabase: {
+    host: string
+    user: string
+    password: string
+    port: number
+    database: string
+  }
   health: {
     infobip: {
       systemName: string
@@ -23,6 +30,10 @@ export interface Config {
       minimumMinutesBetweenRequests: number
     }
     linear: {
+      systemName: string
+      minimumMinutesBetweenRequests: number
+    }
+    communicationDatabase: {
       systemName: string
       minimumMinutesBetweenRequests: number
     }
@@ -48,6 +59,13 @@ const config = configPackage({
       baseUrl: '',
       apiKey: '',
     },
+    communicationDatabase: {
+      host: '',
+      user: '',
+      password: '',
+      port: 1438,
+      database: '',
+    },
     health: {
       infobip: {
         systemName: 'infobip',
@@ -60,6 +78,10 @@ const config = configPackage({
       linear: {
         systemName: 'linear',
         minimumMinutesBetweenRequests: 5,
+      },
+      communicationDatabase: {
+        systemName: 'communication database',
+        minimumMinutesBetweenRequests: 1,
       },
     },
     linear: {
@@ -76,6 +98,7 @@ export default {
   port: config.get('port'),
   infobip: config.get('infobip'),
   tele2: config.get('tele2'),
+  communicationDatabase: config.get('communicationDatabase'),
   health: config.get('health'),
   linear: config.get('linear'),
 } as Config

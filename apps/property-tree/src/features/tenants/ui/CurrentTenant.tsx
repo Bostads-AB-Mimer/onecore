@@ -81,10 +81,18 @@ export function CurrentTenant({
               <TenantLeaseCard
                 tenant={tenant}
                 onSendSms={(phone) =>
-                  sms.openSmsModal(formatTenantName(tenant), phone)
+                  sms.openSmsModal(
+                    formatTenantName(tenant),
+                    phone,
+                    tenant.contactCode
+                  )
                 }
                 onSendEmail={(addr) =>
-                  email.openEmailModal(formatTenantName(tenant), addr)
+                  email.openEmailModal(
+                    formatTenantName(tenant),
+                    addr,
+                    tenant.contactCode
+                  )
                 }
               />
             </div>

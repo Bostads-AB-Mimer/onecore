@@ -15,6 +15,10 @@ import { logger } from '@onecore/utilities'
 
 import { EmailV4Message, EmailV4Response } from './types'
 
+// Response from POSTing to Infobip's /email/4/messages (outbound email send).
+// Order of `messages` matches the destinations array passed in.
+export type InfobipSendEmailResponse = EmailV4Response
+
 const AcceptParkingSpaceOfferTemplateId = 205000000030455
 const AdditionalParkingSpaceOfferTemplateId = 200000000092027
 const ReplaceParkingSpaceOfferTemplateId = 200000000094058
@@ -318,19 +322,23 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
   }
 }
 
-export const sendBulkEmail = async (email: BulkEmail) => {
+export const sendBulkEmail = async (email: {
+  emails: string[]
+  subject: string
+  text: string
+}) => {
   logger.info(
     { recipientCount: email.emails.length, baseUrl: config.infobip.baseUrl },
     'Sending bulk email'
   )
 
   try {
-    const recipients = email.emails.map((addr) => ({ destination: addr }))
-
     const response = await sendEmailV4([
       {
         sender: EMAIL_SENDER,
-        destinations: [{ to: recipients }],
+        destinations: email.emails.map((addr) => ({
+          to: [{ destination: addr }],
+        })),
         content: { subject: email.subject, text: email.text },
       },
     ])

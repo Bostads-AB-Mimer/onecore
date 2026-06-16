@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from './useToast'
 
@@ -6,17 +7,19 @@ interface SingleSmsState {
   open: boolean
   recipientName: string
   phoneNumber: string
+  kundId?: string
 }
 
 interface UseSingleSmsOptions {
   sendSms: (
-    phoneNumbers: string[],
+    recipients: { kundId?: string; phoneNumber: string }[],
     message: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
 }
 
 export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [state, setState] = useState<SingleSmsState>({
     open: false,
     recipientName: '',
@@ -24,8 +27,8 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   })
 
   const openSmsModal = useCallback(
-    (recipientName: string, phoneNumber: string) => {
-      setState({ open: true, recipientName, phoneNumber })
+    (recipientName: string, phoneNumber: string, kundId?: string) => {
+      setState({ open: true, recipientName, phoneNumber, kundId })
     },
     []
   )
@@ -39,7 +42,13 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const handleSendSms = useCallback(
     async (message: string) => {
       try {
-        const result = await sendSms([state.phoneNumber], message)
+        const result = await sendSms(
+          [{ kundId: state.kundId, phoneNumber: state.phoneNumber }],
+          message
+        )
+
+        // Refresh any open tenant communication log so the new message appears.
+        queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
 
         toast({
           title: 'SMS skickat',
@@ -60,7 +69,7 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
         })
       }
     },
-    [state.phoneNumber, sendSms, toast]
+    [state.phoneNumber, state.kundId, sendSms, toast, queryClient]
   )
 
   return {

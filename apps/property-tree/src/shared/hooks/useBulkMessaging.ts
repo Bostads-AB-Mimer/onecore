@@ -24,12 +24,12 @@ export interface UseBulkMessagingOptions<TItem> {
   fetchAllContacts?: () => Promise<Contact[]>
   /** Send bulk SMS - returns result with totalSent/totalInvalid */
   sendBulkSms: (
-    phoneNumbers: string[],
+    recipients: { kundId?: string; phoneNumber: string }[],
     message: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
   /** Send bulk email - returns result with totalSent/totalInvalid */
   sendBulkEmail: (
-    emails: string[],
+    recipients: { kundId?: string; emailAddress: string }[],
     subject: string,
     body: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
@@ -254,11 +254,13 @@ export function useBulkMessaging<TItem>({
   const handleSendSms = useCallback(
     async (message: string, validRecipients: SmsRecipient[]) => {
       try {
-        const phoneNumbers = validRecipients
-          .map((r) => r.phone)
-          .filter((p): p is string => p !== null)
+        const recipients = validRecipients
+          .filter(
+            (r): r is SmsRecipient & { phone: string } => r.phone !== null
+          )
+          .map((r) => ({ kundId: r.id, phoneNumber: r.phone }))
 
-        const result = await sendBulkSms(phoneNumbers, message)
+        const result = await sendBulkSms(recipients, message)
 
         toast({
           title: 'SMS skickat',
@@ -291,11 +293,13 @@ export function useBulkMessaging<TItem>({
       validRecipients: EmailRecipient[]
     ) => {
       try {
-        const emails = validRecipients
-          .map((r) => r.email)
-          .filter((e): e is string => e !== null)
+        const recipients = validRecipients
+          .filter(
+            (r): r is EmailRecipient & { email: string } => r.email !== null
+          )
+          .map((r) => ({ kundId: r.id, emailAddress: r.email }))
 
-        const result = await sendBulkEmail(emails, subject, body)
+        const result = await sendBulkEmail(recipients, subject, body)
 
         toast({
           title: 'E-post skickat',

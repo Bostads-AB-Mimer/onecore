@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from './useToast'
 
@@ -6,11 +7,12 @@ interface SingleEmailState {
   open: boolean
   recipientName: string
   emailAddress: string
+  kundId?: string
 }
 
 interface UseSingleEmailOptions {
   sendEmail: (
-    emails: string[],
+    recipients: { kundId?: string; emailAddress: string }[],
     subject: string,
     text: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
@@ -18,6 +20,7 @@ interface UseSingleEmailOptions {
 
 export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [state, setState] = useState<SingleEmailState>({
     open: false,
     recipientName: '',
@@ -25,8 +28,8 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
   })
 
   const openEmailModal = useCallback(
-    (recipientName: string, emailAddress: string) => {
-      setState({ open: true, recipientName, emailAddress })
+    (recipientName: string, emailAddress: string, kundId?: string) => {
+      setState({ open: true, recipientName, emailAddress, kundId })
     },
     []
   )
@@ -40,7 +43,14 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
   const handleSendEmail = useCallback(
     async (subject: string, body: string) => {
       try {
-        const result = await sendEmail([state.emailAddress], subject, body)
+        const result = await sendEmail(
+          [{ kundId: state.kundId, emailAddress: state.emailAddress }],
+          subject,
+          body
+        )
+
+        // Refresh any open tenant communication log so the new message appears.
+        queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
 
         toast({
           title: 'Mejl skickat',
@@ -61,7 +71,7 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
         })
       }
     },
-    [state.emailAddress, sendEmail, toast]
+    [state.emailAddress, state.kundId, sendEmail, toast, queryClient]
   )
 
   return {
