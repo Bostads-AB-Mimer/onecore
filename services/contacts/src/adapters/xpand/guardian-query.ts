@@ -10,6 +10,8 @@ const ROLE_BY_FORVTYP: Record<number, RelatedContactRole> = {
   2: 'administrator',
 }
 
+const GUARDIAN_FORVTYPS = Object.keys(ROLE_BY_FORVTYP).map(Number)
+
 type RelatedRow = {
   contactCode: string | null
   fullName: string | null
@@ -34,9 +36,14 @@ const toRelatedContact = (
 ): RelatedContact | null => {
   const contactCode = row.contactCode?.trim()
   if (!contactCode || contactCode === REDACTED_CONTACT_CODE) return null
+
+  const resolvedRole =
+    role ?? (row.forvtyp ? ROLE_BY_FORVTYP[row.forvtyp] : undefined)
+  if (!resolvedRole) return null
+
   return {
     contactCode,
-    role: role ?? ROLE_BY_FORVTYP[row.forvtyp as number],
+    role: resolvedRole,
     fullName: redactName(row.fullName, row.protectedIdentity),
   }
 }
@@ -116,7 +123,7 @@ export const relatedContactsForMany = async (
   const forwardRows = await db('cmctc as subject')
     .innerJoin('cmctc as related', 'subject.keycmctc2', 'related.keycmctc')
     .whereRaw(inSubjectCodes, trimmed)
-    .whereIn('subject.forvtyp', [1, 2])
+    .whereIn('subject.forvtyp', GUARDIAN_FORVTYPS)
     .select(
       'subject.cmctckod as subjectCode',
       ...RELATED_COLUMNS,
@@ -126,7 +133,7 @@ export const relatedContactsForMany = async (
   const wardRows = await db('cmctc as subject')
     .innerJoin('cmctc as related', 'related.keycmctc2', 'subject.keycmctc')
     .whereRaw(inSubjectCodes, trimmed)
-    .whereIn('related.forvtyp', [1, 2])
+    .whereIn('related.forvtyp', GUARDIAN_FORVTYPS)
     .select('subject.cmctckod as subjectCode', ...RELATED_COLUMNS)
 
   const push = (
@@ -137,8 +144,12 @@ export const relatedContactsForMany = async (
     const key = subjectCode?.trim()
     const related = toRelatedContact(row, role)
     if (!key || !related) return
-    if (!result.has(key)) result.set(key, [])
-    result.get(key)!.push(related)
+    let list = result.get(key)
+    if (!list) {
+      list = []
+      result.set(key, list)
+    }
+    list.push(related)
   }
 
   for (const row of forwardRows) push(row.subjectCode, row)
