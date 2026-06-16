@@ -8,7 +8,6 @@ import {
   TenfastRentArticle,
   TenfastTenantByContactCodeResponse,
   TenfastInvoicesByTenantIdResponse,
-  TenfastInvoicesByOcrResponse,
   type TenfastAutogiroConsent,
 } from '@src/common/adapters/tenfast/schemas'
 
@@ -206,18 +205,6 @@ export const TenfastInvoicesByTenantIdResponseFactory =
       hyror: [TenfastInvoiceRowFactory.build()],
     }),
   ])
-
-export const TenfastInvoicesByOcrResponseFactory =
-  Factory.define<TenfastInvoicesByOcrResponse>(() => ({
-    records: [
-      {
-        ...TenfastInvoiceFactory.build({
-          amountPaid: 500,
-          hyror: [TenfastInvoiceRowFactory.build()],
-        }),
-      },
-    ],
-  }))
 
 export const TenfastAutogiroConsentFactory =
   Factory.define<TenfastAutogiroConsent>(({ sequence }) => ({
