@@ -22,7 +22,7 @@
     "migrate:up": "knex migrate:latest",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
-    "start": "pnpm migrate:up && node index",
+    "start": "pnpm migrate:up && node build/index",
     "test": "jest",
     "test:ci": "jest --silent",
     "typecheck": "tsc --noEmit"
