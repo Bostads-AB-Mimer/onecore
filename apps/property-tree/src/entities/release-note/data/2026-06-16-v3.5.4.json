@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-06-16-v354-1",
+    "date": "2026-06-16",
+    "title": "Kvartersvärdar från Keycloak",
+    "description": "En API-bugg gjorde att kvartersvärdar från subgrupper i Keycloak inte dök upp i API-svaret. Felet är nu åtgärdat och kvartersvärdar dyker upp i gränssnittet igen.",
+    "category": "fix"
+  }
+]
