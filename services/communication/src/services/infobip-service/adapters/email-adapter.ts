@@ -333,12 +333,12 @@ export const sendBulkEmail = async (email: {
   )
 
   try {
-    const recipients = email.emails.map((addr) => ({ destination: addr }))
-
     const response = await sendEmailV4([
       {
         sender: EMAIL_SENDER,
-        destinations: [{ to: recipients }],
+        destinations: email.emails.map((addr) => ({
+          to: [{ destination: addr }],
+        })),
         content: { subject: email.subject, text: email.text },
       },
     ])
