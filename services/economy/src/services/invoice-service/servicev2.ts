@@ -34,7 +34,8 @@ export const exportRentalInvoicesAccounting = async (
   companyId: string,
   numberOfChunks: number = 1
 ): Promise<{
-  invoices: InvoiceWithAccounting[]
+  exportedInvoices: InvoiceWithAccounting[]
+  skippedInvoices: InvoiceWithAccounting[]
   errors: { invoiceNumber: string; error: string }[]
 }> => {
   try {
@@ -44,6 +45,7 @@ export const exportRentalInvoicesAccounting = async (
       (company) => company.xpandId.localeCompare(companyId) === 0
     )
     const invoices: InvoiceWithAccounting[] = []
+    const skippedInvoices: InvoiceWithAccounting[] = []
 
     if (!company) {
       throw new Error('Could not find company ' + companyId)
@@ -68,6 +70,12 @@ export const exportRentalInvoicesAccounting = async (
       let chunkInvoices = invoicesResult.data.invoices.filter((invoice) => {
         return !invoice.recipientContactCode?.startsWith('I')
       })
+
+      let skipped = invoicesResult.data.invoices.filter((invoice) => {
+        return invoice.recipientContactCode?.startsWith('I')
+      })
+
+      skippedInvoices.push(...skipped)
 
       if (invoicesResult.data.errors) {
         errors.push(...invoicesResult.data.errors)
@@ -134,7 +142,8 @@ export const exportRentalInvoicesAccounting = async (
     }
 
     return {
-      invoices,
+      exportedInvoices: invoices,
+      skippedInvoices,
       errors,
     }
   } catch (error: any) {
@@ -397,10 +406,10 @@ const groupAggregateRows = (
           taxRule: o.taxRule,
         }
 
-        aggregatedRow.amount = safeAdd(aggregatedRow.amount, o.amount)
+        aggregatedRow.amount = safeAdd(aggregatedRow.amount, o.amount ? -1 * o.amount : 0)
         aggregatedRow.totalAmount = safeAdd(
           aggregatedRow.totalAmount,
-          o.totalAmount
+          o.totalAmount ? -1 * o.totalAmount : 0
         )
 
         return r.set(key, aggregatedRow)
