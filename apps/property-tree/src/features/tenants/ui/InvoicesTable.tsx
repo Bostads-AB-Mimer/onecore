@@ -12,6 +12,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
+import { InvoiceDeferralAction } from './InvoiceDeferralAction'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',
@@ -37,6 +38,7 @@ type Props = {
   invoices: Invoice[]
   onInvoiceRowClick: (invoiceId: string | null) => void
   expandedInvoiceId: string | null
+  contactCode?: string
 }
 
 export const InvoicesTable = (props: Props) => {
@@ -382,6 +384,12 @@ export const InvoicesTable = (props: Props) => {
               Se PDF
             </Button>
           </div>
+        )}
+        {props.contactCode && (
+          <InvoiceDeferralAction
+            invoice={invoice}
+            contactCode={props.contactCode}
+          />
         )}
         {invoice.invoiceRows.length > 0 && (
           <div className="bg-background rounded-lg p-3 shadow-sm mb-4">

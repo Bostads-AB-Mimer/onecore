@@ -1052,20 +1052,24 @@ export const getAllInvoicesWithMatchIds = async ({
 
 export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
   const q = {
-    query: `query {
-      arTransactions(
-        first: 1
-        filter: {
-          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
-        }
-      ) {
+    query: gql`
+      query ($invoiceNumber: String!) {
+        arTransactions(
+          first: 1
+          filter: {
+            invoiceNumber: $invoiceNumber
+            headerTransactionSourceDbId_in: [600, 797, 3536]
+          }
+        ) {
           edges {
             node {
               ${invoiceNodeFragment}
             }
           }
         }
-    }`,
+      }
+    `,
+    variables: { invoiceNumber },
   }
 
   try {
@@ -1086,20 +1090,24 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
 
 export async function getInvoiceMatchId(invoiceNumber: string) {
   const q = {
-    query: `query {
-      arTransactions(
-        first: 1
-        filter: {
-          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
-        }
-      ) {
+    query: gql`
+      query ($invoiceNumber: String!) {
+        arTransactions(
+          first: 1
+          filter: {
+            invoiceNumber: $invoiceNumber
+            headerTransactionSourceDbId_in: [600, 797, 3536]
+          }
+        ) {
           edges {
             node {
               matchId
             }
           }
         }
-    }`,
+      }
+    `,
+    variables: { invoiceNumber },
   }
 
   try {
@@ -1428,6 +1436,92 @@ export const uploadFile = async (filename: string, csvFile: string) => {
 
 export const healthCheck = async () => {
   return {}
+}
+
+const getArTransactionDbId = async (
+  invoiceNumber: string
+): Promise<number | null> => {
+  const q = {
+    query: gql`
+      query ($invoiceNumber: String!) {
+        arTransactions(
+          first: 1
+          filter: {
+            invoiceNumber: $invoiceNumber
+            headerTransactionSourceDbId_in: [600, 797, 3536]
+          }
+        ) {
+          edges {
+            node {
+              dbId
+            }
+          }
+        }
+      }
+    `,
+    variables: { invoiceNumber },
+  }
+
+  const result = await makeXledgerRequest(q)
+  return result.data?.arTransactions?.edges?.[0]?.node?.dbId ?? null
+}
+
+// Strips any existing "Anstånd till YYYY-MM-DD" segment before appending the
+// new one, so the getDefermentDate() regex always matches the latest date.
+const buildDeferralText = (
+  existingText: string | undefined,
+  dueDateString: string
+): string => {
+  const deferralPart = `Anstånd till ${dueDateString}`
+  const stripped = existingText
+    ? existingText.replace(/,?\s*Anstånd till \d{4}-\d{2}-\d{2}/g, '').trim()
+    : undefined
+  return stripped ? `${stripped}, ${deferralPart}` : deferralPart
+}
+
+export const updateInvoiceDeferralDate = async (
+  invoiceNumber: string,
+  newDueDate: Date
+): Promise<void> => {
+  const [dbId, invoice] = await Promise.all([
+    getArTransactionDbId(invoiceNumber),
+    getInvoiceByInvoiceNumber(invoiceNumber),
+  ])
+
+  if (!dbId) {
+    throw new Error(
+      `Could not find Xledger transaction for invoice ${invoiceNumber}`
+    )
+  }
+
+  const dueDateString = dateToGraphQlDateString(newDueDate)
+  const text = buildDeferralText(invoice?.description, dueDateString)
+
+  const mutation = {
+    query: gql`
+      mutation ($dbId: Int!, $dueDate: DateString!, $text: String!) {
+        updateArTransactions(
+          inputs: {
+            node: {
+              dbId: $dbId
+              dueDate: $dueDate
+              deferredDueDate: $dueDate
+              text: $text
+            }
+          }
+        ) {
+          edges {
+            node {
+              dbId
+            }
+          }
+        }
+      }
+    `,
+    variables: { dbId, dueDate: dueDateString, text },
+  }
+
+  await makeXledgerRequest(mutation)
 }
 
 export const submitMiscellaneousInvoice = async (

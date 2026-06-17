@@ -115,10 +115,24 @@ export const TenfastInvoiceStateSchema = z.enum([
   'forsenad',
   'delvis-betald',
   'krediterad',
-  'anstand',
+  'makulerad',
+  'draft',
+  'pamind',
+  'gracePeriod',
 ])
 
 export type TenfastInvoiceState = z.infer<typeof TenfastInvoiceStateSchema>
+
+/** Tenfast invoice states parsed but not exposed as Invoice. */
+export const EXCLUDED_TENFAST_INVOICE_STATES: readonly TenfastInvoiceState[] = [
+  'draft',
+]
+
+export function isVisibleTenfastInvoice(invoice: {
+  state: TenfastInvoiceState
+}): boolean {
+  return !EXCLUDED_TENFAST_INVOICE_STATES.includes(invoice.state)
+}
 
 export const TenfastInvoiceSchema = z.object({
   interval: z.object({
@@ -204,11 +218,6 @@ export const TenfastLeaseSearchResponseSchema = z.object({
   next: z.string().nullable(),
   prev: z.string().nullable(),
   totalCount: z.number(),
-})
-
-// Getting invoices by OCR from Tenfast returns a list of full Lease objects,
-export const TenfastInvoicesByOcrResponseSchema = z.object({
-  records: TenfastInvoiceSchema.array(),
 })
 
 export const TenfastInvoicesByTenantIdResponseSchema =
@@ -351,9 +360,6 @@ export const TenfastAutogiroConsentResponseSchema = z.object({
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
-export type TenfastInvoicesByOcrResponse = z.infer<
-  typeof TenfastInvoicesByOcrResponseSchema
->
 export type TenfastInvoicesByTenantIdResponse = z.infer<
   typeof TenfastInvoicesByTenantIdResponseSchema
 >

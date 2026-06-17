@@ -97,6 +97,11 @@ app.use(async (ctx, next) => {
   ) {
     return requireRole('keys-admin')(ctx, next)
   }
+
+  if (ctx.method === 'PUT' && /^\/invoices\/[^/]+\/deferral$/.test(ctx.path)) {
+    return requireRole('invoice-deferral')(ctx, next)
+  }
+
   return next()
 })
 

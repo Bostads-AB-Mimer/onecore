@@ -37,7 +37,7 @@
     "script:sync-leases": "node build/scripts/sync-leases/index",
     "script:sync-xledger-payments-to-tenfast": "node build/scripts/sync-xledger-payments-to-tenfast/index",
     "start": "node build/index.js",
-    "test": "jest",
+    "test": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test jest",
     "test:ci": "TZ=UTC jest --silent",
     "test:watch": "TZ=UTC jest --watch",
     "ts:watch": "tsc --watch --noEmit",
