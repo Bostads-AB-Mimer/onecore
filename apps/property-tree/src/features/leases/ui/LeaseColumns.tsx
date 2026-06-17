@@ -1,11 +1,8 @@
-import { Link } from 'react-router-dom'
-
 import { formatDate, LeaseStatusBadge } from '@/entities/lease'
-import { ProtectedIdentityBadge } from '@/entities/tenant'
+import { TenantNameLink } from '@/entities/tenant'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
-import { paths } from '@/shared/routes'
 import { ObjectTypeBadge } from '@/shared/ui/StatusBadges'
 
 export const leaseColumns = [
@@ -40,17 +37,11 @@ export const leaseColumns = [
         <div className="space-y-1">
           {lease.contacts.map((contact) => (
             <div key={contact.contactCode}>
-              <div className="flex items-center gap-2">
-                <Link
-                  to={paths.tenant(contact.contactCode)}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {contact.name}
-                </Link>
-                {contact.protectedIdentity && (
-                  <ProtectedIdentityBadge size="sm" />
-                )}
-              </div>
+              <TenantNameLink
+                contactCode={contact.contactCode}
+                fullName={contact.name}
+                protectedIdentity={contact.protectedIdentity}
+              />
               <div className="text-sm text-muted-foreground">
                 {contact.contactCode}
               </div>

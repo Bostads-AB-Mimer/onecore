@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 
-import { ProtectedIdentityBadge, useTenantSearch } from '@/entities/tenant'
+import {
+  ProtectedIdentityBadge,
+  TenantName,
+  useTenantSearch,
+} from '@/entities/tenant'
 
 import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
@@ -100,7 +104,10 @@ export function TenantsPage() {
                     label: 'Namn',
                     render: (contact) => (
                       <span className="font-medium inline-flex items-center gap-2">
-                        {contact.fullName}
+                        <TenantName
+                          fullName={contact.fullName}
+                          protectedIdentity={contact.protectedIdentity}
+                        />
                         {contact.protectedIdentity && (
                           <ProtectedIdentityBadge size="sm" />
                         )}
@@ -133,7 +140,10 @@ export function TenantsPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <div className="font-medium inline-flex items-center gap-2">
-                          {contact.fullName}
+                          <TenantName
+                            fullName={contact.fullName}
+                            protectedIdentity={contact.protectedIdentity}
+                          />
                           {contact.protectedIdentity && (
                             <ProtectedIdentityBadge size="sm" />
                           )}

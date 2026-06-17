@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import type { RentalPropertyInfo } from '@onecore/types'
 import { InfoIcon } from 'lucide-react'
 
@@ -12,11 +11,10 @@ import {
   LeaseStatusBadge,
   sortLeasesByStatus,
 } from '@/entities/lease'
-import { ProtectedIdentityBadge } from '@/entities/tenant'
+import { TenantNameLink } from '@/entities/tenant'
 
 import { Lease } from '@/services/api/core/leaseService'
 
-import { paths } from '@/shared/routes'
 import { Button } from '@/shared/ui/Button'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
@@ -132,40 +130,18 @@ export function TenantLeasesTabContent({
         }
         return (
           <div className="space-y-1">
-            {lease.tenants.map((tenant) => {
-              const isValidContact =
-                tenant.contactCode.startsWith('P') ||
-                tenant.contactCode.startsWith('F')
-              const nameDisplay = tenant.protectedIdentity ? (
-                <span className="italic text-muted-foreground">
-                  Skyddad identitet
-                </span>
-              ) : (
-                tenant.fullName
-              )
-              return (
-                <div key={tenant.contactCode}>
-                  <div className="flex items-center gap-2">
-                    {isValidContact ? (
-                      <Link
-                        to={paths.tenant(tenant.contactCode)}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {nameDisplay}
-                      </Link>
-                    ) : (
-                      <span className="font-medium">{nameDisplay}</span>
-                    )}
-                    {tenant.protectedIdentity && (
-                      <ProtectedIdentityBadge size="sm" />
-                    )}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {tenant.contactCode}
-                  </div>
+            {lease.tenants.map((tenant) => (
+              <div key={tenant.contactCode}>
+                <TenantNameLink
+                  contactCode={tenant.contactCode}
+                  fullName={tenant.fullName}
+                  protectedIdentity={tenant.protectedIdentity}
+                />
+                <div className="text-sm text-muted-foreground">
+                  {tenant.contactCode}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )
       },
@@ -254,45 +230,23 @@ export function TenantLeasesTabContent({
         {/* Tenant Info Section */}
         {lease.tenants && lease.tenants.length > 0 && (
           <div className="space-y-2 text-sm">
-            {lease.tenants.map((tenant, index) => {
-              const isValidContact =
-                tenant.contactCode.startsWith('P') ||
-                tenant.contactCode.startsWith('F')
-              const nameDisplay = tenant.protectedIdentity ? (
-                <span className="italic text-muted-foreground">
-                  Skyddad identitet
-                </span>
-              ) : (
-                tenant.fullName
-              )
-              return (
-                <div key={tenant.contactCode} className="space-y-1">
-                  {index > 0 && <div className="border-t pt-2" />}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Hyresgäst:</span>
-                    <span className="flex items-center gap-2">
-                      {isValidContact ? (
-                        <Link
-                          to={paths.tenant(tenant.contactCode)}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {nameDisplay}
-                        </Link>
-                      ) : (
-                        <span className="font-medium">{nameDisplay}</span>
-                      )}
-                      {tenant.protectedIdentity && (
-                        <ProtectedIdentityBadge size="sm" />
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Kundnummer:</span>
-                    <span>{tenant.contactCode}</span>
-                  </div>
+            {lease.tenants.map((tenant, index) => (
+              <div key={tenant.contactCode} className="space-y-1">
+                {index > 0 && <div className="border-t pt-2" />}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Hyresgäst:</span>
+                  <TenantNameLink
+                    contactCode={tenant.contactCode}
+                    fullName={tenant.fullName}
+                    protectedIdentity={tenant.protectedIdentity}
+                  />
                 </div>
-              )
-            })}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Kundnummer:</span>
+                  <span>{tenant.contactCode}</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

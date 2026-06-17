@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
 
-import { ProtectedIdentityBadge } from '@/entities/tenant'
+import { ProtectedIdentityBadge, TenantName } from '@/entities/tenant'
 import {
   TenantSearchResult,
   useTenantSearch,
@@ -102,7 +102,10 @@ export function TenantSearchSection({
                   className="w-full px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                   <div className="font-medium inline-flex items-center gap-2">
-                    {tenant.fullName}
+                    <TenantName
+                      fullName={tenant.fullName}
+                      protectedIdentity={tenant.protectedIdentity}
+                    />
                     {tenant.protectedIdentity && (
                       <ProtectedIdentityBadge size="sm" />
                     )}

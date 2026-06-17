@@ -10,6 +10,7 @@ import { useRentalProperties } from '@/entities/rental-property'
 import {
   ProtectedIdentityBadge,
   TenantCard,
+  TenantName,
   useTenant,
 } from '@/entities/tenant'
 
@@ -36,15 +37,9 @@ function TenantHeader({ tenant }: { tenant: Tenant }) {
     <TooltipProvider>
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-3xl font-bold">
-          {tenant.protectedIdentity ? (
-            <span className="italic text-muted-foreground">
-              Skyddad identitet
-            </span>
-          ) : (
-            <>
-              {tenant.firstName} {tenant.lastName}
-            </>
-          )}
+          <TenantName protectedIdentity={tenant.protectedIdentity}>
+            {tenant.firstName} {tenant.lastName}
+          </TenantName>
         </h1>
         {tenant.protectedIdentity && <ProtectedIdentityBadge />}
         {tenant.specialAttention && (
