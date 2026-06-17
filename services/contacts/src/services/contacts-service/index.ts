@@ -300,8 +300,13 @@ export const routes = (
   router.get(
     '/contacts/:contactCode/trustee',
     {
-      summary: 'Get the trustee of a contact identifier by their Contact Code',
-      description: `Get the trustee of a contact.`,
+      summary:
+        'DEPRECATED — Get the god man of a contact by their Contact Code',
+      description:
+        'Deprecated: use GET /contacts/:contactCode/trustees instead, which ' +
+        'returns RelatedContact objects. Returns the god man (cmctc.forvtyp = 1) ' +
+        'of the given contact as a full Contact. 404 when the contact does not ' +
+        'exist or has no god man.',
       tags: ['Contacts'],
       params: {
         contactCode: z.string(),
@@ -314,24 +319,105 @@ export const routes = (
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { contactCode } = ctx.params
-      const contact = await contactsRepository.getByContactCode(contactCode)
+      const relations = await contactsRepository.getTrustees(contactCode)
 
-      if (contact && contact.type === 'individual' && contact.trustee) {
-        const trustee = await contactsRepository.getByContactCode(
-          contact.trustee.contactCode
-        )
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
 
-        if (trustee) {
-          ctx.status = 200
-          ctx.body = {
-            content: trustee,
-            ...metadata,
-          }
-        } else {
-          ctx.status = 404
+      const godMan = relations[0]
+      if (!godMan) {
+        ctx.status = 404
+        return
+      }
+
+      const trustee = await contactsRepository.getByContactCode(
+        godMan.contactCode
+      )
+
+      if (trustee) {
+        ctx.status = 200
+        ctx.body = {
+          content: trustee,
+          ...metadata,
         }
       } else {
         ctx.status = 404
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/:contactCode/trustees',
+    {
+      summary: 'List the god man of a contact',
+      description:
+        'Returns the contacts registered as god man (cmctc.forvtyp = 1) ' +
+        'for the given contact, as RelatedContact objects with role ' +
+        "'trustee'. Empty list when the contact has no god man; " +
+        '404 when the contact does not exist.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      response: {
+        200: GetRelatedContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const relations = await contactsRepository.getTrustees(
+        ctx.params.contactCode
+      )
+
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { relations },
+        ...metadata,
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/:contactCode/trustee-for',
+    {
+      summary: 'List the contacts a person is god man for',
+      description:
+        'Returns the contacts that have the given contact registered as ' +
+        'their god man, as RelatedContact objects with role ' +
+        "'ward'. Empty list when the contact is not a god man for anyone; " +
+        '404 when the contact does not exist.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      response: {
+        200: GetRelatedContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const relations = await contactsRepository.getTrusteeWards(
+        ctx.params.contactCode
+      )
+
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { relations },
+        ...metadata,
       }
     }
   )

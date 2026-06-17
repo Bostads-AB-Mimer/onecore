@@ -24,6 +24,8 @@ import {
   wardRelations,
   relatedContactsFor,
   relatedContactsForMany,
+  ADMINISTRATOR_FORVTYP,
+  TRUSTEE_FORVTYP,
 } from './guardian-query'
 
 /**
@@ -114,7 +116,7 @@ export const xpandContactsRepository = (
     /**
      * Batch lookup of contacts by their contact codes. Uses the lean
      * `contactsByCodesQuery` which omits phone/email/address joins by
-     * default — only base `cmctc` columns plus the trustee self-join.
+     * default — only base `cmctc` columns.
      */
     getByContactCodeBatch: async (
       contactCodes: ContactCode[],
@@ -133,7 +135,8 @@ export const xpandContactsRepository = (
     getGuardians: async (contactCode: ContactCode) => {
       const { subjectExists, related } = await guardianRelations(
         db.get(),
-        contactCode
+        contactCode,
+        ADMINISTRATOR_FORVTYP
       )
       return subjectExists ? related : null
     },
@@ -141,7 +144,26 @@ export const xpandContactsRepository = (
     getGuardianWards: async (contactCode: ContactCode) => {
       const { subjectExists, related } = await wardRelations(
         db.get(),
-        contactCode
+        contactCode,
+        ADMINISTRATOR_FORVTYP
+      )
+      return subjectExists ? related : null
+    },
+
+    getTrustees: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianRelations(
+        db.get(),
+        contactCode,
+        TRUSTEE_FORVTYP
+      )
+      return subjectExists ? related : null
+    },
+
+    getTrusteeWards: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await wardRelations(
+        db.get(),
+        contactCode,
+        TRUSTEE_FORVTYP
       )
       return subjectExists ? related : null
     },

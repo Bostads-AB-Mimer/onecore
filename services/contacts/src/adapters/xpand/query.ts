@@ -530,7 +530,6 @@ export const contactsQuery = () => {
         })
         .from('page')
         .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
-        .leftJoin('cmctc as trustee', 'cmctc.keycmctc2', 'trustee.keycmctc')
         .leftJoin('cmadr', (join) => {
           join.on('cmadr.keycode', 'cmctc.keycmobj').andOnNull('cmadr.tdate')
         })
@@ -547,8 +546,6 @@ export const contactsQuery = () => {
           'cmctc.keycmctc as contactKey',
           'cmctc.lagsokt as protectedIdentity',
           'cmctc.utslag as specialAttention',
-          'trustee.cmctcben as trusteeName',
-          'trustee.cmctckod as trusteeId',
           'cmadr.keycmadr as addressId',
           'cmadr.region',
           'cmadr.adress1',
