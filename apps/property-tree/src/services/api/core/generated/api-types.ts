@@ -6878,6 +6878,76 @@ export interface paths {
       };
     };
   };
+  "/invoices/{invoiceId}/deferral": {
+    /**
+     * Set a grace period (anstånd) on an invoice
+     * @description Grant an invoice deferral by setting a new due date and reason. Requires the invoice-deferral role.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The invoice OCR number */
+          invoiceId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            /**
+             * Format: date
+             * @description New due date (YYYY-MM-DD)
+             */
+            endDate: string;
+            /** @description Reason for the deferral */
+            reason: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Deferral registered successfully */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                ok?: boolean;
+              };
+            };
+          };
+        };
+        /** @description Invalid request body */
+        400: {
+          content: never;
+        };
+        /** @description Invoice not found */
+        404: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              code: "invoice-not-found";
+            };
+          };
+        };
+        /** @description Invoice not eligible for deferral */
+        422: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              code: "invoice-not-eligible";
+            };
+          };
+        };
+        /** @description Deferral could not be completed */
+        500: {
+          content: {
+            "application/json": {
+              /** @enum {string} */
+              code: "xledger-failed" | "tenfast-failed";
+            };
+          };
+        };
+      };
+    };
+  };
   "/invoices/notify-batch": {
     /**
      * Send invoice notification emails for a selection of invoices
@@ -7065,74 +7135,6 @@ export interface paths {
           content: {
             "application/json": {
               error?: string;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/invoices/{invoiceId}/deferral": {
-    /**
-     * Set a grace period (anstånd) on an invoice
-     * @description Grant an invoice deferral by setting a new due date and reason. Requires the invoice-deferral role.
-     */
-    put: {
-      parameters: {
-        path: {
-          /** @description The invoice OCR number */
-          invoiceId: string;
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": {
-            /**
-             * Format: date
-             * @description New due date (YYYY-MM-DD)
-             */
-            endDate: string;
-            /** @description Reason for the deferral */
-            reason: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Deferral registered successfully */
-        200: {
-          content: {
-            "application/json": {
-              content: {
-                ok?: boolean;
-              };
-            };
-          };
-        };
-        /** @description Invalid request body */
-        400: {
-          content: never;
-        };
-        /** @description Invoice not eligible for deferral */
-        422: {
-          content: {
-            "application/json": {
-              code: "invoice-not-eligible";
-            };
-          };
-        };
-        /** @description Invoice not found */
-        404: {
-          content: {
-            "application/json": {
-              code: "invoice-not-found";
-            };
-          };
-        };
-        /** @description Deferral could not be completed */
-        500: {
-          content: {
-            "application/json": {
-              /** @enum {string} */
-              code: "xledger-failed" | "tenfast-failed";
             };
           };
         };
