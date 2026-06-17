@@ -4,6 +4,7 @@ import {
   ContactTypeFilter,
   NationalIdNumber,
   PhoneNumber,
+  RelatedContact,
 } from '@src/domain/contact'
 import { ContactIncludeOptions } from './xpand/batch-query'
 
@@ -81,6 +82,26 @@ export interface ContactsRepository {
   ) => Promise<Contact[]>
 
   /**
+   * Retrieves the förvaltare of a contact as RelatedContact objects with role
+   * 'administrator'.
+   *
+   * @returns null when the subject contact does not exist; empty array when
+   *          it exists but has no förvaltare.
+   */
+  getGuardians: (contactCode: ContactCode) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the contacts the given contact is förvaltare for (the inverse
+   * direction) as RelatedContact objects with role 'ward'.
+   *
+   * @returns null when the subject contact does not exist; empty array when
+   *          it exists but is not a förvaltare for anyone.
+   */
+  getGuardianWards: (
+    contactCode: ContactCode
+  ) => Promise<RelatedContact[] | null>
+
+  /**
    * Retrieves contacts by their national ID number.
    *
    * @param nid - The national ID number to search for.
@@ -129,8 +150,13 @@ export interface ContactsRepository {
    * Retrieves full Contact objects for the given list of contact codes in a single batch.
    *
    * @param codes - The contact codes to fetch.
+   * @param options - When `includeRelations` is set, each contact is populated
+   *                  with its god man/förvaltare/ward relations.
    *
    * @returns A promise that resolves to an array of Contact objects.
    */
-  getByContactCodes: (codes: ContactCode[]) => Promise<Contact[]>
+  getByContactCodes: (
+    codes: ContactCode[],
+    options?: { includeRelations?: boolean }
+  ) => Promise<Contact[]>
 }

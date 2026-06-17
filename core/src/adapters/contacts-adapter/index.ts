@@ -83,11 +83,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
         includePhone?: boolean
         includeEmail?: boolean
         includeAddress?: boolean
+        includeRelations?: boolean
       }
     ): Promise<AdapterResult<Contact[], 'unknown'>> {
       if (contactCodes.length === 0) return { ok: true, data: [] }
 
-      const { includePhone, includeEmail, includeAddress } = options ?? {}
+      const { includePhone, includeEmail, includeAddress, includeRelations } =
+        options ?? {}
 
       const response = await axios<GetContactsResponseBody>(`/contacts/batch`, {
         params: {
@@ -95,6 +97,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           includePhone,
           includeEmail,
           includeAddress,
+          includeRelations,
         },
         // Required: contacts microservice uses Koa's default Node querystring
         // parser (no koa-qs), which doesn't unpack `?code[]=A` into an array.

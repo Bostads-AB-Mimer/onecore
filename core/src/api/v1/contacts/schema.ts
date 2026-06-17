@@ -46,10 +46,23 @@ export const ContactAddressSchema = z.object({
   country: z.string().nullable(),
 })
 
+export const RelatedContactRoleSchema = z.enum([
+  'trustee',
+  'administrator',
+  'ward',
+])
+
+export const RelatedContactSchema = z.object({
+  contactCode: z.string(),
+  role: RelatedContactRoleSchema,
+  fullName: z.string(),
+})
+
 export const ContactBaseSchema = z.object({
   contactCode: z.string(),
   communication: ContactCommunicationSchema,
   addresses: z.array(ContactAddressSchema),
+  relatedContacts: z.optional(z.array(RelatedContactSchema)),
 })
 
 export const ContactPersonalDetailsSchema = z.object({

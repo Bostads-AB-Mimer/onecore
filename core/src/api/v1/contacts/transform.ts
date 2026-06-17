@@ -28,6 +28,9 @@ export const transformContact = (contact: Contact): Contact_APIv1 => {
           fullName: contact.personal.fullName,
         },
         ...(contact.trustee ? { trustee: contact.trustee } : {}),
+        ...(contact.relatedContacts
+          ? { relatedContacts: contact.relatedContacts }
+          : {}),
         communication: contact.communication,
         addresses: contact.addresses.map(transformAddress),
       }
@@ -36,6 +39,9 @@ export const transformContact = (contact: Contact): Contact_APIv1 => {
         type: contact.type,
         contactCode: contact.contactCode,
         organisation: contact.organisation,
+        ...(contact.relatedContacts
+          ? { relatedContacts: contact.relatedContacts }
+          : {}),
         communication: contact.communication,
         addresses: contact.addresses.map(transformAddress),
       }

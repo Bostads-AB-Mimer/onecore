@@ -1,5 +1,17 @@
 import z from 'zod'
 
+export const RelatedContactRoleSchema = z.enum([
+  'trustee', // god man
+  'administrator', // förvaltare
+  'ward', // huvudman — a contact this contact is god man/förvaltare for
+])
+
+export const RelatedContactSchema = z.object({
+  contactCode: z.string(),
+  role: RelatedContactRoleSchema,
+  fullName: z.string(),
+})
+
 export const PhoneNumberTypeSchema = z.enum([
   'work',
   'home',
@@ -64,6 +76,7 @@ export const ContactBaseSchema = z.object({
   contactKey: z.string(),
   communication: ContactCommunicationSchema,
   addresses: z.array(ContactAddressSchema),
+  relatedContacts: z.array(RelatedContactSchema).optional(),
 })
 
 export const ContactIndividualSchema = ContactBaseSchema.extend({
@@ -95,6 +108,13 @@ export const GetContactsResponseBodySchema =
   ONECoreHateOASResponseBodySchema.extend({
     content: z.object({
       contacts: z.array(ContactSchema),
+    }),
+  })
+
+export const GetRelatedContactsResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({
+      relations: z.array(RelatedContactSchema),
     }),
   })
 

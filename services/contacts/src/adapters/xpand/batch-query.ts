@@ -6,6 +6,7 @@ export type ContactIncludeOptions = {
   includePhone?: boolean
   includeEmail?: boolean
   includeAddress?: boolean
+  includeRelations?: boolean
 }
 
 const BASE_COLUMNS = [
