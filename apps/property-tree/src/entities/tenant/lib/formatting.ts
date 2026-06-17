@@ -11,7 +11,11 @@ export function formatTenantName(tenant: {
   firstName?: string | null
   lastName?: string | null
   fullName?: string | null
+  protectedIdentity?: boolean
 }) {
+  if (tenant.protectedIdentity) {
+    return 'Skyddad identitet'
+  }
   return tenant.firstName && tenant.lastName
     ? `${tenant.firstName} ${tenant.lastName}`
     : tenant.fullName || '-'

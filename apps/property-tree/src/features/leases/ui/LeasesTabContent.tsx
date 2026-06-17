@@ -52,6 +52,14 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
             tenant.contactCode.startsWith('P') ||
             tenant.contactCode.startsWith('F')
 
+          const nameDisplay = tenant.protectedIdentity ? (
+            <span className="italic text-muted-foreground">
+              Skyddad identitet
+            </span>
+          ) : (
+            tenant.fullName
+          )
+
           return (
             <div key={tenant.contactCode}>
               <div className="flex items-center gap-2">
@@ -60,10 +68,10 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
                     to={paths.tenant(tenant.contactCode)}
                     className="font-medium text-primary hover:underline"
                   >
-                    {tenant.fullName}
+                    {nameDisplay}
                   </Link>
                 ) : (
-                  <span className="font-medium">{tenant.fullName}</span>
+                  <span className="font-medium">{nameDisplay}</span>
                 )}
                 {tenant.protectedIdentity && (
                   <ProtectedIdentityBadge size="sm" />
@@ -157,6 +165,13 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
                 tenant.contactCode.startsWith('P') ||
                 tenant.contactCode.startsWith('F')
               const phone = tenant.phoneNumbers?.find((p) => p.isMainNumber)
+              const nameDisplay = tenant.protectedIdentity ? (
+                <span className="italic text-muted-foreground">
+                  Skyddad identitet
+                </span>
+              ) : (
+                tenant.fullName
+              )
 
               return (
                 <div key={tenant.contactCode} className="space-y-1">
@@ -169,10 +184,10 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
                           to={paths.tenant(tenant.contactCode)}
                           className="font-medium text-primary hover:underline"
                         >
-                          {tenant.fullName}
+                          {nameDisplay}
                         </Link>
                       ) : (
-                        <span className="font-medium">{tenant.fullName}</span>
+                        <span className="font-medium">{nameDisplay}</span>
                       )}
                       {tenant.protectedIdentity && (
                         <ProtectedIdentityBadge size="sm" />

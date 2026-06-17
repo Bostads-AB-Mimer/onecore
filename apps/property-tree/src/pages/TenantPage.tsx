@@ -36,7 +36,15 @@ function TenantHeader({ tenant }: { tenant: Tenant }) {
     <TooltipProvider>
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-3xl font-bold">
-          {tenant.firstName} {tenant.lastName}
+          {tenant.protectedIdentity ? (
+            <span className="italic text-muted-foreground">
+              Skyddad identitet
+            </span>
+          ) : (
+            <>
+              {tenant.firstName} {tenant.lastName}
+            </>
+          )}
         </h1>
         {tenant.protectedIdentity && <ProtectedIdentityBadge />}
         {tenant.specialAttention && (

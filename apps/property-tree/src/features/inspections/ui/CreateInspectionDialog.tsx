@@ -203,8 +203,14 @@ export function CreateInspectionDialog({
                       <span className="flex items-center gap-2">
                         <span>
                           Kontrakt {option.lease.leaseNumber} –{' '}
-                          {option.lease.tenants?.[0]?.fullName ??
-                            'Okänd hyresgäst'}
+                          {option.lease.tenants?.[0]?.protectedIdentity ? (
+                            <span className="italic text-muted-foreground">
+                              Skyddad identitet
+                            </span>
+                          ) : (
+                            (option.lease.tenants?.[0]?.fullName ??
+                            'Okänd hyresgäst')
+                          )}
                         </span>
                         {option.lease.tenants?.[0]?.protectedIdentity && (
                           <ProtectedIdentityBadge size="sm" />
