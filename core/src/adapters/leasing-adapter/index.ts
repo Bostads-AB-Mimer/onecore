@@ -205,7 +205,13 @@ const getContactsDataBySearchQuery = async (
 ): Promise<
   AdapterResult<
     Array<
-      Pick<Contact, 'fullName' | 'contactCode' | 'nationalRegistrationNumber'>
+      Pick<
+        Contact,
+        | 'fullName'
+        | 'contactCode'
+        | 'nationalRegistrationNumber'
+        | 'protectedIdentity'
+      >
     >,
     unknown
   >
