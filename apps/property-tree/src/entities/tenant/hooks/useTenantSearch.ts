@@ -7,6 +7,7 @@ import type { ContactSearchResult } from '@/services/api/core/tenantService'
 export interface TenantSearchResult {
   fullName: string
   contactCode: string
+  protectedIdentity?: boolean
 }
 
 export const useTenantSearch = () => {
@@ -27,6 +28,7 @@ export const useTenantSearch = () => {
       return contactsSearchQuery.data.map((contact: ContactSearchResult) => ({
         fullName: contact.fullName,
         contactCode: contact.contactCode,
+        protectedIdentity: contact.protectedIdentity,
       }))
     }
 

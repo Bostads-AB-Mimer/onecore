@@ -82,6 +82,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
             isMainNumber: true,
           },
         ],
+        protectedIdentity: false,
         specialAttention: false,
         emailAddress: 'redacted',
         isTenant: false,
@@ -448,6 +449,74 @@ describe('transformFromDbContact', () => {
     expect(contact.fullName).toBeUndefined()
     expect(contact.nationalRegistrationNumber).toBeUndefined()
     expect(contact.birthDate).toBeUndefined()
+  })
+
+  it('should expose protectedIdentity=true when the Xpand row is flagged', () => {
+    const rows = [
+      {
+        contactCode: 'P123456',
+        contactKey: '_ADBAEC',
+        firstName: 'Test',
+        lastName: 'Testman',
+        fullName: 'Test Testman',
+        nationalRegistrationNumber: '121212121212',
+        birthDate: '1212-12-12',
+        street: 'Gatvägen 12',
+        postalCode: '12345',
+        city: 'Test City',
+        emailAddress: 'noreply@mimer.nu',
+        protectedIdentity: true,
+      },
+    ]
+    const phoneNumbers: {
+      phoneNumber: string
+      type: string
+      isMainNumber: number
+    }[] = []
+    const leaseIds: string[] = []
+
+    const contact: Contact = tenantLeaseAdapter.transformFromDbContact(
+      rows,
+      phoneNumbers,
+      leaseIds,
+      false
+    )
+
+    expect(contact.protectedIdentity).toBe(true)
+  })
+
+  it('should expose protectedIdentity=false when the Xpand row is not flagged', () => {
+    const rows = [
+      {
+        contactCode: 'P123456',
+        contactKey: '_ADBAEC',
+        firstName: 'Test',
+        lastName: 'Testman',
+        fullName: 'Test Testman',
+        nationalRegistrationNumber: '121212121212',
+        birthDate: '1212-12-12',
+        street: 'Gatvägen 12',
+        postalCode: '12345',
+        city: 'Test City',
+        emailAddress: 'noreply@mimer.nu',
+        protectedIdentity: null,
+      },
+    ]
+    const phoneNumbers: {
+      phoneNumber: string
+      type: string
+      isMainNumber: number
+    }[] = []
+    const leaseIds: string[] = []
+
+    const contact: Contact = tenantLeaseAdapter.transformFromDbContact(
+      rows,
+      phoneNumbers,
+      leaseIds,
+      false
+    )
+
+    expect(contact.protectedIdentity).toBe(false)
   })
 
   it('should handle special attention correctly', () => {

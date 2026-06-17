@@ -5,6 +5,7 @@ import { GET, POST } from './baseApi'
 export interface ContactSearchResult {
   fullName: string
   contactCode: string
+  protectedIdentity?: boolean
 }
 
 async function getByContactCode(contactCode: string): Promise<Tenant> {

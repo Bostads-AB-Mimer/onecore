@@ -1,10 +1,8 @@
-import { Link } from 'react-router-dom'
-
 import { formatDate, LeaseStatusBadge } from '@/entities/lease'
+import { TenantNameLink } from '@/entities/tenant'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
-import { paths } from '@/shared/routes'
 import { ObjectTypeBadge } from '@/shared/ui/StatusBadges'
 
 export const leaseColumns = [
@@ -39,12 +37,11 @@ export const leaseColumns = [
         <div className="space-y-1">
           {lease.contacts.map((contact) => (
             <div key={contact.contactCode}>
-              <Link
-                to={paths.tenant(contact.contactCode)}
-                className="font-medium text-primary hover:underline"
-              >
-                {contact.name}
-              </Link>
+              <TenantNameLink
+                contactCode={contact.contactCode}
+                fullName={contact.name}
+                protectedIdentity={contact.protectedIdentity}
+              />
               <div className="text-sm text-muted-foreground">
                 {contact.contactCode}
               </div>

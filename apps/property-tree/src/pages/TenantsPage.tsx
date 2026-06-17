@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 
-import { useTenantSearch } from '@/entities/tenant'
+import {
+  ProtectedIdentityBadge,
+  TenantName,
+  useTenantSearch,
+} from '@/entities/tenant'
 
 import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
@@ -99,7 +103,15 @@ export function TenantsPage() {
                     key: 'name',
                     label: 'Namn',
                     render: (contact) => (
-                      <span className="font-medium">{contact.fullName}</span>
+                      <span className="font-medium inline-flex items-center gap-2">
+                        <TenantName
+                          fullName={contact.fullName}
+                          protectedIdentity={contact.protectedIdentity}
+                        />
+                        {contact.protectedIdentity && (
+                          <ProtectedIdentityBadge size="sm" />
+                        )}
+                      </span>
                     ),
                   },
                   {
@@ -127,7 +139,15 @@ export function TenantsPage() {
                   <div className="space-y-2 w-full">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-medium">{contact.fullName}</div>
+                        <div className="font-medium inline-flex items-center gap-2">
+                          <TenantName
+                            fullName={contact.fullName}
+                            protectedIdentity={contact.protectedIdentity}
+                          />
+                          {contact.protectedIdentity && (
+                            <ProtectedIdentityBadge size="sm" />
+                          )}
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {contact.contactCode}
                         </div>

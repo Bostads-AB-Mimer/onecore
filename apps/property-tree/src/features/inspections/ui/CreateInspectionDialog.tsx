@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { LeaseStatusBadge } from '@/entities/lease'
+import { ProtectedIdentityBadge, TenantName } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
@@ -196,22 +197,31 @@ export function CreateInspectionDialog({
                 <SelectValue placeholder="Välj hyreskontrakt" />
               </SelectTrigger>
               <SelectContent>
-                {leaseOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.lease ? (
-                      <span className="flex items-center gap-2">
-                        <span>
-                          Kontrakt {option.lease.leaseNumber} –{' '}
-                          {option.lease.tenants?.[0]?.fullName ??
-                            'Okänd hyresgäst'}
+                {leaseOptions.map((option) => {
+                  const tenant = option.lease?.tenants?.[0]
+                  return (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.lease ? (
+                        <span className="flex items-center gap-2">
+                          <span>
+                            Kontrakt {option.lease.leaseNumber} –{' '}
+                            <TenantName
+                              fullName={tenant?.fullName}
+                              protectedIdentity={tenant?.protectedIdentity}
+                              fallback="Okänd hyresgäst"
+                            />
+                          </span>
+                          {tenant?.protectedIdentity && (
+                            <ProtectedIdentityBadge size="sm" />
+                          )}
+                          <LeaseStatusBadge status={option.lease.status} />
                         </span>
-                        <LeaseStatusBadge status={option.lease.status} />
-                      </span>
-                    ) : (
-                      'Inget kontrakt'
-                    )}
-                  </SelectItem>
-                ))}
+                      ) : (
+                        'Inget kontrakt'
+                      )}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>

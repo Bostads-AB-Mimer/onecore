@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
 
+import { ProtectedIdentityBadge, TenantName } from '@/entities/tenant'
 import {
   TenantSearchResult,
   useTenantSearch,
@@ -100,7 +101,15 @@ export function TenantSearchSection({
                   onClick={() => handleSelectCustomer(tenant)}
                   className="w-full px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
-                  <div className="font-medium">{tenant.fullName}</div>
+                  <div className="font-medium inline-flex items-center gap-2">
+                    <TenantName
+                      fullName={tenant.fullName}
+                      protectedIdentity={tenant.protectedIdentity}
+                    />
+                    {tenant.protectedIdentity && (
+                      <ProtectedIdentityBadge size="sm" />
+                    )}
+                  </div>
                   <div className="text-sm opacity-70">
                     {tenant.contactCode} • {tenant.fullName}
                   </div>

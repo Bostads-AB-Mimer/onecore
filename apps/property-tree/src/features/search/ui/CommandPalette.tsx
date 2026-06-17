@@ -14,6 +14,8 @@ import {
   Wrench,
 } from 'lucide-react'
 
+import { ProtectedIdentityBadge } from '@/entities/tenant'
+
 import { debounce } from '@/shared/lib/debounce'
 import { paths } from '@/shared/routes'
 
@@ -68,6 +70,9 @@ function getResultProps(item: CombinedSearchResult) {
         icon,
         label: item.contactCode,
         subtitle: item.fullName,
+        trailing: item.protectedIdentity ? (
+          <ProtectedIdentityBadge size="sm" />
+        ) : undefined,
         path: paths.tenant(item.contactCode),
         state: {},
       }
@@ -235,6 +240,9 @@ export function CommandPalette() {
                         label={props.label}
                         prefix={props.prefix}
                         subtitle={props.subtitle}
+                        trailing={
+                          'trailing' in props ? props.trailing : undefined
+                        }
                         isSelected={selectedIndex === index}
                         onClick={() => handleSelect(props.path, props.state)}
                       />

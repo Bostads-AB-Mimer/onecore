@@ -7,7 +7,12 @@ import { TenantTabs } from '@/widgets/tenant-tabs'
 
 import { useLeasesByContactCode } from '@/entities/lease'
 import { useRentalProperties } from '@/entities/rental-property'
-import { TenantCard, useTenant } from '@/entities/tenant'
+import {
+  ProtectedIdentityBadge,
+  TenantCard,
+  TenantName,
+  useTenant,
+} from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 import type { Tenant } from '@/services/types'
@@ -26,14 +31,17 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
 
-// Helper component: Tenant header with name and special attention badge
+// Helper component: Tenant header with name and status badges
 function TenantHeader({ tenant }: { tenant: Tenant }) {
   return (
     <TooltipProvider>
       <div className="flex items-center gap-3 mb-6">
         <h1 className="text-3xl font-bold">
-          {tenant.firstName} {tenant.lastName}
+          <TenantName protectedIdentity={tenant.protectedIdentity}>
+            {tenant.firstName} {tenant.lastName}
+          </TenantName>
         </h1>
+        {tenant.protectedIdentity && <ProtectedIdentityBadge />}
         {tenant.specialAttention && (
           <Tooltip>
             <TooltipTrigger asChild>

@@ -9950,6 +9950,7 @@ export interface components {
             }[];
           emailAddress?: string | null;
           isTenant: boolean;
+          protectedIdentity?: boolean;
           specialAttention?: boolean;
           parkingSpaceWaitingList?: {
             /** Format: date-time */
@@ -9973,6 +9974,7 @@ export interface components {
           contactCode: string;
           email: string | null;
           phone: string | null;
+          protectedIdentity?: boolean;
         })[];
       address: string | null;
       /** Format: date-time */
@@ -9995,6 +9997,7 @@ export interface components {
       contactCode: string;
       email: string | null;
       phone: string | null;
+      protectedIdentity?: boolean;
     };
     PaginationMeta: {
       totalRecords: number;
@@ -10030,6 +10033,7 @@ export interface components {
         }[];
       emailAddress?: string | null;
       isTenant: boolean;
+      protectedIdentity?: boolean;
       specialAttention?: boolean;
     };
     ListingTextContent: {
@@ -12493,6 +12497,7 @@ export interface components {
               }[];
             emailAddress?: string | null;
             isTenant: boolean;
+            protectedIdentity?: boolean;
             specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */
@@ -12767,6 +12772,7 @@ export interface components {
               }[];
             emailAddress?: string | null;
             isTenant: boolean;
+            protectedIdentity?: boolean;
             specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */
@@ -13151,6 +13157,7 @@ export interface components {
               }[];
             emailAddress?: string | null;
             isTenant: boolean;
+            protectedIdentity?: boolean;
             specialAttention?: boolean;
             parkingSpaceWaitingList?: {
               /** Format: date-time */

@@ -9,6 +9,7 @@ export const ContactInfoSchema = z.object({
   contactCode: z.string(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
+  protectedIdentity: z.boolean().optional(),
 })
 
 export type ContactInfo = z.infer<typeof ContactInfoSchema>

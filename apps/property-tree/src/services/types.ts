@@ -265,6 +265,7 @@ export interface Tenant {
   emailAddress: string
   isTenant: boolean
   parkingSpaceWaitingList: WaitingListResponse
+  protectedIdentity?: boolean
   specialAttention: boolean
   isAboutToLeave: boolean
   currentHousingContract: ContractType
