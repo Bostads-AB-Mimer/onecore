@@ -9902,6 +9902,7 @@ export interface components {
           contactCode: string;
           email: string | null;
           phone: string | null;
+          protectedIdentity?: boolean;
         })[];
       address: string | null;
       /** Format: date-time */
@@ -9924,6 +9925,7 @@ export interface components {
       contactCode: string;
       email: string | null;
       phone: string | null;
+      protectedIdentity?: boolean;
     };
     PaginationMeta: {
       totalRecords: number;
