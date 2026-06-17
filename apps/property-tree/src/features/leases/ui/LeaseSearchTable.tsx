@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { formatDate, LeaseStatusBadge } from '@/entities/lease'
+import { ProtectedIdentityBadge } from '@/entities/tenant'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
@@ -24,12 +25,17 @@ export function LeaseMobileCard(lease: LeaseSearchResult) {
           lease.contacts.map((contact) => (
             <div key={contact.contactCode} className="flex justify-between">
               <span className="text-muted-foreground">Hyresgäst:</span>
-              <Link
-                to={paths.tenant(contact.contactCode)}
-                className="font-medium text-primary hover:underline"
-              >
-                {contact.name}
-              </Link>
+              <span className="flex items-center gap-2">
+                <Link
+                  to={paths.tenant(contact.contactCode)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {contact.name}
+                </Link>
+                {contact.protectedIdentity && (
+                  <ProtectedIdentityBadge size="sm" />
+                )}
+              </span>
             </div>
           ))
         ) : (
