@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import { motion } from 'framer-motion'
 import { ArrowRight, type LucideIcon } from 'lucide-react'
 
@@ -6,6 +8,7 @@ interface SearchResultItemProps {
   label: string
   prefix?: string
   subtitle?: string | null
+  trailing?: ReactNode
   isSelected: boolean
   onClick: () => void
 }
@@ -15,6 +18,7 @@ export function SearchResultItem({
   label,
   prefix,
   subtitle,
+  trailing,
   isSelected,
   onClick,
 }: SearchResultItemProps) {
@@ -35,6 +39,7 @@ export function SearchResultItem({
       </div>
       {subtitle && <span className="text-xs text-gray-400">{subtitle}</span>}
       <span className="flex-1 text-left">{label}</span>
+      {trailing}
       <ArrowRight className="h-4 w-4 opacity-50" />
     </motion.button>
   )
