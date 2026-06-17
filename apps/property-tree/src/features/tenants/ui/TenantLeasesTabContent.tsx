@@ -12,6 +12,7 @@ import {
   LeaseStatusBadge,
   sortLeasesByStatus,
 } from '@/entities/lease'
+import { ProtectedIdentityBadge } from '@/entities/tenant'
 
 import { Lease } from '@/services/api/core/leaseService'
 
@@ -137,16 +138,21 @@ export function TenantLeasesTabContent({
                 tenant.contactCode.startsWith('F')
               return (
                 <div key={tenant.contactCode}>
-                  {isValidContact ? (
-                    <Link
-                      to={paths.tenant(tenant.contactCode)}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {tenant.fullName}
-                    </Link>
-                  ) : (
-                    <span className="font-medium">{tenant.fullName}</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isValidContact ? (
+                      <Link
+                        to={paths.tenant(tenant.contactCode)}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {tenant.fullName}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">{tenant.fullName}</span>
+                    )}
+                    {tenant.protectedIdentity && (
+                      <ProtectedIdentityBadge size="sm" />
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground">
                     {tenant.contactCode}
                   </div>
@@ -250,16 +256,21 @@ export function TenantLeasesTabContent({
                   {index > 0 && <div className="border-t pt-2" />}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Hyresgäst:</span>
-                    {isValidContact ? (
-                      <Link
-                        to={paths.tenant(tenant.contactCode)}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {tenant.fullName}
-                      </Link>
-                    ) : (
-                      <span className="font-medium">{tenant.fullName}</span>
-                    )}
+                    <span className="flex items-center gap-2">
+                      {isValidContact ? (
+                        <Link
+                          to={paths.tenant(tenant.contactCode)}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {tenant.fullName}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">{tenant.fullName}</span>
+                      )}
+                      {tenant.protectedIdentity && (
+                        <ProtectedIdentityBadge size="sm" />
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Kundnummer:</span>

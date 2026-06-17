@@ -1,4 +1,5 @@
 // UI Components
+export { ProtectedIdentityBadge } from './ui/ProtectedIdentityBadge'
 export { TenantCard } from './ui/TenantCard'
 export { TenantContactActions } from './ui/TenantContactActions'
 export { TenantLeaseCard } from './ui/TenantLeaseCard'

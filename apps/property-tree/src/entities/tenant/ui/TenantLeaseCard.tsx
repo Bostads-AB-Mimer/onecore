@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom'
 import { User, Users } from 'lucide-react'
 
-import { TenantContactActions, TenantPersonalInfo } from '@/entities/tenant'
+import {
+  ProtectedIdentityBadge,
+  TenantContactActions,
+  TenantPersonalInfo,
+} from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 
@@ -28,9 +32,10 @@ export function TenantLeaseCard({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <Users className="h-5 w-5 mr-2 text-slate-500" />
           <h4 className="font-medium">Kontraktsinnehavare</h4>
+          {tenant.protectedIdentity && <ProtectedIdentityBadge size="sm" />}
         </div>
         <Button variant="outline" asChild className="shrink-0">
           <Link to={paths.tenant(tenant.contactCode)} rel="noopener noreferrer">

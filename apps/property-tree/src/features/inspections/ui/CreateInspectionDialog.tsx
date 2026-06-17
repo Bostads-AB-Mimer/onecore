@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { LeaseStatusBadge } from '@/entities/lease'
+import { ProtectedIdentityBadge } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
@@ -205,6 +206,9 @@ export function CreateInspectionDialog({
                           {option.lease.tenants?.[0]?.fullName ??
                             'Okänd hyresgäst'}
                         </span>
+                        {option.lease.tenants?.[0]?.protectedIdentity && (
+                          <ProtectedIdentityBadge size="sm" />
+                        )}
                         <LeaseStatusBadge status={option.lease.status} />
                       </span>
                     ) : (

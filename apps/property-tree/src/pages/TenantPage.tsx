@@ -1,13 +1,17 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import type { RentalPropertyInfo } from '@onecore/types'
-import { AlertTriangle, ShieldAlert } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 
 import { TenantTabs } from '@/widgets/tenant-tabs'
 
 import { useLeasesByContactCode } from '@/entities/lease'
 import { useRentalProperties } from '@/entities/rental-property'
-import { TenantCard, useTenant } from '@/entities/tenant'
+import {
+  ProtectedIdentityBadge,
+  TenantCard,
+  useTenant,
+} from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 import type { Tenant } from '@/services/types'
@@ -34,20 +38,7 @@ function TenantHeader({ tenant }: { tenant: Tenant }) {
         <h1 className="text-3xl font-bold">
           {tenant.firstName} {tenant.lastName}
         </h1>
-        {tenant.protectedIdentity && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center justify-center w-8 h-8 bg-red-100 rounded-full border border-red-200 cursor-help">
-                <ShieldAlert className="h-4 w-4 text-red-600" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>
-                Skyddad identitet. Hantera kunduppgifter med särskild varsamhet.
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        )}
+        {tenant.protectedIdentity && <ProtectedIdentityBadge />}
         {tenant.specialAttention && (
           <Tooltip>
             <TooltipTrigger asChild>
