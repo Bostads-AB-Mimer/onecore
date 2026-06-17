@@ -36,21 +36,24 @@ export const routes = (router: KoaRouter) => {
 
       const invoicesResult = await exportRentalInvoicesAccounting(companyId)
       const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
-        await createAccounting(invoicesResult.invoices)
+        await createAccounting(invoicesResult.exportedInvoices)
 
       await uploadCsvFiles(
         companyId,
         aggregateAccountingCsv,
         ledgerAccountingCsv
       )
-      //await markInvoicesAsExported(invoicesResult.invoices)
+      //await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
 
       ctx.status = 200
       ctx.body = {
         errors: invoicesResult.errors,
-        successfulInvoices: invoicesResult.invoices.map(
+        successfulInvoices: invoicesResult.exportedInvoices.map(
           (invoice) => invoice.invoiceId
         ),
+        skippedInvoices: invoicesResult.skippedInvoices.map(
+          (invoice) => invoice.invoiceId
+        )
       }
     } catch (error) {
       ctx.status = 500
@@ -73,23 +76,6 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
     }
   )
-
-  // TODO: Remove this route after feature completion
-  router.get('(.*)/invoices/invoices-for-import', async (ctx) => {
-    try {
-      const invoicesResult = await exportRentalInvoicesAccounting('001')
-
-      const invoiceIds = invoicesResult.invoices.map((invoice) => {
-        return invoice.invoiceId
-      })
-
-      ctx.status = 200
-      ctx.body = invoiceIds
-    } catch (error) {
-      ctx.status = 500
-      ctx.body = 'Could not export invoices ' + (error as any).message
-    }
-  })
 
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
