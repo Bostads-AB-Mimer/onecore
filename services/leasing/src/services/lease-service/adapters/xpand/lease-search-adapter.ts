@@ -464,6 +464,7 @@ export class LeaseSearchQueryBuilder {
         SELECT
           cmctc.cmctcben as name,
           cmctc.cmctckod as contactCode,
+          cmctc.lagsokt as lagsokt,
           cmeml.cmemlben as email,
           cmtel.cmtelben as phone
         FROM hyavk
@@ -653,6 +654,7 @@ export const parseContactsJson = (
       contactCode: c.contactCode ? String(c.contactCode).trim() : '',
       email: c.email ? String(c.email).trim() : null,
       phone: c.phone ? String(c.phone).trim() : null,
+      protectedIdentity: c.lagsokt != null,
     }))
   } catch (e) {
     logger.warn(e, 'parseContactsJson: failed to parse contacts JSON')
