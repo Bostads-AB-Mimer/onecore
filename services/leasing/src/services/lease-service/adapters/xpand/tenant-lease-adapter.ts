@@ -488,6 +488,7 @@ const getContactsDataBySearchQuery = async (
       contactCode: string
       fullName: string
       nationalRegistrationNumber: string
+      protectedIdentity: boolean
     }>,
     'internal-error'
   >
@@ -500,7 +501,11 @@ const getContactsDataBySearchQuery = async (
       // Email search only
       const rows = await xpandDb
         .from('cmctc')
-        .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+        .select(
+          'cmctc.cmctckod as contactCode',
+          'cmctc.cmctcben as fullName',
+          'cmctc.lagsokt as lagsokt'
+        )
         .where(
           'cmctc.keycmobj',
           'in',
@@ -514,7 +519,7 @@ const getContactsDataBySearchQuery = async (
 
       return {
         ok: true,
-        data: rows,
+        data: rows.map(withProtectedIdentity),
       }
     }
 
@@ -524,7 +529,8 @@ const getContactsDataBySearchQuery = async (
         .select(
           'cmctc.cmctckod as contactCode',
           'cmctc.cmctcben as fullName',
-          'cmctc.persorgnr as nationalRegistrationNumber'
+          'cmctc.persorgnr as nationalRegistrationNumber',
+          'cmctc.lagsokt as lagsokt'
         )
         .where(
           'cmctc.keycmobj',
@@ -540,7 +546,7 @@ const getContactsDataBySearchQuery = async (
 
       return {
         ok: true,
-        data: rows,
+        data: rows.map(withProtectedIdentity),
       }
     }
 
@@ -554,7 +560,11 @@ const getContactsDataBySearchQuery = async (
 
     const rows = await xpandDb
       .from('cmctc')
-      .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+      .select(
+        'cmctc.cmctckod as contactCode',
+        'cmctc.cmctcben as fullName',
+        'cmctc.lagsokt as lagsokt'
+      )
       .where('cmctc.deletemark', '=', '0')
       .where((builder) => {
         builder.where('cmctc.cmctckod', 'like', `${q}%`)
@@ -568,7 +578,7 @@ const getContactsDataBySearchQuery = async (
 
     return {
       ok: true,
-      data: rows,
+      data: rows.map(withProtectedIdentity),
     }
   } catch (err) {
     logger.error({ err }, 'tenant-lease-adapter.getContactsDataBySearchQuery')
@@ -577,6 +587,15 @@ const getContactsDataBySearchQuery = async (
       err: 'internal-error',
     }
   }
+}
+
+// Derives the protectedIdentity boolean from the raw cmctc.lagsokt column
+// (`!== null` matches the semantics used elsewhere in this adapter — see line 94).
+// Typed loosely because knex returns rows as `unknown` — the calling site's
+// declared Promise<AdapterResult<…>> enforces the shape we actually return.
+const withProtectedIdentity = (row: any) => {
+  const { lagsokt, ...rest } = row
+  return { ...rest, protectedIdentity: lagsokt !== null }
 }
 
 /**
@@ -588,14 +607,24 @@ const getContactsDataBySearchQuery = async (
 const searchContactsPaginated = async (
   q: string,
   ctx: Context
-): Promise<PaginatedResponse<{ contactCode: string; fullName: string }>> => {
+): Promise<
+  PaginatedResponse<{
+    contactCode: string
+    fullName: string
+    protectedIdentity: boolean
+  }>
+> => {
   const isEmailSearch = q.includes('@')
   const isPhoneNumberSearch = /^[0+][\d\-+]*$/.test(q)
 
   if (isEmailSearch) {
     const query = xpandDb
       .from('cmctc')
-      .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+      .select(
+        'cmctc.cmctckod as contactCode',
+        'cmctc.cmctcben as fullName',
+        'cmctc.lagsokt as lagsokt'
+      )
       .where(
         'cmctc.keycmobj',
         'in',
@@ -605,13 +634,18 @@ const searchContactsPaginated = async (
           .where('cmemlben', 'like', `${q}%`)
       )
 
-    return paginateKnex(query, ctx)
+    const page = await paginateKnex(query, ctx)
+    return { ...page, content: page.content.map(withProtectedIdentity) }
   }
 
   if (isPhoneNumberSearch) {
     const query = xpandDb
       .from('cmctc')
-      .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+      .select(
+        'cmctc.cmctckod as contactCode',
+        'cmctc.cmctcben as fullName',
+        'cmctc.lagsokt as lagsokt'
+      )
       .where(
         'cmctc.keycmobj',
         'in',
@@ -623,7 +657,8 @@ const searchContactsPaginated = async (
       .where('cmctc.deletemark', '=', '0')
       .orderBy('cmctc.cmctcben', 'asc')
 
-    return paginateKnex(query, ctx)
+    const page = await paginateKnex(query, ctx)
+    return { ...page, content: page.content.map(withProtectedIdentity) }
   }
 
   // Split into terms - all must match name (AND), or match contactCode/persorgnr
@@ -634,7 +669,11 @@ const searchContactsPaginated = async (
 
   const query = xpandDb
     .from('cmctc')
-    .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+    .select(
+      'cmctc.cmctckod as contactCode',
+      'cmctc.cmctcben as fullName',
+      'cmctc.lagsokt as lagsokt'
+    )
     .where('cmctc.deletemark', '=', '0')
     .where((builder) => {
       builder.where('cmctc.cmctckod', 'like', `${q}%`)
@@ -648,7 +687,8 @@ const searchContactsPaginated = async (
     })
     .orderBy('cmctc.cmctcben', 'asc')
 
-  return paginateKnex(query, ctx)
+  const page = await paginateKnex(query, ctx)
+  return { ...page, content: page.content.map(withProtectedIdentity) }
 }
 
 /**

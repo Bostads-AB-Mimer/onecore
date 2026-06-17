@@ -48,6 +48,7 @@ describe('GET /contacts/search', () => {
             contactCode: 'foo',
             fullName: 'Foo Bar',
             nationalRegistrationNumber: '123456789',
+            protectedIdentity: false,
           },
         ],
       })
