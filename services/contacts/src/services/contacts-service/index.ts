@@ -300,13 +300,10 @@ export const routes = (
   router.get(
     '/contacts/:contactCode/trustee',
     {
-      summary:
-        'DEPRECATED — Get the god man of a contact by their Contact Code',
+      summary: 'Get the god man of a contact by their Contact Code',
       description:
-        'Deprecated: use GET /contacts/:contactCode/trustees instead, which ' +
-        'returns RelatedContact objects. Returns the god man (cmctc.forvtyp = 1) ' +
-        'of the given contact as a full Contact. 404 when the contact does not ' +
-        'exist or has no god man.',
+        'Returns the god man (cmctc.forvtyp = 1) of the given contact as a ' +
+        'full Contact. 404 when the contact does not exist or has no god man.',
       tags: ['Contacts'],
       params: {
         contactCode: z.string(),
