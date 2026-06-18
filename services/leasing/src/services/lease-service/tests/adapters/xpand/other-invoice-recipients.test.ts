@@ -49,9 +49,9 @@ jest.mock('knex', () => () => ({
 
 describe('getOtherInvoiceRecipientsByLeaseIds', () => {
   it('groups ANNANFM recipients by leaseId', async () => {
-    const result = await tenantLeaseAdapter.getOtherInvoiceRecipientsByLeaseIds([
-      '123-456-78/1',
-    ])
+    const result = await tenantLeaseAdapter.getOtherInvoiceRecipientsByLeaseIds(
+      ['123-456-78/1']
+    )
 
     const recipients = result.get('123-456-78/1')
     expect(recipients).toHaveLength(1)
@@ -175,9 +175,8 @@ describe('getOtherInvoiceRecipientsByLeaseIds', () => {
 
     const recipients = result.get('123-456-78/1')
     expect(recipients).toHaveLength(2)
-    expect(recipients?.map((r: { contactCode: string }) => r.contactCode).sort()).toEqual([
-      'P000001',
-      'P000002',
-    ])
+    expect(
+      recipients?.map((r: { contactCode: string }) => r.contactCode).sort()
+    ).toEqual(['P000001', 'P000002'])
   })
 })

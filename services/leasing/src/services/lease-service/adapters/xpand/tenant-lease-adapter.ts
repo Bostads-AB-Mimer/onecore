@@ -631,7 +631,12 @@ const getOtherInvoiceRecipientsByLeaseIds = async (
       const phoneNumbers = await getPhoneNumbersForContact(
         contactRows[0].keycmobj
       )
-      const contact = transformFromDbContact(contactRows, phoneNumbers, [], false)
+      const contact = transformFromDbContact(
+        contactRows,
+        phoneNumbers,
+        [],
+        false
+      )
 
       return { leaseId: (row.leaseId as string)?.trim(), contact }
     })
