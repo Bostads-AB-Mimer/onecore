@@ -600,6 +600,45 @@ const getPhoneNumbersForContact = async (keycmobj: string) => {
   return rows
 }
 
+const getOtherInvoiceRecipientsByLeaseIds = async (
+  leaseIds: string[]
+): Promise<Map<string, Contact[]>> => {
+  const result = new Map<string, Contact[]>()
+  if (leaseIds.length === 0) {
+    return result
+  }
+
+  const junctionRows = await xpandDb
+    .from('hyavk')
+    .select('hyobj.hyobjben as leaseId', 'hyavk.keycmctc as contactKey')
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .whereRaw('TRIM(hyavk.keyhyakt) = ?', ['ANNANFM'])
+    .whereIn('hyobj.hyobjben', leaseIds)
+
+  for (const row of junctionRows) {
+    const contactRows = await getContactQuery().where({
+      'cmctc.keycmctc': row.contactKey,
+    })
+
+    if (!contactRows?.length) {
+      continue
+    }
+    if ((contactRows[0].contactCode as string)?.trim() === 'RENSAD_GDPR') {
+      continue
+    }
+
+    const phoneNumbers = await getPhoneNumbersForContact(contactRows[0].keycmobj)
+    const contact = transformFromDbContact(contactRows, phoneNumbers, [], false)
+
+    const leaseId = (row.leaseId as string)?.trim()
+    const existing = result.get(leaseId) ?? []
+    existing.push(contact)
+    result.set(leaseId, existing)
+  }
+
+  return result
+}
+
 const getContactForPhoneNumber = async (phoneNumber: string) => {
   const rows = await xpandDb
     .from('cmtel')
@@ -665,7 +704,17 @@ const getLeases = async (leaseIds: string[]) => {
       `hyobj.hyobjben IN (${leaseIds.map((id) => `'${id}'`).join(', ')})`
     )
 
-  return rows.map((row) => transformFromXPandDb.toLease(row, [], []))
+  const recipientsByLeaseId =
+    await getOtherInvoiceRecipientsByLeaseIds(leaseIds)
+
+  return rows.map((row) =>
+    transformFromXPandDb.toLease(
+      row,
+      [],
+      [],
+      recipientsByLeaseId.get((row.leaseId as string)?.trim()) ?? []
+    )
+  )
 }
 
 const getContacts = async (contactCodes: string[]) => {
@@ -840,4 +889,5 @@ export {
   getContactsForIdentityCheck,
   transformFromDbContact,
   getContactsByLeaseId,
+  getOtherInvoiceRecipientsByLeaseIds,
 }
