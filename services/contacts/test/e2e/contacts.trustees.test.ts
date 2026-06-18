@@ -3,7 +3,7 @@ import { RelatedContactSchema } from '@src/services/contacts-service/schema'
 import { makeTestAppFixture, TestApp } from './app-fixture'
 import { FULL_TEST_DATA_SET } from './data-set'
 
-describe('god man endpoints', () => {
+describe('trustee endpoints', () => {
   let testApp: TestApp | undefined
   let httpClient: AxiosInstance
 
@@ -22,31 +22,26 @@ describe('god man endpoints', () => {
     }
   })
 
-  describe('GET /contacts/:contactCode/trustees', () => {
-    it('returns the god man of a contact that has one', async () => {
-      const response = await httpClient.get('/contacts/P000666/trustees')
+  describe('GET /contacts/:contactCode/trustee', () => {
+    it('returns the trustee as a full contact', async () => {
+      const response = await httpClient.get('/contacts/P000666/trustee')
 
       expect(response.status).toBe(200)
-      expect(response.data.content.relations).toHaveLength(1)
-
-      const [relation] = response.data.content.relations
-      expect(RelatedContactSchema.safeParse(relation).success).toBe(true)
-      expect(relation).toMatchObject({
+      expect(response.data.content).toMatchObject({
         contactCode: 'P000444',
-        role: 'trustee',
-        fullName: 'McTestface Testy',
       })
     })
 
-    it('returns an empty list for a contact that has only a förvaltare', async () => {
-      const response = await httpClient.get('/contacts/P000555/trustees')
+    it('returns 404 when the contact has only a förvaltare (no trustee)', async () => {
+      const response = await httpClient.get('/contacts/P000555/trustee', {
+        validateStatus: () => true,
+      })
 
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toEqual([])
+      expect(response.status).toBe(404)
     })
 
     it('returns 404 for an unknown contact', async () => {
-      const response = await httpClient.get('/contacts/P999999/trustees', {
+      const response = await httpClient.get('/contacts/P999999/trustee', {
         validateStatus: () => true,
       })
 
@@ -55,7 +50,7 @@ describe('god man endpoints', () => {
   })
 
   describe('GET /contacts/:contactCode/trustee-for', () => {
-    it('returns the wards of a god man with role ward, excluding förvaltare wards', async () => {
+    it('returns the wards of a trustee with role ward, excluding förvaltare wards', async () => {
       const response = await httpClient.get('/contacts/P000444/trustee-for')
 
       expect(response.status).toBe(200)
@@ -70,7 +65,7 @@ describe('god man endpoints', () => {
       })
     })
 
-    it('returns an empty list for a contact that is god man for no one', async () => {
+    it('returns an empty list for a contact that is trustee for no one', async () => {
       const response = await httpClient.get('/contacts/P000111/trustee-for')
 
       expect(response.status).toBe(200)
@@ -79,25 +74,6 @@ describe('god man endpoints', () => {
 
     it('returns 404 for an unknown contact', async () => {
       const response = await httpClient.get('/contacts/P999999/trustee-for', {
-        validateStatus: () => true,
-      })
-
-      expect(response.status).toBe(404)
-    })
-  })
-
-  describe('GET /contacts/:contactCode/trustee (god man only)', () => {
-    it('returns the god man as a full contact', async () => {
-      const response = await httpClient.get('/contacts/P000666/trustee')
-
-      expect(response.status).toBe(200)
-      expect(response.data.content).toMatchObject({
-        contactCode: 'P000444',
-      })
-    })
-
-    it('returns 404 when the contact has only a förvaltare (no god man)', async () => {
-      const response = await httpClient.get('/contacts/P000555/trustee', {
         validateStatus: () => true,
       })
 

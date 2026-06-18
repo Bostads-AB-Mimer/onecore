@@ -300,10 +300,10 @@ export const routes = (
   router.get(
     '/contacts/:contactCode/trustee',
     {
-      summary: 'Get the god man of a contact by their Contact Code',
+      summary: 'Get the trustee (god man) of a contact by their Contact Code',
       description:
-        'Returns the god man (cmctc.forvtyp = 1) of the given contact as a ' +
-        'full Contact. 404 when the contact does not exist or has no god man.',
+        'Returns the trustee (god man) of the given contact as a full ' +
+        'Contact. 404 when the contact does not exist or has no trustee.',
       tags: ['Contacts'],
       params: {
         contactCode: z.string(),
@@ -323,22 +323,19 @@ export const routes = (
         return
       }
 
-      const godMan = relations[0]
-      if (!godMan) {
+      const trusteeRelation = relations[0]
+      if (!trusteeRelation) {
         ctx.status = 404
         return
       }
 
       const trustee = await contactsRepository.getByContactCode(
-        godMan.contactCode
+        trusteeRelation.contactCode
       )
 
       if (trustee) {
         ctx.status = 200
-        ctx.body = {
-          content: trustee,
-          ...metadata,
-        }
+        ctx.body = makeSuccessResponseBody(trustee, metadata)
       } else {
         ctx.status = 404
       }
@@ -346,50 +343,13 @@ export const routes = (
   )
 
   router.get(
-    '/contacts/:contactCode/trustees',
-    {
-      summary: 'List the god man of a contact',
-      description:
-        'Returns the contacts registered as god man (cmctc.forvtyp = 1) ' +
-        'for the given contact, as RelatedContact objects with role ' +
-        "'trustee'. Empty list when the contact has no god man; " +
-        '404 when the contact does not exist.',
-      tags: ['Contacts'],
-      params: {
-        contactCode: z.string(),
-      },
-      response: {
-        200: GetRelatedContactsResponseBodySchema,
-        404: ONECoreHateOASResponseBodySchema,
-      },
-    },
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const relations = await contactsRepository.getTrustees(
-        ctx.params.contactCode
-      )
-
-      if (relations === null) {
-        ctx.status = 404
-        return
-      }
-
-      ctx.status = 200
-      ctx.body = {
-        content: { relations },
-        ...metadata,
-      }
-    }
-  )
-
-  router.get(
     '/contacts/:contactCode/trustee-for',
     {
-      summary: 'List the contacts a person is god man for',
+      summary: 'List the contacts a person is trustee (god man) for',
       description:
         'Returns the contacts that have the given contact registered as ' +
-        'their god man, as RelatedContact objects with role ' +
-        "'ward'. Empty list when the contact is not a god man for anyone; " +
+        'their trustee, as RelatedContact objects with role ' +
+        "'ward'. Empty list when the contact is not a trustee for anyone; " +
         '404 when the contact does not exist.',
       tags: ['Contacts'],
       params: {
@@ -412,46 +372,53 @@ export const routes = (
       }
 
       ctx.status = 200
-      ctx.body = {
-        content: { relations },
-        ...metadata,
-      }
+      ctx.body = makeSuccessResponseBody({ relations }, metadata)
     }
   )
 
   router.get(
-    '/contacts/:contactCode/administrators',
+    '/contacts/:contactCode/administrator',
     {
-      summary: 'List the administrators (förvaltare) of a contact',
+      summary:
+        'Get the administrator (förvaltare) of a contact by their Contact Code',
       description:
-        'Returns the contacts registered as förvaltare (cmctc.forvtyp = 2) ' +
-        'for the given contact, as RelatedContact objects with role ' +
-        "'administrator'. Empty list when the contact has no förvaltare; " +
-        '404 when the contact does not exist.',
+        'Returns the administrator (förvaltare) of the given contact as a ' +
+        'full Contact. 404 when the contact does not exist or has no ' +
+        'administrator.',
       tags: ['Contacts'],
       params: {
         contactCode: z.string(),
       },
       response: {
-        200: GetRelatedContactsResponseBodySchema,
+        200: GetContactResponseBodySchema,
         404: ONECoreHateOASResponseBodySchema,
       },
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const relations = await contactsRepository.getGuardians(
-        ctx.params.contactCode
-      )
+      const { contactCode } = ctx.params
+      const relations = await contactsRepository.getGuardians(contactCode)
 
       if (relations === null) {
         ctx.status = 404
         return
       }
 
-      ctx.status = 200
-      ctx.body = {
-        content: { relations },
-        ...metadata,
+      const administratorRelation = relations[0]
+      if (!administratorRelation) {
+        ctx.status = 404
+        return
+      }
+
+      const administrator = await contactsRepository.getByContactCode(
+        administratorRelation.contactCode
+      )
+
+      if (administrator) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(administrator, metadata)
+      } else {
+        ctx.status = 404
       }
     }
   )
@@ -486,10 +453,7 @@ export const routes = (
       }
 
       ctx.status = 200
-      ctx.body = {
-        content: { relations },
-        ...metadata,
-      }
+      ctx.body = makeSuccessResponseBody({ relations }, metadata)
     }
   )
 
