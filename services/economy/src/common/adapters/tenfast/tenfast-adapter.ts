@@ -12,6 +12,10 @@ import {
   TenfastInvoiceRow,
   TenfastRentArticleSchema,
   TenfastRentArticle,
+  TenfastRentalLossHyraSchema,
+  TenfastRentalLossSchema,
+  TenfastRentalLoss,
+  TenfastRentalLossResponseSchema,
 } from './schemas'
 import {
   Invoice,
@@ -23,6 +27,8 @@ import {
   InvoiceRowWithAccounting,
   InvoiceWithAccounting,
   MimerCompany,
+  RentalLoss,
+  RentalLossRow,
   TenfastRentalObject,
 } from '@src/common/types/typesv2'
 
@@ -365,17 +371,17 @@ const enrichInvoiceRowsWithAccounting = async (
               accountConfiguration.accountNr.toString()
             invoiceRowWithAccounting.costCode =
               accountConfiguration.costCenter &&
-              accountConfiguration.costCenter !== ''
+                accountConfiguration.costCenter !== ''
                 ? accountConfiguration.costCenter
                 : undefined
             invoiceRowWithAccounting.property =
               accountConfiguration.property &&
-              accountConfiguration.property !== ''
+                accountConfiguration.property !== ''
                 ? accountConfiguration.property
                 : undefined
             invoiceRowWithAccounting.projectCode =
               accountConfiguration.projectCode &&
-              accountConfiguration.projectCode !== ''
+                accountConfiguration.projectCode !== ''
                 ? accountConfiguration.projectCode
                 : undefined
 
@@ -495,6 +501,266 @@ export const getInvoicesNotExported = async (
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
+  }
+}
+
+const emptyToUndefined = (
+  value: string | null | undefined
+): string | undefined => (value && value !== '' ? value : undefined)
+
+export const mapToRentalLoss = async (
+  tenfastRentalLoss: TenfastRentalLoss
+): Promise<{
+  rentalLoss: RentalLoss
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
+  const errors: { invoiceNumber: string; error: string }[] = []
+  const rentalLossRows: RentalLossRow[] = []
+  const rentalObjectExternalId = tenfastRentalLoss.hyresobjekt.externalId
+
+  for (const hyra of tenfastRentalLoss.hyresobjekt.hyror) {
+    if (!hyra.article) {
+      logger.error(
+        { rentalObject: rentalObjectExternalId, label: hyra.label },
+        'Rental loss row is missing rent article'
+      )
+      errors.push({
+        invoiceNumber: rentalObjectExternalId,
+        error: `Hyresraden ${hyra.label} saknar hyresartikel`,
+      })
+      continue
+    }
+
+    const articleResult = await getInvoiceArticle(hyra.article)
+    if (!articleResult.ok) {
+      errors.push({
+        invoiceNumber: rentalObjectExternalId,
+        error: `Kunde inte hämta hyresartikel ${hyra.article}`,
+      })
+      continue
+    }
+
+    const article = articleResult.data
+    const rentalLossConfigurations =
+      article.accountConfigurations?.filter(
+        (accountConfiguration) =>
+          accountConfiguration.debitType === 'HYRESBORTFALL'
+      ) ?? []
+
+    // Only include rows whose article actually has rental loss
+    // (HYRESBORTFALL) account configurations.
+    if (rentalLossConfigurations.length === 0) {
+      continue
+    }
+
+    const incomeConfiguration = rentalLossConfigurations.find(
+      (accountConfiguration) =>
+        accountConfiguration.categoryCode === 'Intäkter'
+    )
+    const costConfiguration = rentalLossConfigurations.find(
+      (accountConfiguration) =>
+        accountConfiguration.categoryCode === 'Kostnad/Inköp'
+    )
+
+    if (!incomeConfiguration || !costConfiguration) {
+      logger.error(
+        { article },
+        'Rent article is missing rental loss account configuration'
+      )
+      errors.push({
+        invoiceNumber: rentalObjectExternalId,
+        error: `Hyresartikeln ${article.code} saknar konton för hyresbortfall (Intäkter och/eller Kostnad/Inköp)`,
+      })
+      continue
+    }
+
+    const uncontractedAmount =
+      (hyra.amount * tenfastRentalLoss.days.uncontracted) /
+      tenfastRentalLoss.days.month
+
+    rentalLossRows.push({
+      amount: Math.round((uncontractedAmount + Number.EPSILON) * 100) / 100,
+      totalAmount: Math.round((uncontractedAmount * (1 + (hyra.vat ?? 0)) + Number.EPSILON) * 100) / 100,
+      vat: hyra.vat,
+      rentArticleName: article.code,
+      rentalObject: rentalObjectExternalId,
+      incomeAccount: incomeConfiguration.accountNr,
+      incomeProjectCode: emptyToUndefined(incomeConfiguration.projectCode),
+      incomeProperty: emptyToUndefined(incomeConfiguration.property),
+      incomeFreeCode: emptyToUndefined(incomeConfiguration.freeText),
+      incomeCostCode: emptyToUndefined(incomeConfiguration.costCenter),
+      costAccount: costConfiguration.accountNr,
+      costProjectCode: emptyToUndefined(costConfiguration.projectCode),
+      costProperty: emptyToUndefined(costConfiguration.property),
+      costFreeCode: emptyToUndefined(costConfiguration.freeText),
+      costCostCode: emptyToUndefined(costConfiguration.costCenter),
+    })
+  }
+
+  const rentalLoss: RentalLoss = {
+    rentalLossRows,
+    rentalObject: rentalObjectExternalId,
+    month: tenfastRentalLoss.month,
+    days: {
+      totalInMonth: tenfastRentalLoss.days.month,
+      contracted: tenfastRentalLoss.days.contracted,
+      uncontracted: tenfastRentalLoss.days.uncontracted,
+    },
+    uncontractedIntervals: tenfastRentalLoss.uncontractedIntervals.map(
+      (interval) => ({
+        from: new Date(interval.from),
+        to: new Date(interval.to),
+      })
+    ),
+  }
+
+  return { rentalLoss, errors }
+}
+
+export const getRentalLosses = async (
+  company: MimerCompany
+): Promise<
+  AdapterResult<
+    {
+      rentalLosses: RentalLoss[]
+      errors: { invoiceNumber: string; error: string }[] | undefined
+    },
+    string
+  >
+> => {
+  console.log('Parsing rental loss')
+
+  const parsedResponse = TenfastRentalLossResponseSchema.safeParse(JSON.parse(
+    `[{
+  "month": "2026-05",
+  "hyresvard": {
+    "id": "6344b398b63ff59d5bde8257",
+    "name": "Bostadsaktiebolaget Mimer"
+  },
+  "hyresobjekt": {
+    "id": "6a01b4e104ff913fb088a24b",
+    "externalId": "110-004-01-0701",
+    "fastighetId": "6a01b4e104ff913fb08899bb",
+    "postadress": "Fyrbåksvägen 3",
+    "postnummer": "722 10",
+    "stad": "VÄSTERÅS",
+    "skvNummer": "1601",
+    "objektnummer": "0701",
+    "typ": "Bostad",
+    "hyror": [
+      {
+        "_id": "6a01cb1fdd5a3ddda8c6d3a5",
+        "label": "Hyra bostad",
+        "amount": 15,
+        "vat": 0,
+        "hyresobjekt": "6a01b4e104ff913fb088a24b",
+        "article": "67eb8aea545c8f1195bea0ae",
+        "includeInContract": true,
+        "from": "2025-01-01",
+        "to": null,
+        "consolidationLabel": "Hyra bostad"
+      },
+      {
+        "_id": "6a01cb22dd5a3ddda8c6fc8a",
+        "label": "Mimers Hemförsäkring",
+        "amount": 80,
+        "vat": 0,
+        "hyresobjekt": "6a01b4e104ff913fb088a24b",
+        "article": "67eb8aea545c8f1195bea0af",
+        "includeInContract": false,
+        "from": "2026-01-01",
+        "to": null,
+        "consolidationLabel": null
+      },
+      {
+        "_id": "6a01cb24dd5a3ddda8c70e6b",
+        "label": "Hyra bostad",
+        "amount": 58.45,
+        "vat": 0,
+        "hyresobjekt": "6a01b4e104ff913fb088a24b",
+        "article": "67eb8aea545c8f1195bea0b5",
+        "includeInContract": true,
+        "from": "2026-01-01",
+        "to": null,
+        "consolidationLabel": "Hyra bostad"
+      },
+      {
+        "_id": "6a01cb24dd5a3ddda8c70fe1",
+        "label": "Hyra bostad",
+        "amount": 12198.86,
+        "vat": 0,
+        "hyresobjekt": "6a01b4e104ff913fb088a24b",
+        "article": "69f9c53cd96d16781940304c",
+        "includeInContract": true,
+        "from": "2026-01-01",
+        "to": null,
+        "consolidationLabel": "Hyra bostad"
+      }
+    ]
+  },
+  "days": {
+    "month": 31,
+    "contracted": 21,
+    "uncontracted": 10
+  },
+  "uncontractedIntervals": [
+    {
+      "from": "2026-05-01",
+      "to": "2026-05-10"
+    }
+  ],
+  "avtalIds": [
+    "6a01b51304ff913fb089f593"
+  ],
+  "relatedAvtalCoverage": [
+    {
+      "avtalId": "6a01b51304ff913fb089f593",
+      "source": "current",
+      "reference": 3015,
+      "externalId": "110-004-01-0701/04",
+      "version": 1,
+      "hyresobjekt": [
+        "6a01b4e104ff913fb088a24b"
+      ],
+      "startDate": "2026-05-11T00:00:00.000Z",
+      "endDate": null,
+      "signed": true,
+      "signedAt": "2026-04-10T00:00:00.000Z",
+      "cancellation": {
+        "cancelled": false,
+        "doneAutomatically": false
+      },
+      "automaticExtension": null
+    }
+  ]
+  }]`
+  ))
+
+  if (parsedResponse.error) {
+    console.log(parsedResponse.error)
+    return { ok: false, err: 'schema-error' }
+  }
+
+  const rentalLosses: RentalLoss[] = []
+  const errors: { invoiceNumber: string; error: string }[] = []
+
+  const rentalLossResults = parsedResponse.data.filter(rentalLoss => {
+    return rentalLoss.days.uncontracted > 0
+  })
+
+  for (const tenfastRentalLoss of rentalLossResults) {
+    const { rentalLoss, errors: rentalLossErrors } =
+      await mapToRentalLoss(tenfastRentalLoss)
+    rentalLosses.push(rentalLoss)
+    errors.push(...rentalLossErrors)
+  }
+
+  return {
+    ok: true,
+    data: {
+      rentalLosses,
+      errors: errors.length ? errors : undefined,
+    },
   }
 }
 

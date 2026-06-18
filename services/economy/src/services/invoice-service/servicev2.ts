@@ -14,6 +14,7 @@ import {
   AggregatedRow,
   LedgerRow,
   xledgerDateString,
+  RentalLoss,
 } from '../../common/types/typesv2'
 import {
   getPeriodInformationFromDateStrings,
@@ -21,7 +22,7 @@ import {
   uploadFile,
 } from '../common/adapters/xledger-adapter'
 import { logger } from '@onecore/utilities'
-import { getInvoicesNotExported } from '@src/common/adapters/tenfast/tenfast-adapter'
+import { getInvoicesNotExported, getRentalLosses } from '@src/common/adapters/tenfast/tenfast-adapter'
 import config from '@src/common/config'
 
 export { markInvoicesAsExported } from '@src/common/adapters/tenfast/tenfast-adapter'
@@ -41,11 +42,12 @@ export const exportRentalInvoicesAccounting = async (
   try {
     const errors: { invoiceNumber: string; error: string }[] = []
     const CHUNK_SIZE = 100 // 100
+    const invoices: InvoiceWithAccounting[] = []
+    const skippedInvoices: InvoiceWithAccounting[] = []
+
     const company = config.companies.find(
       (company) => company.xpandId.localeCompare(companyId) === 0
     )
-    const invoices: InvoiceWithAccounting[] = []
-    const skippedInvoices: InvoiceWithAccounting[] = []
 
     if (!company) {
       throw new Error('Could not find company ' + companyId)
@@ -582,7 +584,113 @@ const convertToLedgerCsvRows = (ledgerRows: LedgerRow[]) => {
 //#endregion
 
 //#region Rental Loss Accounting
-export const exportRentalLossAccounting = async (companyId: string) => {}
+export const exportRentalLosses = async (companyId: string): Promise<RentalLoss[]> => {
+  const company = config.companies.find(
+    (company) => company.xpandId.localeCompare(companyId) === 0
+  )
+
+  if (!company) {
+    throw new Error('Could not find company ' + companyId)
+  }
+
+  const rentalLossResults = await getRentalLosses(company)
+  if (rentalLossResults.ok !== true) {
+    logger.error({ error: rentalLossResults.err }, 'Could not retrieve rental loss information')
+    throw new Error('Could not retrieve rental loss information: ' + rentalLossResults.err)
+  }
+
+  console.log(JSON.stringify(rentalLossResults.data.rentalLosses, null, 2))
+  return rentalLossResults.data.rentalLosses
+}
+
+export const createRentalLossAccounting = async (rentalLosses: RentalLoss[]): Promise<{ aggregateRentalLossAccountingCsv: string[], errors: { rentalObject: string, error: string }[] }> => {
+  const aggregateRows = await createRentalLossAggregateRows(rentalLosses)
+
+  const rowChunks: Record<string, AggregatedRow[]> = {}
+
+  aggregateRows.forEach(aggregatedRow => {
+    const key =
+      aggregatedRow.fromDate +
+      ':' +
+      aggregatedRow.toDate
+
+    if (!rowChunks[key]) {
+      rowChunks[key] = []
+    }
+
+    rowChunks[key].push(aggregatedRow)
+  })
+
+  let voucherIndex = 0
+
+  Object.values(rowChunks).forEach((chunkAggregatedRows) => {
+    const voucherNumber =
+      Date.now().toString().substring(6, 12) +
+      voucherIndex.toString().padStart(3, '0')
+    voucherIndex++
+
+    chunkAggregatedRows.forEach(aggregatedRow => {
+      aggregatedRow.voucherNumber = voucherNumber
+    })
+  })
+
+  const aggregateRowsCsv = convertToAggregateCsvRows(aggregateRows)
+
+  console.table(aggregateRows)
+  console.log(aggregateRowsCsv)
+  //const aggregateRowsCsv = convertToRentalLossAggregateCsvRows(aggregateRows)
+
+  return {
+    aggregateRentalLossAccountingCsv: aggregateRowsCsv,
+    errors: []
+  }
+}
+
+const createRentalLossAggregateRows = async (rentalLosses: RentalLoss[]) => {
+  const exportedRows: AggregatedRow[] = []
+
+  rentalLosses.forEach(rentalLoss => {
+    rentalLoss.rentalLossRows.forEach(rentalLossRow => {
+      const exportedRentalLossIncomeRow = {
+        amount: rentalLossRow.amount,
+        vat: rentalLossRow.vat,
+        totalAmount: rentalLossRow.totalAmount,
+        taxRule: rentalLossRow.taxRule,
+        account: rentalLossRow.incomeAccount.toString(),
+        projectCode: rentalLossRow.incomeProjectCode,
+        freeCode: rentalLossRow.incomeFreeCode,
+        costCode: rentalLossRow.incomeCostCode,
+        property: rentalLossRow.incomeProperty,
+        fromDate: dateString(rentalLoss.uncontractedIntervals[0].from) ?? '',
+        toDate: dateString(rentalLoss.uncontractedIntervals[0].to) ?? '',
+        voucherDate: dateString(rentalLoss.uncontractedIntervals[0].from) ?? '',
+        totalAccount: ''
+      }
+
+      exportedRows.push(exportedRentalLossIncomeRow)
+
+      const exportedRentalLossCostRow = {
+        amount: -rentalLossRow.amount,
+        vat: rentalLossRow.vat,
+        totalAmount: -rentalLossRow.totalAmount,
+        taxRule: rentalLossRow.taxRule,
+        account: rentalLossRow.costAccount.toString(),
+        projectCode: rentalLossRow.costProjectCode,
+        freeCode: rentalLossRow.costFreeCode,
+        costCode: rentalLossRow.costCostCode,
+        property: rentalLossRow.costProperty,
+        fromDate: dateString(rentalLoss.uncontractedIntervals[0].from) ?? '',
+        toDate: dateString(rentalLoss.uncontractedIntervals[0].to) ?? '',
+        voucherDate: dateString(rentalLoss.uncontractedIntervals[0].from) ?? '',
+        totalAccount: ''
+      }
+
+      exportedRows.push(exportedRentalLossCostRow)
+    })
+  })
+
+  return exportedRows
+}
 //#endregion
 
 export const uploadCsvFiles = async (

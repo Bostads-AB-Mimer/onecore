@@ -247,6 +247,79 @@ export type TenfastAccountConfiguration = z.infer<
   typeof TenfastAccountConfigurationSchema
 >
 
+// Rental loss (hyresbortfall) for a single rental object for a single month.
+// Mirrors the shape of stuff/tenfast/hyresbortfall.json.
+export const TenfastRentalLossHyraSchema = z.object({
+  _id: z.string(),
+  label: z.string(),
+  amount: z.number(),
+  vat: z.number(),
+  hyresobjekt: z.string(),
+  article: z.string().nullable(),
+  includeInContract: z.boolean(),
+  from: z.string().nullable().optional(),
+  to: z.string().nullable().optional(),
+  consolidationLabel: z.string().nullable().optional(),
+})
+
+export const TenfastRentalLossSchema = z.object({
+  month: z.string(), // "YYYY-MM"
+  hyresvard: z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+  hyresobjekt: z.object({
+    id: z.string(),
+    externalId: z.string(),
+    fastighetId: z.string(),
+    postadress: z.string(),
+    postnummer: z.string(),
+    stad: z.string(),
+    skvNummer: z.string().nullable(),
+    objektnummer: z.string(),
+    typ: z.string(),
+    hyror: z.array(TenfastRentalLossHyraSchema),
+  }),
+  days: z.object({
+    month: z.number(),
+    contracted: z.number(),
+    uncontracted: z.number(),
+  }),
+  uncontractedIntervals: z.array(
+    z.object({
+      from: z.string(),
+      to: z.string(),
+    })
+  ),
+  avtalIds: z.array(z.string()),
+  relatedAvtalCoverage: z.array(
+    z.object({
+      avtalId: z.string(),
+      source: z.string(),
+      reference: z.number(),
+      externalId: z.string(),
+      version: z.number(),
+      hyresobjekt: z.array(z.string()),
+      startDate: z.string().nullable(),
+      endDate: z.string().nullable(),
+      signed: z.boolean(),
+      signedAt: z.string().nullable(),
+      cancellation: z
+        .object({
+          cancelled: z.boolean(),
+          doneAutomatically: z.boolean(),
+        })
+        .optional(),
+      automaticExtension: z.any().nullable(),
+    })
+  ),
+})
+
+export const TenfastRentalLossResponseSchema = z.array(TenfastRentalLossSchema)
+
+export type TenfastRentalLossHyra = z.infer<typeof TenfastRentalLossHyraSchema>
+export type TenfastRentalLoss = z.infer<typeof TenfastRentalLossSchema>
+
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),

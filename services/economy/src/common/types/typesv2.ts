@@ -1,4 +1,5 @@
 import { Contact, Invoice, InvoiceRow } from '@onecore/types'
+import { TenfastRentalLoss } from '../adapters/tenfast/schemas'
 
 export const TOTAL_ACCOUNT = '2970'
 export const CUSTOMER_LEDGER_ACCOUNT = '1530'
@@ -46,6 +47,43 @@ export type InvoiceWithAccounting = Omit<Invoice, 'invoiceRows'> & {
   totalAccount?: string
   counterPartCode?: string
   roundOffCostCode?: string
+}
+
+export type RentalLoss = {
+  rentalLossRows: RentalLossRow[]
+  rentalObject: string
+  month: string
+  days: {
+    totalInMonth: number
+    contracted: number
+    uncontracted: number
+  },
+  uncontractedIntervals: RentalLossInterval[]
+}
+
+export type RentalLossRow = {
+  amount: number
+  totalAmount: number
+  vat: number
+  mimerCompanyCode?: string
+  rentArticleName?: string
+  rentalObject?: string
+  incomeAccount: number
+  incomeProjectCode?: string
+  incomeProperty?: string
+  incomeFreeCode?: string
+  incomeCostCode?: string
+  costAccount: number
+  costProjectCode?: string
+  costProperty?: string
+  costFreeCode?: string
+  costCostCode?: string
+  taxRule?: string
+}
+
+export type RentalLossInterval = {
+  from: Date
+  to: Date
 }
 
 export type CounterPartCustomer = {
