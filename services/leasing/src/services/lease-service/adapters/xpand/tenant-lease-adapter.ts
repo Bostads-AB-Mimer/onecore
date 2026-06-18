@@ -615,25 +615,35 @@ const getOtherInvoiceRecipientsByLeaseIds = async (
     .whereRaw('TRIM(hyavk.keyhyakt) = ?', ['ANNANFM'])
     .whereIn('hyobj.hyobjben', leaseIds)
 
-  for (const row of junctionRows) {
-    const contactRows = await getContactQuery().where({
-      'cmctc.keycmctc': row.contactKey,
+  const entries = await Promise.all(
+    junctionRows.map(async (row) => {
+      const contactRows = await getContactQuery().where({
+        'cmctc.keycmctc': row.contactKey,
+      })
+
+      if (!contactRows?.length) {
+        return null
+      }
+      if ((contactRows[0].contactCode as string)?.trim() === 'RENSAD_GDPR') {
+        return null
+      }
+
+      const phoneNumbers = await getPhoneNumbersForContact(
+        contactRows[0].keycmobj
+      )
+      const contact = transformFromDbContact(contactRows, phoneNumbers, [], false)
+
+      return { leaseId: (row.leaseId as string)?.trim(), contact }
     })
+  )
 
-    if (!contactRows?.length) {
+  for (const entry of entries) {
+    if (!entry) {
       continue
     }
-    if ((contactRows[0].contactCode as string)?.trim() === 'RENSAD_GDPR') {
-      continue
-    }
-
-    const phoneNumbers = await getPhoneNumbersForContact(contactRows[0].keycmobj)
-    const contact = transformFromDbContact(contactRows, phoneNumbers, [], false)
-
-    const leaseId = (row.leaseId as string)?.trim()
-    const existing = result.get(leaseId) ?? []
-    existing.push(contact)
-    result.set(leaseId, existing)
+    const existing = result.get(entry.leaseId) ?? []
+    existing.push(entry.contact)
+    result.set(entry.leaseId, existing)
   }
 
   return result
