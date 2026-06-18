@@ -1,11 +1,10 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequest } from '../middleware/parse-request'
-import {
-  AnalyzeComponentImageRequestSchema,
-  AIComponentAnalysisSchema,
-} from '../types/component'
+import { AnalyzeComponentImageRequestSchema } from '../types/component'
 import { analyzeComponentImage } from '../adapters/berget-adapter'
+import { getComponentCategoryById } from '../adapters/component-category-adapter'
+import { hasDedicatedPrompt } from '../prompts/component-analysis'
 
 /**
  * @swagger
@@ -41,6 +40,10 @@ export const routes = (router: KoaRouter) => {
    *               additionalImage:
    *                 type: string
    *                 description: Optional additional base64 encoded image (max 10MB) - combine typeplate + product photo for best results
+   *               categoryId:
+   *                 type: string
+   *                 format: uuid
+   *                 description: Optional component category id from the component library - the service uses it to select the analysis prompt and to constrain the classification to the component types under that category (falls back to a general prompt when omitted or unknown)
    *     responses:
    *       200:
    *         description: Component analysis successful
@@ -121,9 +124,62 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const { image, additionalImage } = ctx.request.parsedBody
-        const analysis = await analyzeComponentImage(image, additionalImage)
+        const { image, additionalImage, categoryId } = ctx.request.parsedBody
 
+        // When a category is selected, look up its name (selects the prompt)
+        // and the component types under it (constrains the classification).
+        // An unknown id falls back to the general prompt rather than failing.
+        let taxonomy:
+          | { categoryName: string; availableTypes: string[] }
+          | undefined
+        if (categoryId) {
+          try {
+            const category = await getComponentCategoryById(categoryId)
+            if (category) {
+              taxonomy = {
+                categoryName: category.categoryName,
+                availableTypes: category.componentTypes.map(
+                  (type) => type.typeName
+                ),
+              }
+              if (!hasDedicatedPrompt(category.categoryName)) {
+                // Normal for most categories — but if a category that HAS a
+                // dedicated overlay (e.g. "Vitvaror") is renamed in the
+                // component library, this is the only signal that its
+                // analyses silently degraded to the general prompt.
+                logger.info(
+                  { categoryId, categoryName: category.categoryName },
+                  'components.analyze-image: no dedicated prompt for category, using general prompt'
+                )
+              }
+            } else {
+              logger.warn(
+                { categoryId },
+                'components.analyze-image: unknown categoryId, using general prompt'
+              )
+            }
+          } catch (err) {
+            // The taxonomy is an enhancement — a failed lookup must not abort
+            // the analysis (or leak the underlying error to the client).
+            logger.warn(
+              { err, categoryId },
+              'components.analyze-image: category lookup failed, using general prompt'
+            )
+          }
+        }
+
+        const analysis = await analyzeComponentImage(
+          image,
+          additionalImage,
+          taxonomy
+        )
+
+        // TODO: type-id mapping (next step). The AI returns componentType as a
+        // name constrained to the category's types. Map it back to the matching
+        // category.componentTypes[].id and return a componentTypeId so Odoo can
+        // link directly to the type. Requires keeping the {id, typeName} pairs
+        // here (not just typeName) and adding componentTypeId to the response
+        // schema in both property and core.
         ctx.status = 200
         ctx.body = {
           content: analysis,

@@ -6,6 +6,8 @@ import {
   ApartmentTemperaturePointSchema,
   ApartmentTemperatureSeriesSchema,
   ApartmentTemperaturesResponseSchema,
+  AnalyzeComponentImageRequestSchema,
+  AIComponentAnalysisSchema,
 } from './schema'
 
 export type ApartmentTemperaturesInterval = z.infer<
@@ -23,3 +25,7 @@ export type ApartmentTemperatureSeries = z.infer<
 export type ApartmentTemperaturesResponse = z.infer<
   typeof ApartmentTemperaturesResponseSchema
 >
+export type AnalyzeComponentImageRequest = z.infer<
+  typeof AnalyzeComponentImageRequestSchema
+>
+export type AIComponentAnalysis = z.infer<typeof AIComponentAnalysisSchema>

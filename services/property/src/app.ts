@@ -44,6 +44,10 @@ app.on('error', (err) => {
 const koaBodyMiddleware = bodyParser({
   multipart: false,
   urlencoded: true,
+  // /components/analyze-image accepts up to two base64 images of 14M chars
+  // each (~28MB of JSON). Matches core's jsonLimit so bodies forwarded by the
+  // proxy aren't rejected here with 413 (koa-body's default is 1mb).
+  jsonLimit: '50mb',
 })
 
 app.use(async (ctx, next) => {

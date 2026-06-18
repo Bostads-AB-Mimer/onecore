@@ -2426,6 +2426,11 @@ export interface paths {
             image: string
             /** @description Optional additional base64 encoded image (max 10MB) - combine typeplate + product photo for best results */
             additionalImage?: string
+            /**
+             * Format: uuid
+             * @description Optional component category id from the component library - the service uses it to select the analysis prompt and to constrain the classification to the component types under that category (falls back to a general prompt when omitted or unknown)
+             */
+            categoryId?: string
           }
         }
       }
@@ -4092,6 +4097,8 @@ export interface components {
     AnalyzeComponentImageRequest: {
       image: string
       additionalImage?: string
+      /** Format: uuid */
+      categoryId?: string
     }
     AIComponentAnalysis: {
       componentCategory: string | null

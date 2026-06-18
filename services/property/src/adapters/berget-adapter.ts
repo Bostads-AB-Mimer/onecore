@@ -1,72 +1,36 @@
 import axios from 'axios'
+import { ZodError } from 'zod'
+import { logger } from '@onecore/utilities'
 import bergetConfig from '../config/berget'
-import type { AIComponentAnalysis } from '../types/component'
+import {
+  AIComponentAnalysisSchema,
+  type AIComponentAnalysis,
+} from '../types/component'
+import { resolveComponentAnalysisPrompt } from '../prompts/component-analysis'
 
-// MVP: AI-powered component analysis focused on Swedish appliances (vitvaror)
+// AI-powered component image analysis. The system prompt is selected per
+// component category (see ../prompts/component-analysis), with a general
+// fallback for categories without a dedicated prompt.
 // TODO: Future enhancement - Add TYPE_PLATE mode parameter for nameplate reading
-// TODO: Future enhancement - Add support for other component categories (HVAC, plumbing, etc.)
 // TODO: Future enhancement - Add confidence threshold warnings
 // TODO: Future enhancement - Implement retry logic with exponential backoff
 
-const SYSTEM_PROMPT = `Du är en expert på svenska vitvaror och hushållsapparater. Analysera bilden/bilderna och extrahera relevant information.
-
-Du kan få EN eller TVÅ bilder:
-
-Om EN bild (typskylt):
-- Extrahera all teknisk data (modell, serienummer, specifikationer, dimensioner, garanti)
-- Sätt componentType till null om du inte kan identifiera produkttypen från texten
-
-Om EN bild (produktbild):
-- Identifiera componentCategory, componentType och componentSubtype visuellt
-- Bedöm skick (condition) och uppskatta ålder (estimatedAge)
-- Extrahera synlig data om tillgänglig
-
-Om TVÅ bilder:
-- Kombinera information från båda bilderna
-- Använd produktbilden för att identifiera componentType och bedöma skick
-- Använd typskylten för exakta tekniska data (modell, serienummer, specifikationer)
-
-Fokusera på dessa typer av vitvaror:
-- Kylskåp, Kyl/Frys-kombinationer
-- Spisar, Ugnar, Häll
-- Diskmaskiner
-- Tvättmaskiner, Torktumlare, Torkskåp
-- Mikrovågsugnar
-- Fläktar, Köksfläktar
-- Värmepumpar
-
-Svara ENDAST med JSON i följande format (inget annat text):
-{
-  "componentCategory": "övergripande kategori (för vitvaror: 'Vitvaror')",
-  "componentType": "typ av komponent (t.ex. 'Kylskåp', 'Diskmaskin', 'Tvättmaskin', 'Spis')",
-  "componentSubtype": "specifik variant (t.ex. '60cm integrerad', 'Fristående 190-215 liter', 'Kyl/frys-kombination', annars null)",
-  "manufacturer": "tillverkare/märke (om synligt, annars null)",
-  "model": "modellnamn/nummer (om synligt, annars null)",
-  "serialNumber": "serienummer (om synligt på bild, annars null)",
-  "estimatedAge": "uppskattad ålder som text (t.ex. '5-10 år', 'Ny', 'Okänd')",
-  "condition": "visuellt skick som text (t.ex. 'Utmärkt', 'Gott', 'Normalt', 'Slitet')",
-  "specifications": "tekniska specifikationer om synliga (t.ex. 'Energiklass A++, Volym 343L')",
-  "dimensions": "fysiska mått om synliga på etikett (t.ex. 'BxDxH: 60x60x85 cm', annars null)",
-  "warrantyMonths": "garantitid i månader om synlig (t.ex. från garantietikett, annars null)",
-  "ncsCode": "NCS-färgkod om synlig (format XXX eller XXX.XXX, annars null)",
-  "additionalInformation": "övrig relevant information synlig på produkten (annars null)",
-  "confidence": 0.85
-}
-
-VIKTIGT: Fyll ENDAST i fält där information är synlig eller kan extraheras från bilden. Använd null för fält där du inte är säker. Var konservativ med confidence-värdet (0.0-1.0).`
-
 /**
  * Analyzes component image(s) using the Berget AI API
- * MVP version: Single or dual image mode, focused on Swedish appliances (vitvaror)
+ * Single or dual image mode. The prompt is built from the selected category and
+ * the component types available under it (see ../prompts/component-analysis).
  *
  * @param base64Image - Primary base64 encoded image string (with or without data URI prefix)
  * @param additionalImage - Optional additional base64 image (e.g., typeplate + product photo)
+ * @param taxonomy - Optional category context: the category name (selects the
+ *   prompt) and the component type names under it (constrains the classification)
  * @returns Promise<AIComponentAnalysis> - Structured analysis of the component
  * @throws Error on API failure, timeout, or invalid response
  */
 export const analyzeComponentImage = async (
   base64Image: string,
-  additionalImage?: string
+  additionalImage?: string,
+  taxonomy?: { categoryName: string; availableTypes: string[] }
 ): Promise<AIComponentAnalysis> => {
   try {
     // Ensure primary image has data URI prefix
@@ -82,7 +46,13 @@ export const analyzeComponentImage = async (
       text?: string
       image_url?: { url: string }
     }> = [
-      { type: 'text', text: SYSTEM_PROMPT },
+      {
+        type: 'text',
+        text: resolveComponentAnalysisPrompt(
+          taxonomy?.categoryName,
+          taxonomy?.availableTypes
+        ),
+      },
       { type: 'image_url', image_url: { url: imageData } },
     ]
 
@@ -131,37 +101,61 @@ export const analyzeComponentImage = async (
       throw new Error('Could not parse JSON from AI response')
     }
 
-    const analysis = JSON.parse(jsonMatch[0]) as AIComponentAnalysis
+    const analysis = JSON.parse(jsonMatch[0]) as Record<string, unknown>
 
-    // Ensure all fields exist (default to null if missing)
-    return {
-      // Basic identification fields (three-level taxonomy)
+    // The AI output is untrusted: clamp near-miss numeric values rather than
+    // failing the whole analysis on them, then validate the final shape so an
+    // out-of-contract response fails here (with a curated error) instead of
+    // failing core's response parse downstream.
+    const roundedWarranty =
+      typeof analysis.warrantyMonths === 'number' &&
+      Number.isFinite(analysis.warrantyMonths)
+        ? Math.round(analysis.warrantyMonths)
+        : null
+    const warrantyMonths =
+      roundedWarranty !== null && roundedWarranty >= 0 ? roundedWarranty : null
+
+    const confidence =
+      typeof analysis.confidence === 'number' &&
+      Number.isFinite(analysis.confidence)
+        ? Math.min(1, Math.max(0, analysis.confidence))
+        : 0
+
+    return AIComponentAnalysisSchema.parse({
       componentCategory: analysis.componentCategory ?? null,
       componentType: analysis.componentType ?? null,
       componentSubtype: analysis.componentSubtype ?? null,
       manufacturer: analysis.manufacturer ?? null,
       model: analysis.model ?? null,
       serialNumber: analysis.serialNumber ?? null,
-
-      // Condition and age assessment
       estimatedAge: analysis.estimatedAge ?? null,
       condition: analysis.condition ?? null,
-
-      // Technical information from labels
       specifications: analysis.specifications ?? null,
       dimensions: analysis.dimensions ?? null,
-      warrantyMonths: analysis.warrantyMonths ?? null,
-
-      // Classification codes
+      warrantyMonths,
       ncsCode: analysis.ncsCode ?? null,
-
-      // Additional information
       additionalInformation: analysis.additionalInformation ?? null,
-
-      // Confidence score
-      confidence: analysis.confidence ?? 0,
-    }
+      confidence,
+    })
   } catch (error) {
+    // The curated rethrows below hide diagnostic detail from the API
+    // consumer, so record the raw error (zod issues, JSON syntax error,
+    // axios failure) here before mapping it
+    logger.error({ err: error }, 'berget-adapter.analyzeComponentImage')
+
+    if (error instanceof ZodError) {
+      // Don't leak raw zod issues to the API consumer
+      throw new Error('AI response did not match the expected format')
+    }
+
+    if (error instanceof SyntaxError) {
+      // The regex-extracted brace span wasn't valid JSON — same curated
+      // message as when no JSON is found at all
+      throw new Error(
+        'AI analysis failed: Could not parse JSON from AI response'
+      )
+    }
+
     // Handle specific error cases
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
