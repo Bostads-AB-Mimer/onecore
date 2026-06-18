@@ -18,8 +18,9 @@ import {
 import { getInvoiceDetails } from './service'
 import {
   createAccounting,
+  createRentalLossAccounting,
   exportRentalInvoicesAccounting,
-  exportRentalLossAccounting,
+  exportRentalLosses,
   markInvoicesAsExported,
   uploadCsvFiles,
 } from './servicev2'
@@ -71,7 +72,8 @@ export const routes = (router: KoaRouter) => {
         ctx.body = 'Company with specified ID could not be found'
       }
 
-      await exportRentalLossAccounting(companyId)
+      const rentalLosses = await exportRentalLosses(companyId)
+      const { aggregateRentalLossAccountingCsv, errors } = await createRentalLossAccounting(rentalLosses)
 
       ctx.status = 200
     }
