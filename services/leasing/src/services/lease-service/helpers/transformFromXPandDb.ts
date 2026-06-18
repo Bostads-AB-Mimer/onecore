@@ -1,4 +1,4 @@
-import { Lease, LeaseStatus } from '@onecore/types'
+import { Contact, Lease, LeaseStatus } from '@onecore/types'
 import { calculateRentInfoFromTotal } from './rent-calculation'
 import { parseLeaseType } from './lease-type-parser'
 
@@ -27,7 +27,8 @@ const calculateStatus = (
 const toLease = (
   row: any,
   tenantContactIds: string[] | undefined,
-  tenants: Lease['tenants']
+  tenants: Lease['tenants'],
+  otherInvoiceRecipients?: Contact[]
 ): Lease => {
   const parsedLeaseId = row.leaseId.split('/')
   const rentalPropertyId = parsedLeaseId[0]
@@ -43,6 +44,7 @@ const toLease = (
     status: calculateStatus(row.lastDebitDate, row.fromDate),
     tenantContactIds,
     tenants,
+    otherInvoiceRecipients,
     rentalProperty: undefined,
     rentInfo: calculateRentInfoFromTotal(row.totalYearRent),
     rentRows: [],
