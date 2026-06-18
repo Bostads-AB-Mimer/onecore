@@ -12,6 +12,7 @@ export const TenfastRentalObjectByRentalObjectCodeResponseFactory =
       records: [
         {
           _id: '67eb8af5545c8f1195bef2e6' + sequence,
+          hyresvard: '6344b398b63ff59d5bde8257',
           hyra: 287.17,
           hyraVat: 0, // total moms pa hyran
           hyraExcludingVat: 287.17, // hyran exklusive moms
@@ -32,6 +33,7 @@ export const TenfastRentalObjectByRentalObjectCodeResponseFactory =
 export const TenfastRentalObjectFactory = Factory.define<TenfastRentalObject>(
   ({ sequence }) => ({
     _id: `rental-object-${sequence}`,
+    hyresvard: '6344b398b63ff59d5bde8257',
     hyra: 287.17,
     hyraVat: 0,
     hyraExcludingVat: 287.17,

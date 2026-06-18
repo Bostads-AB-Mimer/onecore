@@ -103,14 +103,6 @@ export const createLease = async (
     | 'unknown'
   >
 > => {
-  const tenantResult = await getOrCreateTenant(
-    contact.contactCode,
-    buildTenantRequestData(contact)
-  )
-  if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
-  else if (!tenantResult.data)
-    return { ok: false, err: 'could-not-retrieve-tenant' }
-
   const rentalObjectResponse = await getRentalObject(rentalObjectCode)
   if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
     return { ok: false, err: 'could-not-find-rental-object' }
@@ -121,6 +113,17 @@ export const createLease = async (
     return { ok: false, err: 'rent-article-is-missing' }
   if (!rentalObjectResponse.data.contractTemplate)
     return { ok: false, err: 'rental-object-has-no-template' }
+
+  const rentalObjectHyresvard = rentalObjectResponse.data.hyresvard
+
+  const tenantResult = await getOrCreateTenant(
+    contact.contactCode,
+    buildTenantRequestData(contact),
+    rentalObjectHyresvard
+  )
+  if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
+  else if (!tenantResult.data)
+    return { ok: false, err: 'could-not-retrieve-tenant' }
 
   const templateResponse = await getLeaseTemplate(
     rentalObjectResponse.data.contractTemplate
@@ -139,7 +142,7 @@ export const createLease = async (
 
     const leaseResponse = await tenfastApi.request({
       method: 'post',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${rentalObjectHyresvard}`,
       data: createLeaseRequestData,
     })
     if (leaseResponse.status === 400)
@@ -193,18 +196,20 @@ export const importLease = async (
       { leaseId, contactCode: contact.contactCode, rentalObjectCode },
       'tenfast-adapter.importLease: starting import'
     )
+    const rentalObjectResponse = await getRentalObject(rentalObjectCode)
+    if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
+      return { ok: false, err: 'could-not-find-rental-object' }
+    const rentalObject = rentalObjectResponse.data
+
     const tenantResult = await getOrCreateTenant(
       contact.contactCode,
-      buildTenantRequestDataFromPayload(contact)
+      buildTenantRequestDataFromPayload(contact),
+      rentalObject.hyresvard
     )
     if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
     if (!tenantResult.data)
       return { ok: false, err: 'could-not-retrieve-tenant' }
 
-    const rentalObjectResponse = await getRentalObject(rentalObjectCode)
-    if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
-      return { ok: false, err: 'could-not-find-rental-object' }
-    const rentalObject = rentalObjectResponse.data
     const body = {
       // Pass the xpand leaseId as externalId so terminate/void can later look
       // up this lease via GET /extras/avtal/{externalId} (see
@@ -229,7 +234,7 @@ export const importLease = async (
 
     const response = await tenfastApi.request({
       method: 'post',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${rentalObject.hyresvard}`,
       data: body,
     })
 
@@ -680,7 +685,8 @@ export const getLeaseTemplate = async (
 }
 
 export const getTenantByContactCode = async (
-  contactCode: string
+  contactCode: string,
+  hyresvardId?: string
 ): Promise<
   AdapterResult<
     TenfastTenant | null,
@@ -718,9 +724,18 @@ export const getTenantByContactCode = async (
         'could-not-parse-tenant-response'
       )
     }
+    // Tenfast's /hyresgaster/search ignores the `hyresvard=` query param and
+    // returns every tenant the api-token can see. The same contactCode can
+    // legitimately exist under several hyresvärdar (one tenant record per
+    // landlord), so filter client-side when a hyresvärd was specified.
+    const records = hyresvardId
+      ? parsedTenantResponse.data.records.filter(
+          (r) => r.hyresvard === hyresvardId
+        )
+      : parsedTenantResponse.data.records
     return {
       ok: true,
-      data: parsedTenantResponse.data.records[0] ?? null,
+      data: records[0] ?? null,
     }
   } catch (err: any) {
     return handleTenfastError(err, 'unknown')
@@ -728,7 +743,8 @@ export const getTenantByContactCode = async (
 }
 
 const createTenantRequest = async (
-  requestData: object
+  requestData: object,
+  hyresvardId?: string
 ): Promise<
   AdapterResult<
     TenfastTenant | undefined,
@@ -739,7 +755,7 @@ const createTenantRequest = async (
 > => {
   const tenantResponse = await tenfastApi.request({
     method: 'post',
-    url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?hyresvard=${tenfastCompanyId}`,
+    url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?hyresvard=${hyresvardId ?? tenfastCompanyId}`,
     data: requestData,
   })
 
@@ -774,19 +790,23 @@ export const createTenant = (contact: Contact) =>
 
 async function getOrCreateTenant(
   contactCode: string,
-  requestData: object
+  requestData: object,
+  hyresvardId?: string
 ): Promise<
   AdapterResult<
     TenfastTenant,
     'could-not-retrieve-tenant' | 'could-not-create-tenant'
   >
 > {
-  const tenantResponse = await getTenantByContactCode(contactCode)
+  const tenantResponse = await getTenantByContactCode(contactCode, hyresvardId)
   if (!tenantResponse.ok) {
     return { ok: false, err: 'could-not-retrieve-tenant' }
   }
   if (!tenantResponse.data) {
-    const createTenantResult = await createTenantRequest(requestData)
+    const createTenantResult = await createTenantRequest(
+      requestData,
+      hyresvardId
+    )
     if (!createTenantResult.ok || !createTenantResult.data) {
       return { ok: false, err: 'could-not-create-tenant' }
     }
