@@ -217,7 +217,12 @@ VALUES
   -- BEGIN cmeml ROWS
   ('_0XG120TO7     ', 'mail           ', '_0J4157JJ1     ', 'o.kontaktbarsson@test.example.se                                ', 1, NULL, NULL, '_0XG120TO8'),
 
-  ('_0J415815F     ', 'mail           ', '_0J4158KK1     ', 'valle.von.testberg@test.se', 1, NULL, NULL, '14-06564  ')
+  ('_0J415815F     ', 'mail           ', '_0J4158KK1     ', 'valle.von.testberg@test.se', 1, NULL, NULL, '14-06564  '),
+
+  -- P000555 (object key _0J4157EE1) — has both a phone (above) and an email,
+  -- plus a förvaltare (P000444), so the by-phone-number and by-email-address
+  -- lookups can assert relatedContacts is surfaced.
+  ('_0J4157EE9     ', 'mail           ', '_0J4157EE1     ', 'fiktiv.personsson@test.example.se', 1, NULL, NULL, '_0J4157EE8')
   -- END cmeml ROWS
 ;
 
@@ -292,3 +297,19 @@ VALUES
   ('_0J415P786     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4158OO1     ', 'SE', 'Testgatan 2', NULL, '722 22', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415P787')
   -- END cmadr ROWS
 ;
+
+-- Guardian relations (AVTAL-135).
+-- P000555 has förvaltare P000444 (forvtyp = 2).
+-- P000666 has god man P000444 (forvtyp = 1) — exists to prove the
+-- förvaltare endpoints filter on type.
+UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'P000555';
+UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 1 WHERE cmctckod = 'P000666';
+
+-- Protected-identity (lagsokt) redaction fixture (AVTAL-135).
+-- P000777 has förvaltare P000888 (forvtyp = 2); P000999 has förvaltare P000777.
+-- P000888 (guardian side) and P000999 (ward side) carry a protected identity,
+-- so their names must come back 'redacted' in relatedContacts — proving the
+-- redaction holds in both the guardian and the ward direction.
+UPDATE cmctc SET keycmctc2 = '_0J4157HHH     ', forvtyp = 2 WHERE cmctckod = 'P000777';
+UPDATE cmctc SET keycmctc2 = '_0J4157GGG     ', forvtyp = 2 WHERE cmctckod = 'P000999';
+UPDATE cmctc SET lagsokt = 1 WHERE cmctckod IN ('P000888', 'P000999');

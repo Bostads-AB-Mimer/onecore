@@ -58,6 +58,7 @@ describe('/contacts/:contactCode', () => {
           fullName: 'Fiktivsson Exempel',
           nationalId: null,
         },
+        relatedContacts: [],
         communication: {
           emailAddresses: [],
           phoneNumbers: [
@@ -80,6 +81,26 @@ describe('/contacts/:contactCode', () => {
           },
         ],
       })
+    })
+  })
+
+  describe('relatedContacts', () => {
+    it('includes the förvaltare on a contact that has one', async () => {
+      const response = await httpClient.get('/contacts/P000555')
+
+      expect(response.status).toBe(200)
+      expect(response.data.content.relatedContacts).toContainEqual({
+        contactCode: 'P000444',
+        role: 'administrator',
+        fullName: 'McTestface Testy',
+      })
+    })
+
+    it('is an empty array for a contact with no guardian relations', async () => {
+      const response = await httpClient.get('/contacts/P000333')
+
+      expect(response.status).toBe(200)
+      expect(response.data.content.relatedContacts).toEqual([])
     })
   })
 })

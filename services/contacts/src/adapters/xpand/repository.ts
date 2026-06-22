@@ -19,6 +19,31 @@ import {
 import { contactsByCodesQuery, ContactIncludeOptions } from './batch-query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
+import {
+  guardianRelations,
+  wardRelations,
+  relatedContactsFor,
+  relatedContactsForMany,
+} from './guardian-query'
+
+/**
+ * Populates `relatedContacts` on a batch of contacts using a single grouped
+ * relation query (not N+1). Contacts with no relations get an empty array.
+ */
+const withRelatedContacts = async (
+  db: knex.Knex,
+  contacts: Contact[]
+): Promise<Contact[]> => {
+  if (contacts.length === 0) return contacts
+  const byCode = await relatedContactsForMany(
+    db,
+    contacts.map((c) => c.contactCode)
+  )
+  for (const c of contacts) {
+    c.relatedContacts = byCode.get(c.contactCode) ?? []
+  }
+  return contacts
+}
 
 /**
  * Creates a ContactsRepository that interacts with the Xpand database,
@@ -77,7 +102,13 @@ export const xpandContactsRepository = (
         .hasContactCode(contactCode)
         .getOne(db.get())
 
-      return transformDbContactRows(dbContactRows)[0]
+      const contact = transformDbContactRows(dbContactRows)[0]
+      if (!contact) return null
+      contact.relatedContacts = await relatedContactsFor(
+        db.get(),
+        contact.contactCode
+      )
+      return contact
     },
 
     /**
@@ -92,7 +123,27 @@ export const xpandContactsRepository = (
       if (contactCodes.length === 0) return []
 
       const rows = await contactsByCodesQuery(db.get(), contactCodes, options)
-      return transformDbContactRows(rows)
+      const contacts = transformDbContactRows(rows)
+
+      return options?.includeRelations
+        ? withRelatedContacts(db.get(), contacts)
+        : contacts
+    },
+
+    getGuardians: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianRelations(
+        db.get(),
+        contactCode
+      )
+      return subjectExists ? related : null
+    },
+
+    getGuardianWards: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await wardRelations(
+        db.get(),
+        contactCode
+      )
+      return subjectExists ? related : null
     },
 
     /**
@@ -107,7 +158,13 @@ export const xpandContactsRepository = (
         .hasNationalId(nid.replaceAll(/[^0-9]/g, ''))
         .getOne(db.get())
 
-      return transformDbContactRows(dbContactRows)[0]
+      const contact = transformDbContactRows(dbContactRows)[0]
+      if (!contact) return null
+      contact.relatedContacts = await relatedContactsFor(
+        db.get(),
+        contact.contactCode
+      )
+      return contact
     },
 
     /**
@@ -135,7 +192,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return transformDbContactRows(rows)
+        return withRelatedContacts(db.get(), transformDbContactRows(rows))
       }
 
       return []
@@ -165,7 +222,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return transformDbContactRows(rows)
+        return withRelatedContacts(db.get(), transformDbContactRows(rows))
       }
 
       return []
@@ -177,12 +234,18 @@ export const xpandContactsRepository = (
      * @param codes - The contact codes to fetch.
      * @returns A promise that resolves to an array of Contact objects.
      */
-    getByContactCodes: async (codes: ContactCode[]): Promise<Contact[]> => {
+    getByContactCodes: async (
+      codes: ContactCode[],
+      options?: { includeRelations?: boolean }
+    ): Promise<Contact[]> => {
       if (codes.length === 0) return []
       const rows = await contactsQuery()
         .withContactCodeIn(codes)
         .getPage(db.get(), { page: 0, pageSize: codes.length })
-      return transformDbContactRows(rows)
+      const contacts = transformDbContactRows(rows)
+      return options?.includeRelations
+        ? withRelatedContacts(db.get(), contacts)
+        : contacts
     },
 
     /**

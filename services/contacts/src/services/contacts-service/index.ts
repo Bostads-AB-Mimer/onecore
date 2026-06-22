@@ -12,6 +12,7 @@ import {
   ErrorResponseBodySchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
+  GetRelatedContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
   SyncContactsResponseBodySchema,
 } from './schema'
@@ -183,7 +184,9 @@ export const routes = (
         return
       }
 
-      const contacts = await contactsRepository.getByContactCodes(codes)
+      const contacts = await contactsRepository.getByContactCodes(codes, {
+        includeRelations: true,
+      })
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody({ contacts }, metadata)
@@ -197,8 +200,9 @@ export const routes = (
       description:
         'Lean by default — returns base contact fields with empty phone/' +
         'email/address arrays. Pass any combination of `includePhone`, ' +
-        '`includeEmail`, `includeAddress` to include those joins. Missing ' +
-        'contact codes are simply absent from the response.',
+        '`includeEmail`, `includeAddress` to include those joins; ' +
+        "`includeRelations` adds each contact's god man/förvaltare/ward " +
+        'relations. Missing contact codes are simply absent from the response.',
       tags: ['Contacts'],
       query: {
         code: {
@@ -217,6 +221,11 @@ export const routes = (
         },
         includeAddress: {
           description: 'Include addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeRelations: {
+          description:
+            'Include related contacts (guardians/wards) in the response.',
           schema: z.optional(z.boolean()),
         },
       },
@@ -246,6 +255,7 @@ export const routes = (
         includePhone: isTrue(ctx.query.includePhone),
         includeEmail: isTrue(ctx.query.includeEmail),
         includeAddress: isTrue(ctx.query.includeAddress),
+        includeRelations: isTrue(ctx.query.includeRelations),
       })
 
       ctx.status = 200
@@ -322,6 +332,80 @@ export const routes = (
         }
       } else {
         ctx.status = 404
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/:contactCode/administrators',
+    {
+      summary: 'List the administrators (förvaltare) of a contact',
+      description:
+        'Returns the contacts registered as förvaltare (cmctc.forvtyp = 2) ' +
+        'for the given contact, as RelatedContact objects with role ' +
+        "'administrator'. Empty list when the contact has no förvaltare; " +
+        '404 when the contact does not exist.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      response: {
+        200: GetRelatedContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const relations = await contactsRepository.getGuardians(
+        ctx.params.contactCode
+      )
+
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { relations },
+        ...metadata,
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/:contactCode/administrator-for',
+    {
+      summary: 'List the contacts a person is administrator (förvaltare) for',
+      description:
+        'Returns the contacts that have the given contact registered as ' +
+        'their förvaltare, as RelatedContact objects with role ' +
+        "'ward'. Empty list when the contact is not a förvaltare for anyone; " +
+        '404 when the contact does not exist.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      response: {
+        200: GetRelatedContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const relations = await contactsRepository.getGuardianWards(
+        ctx.params.contactCode
+      )
+
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { relations },
+        ...metadata,
       }
     }
   )

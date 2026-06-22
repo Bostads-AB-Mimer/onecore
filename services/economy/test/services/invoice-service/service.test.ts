@@ -3,6 +3,7 @@ import {
   getInvoiceDetails,
   getBatchContactsCsv,
   getBatchLedgerRowsCsv,
+  getAutogiroConsent,
 } from '@src/services/invoice-service/service'
 
 let mockInvoiceDataRows = [
@@ -54,6 +55,7 @@ jest.mock('@src/services/common/adapters/xledger-adapter', () => ({
 jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
   getInvoiceByOcr: jest.fn(),
   getInvoiceArticle: jest.fn(),
+  getAutogiroConsentByNationalRegistrationNumber: jest.fn(),
 }))
 
 import {
@@ -77,12 +79,16 @@ import { getInvoiceByInvoiceNumber } from '@src/services/common/adapters/xledger
 import {
   getInvoiceByOcr,
   getInvoiceArticle,
+  getAutogiroConsentByNationalRegistrationNumber,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
+import { TenfastAutogiroConsentFactory } from '@test/factories'
 
 // Assign the mocked functions
 const mockGetInvoiceByInvoiceNumber = getInvoiceByInvoiceNumber as jest.Mock
 const mockGetInvoiceByOcr = getInvoiceByOcr as jest.Mock
 const mockGetInvoiceArticle = getInvoiceArticle as jest.Mock
+const mockGetAutogiroConsent =
+  getAutogiroConsentByNationalRegistrationNumber as jest.Mock
 
 describe('Rental Invoice Service', () => {
   describe('processInvoiceRows', () => {
@@ -263,9 +269,9 @@ describe('Rental Invoice Service', () => {
         err: mockTenfastError,
       })
 
-      await expect(getInvoiceDetails('55123456')).rejects.toEqual(
-        mockTenfastError
-      )
+      await expect(getInvoiceDetails('55123456')).rejects.toMatchObject({
+        message: mockTenfastError,
+      })
 
       expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('55123456')
       expect(getInvoiceByOcr).toHaveBeenCalledWith('test-invoice-id')
@@ -417,6 +423,7 @@ describe('Rental Invoice Service', () => {
       })
     })
   })
+
   describe('getBatchContactsCsv', () => {
     beforeEach(() => {
       setupDefaultInvoiceDbMocks()
@@ -487,6 +494,44 @@ describe('Rental Invoice Service', () => {
       const result = await getBatchLedgerRowsCsv('1337')
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe('getAutogiroConsent', () => {
+    beforeEach(() => {
+      mockGetAutogiroConsent.mockReset()
+    })
+
+    it('returns consent data when tenfast returns ok result', async () => {
+      const mockConsent = TenfastAutogiroConsentFactory.build()
+      mockGetAutogiroConsent.mockResolvedValue({
+        ok: true,
+        data: mockConsent,
+      })
+
+      const result = await getAutogiroConsent('198001011234')
+
+      expect(mockGetAutogiroConsent).toHaveBeenCalledWith('198001011234')
+      expect(result).toEqual(mockConsent)
+    })
+
+    it('returns null when no consent found', async () => {
+      mockGetAutogiroConsent.mockResolvedValue({ ok: true, data: null })
+
+      const result = await getAutogiroConsent('198001011234')
+
+      expect(result).toBeNull()
+    })
+
+    it('throws when tenfast returns error', async () => {
+      mockGetAutogiroConsent.mockResolvedValue({
+        ok: false,
+        err: 'API error',
+      })
+
+      await expect(getAutogiroConsent('198001011234')).rejects.toMatchObject({
+        message: 'API error',
+      })
     })
   })
 })

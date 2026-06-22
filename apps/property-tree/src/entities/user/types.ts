@@ -2,5 +2,5 @@ export type User = {
   id: string
   name: string
   email: string
-  roles: string[]
+  realm_access?: { roles?: string[] }
 }

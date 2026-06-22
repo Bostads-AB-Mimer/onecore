@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { z } from 'zod'
 import config from '../../config'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
@@ -7,8 +6,7 @@ import {
   TenfastTenantByContactCodeResponseSchema,
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
-  TenfastInvoicesByOcrResponseSchema,
-  TenfastInvoiceStateSchema,
+  TenfastInvoiceSchema,
   TenfastInvoice,
   TenfastInvoiceRow,
   TenfastRentArticleSchema,
@@ -22,6 +20,9 @@ import {
   TenfastOutboundExportSchema,
   TenfastOutboundExportListSchema,
   TenfastOutboundExport,
+  TenfastAutogiroConsentResponseSchema,
+  TenfastAutogiroConsent,
+  isVisibleTenfastInvoice,
 } from './schemas'
 
 export type { TenfastOutboundExport }
@@ -40,8 +41,6 @@ import {
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
 const companyId = config.tenfast.companyId
-
-const TENFAST_INVOICE_STATES = TenfastInvoiceStateSchema.options
 
 const makeTenfastRequest = async (
   url: string,
@@ -184,7 +183,12 @@ export const getInvoicesForTenant = async (
       )
       return { ok: false, err: 'schema-error' }
     }
-    return { ok: true, data: parsedResponse.data.map(transformToInvoice) }
+    return {
+      ok: true,
+      data: parsedResponse.data
+        .filter(isVisibleTenfastInvoice)
+        .map(transformToInvoice),
+    }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -390,41 +394,67 @@ const transformToLease = (tenfastLease: TenfastLease): Lease => {
   }
 }
 
-export const getInvoiceByOcr = async (
+const fetchTenfastInvoiceByOcr = async (
   ocr: string
-): Promise<AdapterResult<Invoice, string>> => {
+): Promise<
+  AdapterResult<TenfastInvoice, 'not-found' | 'unknown' | 'schema-error'>
+> => {
   try {
-    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
-      params: {
-        ocrNumber: ocr,
-      },
-    })
-    if (result.status !== 200) {
-      return { ok: false, err: result.statusText }
+    const result = await makeTenfastRequest(
+      `/v1/hyresvard/extras/hyror/${encodeURIComponent(ocr)}`,
+      {
+        params: { hyresvard: companyId, populate: 'avtal' },
+      }
+    )
+
+    if (result.status === 404) {
+      return { ok: false, err: 'not-found' }
     }
 
-    const parsedResponse = TenfastInvoicesByOcrResponseSchema.safeParse(
-      result.data
-    )
-    if (!parsedResponse.success) {
-      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+    if (result.status !== 200) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = TenfastInvoiceSchema.safeParse(result.data)
+    if (!parsed.success) {
+      logger.warn(
+        { ocr, errors: parsed.error.issues },
+        'tenfast-adapter.fetchTenfastInvoiceByOcr: response failed schema validation'
+      )
       return { ok: false, err: 'schema-error' }
     }
 
-    if (!parsedResponse.data.records[0]) {
-      return {
-        ok: false,
-        err: `Invoice with ocr ${ocr} not found`,
-      }
-    }
-
-    return {
-      ok: true,
-      data: transformToInvoice(parsedResponse.data.records[0]),
-    }
+    return { ok: true, data: parsed.data }
   } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+    logger.error(err, 'tenfast-adapter.fetchTenfastInvoiceByOcr')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getInvoiceByOcr = async (
+  ocr: string
+): Promise<AdapterResult<Invoice, string>> => {
+  const result = await fetchTenfastInvoiceByOcr(ocr)
+  if (!result.ok) {
+    if (result.err === 'not-found') {
+      return { ok: false, err: `Invoice with ocr ${ocr} not found` }
+    }
+    if (result.err === 'schema-error') {
+      return { ok: false, err: 'schema-error' }
+    }
+    return { ok: false, err: 'unknown' }
+  }
+
+  if (!isVisibleTenfastInvoice(result.data)) {
+    return {
+      ok: false,
+      err: `Invoice with ocr ${ocr} not found`,
+    }
+  }
+
+  return {
+    ok: true,
+    data: transformToInvoice(result.data),
   }
 }
 
@@ -461,7 +491,7 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
     toDate: new Date(tenfastInvoice.interval.to),
     invoiceDate: tenfastInvoice.activatedAt
       ? new Date(tenfastInvoice.activatedAt)
-      : new Date(tenfastInvoice.expectedInvoiceDate), // If tenfastInvoice.state == 'draft', activatedAt will be null
+      : new Date(tenfastInvoice.expectedInvoiceDate),
     expirationDate: new Date(tenfastInvoice.due),
     paidAmount: tenfastInvoice.amountPaid,
     remainingAmount,
@@ -481,9 +511,47 @@ const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
   }
 }
 
-const OcrLookupResponseSchema = z.object({
-  records: z.array(z.object({ _id: z.string() }).passthrough()),
-})
+export const setGracePeriod = async (params: {
+  invoiceOcr: string
+  endDate: string
+  madeByEmail: string
+  reason: string
+}): Promise<AdapterResult<null, 'not-found' | 'unknown' | 'schema-error'>> => {
+  try {
+    const result = await fetchTenfastInvoiceByOcr(params.invoiceOcr)
+    if (!result.ok) {
+      return result
+    }
+
+    const res = await makeTenfastRequest(
+      `/v1/hyresvard/hyror/${result.data._id}/grace-period`,
+      {
+        method: 'POST',
+        data: {
+          endDate: params.endDate,
+          madeByEmail: params.madeByEmail,
+          reason: params.reason,
+        },
+      }
+    )
+
+    if (res.status === 200) {
+      return { ok: true, data: null }
+    }
+    if (res.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    logger.error(
+      { status: res.status, data: res.data, ocr: params.invoiceOcr },
+      'tenfast-adapter.setGracePeriod: unexpected status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    logger.error(err, 'tenfast-adapter.setGracePeriod')
+    return { ok: false, err: 'unknown' }
+  }
+}
 
 export const recordPaymentForInvoice = async (params: {
   ocr: string
@@ -491,36 +559,18 @@ export const recordPaymentForInvoice = async (params: {
   dateTime: Date
   // TODO: confirm valid method values with Tenfast (e.g. 'bank', 'bankgiro', 'autogiro')
   method: string
-}): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
+}): Promise<AdapterResult<null, 'not-found' | 'unknown' | 'schema-error'>> => {
   try {
-    const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
-      params: {
-        ocrNumber: params.ocr,
-        states: TENFAST_INVOICE_STATES.join(','),
-      },
-    })
-
-    if (lookupResult.status !== 200) {
-      return { ok: false, err: 'unknown' }
+    const result = await fetchTenfastInvoiceByOcr(params.ocr)
+    if (!result.ok) {
+      return result
     }
 
-    const parsed = OcrLookupResponseSchema.safeParse(lookupResult.data)
-    if (!parsed.success) {
-      logger.warn(
-        { ocr: params.ocr, errors: parsed.error.issues },
-        'tenfast-adapter.recordPaymentForInvoice: OCR lookup response failed schema validation'
-      )
-      return { ok: false, err: 'unknown' }
-    }
-
-    const invoice = parsed.data.records[0]
+    const invoice = result.data
     logger.info(
-      { ocr: params.ocr, found: !!invoice, invoiceId: invoice?._id },
+      { ocr: params.ocr, found: true, invoiceId: invoice._id },
       'tenfast-adapter.recordPaymentForInvoice: invoice lookup'
     )
-    if (!invoice) {
-      return { ok: false, err: 'not-found' }
-    }
 
     const res = await makeTenfastRequest('/v1/hyresvard/transactions', {
       method: 'POST',
@@ -850,28 +900,16 @@ export const getInvoicePdf = async (
   >
 > => {
   try {
-    const lookupResult = await makeTenfastRequest('/v1/hyresvard/hyror', {
-      params: {
-        ocrNumber: ocr,
-      },
-    })
-
-    if (lookupResult.status !== 200) {
-      logger.error(
-        { ocr, status: lookupResult.status },
-        'getInvoicePdf: OCR lookup failed'
-      )
+    const result = await fetchTenfastInvoiceByOcr(ocr)
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        return { ok: false, err: 'not-found' }
+      }
+      logger.error({ ocr }, 'getInvoicePdf: OCR lookup failed')
       return { ok: false, err: 'unknown' }
     }
 
-    const parsed = TenfastInvoicesByOcrResponseSchema.safeParse(
-      lookupResult.data
-    )
-    if (!parsed.success || !parsed.data.records[0]) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    const tenfastId = parsed.data.records[0]._id
+    const tenfastId = result.data._id
 
     const response = await axios.request({
       baseURL: baseUrl,
@@ -906,5 +944,50 @@ export const getInvoicePdf = async (
   } catch (err) {
     logger.error({ err, ocr }, 'getInvoicePdf: failed')
     return { ok: false, err: 'unknown' }
+  }
+}
+
+export const getAutogiroConsentByNationalRegistrationNumber = async (
+  nationalRegistrationNumber: string
+): Promise<AdapterResult<TenfastAutogiroConsent | null, string>> => {
+  try {
+    // payerSSN in autogiro consent has a dash before the last 4 digits, we need to add it to nationalRegistrationNumber if missing
+    const formattedNationalRegistrationNumber =
+      nationalRegistrationNumber.includes('-')
+        ? nationalRegistrationNumber
+        : `${nationalRegistrationNumber.slice(0, -4)}-${nationalRegistrationNumber.slice(-4)}`
+
+    const autogiroConsentResponse = await makeTenfastRequest(
+      '/v1/hyresvard/autogiro/consents/search',
+      {
+        params: {
+          'filter[payerSSN]': formattedNationalRegistrationNumber,
+          limit: 1,
+        },
+      }
+    )
+    if (autogiroConsentResponse.status !== 200) {
+      return {
+        ok: false,
+        err: autogiroConsentResponse.statusText,
+        statusCode: autogiroConsentResponse.status,
+      }
+    }
+
+    const parsedResponse = TenfastAutogiroConsentResponseSchema.safeParse(
+      autogiroConsentResponse.data
+    )
+    if (!parsedResponse.success) {
+      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return {
+      ok: true,
+      data: parsedResponse.data.records[0] ?? null,
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
   }
 }

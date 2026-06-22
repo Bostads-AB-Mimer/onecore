@@ -30,6 +30,7 @@ interface TenantTabsMobileProps {
   rentalProperties: Record<string, RentalPropertyInfo | null>
   contactCode: string
   tenantName: string
+  nationalRegistrationNumber: string
   isLoadingLeases: boolean
   isLoadingProperties: boolean
 }
@@ -39,6 +40,7 @@ export const TenantTabsMobile = ({
   rentalProperties,
   contactCode,
   tenantName,
+  nationalRegistrationNumber,
   isLoadingLeases,
   isLoadingProperties,
 }: TenantTabsMobileProps) => {
@@ -82,7 +84,12 @@ export const TenantTabsMobile = ({
       id: 'ledger',
       icon: Receipt,
       title: 'Fakturor & betalningar',
-      content: <TenantLedgerTabContent contactCode={contactCode} />,
+      content: (
+        <TenantLedgerTabContent
+          contactCode={contactCode}
+          nationalRegistrationNumber={nationalRegistrationNumber}
+        />
+      ),
     },
     {
       id: 'notes',

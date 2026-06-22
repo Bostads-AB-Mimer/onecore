@@ -261,6 +261,51 @@ export async function getRentInvoiceRows(
   }
 }
 
+export async function deferInvoice(params: {
+  invoiceId: string
+  endDate: string
+  madeByEmail: string
+  reason: string
+}): Promise<AdapterResult<true, economy.DeferralErrorCode | 'unknown'>> {
+  try {
+    const response = await axios.put(
+      `${config.economyService.url}/invoices/${params.invoiceId}/deferral`,
+      {
+        endDate: params.endDate,
+        madeByEmail: params.madeByEmail,
+        reason: params.reason,
+      },
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: true }
+    }
+
+    const code = response.data?.code
+    if (economy.isDeferralErrorCode(code)) {
+      if (response.status === 404 && code === 'invoice-not-found') {
+        return { ok: false, err: 'invoice-not-found', statusCode: 404 }
+      }
+      if (response.status === 422 && code === 'invoice-not-eligible') {
+        return { ok: false, err: 'invoice-not-eligible', statusCode: 422 }
+      }
+      if (response.status === 500 && code === 'tenfast-failed') {
+        return { ok: false, err: 'tenfast-failed', statusCode: 500 }
+      }
+      if (response.status === 500 && code === 'xledger-failed') {
+        return { ok: false, err: 'xledger-failed', statusCode: 500 }
+      }
+    }
+
+    logger.error(response.data, 'economy-adapter.deferInvoice')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: unknown) {
+    logger.error(err, 'economy-adapter.deferInvoice')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 export async function getContacts(): Promise<
   AdapterResult<XledgerContact[], 'unknown'>
 > {
@@ -397,6 +442,39 @@ export async function getInvoiceChannels(
     return { ok: false, err: 'unknown' }
   }
 }
+
+const AutogiroConsentSchema = z.object({
+  payerSSN: z.string(),
+  status: z.enum(['ACTIVE', 'MANUAL']),
+})
+
+type AutogiroConsent = z.infer<typeof AutogiroConsentSchema>
+
+export async function getAutogiroConsent(
+  nationalRegistrationNumber: string
+): Promise<AdapterResult<AutogiroConsent, 'not-found' | 'unknown'>> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/autogiro-consent/${nationalRegistrationNumber}`
+    )
+
+    if (response.status === 200) {
+      const parsed = AutogiroConsentSchema.parse(response.data.content)
+      return { ok: true, data: parsed }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+
+    logger.error(response.data, 'economy-adapter.getAutogiroConsent')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getAutogiroConsent')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const PaymentsSinceResultSchema = z.object({
   events: schemas.v1.InvoicePaymentEventSchema.array(),
   lastCursor: z.string().nullable(),

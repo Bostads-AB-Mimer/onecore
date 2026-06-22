@@ -10,6 +10,8 @@ import {
   EmailAddressSchema,
   PhoneNumberSchema,
   PhoneNumberTypeSchema,
+  RelatedContactSchema,
+  RelatedContactRoleSchema,
   TrusteeSchema,
 } from '@src/services/contacts-service/schema'
 
@@ -37,3 +39,5 @@ export type OrganisationDetails = z.infer<
 export type ContactIndividual = z.infer<typeof ContactIndividualSchema>
 export type ContactOrganisation = z.infer<typeof ContactOrganisationSchema>
 export type Contact = z.infer<typeof ContactSchema>
+export type RelatedContactRole = z.infer<typeof RelatedContactRoleSchema>
+export type RelatedContact = z.infer<typeof RelatedContactSchema>

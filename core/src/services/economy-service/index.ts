@@ -5,7 +5,6 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { economy } from '@onecore/types'
-
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as economyAdapter from '../../adapters/economy-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -188,6 +187,165 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody({ data: result.data }, metadata)
     }
   })
+
+  /**
+   * @swagger
+   * /invoices/{invoiceId}/deferral:
+   *   put:
+   *     tags:
+   *       - Economy service
+   *     summary: Set a grace period (anstånd) on an invoice
+   *     description: Grant an invoice deferral by setting a new due date and reason. Requires the invoice-deferral role.
+   *     parameters:
+   *       - in: path
+   *         name: invoiceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The invoice OCR number
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - endDate
+   *               - reason
+   *             properties:
+   *               endDate:
+   *                 type: string
+   *                 format: date
+   *                 description: New due date (YYYY-MM-DD)
+   *               reason:
+   *                 type: string
+   *                 description: Reason for the deferral
+   *     responses:
+   *       '200':
+   *         description: Deferral registered successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     ok:
+   *                       type: boolean
+   *       '400':
+   *         description: Invalid request body
+   *       '422':
+   *         description: Invoice not eligible for deferral
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [code]
+   *               properties:
+   *                 code:
+   *                   type: string
+   *                   enum: [invoice-not-eligible]
+   *       '404':
+   *         description: Invoice not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [code]
+   *               properties:
+   *                 code:
+   *                   type: string
+   *                   enum: [invoice-not-found]
+   *       '500':
+   *         description: Deferral could not be completed
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [code]
+   *               properties:
+   *                 code:
+   *                   type: string
+   *                   enum: [xledger-failed, tenfast-failed]
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put(
+    '/invoices/:invoiceId/deferral',
+    parseRequestBody(economy.DeferralRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { endDate, reason } = ctx.request.body
+      const invoiceId = ctx.params.invoiceId
+      const madeByEmail = ctx.state.user?.email
+
+      if (!madeByEmail) {
+        ctx.status = 401
+        ctx.body = { code: 'unauthorized' }
+        return
+      }
+
+      const deferralResult = await economyAdapter.deferInvoice({
+        invoiceId,
+        endDate,
+        madeByEmail,
+        reason,
+      })
+
+      if (!deferralResult.ok) {
+        if (
+          deferralResult.err === 'invoice-not-found' ||
+          deferralResult.err === 'invoice-not-eligible'
+        ) {
+          ctx.status = deferralResult.statusCode ?? 400
+          ctx.body = { code: deferralResult.err }
+          return
+        }
+
+        if (
+          deferralResult.err === 'tenfast-failed' ||
+          deferralResult.err === 'xledger-failed'
+        ) {
+          const failedSystem =
+            deferralResult.err === 'tenfast-failed' ? 'Tenfast' : 'Xledger'
+
+          try {
+            await communicationAdapter.sendEmail({
+              to: config.emailAddresses.economy,
+              subject: `Fel: anstånd kunde inte registreras i ${failedSystem}`,
+              body: [
+                `Anstånd på faktura ${invoiceId} misslyckades i: ${failedSystem}.`,
+                '',
+                `Nytt förfallodatum: ${endDate}`,
+                `Begärt av: ${madeByEmail}`,
+                reason ? `Anledning: ${reason}` : '',
+                '',
+                'Åtgärd krävs: registrera anståndet manuellt.',
+              ]
+                .filter(Boolean)
+                .join('\n'),
+            })
+          } catch (emailErr) {
+            logger.error(
+              emailErr,
+              'Failed to send deferral failure notification'
+            )
+          }
+
+          ctx.status = 500
+          ctx.body = { code: deferralResult.err }
+          return
+        }
+
+        ctx.status = 500
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+    }
+  )
 
   router.get('/xledger-contacts', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -532,9 +690,7 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                         enum:
    *                           - Kivra
-   *                           - Billo
    *                           - eInvoiceB2C
-   *                           - eInvoiceB2B
    *                       matchedCandidates:
    *                         type: array
    *                         items:
@@ -577,4 +733,125 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /autogiro-consent/{nationalRegistrationNumber}:
+   *   get:
+   *     tags:
+   *       - Economy service
+   *     summary: Get autogiro consent for tenant
+   *     description: Returns autogiro consent by national registration number.
+   *     parameters:
+   *       - in: path
+   *         name: nationalRegistrationNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The tenant's national registration number
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved autogiro consent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - content
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   required:
+   *                     - _id
+   *                     - hyresgast
+   *                     - hyresvardBankgiro
+   *                     - payerNumber
+   *                     - fixedDueDay
+   *                     - isCompany
+   *                     - payerSSN
+   *                     - status
+   *                     - statusChangedAt
+   *                     - extra
+   *                     - payerBankAccountNumber
+   *                   properties:
+   *                     _id:
+   *                       type: string
+   *                     hyresgast:
+   *                       type: string
+   *                     hyresvardBankgiro:
+   *                       type: string
+   *                     payerNumber:
+   *                       type: integer
+   *                     fixedDueDay:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     isCompany:
+   *                       type: boolean
+   *                     payerSSN:
+   *                       type: string
+   *                     status:
+   *                       type: string
+   *                       enum:
+   *                         - ACTIVE
+   *                         - MANUAL
+   *                     statusChangedAt:
+   *                       type: string
+   *                       format: date-time
+   *                     extra:
+   *                       type: object
+   *                       required:
+   *                         - nameAndAddress1
+   *                         - mismatch
+   *                       properties:
+   *                         nameAndAddress1:
+   *                           type: string
+   *                         mismatch:
+   *                           type: string
+   *                           nullable: true
+   *                     payerBankAccountNumber:
+   *                       type: string
+   *       '404':
+   *         description: No autogiro consent found for the given national registration number.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   */
+  router.get('/autogiro-consent/:nationalRegistrationNumber', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { nationalRegistrationNumber } = ctx.params
+
+    const response = await economyAdapter.getAutogiroConsent(
+      nationalRegistrationNumber
+    )
+
+    if (response.ok) {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(response.data, metadata)
+      return
+    }
+
+    if (response.err === 'not-found') {
+      ctx.status = 404
+      ctx.body = { error: 'Not found' }
+    } else {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+      }
+    }
+  })
 }

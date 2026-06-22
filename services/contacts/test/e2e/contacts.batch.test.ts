@@ -102,6 +102,47 @@ describe('/contacts/batch', () => {
     })
   })
 
+  describe('includeRelations flag', () => {
+    it('includes relatedContacts when includeRelations is set', async () => {
+      const response = await httpClient.get('/contacts/batch', {
+        params: { code: ['P000555'], includeRelations: true },
+      })
+
+      expect(response.status).toBe(200)
+      expect(response.data.content.contacts[0].relatedContacts).toContainEqual({
+        contactCode: 'P000444',
+        role: 'administrator',
+        fullName: 'McTestface Testy',
+      })
+    })
+
+    it('omits relatedContacts without the flag', async () => {
+      const response = await httpClient.get('/contacts/batch', {
+        params: { code: ['P000555'] },
+      })
+
+      expect(response.status).toBe(200)
+      expect(response.data.content.contacts[0].relatedContacts).toBeUndefined()
+    })
+
+    it('groups relations per contact in a mixed batch', async () => {
+      const response = await httpClient.get('/contacts/batch', {
+        params: { code: ['P000555', 'P000333'], includeRelations: true },
+      })
+
+      expect(response.status).toBe(200)
+      const byCode = Object.fromEntries(
+        response.data.content.contacts.map((c: { contactCode: string; relatedContacts: unknown }) => [c.contactCode, c.relatedContacts])
+      )
+      expect(byCode['P000555']).toContainEqual({
+        contactCode: 'P000444',
+        role: 'administrator',
+        fullName: 'McTestface Testy',
+      })
+      expect(byCode['P000333']).toEqual([])
+    })
+  })
+
   describe('Input validation', () => {
     it('returns 400 when no code param is provided', async () => {
       const response = await httpClient.get('/contacts/batch', {

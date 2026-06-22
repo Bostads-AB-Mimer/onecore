@@ -115,10 +115,24 @@ export const TenfastInvoiceStateSchema = z.enum([
   'forsenad',
   'delvis-betald',
   'krediterad',
-  'anstand',
+  'makulerad',
+  'draft',
+  'pamind',
+  'gracePeriod',
 ])
 
 export type TenfastInvoiceState = z.infer<typeof TenfastInvoiceStateSchema>
+
+/** Tenfast invoice states parsed but not exposed as Invoice. */
+export const EXCLUDED_TENFAST_INVOICE_STATES: readonly TenfastInvoiceState[] = [
+  'draft',
+]
+
+export function isVisibleTenfastInvoice(invoice: {
+  state: TenfastInvoiceState
+}): boolean {
+  return !EXCLUDED_TENFAST_INVOICE_STATES.includes(invoice.state)
+}
 
 export const TenfastInvoiceSchema = z.object({
   interval: z.object({
@@ -204,11 +218,6 @@ export const TenfastLeaseSearchResponseSchema = z.object({
   next: z.string().nullable(),
   prev: z.string().nullable(),
   totalCount: z.number(),
-})
-
-// Getting invoices by OCR from Tenfast returns a list of full Lease objects,
-export const TenfastInvoicesByOcrResponseSchema = z.object({
-  records: TenfastInvoiceSchema.array(),
 })
 
 export const TenfastInvoicesByTenantIdResponseSchema =
@@ -323,11 +332,34 @@ export const TenfastBatchGetRentalObjectsResponseSchema = z.array(
   TenfastBatchGetRentalObjectSchema
 )
 
+// No schema for this in Tenfast docs currently, this is guesswork based on response
+export const TenfastAutogiroConsentSchema = z.object({
+  _id: z.string(),
+  hyresgast: z.string(),
+  hyresvard: z.string(),
+  hyresvardBankgiro: z.string(),
+  payerNumber: z.number(),
+  fixedDueDay: z.coerce.date().nullable(), // TODO is this a date string?
+  isCompany: z.boolean(),
+  payerSSN: z.string(),
+  status: z.enum(['ACTIVE', 'MANUAL']), // TODO are there more possible statuses?
+  statusChangedAt: z.coerce.date(),
+  extra: z.object({
+    nameAndAddress1: z.string(),
+    mismatch: z.string().nullable(), // TODO is this a string?
+  }),
+  payerBankAccountNumber: z.string(),
+})
+
+export const TenfastAutogiroConsentResponseSchema = z.object({
+  records: z.array(TenfastAutogiroConsentSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
-export type TenfastInvoicesByOcrResponse = z.infer<
-  typeof TenfastInvoicesByOcrResponseSchema
->
 export type TenfastInvoicesByTenantIdResponse = z.infer<
   typeof TenfastInvoicesByTenantIdResponseSchema
 >
@@ -346,6 +378,8 @@ export type TenfastBatchGetRentalObjectsResponse = z.infer<
 >
 
 export type TenfastRentalProperty = z.infer<typeof TenfastRentalPropertySchema>
+
+export type TenfastAutogiroConsent = z.infer<typeof TenfastAutogiroConsentSchema>
 
 export const TenfastOutboundExportSchema = z.object({
   _id: z.string(),

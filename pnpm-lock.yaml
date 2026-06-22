@@ -616,6 +616,9 @@ importers:
       '@headlessui/react':
         specifier: ^1.7.18
         version: 1.7.19(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@hookform/resolvers':
+        specifier: ^5.4.0
+        version: 5.4.0(react-hook-form@7.62.0(react@18.3.1))
       '@onecore/types':
         specifier: workspace:*
         version: link:../../libs/types
@@ -1360,6 +1363,9 @@ importers:
       eslint:
         specifier: ^9.31.0
         version: 9.34.0(jiti@1.21.7)
+      fishery:
+        specifier: ^2.4.0
+        version: 2.4.0
       globals:
         specifier: ^15.9.0
         version: 15.15.0
@@ -3485,6 +3491,11 @@ packages:
 
   '@hookform/resolvers@5.2.2':
     resolution: {integrity: sha512-A/IxlMLShx3KjV/HeTcTfaMxdwy690+L/ZADoeaTltLx+CVuzkeVIPuybK3jrRfw7YZnmdKsVVHAlEPIAEUNlA==}
+    peerDependencies:
+      react-hook-form: ^7.55.0
+
+  '@hookform/resolvers@5.4.0':
+    resolution: {integrity: sha512-EIsqr/t/qbinPIhGjMdtvutIN1Kk4uwbROE9/UQ93CAVGR7GkA7Y92+fX80OzXi/OB67jVFYwKGO1WzkxmkFZw==}
     peerDependencies:
       react-hook-form: ^7.55.0
 
@@ -13432,6 +13443,11 @@ snapshots:
       react-hook-form: 7.62.0(react@18.3.1)
 
   '@hookform/resolvers@5.2.2(react-hook-form@7.62.0(react@18.3.1))':
+    dependencies:
+      '@standard-schema/utils': 0.3.0
+      react-hook-form: 7.62.0(react@18.3.1)
+
+  '@hookform/resolvers@5.4.0(react-hook-form@7.62.0(react@18.3.1))':
     dependencies:
       '@standard-schema/utils': 0.3.0
       react-hook-form: 7.62.0(react@18.3.1)

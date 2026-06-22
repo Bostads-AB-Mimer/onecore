@@ -25,15 +25,37 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { economy } from '@onecore/types'
 
+import { requireRole } from '../../../middlewares/keycloak-auth'
 import { routes } from '../index'
 import * as economyAdapter from '../../../adapters/economy-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 
+const INVOICE_DEFERRAL_ROLE = 'invoice-deferral'
+
+const TEST_USER = {
+  email: 'admin@mimer.nu',
+  name: 'Admin',
+  preferred_username: 'admin',
+  realm_access: { roles: ['api-access', INVOICE_DEFERRAL_ROLE] },
+}
+
+let mockUser: typeof TEST_USER = TEST_USER
+
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
+app.use((ctx, next) => {
+  ctx.state.user = mockUser
+  return next()
+})
+app.use(async (ctx, next) => {
+  if (ctx.method === 'PUT' && /^\/invoices\/[^/]+\/deferral$/.test(ctx.path)) {
+    return requireRole(INVOICE_DEFERRAL_ROLE)(ctx, next)
+  }
+  return next()
+})
 app.use(router.routes())
 
 describe('economy-service routes', () => {
@@ -79,6 +101,174 @@ describe('economy-service routes', () => {
       const res = await request(app.callback()).get(
         '/invoices/552606001476999/pdf'
       )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('PUT /invoices/:invoiceId/deferral', () => {
+    beforeEach(() => {
+      jest.clearAllMocks()
+      mockUser = TEST_USER
+    })
+
+    const validBody = {
+      endDate: '2026-06-30',
+      reason: 'Betalningsplan överenskommen.',
+    }
+
+    const mockSuccess = () => {
+      jest
+        .spyOn(economyAdapter, 'deferInvoice')
+        .mockResolvedValue({ ok: true, data: true })
+    }
+
+    it('returns 400 when endDate is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({})
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when reason is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({ endDate: validBody.endDate })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 403 when user lacks invoice-deferral role', async () => {
+      mockUser = {
+        ...TEST_USER,
+        realm_access: { roles: ['api-access'] },
+      }
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(403)
+    })
+
+    it('returns 200 when both Xledger and Tenfast succeed', async () => {
+      mockSuccess()
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({ ok: true })
+    })
+
+    it('calls economy deferInvoice with invoiceId, endDate, madeByEmail from token and reason', async () => {
+      mockSuccess()
+      const spy = jest.spyOn(economyAdapter, 'deferInvoice')
+
+      await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(spy).toHaveBeenCalledWith({
+        invoiceId: '55123456',
+        endDate: validBody.endDate,
+        madeByEmail: TEST_USER.email,
+        reason: validBody.reason,
+      })
+    })
+
+    it('returns 500 with code xledger-failed and sends notification when Xledger fails', async () => {
+      jest.spyOn(economyAdapter, 'deferInvoice').mockResolvedValue({
+        ok: false,
+        err: 'xledger-failed',
+        statusCode: 500,
+      })
+      const emailSpy = jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.code).toBe('xledger-failed')
+      expect(emailSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Fel: anstånd kunde inte registreras i Xledger',
+          body: expect.stringContaining('55123456'),
+        })
+      )
+    })
+
+    it('returns 500 with code tenfast-failed and sends notification when Tenfast fails', async () => {
+      jest.spyOn(economyAdapter, 'deferInvoice').mockResolvedValue({
+        ok: false,
+        err: 'tenfast-failed',
+        statusCode: 500,
+      })
+      const emailSpy = jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.code).toBe('tenfast-failed')
+      expect(emailSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Fel: anstånd kunde inte registreras i Tenfast',
+        })
+      )
+    })
+
+    it('returns 422 with code invoice-not-eligible when economy rejects invoice', async () => {
+      jest.spyOn(economyAdapter, 'deferInvoice').mockResolvedValue({
+        ok: false,
+        err: 'invoice-not-eligible',
+        statusCode: 422,
+      })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(422)
+      expect(res.body.code).toBe('invoice-not-eligible')
+    })
+
+    it('returns 404 with code invoice-not-found when economy cannot find invoice', async () => {
+      jest.spyOn(economyAdapter, 'deferInvoice').mockResolvedValue({
+        ok: false,
+        err: 'invoice-not-found',
+        statusCode: 404,
+      })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(404)
+      expect(res.body.code).toBe('invoice-not-found')
+    })
+
+    it('still returns 500 even if notification email itself fails', async () => {
+      jest.spyOn(economyAdapter, 'deferInvoice').mockResolvedValue({
+        ok: false,
+        err: 'xledger-failed',
+        statusCode: 500,
+      })
+      jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockRejectedValue(new Error('email down'))
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
 
       expect(res.status).toBe(500)
     })
@@ -413,6 +603,66 @@ describe('economy-service routes', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('unknown')
+    })
+  })
+
+  describe('GET /autogiro-consent/:nationalRegistrationNumber', () => {
+    const mockConsent = {
+      _id: 'abc123',
+      hyresgast: '191212121212',
+      hyresvardBankgiro: '5050-1005',
+      payerNumber: 12345,
+      fixedDueDay: null,
+      isCompany: false,
+      payerSSN: '191212121212',
+      status: 'ACTIVE',
+      statusChangedAt: '2024-01-01T00:00:00.000Z',
+      extra: { nameAndAddress1: 'Test Testsson', mismatch: null },
+      payerBankAccountNumber: '83059876',
+    }
+
+    it('returns 200 with consent data on success', async () => {
+      jest.spyOn(economyAdapter, 'getAutogiroConsent').mockResolvedValue({
+        ok: true,
+        data: mockConsent as any,
+      })
+
+      const res = await request(app.callback()).get(
+        '/autogiro-consent/191212121212'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(mockConsent)
+      expect(economyAdapter.getAutogiroConsent).toHaveBeenCalledWith(
+        '191212121212'
+      )
+    })
+
+    it('returns 404 when no consent found', async () => {
+      jest.spyOn(economyAdapter, 'getAutogiroConsent').mockResolvedValue({
+        ok: false,
+        err: 'not-found',
+      })
+
+      const res = await request(app.callback()).get(
+        '/autogiro-consent/191212121212'
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 when adapter returns error', async () => {
+      jest.spyOn(economyAdapter, 'getAutogiroConsent').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback()).get(
+        '/autogiro-consent/191212121212'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Unknown error')
     })
   })
 })

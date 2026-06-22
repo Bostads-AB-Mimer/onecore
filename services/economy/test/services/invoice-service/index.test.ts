@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
+import * as invoiceService from '@src/services/invoice-service/service'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
@@ -228,6 +229,92 @@ describe('Invoice Service', () => {
     })
   })
 
+  describe('PUT /invoices/:invoiceNumber/deferral', () => {
+    const validBody = {
+      endDate: '2026-06-30',
+      madeByEmail: 'admin@mimer.nu',
+      reason: 'Betalningsplan överenskommen.',
+    }
+
+    it('returns 400 when endDate is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({ madeByEmail: 'admin@mimer.nu', reason: 'test' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 200 and calls deferInvoice with correct args', async () => {
+      const spy = jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: true })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(200)
+      expect(spy).toHaveBeenCalledWith({
+        invoiceOcr: '55123456',
+        endDate: validBody.endDate,
+        madeByEmail: validBody.madeByEmail,
+        reason: validBody.reason,
+      })
+    })
+
+    it('returns 422 with invoice-not-eligible when deferral is rejected', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'invoice-not-eligible' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(422)
+      expect(res.body.code).toBe('invoice-not-eligible')
+    })
+
+    it('returns 404 with invoice-not-found when invoice is missing', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'invoice-not-found' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(404)
+      expect(res.body.code).toBe('invoice-not-found')
+    })
+
+    it('returns 500 with tenfast-failed when Tenfast update fails', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'tenfast-failed' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.code).toBe('tenfast-failed')
+    })
+
+    it('returns 500 with xledger-failed when Xledger update fails', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'xledger-failed' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.code).toBe('xledger-failed')
+    })
+  })
+
   describe('GET /invoices/:invoiceId/pdf', () => {
     const pdfBuffer = Buffer.from('%PDF-1.4 mock')
     const contentDisposition = 'attachment; filename=Hyresavi.pdf'
@@ -264,6 +351,48 @@ describe('Invoice Service', () => {
       })
 
       const res = await request(app.callback()).get('/invoices/55123456/pdf')
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /autogiro-consent/:nationalRegistrationNumber', () => {
+    const mockConsent = factory.TenfastAutogiroConsentFactory.build()
+
+    it('responds with consent when found', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: true, data: mockConsent })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toMatchObject({ _id: mockConsent._id })
+    })
+
+    it('responds with 404 when no consent found', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
+
+      expect(res.status).toBe(404)
+      expect(res.body).toMatchObject({ message: 'No autogiro consent found' })
+    })
+
+    it('responds with 500 when tenfast returns error', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: false, err: 'API error' })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
 
       expect(res.status).toBe(500)
     })

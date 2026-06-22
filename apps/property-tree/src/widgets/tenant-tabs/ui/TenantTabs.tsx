@@ -31,6 +31,7 @@ interface TenantTabsProps {
   rentalProperties: Record<string, RentalPropertyInfo | null>
   contactCode: string
   tenantName: string
+  nationalRegistrationNumber: string
   isLoadingLeases: boolean
   isLoadingProperties: boolean
 }
@@ -39,6 +40,7 @@ export const TenantTabs = ({
   leases,
   rentalProperties,
   contactCode,
+  nationalRegistrationNumber,
   tenantName,
   isLoadingLeases,
   isLoadingProperties,
@@ -56,6 +58,7 @@ export const TenantTabs = ({
         rentalProperties={rentalProperties}
         contactCode={contactCode}
         tenantName={tenantName}
+        nationalRegistrationNumber={nationalRegistrationNumber}
         isLoadingLeases={isLoadingLeases}
         isLoadingProperties={isLoadingProperties}
       />
@@ -115,7 +118,10 @@ export const TenantTabs = ({
       </TabsContent>
 
       <TabsContent value="ledger">
-        <TenantLedgerTabContent contactCode={contactCode} />
+        <TenantLedgerTabContent
+          contactCode={contactCode}
+          nationalRegistrationNumber={nationalRegistrationNumber}
+        />
       </TabsContent>
 
       <TabsContent value="notes">

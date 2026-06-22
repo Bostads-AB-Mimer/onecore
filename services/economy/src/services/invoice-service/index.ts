@@ -19,8 +19,9 @@ import {
   fetchPaymentEvents,
   getLeaseDetails,
   stralforsPostChannelLookup,
+  getAutogiroConsent,
 } from './service'
-import { getInvoiceDetails } from './service'
+import * as invoiceService from './service'
 import {
   getInvoiceByOcr,
   getInvoicePdf,
@@ -92,7 +93,9 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const result = await getInvoiceDetails(ctx.params.invoiceNumber)
+      const result = await invoiceService.getInvoiceDetails(
+        ctx.params.invoiceNumber
+      )
       if (!result) {
         ctx.status = 404
         return
@@ -212,6 +215,43 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.put('(.*)/invoices/:invoiceNumber/deferral', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = economy.TenfastGracePeriodRequestSchema.safeParse(
+      ctx.request.body
+    )
+
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = {
+        message: body.error.issues[0]?.message ?? 'Invalid request',
+      }
+      return
+    }
+
+    const result = await invoiceService.deferInvoice({
+      invoiceOcr: ctx.params.invoiceNumber,
+      endDate: body.data.endDate,
+      madeByEmail: body.data.madeByEmail,
+      reason: body.data.reason,
+    })
+
+    if (!result.ok) {
+      if (result.err === 'invoice-not-found') {
+        ctx.status = 404
+      } else if (result.err === 'invoice-not-eligible') {
+        ctx.status = 422
+      } else {
+        ctx.status = 500
+      }
+      ctx.body = { code: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+  })
+
   router.post('(.*)/rent-invoice-rows/batch', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const invoiceIds = ctx.request.body.invoiceIds as string[] // TODO schema
@@ -286,4 +326,32 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { ...metadata, message: error.message }
     }
   })
+
+  router.get(
+    '(.*)/autogiro-consent/:nationalRegistrationNumber',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { nationalRegistrationNumber } = ctx.params
+
+      try {
+        const results = await getAutogiroConsent(nationalRegistrationNumber)
+
+        if (results === null) {
+          ctx.status = 404
+          ctx.body = { ...metadata, message: 'No autogiro consent found' }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          ...metadata,
+          content: results,
+        }
+      } catch (error: any) {
+        logger.error(error, 'Error getting autogiro consent')
+        ctx.status = 500
+        ctx.body = { ...metadata, message: error.message }
+      }
+    }
+  )
 }

@@ -37,9 +37,16 @@ import {
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
   transformAggregatedInvoiceRow,
   transformContact,
+  updateInvoiceDeferralDate,
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
-import { Contact, Invoice, InvoiceRow } from '@onecore/types'
+import {
+  Contact,
+  economy,
+  Invoice,
+  InvoiceRow,
+  PaymentStatus,
+} from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import {
   getInvoiceRows,
@@ -53,9 +60,11 @@ import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'
 import {
   getInvoiceArticle,
   getInvoiceByOcr,
+  setGracePeriod,
   getInvoicesByContactCode as getTenfastInvoicesByContactCode,
   getInvoicesForTenant,
   getTenantByContactCode,
+  getAutogiroConsentByNationalRegistrationNumber,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
 
@@ -948,6 +957,69 @@ export const getInvoicesByContactCode = async (
     )
 }
 
+type DeferInvoiceError = economy.DeferralErrorCode | 'unknown'
+
+const isInvoiceEligibleForDeferral = (invoice: Invoice): boolean =>
+  invoice.source === 'next' &&
+  invoice.paymentStatus !== PaymentStatus.Paid &&
+  invoice.credit === null
+
+const checkInvoiceDeferralEligibility = async (
+  invoiceOcr: string
+): Promise<
+  | { ok: true }
+  | { ok: false; err: 'invoice-not-found' | 'invoice-not-eligible' | 'unknown' }
+> => {
+  const xledgerInvoice = await getInvoiceByInvoiceNumber(invoiceOcr)
+  if (!xledgerInvoice) {
+    return { ok: false, err: 'invoice-not-found' }
+  }
+
+  if (!isInvoiceEligibleForDeferral(xledgerInvoice)) {
+    return { ok: false, err: 'invoice-not-eligible' }
+  }
+
+  return { ok: true }
+}
+
+export const deferInvoice = async (params: {
+  invoiceOcr: string
+  endDate: string
+  madeByEmail: string
+  reason: string
+}): Promise<{ ok: true } | { ok: false; err: DeferInvoiceError }> => {
+  const eligibility = await checkInvoiceDeferralEligibility(params.invoiceOcr)
+  if (!eligibility.ok) {
+    return eligibility
+  }
+
+  const tenfastResult = await setGracePeriod({
+    invoiceOcr: params.invoiceOcr,
+    endDate: params.endDate,
+    madeByEmail: params.madeByEmail,
+    reason: params.reason,
+  })
+
+  if (!tenfastResult.ok) {
+    if (tenfastResult.err === 'not-found') {
+      return { ok: false, err: 'invoice-not-found' }
+    }
+    return { ok: false, err: 'tenfast-failed' }
+  }
+
+  try {
+    await updateInvoiceDeferralDate(params.invoiceOcr, new Date(params.endDate))
+  } catch (error) {
+    logger.error(
+      { error, invoiceOcr: params.invoiceOcr },
+      'deferInvoice: Xledger update failed after Tenfast grace period was set'
+    )
+    return { ok: false, err: 'xledger-failed' }
+  }
+
+  return { ok: true }
+}
+
 export const getInvoiceDetails = async (
   invoiceNumber: string
 ): Promise<Invoice | null> => {
@@ -959,7 +1031,7 @@ export const getInvoiceDetails = async (
   const tenfastInvoiceResult = await getInvoiceByOcr(result.invoiceId)
 
   if (!tenfastInvoiceResult.ok) {
-    throw tenfastInvoiceResult.err
+    throw new Error(tenfastInvoiceResult.err)
   }
 
   if (tenfastInvoiceResult.data) {
@@ -1063,4 +1135,19 @@ export const stralforsPostChannelLookup = async (
   nationalRegistrationNumbers: string[]
 ) => {
   return await postChannelLookup(nationalRegistrationNumbers)
+}
+
+export const getAutogiroConsent = async (
+  nationalRegistrationNumber: string
+) => {
+  const autogiroConsentResult =
+    await getAutogiroConsentByNationalRegistrationNumber(
+      nationalRegistrationNumber
+    )
+
+  if (!autogiroConsentResult.ok) {
+    throw new Error(autogiroConsentResult.err)
+  }
+
+  return autogiroConsentResult.data
 }
