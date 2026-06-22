@@ -24,40 +24,69 @@ async function uploadToStralfors(
   )
 }
 
-async function notifyFailure(err: unknown, context?: string): Promise<void> {
+const environment = `${process.env.APPLICATION_NAME ?? 'economy'} (${config.stralforsExport.sftp.directory})`
+
+async function notify(subject: string, body: string): Promise<void> {
   const recipient = config.stralforsExport.notificationEmail
   if (!recipient) {
     logger.warn(
-      'config.stralforsExport.notificationEmail is not set — skipping failure notification'
+      'config.stralforsExport.notificationEmail is not set — skipping notification'
     )
     return
   }
-
-  const subject = 'Fel i körning: transfer-stralfors-files'
-  const body = [
-    'Överföring av Strålfors-filer misslyckades.',
-    context ? `Kontext: ${context}` : '',
-    '',
-    `Fel: ${err instanceof Error ? err.message : String(err)}`,
-    '',
-    'Filer som inte skickades kommer att försökas igen vid nästa körning.',
-  ]
-    .filter((line) => line !== undefined)
-    .join('\n')
-
   try {
     await sendEmail(recipient, subject, body)
   } catch (emailErr) {
-    logger.error({ emailErr }, 'failed to send failure notification')
+    logger.error({ emailErr }, 'failed to send notification')
   }
 }
 
+async function notifySuccess(
+  transferred: number,
+  failed: number,
+  startedAt: Date
+): Promise<void> {
+  const duration = Math.round((Date.now() - startedAt.getTime()) / 1000)
+  await notify(
+    `Strålfors-överföring klar [${environment}]`,
+    [
+      `Miljö: ${environment}`,
+      `Starttid: ${startedAt.toISOString()}`,
+      `Varaktighet: ${duration}s`,
+      `Överförda filer: ${transferred}`,
+      failed > 0 ? `Misslyckade filer: ${failed}` : '',
+      `SFTP-katalog: ${config.stralforsExport.sftp.directory}`,
+    ]
+      .filter((line) => line !== '')
+      .join('\n')
+  )
+}
+
+async function notifyFailure(err: unknown, context?: string): Promise<void> {
+  await notify(
+    `Fel i körning: transfer-stralfors-files [${environment}]`,
+    [
+      'Överföring av Strålfors-filer misslyckades.',
+      context ? `Kontext: ${context}` : '',
+      '',
+      `Fel: ${err instanceof Error ? err.message : String(err)}`,
+      '',
+      'Filer som inte skickades kommer att försökas igen vid nästa körning.',
+    ]
+      .filter((line) => line !== undefined)
+      .join('\n')
+  )
+}
+
 export async function transferStralforsFiles(): Promise<void> {
+  const startedAt = new Date()
   logger.info('transfer-stralfors-files: starting')
 
   const listResult = await listNewOutboundExports()
   if (!listResult.ok) {
-    throw new Error('Failed to fetch outbound exports from Tenfast')
+    const err = new Error('Failed to fetch outbound exports from Tenfast')
+    await notifyFailure(err)
+    throw err
   }
 
   const files = listResult.data
@@ -68,6 +97,9 @@ export async function transferStralforsFiles(): Promise<void> {
     return
   }
 
+  let transferred = 0
+  let failed = 0
+
   const sftpClient = new SftpClient()
   try {
     await sftpClient.connect({
@@ -75,6 +107,16 @@ export async function transferStralforsFiles(): Promise<void> {
       username: config.stralforsExport.sftp.username,
       password: config.stralforsExport.sftp.password,
       port: config.stralforsExport.sftp.port ?? 22,
+      hostVerifier: () => true,
+      algorithms: {
+        serverHostKey: [
+          'rsa-sha2-512',
+          'rsa-sha2-256',
+          'ssh-rsa',
+          'ecdsa-sha2-nistp256',
+          'ssh-ed25519',
+        ],
+      },
     })
     logger.info('connected to Strålfors SFTP')
 
@@ -103,6 +145,7 @@ export async function transferStralforsFiles(): Promise<void> {
           { filename: file.filename, sentAt: markResult.data.sentAt },
           'file transferred and marked as sent'
         )
+        transferred++
       } catch (err) {
         // Per-file error isolation: log and notify but continue with remaining
         // files so one bad file does not block the rest of the batch.
@@ -111,12 +154,17 @@ export async function transferStralforsFiles(): Promise<void> {
           'transfer-stralfors-files: failed to transfer file, continuing with remaining files'
         )
         await notifyFailure(err, file.filename)
+        failed++
       }
     }
+  } catch (err) {
+    await notifyFailure(err, 'SFTP-anslutning')
+    throw err
   } finally {
     await sftpClient.end()
     logger.info('disconnected from Strålfors SFTP')
   }
 
-  logger.info('transfer-stralfors-files: done')
+  await notifySuccess(transferred, failed, startedAt)
+  logger.info({ transferred, failed }, 'transfer-stralfors-files: done')
 }
