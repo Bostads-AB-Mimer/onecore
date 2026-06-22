@@ -5,6 +5,11 @@ const calculateStatus = (
   lastDebitDateString: string,
   startDateString: string
 ): LeaseStatus => {
+  // A row with no start date and no last-debit date is not a real, active lease
+  // (e.g. an Xpand "Avtalsmall" template). Without this guard it falls through to
+  // Current below.
+  if (!startDateString && !lastDebitDateString) return LeaseStatus.Ended
+
   const leaseStartDate = new Date(startDateString)
   const leaseLastDebitDate = new Date(lastDebitDateString)
   const today = new Date()
