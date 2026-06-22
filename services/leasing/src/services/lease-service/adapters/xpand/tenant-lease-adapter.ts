@@ -644,7 +644,7 @@ const getLeaseIds = async (
 // TODO: NON-TENANT-CONTACTS
 const getLeases = async (leaseIds: string[]) => {
   const rows = await xpandDb
-    .from('hyavk')
+    .from('hyobj')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyhav.hyhavben as leaseType',
@@ -659,7 +659,6 @@ const getLeases = async (leaseIds: string[]) => {
       'hyobj.onskflytt AS preferredMoveOutDate',
       'hyobj.makuldatum AS terminationDate'
     )
-    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
     .whereRaw(
       `hyobj.hyobjben IN (${leaseIds.map((id) => `'${id}'`).join(', ')})`
