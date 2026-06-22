@@ -199,7 +199,6 @@ export function RoomInspectionEditor({
             return (
               <ComponentInspectionCard
                 key={componentId}
-                componentKey={componentId}
                 label={label}
                 condition={state.condition}
                 note={state.note}

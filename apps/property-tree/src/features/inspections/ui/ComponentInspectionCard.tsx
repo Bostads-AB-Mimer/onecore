@@ -9,16 +9,14 @@ import {
   type ComponentType,
   CONDITION_OPTIONS,
   CONDITION_TYPE,
-  COST_RESPONSIBILITY,
-  COST_RESPONSIBILITY_LABEL,
   type CostResponsibility,
   getActionsForComponentType,
   getConditionConfig,
 } from '../constants'
+import { CostResponsibilitySelect } from './CostResponsibilitySelect'
 import { PhotoCapture, type InspectionPhotoUploadContext } from './PhotoCapture'
 
 interface ComponentInspectionCardProps {
-  componentKey: string
   label: string
   condition: string
   note: string
@@ -36,7 +34,6 @@ interface ComponentInspectionCardProps {
 }
 
 export function ComponentInspectionCard({
-  componentKey,
   label,
   condition,
   note,
@@ -178,31 +175,17 @@ export function ComponentInspectionCard({
             </div>
           )}
 
-          {/* Cost responsibility radio — only shown for Skadad */}
+          {/* Cost responsibility — only shown for Skadad */}
           {condition === CONDITION_TYPE.DAMAGED && (
             <div className="mb-3">
               <p className="text-sm text-muted-foreground mb-2">
                 Kostnadsansvar
               </p>
-              <div className="flex gap-4">
-                {[COST_RESPONSIBILITY.TENANT, COST_RESPONSIBILITY.LANDLORD].map(
-                  (value) => (
-                    <label
-                      key={value}
-                      className="flex items-center gap-2 text-sm cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name={`cost-${componentKey}`}
-                        value={value}
-                        checked={costResponsibility === value}
-                        onChange={() => onCostResponsibilityChange(value)}
-                      />
-                      {COST_RESPONSIBILITY_LABEL[value]}
-                    </label>
-                  )
-                )}
-              </div>
+              <CostResponsibilitySelect
+                value={costResponsibility}
+                onChange={onCostResponsibilityChange}
+                ariaLabel={`Kostnadsansvar för ${label}`}
+              />
             </div>
           )}
 
