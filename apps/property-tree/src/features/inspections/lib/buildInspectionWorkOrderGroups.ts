@@ -2,6 +2,7 @@ import type { MaintenanceTeam } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
 
+import { getActionLabel } from '../constants/actions'
 import { CONDITION_TYPE } from '../constants/conditions'
 import { COST_RESPONSIBILITY_LABEL } from '../constants/costResponsibility'
 
@@ -86,7 +87,8 @@ export const getDamagedComponents = (
 
 const formatLine = (component: DamagedComponent): string => {
   let line = component.label
-  if (component.actions.length > 0) line += ` – ${component.actions.join(', ')}`
+  if (component.actions.length > 0)
+    line += ` – ${component.actions.map(getActionLabel).join(', ')}`
   if (component.note.trim()) line += `: ${component.note.trim()}`
 
   if (component.cost > 0) {
