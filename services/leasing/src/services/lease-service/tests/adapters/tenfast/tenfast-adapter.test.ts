@@ -574,6 +574,71 @@ describe(tenfastAdapter.createTenant, () => {
   })
 })
 
+describe(tenfastAdapter.importContact, () => {
+  beforeEach(() => {
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('POSTs to /hyresgaster/import-contact with { contactCode } and returns the parsed tenant', async () => {
+    const mockTenant = factory.tenfastTenant.build()
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: mockTenant,
+    })
+
+    const result = await tenfastAdapter.importContact('P12345')
+
+    expect(result).toEqual({ ok: true, data: mockTenant })
+    expect(request).toHaveBeenCalledTimes(1)
+    const call = (request as jest.Mock).mock.calls[0][0]
+    expect(call.method).toBe('post')
+    expect(call.url).toContain('/v1/hyresvard/hyresgaster/import-contact')
+    expect(call.url).toContain('hyresvard=')
+    expect(call.data).toEqual({ contactCode: 'P12345' })
+  })
+
+  it('returns "import-contact-bad-request" on 400', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 400,
+      data: { error: 'bad' },
+    })
+
+    const result = await tenfastAdapter.importContact('P12345')
+
+    expect(result).toEqual({ ok: false, err: 'import-contact-bad-request' })
+  })
+
+  it('returns "tenant-could-not-be-created" on non-2xx', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 500,
+      data: { error: 'boom' },
+    })
+
+    const result = await tenfastAdapter.importContact('P12345')
+
+    expect(result).toEqual({ ok: false, err: 'tenant-could-not-be-created' })
+  })
+
+  it('returns "tenant-could-not-be-parsed" when response does not match schema', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { notATenant: true },
+    })
+
+    const result = await tenfastAdapter.importContact('P12345')
+
+    expect(result).toEqual({ ok: false, err: 'tenant-could-not-be-parsed' })
+  })
+
+  it('returns "unknown" when the request throws', async () => {
+    ;(request as jest.Mock).mockRejectedValue(new Error('network'))
+
+    const result = await tenfastAdapter.importContact('P12345')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
 describe(tenfastAdapter.createLease, () => {
   it('should return lease when all dependencies succeed and status is 200', async () => {
     // Arrange
@@ -1050,10 +1115,9 @@ describe(tenfastAdapter.importLease, () => {
       data: { _id: 'created-lease-id' },
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1082,22 +1146,76 @@ describe(tenfastAdapter.importLease, () => {
     })
   })
 
-  it('returns "could-not-retrieve-tenant" when getOrCreateTenant fails', async () => {
+  it('returns "could-not-retrieve-tenant" when getTenantByContactCode fails', async () => {
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: false,
       err: 'unknown',
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
 
     expect(result).toEqual({ ok: false, err: 'could-not-retrieve-tenant' })
     expect(request).not.toHaveBeenCalled()
+  })
+
+  it('imports the contact via /hyresgaster/import-contact when tenant does not yet exist', async () => {
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: true,
+      data: null,
+    })
+    const importedTenant = factory.tenfastTenant.build({
+      _id: 'imported-tenant-id',
+    })
+    jest
+      .spyOn(tenfastAdapter, 'importContact')
+      .mockResolvedValue({ ok: true, data: importedTenant })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 201,
+      data: { _id: 'created-lease-id' },
+    })
+
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      'P12345',
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: true, data: { _id: 'created-lease-id' } })
+    expect(tenfastAdapter.importContact).toHaveBeenCalledWith('P12345')
+    const leaseCall = (request as jest.Mock).mock.calls.at(-1)![0]
+    expect(leaseCall.data.hyresgaster).toEqual(['imported-tenant-id'])
+  })
+
+  it('returns "could-not-create-tenant" when import-contact fails', async () => {
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: true,
+      data: null,
+    })
+    jest.spyOn(tenfastAdapter, 'importContact').mockResolvedValue({
+      ok: false,
+      err: 'tenant-could-not-be-created',
+    })
+
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      'P12345',
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: false, err: 'could-not-create-tenant' })
   })
 
   it('returns "could-not-find-rental-object" when rental object lookup fails', async () => {
@@ -1112,10 +1230,9 @@ describe(tenfastAdapter.importLease, () => {
       err: 'could-not-find-rental-object',
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1141,10 +1258,9 @@ describe(tenfastAdapter.importLease, () => {
       data: { error: 'boom' },
     })
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -1166,10 +1282,9 @@ describe(tenfastAdapter.importLease, () => {
     })
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
-    const payload = factory.syncTenantPayload.build()
     const result = await tenfastAdapter.importLease(
       leaseId,
-      payload,
+      'P12345',
       rentalObjectCode,
       fromDate
     )
@@ -2021,89 +2136,56 @@ describe(tenfastAdapter.syncTenant, () => {
     ;(request as jest.Mock).mockReset()
   })
 
-  it('should skip when tenant does not exist', async () => {
-    const payload = factory.syncTenantPayload.build()
-
+  it('should POST to /hyresvard/extras/contacts/{contactCode} with no body', async () => {
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 200,
-      data: { records: [] },
+      data: { updatedCount: 1 },
     })
 
-    const result = await tenfastAdapter.syncTenant(payload)
+    const result = await tenfastAdapter.syncTenant('P12345')
+
+    expect(result).toEqual({ ok: true, data: { updatedCount: 1 } })
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'post',
+        url: expect.stringContaining('/v1/hyresvard/extras/contacts/P12345'),
+      })
+    )
+    expect((request as jest.Mock).mock.calls[0][0].data).toBeUndefined()
+  })
+
+  it('should skip when Tenfast returns 404', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 404,
+      data: { error: 'not found' },
+    })
+
+    const result = await tenfastAdapter.syncTenant('P12345')
 
     expect(result).toEqual({ ok: true, data: null })
-    expect(request).toHaveBeenCalledTimes(1)
-  })
-
-  it('should update tenant when tenant already exists', async () => {
-    const payload = factory.syncTenantPayload.build()
-    const existingTenant = factory.tenfastTenant.build({
-      _id: 'existing-tenant-id',
-      externalId: payload.contactCode,
-    })
-    const updatedTenant = factory.tenfastTenant.build({
-      _id: 'existing-tenant-id',
-      externalId: payload.contactCode,
-      name: { first: 'Knut', last: 'Kansen' },
-    })
-
-    // First call: getTenantByContactCode → found
-    ;(request as jest.Mock).mockResolvedValueOnce({
-      status: 200,
-      data: { records: [existingTenant] },
-    })
-
-    // Second call: updateTenant (patch) → updated
-    ;(request as jest.Mock).mockResolvedValueOnce({
-      status: 200,
-      data: updatedTenant,
-    })
-
-    const result = await tenfastAdapter.syncTenant(payload)
-
-    expect(result).toEqual({ ok: true, data: updatedTenant })
-    expect(request).toHaveBeenCalledTimes(2)
-    expect(request).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ method: 'patch' })
-    )
-  })
-
-  it('should return error when tenant lookup fails', async () => {
-    const payload = factory.syncTenantPayload.build()
-
-    ;(request as jest.Mock).mockResolvedValueOnce({
-      status: 500,
-      data: { error: 'Internal server error' },
-    })
-
-    const result = await tenfastAdapter.syncTenant(payload)
-
-    expect(result).toEqual({ ok: false, err: 'could-not-retrieve-tenant' })
   })
 
   it('should return error when update fails', async () => {
-    const payload = factory.syncTenantPayload.build()
-    const existingTenant = factory.tenfastTenant.build({
-      _id: 'existing-tenant-id',
-      externalId: payload.contactCode,
-    })
-
-    ;(request as jest.Mock).mockResolvedValueOnce({
-      status: 200,
-      data: { records: [existingTenant] },
-    })
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 500,
       data: { error: 'Internal server error' },
     })
 
-    const result = await tenfastAdapter.syncTenant(payload)
+    const result = await tenfastAdapter.syncTenant('P12345')
 
-    expect(result).toEqual({
-      ok: false,
-      err: 'could-not-update-tenant',
+    expect(result).toEqual({ ok: false, err: 'could-not-update-tenant' })
+  })
+
+  it('should return ok with updatedCount:0 when response omits the field', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: {},
     })
+
+    const result = await tenfastAdapter.syncTenant('P12345')
+
+    expect(result).toEqual({ ok: true, data: { updatedCount: 0 } })
   })
 })
 

@@ -16,7 +16,7 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
-import type { LeaseChange, SyncContactToLeasingPayload } from '@onecore/types'
+import type { LeaseChange } from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
@@ -758,12 +758,11 @@ const exportLeasesToExcel = async (
 }
 
 const syncContactToLeasing = async (
-  payload: SyncContactToLeasingPayload
+  contactCode: string
 ): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> => {
   try {
     const response = await axios.post(
-      `${tenantsLeasesServiceUrl}/contacts/${payload.contactCode}/sync`,
-      payload
+      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/sync`
     )
 
     if (response.status === 200 || response.status === 201) {
@@ -813,7 +812,7 @@ const getUpdatedLeases = async (
 
 const syncLease = async (
   leaseId: string,
-  contact: SyncContactToLeasingPayload | undefined,
+  contactCode: string | undefined,
   action: 'create' | 'terminate' | 'void'
 ): Promise<
   AdapterResult<
@@ -827,7 +826,7 @@ const syncLease = async (
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/leases/sync`,
-      { leaseId, contact, action }
+      { leaseId, contactCode, action }
     )
 
     if (response.status === 200 || response.status === 201) {

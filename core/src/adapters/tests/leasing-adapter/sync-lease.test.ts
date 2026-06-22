@@ -69,19 +69,19 @@ describe(leasingAdapter.getUpdatedLeases, () => {
 })
 
 describe(leasingAdapter.syncLease, () => {
-  it('returns { ok: true, data: { action, leaseId } } on success', async () => {
-    const contact = factory.syncContactToLeasingPayload.build()
-    const leaseId = '101-002-03-0201/07'
-    // Normalize contact so nock body-match sees the same JSON axios will send
-    const serialized = JSON.parse(
-      JSON.stringify({ leaseId, contact, action: 'create' })
-    )
+  const contactCode = 'P12345'
+  const leaseId = '101-002-03-0201/07'
 
+  it('returns { ok: true, data: { action, leaseId } } on success', async () => {
     nock(config.tenantsLeasesService.url)
-      .post('/leases/sync', serialized)
+      .post('/leases/sync', { leaseId, contactCode, action: 'create' })
       .reply(200, { content: { action: 'created', leaseId } })
 
-    const result = await leasingAdapter.syncLease(leaseId, contact, 'create')
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      contactCode,
+      'create'
+    )
 
     expect(result).toEqual({
       ok: true,
@@ -90,17 +90,15 @@ describe(leasingAdapter.syncLease, () => {
   })
 
   it('returns { ok: true, data: { action, leaseId } } on 201 response', async () => {
-    const contact = factory.syncContactToLeasingPayload.build()
-    const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(
-      JSON.stringify({ leaseId, contact, action: 'create' })
-    )
-
     nock(config.tenantsLeasesService.url)
-      .post('/leases/sync', serialized)
+      .post('/leases/sync', { leaseId, contactCode, action: 'create' })
       .reply(201, { content: { action: 'created', leaseId } })
 
-    const result = await leasingAdapter.syncLease(leaseId, contact, 'create')
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      contactCode,
+      'create'
+    )
 
     expect(result).toEqual({
       ok: true,
@@ -109,47 +107,38 @@ describe(leasingAdapter.syncLease, () => {
   })
 
   it('returns { ok: false, err: "sync-failed" } on non-200 response', async () => {
-    const contact = factory.syncContactToLeasingPayload.build()
-    const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(
-      JSON.stringify({ leaseId, contact, action: 'terminate' })
-    )
-
     nock(config.tenantsLeasesService.url)
-      .post('/leases/sync', serialized)
+      .post('/leases/sync', { leaseId, contactCode, action: 'terminate' })
       .reply(400, { error: 'Bad request' })
 
-    const result = await leasingAdapter.syncLease(leaseId, contact, 'terminate')
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      contactCode,
+      'terminate'
+    )
 
     assert(!result.ok)
     expect(result.err).toBe('sync-failed')
   })
 
   it('returns { ok: false, err: "unknown" } on network error', async () => {
-    const contact = factory.syncContactToLeasingPayload.build()
-    const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(
-      JSON.stringify({ leaseId, contact, action: 'terminate' })
-    )
-
     nock(config.tenantsLeasesService.url)
-      .post('/leases/sync', serialized)
+      .post('/leases/sync', { leaseId, contactCode, action: 'terminate' })
       .replyWithError('Connection refused')
 
-    const result = await leasingAdapter.syncLease(leaseId, contact, 'terminate')
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      contactCode,
+      'terminate'
+    )
 
     assert(!result.ok)
     expect(result.err).toBe('unknown')
   })
 
-  it('serializes body without contact when contact is undefined', async () => {
-    const leaseId = '101-002-03-0201/07'
-    const serialized = JSON.parse(
-      JSON.stringify({ leaseId, action: 'terminate' })
-    )
-
+  it('serializes body without contactCode when undefined', async () => {
     nock(config.tenantsLeasesService.url)
-      .post('/leases/sync', serialized)
+      .post('/leases/sync', { leaseId, action: 'terminate' })
       .reply(200, { content: { action: 'terminated', leaseId } })
 
     const result = await leasingAdapter.syncLease(

@@ -4,8 +4,6 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { SyncContactToLeasingSchema } from '@onecore/types'
-
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
 import { getLeases } from '../adapters/xpand/tenant-lease-adapter'
 import { getSignedContractPdf } from '../adapters/xpand/lease-document-adapter'
@@ -15,7 +13,7 @@ import { z } from 'zod'
 
 const SyncLeaseRequestSchema = z.object({
   leaseId: z.string(),
-  contact: SyncContactToLeasingSchema.optional(),
+  contactCode: z.string().optional(),
   action: z.enum(['create', 'terminate', 'void']),
 })
 
@@ -60,14 +58,14 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(SyncLeaseRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { leaseId, contact, action } = ctx.request.body
+      const { leaseId, contactCode, action } = ctx.request.body
 
       try {
         if (action === 'create') {
-          if (!contact) {
+          if (!contactCode) {
             ctx.status = 400
             ctx.body = {
-              error: 'contact is required for action "create"',
+              error: 'contactCode is required for action "create"',
               ...metadata,
             }
             return
@@ -95,7 +93,7 @@ export const routes = (router: KoaRouter) => {
 
           const createResult = await tenfastAdapter.importLease(
             leaseId,
-            contact,
+            contactCode,
             rentalObjectCode,
             new Date(startDate)
           )
