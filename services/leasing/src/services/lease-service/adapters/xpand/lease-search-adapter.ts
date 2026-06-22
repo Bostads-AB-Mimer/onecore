@@ -94,6 +94,11 @@ export class LeaseSearchQueryBuilder {
       .innerJoin('cmobj', 'cmobj.keycmobj', 'hykop.keycmobj')
       .where('hyobj.deletemark', 0)
       .whereNot('hyobj.hyobjben', 'like', '%M%')
+      // keyhyobt = 1 is "Avtalsmall" — an agreement template, not a real contract.
+      // Template rows have all dates NULL, so calculateStatus classifies them as
+      // "Gällande" and they leak into search results. Xpand's own UI hides them and
+      // rental-object-adapter already excludes them via a keyhyobt whitelist.
+      .whereNot('hyobj.keyhyobt', '1')
 
     this.joinedTables.add('hyobj')
     this.joinedTables.add('hyhav')
