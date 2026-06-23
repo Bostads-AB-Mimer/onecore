@@ -42,14 +42,18 @@ beforeEach(() => {
 
 describe('transferStralforsFiles', () => {
   describe('happy path', () => {
-    it('does nothing when there are no NEW exports', async () => {
+    it('sends summary notification even when there are no NEW exports', async () => {
       mockListNew.mockResolvedValueOnce({ ok: true, data: [] })
 
       await transferStralforsFiles()
 
       expect(mockSftpInstance.connect).not.toHaveBeenCalled()
       expect(mockDownload).not.toHaveBeenCalled()
-      expect(mockSendEmail).not.toHaveBeenCalled()
+      expect(mockSendEmail).toHaveBeenCalledWith(
+        'test@example.com',
+        expect.stringContaining('Strålfors-överföring klar'),
+        expect.stringContaining('Överförda filer: 0')
+      )
     })
 
     it('connects to SFTP, uploads the file and marks it as sent', async () => {

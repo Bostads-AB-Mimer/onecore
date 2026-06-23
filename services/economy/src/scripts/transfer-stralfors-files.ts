@@ -98,6 +98,7 @@ export async function transferStralforsFiles(): Promise<void> {
 
   if (files.length === 0) {
     logger.info('transfer-stralfors-files: nothing to do')
+    await notifySuccess(0, 0, startedAt)
     return
   }
 
