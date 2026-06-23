@@ -62,7 +62,11 @@ describe('transferStralforsFiles', () => {
       })
       mockMarkSent.mockResolvedValueOnce({
         ok: true,
-        data: { ...export1, status: 'SENT', sentAt: '2026-06-09T14:00:00.000Z' },
+        data: {
+          ...export1,
+          status: 'SENT',
+          sentAt: '2026-06-09T14:00:00.000Z',
+        },
       })
 
       await transferStralforsFiles()
@@ -233,7 +237,9 @@ describe('transferStralforsFiles', () => {
         new Error('Connection refused')
       )
 
-      await expect(transferStralforsFiles()).rejects.toThrow('Connection refused')
+      await expect(transferStralforsFiles()).rejects.toThrow(
+        'Connection refused'
+      )
 
       expect(mockSendEmail).toHaveBeenCalledWith(
         'test@example.com',

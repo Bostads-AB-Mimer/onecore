@@ -233,8 +233,8 @@ export const TenfastInvoiceByOcrResponseFactory =
     })
   )
 
-export const TenfastOutboundExportFactory = Factory.define<TenfastOutboundExport>(
-  ({ sequence }) => ({
+export const TenfastOutboundExportFactory =
+  Factory.define<TenfastOutboundExport>(({ sequence }) => ({
     _id: `export-id-${sequence}`,
     provider: 'stralfors',
     type: 'stralfors_invoice',
@@ -247,5 +247,4 @@ export const TenfastOutboundExportFactory = Factory.define<TenfastOutboundExport
     failedAt: null,
     createdAt: '2026-06-09T13:41:20.378Z',
     updatedAt: '2026-06-09T13:41:20.378Z',
-  })
-)
+  }))

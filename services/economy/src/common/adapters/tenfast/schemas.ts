@@ -379,7 +379,9 @@ export type TenfastBatchGetRentalObjectsResponse = z.infer<
 
 export type TenfastRentalProperty = z.infer<typeof TenfastRentalPropertySchema>
 
-export type TenfastAutogiroConsent = z.infer<typeof TenfastAutogiroConsentSchema>
+export type TenfastAutogiroConsent = z.infer<
+  typeof TenfastAutogiroConsentSchema
+>
 
 export const TenfastOutboundExportSchema = z.object({
   _id: z.string(),

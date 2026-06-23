@@ -875,7 +875,11 @@ export const markOutboundExportSent = async (
   try {
     const response = await makeTenfastRequest(
       `/v1/hyresvard/outbound-exports/${exportId}/mark-sent`,
-      { method: 'POST', params: { hyresvard: companyId }, validateStatus: () => true }
+      {
+        method: 'POST',
+        params: { hyresvard: companyId },
+        validateStatus: () => true,
+      }
     )
 
     if (response.status === 404) {
