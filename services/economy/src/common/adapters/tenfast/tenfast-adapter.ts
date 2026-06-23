@@ -581,7 +581,7 @@ export const setGracePeriod = async (params: {
         ocr: params.invoiceOcr,
         tenfastInvoiceId: result.data._id,
       },
-      'deferral: Tenfast grace-period endpoint returned unexpected status'
+      'tenfast-adapter.setGracePeriod: unexpected status'
     )
     return { ok: false, err: 'unknown' }
   } catch (err: any) {
