@@ -136,7 +136,10 @@ export const setupDefaultMocks = () => {
     ok: true,
     data: createMockContact(),
   })
-  getInvoiceByOcr.mockResolvedValue({ ok: true, data: createMockRentInvoice() })
+  getInvoiceByOcr.mockResolvedValue({
+    ok: true,
+    data: { invoice: createMockRentInvoice() },
+  })
   getLease.mockResolvedValue({ ok: true, data: createMockLease() })
   getRentalProperty.mockResolvedValue({
     ok: true,

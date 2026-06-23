@@ -20,12 +20,10 @@ import {
   getLeaseDetails,
   stralforsPostChannelLookup,
   getAutogiroConsent,
+  getPublicInvoiceByOcr,
 } from './service'
 import * as invoiceService from './service'
-import {
-  getInvoiceByOcr,
-  getInvoicePdf,
-} from '../../common/adapters/tenfast/tenfast-adapter'
+import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -79,7 +77,7 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/invoices/by-ocr/:ocr', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await getInvoiceByOcr(ctx.params.ocr)
+    const result = await getPublicInvoiceByOcr(ctx.params.ocr)
 
     if (!result.ok) {
       ctx.status = result.err.includes('not found') ? 404 : 500

@@ -21,6 +21,7 @@ import {
   TenfastAutogiroConsent,
   isVisibleTenfastInvoice,
 } from './schemas'
+import { TenfastDeferralSource } from '../../invoice-deferral'
 import {
   Contact,
   Invoice,
@@ -148,10 +149,15 @@ const dateToDateString = (date: Date): string => {
   return date.toISOString().split('T')[0]
 }
 
+export type ParsedTenfastInvoice = {
+  invoice: Invoice
+  tenfastDeferral?: TenfastDeferralSource
+}
+
 export const getInvoicesForTenant = async (
   tenantId: string,
   from?: Date
-): Promise<AdapterResult<Invoice[], string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice[], string>> => {
   try {
     const result = await makeTenfastRequest(
       `/v1/hyresvard/hyresgaster/${tenantId}/hyror?populate=avtal`,
@@ -193,7 +199,7 @@ export const getInvoicesForTenant = async (
 export const getInvoicesByContactCode = async (
   contactCode: string,
   filters?: { from?: Date }
-): Promise<Invoice[]> => {
+): Promise<ParsedTenfastInvoice[]> => {
   const tenantResult = await getTenantByContactCode(contactCode)
   if (!tenantResult.ok) {
     throw tenantResult.err
@@ -403,10 +409,15 @@ const fetchTenfastInvoiceByOcr = async (
     )
 
     if (result.status === 404) {
+      logger.info({ ocr }, 'deferral: Tenfast OCR lookup returned 404')
       return { ok: false, err: 'not-found' }
     }
 
     if (result.status !== 200) {
+      logger.info(
+        { ocr, status: result.status, data: result.data },
+        'deferral: Tenfast OCR lookup returned unexpected status'
+      )
       return { ok: false, err: 'unknown' }
     }
 
@@ -428,7 +439,7 @@ const fetchTenfastInvoiceByOcr = async (
 
 export const getInvoiceByOcr = async (
   ocr: string
-): Promise<AdapterResult<Invoice, string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice, string>> => {
   const result = await fetchTenfastInvoiceByOcr(ocr)
   if (!result.ok) {
     if (result.err === 'not-found') {
@@ -476,33 +487,51 @@ export const getInvoiceArticle = async (
   }
 }
 
-const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
+const toTenfastDeferralSource = (
+  gracePeriod: TenfastInvoice['gracePeriod']
+): TenfastDeferralSource | undefined => {
+  if (!gracePeriod) {
+    return undefined
+  }
+
+  return {
+    reason: gracePeriod.reason,
+    madeBy: gracePeriod.madeByEmail,
+  }
+}
+
+const transformToInvoice = (
+  tenfastInvoice: TenfastInvoice
+): ParsedTenfastInvoice => {
   const remainingAmount = tenfastInvoice.amount - tenfastInvoice.amountPaid
 
   return {
-    amount: tenfastInvoice.amount,
-    debitStatus: 0, //
-    fromDate: new Date(tenfastInvoice.interval.from),
-    toDate: new Date(tenfastInvoice.interval.to),
-    invoiceDate: tenfastInvoice.activatedAt
-      ? new Date(tenfastInvoice.activatedAt)
-      : new Date(tenfastInvoice.expectedInvoiceDate),
-    expirationDate: new Date(tenfastInvoice.due),
-    paidAmount: tenfastInvoice.amountPaid,
-    remainingAmount,
-    invoiceId: tenfastInvoice.ocrNumber,
-    leaseIds: tenfastInvoice.avtal.map((a) => a.externalId),
-    paymentStatus:
-      remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
-    type: 'Regular',
-    reference: tenfastInvoice.ocrNumber,
-    source: 'next', // ??
-    invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
-    transactionType: InvoiceTransactionType.Rent,
-    // TODO this is only (?) used for uniquely identifying invoices with the same invoice number in mina sidor.
-    // We should maybe add a unique id property to the Invoice type instead
-    transactionTypeName: 'some random string',
-    credit: null,
+    invoice: {
+      amount: tenfastInvoice.amount,
+      debitStatus: 0, //
+      fromDate: new Date(tenfastInvoice.interval.from),
+      toDate: new Date(tenfastInvoice.interval.to),
+      invoiceDate: tenfastInvoice.activatedAt
+        ? new Date(tenfastInvoice.activatedAt)
+        : new Date(tenfastInvoice.expectedInvoiceDate),
+      expirationDate: new Date(tenfastInvoice.due),
+      paidAmount: tenfastInvoice.amountPaid,
+      remainingAmount,
+      invoiceId: tenfastInvoice.ocrNumber,
+      leaseIds: tenfastInvoice.avtal.map((a) => a.externalId),
+      paymentStatus:
+        remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
+      type: 'Regular',
+      reference: tenfastInvoice.ocrNumber,
+      source: 'next', // ??
+      invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
+      transactionType: InvoiceTransactionType.Rent,
+      // TODO this is only (?) used for uniquely identifying invoices with the same invoice number in mina sidor.
+      // We should maybe add a unique id property to the Invoice type instead
+      transactionTypeName: 'some random string',
+      credit: null,
+    },
+    tenfastDeferral: toTenfastDeferralSource(tenfastInvoice.gracePeriod),
   }
 }
 
@@ -515,6 +544,10 @@ export const setGracePeriod = async (params: {
   try {
     const result = await fetchTenfastInvoiceByOcr(params.invoiceOcr)
     if (!result.ok) {
+      logger.info(
+        { invoiceOcr: params.invoiceOcr, err: result.err },
+        'deferral: Tenfast grace period aborted — OCR lookup failed'
+      )
       return result
     }
 
@@ -534,11 +567,20 @@ export const setGracePeriod = async (params: {
       return { ok: true, data: null }
     }
     if (res.status === 404) {
+      logger.error(
+        { invoiceOcr: params.invoiceOcr, tenfastInvoiceId: result.data._id },
+        'deferral: Tenfast grace-period endpoint returned 404'
+      )
       return { ok: false, err: 'not-found' }
     }
 
     logger.error(
-      { status: res.status, data: res.data, ocr: params.invoiceOcr },
+      {
+        status: res.status,
+        data: res.data,
+        ocr: params.invoiceOcr,
+        tenfastInvoiceId: result.data._id,
+      },
       'tenfast-adapter.setGracePeriod: unexpected status'
     )
     return { ok: false, err: 'unknown' }

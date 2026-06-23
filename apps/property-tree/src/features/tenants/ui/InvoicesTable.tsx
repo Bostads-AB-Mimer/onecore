@@ -12,6 +12,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
+import { hasInvoiceDeferral } from '../lib/invoiceDeferral'
 import { InvoiceDeferralAction } from './InvoiceDeferralAction'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
@@ -65,32 +66,6 @@ export const InvoicesTable = (props: Props) => {
     return format(dateObj, 'yyyy-MM-dd')
   }
 
-  const formatSource = (source: Invoice['source']) => {
-    return match(source)
-      .with('next', () => 'XLedger')
-      .with('legacy', () => 'Xpand')
-      .exhaustive()
-  }
-
-  // Get the effective expiration date (deferment date if applicable, otherwise original)
-  const getEffectiveExpirationDate = (
-    invoice: Invoice
-  ): { date: Date | null; isDeferment: boolean; originalDate: Date | null } => {
-    const originalDate = invoice.expirationDate
-      ? new Date(invoice.expirationDate)
-      : null
-
-    const defermentDate = invoice.defermentDate
-      ? new Date(invoice.defermentDate)
-      : null
-
-    if (defermentDate && originalDate && defermentDate > originalDate) {
-      return { date: defermentDate, isDeferment: true, originalDate }
-    }
-
-    return { date: originalDate, isDeferment: false, originalDate: null }
-  }
-
   const getStatusBadge = (invoice: Invoice) => {
     return match(invoice)
       .with({ credit: { originalInvoiceId: P.string } }, () => (
@@ -111,6 +86,27 @@ export const InvoicesTable = (props: Props) => {
       .otherwise((v) => (
         <Badge variant="secondary">Okänd betalstatus: {v.paymentStatus}</Badge>
       ))
+  }
+
+  const getDeferralBadge = (invoice: Invoice) => {
+    if (!hasInvoiceDeferral(invoice)) {
+      return null
+    }
+
+    const badge = <Badge variant="destructive">Anstånd</Badge>
+
+    if (invoice.deferral?.madeBy) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{badge}</span>
+          </TooltipTrigger>
+          <TooltipContent>Beviljat av {invoice.deferral.madeBy}</TooltipContent>
+        </Tooltip>
+      )
+    }
+
+    return badge
   }
 
   const getInvoiceType = (invoice: Invoice): string => {
@@ -159,25 +155,22 @@ export const InvoicesTable = (props: Props) => {
 
   // Component to render expiration date with deferment indicator
   const ExpirationDateCell = ({ invoice }: { invoice: Invoice }) => {
-    const { date, isDeferment, originalDate } =
-      getEffectiveExpirationDate(invoice)
+    if (!invoice.expirationDate) return <span>-</span>
 
-    if (!date) return <span>-</span>
+    const dateLabel = formatDate(invoice.expirationDate)
 
-    if (isDeferment && originalDate) {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="cursor-help">{formatDate(date)}*</span>
-          </TooltipTrigger>
-          <TooltipContent>
-            Ursprungligt förfallodatum: {formatDate(originalDate)}
-          </TooltipContent>
-        </Tooltip>
-      )
+    if (!hasInvoiceDeferral(invoice)) {
+      return <span>{dateLabel}</span>
     }
 
-    return <span>{formatDate(date)}</span>
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-help">{dateLabel}*</span>
+        </TooltipTrigger>
+        <TooltipContent>Förfallodatum efter anstånd</TooltipContent>
+      </Tooltip>
+    )
   }
 
   // Component to display payment events table
@@ -338,11 +331,9 @@ export const InvoicesTable = (props: Props) => {
       className: 'p-3 text-sm',
     },
     {
-      key: 'source',
-      label: 'Källa',
-      render: (invoice) => (
-        <span className="text-sm">{formatSource(invoice.source)}</span>
-      ),
+      key: 'deferral',
+      label: 'Anstånd',
+      render: (invoice) => getDeferralBadge(invoice),
       className: 'p-3 text-sm',
     },
     {
@@ -358,9 +349,15 @@ export const InvoicesTable = (props: Props) => {
     return (
       <>
         {invoice.description && (
-          <div className="mb-3 text-sm bg-background/50 rounded p-2">
+          <div className="text-sm bg-background/50 rounded p-2">
             <span className="font-medium">Text:</span> {invoice.description}
             {invoice.expectedLoss && <div>Befarad kundförlust</div>}
+          </div>
+        )}
+        {invoice.deferral?.madeBy && (
+          <div className="mb-3 text-sm bg-background/50 rounded p-2">
+            <span className="font-medium">Anstånd beviljat av:</span>{' '}
+            {invoice.deferral.madeBy}
           </div>
         )}
         {invoice.credit && (
@@ -484,10 +481,12 @@ export const InvoicesTable = (props: Props) => {
             <span className="text-muted-foreground">Inkasso:</span>
             <span>{invoice.sentToDebtCollection ? 'Ja' : 'Nej'}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Källa:</span>
-            <span>{formatSource(invoice.source)}</span>
-          </div>
+          {hasInvoiceDeferral(invoice) && (
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Anstånd:</span>
+              {getDeferralBadge(invoice)}
+            </div>
+          )}
         </div>
       </>
     )

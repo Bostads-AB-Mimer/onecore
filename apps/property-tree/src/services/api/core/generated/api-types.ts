@@ -10054,7 +10054,7 @@ export interface paths {
   "/v1/contacts/batch": {
     /**
      * Batch lookup of contacts by contact code
-     * @description Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, or `includeAddress` to include those joins. Missing contact codes are simply absent from the response.
+     * @description Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, `includeAddress`, or `includeRelations` to include those joins. Missing contact codes are simply absent from the response.
      */
     get: {
       parameters: {
@@ -10067,6 +10067,8 @@ export interface paths {
           includeEmail?: boolean;
           /** @description Include addresses in the response. */
           includeAddress?: boolean;
+          /** @description Include related contacts (guardians/wards) in the response. */
+          includeRelations?: boolean;
         };
       };
       responses: {
@@ -13879,6 +13881,12 @@ export interface components {
           region: string | null;
           country: string | null;
         })[];
+      relatedContacts?: ({
+          contactCode: string;
+          /** @enum {string} */
+          role: "trustee" | "administrator" | "ward";
+          fullName: string;
+        })[];
       /** @enum {string} */
       type: "individual";
       personal: {
@@ -13916,6 +13924,12 @@ export interface components {
           city: string | null;
           region: string | null;
           country: string | null;
+        })[];
+      relatedContacts?: ({
+          contactCode: string;
+          /** @enum {string} */
+          role: "trustee" | "administrator" | "ward";
+          fullName: string;
         })[];
       /** @enum {string} */
       type: "organisation";

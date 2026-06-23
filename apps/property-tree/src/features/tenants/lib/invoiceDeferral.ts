@@ -27,3 +27,7 @@ export function canGrantInvoiceDeferral(invoice: Invoice): boolean {
     !invoice.credit
   )
 }
+
+export function hasInvoiceDeferral(invoice: Invoice): boolean {
+  return !!invoice.deferral
+}

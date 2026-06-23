@@ -111,7 +111,7 @@ describe('Tenfast Adapter', () => {
 
       assert(result.ok)
       expect(result.data).toHaveLength(1)
-      expect(result.data[0]).toMatchObject({
+      expect(result.data[0].invoice).toMatchObject({
         amount: 1000,
         debitStatus: 0,
         fromDate: new Date('2024-01-01'),
@@ -126,8 +126,8 @@ describe('Tenfast Adapter', () => {
         reference: '55123456',
         source: 'next',
       })
-      expect(result.data[0].invoiceRows).toHaveLength(1)
-      expect(result.data[0].invoiceRows[0]).toMatchObject({
+      expect(result.data[0].invoice.invoiceRows).toHaveLength(1)
+      expect(result.data[0].invoice.invoiceRows[0]).toMatchObject({
         amount: 1000,
         rentArticle: 'HYRAB',
         fromDate: '2024-01-01',
@@ -135,6 +135,32 @@ describe('Tenfast Adapter', () => {
         vat: 0,
         printGroup: 'Hyra bostad',
       })
+    })
+
+    it('maps tenfast deferral source when grace period is present on invoice', async () => {
+      const mockInvoices = [
+        TenfastInvoiceFactory.build({
+          gracePeriod: {
+            endDate: '2026-06-30',
+            reason: 'Betalningsplan',
+            madeBy: 'user-123',
+            madeByEmail: 'admin@mimer.nu',
+          },
+        }),
+      ]
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: mockInvoices,
+      })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      assert(result.ok)
+      expect(result.data[0].tenfastDeferral).toEqual({
+        reason: 'Betalningsplan',
+        madeBy: 'admin@mimer.nu',
+      })
+      expect(result.data[0].invoice.deferral).toBeUndefined()
     })
 
     it('should transform paid invoices correctly', async () => {
@@ -153,8 +179,8 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoicesForTenant('tenant-123')
 
       assert(result.ok)
-      expect(result.data[0].paymentStatus).toBe(PaymentStatus.Paid)
-      expect(result.data[0].remainingAmount).toBe(0)
+      expect(result.data[0].invoice.paymentStatus).toBe(PaymentStatus.Paid)
+      expect(result.data[0].invoice.remainingAmount).toBe(0)
     })
 
     it('parses draft invoices but excludes them from results', async () => {
@@ -180,7 +206,7 @@ describe('Tenfast Adapter', () => {
 
       assert(result.ok)
       expect(result.data).toHaveLength(1)
-      expect(result.data[0].invoiceId).toBe('55123456')
+      expect(result.data[0].invoice.invoiceId).toBe('55123456')
     })
   })
 
@@ -197,7 +223,7 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr(ocr)
 
       assert(result.ok)
-      expect(result.data).toMatchObject({
+      expect(result.data.invoice).toMatchObject({
         amount: 1000,
         paidAmount: 500,
         remainingAmount: 500,
