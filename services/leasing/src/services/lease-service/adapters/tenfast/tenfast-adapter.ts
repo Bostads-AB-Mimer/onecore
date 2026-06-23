@@ -8,7 +8,6 @@ import { isAxiosError } from 'axios'
 import z from 'zod'
 
 import {
-  TenfastTenantByContactCodeResponseSchema,
   TenfastTenant,
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponseSchema,
@@ -347,26 +346,18 @@ export const getRentalObject = async (
 ): Promise<
   AdapterResult<
     TenfastRentalObject | null,
-    | 'could-not-find-rental-object'
-    | 'could-not-parse-rental-object'
-    | 'get-rental-object-bad-request'
+    'could-not-find-rental-object' | 'could-not-parse-rental-object'
   >
 > => {
   try {
     const rentalObjectResponse = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/search?filter[externalId]=${rentalObjectCode}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/${encodeURIComponent(rentalObjectCode)}?hyresvard=${tenfastCompanyId}`,
     })
 
-    if (rentalObjectResponse.status === 400)
-      return handleTenfastError(
-        rentalObjectResponse.data.error,
-        'get-rental-object-bad-request'
-      )
-    else if (
-      rentalObjectResponse.status !== 200 &&
-      rentalObjectResponse.status !== 201
-    )
+    if (rentalObjectResponse.status === 404) return { ok: true, data: null }
+
+    if (rentalObjectResponse.status !== 200)
       return handleTenfastError(
         {
           error: rentalObjectResponse.data.error,
@@ -375,19 +366,13 @@ export const getRentalObject = async (
         'could-not-find-rental-object'
       )
 
-    const parsedRentalObjectResponse =
-      TenfastRentalObjectByRentalObjectCodeResponseSchema.safeParse(
-        rentalObjectResponse.data
-      )
-    if (!parsedRentalObjectResponse.success)
-      return handleTenfastError(
-        parsedRentalObjectResponse.error,
-        'could-not-parse-rental-object'
-      )
-    return {
-      ok: true,
-      data: parsedRentalObjectResponse.data.records[0] ?? null,
-    }
+    const parsed = TenfastRentalObjectSchema.safeParse(
+      rentalObjectResponse.data
+    )
+    if (!parsed.success)
+      return handleTenfastError(parsed.error, 'could-not-parse-rental-object')
+
+    return { ok: true, data: parsed.data }
   } catch (err: any) {
     return handleTenfastError(err, 'could-not-find-rental-object')
   }
@@ -518,9 +503,7 @@ export const getAvailabilityForRentalObject = async (
 ): Promise<
   AdapterResult<
     RentalObjectAvailabilityInfo,
-    | 'could-not-find-rental-object'
-    | 'could-not-parse-rental-object'
-    | 'get-rental-object-bad-request'
+    'could-not-find-rental-object' | 'could-not-parse-rental-object'
   >
 > => {
   const [rentalObjectResult, tagsById] = await Promise.all([
@@ -684,24 +667,18 @@ export const getTenantByContactCode = async (
 ): Promise<
   AdapterResult<
     TenfastTenant | null,
-    | 'could-not-retrieve-tenant'
-    | 'could-not-parse-tenant-response'
-    | 'get-tenant-bad-request'
-    | 'unknown'
+    'could-not-retrieve-tenant' | 'could-not-parse-tenant-response'
   >
 > => {
   try {
     const tenantResponse = await tenfastApi.request({
       method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/search?filter[externalId]=${contactCode}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresgaster/${encodeURIComponent(contactCode)}?hyresvard=${tenfastCompanyId}`,
     })
 
-    if (tenantResponse.status === 400)
-      return handleTenfastError(
-        tenantResponse.data.error,
-        'get-tenant-bad-request'
-      )
-    else if (tenantResponse.status !== 200 && tenantResponse.status !== 201)
+    if (tenantResponse.status === 404) return { ok: true, data: null }
+
+    if (tenantResponse.status !== 200)
       return handleTenfastError(
         {
           error: tenantResponse.data.error,
@@ -710,20 +687,13 @@ export const getTenantByContactCode = async (
         'could-not-retrieve-tenant'
       )
 
-    const parsedTenantResponse =
-      TenfastTenantByContactCodeResponseSchema.safeParse(tenantResponse.data)
-    if (!parsedTenantResponse.success) {
-      return handleTenfastError(
-        parsedTenantResponse.error,
-        'could-not-parse-tenant-response'
-      )
-    }
-    return {
-      ok: true,
-      data: parsedTenantResponse.data.records[0] ?? null,
-    }
+    const parsed = TenfastTenantSchema.safeParse(tenantResponse.data)
+    if (!parsed.success)
+      return handleTenfastError(parsed.error, 'could-not-parse-tenant-response')
+
+    return { ok: true, data: parsed.data }
   } catch (err: any) {
-    return handleTenfastError(err, 'unknown')
+    return handleTenfastError(err, 'could-not-retrieve-tenant')
   }
 }
 

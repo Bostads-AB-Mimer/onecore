@@ -3,7 +3,7 @@ import config from '../../config'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
 import {
-  TenfastTenantByContactCodeResponseSchema,
+  TenfastTenantSchema,
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
   TenfastInvoiceSchema,
@@ -14,9 +14,9 @@ import {
   TenfastBatchGetRentalObjectsResponseSchema,
   type TenfastBatchGetLease,
   TenfastLease,
-  TenfastRentalPropertySearchResponseSchema,
+  TenfastLeaseSchema,
+  TenfastRentalPropertySchema,
   TenfastRentalProperty,
-  TenfastLeaseSearchResponseSchema,
   TenfastAutogiroConsentResponseSchema,
   TenfastAutogiroConsent,
   isVisibleTenfastInvoice,
@@ -64,13 +64,12 @@ export const getTenantByContactCode = async (
 ): Promise<AdapterResult<TenfastTenant | null, string>> => {
   try {
     const tenantResponse = await makeTenfastRequest(
-      '/v1/hyresvard/hyresgaster/search',
-      {
-        params: {
-          'filter[externalId]': contactCode,
-        },
-      }
+      `/v1/hyresvard/extras/hyresgaster/${encodeURIComponent(contactCode)}`,
+      { params: { hyresvard: companyId } }
     )
+
+    if (tenantResponse.status === 404) return { ok: true, data: null }
+
     if (tenantResponse.status !== 200) {
       return {
         ok: false,
@@ -79,18 +78,13 @@ export const getTenantByContactCode = async (
       }
     }
 
-    const parsedResponse = TenfastTenantByContactCodeResponseSchema.safeParse(
-      tenantResponse.data
-    )
-    if (!parsedResponse.success) {
-      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+    const parsed = TenfastTenantSchema.safeParse(tenantResponse.data)
+    if (!parsed.success) {
+      logger.warn(JSON.stringify(parsed.error, null, 2))
       return { ok: false, err: 'schema-error' }
     }
 
-    return {
-      ok: true,
-      data: parsedResponse.data.records[0] ?? null,
-    }
+    return { ok: true, data: parsed.data }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -224,36 +218,28 @@ export const getRentalProperty = async (
 ): Promise<AdapterResult<RentalProperty, string>> => {
   try {
     const result = await makeTenfastRequest(
-      '/v1/hyresvard/hyresobjekt/search',
-      {
-        params: {
-          'filter[externalId]': rentalPropertyCode,
-        },
-      }
+      `/v1/hyresvard/extras/hyresobjekt/${encodeURIComponent(rentalPropertyCode)}`,
+      { params: { hyresvard: companyId } }
     )
-    if (result.status !== 200) {
-      return { ok: false, err: result.statusText }
-    }
 
-    const parsedResponse = TenfastRentalPropertySearchResponseSchema.safeParse(
-      result.data
-    )
-    if (!parsedResponse.success) {
-      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
-      return { ok: false, err: 'schema-error' }
-    }
-
-    if (!parsedResponse.data.records[0]) {
+    if (result.status === 404) {
       return {
         ok: false,
         err: `Rental property with rentalPropertyCode ${rentalPropertyCode} not found`,
       }
     }
 
-    return {
-      ok: true,
-      data: transformToRentalProperty(parsedResponse.data.records[0]),
+    if (result.status !== 200) {
+      return { ok: false, err: result.statusText }
     }
+
+    const parsed = TenfastRentalPropertySchema.safeParse(result.data)
+    if (!parsed.success) {
+      logger.warn(JSON.stringify(parsed.error, null, 2))
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: transformToRentalProperty(parsed.data) }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -286,35 +272,26 @@ export const getLease = async (
   leaseId: string
 ): Promise<AdapterResult<Lease, string>> => {
   try {
-    const result = await makeTenfastRequest('/v1/hyresvard/avtal/search', {
-      params: {
-        'filter[externalId]': leaseId,
-        populate: 'hyresobjekt,hyresgaster',
-      },
-    })
+    const result = await makeTenfastRequest(
+      `/v1/hyresvard/extras/avtal/${encodeURIComponent(leaseId)}`,
+      { params: { hyresvard: companyId, populate: 'hyresobjekt,hyresgaster' } }
+    )
+
+    if (result.status === 404) {
+      return { ok: false, err: `Lease with leaseId ${leaseId} not found` }
+    }
+
     if (result.status !== 200) {
       return { ok: false, err: result.statusText }
     }
 
-    const parsedResponse = TenfastLeaseSearchResponseSchema.safeParse(
-      result.data
-    )
-    if (!parsedResponse.success) {
-      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+    const parsed = TenfastLeaseSchema.safeParse(result.data)
+    if (!parsed.success) {
+      logger.warn(JSON.stringify(parsed.error, null, 2))
       return { ok: false, err: 'schema-error' }
     }
 
-    if (!parsedResponse.data.records[0]) {
-      return {
-        ok: false,
-        err: `Lease with leaseId ${leaseId} not found`,
-      }
-    }
-
-    return {
-      ok: true,
-      data: transformToLease(parsedResponse.data.records[0]),
-    }
+    return { ok: true, data: transformToLease(parsed.data) }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }

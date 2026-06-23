@@ -89,9 +89,6 @@ export const TenfastRentalObjectWithEstateSchema =
       .optional(),
   })
 
-export const TenfastTenantByContactCodeResponseSchema = z.object({
-  records: z.array(TenfastTenantSchema),
-})
 export const TenfastRentalObjectByRentalObjectCodeResponseSchema = z.object({
   records: z.array(TenfastRentalObjectSchema),
   prev: z.string().nullable(),
@@ -101,9 +98,6 @@ export const TenfastRentalObjectByRentalObjectCodeResponseSchema = z.object({
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
-export type TenfastTenantByContactCodeResponse = z.infer<
-  typeof TenfastTenantByContactCodeResponseSchema
->
 export const TenfastTagSchema = z.object({
   _id: z.string(),
   code: z.string(),
@@ -112,9 +106,6 @@ export const TenfastTagSchema = z.object({
 
 export type TenfastTag = z.infer<typeof TenfastTagSchema>
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
-export type TenfastRentalObjectByRentalObjectCodeResponse = z.infer<
-  typeof TenfastRentalObjectByRentalObjectCodeResponseSchema
->
 
 // TODO byt namn
 export const TenfastContractSchema = z.object({
