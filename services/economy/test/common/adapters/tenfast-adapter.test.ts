@@ -114,6 +114,7 @@ describe('Tenfast Adapter', () => {
 
       assert(result.ok)
       expect(result.data.rentalPropertyId).toBe(mockProperty.externalId)
+      assert(result.data.address !== undefined)
       expect(result.data.address.street).toBe(mockProperty.postadress)
       expect(mockAxios.request).toHaveBeenCalledWith(
         expect.objectContaining({
