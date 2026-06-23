@@ -191,7 +191,7 @@ const config = configPackage({
         username: '',
         password: '',
         port: 22,
-        directory: '',
+        directory: 'TEST',
       },
       notificationEmail: '',
     },

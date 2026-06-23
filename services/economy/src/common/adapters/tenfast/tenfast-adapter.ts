@@ -48,6 +48,7 @@ const makeTenfastRequest = async (
     method?: string
     params?: Record<string, string | string[] | number | number[] | undefined>
     data?: any
+    validateStatus?: (status: number) => boolean
   }
 ) => {
   return axios.request({
@@ -60,6 +61,7 @@ const makeTenfastRequest = async (
       'Content-type': 'application/json',
       'api-token': apiKey,
     },
+    ...(config?.validateStatus && { validateStatus: config.validateStatus }),
   })
 }
 
@@ -774,33 +776,46 @@ export const listNewOutboundExports = async (): Promise<
   AdapterResult<TenfastOutboundExport[], 'unknown'>
 > => {
   try {
-    const response = await makeTenfastRequest(
-      '/v1/hyresvard/outbound-exports',
-      {
-        params: { hyresvard: companyId },
+    const records: TenfastOutboundExport[] = []
+    let next: string | null = ''
+    let totalCount = Infinity
+
+    while (next !== null && records.length < totalCount) {
+      const response = await makeTenfastRequest(
+        '/v1/hyresvard/outbound-exports',
+        {
+          params: {
+            hyresvard: companyId,
+            ...(next ? { paginate: next } : {}),
+          },
+        }
+      )
+
+      if (response.status !== 200) {
+        logger.error(
+          { status: response.status },
+          'listNewOutboundExports: unexpected status'
+        )
+        return { ok: false, err: 'unknown' }
       }
-    )
 
-    if (response.status !== 200) {
-      logger.error(
-        { status: response.status },
-        'listNewOutboundExports: unexpected status'
-      )
-      return { ok: false, err: 'unknown' }
-    }
+      const parsed = TenfastOutboundExportListSchema.safeParse(response.data)
+      if (!parsed.success) {
+        logger.error(
+          { error: parsed.error },
+          'listNewOutboundExports: response parse failed'
+        )
+        return { ok: false, err: 'unknown' }
+      }
 
-    const parsed = TenfastOutboundExportListSchema.safeParse(response.data)
-    if (!parsed.success) {
-      logger.error(
-        { error: parsed.error },
-        'listNewOutboundExports: response parse failed'
-      )
-      return { ok: false, err: 'unknown' }
+      records.push(...parsed.data.records)
+      next = parsed.data.next
+      totalCount = parsed.data.totalCount
     }
 
     return {
       ok: true,
-      data: parsed.data.records.filter((r) => r.status === 'NEW'),
+      data: records.filter((r) => r.status === 'NEW'),
     }
   } catch (err) {
     logger.error({ err }, 'listNewOutboundExports: failed')
@@ -860,7 +875,7 @@ export const markOutboundExportSent = async (
   try {
     const response = await makeTenfastRequest(
       `/v1/hyresvard/outbound-exports/${exportId}/mark-sent`,
-      { method: 'POST', params: { hyresvard: companyId } }
+      { method: 'POST', params: { hyresvard: companyId }, validateStatus: () => true }
     )
 
     if (response.status === 404) {
