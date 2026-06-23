@@ -198,7 +198,7 @@ export const TenfastInvoiceSchema = z.object({
   ekoNotifications: z.array(z.any()),
   skipEmail: z.boolean(),
   markedAsLate: z.boolean(),
-  reference: z.number().optional(),
+  reference: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   ocrNumber: z.string(),

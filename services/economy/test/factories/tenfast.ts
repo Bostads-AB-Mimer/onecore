@@ -111,7 +111,7 @@ export const TenfastInvoiceFactory = Factory.define<TenfastInvoice>(
     ekoNotifications: [],
     skipEmail: false,
     markedAsLate: false,
-    reference: 55123456,
+    reference: '55123456',
     createdAt: '2024-01-01T10:00:00Z',
     updatedAt: '2024-01-01T10:00:00Z',
     __v: 0,
