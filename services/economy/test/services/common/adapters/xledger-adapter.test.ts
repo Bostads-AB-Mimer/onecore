@@ -89,7 +89,9 @@ describe(adapter.getInvoicesByContactCode, () => {
 
     const result = await adapter.getInvoicesByContactCode('P12345')
     expect(result).toHaveLength(1)
-    expect(() => schemas.v1.InvoiceSchema.array().parse(result)).not.toThrow()
+    expect(() =>
+      schemas.v1.InvoiceSchema.array().parse(result?.map((parsed) => parsed.invoice))
+    ).not.toThrow()
   })
 
   it('marks invoice as credit when payment reference is set', async () => {
@@ -135,7 +137,11 @@ describe(adapter.getInvoicesByContactCode, () => {
 
     const result = await adapter.getInvoicesByContactCode('P12345')
     expect(result).toEqual([
-      expect.objectContaining({ credit: { originalInvoiceId: '123456' } }),
+      expect.objectContaining({
+        invoice: expect.objectContaining({
+          credit: { originalInvoiceId: '123456' },
+        }),
+      }),
     ])
   })
 
@@ -181,7 +187,11 @@ describe(adapter.getInvoicesByContactCode, () => {
 
     const result = await adapter.getInvoicesByContactCode('P12345')
     expect(result).toEqual([
-      expect.objectContaining({ credit: { originalInvoiceId: '12345' } }),
+      expect.objectContaining({
+        invoice: expect.objectContaining({
+          credit: { originalInvoiceId: '12345' },
+        }),
+      }),
     ])
   })
 })

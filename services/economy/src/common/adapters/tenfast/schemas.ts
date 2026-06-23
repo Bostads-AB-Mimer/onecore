@@ -134,6 +134,13 @@ export function isVisibleTenfastInvoice(invoice: {
   return !EXCLUDED_TENFAST_INVOICE_STATES.includes(invoice.state)
 }
 
+export const TenfastGracePeriodSchema = z.object({
+  endDate: z.string(),
+  reason: z.string(),
+  madeBy: z.string(),
+  madeByEmail: z.string(),
+})
+
 export const TenfastInvoiceSchema = z.object({
   interval: z.object({
     from: z.string(),
@@ -204,6 +211,7 @@ export const TenfastInvoiceSchema = z.object({
   ocrNumber: z.string(),
   late: z.boolean(),
   state: TenfastInvoiceStateSchema,
+  gracePeriod: TenfastGracePeriodSchema.nullish(),
 })
 
 export const TenfastRentalPropertySearchResponseSchema = z.object({

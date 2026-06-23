@@ -165,7 +165,7 @@ const dateToXledgerDateString = (date: Date): string => {
 }
 
 // Extract deferment date from description like "Anstånd till 2025-12-31"
-const getDefermentDate = (
+export const getDefermentDate = (
   description: string | undefined
 ): Date | undefined => {
   if (!description) return undefined
@@ -174,6 +174,11 @@ const getDefermentDate = (
     return new Date(match[1])
   }
   return undefined
+}
+
+export type ParsedXledgerInvoice = {
+  invoice: Invoice
+  defermentEndDate?: Date
 }
 
 /*
@@ -193,7 +198,7 @@ function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
     .otherwise(() => null)
 }
 
-const transformToInvoice = (invoiceData: any): Invoice => {
+const transformToInvoice = (invoiceData: any): ParsedXledgerInvoice => {
   const InvoiceTypeMap: Record<number, Invoice['type']> = {
     600: 'Other',
     797: 'Regular',
@@ -226,6 +231,8 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     }
   }
 
+  const defermentEndDate = getDefermentDate(invoiceData.node.text)
+
   const invoice: Omit<Invoice, 'paymentStatus'> = {
     invoiceId: invoiceData.node.invoiceNumber,
     leaseIds: [],
@@ -235,7 +242,6 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     fromDate: dateFromString(invoiceData.node.period.fromDate),
     toDate: dateFromString(invoiceData.node.period.toDate),
     expirationDate: dateFromString(invoiceData.node.dueDate),
-    defermentDate: getDefermentDate(invoiceData.node.text),
     debitStatus: 0,
     transactionType: InvoiceTransactionType.Rent,
     transactionTypeName: randomUUID(),
@@ -256,9 +262,12 @@ const transformToInvoice = (invoiceData: any): Invoice => {
 
   // TODO? handle overpaid invoices (negative remainingAmount)?
   // TODO? DO we want a unique status for invoices paid after due date?
-  function getPaymentStatus(invoice: Omit<Invoice, 'paymentStatus'>) {
+  function getPaymentStatus(
+    invoice: Omit<Invoice, 'paymentStatus'>,
+    defermentEndDate?: Date
+  ) {
     const now = new Date()
-    const overdueDate = invoice.defermentDate ?? invoice.expirationDate
+    const overdueDate = defermentEndDate ?? invoice.expirationDate
 
     //Can remainingAmount be negative? otherwise skip check
     if (!invoice.remainingAmount || invoice.remainingAmount <= 0)
@@ -269,7 +278,15 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     return PaymentStatus.Unpaid
   }
 
-  return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
+  const invoiceWithPaymentStatus = {
+    ...invoice,
+    paymentStatus: getPaymentStatus(invoice, defermentEndDate),
+  }
+
+  return {
+    invoice: invoiceWithPaymentStatus,
+    ...(defermentEndDate && { defermentEndDate }),
+  }
 }
 
 export interface XledgerCustomer {
@@ -905,7 +922,7 @@ function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
 export const getInvoicesByContactCode = async (
   contactCode: string,
   filters?: { from?: Date }
-): Promise<Invoice[] | null> => {
+): Promise<ParsedXledgerInvoice[] | null> => {
   const xledgerId = await getCustomerDbId(contactCode)
 
   if (!xledgerId) {
@@ -971,7 +988,11 @@ export const getInvoices = async (from?: Date, to?: Date) => {
   }
 
   const result = await makeXledgerRequest(query)
-  return result.data?.arTransactions?.edges.map(transformToInvoice) ?? []
+  return (
+    result.data?.arTransactions?.edges.map(
+      (e: any) => transformToInvoice(e).invoice
+    ) ?? []
+  )
 }
 
 export const getAllInvoicesWithMatchIds = async ({
@@ -1033,8 +1054,9 @@ export const getAllInvoicesWithMatchIds = async ({
 
   const invoicesWithMatchIds: Invoice[] = result.data.arTransactions.edges.map(
     (e: any): Invoice => {
+      const { invoice } = transformToInvoice(e)
       return {
-        ...transformToInvoice(e),
+        ...invoice,
         matchId: e.node.matchId,
       }
     }
@@ -1050,7 +1072,9 @@ export const getAllInvoicesWithMatchIds = async ({
   return { content: invoicesWithMatchIds, pageInfo }
 }
 
-export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
+export async function getInvoiceByInvoiceNumber(
+  invoiceNumber: string
+): Promise<ParsedXledgerInvoice | null> {
   const q = {
     query: gql`
       query ($invoiceNumber: String!) {
@@ -1079,9 +1103,9 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
       return null
     }
 
-    const [invoice] =
+    const [parsed] =
       result.data?.arTransactions.edges.map(transformToInvoice) ?? []
-    return invoice
+    return parsed ?? null
   } catch (err) {
     logger.error(err, 'Error getting invoice from Xledger')
     throw err
@@ -1483,7 +1507,7 @@ export const updateInvoiceDeferralDate = async (
   invoiceNumber: string,
   newDueDate: Date
 ): Promise<void> => {
-  const [dbId, invoice] = await Promise.all([
+  const [dbId, parsed] = await Promise.all([
     getArTransactionDbId(invoiceNumber),
     getInvoiceByInvoiceNumber(invoiceNumber),
   ])
@@ -1495,7 +1519,7 @@ export const updateInvoiceDeferralDate = async (
   }
 
   const dueDateString = dateToGraphQlDateString(newDueDate)
-  const text = buildDeferralText(invoice?.description, dueDateString)
+  const text = buildDeferralText(parsed?.invoice.description, dueDateString)
 
   const mutation = {
     query: gql`

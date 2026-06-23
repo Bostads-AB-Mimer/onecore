@@ -12,6 +12,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
+import { hasInvoiceDeferral } from '../lib/invoiceDeferral'
 import { InvoiceDeferralAction } from './InvoiceDeferralAction'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
@@ -65,9 +66,7 @@ export const InvoicesTable = (props: Props) => {
     return format(dateObj, 'yyyy-MM-dd')
   }
 
-  // Xledger updates dueDate on deferral and adds "Anstånd till YYYY-MM-DD" to text.
-  // defermentDate is parsed from that text — it won't be later than expirationDate.
-  const hasDeferral = (invoice: Invoice): boolean => !!invoice.defermentDate
+  const hasDeferral = hasInvoiceDeferral
 
   const getStatusBadge = (invoice: Invoice) => {
     return match(invoice)
@@ -96,7 +95,20 @@ export const InvoicesTable = (props: Props) => {
       return null
     }
 
-    return <Badge variant="destructive">Anstånd</Badge>
+    const badge = <Badge variant="destructive">Anstånd</Badge>
+
+    if (invoice.deferral?.madeBy) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{badge}</span>
+          </TooltipTrigger>
+          <TooltipContent>Beviljat av {invoice.deferral.madeBy}</TooltipContent>
+        </Tooltip>
+      )
+    }
+
+    return badge
   }
 
   const getInvoiceType = (invoice: Invoice): string => {
@@ -348,6 +360,12 @@ export const InvoicesTable = (props: Props) => {
           <div className="mb-3 text-sm bg-background/50 rounded p-2">
             <span className="font-medium">Krediterar faktura:</span>{' '}
             {invoice.credit.originalInvoiceId}
+          </div>
+        )}
+        {invoice.deferral?.madeBy && (
+          <div className="mb-3 text-sm bg-background/50 rounded p-2">
+            <span className="font-medium">Anstånd beviljat av:</span>{' '}
+            {invoice.deferral.madeBy}
           </div>
         )}
         {invoice.invoiceFileUrl && (
