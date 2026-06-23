@@ -329,6 +329,13 @@ export function MiscellaneousInvoiceForm() {
                   {errors.reference}
                 </span>
               )}
+              <p className="text-sm text-muted-foreground">
+                Saknas du som referens? Kontakta{' '}
+                <a href="mailto:ekonomi@mimer.nu" className="underline">
+                  ekonomi@mimer.nu
+                </a>{' '}
+                så lägger de till dig i ekonomisystemet.
+              </p>
             </div>
           </div>
 

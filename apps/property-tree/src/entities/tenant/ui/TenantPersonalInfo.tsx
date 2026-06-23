@@ -54,9 +54,7 @@ export function TenantPersonalInfo({
             ]}
           />
         )}
-        {variant === 'full' && (
-          <CopyableField label="Kundnummer" value={tenant.contactCode} />
-        )}
+        <CopyableField label="Kundnummer" value={tenant.contactCode} />
         {variant === 'full' && (
           <CopyableField label="Typ/roll" value={getTenantRoles(tenant)} />
         )}
