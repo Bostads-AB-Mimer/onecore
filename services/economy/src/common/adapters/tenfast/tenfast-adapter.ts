@@ -786,6 +786,7 @@ export const listNewOutboundExports = async (): Promise<
         {
           params: {
             hyresvard: companyId,
+            status: 'NEW',
             ...(next ? { paginate: next } : {}),
           },
         }
@@ -813,10 +814,7 @@ export const listNewOutboundExports = async (): Promise<
       totalCount = parsed.data.totalCount
     }
 
-    return {
-      ok: true,
-      data: records.filter((r) => r.status === 'NEW'),
-    }
+    return { ok: true, data: records }
   } catch (err) {
     logger.error({ err }, 'listNewOutboundExports: failed')
     return { ok: false, err: 'unknown' }
