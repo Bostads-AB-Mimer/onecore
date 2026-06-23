@@ -409,10 +409,15 @@ const fetchTenfastInvoiceByOcr = async (
     )
 
     if (result.status === 404) {
+      logger.info({ ocr }, 'deferral: Tenfast OCR lookup returned 404')
       return { ok: false, err: 'not-found' }
     }
 
     if (result.status !== 200) {
+      logger.info(
+        { ocr, status: result.status, data: result.data },
+        'deferral: Tenfast OCR lookup returned unexpected status'
+      )
       return { ok: false, err: 'unknown' }
     }
 
@@ -539,6 +544,10 @@ export const setGracePeriod = async (params: {
   try {
     const result = await fetchTenfastInvoiceByOcr(params.invoiceOcr)
     if (!result.ok) {
+      logger.info(
+        { invoiceOcr: params.invoiceOcr, err: result.err },
+        'deferral: Tenfast grace period aborted — OCR lookup failed'
+      )
       return result
     }
 
@@ -558,12 +567,21 @@ export const setGracePeriod = async (params: {
       return { ok: true, data: null }
     }
     if (res.status === 404) {
+      logger.error(
+        { invoiceOcr: params.invoiceOcr, tenfastInvoiceId: result.data._id },
+        'deferral: Tenfast grace-period endpoint returned 404'
+      )
       return { ok: false, err: 'not-found' }
     }
 
     logger.error(
-      { status: res.status, data: res.data, ocr: params.invoiceOcr },
-      'tenfast-adapter.setGracePeriod: unexpected status'
+      {
+        status: res.status,
+        data: res.data,
+        ocr: params.invoiceOcr,
+        tenfastInvoiceId: result.data._id,
+      },
+      'deferral: Tenfast grace-period endpoint returned unexpected status'
     )
     return { ok: false, err: 'unknown' }
   } catch (err: any) {

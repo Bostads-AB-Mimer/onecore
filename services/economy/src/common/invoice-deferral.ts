@@ -1,4 +1,5 @@
 import { Invoice } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 export type TenfastDeferralSource = {
   reason: string
@@ -10,6 +11,12 @@ export function buildInvoiceDeferral(sources: {
   tenfastDeferral?: TenfastDeferralSource
 }): NonNullable<Invoice['deferral']> | undefined {
   if (!sources.defermentEndDate) {
+    if (sources.tenfastDeferral) {
+      logger.warn(
+        { tenfastDeferral: sources.tenfastDeferral },
+        'deferral: no public deferral — Tenfast grace period present but missing Xledger deferment end date'
+      )
+    }
     return undefined
   }
 

@@ -988,10 +988,23 @@ const checkInvoiceDeferralEligibility = async (
 > => {
   const xledgerInvoice = await getInvoiceByInvoiceNumber(invoiceOcr)
   if (!xledgerInvoice) {
+    logger.warn(
+      { invoiceOcr },
+      'deferral: eligibility failed — invoice not found in Xledger'
+    )
     return { ok: false, err: 'invoice-not-found' }
   }
 
   if (!isInvoiceEligibleForDeferral(xledgerInvoice.invoice)) {
+    logger.warn(
+      {
+        invoiceOcr,
+        source: xledgerInvoice.invoice.source,
+        paymentStatus: xledgerInvoice.invoice.paymentStatus,
+        credit: xledgerInvoice.invoice.credit,
+      },
+      'deferral: eligibility failed — invoice not eligible'
+    )
     return { ok: false, err: 'invoice-not-eligible' }
   }
 
@@ -1017,6 +1030,10 @@ export const deferInvoice = async (params: {
   })
 
   if (!tenfastResult.ok) {
+    logger.error(
+      { invoiceOcr: params.invoiceOcr, err: tenfastResult.err },
+      'deferral: Tenfast grace period failed — skipping Xledger update'
+    )
     if (tenfastResult.err === 'not-found') {
       return { ok: false, err: 'invoice-not-found' }
     }
@@ -1028,7 +1045,7 @@ export const deferInvoice = async (params: {
   } catch (error) {
     logger.error(
       { error, invoiceOcr: params.invoiceOcr },
-      'deferInvoice: Xledger update failed after Tenfast grace period was set'
+      'deferral: Xledger update failed after Tenfast grace period was set'
     )
     return { ok: false, err: 'xledger-failed' }
   }
@@ -1062,6 +1079,11 @@ export const getInvoiceDetails = async (
 ): Promise<Invoice | null> => {
   const parsed = await getInvoiceByInvoiceNumber(invoiceNumber)
   if (!parsed) {
+    logger.warn(
+      { invoiceNumber },
+      'deferral: getInvoiceDetails — invoice not found in Xledger'
+    )
+
     return null
   }
 
