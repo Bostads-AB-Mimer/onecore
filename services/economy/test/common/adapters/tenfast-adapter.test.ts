@@ -2,6 +2,8 @@ import axios from 'axios'
 import assert from 'node:assert'
 import {
   getTenantByContactCode,
+  getRentalProperty,
+  getLease,
   getInvoicesForTenant,
   getInvoiceByOcr,
   getInvoiceArticle,
@@ -13,13 +15,14 @@ import {
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
-  TenfastTenantByContactCodeResponseFactory,
+  TenfastTenantFactory,
+  TenfastRentalPropertyFactory,
+  TenfastLeaseFactory,
   TenfastInvoicesByTenantIdResponseFactory,
   TenfastInvoiceByOcrResponseFactory,
   TenfastRentArticleFactory,
   TenfastInvoiceFactory,
   TenfastInvoiceRowFactory,
-  TenfastLeaseFactory,
   TenfastAutogiroConsentFactory,
 } from '../../factories'
 
@@ -43,24 +46,24 @@ describe('Tenfast Adapter', () => {
 
   describe(getTenantByContactCode, () => {
     it('should return tenant data when request is successful', async () => {
-      const mockResponse = TenfastTenantByContactCodeResponseFactory.build()
+      const mockTenant = TenfastTenantFactory.build()
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: mockResponse,
+        data: mockTenant,
       })
 
       const result = await getTenantByContactCode('P999999')
 
       expect(result).toEqual({
         ok: true,
-        data: mockResponse.records[0],
+        data: mockTenant,
       })
     })
 
-    it('should return null when no tenant is found', async () => {
+    it('should return null when no tenant is found (404)', async () => {
       mockAxios.request.mockResolvedValue({
-        status: 200,
-        data: { records: [] },
+        status: 404,
+        data: { error: 'Not found' },
       })
 
       const result = await getTenantByContactCode('NONEXISTENT')
@@ -73,16 +76,16 @@ describe('Tenfast Adapter', () => {
 
     it('should return error when request fails with non-200 status', async () => {
       mockAxios.request.mockResolvedValue({
-        status: 404,
-        statusText: 'Not Found',
+        status: 500,
+        statusText: 'Internal Server Error',
       })
 
       const result = await getTenantByContactCode('P999999')
 
       expect(result).toEqual({
         ok: false,
-        err: 'Not Found',
-        statusCode: 404,
+        err: 'Internal Server Error',
+        statusCode: 500,
       })
     })
 
@@ -93,6 +96,142 @@ describe('Tenfast Adapter', () => {
       })
 
       const result = await getTenantByContactCode('P999999')
+
+      assert(!result.ok)
+      expect(result.err).toBe('schema-error')
+    })
+  })
+
+  describe(getRentalProperty, () => {
+    it('should return transformed rental property when request is successful', async () => {
+      const mockProperty = TenfastRentalPropertyFactory.build()
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: mockProperty,
+      })
+
+      const result = await getRentalProperty(mockProperty.externalId)
+
+      assert(result.ok)
+      expect(result.data.rentalPropertyId).toBe(mockProperty.externalId)
+      expect(result.data.address.street).toBe(mockProperty.postadress)
+      expect(mockAxios.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: `/v1/hyresvard/extras/hyresobjekt/${encodeURIComponent(mockProperty.externalId)}`,
+          params: expect.objectContaining({ hyresvard: 'test-hyresvard-id' }),
+        })
+      )
+    })
+
+    it('should return error when rental property is not found (404)', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 404,
+        data: { error: 'Not found' },
+      })
+
+      const result = await getRentalProperty('UNKNOWN-CODE')
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'Rental property with rentalPropertyCode UNKNOWN-CODE not found',
+      })
+    })
+
+    it('should return error when request fails with non-200 status', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 500,
+        statusText: 'Internal Server Error',
+      })
+
+      const result = await getRentalProperty('CODE')
+
+      expect(result).toEqual({ ok: false, err: 'Internal Server Error' })
+    })
+
+    it('should return schema-error when response format is invalid', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: { notAProperty: true },
+      })
+
+      const result = await getRentalProperty('CODE')
+
+      assert(!result.ok)
+      expect(result.err).toBe('schema-error')
+    })
+  })
+
+  describe(getLease, () => {
+    it('should return transformed lease when request is successful', async () => {
+      const mockLease = TenfastLeaseFactory.build()
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: mockLease,
+      })
+
+      const result = await getLease(mockLease.externalId)
+
+      assert(result.ok)
+      expect(result.data.leaseId).toBe(mockLease.externalId)
+      expect(mockAxios.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: `/v1/hyresvard/extras/avtal/${encodeURIComponent(mockLease.externalId)}`,
+          params: expect.objectContaining({
+            hyresvard: 'test-hyresvard-id',
+            populate: 'hyresobjekt,hyresgaster',
+          }),
+        })
+      )
+    })
+
+    it('should encode lease IDs containing slashes correctly', async () => {
+      const leaseId = '306-008-01-0201/02'
+      mockAxios.request.mockResolvedValue({
+        status: 404,
+        data: {},
+      })
+
+      await getLease(leaseId)
+
+      expect(mockAxios.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: `/v1/hyresvard/extras/avtal/306-008-01-0201%2F02`,
+        })
+      )
+    })
+
+    it('should return error when lease is not found (404)', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 404,
+        data: {},
+      })
+
+      const result = await getLease('UNKNOWN-LEASE-ID')
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'Lease with leaseId UNKNOWN-LEASE-ID not found',
+      })
+    })
+
+    it('should return error when request fails with non-200 status', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 500,
+        statusText: 'Internal Server Error',
+      })
+
+      const result = await getLease('LEASE-ID')
+
+      expect(result).toEqual({ ok: false, err: 'Internal Server Error' })
+    })
+
+    it('should return schema-error when response format is invalid', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: { notALease: true },
+      })
+
+      const result = await getLease('LEASE-ID')
 
       assert(!result.ok)
       expect(result.err).toBe('schema-error')

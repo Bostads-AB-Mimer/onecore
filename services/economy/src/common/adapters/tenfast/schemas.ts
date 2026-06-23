@@ -206,20 +206,6 @@ export const TenfastInvoiceSchema = z.object({
   state: TenfastInvoiceStateSchema,
 })
 
-export const TenfastRentalPropertySearchResponseSchema = z.object({
-  records: z.array(TenfastRentalPropertySchema),
-  next: z.string().nullable(),
-  prev: z.string().nullable(),
-  totalCount: z.number(),
-})
-
-export const TenfastLeaseSearchResponseSchema = z.object({
-  records: z.array(TenfastLeaseSchema),
-  next: z.string().nullable(),
-  prev: z.string().nullable(),
-  totalCount: z.number(),
-})
-
 export const TenfastInvoicesByTenantIdResponseSchema =
   z.array(TenfastInvoiceSchema)
 
@@ -292,10 +278,6 @@ export const TenfastTenantSchema = z.object({
   updatedAt: z.string().optional(),
 })
 
-export const TenfastTenantByContactCodeResponseSchema = z.object({
-  records: z.array(TenfastTenantSchema),
-})
-
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
@@ -364,9 +346,6 @@ export type TenfastInvoicesByTenantIdResponse = z.infer<
   typeof TenfastInvoicesByTenantIdResponseSchema
 >
 export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
-export type TenfastTenantByContactCodeResponse = z.infer<
-  typeof TenfastTenantByContactCodeResponseSchema
->
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
 export type TenfastBatchGetLease = z.infer<typeof TenfastBatchGetLeaseSchema>

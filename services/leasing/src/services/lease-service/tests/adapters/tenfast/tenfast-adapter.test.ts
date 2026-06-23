@@ -105,10 +105,10 @@ describe(tenfastAdapter.getLeaseTemplate, () => {
 describe(tenfastAdapter.getRentalObject, () => {
   it('should return rental object when response is valid and status is 200', async () => {
     // Arrange
-    const mockRentalObjectResponse = factory.tenfastRentalObjectResponse.build()
+    const mockRentalObject = factory.tenfastRentalObject.build()
     const mockResponse = {
       status: 200,
-      data: mockRentalObjectResponse,
+      data: mockRentalObject,
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
@@ -118,34 +118,15 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: mockRentalObjectResponse.records[0],
+      data: mockRentalObject,
     })
   })
 
-  it('should return rental object when response is valid and status is 201', async () => {
-    // Arrange
-    const mockRentalObjectResponse = factory.tenfastRentalObjectResponse.build()
-    const mockResponse = {
-      status: 201,
-      data: mockRentalObjectResponse,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: true,
-      data: mockRentalObjectResponse.records[0],
-    })
-  })
-
-  it('should return null when response is valid but records array is empty', async () => {
+  it('should return null when status is 404', async () => {
     // Arrange
     const mockResponse = {
-      status: 200,
-      data: { records: [], prev: null, next: null, totalCount: 0 },
+      status: 404,
+      data: { error: 'Not found' },
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
@@ -159,25 +140,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     })
   })
 
-  it('should return error "get-lease-bad-request" when status is 400', async () => {
-    // Arrange
-    const mockResponse = {
-      status: 400,
-      data: { error: 'Bad request' },
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'get-rental-object-bad-request',
-    })
-  })
-
-  it('should return error "could-not-find-rental-object" when status is not 200, 201, or 400', async () => {
+  it('should return error "could-not-find-rental-object" when status is not 200 or 404', async () => {
     // Arrange
     const mockResponse = {
       status: 500,
@@ -197,11 +160,9 @@ describe(tenfastAdapter.getRentalObject, () => {
 
   it('should return error "could-not-parse-rental-object" when schema parsing fails', async () => {
     // Arrange
-    // Return a response with status 200 and invalid data for the schema
-    const invalidData = { notARentalObject: true }
     const mockResponse = {
       status: 200,
-      data: invalidData,
+      data: { notARentalObject: true },
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
@@ -233,7 +194,7 @@ describe(tenfastAdapter.getRentalObject, () => {
 describe(tenfastAdapter.getTenantByContactCode, () => {
   it('should return tenant when response is valid and status is 200', async () => {
     // Arrange
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     const mockResponse = {
       status: 200,
       data: mockTenant,
@@ -246,34 +207,15 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: mockTenant.records[0],
-    })
-  })
-
-  it('should return tenant when response is valid and status is 201', async () => {
-    // Arrange
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
-    const mockResponse = {
-      status: 201,
       data: mockTenant,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: true,
-      data: mockTenant.records[0],
     })
   })
 
-  it('should return null when response is valid but records array is empty', async () => {
+  it('should return null when status is 404', async () => {
     // Arrange
     const mockResponse = {
-      status: 200,
-      data: { records: [] },
+      status: 404,
+      data: { error: 'Not found' },
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
@@ -287,25 +229,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
     })
   })
 
-  it('should return error "get-tenant-bad-request" when status is 400', async () => {
-    // Arrange
-    const mockResponse = {
-      status: 400,
-      data: { error: 'Bad request' },
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getTenantByContactCode('TENANT_CODE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'get-tenant-bad-request',
-    })
-  })
-
-  it('should return error "could-not-retrieve-tenant" when status is not 200, 201, or 400', async () => {
+  it('should return error "could-not-retrieve-tenant" when status is not 200 or 404', async () => {
     // Arrange
     const mockResponse = {
       status: 500,
@@ -325,11 +249,9 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
 
   it('should return error "could-not-parse-tenant-response" when schema parsing fails', async () => {
     // Arrange
-    // Return a response with status 200 and invalid data for the schema
-    const invalidData = { notATenant: true }
     const mockResponse = {
       status: 200,
-      data: invalidData,
+      data: { notATenant: true },
     }
     ;(request as jest.Mock).mockResolvedValue(mockResponse)
 
@@ -343,7 +265,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
     })
   })
 
-  it('should return error "unknown" when tenfastApiRequest throws an exception', async () => {
+  it('should return error "could-not-retrieve-tenant" when tenfastApiRequest throws an exception', async () => {
     // Arrange
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
@@ -353,7 +275,7 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
     // Assert
     expect(result).toEqual({
       ok: false,
-      err: 'unknown',
+      err: 'could-not-retrieve-tenant',
     })
   })
 })
@@ -583,10 +505,10 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTemplate,
     })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -626,10 +548,10 @@ describe(tenfastAdapter.createLease, () => {
       .spyOn(tenfastAdapter, 'getLeaseTemplate')
       .mockResolvedValue({ ok: true, data: mockTemplate })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
-      .mockResolvedValue({ ok: true, data: mockTenant.records[0] })
+      .mockResolvedValue({ ok: true, data: mockTenant })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest
@@ -659,10 +581,10 @@ describe(tenfastAdapter.createLease, () => {
       .spyOn(tenfastAdapter, 'getLeaseTemplate')
       .mockResolvedValue({ ok: true, data: mockTemplate })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
-      .mockResolvedValue({ ok: true, data: mockTenant.records[0] })
+      .mockResolvedValue({ ok: true, data: mockTenant })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest
@@ -693,10 +615,10 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTemplate,
     })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -758,10 +680,10 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "could-not-find-template" when getLeaseTemplate fails or returns no data', async () => {
     // Arrange
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
-      .mockResolvedValue({ ok: true, data: mockTenant.records[0] })
+      .mockResolvedValue({ ok: true, data: mockTenant })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
     jest
@@ -830,10 +752,10 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTemplate,
     })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
@@ -867,10 +789,10 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTemplate,
     })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -907,10 +829,10 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTemplate,
     })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -950,10 +872,10 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTemplate,
     })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -993,10 +915,10 @@ describe(tenfastAdapter.createLease, () => {
       data: mockTemplate,
     })
 
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -1034,10 +956,10 @@ describe(tenfastAdapter.importLease, () => {
   })
 
   it('sends externalId=leaseId and the expected sync payload to Tenfast', async () => {
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -1065,7 +987,7 @@ describe(tenfastAdapter.importLease, () => {
     expect(call.method).toBe('post')
     expect(call.data).toEqual({
       externalId: leaseId,
-      hyresgaster: [mockTenant.records[0]._id],
+      hyresgaster: [mockTenant._id],
       hyresobjekt: [mockRentalObject._id],
       startDate: fromDate.toISOString(),
       avtalsbyggare: false,
@@ -1085,7 +1007,7 @@ describe(tenfastAdapter.importLease, () => {
   it('returns "could-not-retrieve-tenant" when getOrCreateTenant fails', async () => {
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: false,
-      err: 'unknown',
+      err: 'could-not-retrieve-tenant',
     })
 
     const payload = factory.syncTenantPayload.build()
@@ -1101,10 +1023,10 @@ describe(tenfastAdapter.importLease, () => {
   })
 
   it('returns "could-not-find-rental-object" when rental object lookup fails', async () => {
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
@@ -1125,10 +1047,10 @@ describe(tenfastAdapter.importLease, () => {
   })
 
   it('returns "lease-could-not-be-created" when Tenfast returns non-2xx', async () => {
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -1153,10 +1075,10 @@ describe(tenfastAdapter.importLease, () => {
   })
 
   it('returns "unknown" when the request throws', async () => {
-    const mockTenant = factory.tenfastTenantByContactCodeResponse.build()
+    const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
-      data: mockTenant.records[0],
+      data: mockTenant,
     })
 
     const mockRentalObject = factory.tenfastRentalObject.build()
@@ -2025,8 +1947,8 @@ describe(tenfastAdapter.syncTenant, () => {
     const payload = factory.syncTenantPayload.build()
 
     ;(request as jest.Mock).mockResolvedValueOnce({
-      status: 200,
-      data: { records: [] },
+      status: 404,
+      data: { error: 'Not found' },
     })
 
     const result = await tenfastAdapter.syncTenant(payload)
@@ -2050,7 +1972,7 @@ describe(tenfastAdapter.syncTenant, () => {
     // First call: getTenantByContactCode → found
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 200,
-      data: { records: [existingTenant] },
+      data: existingTenant,
     })
 
     // Second call: updateTenant (patch) → updated
@@ -2091,7 +2013,7 @@ describe(tenfastAdapter.syncTenant, () => {
 
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 200,
-      data: { records: [existingTenant] },
+      data: existingTenant,
     })
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 500,
