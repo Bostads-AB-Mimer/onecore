@@ -1,3 +1,4 @@
+import path from 'node:path'
 import SftpClient from 'ssh2-sftp-client'
 import { logger } from '@onecore/utilities'
 import {
@@ -14,7 +15,10 @@ async function uploadToStralfors(
   file: TenfastOutboundExport,
   content: Buffer
 ): Promise<void> {
-  const remotePath = `${config.stralforsExport.sftp.directory}/${file.filename}`
+  const remotePath = path.posix.join(
+    config.stralforsExport.sftp.directory ?? '',
+    path.posix.basename(file.filename)
+  )
   await client.put(content, remotePath, {
     writeStreamOptions: { flags: 'w', mode: 0o644 },
   })
@@ -67,7 +71,7 @@ async function notifyFailure(err: unknown, context?: string): Promise<void> {
     `Fel i körning: transfer-stralfors-files [${environment}]`,
     [
       'Överföring av Strålfors-filer misslyckades.',
-      context ? `Kontext: ${context}` : '',
+      context ? `Kontext: ${context}` : undefined,
       '',
       `Fel: ${err instanceof Error ? err.message : String(err)}`,
       '',
@@ -107,7 +111,10 @@ export async function transferStralforsFiles(): Promise<void> {
       username: config.stralforsExport.sftp.username,
       password: config.stralforsExport.sftp.password,
       port: config.stralforsExport.sftp.port ?? 22,
-      hostVerifier: () => true,
+      // Strålfors SFTP server fingerprint — verified 2026-06-12 via SSH debug session.
+      // Reject connections to any other host to prevent MITM.
+      hostVerifier: (fingerprint: string) =>
+        fingerprint === 'SHA256:b1CVzrZkuOk+0efd2T+tPB7QmMo/rSm+TTUa3f8XAO8',
       algorithms: {
         serverHostKey: [
           'rsa-sha2-512',

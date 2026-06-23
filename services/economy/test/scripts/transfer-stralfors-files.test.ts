@@ -20,30 +20,12 @@ import {
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { sendEmail } from '@src/common/adapters/infobip-adapter'
 import { transferStralforsFiles } from '@src/scripts/transfer-stralfors-files'
-import type { TenfastOutboundExport } from '@src/common/adapters/tenfast/tenfast-adapter'
+import { TenfastOutboundExportFactory as makeExport } from '@test/factories/tenfast'
 
 const mockListNew = listNewOutboundExports as jest.Mock
 const mockDownload = downloadOutboundExport as jest.Mock
 const mockMarkSent = markOutboundExportSent as jest.Mock
 const mockSendEmail = sendEmail as jest.Mock
-
-const makeExport = (
-  overrides?: Partial<TenfastOutboundExport>
-): TenfastOutboundExport => ({
-  _id: 'export-id-1',
-  provider: 'stralfors',
-  type: 'stralfors_invoice',
-  format: 'xml',
-  status: 'NEW',
-  size: 1024,
-  filename: 'job-abc123.xml',
-  invoicesCount: 2,
-  sentAt: null,
-  failedAt: null,
-  createdAt: '2026-06-09T13:41:20.378Z',
-  updatedAt: '2026-06-09T13:41:20.378Z',
-  ...overrides,
-})
 
 let mockSftpInstance: { connect: jest.Mock; end: jest.Mock; put: jest.Mock }
 
@@ -71,7 +53,7 @@ describe('transferStralforsFiles', () => {
     })
 
     it('connects to SFTP, uploads the file and marks it as sent', async () => {
-      const export1 = makeExport()
+      const export1 = makeExport.build()
       const fileContent = Buffer.from('<INVOICEINFO/>')
       mockListNew.mockResolvedValueOnce({ ok: true, data: [export1] })
       mockDownload.mockResolvedValueOnce({
@@ -98,8 +80,8 @@ describe('transferStralforsFiles', () => {
 
     it('sends success notification with transferred count after run', async () => {
       const exports = [
-        makeExport({ _id: 'id-1' }),
-        makeExport({ _id: 'id-2', filename: 'job-def456.xml' }),
+        makeExport.build({ _id: 'id-1' }),
+        makeExport.build({ _id: 'id-2', filename: 'job-def456.xml' }),
       ]
       mockListNew.mockResolvedValueOnce({ ok: true, data: exports })
       mockDownload.mockResolvedValue({
@@ -122,7 +104,7 @@ describe('transferStralforsFiles', () => {
 
     it('uploads before marking as sent', async () => {
       const callOrder: string[] = []
-      const export1 = makeExport()
+      const export1 = makeExport.build()
       mockListNew.mockResolvedValueOnce({ ok: true, data: [export1] })
       mockDownload.mockResolvedValueOnce({
         ok: true,
@@ -143,8 +125,8 @@ describe('transferStralforsFiles', () => {
 
     it('processes multiple files and disconnects once', async () => {
       const exports = [
-        makeExport({ _id: 'id-1' }),
-        makeExport({ _id: 'id-2', filename: 'job-def456.xml' }),
+        makeExport.build({ _id: 'id-1' }),
+        makeExport.build({ _id: 'id-2', filename: 'job-def456.xml' }),
       ]
       mockListNew.mockResolvedValueOnce({ ok: true, data: exports })
       mockDownload.mockResolvedValue({
@@ -167,8 +149,8 @@ describe('transferStralforsFiles', () => {
   describe('error isolation', () => {
     it('continues with remaining files when one download fails', async () => {
       const exports = [
-        makeExport({ _id: 'id-1' }),
-        makeExport({ _id: 'id-2', filename: 'job-def456.xml' }),
+        makeExport.build({ _id: 'id-1' }),
+        makeExport.build({ _id: 'id-2', filename: 'job-def456.xml' }),
       ]
       mockListNew.mockResolvedValueOnce({ ok: true, data: exports })
       mockDownload
@@ -192,8 +174,8 @@ describe('transferStralforsFiles', () => {
 
     it('continues with remaining files when one upload fails', async () => {
       const exports = [
-        makeExport({ _id: 'id-1' }),
-        makeExport({ _id: 'id-2', filename: 'job-def456.xml' }),
+        makeExport.build({ _id: 'id-1' }),
+        makeExport.build({ _id: 'id-2', filename: 'job-def456.xml' }),
       ]
       mockListNew.mockResolvedValueOnce({ ok: true, data: exports })
       mockDownload.mockResolvedValue({
@@ -217,7 +199,7 @@ describe('transferStralforsFiles', () => {
     })
 
     it('sends failure notification when a file fails', async () => {
-      const export1 = makeExport()
+      const export1 = makeExport.build()
       mockListNew.mockResolvedValueOnce({ ok: true, data: [export1] })
       mockDownload.mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
@@ -245,7 +227,7 @@ describe('transferStralforsFiles', () => {
     })
 
     it('sends failure notification and throws when SFTP connect fails', async () => {
-      const export1 = makeExport()
+      const export1 = makeExport.build()
       mockListNew.mockResolvedValueOnce({ ok: true, data: [export1] })
       mockSftpInstance.connect.mockRejectedValueOnce(
         new Error('Connection refused')
@@ -261,7 +243,7 @@ describe('transferStralforsFiles', () => {
     })
 
     it('disconnects from SFTP even when a file fails', async () => {
-      const export1 = makeExport()
+      const export1 = makeExport.build()
       mockListNew.mockResolvedValueOnce({ ok: true, data: [export1] })
       mockDownload.mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
@@ -272,8 +254,8 @@ describe('transferStralforsFiles', () => {
 
     it('success summary includes failed count when some files failed', async () => {
       const exports = [
-        makeExport({ _id: 'id-1' }),
-        makeExport({ _id: 'id-2', filename: 'job-def456.xml' }),
+        makeExport.build({ _id: 'id-1' }),
+        makeExport.build({ _id: 'id-2', filename: 'job-def456.xml' }),
       ]
       mockListNew.mockResolvedValueOnce({ ok: true, data: exports })
       mockDownload

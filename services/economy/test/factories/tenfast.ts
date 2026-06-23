@@ -9,6 +9,7 @@ import {
   TenfastTenantByContactCodeResponse,
   TenfastInvoicesByTenantIdResponse,
   type TenfastAutogiroConsent,
+  type TenfastOutboundExport,
 } from '@src/common/adapters/tenfast/schemas'
 
 export const TenfastTenantFactory = Factory.define<TenfastTenant>(
@@ -231,3 +232,20 @@ export const TenfastInvoiceByOcrResponseFactory =
       hyror: [TenfastInvoiceRowFactory.build()],
     })
   )
+
+export const TenfastOutboundExportFactory = Factory.define<TenfastOutboundExport>(
+  ({ sequence }) => ({
+    _id: `export-id-${sequence}`,
+    provider: 'stralfors',
+    type: 'stralfors_invoice',
+    format: 'xml',
+    status: 'NEW',
+    size: 1024,
+    filename: `job-${sequence}.xml`,
+    invoicesCount: 2,
+    sentAt: null,
+    failedAt: null,
+    createdAt: '2026-06-09T13:41:20.378Z',
+    updatedAt: '2026-06-09T13:41:20.378Z',
+  })
+)
