@@ -66,8 +66,6 @@ export const InvoicesTable = (props: Props) => {
     return format(dateObj, 'yyyy-MM-dd')
   }
 
-  const hasDeferral = hasInvoiceDeferral
-
   const getStatusBadge = (invoice: Invoice) => {
     return match(invoice)
       .with({ credit: { originalInvoiceId: P.string } }, () => (
@@ -91,7 +89,7 @@ export const InvoicesTable = (props: Props) => {
   }
 
   const getDeferralBadge = (invoice: Invoice) => {
-    if (!hasDeferral(invoice)) {
+    if (!hasInvoiceDeferral(invoice)) {
       return null
     }
 
@@ -161,7 +159,7 @@ export const InvoicesTable = (props: Props) => {
 
     const dateLabel = formatDate(invoice.expirationDate)
 
-    if (!hasDeferral(invoice)) {
+    if (!hasInvoiceDeferral(invoice)) {
       return <span>{dateLabel}</span>
     }
 
@@ -483,7 +481,7 @@ export const InvoicesTable = (props: Props) => {
             <span className="text-muted-foreground">Inkasso:</span>
             <span>{invoice.sentToDebtCollection ? 'Ja' : 'Nej'}</span>
           </div>
-          {hasDeferral(invoice) && (
+          {hasInvoiceDeferral(invoice) && (
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Anstånd:</span>
               {getDeferralBadge(invoice)}
