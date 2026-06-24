@@ -134,6 +134,13 @@ export function isVisibleTenfastInvoice(invoice: {
   return !EXCLUDED_TENFAST_INVOICE_STATES.includes(invoice.state)
 }
 
+export const TenfastGracePeriodSchema = z.object({
+  endDate: z.string(),
+  reason: z.string(),
+  madeBy: z.string(),
+  madeByEmail: z.string(),
+})
+
 export const TenfastInvoiceSchema = z.object({
   interval: z.object({
     from: z.string(),
@@ -198,26 +205,13 @@ export const TenfastInvoiceSchema = z.object({
   ekoNotifications: z.array(z.any()),
   skipEmail: z.boolean(),
   markedAsLate: z.boolean(),
-  reference: z.number().optional(),
+  reference: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   ocrNumber: z.string(),
   late: z.boolean(),
   state: TenfastInvoiceStateSchema,
-})
-
-export const TenfastRentalPropertySearchResponseSchema = z.object({
-  records: z.array(TenfastRentalPropertySchema),
-  next: z.string().nullable(),
-  prev: z.string().nullable(),
-  totalCount: z.number(),
-})
-
-export const TenfastLeaseSearchResponseSchema = z.object({
-  records: z.array(TenfastLeaseSchema),
-  next: z.string().nullable(),
-  prev: z.string().nullable(),
-  totalCount: z.number(),
+  gracePeriod: TenfastGracePeriodSchema.nullish(),
 })
 
 export const TenfastInvoicesByTenantIdResponseSchema =
@@ -292,10 +286,6 @@ export const TenfastTenantSchema = z.object({
   updatedAt: z.string().optional(),
 })
 
-export const TenfastTenantByContactCodeResponseSchema = z.object({
-  records: z.array(TenfastTenantSchema),
-})
-
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
@@ -364,9 +354,6 @@ export type TenfastInvoicesByTenantIdResponse = z.infer<
   typeof TenfastInvoicesByTenantIdResponseSchema
 >
 export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
-export type TenfastTenantByContactCodeResponse = z.infer<
-  typeof TenfastTenantByContactCodeResponseSchema
->
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
 export type TenfastBatchGetLease = z.infer<typeof TenfastBatchGetLeaseSchema>

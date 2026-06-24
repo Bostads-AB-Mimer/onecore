@@ -12,8 +12,6 @@ export type DbContact = {
   city: string
   protectedIdentity: string | undefined
   specialAttention: string | undefined
-  trusteeId: string | undefined
-  trusteeName: string | undefined
 }
 
 export type DbPhoneNumber = {

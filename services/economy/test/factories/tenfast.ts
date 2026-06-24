@@ -5,8 +5,8 @@ import {
   TenfastInvoice,
   TenfastInvoiceRow,
   TenfastLease,
+  TenfastRentalProperty,
   TenfastRentArticle,
-  TenfastTenantByContactCodeResponse,
   TenfastInvoicesByTenantIdResponse,
   type TenfastAutogiroConsent,
   type TenfastOutboundExport,
@@ -112,7 +112,7 @@ export const TenfastInvoiceFactory = Factory.define<TenfastInvoice>(
     ekoNotifications: [],
     skipEmail: false,
     markedAsLate: false,
-    reference: 55123456,
+    reference: '55123456',
     createdAt: '2024-01-01T10:00:00Z',
     updatedAt: '2024-01-01T10:00:00Z',
     __v: 0,
@@ -181,6 +181,39 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
   })
 )
 
+export const TenfastRentalPropertyFactory =
+  Factory.define<TenfastRentalProperty>(({ sequence }) => ({
+    hyresvard: 'test-hyresvard-id',
+    externalId: `306-008-01-0${sequence.toString().padStart(3, '0')}`,
+    nummer: '0001',
+    skvNummer: null,
+    postadress: 'Testgatan 1',
+    postnummer: '72231',
+    stad: 'VÄSTERÅS',
+    stadsdel: 'Centrum',
+    displayName: 'Testgatan 1 - nr. 0001',
+    typ: 'lägenhet',
+    kvm: 65,
+    roomCount: 3,
+    bostadType: 'lägenhet',
+    parkeringType: null,
+    lokalType: null,
+    category: null,
+    hyra: 5500,
+    hyraExcludingVat: 5500,
+    hyraVat: 0,
+    hyror: [],
+    images: [],
+    files: [],
+    comments: [],
+    tags: [],
+    useCounter: 0,
+    avtalStates: [],
+    states: [],
+    lastStateChanged: '2024-01-01T10:00:00.000Z',
+    updatedAt: new Date('2024-01-01'),
+  }))
+
 export const TenfastRentArticleFactory = Factory.define<TenfastRentArticle>(
   ({ sequence }) => ({
     _id: `${sequence}`,
@@ -194,11 +227,6 @@ export const TenfastRentArticleFactory = Factory.define<TenfastRentArticle>(
     includeInContract: true,
   })
 )
-
-export const TenfastTenantByContactCodeResponseFactory =
-  Factory.define<TenfastTenantByContactCodeResponse>(() => ({
-    records: [TenfastTenantFactory.build()],
-  }))
 
 export const TenfastInvoicesByTenantIdResponseFactory =
   Factory.define<TenfastInvoicesByTenantIdResponse>(() => [

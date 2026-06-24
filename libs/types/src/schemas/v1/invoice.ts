@@ -22,6 +22,12 @@ export const InvoiceRowSchema = z.object({
   vat: z.number(),
 })
 
+export const InvoiceDeferralSchema = z.object({
+  endDate: z.coerce.date(),
+  reason: z.string(),
+  madeBy: z.string(),
+})
+
 export const InvoicePaymentEventSchema = z.object({
   type: z.string(),
   invoiceId: z.string(),
@@ -46,7 +52,7 @@ export const InvoiceSchema = z.object({
   toDate: z.coerce.date(),
   invoiceDate: z.coerce.date(),
   expirationDate: z.coerce.date().optional(),
-  defermentDate: z.coerce.date().optional(),
+  deferral: InvoiceDeferralSchema.optional(),
   debitStatus: z.number(),
   paymentStatus: PaymentStatusSchema,
   transactionType: InvoiceTransactionTypeSchema,

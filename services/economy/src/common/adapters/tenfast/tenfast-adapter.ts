@@ -3,7 +3,7 @@ import config from '../../config'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
 import {
-  TenfastTenantByContactCodeResponseSchema,
+  TenfastTenantSchema,
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
   TenfastInvoiceSchema,
@@ -14,7 +14,8 @@ import {
   TenfastBatchGetRentalObjectsResponseSchema,
   type TenfastBatchGetLease,
   TenfastLease,
-  TenfastRentalPropertySearchResponseSchema,
+  TenfastLeaseSchema,
+  TenfastRentalPropertySchema,
   TenfastRentalProperty,
   TenfastLeaseSearchResponseSchema,
   TenfastOutboundExportSchema,
@@ -24,7 +25,7 @@ import {
   TenfastAutogiroConsent,
   isVisibleTenfastInvoice,
 } from './schemas'
-
+import { TenfastDeferralSource } from '../../invoice-deferral'
 import {
   Contact,
   Invoice,
@@ -71,13 +72,12 @@ export const getTenantByContactCode = async (
 ): Promise<AdapterResult<TenfastTenant | null, string>> => {
   try {
     const tenantResponse = await makeTenfastRequest(
-      '/v1/hyresvard/hyresgaster/search',
-      {
-        params: {
-          'filter[externalId]': contactCode,
-        },
-      }
+      `/v1/hyresvard/extras/hyresgaster/${encodeURIComponent(contactCode)}`,
+      { params: { hyresvard: companyId } }
     )
+
+    if (tenantResponse.status === 404) return { ok: true, data: null }
+
     if (tenantResponse.status !== 200) {
       return {
         ok: false,
@@ -86,18 +86,13 @@ export const getTenantByContactCode = async (
       }
     }
 
-    const parsedResponse = TenfastTenantByContactCodeResponseSchema.safeParse(
-      tenantResponse.data
-    )
-    if (!parsedResponse.success) {
-      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+    const parsed = TenfastTenantSchema.safeParse(tenantResponse.data)
+    if (!parsed.success) {
+      logger.warn(JSON.stringify(parsed.error, null, 2))
       return { ok: false, err: 'schema-error' }
     }
 
-    return {
-      ok: true,
-      data: parsedResponse.data.records[0] ?? null,
-    }
+    return { ok: true, data: parsed.data }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -156,10 +151,15 @@ const dateToDateString = (date: Date): string => {
   return date.toISOString().split('T')[0]
 }
 
+export type ParsedTenfastInvoice = {
+  invoice: Invoice
+  tenfastDeferral?: TenfastDeferralSource
+}
+
 export const getInvoicesForTenant = async (
   tenantId: string,
   from?: Date
-): Promise<AdapterResult<Invoice[], string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice[], string>> => {
   try {
     const result = await makeTenfastRequest(
       `/v1/hyresvard/hyresgaster/${tenantId}/hyror?populate=avtal`,
@@ -201,7 +201,7 @@ export const getInvoicesForTenant = async (
 export const getInvoicesByContactCode = async (
   contactCode: string,
   filters?: { from?: Date }
-): Promise<Invoice[]> => {
+): Promise<ParsedTenfastInvoice[]> => {
   const tenantResult = await getTenantByContactCode(contactCode)
   if (!tenantResult.ok) {
     throw tenantResult.err
@@ -226,36 +226,28 @@ export const getRentalProperty = async (
 ): Promise<AdapterResult<RentalProperty, string>> => {
   try {
     const result = await makeTenfastRequest(
-      '/v1/hyresvard/hyresobjekt/search',
-      {
-        params: {
-          'filter[externalId]': rentalPropertyCode,
-        },
-      }
+      `/v1/hyresvard/extras/hyresobjekt/${encodeURIComponent(rentalPropertyCode)}`,
+      { params: { hyresvard: companyId } }
     )
-    if (result.status !== 200) {
-      return { ok: false, err: result.statusText }
-    }
 
-    const parsedResponse = TenfastRentalPropertySearchResponseSchema.safeParse(
-      result.data
-    )
-    if (!parsedResponse.success) {
-      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
-      return { ok: false, err: 'schema-error' }
-    }
-
-    if (!parsedResponse.data.records[0]) {
+    if (result.status === 404) {
       return {
         ok: false,
         err: `Rental property with rentalPropertyCode ${rentalPropertyCode} not found`,
       }
     }
 
-    return {
-      ok: true,
-      data: transformToRentalProperty(parsedResponse.data.records[0]),
+    if (result.status !== 200) {
+      return { ok: false, err: result.statusText }
     }
+
+    const parsed = TenfastRentalPropertySchema.safeParse(result.data)
+    if (!parsed.success) {
+      logger.warn(JSON.stringify(parsed.error, null, 2))
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: transformToRentalProperty(parsed.data) }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -288,35 +280,26 @@ export const getLease = async (
   leaseId: string
 ): Promise<AdapterResult<Lease, string>> => {
   try {
-    const result = await makeTenfastRequest('/v1/hyresvard/avtal/search', {
-      params: {
-        'filter[externalId]': leaseId,
-        populate: 'hyresobjekt,hyresgaster',
-      },
-    })
+    const result = await makeTenfastRequest(
+      `/v1/hyresvard/extras/avtal/${encodeURIComponent(leaseId)}`,
+      { params: { hyresvard: companyId, populate: 'hyresobjekt,hyresgaster' } }
+    )
+
+    if (result.status === 404) {
+      return { ok: false, err: `Lease with leaseId ${leaseId} not found` }
+    }
+
     if (result.status !== 200) {
       return { ok: false, err: result.statusText }
     }
 
-    const parsedResponse = TenfastLeaseSearchResponseSchema.safeParse(
-      result.data
-    )
-    if (!parsedResponse.success) {
-      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+    const parsed = TenfastLeaseSchema.safeParse(result.data)
+    if (!parsed.success) {
+      logger.warn(JSON.stringify(parsed.error, null, 2))
       return { ok: false, err: 'schema-error' }
     }
 
-    if (!parsedResponse.data.records[0]) {
-      return {
-        ok: false,
-        err: `Lease with leaseId ${leaseId} not found`,
-      }
-    }
-
-    return {
-      ok: true,
-      data: transformToLease(parsedResponse.data.records[0]),
-    }
+    return { ok: true, data: transformToLease(parsed.data) }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -411,10 +394,15 @@ const fetchTenfastInvoiceByOcr = async (
     )
 
     if (result.status === 404) {
+      logger.info({ ocr }, 'deferral: Tenfast OCR lookup returned 404')
       return { ok: false, err: 'not-found' }
     }
 
     if (result.status !== 200) {
+      logger.info(
+        { ocr, status: result.status, data: result.data },
+        'deferral: Tenfast OCR lookup returned unexpected status'
+      )
       return { ok: false, err: 'unknown' }
     }
 
@@ -436,7 +424,7 @@ const fetchTenfastInvoiceByOcr = async (
 
 export const getInvoiceByOcr = async (
   ocr: string
-): Promise<AdapterResult<Invoice, string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice, string>> => {
   const result = await fetchTenfastInvoiceByOcr(ocr)
   if (!result.ok) {
     if (result.err === 'not-found') {
@@ -484,33 +472,51 @@ export const getInvoiceArticle = async (
   }
 }
 
-const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
+const toTenfastDeferralSource = (
+  gracePeriod: TenfastInvoice['gracePeriod']
+): TenfastDeferralSource | undefined => {
+  if (!gracePeriod) {
+    return undefined
+  }
+
+  return {
+    reason: gracePeriod.reason,
+    madeBy: gracePeriod.madeByEmail,
+  }
+}
+
+const transformToInvoice = (
+  tenfastInvoice: TenfastInvoice
+): ParsedTenfastInvoice => {
   const remainingAmount = tenfastInvoice.amount - tenfastInvoice.amountPaid
 
   return {
-    amount: tenfastInvoice.amount,
-    debitStatus: 0, //
-    fromDate: new Date(tenfastInvoice.interval.from),
-    toDate: new Date(tenfastInvoice.interval.to),
-    invoiceDate: tenfastInvoice.activatedAt
-      ? new Date(tenfastInvoice.activatedAt)
-      : new Date(tenfastInvoice.expectedInvoiceDate),
-    expirationDate: new Date(tenfastInvoice.due),
-    paidAmount: tenfastInvoice.amountPaid,
-    remainingAmount,
-    invoiceId: tenfastInvoice.ocrNumber,
-    leaseIds: tenfastInvoice.avtal.map((a) => a.externalId),
-    paymentStatus:
-      remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
-    type: 'Regular',
-    reference: tenfastInvoice.ocrNumber,
-    source: 'next', // ??
-    invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
-    transactionType: InvoiceTransactionType.Rent,
-    // TODO this is only (?) used for uniquely identifying invoices with the same invoice number in mina sidor.
-    // We should maybe add a unique id property to the Invoice type instead
-    transactionTypeName: 'some random string',
-    credit: null,
+    invoice: {
+      amount: tenfastInvoice.amount,
+      debitStatus: 0, //
+      fromDate: new Date(tenfastInvoice.interval.from),
+      toDate: new Date(tenfastInvoice.interval.to),
+      invoiceDate: tenfastInvoice.activatedAt
+        ? new Date(tenfastInvoice.activatedAt)
+        : new Date(tenfastInvoice.expectedInvoiceDate),
+      expirationDate: new Date(tenfastInvoice.due),
+      paidAmount: tenfastInvoice.amountPaid,
+      remainingAmount,
+      invoiceId: tenfastInvoice.ocrNumber,
+      leaseIds: tenfastInvoice.avtal.map((a) => a.externalId),
+      paymentStatus:
+        remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
+      type: 'Regular',
+      reference: tenfastInvoice.ocrNumber,
+      source: 'next', // ??
+      invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
+      transactionType: InvoiceTransactionType.Rent,
+      // TODO this is only (?) used for uniquely identifying invoices with the same invoice number in mina sidor.
+      // We should maybe add a unique id property to the Invoice type instead
+      transactionTypeName: 'some random string',
+      credit: null,
+    },
+    tenfastDeferral: toTenfastDeferralSource(tenfastInvoice.gracePeriod),
   }
 }
 
@@ -523,6 +529,10 @@ export const setGracePeriod = async (params: {
   try {
     const result = await fetchTenfastInvoiceByOcr(params.invoiceOcr)
     if (!result.ok) {
+      logger.info(
+        { invoiceOcr: params.invoiceOcr, err: result.err },
+        'deferral: Tenfast grace period aborted — OCR lookup failed'
+      )
       return result
     }
 
@@ -542,11 +552,20 @@ export const setGracePeriod = async (params: {
       return { ok: true, data: null }
     }
     if (res.status === 404) {
+      logger.error(
+        { invoiceOcr: params.invoiceOcr, tenfastInvoiceId: result.data._id },
+        'deferral: Tenfast grace-period endpoint returned 404'
+      )
       return { ok: false, err: 'not-found' }
     }
 
     logger.error(
-      { status: res.status, data: res.data, ocr: params.invoiceOcr },
+      {
+        status: res.status,
+        data: res.data,
+        ocr: params.invoiceOcr,
+        tenfastInvoiceId: result.data._id,
+      },
       'tenfast-adapter.setGracePeriod: unexpected status'
     )
     return { ok: false, err: 'unknown' }

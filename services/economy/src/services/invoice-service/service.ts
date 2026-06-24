@@ -57,6 +57,8 @@ import {
   getRentalIdFromLeaseId,
 } from '../common/helpers'
 import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'
+import { AdapterResult } from '@src/common/types'
+import { withInvoiceDeferral } from '@src/common/invoice-deferral'
 import {
   getInvoiceArticle,
   getInvoiceByOcr,
@@ -910,50 +912,64 @@ export const getInvoicesByContactCode = async (
     from: filters?.from,
   })
 
-  const xledgerInvoiceIds = xledgerInvoices.map((invoice) => invoice.invoiceId)
+  const xledgerInvoiceIds = xledgerInvoices.map(
+    (parsed) => parsed.invoice.invoiceId
+  )
 
-  const regularInvoices: Invoice[] = []
-  const losses: Invoice[] = []
+  const regularInvoices: typeof xledgerInvoices = []
+  const losses: typeof xledgerInvoices = []
 
-  xledgerInvoices.forEach((i) => {
+  xledgerInvoices.forEach((parsed) => {
     // A loss is recorded as a transaction on account 1529
-    if (i.accountCode === '1529') {
-      losses.push(i)
+    if (parsed.invoice.accountCode === '1529') {
+      losses.push(parsed)
     } else {
-      regularInvoices.push(i)
+      regularInvoices.push(parsed)
     }
   })
 
   // An invoice is marked as an expected loss if there is a recorded loss with the same invoice number
-  regularInvoices.forEach((i) => {
-    const lossForInvoice = losses.find((l) => l.invoiceId === i.invoiceId)
+  regularInvoices.forEach((parsed) => {
+    const lossForInvoice = losses.find(
+      (loss) => loss.invoice.invoiceId === parsed.invoice.invoiceId
+    )
     if (lossForInvoice) {
-      i.expectedLoss = true
+      parsed.invoice.expectedLoss = true
     }
   })
 
   // If invoice exists in tenfast, use period (fromDate, toDate) from tenfast invoice
   // Otherwise use period from xledger invoice
   return regularInvoices
-    .map((invoice) => {
+    .map((parsed) => {
       const tenfastInvoice = tenfastInvoices.find(
-        (v) => v.invoiceId === invoice.invoiceId
+        (invoice) => invoice.invoice.invoiceId === parsed.invoice.invoiceId
       )
 
-      if (tenfastInvoice?.fromDate && tenfastInvoice.toDate) {
-        return {
-          ...invoice,
-          fromDate: tenfastInvoice.fromDate,
-          toDate: tenfastInvoice.toDate,
-        }
-      } else {
-        return invoice
+      const invoice = {
+        ...parsed.invoice,
+        ...(tenfastInvoice?.invoice.fromDate &&
+          tenfastInvoice.invoice.toDate && {
+            fromDate: tenfastInvoice.invoice.fromDate,
+            toDate: tenfastInvoice.invoice.toDate,
+          }),
       }
+
+      return withInvoiceDeferral(invoice, {
+        defermentEndDate: parsed.defermentEndDate,
+        tenfastDeferral: tenfastInvoice?.tenfastDeferral,
+      })
     })
     .concat(
-      tenfastInvoices.filter(
-        (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
-      )
+      tenfastInvoices
+        .filter(
+          (parsed) => !xledgerInvoiceIds.includes(parsed.invoice.invoiceId)
+        )
+        .map((parsed) =>
+          withInvoiceDeferral(parsed.invoice, {
+            tenfastDeferral: parsed.tenfastDeferral,
+          })
+        )
     )
 }
 
@@ -972,10 +988,23 @@ const checkInvoiceDeferralEligibility = async (
 > => {
   const xledgerInvoice = await getInvoiceByInvoiceNumber(invoiceOcr)
   if (!xledgerInvoice) {
+    logger.warn(
+      { invoiceOcr },
+      'deferral: eligibility failed — invoice not found in Xledger'
+    )
     return { ok: false, err: 'invoice-not-found' }
   }
 
-  if (!isInvoiceEligibleForDeferral(xledgerInvoice)) {
+  if (!isInvoiceEligibleForDeferral(xledgerInvoice.invoice)) {
+    logger.warn(
+      {
+        invoiceOcr,
+        source: xledgerInvoice.invoice.source,
+        paymentStatus: xledgerInvoice.invoice.paymentStatus,
+        credit: xledgerInvoice.invoice.credit,
+      },
+      'deferral: eligibility failed — invoice not eligible'
+    )
     return { ok: false, err: 'invoice-not-eligible' }
   }
 
@@ -1001,6 +1030,10 @@ export const deferInvoice = async (params: {
   })
 
   if (!tenfastResult.ok) {
+    logger.error(
+      { invoiceOcr: params.invoiceOcr, err: tenfastResult.err },
+      'deferral: Tenfast grace period failed — skipping Xledger update'
+    )
     if (tenfastResult.err === 'not-found') {
       return { ok: false, err: 'invoice-not-found' }
     }
@@ -1012,7 +1045,7 @@ export const deferInvoice = async (params: {
   } catch (error) {
     logger.error(
       { error, invoiceOcr: params.invoiceOcr },
-      'deferInvoice: Xledger update failed after Tenfast grace period was set'
+      'deferral: Xledger update failed after Tenfast grace period was set'
     )
     return { ok: false, err: 'xledger-failed' }
   }
@@ -1020,27 +1053,60 @@ export const deferInvoice = async (params: {
   return { ok: true }
 }
 
+export const getPublicInvoiceByOcr = async (
+  ocr: string
+): Promise<AdapterResult<Invoice, string>> => {
+  const tenfastResult = await getInvoiceByOcr(ocr)
+  if (!tenfastResult.ok) {
+    return tenfastResult
+  }
+
+  const xledgerResult = await getInvoiceByInvoiceNumber(
+    tenfastResult.data.invoice.invoiceId
+  )
+
+  return {
+    ok: true,
+    data: withInvoiceDeferral(tenfastResult.data.invoice, {
+      defermentEndDate: xledgerResult?.defermentEndDate,
+      tenfastDeferral: tenfastResult.data.tenfastDeferral,
+    }),
+  }
+}
+
 export const getInvoiceDetails = async (
   invoiceNumber: string
 ): Promise<Invoice | null> => {
-  const result = await getInvoiceByInvoiceNumber(invoiceNumber)
-  if (!result) {
+  const parsed = await getInvoiceByInvoiceNumber(invoiceNumber)
+  if (!parsed) {
+    logger.warn(
+      { invoiceNumber },
+      'deferral: getInvoiceDetails — invoice not found in Xledger'
+    )
+
     return null
   }
 
-  const tenfastInvoiceResult = await getInvoiceByOcr(result.invoiceId)
+  let invoice = parsed.invoice
+  const tenfastInvoiceResult = await getInvoiceByOcr(invoice.invoiceId)
 
   if (!tenfastInvoiceResult.ok) {
     throw new Error(tenfastInvoiceResult.err)
   }
 
   if (tenfastInvoiceResult.data) {
-    result.invoiceRows = await enrichInvoiceRowsWithText(
-      tenfastInvoiceResult.data.invoiceRows
-    )
+    invoice = {
+      ...invoice,
+      invoiceRows: await enrichInvoiceRowsWithText(
+        tenfastInvoiceResult.data.invoice.invoiceRows
+      ),
+    }
   }
 
-  return result
+  return withInvoiceDeferral(invoice, {
+    defermentEndDate: parsed.defermentEndDate,
+    tenfastDeferral: tenfastInvoiceResult.data?.tenfastDeferral,
+  })
 }
 
 export const getInvoiceDetailsForContactCode = async (
@@ -1060,7 +1126,13 @@ export const getInvoiceDetailsForContactCode = async (
     return []
   }
 
-  return enrichInvoices(tenfastInvoicesResult.data)
+  return enrichInvoices(
+    tenfastInvoicesResult.data.map((parsed) =>
+      withInvoiceDeferral(parsed.invoice, {
+        tenfastDeferral: parsed.tenfastDeferral,
+      })
+    )
+  )
 }
 
 const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {

@@ -195,7 +195,7 @@ describe('Debt Collection Service', () => {
 
       getInvoiceByOcr.mockResolvedValueOnce({
         ok: true,
-        data: createMockRentInvoice({ invoiceRows: mockRows }),
+        data: { invoice: createMockRentInvoice({ invoiceRows: mockRows }) },
       })
 
       const csvWithPayment = createRentInvoiceCsv([

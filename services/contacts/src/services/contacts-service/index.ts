@@ -300,8 +300,10 @@ export const routes = (
   router.get(
     '/contacts/:contactCode/trustee',
     {
-      summary: 'Get the trustee of a contact identifier by their Contact Code',
-      description: `Get the trustee of a contact.`,
+      summary: 'Get the trustee (god man) of a contact by their Contact Code',
+      description:
+        'Returns the trustee (god man) of the given contact as a full ' +
+        'Contact. 404 when the contact does not exist or has no trustee.',
       tags: ['Contacts'],
       params: {
         contactCode: z.string(),
@@ -314,22 +316,26 @@ export const routes = (
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { contactCode } = ctx.params
-      const contact = await contactsRepository.getByContactCode(contactCode)
+      const relations = await contactsRepository.getTrustees(contactCode)
 
-      if (contact && contact.type === 'individual' && contact.trustee) {
-        const trustee = await contactsRepository.getByContactCode(
-          contact.trustee.contactCode
-        )
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
 
-        if (trustee) {
-          ctx.status = 200
-          ctx.body = {
-            content: trustee,
-            ...metadata,
-          }
-        } else {
-          ctx.status = 404
-        }
+      const trusteeRelation = relations[0]
+      if (!trusteeRelation) {
+        ctx.status = 404
+        return
+      }
+
+      const trustee = await contactsRepository.getByContactCode(
+        trusteeRelation.contactCode
+      )
+
+      if (trustee) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(trustee, metadata)
       } else {
         ctx.status = 404
       }
@@ -337,13 +343,13 @@ export const routes = (
   )
 
   router.get(
-    '/contacts/:contactCode/administrators',
+    '/contacts/:contactCode/trustee-for',
     {
-      summary: 'List the administrators (förvaltare) of a contact',
+      summary: 'List the contacts a person is trustee (god man) for',
       description:
-        'Returns the contacts registered as förvaltare (cmctc.forvtyp = 2) ' +
-        'for the given contact, as RelatedContact objects with role ' +
-        "'administrator'. Empty list when the contact has no förvaltare; " +
+        'Returns the contacts that have the given contact registered as ' +
+        'their trustee, as RelatedContact objects with role ' +
+        "'ward'. Empty list when the contact is not a trustee for anyone; " +
         '404 when the contact does not exist.',
       tags: ['Contacts'],
       params: {
@@ -356,7 +362,7 @@ export const routes = (
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const relations = await contactsRepository.getGuardians(
+      const relations = await contactsRepository.getTrusteeWards(
         ctx.params.contactCode
       )
 
@@ -366,9 +372,53 @@ export const routes = (
       }
 
       ctx.status = 200
-      ctx.body = {
-        content: { relations },
-        ...metadata,
+      ctx.body = makeSuccessResponseBody({ relations }, metadata)
+    }
+  )
+
+  router.get(
+    '/contacts/:contactCode/administrator',
+    {
+      summary:
+        'Get the administrator (förvaltare) of a contact by their Contact Code',
+      description:
+        'Returns the administrator (förvaltare) of the given contact as a ' +
+        'full Contact. 404 when the contact does not exist or has no ' +
+        'administrator.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { contactCode } = ctx.params
+      const relations = await contactsRepository.getGuardians(contactCode)
+
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
+
+      const administratorRelation = relations[0]
+      if (!administratorRelation) {
+        ctx.status = 404
+        return
+      }
+
+      const administrator = await contactsRepository.getByContactCode(
+        administratorRelation.contactCode
+      )
+
+      if (administrator) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(administrator, metadata)
+      } else {
+        ctx.status = 404
       }
     }
   )
@@ -403,10 +453,7 @@ export const routes = (
       }
 
       ctx.status = 200
-      ctx.body = {
-        content: { relations },
-        ...metadata,
-      }
+      ctx.body = makeSuccessResponseBody({ relations }, metadata)
     }
   )
 

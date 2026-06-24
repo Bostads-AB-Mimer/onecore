@@ -1,6 +1,7 @@
 import {
   processInvoiceRows,
   getInvoiceDetails,
+  getPublicInvoiceByOcr,
   getBatchContactsCsv,
   getBatchLedgerRowsCsv,
   getAutogiroConsent,
@@ -174,30 +175,34 @@ describe('Rental Invoice Service', () => {
 
   describe('getInvoiceDetails', () => {
     const mockXledgerInvoice = {
-      invoiceId: 'test-invoice-id',
-      invoiceNumber: '55123456',
-      customerCode: 'P999999',
-      amount: 1000,
-      invoiceRows: [],
+      invoice: {
+        invoiceId: 'test-invoice-id',
+        invoiceNumber: '55123456',
+        customerCode: 'P999999',
+        amount: 1000,
+        invoiceRows: [],
+      },
     }
 
     const mockTenfastInvoiceResult = {
       ok: true,
       data: {
-        invoiceRows: [
-          {
-            rentArticle: 'HYRAB',
-            amount: 999.57,
-            vat: 0,
-            invoiceRowText: null,
-          },
-          {
-            rentArticle: 'PARK',
-            amount: 50,
-            vat: 0,
-            invoiceRowText: null,
-          },
-        ],
+        invoice: {
+          invoiceRows: [
+            {
+              rentArticle: 'HYRAB',
+              amount: 999.57,
+              vat: 0,
+              invoiceRowText: null,
+            },
+            {
+              rentArticle: 'PARK',
+              amount: 50,
+              vat: 0,
+              invoiceRowText: null,
+            },
+          ],
+        },
       },
     }
 
@@ -233,7 +238,7 @@ describe('Rental Invoice Service', () => {
       expect(getInvoiceArticle).toHaveBeenCalledWith('PARK')
 
       expect(result).toEqual({
-        ...mockXledgerInvoice,
+        ...mockXledgerInvoice.invoice,
         invoiceRows: [
           {
             rentArticle: 'HYRAB',
@@ -286,27 +291,29 @@ describe('Rental Invoice Service', () => {
       expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('55123456')
       expect(getInvoiceByOcr).toHaveBeenCalledWith('test-invoice-id')
       expect(getInvoiceArticle).not.toHaveBeenCalled()
-      expect(result).toEqual(mockXledgerInvoice)
+      expect(result).toEqual(mockXledgerInvoice.invoice)
     })
 
     it('should handle invoice rows without rent articles', async () => {
       const mockTenfastResultWithoutArticles = {
         ok: true,
         data: {
-          invoiceRows: [
-            {
-              rentArticle: null,
-              amount: 50,
-              vat: 0,
-              invoiceRowText: null,
-            },
-            {
-              rentArticle: 'HYRAB',
-              amount: 999.57,
-              vat: 0,
-              invoiceRowText: null,
-            },
-          ],
+          invoice: {
+            invoiceRows: [
+              {
+                rentArticle: null,
+                amount: 50,
+                vat: 0,
+                invoiceRowText: null,
+              },
+              {
+                rentArticle: 'HYRAB',
+                amount: 999.57,
+                vat: 0,
+                invoiceRowText: null,
+              },
+            ],
+          },
         },
       }
 
@@ -323,7 +330,7 @@ describe('Rental Invoice Service', () => {
       expect(mockGetInvoiceArticle).toHaveBeenCalledWith('HYRAB')
 
       expect(result).toEqual({
-        ...mockXledgerInvoice,
+        ...mockXledgerInvoice.invoice,
         invoiceRows: [
           {
             rentArticle: null,
@@ -353,7 +360,7 @@ describe('Rental Invoice Service', () => {
       expect(getInvoiceArticle).toHaveBeenCalledTimes(2)
 
       expect(result).toEqual({
-        ...mockXledgerInvoice,
+        ...mockXledgerInvoice.invoice,
         invoiceRows: [
           {
             rentArticle: 'HYRAB',
@@ -375,20 +382,22 @@ describe('Rental Invoice Service', () => {
       const mockTenfastResultWithDuplicates = {
         ok: true,
         data: {
-          invoiceRows: [
-            {
-              rentArticle: 'HYRAB',
-              amount: 500,
-              vat: 0,
-              invoiceRowText: null,
-            },
-            {
-              rentArticle: 'HYRAB',
-              amount: 499.57,
-              vat: 0,
-              invoiceRowText: null,
-            },
-          ],
+          invoice: {
+            invoiceRows: [
+              {
+                rentArticle: 'HYRAB',
+                amount: 500,
+                vat: 0,
+                invoiceRowText: null,
+              },
+              {
+                rentArticle: 'HYRAB',
+                amount: 499.57,
+                vat: 0,
+                invoiceRowText: null,
+              },
+            ],
+          },
         },
       }
 
@@ -405,7 +414,7 @@ describe('Rental Invoice Service', () => {
       expect(mockGetInvoiceArticle).toHaveBeenCalledWith('HYRAB')
 
       expect(result).toEqual({
-        ...mockXledgerInvoice,
+        ...mockXledgerInvoice.invoice,
         invoiceRows: [
           {
             rentArticle: 'HYRAB',
@@ -420,6 +429,71 @@ describe('Rental Invoice Service', () => {
             invoiceRowText: 'Hyra bostad',
           },
         ],
+      })
+    })
+  })
+
+  describe('getPublicInvoiceByOcr', () => {
+    beforeEach(() => {
+      mockGetInvoiceByInvoiceNumber.mockReset()
+      mockGetInvoiceByOcr.mockReset()
+    })
+
+    it('returns a public invoice with deferral when xledger has deferment', async () => {
+      mockGetInvoiceByOcr.mockResolvedValue({
+        ok: true,
+        data: {
+          invoice: { invoiceId: '55123456', invoiceRows: [] },
+          tenfastDeferral: {
+            reason: 'Betalningsplan',
+            madeBy: 'admin@mimer.nu',
+          },
+        },
+      })
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue({
+        invoice: { invoiceId: '55123456', invoiceRows: [] },
+        defermentEndDate: new Date('2026-07-15'),
+      })
+
+      const result = await getPublicInvoiceByOcr('55123456')
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          invoiceId: '55123456',
+          invoiceRows: [],
+          deferral: {
+            endDate: new Date('2026-07-15'),
+            reason: 'Betalningsplan',
+            madeBy: 'admin@mimer.nu',
+          },
+        },
+      })
+    })
+
+    it('returns invoice without deferral when xledger has no deferment', async () => {
+      mockGetInvoiceByOcr.mockResolvedValue({
+        ok: true,
+        data: {
+          invoice: { invoiceId: '55123456', invoiceRows: [] },
+          tenfastDeferral: {
+            reason: 'Betalningsplan',
+            madeBy: 'admin@mimer.nu',
+          },
+        },
+      })
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue({
+        invoice: { invoiceId: '55123456', invoiceRows: [] },
+      })
+
+      const result = await getPublicInvoiceByOcr('55123456')
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          invoiceId: '55123456',
+          invoiceRows: [],
+        },
       })
     })
   })
