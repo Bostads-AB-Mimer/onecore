@@ -23,6 +23,7 @@ import {
   exportRentalLosses,
   markInvoicesAsExported,
   uploadCsvFiles,
+  uploadRentalLossCsvFile,
 } from './servicev2'
 
 export const routes = (router: KoaRouter) => {
@@ -44,7 +45,7 @@ export const routes = (router: KoaRouter) => {
         aggregateAccountingCsv,
         ledgerAccountingCsv
       )
-      //await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
+      await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
 
       ctx.status = 200
       ctx.body = {
@@ -75,6 +76,10 @@ export const routes = (router: KoaRouter) => {
       const rentalLosses = await exportRentalLosses(companyId)
       const { aggregateRentalLossAccountingCsv, errors } = await createRentalLossAccounting(rentalLosses)
 
+      await uploadRentalLossCsvFile(
+        companyId,
+        aggregateRentalLossAccountingCsv
+      )
       ctx.status = 200
     }
   )

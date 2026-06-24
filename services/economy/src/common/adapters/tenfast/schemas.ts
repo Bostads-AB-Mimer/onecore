@@ -275,7 +275,7 @@ export const TenfastRentalLossSchema = z.object({
     postadress: z.string(),
     postnummer: z.string(),
     stad: z.string(),
-    skvNummer: z.string().nullable(),
+    skvNummer: z.union([z.string(), z.number()]).nullable(),
     objektnummer: z.string(),
     typ: z.string(),
     hyror: z.array(TenfastRentalLossHyraSchema),
@@ -307,7 +307,7 @@ export const TenfastRentalLossSchema = z.object({
       cancellation: z
         .object({
           cancelled: z.boolean(),
-          doneAutomatically: z.boolean(),
+          doneAutomatically: z.boolean().optional(),
         })
         .optional(),
       automaticExtension: z.any().nullable(),
