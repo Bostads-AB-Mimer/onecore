@@ -301,12 +301,13 @@ export const routes = (router: KoaRouter) => {
         )
 
         // rentalId comes from a nested to-many relation, so it can't be ordered
-        // in the Prisma query — sort the mapped results by object number here.
-        // Numeric collation keeps "…0010" after "…0002".
+        // in the Prisma query like the other search endpoints — sort the mapped
+        // results here instead. Object numbers are zero-padded fixed-width
+        // (e.g. "807-033-03-0302"), so a plain lexicographic sort yields numeric
+        // order and stays consistent with the DB-side `orderBy` used by the
+        // other search endpoints (and with keys-portal's sortByRentalId).
         content.sort((a, b) =>
-          (a.rentalId ?? '').localeCompare(b.rentalId ?? '', 'sv', {
-            numeric: true,
-          })
+          (a.rentalId ?? '').localeCompare(b.rentalId ?? '', 'sv')
         )
 
         ctx.status = 200
