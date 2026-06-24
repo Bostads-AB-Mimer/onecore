@@ -8,7 +8,7 @@ import {
 import { useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react'
 
 import { useLeasesByContactCode } from '@/entities/lease'
 import { useRentalProperties } from '@/entities/rental-property'
@@ -23,15 +23,16 @@ import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import { Calendar } from '@/shared/ui/Calendar'
 import { Card } from '@/shared/ui/Card'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/shared/ui/Command'
 import { Label } from '@/shared/ui/Label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/Select'
 import { Separator } from '@/shared/ui/Separator'
 
 import { getArticleById } from '@/data/articles/miscellaneousInvoiceArticles'
@@ -83,6 +84,7 @@ export function MiscellaneousInvoiceForm() {
   const { data: projects, isLoading: isLoadingProjects } = useXledgerProjects()
 
   const [reference, setReference] = useState<XledgerContact | null>(null)
+  const [referenceOpen, setReferenceOpen] = useState(false)
 
   useEffect(() => {
     if (userState.tag === 'success' && contacts) {
@@ -126,13 +128,6 @@ export function MiscellaneousInvoiceForm() {
   const [comment, setComment] = useState('')
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
-
-  const handleSelectContact = (dbId: string) => {
-    const selectedContact = contacts?.find((c) => c.dbId === dbId)
-    if (selectedContact) {
-      setReference(selectedContact)
-    }
-  }
 
   const handleSelectTenant = (tenant: TenantSearchResult | null) => {
     setSelectedTenant(tenant)
@@ -306,23 +301,60 @@ export function MiscellaneousInvoiceForm() {
               {isLoadingContacts ? (
                 <div>Laddar kontakter...</div>
               ) : (
-                <Select
-                  value={reference?.dbId}
-                  onValueChange={(dbId) => handleSelectContact(dbId)}
-                >
-                  <SelectTrigger id="contact">
-                    <SelectValue placeholder="Välj referens" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contacts
-                      ?.sort((a, b) => a.fullName.localeCompare(b.fullName))
-                      .map((contact) => (
-                        <SelectItem key={contact.dbId} value={contact.dbId}>
-                          {contact.fullName}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={referenceOpen} onOpenChange={setReferenceOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="contact"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={referenceOpen}
+                      className={cn(
+                        'w-full justify-between font-normal',
+                        !reference && 'text-muted-foreground'
+                      )}
+                    >
+                      {reference?.fullName ?? 'Välj referens'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[--radix-popover-trigger-width] p-0"
+                    align="start"
+                  >
+                    <Command>
+                      <CommandInput placeholder="Sök referens..." />
+                      <CommandList>
+                        <CommandEmpty>Inga resultat</CommandEmpty>
+                        <CommandGroup>
+                          {[...(contacts ?? [])]
+                            .sort((a, b) =>
+                              a.fullName.localeCompare(b.fullName)
+                            )
+                            .map((contact) => (
+                              <CommandItem
+                                key={contact.dbId}
+                                value={contact.fullName}
+                                onSelect={() => {
+                                  setReference(contact)
+                                  setReferenceOpen(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    reference?.dbId === contact.dbId
+                                      ? 'opacity-100'
+                                      : 'opacity-0'
+                                  )}
+                                />
+                                {contact.fullName}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
               {errors.reference && (
                 <span className={cn('text-destructive')}>
