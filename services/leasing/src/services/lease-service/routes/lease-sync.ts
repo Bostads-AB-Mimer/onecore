@@ -7,7 +7,10 @@ import {
 import { SyncContactToLeasingSchema } from '@onecore/types'
 
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
-import { getLeases } from '../adapters/xpand/tenant-lease-adapter'
+import {
+  getLeases,
+  getSuboccupantsForLease,
+} from '../adapters/xpand/tenant-lease-adapter'
 import { getSignedContractPdf } from '../adapters/xpand/lease-document-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
@@ -91,6 +94,29 @@ export const routes = (router: KoaRouter) => {
               ...metadata,
             }
             return
+          }
+
+          // Best-effort: fetch nyttjare (suboccupants) from Xpand so they are
+          // available for Tenfast sync once the API endpoint is confirmed.
+          const suboccupants = await getSuboccupantsForLease(leaseId).catch(
+            (err) => {
+              logger.warn(
+                { err, leaseId },
+                'Failed to fetch suboccupants (nyttjare) from Xpand'
+              )
+              return []
+            }
+          )
+          if (suboccupants.length > 0) {
+            logger.info(
+              { leaseId, count: suboccupants.length },
+              'Suboccupants (nyttjare) found for lease — TODO: sync to Tenfast'
+            )
+          } else {
+            logger.info(
+              { leaseId },
+              'No suboccupants (nyttjare) found for lease'
+            )
           }
 
           const createResult = await tenfastAdapter.importLease(

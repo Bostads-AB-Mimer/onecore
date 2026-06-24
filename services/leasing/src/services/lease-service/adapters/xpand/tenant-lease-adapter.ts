@@ -822,6 +822,71 @@ const formatDate = (date: Date) => {
   return date.toISOString().split('T')[0]
 }
 
+export type Suboccupant = {
+  leaseId: string
+  contactCode: string
+  name: string
+  fromDate: Date | null
+  toDate: Date | null
+}
+
+const getSuboccupantsForLease = async (
+  leaseId: string,
+  onlyActive = true
+): Promise<Suboccupant[]> => {
+  // hyavk is the contract-party table: each row links a contact (keycmctc) to
+  // a rental object (keyhyobj) with a role (keyhyakt). We join it twice because
+  // a single rental object can have multiple parties with different roles:
+  //
+  //   ten  (alias) — the primary tenant, role INNEHAVARE ("holder")
+  //   nyt  (alias) — the suboccupant,      role NYTTJARE  ("user/occupant")
+  //
+  // Joining on the same keyhyobj ties suboccupants to the same rental object
+  // as the primary tenant, which lets us filter by the lease's hyobjben ID.
+  //
+  // cmctc (aliased nyt_c) provides the suboccupant's contact details.
+  // The RENSAD_GDPR guard excludes contacts whose data has been erased.
+  //
+  // When onlyActive is true, the date filter restricts to suboccupancies whose
+  // period overlaps today (fdate <= today AND (tdate IS NULL OR tdate >= today)).
+  const query = xpandDb
+    .from('hyavk as ten')
+    .select(
+      xpandDb.raw('RTRIM(hyobj.hyobjben) AS leaseId'),
+      xpandDb.raw('RTRIM(nyt_c.cmctckod) AS contactCode'),
+      xpandDb.raw('RTRIM(nyt_c.cmctcben) AS name'),
+      'nyt.fdate as fromDate',
+      'nyt.tdate as toDate'
+    )
+    // Second hyavk join: find suboccupants on the same rental object as the tenant
+    .join('hyavk as nyt', function () {
+      this.on('nyt.keyhyobj', '=', 'ten.keyhyobj').andOn(
+        'nyt.keyhyakt',
+        '=',
+        xpandDb.raw("'NYTTJARE'")
+      )
+    })
+    // hyobj gives us the human-readable lease ID (hyobjben) to filter by
+    .join('hyobj', 'hyobj.keyhyobj', 'nyt.keyhyobj')
+    .where('ten.keyhyakt', 'INNEHAVARE')
+    .where('hyobj.hyobjben', leaseId)
+
+  if (onlyActive) {
+    query.whereRaw('nyt.fdate <= GETDATE()').where(function () {
+      this.whereNull('nyt.tdate').orWhereRaw('nyt.tdate >= GETDATE()')
+    })
+  }
+
+  const rows: any[] = await query
+  return rows.map((row) => ({
+    leaseId: row.leaseId as string,
+    contactCode: row.contactCode as string,
+    name: row.name as string,
+    fromDate: (row.fromDate as Date | null) ?? null,
+    toDate: (row.toDate as Date | null) ?? null,
+  }))
+}
+
 export {
   getLeases,
   getContactByNationalRegistrationNumber,
@@ -839,4 +904,5 @@ export {
   getContactsForIdentityCheck,
   transformFromDbContact,
   getContactsByLeaseId,
+  getSuboccupantsForLease,
 }

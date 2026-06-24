@@ -15,6 +15,7 @@ jest.mock('../../adapters/xpand/xpandDb', () => ({
 
 jest.mock('../../adapters/xpand/tenant-lease-adapter', () => ({
   getLeases: jest.fn(),
+  getSuboccupantsForLease: jest.fn().mockResolvedValue([]),
 }))
 
 jest.mock('../../adapters/xpand/lease-document-adapter', () => ({
@@ -28,6 +29,10 @@ app.use(bodyParser())
 app.use(router.routes())
 
 const getLeases = jest.spyOn(tenantLeaseAdapter, 'getLeases')
+const getSuboccupantsForLease = jest.spyOn(
+  tenantLeaseAdapter,
+  'getSuboccupantsForLease'
+)
 const getLeaseChanges = jest.spyOn(cmlogLeaseAdapter, 'getLeaseChanges')
 const importLease = jest.spyOn(tenfastAdapter, 'importLease')
 const terminateLease = jest.spyOn(tenfastAdapter, 'terminateLease')
@@ -190,6 +195,59 @@ describe('POST /leases/sync', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('lease-could-not-be-created')
+    })
+
+    it('calls getSuboccupantsForLease after successful create', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: new Date('2026-01-01'),
+        }),
+      ])
+      importLease.mockResolvedValueOnce({
+        ok: true,
+        data: { _id: 'tenfast-id' },
+      })
+      getSuboccupantsForLease.mockResolvedValueOnce([
+        {
+          leaseId: '123-456/01',
+          contactCode: 'P123456',
+          name: 'Test Person',
+          fromDate: new Date('2025-01-01'),
+          toDate: null,
+        },
+      ])
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'create',
+      })
+
+      expect(res.status).toBe(201)
+      expect(getSuboccupantsForLease).toHaveBeenCalledWith('123-456/01')
+    })
+
+    it('still returns 201 when getSuboccupantsForLease throws', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: new Date('2026-01-01'),
+        }),
+      ])
+      importLease.mockResolvedValueOnce({
+        ok: true,
+        data: { _id: 'tenfast-id' },
+      })
+      getSuboccupantsForLease.mockRejectedValueOnce(new Error('xpand error'))
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contact: factory.syncTenantPayload.build(),
+        action: 'create',
+      })
+
+      expect(res.status).toBe(201)
     })
   })
 
