@@ -135,6 +135,15 @@ describe(mapLeasesToLfExportRows, () => {
       expect(rows).toHaveLength(0)
     })
 
+    it('excludes leases where insurance row has a negative amount', () => {
+      const rows = mapLeasesToLfExportRows(
+        [makeLease({ hyror: [makeInsuranceRow({ amount: -93 })] })],
+        ARTICLE_ID
+      )
+
+      expect(rows).toHaveLength(0)
+    })
+
     it('excludes leases with no rental object', () => {
       const rows = mapLeasesToLfExportRows(
         [makeLease({ hyresobjekt: [] })],
