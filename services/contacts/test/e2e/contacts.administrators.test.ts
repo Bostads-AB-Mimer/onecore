@@ -22,50 +22,34 @@ describe('förvaltare endpoints', () => {
     }
   })
 
-  describe('GET /contacts/:contactCode/administrators', () => {
-    it('returns the förvaltare of a contact that has one', async () => {
-      const response = await httpClient.get('/contacts/P000555/administrators')
+  describe('GET /contacts/:contactCode/administrator', () => {
+    it('returns the administrator as a full contact', async () => {
+      const response = await httpClient.get('/contacts/P000555/administrator')
 
       expect(response.status).toBe(200)
-      expect(response.data.content.relations).toHaveLength(1)
-
-      const [relation] = response.data.content.relations
-      expect(RelatedContactSchema.safeParse(relation).success).toBe(true)
-      expect(relation).toMatchObject({
+      expect(response.data.content).toMatchObject({
         contactCode: 'P000444',
-        role: 'administrator',
-        fullName: 'McTestface Testy',
       })
     })
 
-    it('returns an empty list for a contact without förvaltare', async () => {
-      const response = await httpClient.get('/contacts/P000111/administrators')
-
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toEqual([])
-    })
-
-    it('does not return a god man as förvaltare', async () => {
-      const response = await httpClient.get('/contacts/P000666/administrators')
-
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toEqual([])
-    })
-
-    it('redacts the name of a förvaltare with a protected identity', async () => {
-      const response = await httpClient.get('/contacts/P000777/administrators')
-
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toHaveLength(1)
-      expect(response.data.content.relations[0]).toMatchObject({
-        contactCode: 'P000888',
-        role: 'administrator',
-        fullName: 'redacted',
+    it('returns 404 when the contact has only a god man (no administrator)', async () => {
+      const response = await httpClient.get('/contacts/P000666/administrator', {
+        validateStatus: () => true,
       })
+
+      expect(response.status).toBe(404)
+    })
+
+    it('returns 404 for a contact without an administrator', async () => {
+      const response = await httpClient.get('/contacts/P000111/administrator', {
+        validateStatus: () => true,
+      })
+
+      expect(response.status).toBe(404)
     })
 
     it('returns 404 for an unknown contact', async () => {
-      const response = await httpClient.get('/contacts/P999999/administrators', {
+      const response = await httpClient.get('/contacts/P999999/administrator', {
         validateStatus: () => true,
       })
 
@@ -129,7 +113,11 @@ describe('förvaltare endpoints', () => {
       const response = await httpClient.get('/contacts/P000555')
       expect(response.status).toBe(200)
       expect(response.data.content.relatedContacts).toEqual([
-        { contactCode: 'P000444', role: 'administrator', fullName: 'McTestface Testy' },
+        {
+          contactCode: 'P000444',
+          role: 'administrator',
+          fullName: 'McTestface Testy',
+        },
       ])
     })
 
@@ -160,7 +148,11 @@ describe('förvaltare endpoints', () => {
       const response = await httpClient.get('/contacts/P000666')
       expect(response.status).toBe(200)
       expect(response.data.content.relatedContacts).toEqual([
-        { contactCode: 'P000444', role: 'trustee', fullName: 'McTestface Testy' },
+        {
+          contactCode: 'P000444',
+          role: 'trustee',
+          fullName: 'McTestface Testy',
+        },
       ])
     })
 

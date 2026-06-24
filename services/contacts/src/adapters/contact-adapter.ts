@@ -102,6 +102,26 @@ export interface ContactsRepository {
   ) => Promise<RelatedContact[] | null>
 
   /**
+   * Retrieves the god man of a contact as RelatedContact objects with role
+   * 'trustee'.
+   *
+   * @returns null when the subject contact does not exist; empty array when
+   *          it exists but has no god man.
+   */
+  getTrustees: (contactCode: ContactCode) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the contacts the given contact is god man for (the inverse
+   * direction) as RelatedContact objects with role 'ward'.
+   *
+   * @returns null when the subject contact does not exist; empty array when
+   *          it exists but is not a god man for anyone.
+   */
+  getTrusteeWards: (
+    contactCode: ContactCode
+  ) => Promise<RelatedContact[] | null>
+
+  /**
    * Retrieves contacts by their national ID number.
    *
    * @param nid - The national ID number to search for.

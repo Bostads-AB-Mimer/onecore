@@ -3,7 +3,8 @@ import { ContactCode } from '@src/domain'
 import { RelatedContact, RelatedContactRole } from '@src/domain/contact'
 
 const REDACTED_CONTACT_CODE = 'RENSAD_GDPR'
-const ADMINISTRATOR_FORVTYP = 2
+export const TRUSTEE_FORVTYP = 1
+export const ADMINISTRATOR_FORVTYP = 2
 
 const ROLE_BY_FORVTYP: Record<number, RelatedContactRole> = {
   1: 'trustee',
@@ -61,17 +62,18 @@ export type GuardianRelationsResult = {
   related: RelatedContact[]
 }
 
-/** The contact's förvaltare. */
+/** The contact's god man/förvaltare for the given forvtyp. */
 export const guardianRelations = async (
   db: knex.Knex,
-  contactCode: ContactCode
+  contactCode: ContactCode,
+  forvtyp: number
 ): Promise<GuardianRelationsResult> => {
   const rows = await db('cmctc as subject')
     .leftJoin('cmctc as related', function () {
       this.on('subject.keycmctc2', 'related.keycmctc').andOn(
         'subject.forvtyp',
         '=',
-        db.raw('?', [ADMINISTRATOR_FORVTYP])
+        db.raw('?', [forvtyp])
       )
     })
     .whereRaw('TRIM(subject.cmctckod) = ?', [contactCode.trim()])
@@ -79,21 +81,22 @@ export const guardianRelations = async (
 
   return {
     subjectExists: rows.length > 0,
-    related: toRelatedContacts(rows, 'administrator'),
+    related: toRelatedContacts(rows, ROLE_BY_FORVTYP[forvtyp]),
   }
 }
 
-/** The contacts the given contact is förvaltare for. */
+/** The contacts the given contact is god man/förvaltare for, for the given forvtyp. */
 export const wardRelations = async (
   db: knex.Knex,
-  contactCode: ContactCode
+  contactCode: ContactCode,
+  forvtyp: number
 ): Promise<GuardianRelationsResult> => {
   const rows = await db('cmctc as subject')
     .leftJoin('cmctc as related', function () {
       this.on('related.keycmctc2', 'subject.keycmctc').andOn(
         'related.forvtyp',
         '=',
-        db.raw('?', [ADMINISTRATOR_FORVTYP])
+        db.raw('?', [forvtyp])
       )
     })
     .whereRaw('TRIM(subject.cmctckod) = ?', [contactCode.trim()])
