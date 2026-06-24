@@ -112,10 +112,14 @@ export async function transferStralforsFiles(): Promise<void> {
       username: config.stralforsExport.sftp.username,
       password: config.stralforsExport.sftp.password,
       port: config.stralforsExport.sftp.port ?? 22,
-      // Strålfors SFTP server fingerprint — verified 2026-06-12 via SSH debug session.
-      // Reject connections to any other host to prevent MITM.
-      hostVerifier: (fingerprint: string) =>
-        fingerprint === 'SHA256:b1CVzrZkuOk+0efd2T+tPB7QmMo/rSm+TTUa3f8XAO8',
+      hostVerifier: (fingerprint: string) => {
+        const expected = config.stralforsExport.sftp.hostFingerprint
+        if (!expected) {
+          logger.warn('STRALFORS_EXPORT__SFTP__HOST_FINGERPRINT is not set — skipping host verification')
+          return true
+        }
+        return fingerprint === expected
+      },
       algorithms: {
         serverHostKey: [
           'rsa-sha2-512',

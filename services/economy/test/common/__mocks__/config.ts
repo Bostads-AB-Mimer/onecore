@@ -40,6 +40,7 @@ export default {
       password: 'test-sftp-password',
       port: 22,
       directory: 'TEST',
+      hostFingerprint: 'SHA256:test-fingerprint',
     },
     notificationEmail: 'test@example.com',
   },

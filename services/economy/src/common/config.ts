@@ -11,6 +11,7 @@ type SftpConfig = {
   glDirectory?: string
   arDirectory?: string
   useSshDss?: boolean
+  hostFingerprint?: string
 }
 
 export interface Config {
@@ -192,6 +193,7 @@ const config = configPackage({
         password: '',
         port: 22,
         directory: 'TEST',
+        hostFingerprint: '',
       },
       notificationEmail: '',
     },
