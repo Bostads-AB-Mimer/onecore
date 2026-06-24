@@ -33,4 +33,15 @@ export default {
     retryBackoffMs: 0,
     maxRetries: 10,
   },
+  stralforsExport: {
+    sftp: {
+      host: 'test-stralfors-sftp.com',
+      username: 'test-sftp-user',
+      password: 'test-sftp-password',
+      port: 22,
+      directory: 'TEST',
+      hostFingerprint: 'SHA256:test-fingerprint',
+    },
+    notificationEmail: 'test@example.com',
+  },
 }

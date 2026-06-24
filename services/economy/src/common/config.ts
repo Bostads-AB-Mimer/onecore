@@ -11,6 +11,7 @@ type SftpConfig = {
   glDirectory?: string
   arDirectory?: string
   useSshDss?: boolean
+  hostFingerprint?: string
 }
 
 export interface Config {
@@ -72,6 +73,10 @@ export interface Config {
     baseUrl: string
     apiKey: string
     companyId: string
+  }
+  stralforsExport: {
+    sftp: SftpConfig
+    notificationEmail: string
   }
   health: {
     xledger: {
@@ -181,6 +186,17 @@ const config = configPackage({
         minimumMinutesBetweenRequests: 5,
       },
     },
+    stralforsExport: {
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        port: 22,
+        directory: 'TEST',
+        hostFingerprint: '',
+      },
+      notificationEmail: '',
+    },
   },
 })
 
@@ -198,5 +214,6 @@ export default {
   ),
   infobip: config.get('infobip'),
   tenfast: config.get('tenfast'),
+  stralforsExport: config.get('stralforsExport'),
   health: config.get('health'),
 } as Config

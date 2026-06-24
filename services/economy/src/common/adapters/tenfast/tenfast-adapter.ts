@@ -17,6 +17,9 @@ import {
   TenfastLeaseSchema,
   TenfastRentalPropertySchema,
   TenfastRentalProperty,
+  TenfastOutboundExportSchema,
+  TenfastOutboundExportListSchema,
+  TenfastOutboundExport,
   TenfastAutogiroConsentResponseSchema,
   TenfastAutogiroConsent,
   isVisibleTenfastInvoice,
@@ -44,6 +47,8 @@ const makeTenfastRequest = async (
     method?: string
     params?: Record<string, string | string[] | number | number[] | undefined>
     data?: any
+    validateStatus?: (status: number) => boolean
+    responseType?: 'json' | 'arraybuffer'
   }
 ) => {
   return axios.request({
@@ -56,6 +61,8 @@ const makeTenfastRequest = async (
       'Content-type': 'application/json',
       'api-token': apiKey,
     },
+    ...(config?.validateStatus && { validateStatus: config.validateStatus }),
+    ...(config?.responseType && { responseType: config.responseType }),
   })
 }
 
@@ -784,6 +791,140 @@ const transformToInvoiceRow = (
   }
 }
 
+export const listNewOutboundExports = async (): Promise<
+  AdapterResult<TenfastOutboundExport[], 'unknown'>
+> => {
+  try {
+    const records: TenfastOutboundExport[] = []
+    let next: string | null = ''
+    let totalCount = Infinity
+
+    while (next !== null && records.length < totalCount) {
+      const response = await makeTenfastRequest(
+        '/v1/hyresvard/outbound-exports',
+        {
+          params: {
+            hyresvard: companyId,
+            status: 'NEW',
+            ...(next ? { paginate: next } : {}),
+          },
+        }
+      )
+
+      if (response.status !== 200) {
+        logger.error(
+          { status: response.status },
+          'listNewOutboundExports: unexpected status'
+        )
+        return { ok: false, err: 'unknown' }
+      }
+
+      const parsed = TenfastOutboundExportListSchema.safeParse(response.data)
+      if (!parsed.success) {
+        logger.error(
+          { error: parsed.error },
+          'listNewOutboundExports: response parse failed'
+        )
+        return { ok: false, err: 'unknown' }
+      }
+
+      records.push(...parsed.data.records)
+      next = parsed.data.next
+      totalCount = parsed.data.totalCount
+    }
+
+    return { ok: true, data: records }
+  } catch (err) {
+    logger.error({ err }, 'listNewOutboundExports: failed')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const downloadOutboundExport = async (
+  exportId: string
+): Promise<
+  AdapterResult<{ content: Buffer; filename: string }, 'not-found' | 'unknown'>
+> => {
+  try {
+    const response = await makeTenfastRequest(
+      `/v1/hyresvard/outbound-exports/${exportId}/download`,
+      {
+        method: 'POST',
+        params: { hyresvard: companyId },
+        responseType: 'arraybuffer',
+        validateStatus: () => true,
+      }
+    )
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (response.status !== 200) {
+      logger.error(
+        { exportId, status: response.status },
+        'downloadOutboundExport: download failed'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return {
+      ok: true,
+      data: {
+        content: Buffer.from(response.data),
+        filename:
+          response.headers['content-disposition']?.match(
+            /filename="?([^";\s]+)"?/
+          )?.[1] ?? `${exportId}.xml`,
+      },
+    }
+  } catch (err) {
+    logger.error({ err, exportId }, 'downloadOutboundExport: failed')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const markOutboundExportSent = async (
+  exportId: string
+): Promise<AdapterResult<TenfastOutboundExport, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await makeTenfastRequest(
+      `/v1/hyresvard/outbound-exports/${exportId}/mark-sent`,
+      {
+        method: 'POST',
+        params: { hyresvard: companyId },
+        validateStatus: () => true,
+      }
+    )
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (response.status !== 200) {
+      logger.error(
+        { exportId, status: response.status },
+        'markOutboundExportSent: unexpected status'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = TenfastOutboundExportSchema.safeParse(response.data)
+    if (!parsed.success) {
+      logger.error(
+        { exportId, error: parsed.error },
+        'markOutboundExportSent: response parse failed'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: parsed.data }
+  } catch (err) {
+    logger.error({ err, exportId }, 'markOutboundExportSent: failed')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const getInvoicePdf = async (
   ocr: string
 ): Promise<
@@ -884,3 +1025,5 @@ export const getAutogiroConsentByNationalRegistrationNumber = async (
     return { ok: false, err: err.message }
   }
 }
+
+export type { TenfastOutboundExport }

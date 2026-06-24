@@ -369,3 +369,27 @@ export type TenfastRentalProperty = z.infer<typeof TenfastRentalPropertySchema>
 export type TenfastAutogiroConsent = z.infer<
   typeof TenfastAutogiroConsentSchema
 >
+
+export const TenfastOutboundExportSchema = z.object({
+  _id: z.string(),
+  provider: z.string(),
+  type: z.string(),
+  format: z.string(),
+  status: z.enum(['NEW', 'SENT', 'FAILED']),
+  size: z.number(),
+  filename: z.string(),
+  invoicesCount: z.number(),
+  sentAt: z.string().nullable(),
+  failedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export const TenfastOutboundExportListSchema = z.object({
+  records: z.array(TenfastOutboundExportSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
+export type TenfastOutboundExport = z.infer<typeof TenfastOutboundExportSchema>
