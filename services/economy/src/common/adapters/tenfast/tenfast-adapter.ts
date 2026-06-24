@@ -25,7 +25,6 @@ import {
   isVisibleTenfastInvoice,
 } from './schemas'
 
-export type { TenfastOutboundExport }
 import {
   Contact,
   Invoice,
@@ -49,6 +48,7 @@ const makeTenfastRequest = async (
     params?: Record<string, string | string[] | number | number[] | undefined>
     data?: any
     validateStatus?: (status: number) => boolean
+    responseType?: 'json' | 'arraybuffer'
   }
 ) => {
   return axios.request({
@@ -62,6 +62,7 @@ const makeTenfastRequest = async (
       'api-token': apiKey,
     },
     ...(config?.validateStatus && { validateStatus: config.validateStatus }),
+    ...(config?.responseType && { responseType: config.responseType }),
   })
 }
 
@@ -827,17 +828,15 @@ export const downloadOutboundExport = async (
   AdapterResult<{ content: Buffer; filename: string }, 'not-found' | 'unknown'>
 > => {
   try {
-    const response = await axios.request({
-      baseURL: baseUrl,
-      url: `/v1/hyresvard/outbound-exports/${exportId}/download`,
-      method: 'POST',
-      params: { hyresvard: companyId },
-      responseType: 'arraybuffer',
-      headers: {
-        'api-token': apiKey,
-      },
-      validateStatus: () => true,
-    })
+    const response = await makeTenfastRequest(
+      `/v1/hyresvard/outbound-exports/${exportId}/download`,
+      {
+        method: 'POST',
+        params: { hyresvard: companyId },
+        responseType: 'arraybuffer',
+        validateStatus: () => true,
+      }
+    )
 
     if (response.status === 404) {
       return { ok: false, err: 'not-found' }
@@ -1008,3 +1007,5 @@ export const getAutogiroConsentByNationalRegistrationNumber = async (
     return { ok: false, err: err.message }
   }
 }
+
+export type { TenfastOutboundExport }
