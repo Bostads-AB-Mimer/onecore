@@ -90,7 +90,9 @@ describe(adapter.getInvoicesByContactCode, () => {
     const result = await adapter.getInvoicesByContactCode('P12345')
     expect(result).toHaveLength(1)
     expect(() =>
-      schemas.v1.InvoiceSchema.array().parse(result?.map((parsed) => parsed.invoice))
+      schemas.v1.InvoiceSchema.array().parse(
+        result?.map((parsed) => parsed.invoice)
+      )
     ).not.toThrow()
   })
 

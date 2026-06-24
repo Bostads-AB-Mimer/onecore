@@ -189,12 +189,12 @@ describe('Invoice Service', () => {
         .mockResolvedValueOnce(
           parsedXledger(factory.invoice.build({ invoiceId: 'test-invoice-id' }))
         )
-      jest
-        .spyOn(tenfastAdapter, 'getInvoiceByOcr')
-        .mockResolvedValueOnce({
-          ok: true,
-          data: parsedTenfast(factory.invoice.build({ invoiceId: 'test-invoice-id' })),
-        })
+      jest.spyOn(tenfastAdapter, 'getInvoiceByOcr').mockResolvedValueOnce({
+        ok: true,
+        data: parsedTenfast(
+          factory.invoice.build({ invoiceId: 'test-invoice-id' })
+        ),
+      })
 
       const res = await request(app.callback()).get(`/invoices/12345`)
 

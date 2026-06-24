@@ -115,7 +115,9 @@ export async function transferStralforsFiles(): Promise<void> {
       hostVerifier: (fingerprint: string) => {
         const expected = config.stralforsExport.sftp.hostFingerprint
         if (!expected) {
-          logger.warn('STRALFORS_EXPORT__SFTP__HOST_FINGERPRINT is not set — skipping host verification')
+          logger.warn(
+            'STRALFORS_EXPORT__SFTP__HOST_FINGERPRINT is not set — skipping host verification'
+          )
           return true
         }
         return fingerprint === expected

@@ -17,7 +17,6 @@ import {
   TenfastLeaseSchema,
   TenfastRentalPropertySchema,
   TenfastRentalProperty,
-  TenfastLeaseSearchResponseSchema,
   TenfastOutboundExportSchema,
   TenfastOutboundExportListSchema,
   TenfastOutboundExport,
