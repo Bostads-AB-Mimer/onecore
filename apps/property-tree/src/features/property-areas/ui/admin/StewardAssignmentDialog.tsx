@@ -1,16 +1,6 @@
 import { useState } from 'react'
-import { Check, ChevronsUpDown } from 'lucide-react'
 
-import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/shared/ui/Command'
 import {
   Dialog,
   DialogContent,
@@ -19,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
-import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
+import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 
 interface Steward {
   id: string
@@ -45,19 +35,15 @@ export function StewardAssignmentDialog({
   allStewards,
   onAssign,
 }: StewardAssignmentDialogProps) {
-  const [selectedSteward, setSelectedSteward] = useState<string>(
-    currentSteward.id
-  )
-  const [popoverOpen, setPopoverOpen] = useState(false)
+  const [selectedSteward, setSelectedSteward] =
+    useState<Steward>(currentSteward)
 
   const handleSave = () => {
-    if (selectedSteward !== currentSteward.id) {
-      onAssign(selectedSteward)
+    if (selectedSteward.id !== currentSteward.id) {
+      onAssign(selectedSteward.id)
     }
     onOpenChange(false)
   }
-
-  const selectedStewardData = allStewards.find((s) => s.id === selectedSteward)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,69 +59,36 @@ export function StewardAssignmentDialog({
 
         <div className="py-4">
           <label className="text-sm font-medium mb-2 block">Kvartersvärd</label>
-          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={popoverOpen}
-                className="w-full justify-between"
-              >
-                {selectedStewardData ? (
-                  <span>
-                    {selectedStewardData.name}
-                    {selectedStewardData.employeeId
-                      ? ` (${selectedStewardData.employeeId})`
-                      : ''}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">
-                    Välj kvartersvärd...
+          <SearchableSelect
+            items={allStewards}
+            value={selectedSteward}
+            onChange={setSelectedSteward}
+            getKey={(steward) => steward.id}
+            getLabel={(steward) =>
+              steward.employeeId
+                ? `${steward.name} (${steward.employeeId})`
+                : steward.name
+            }
+            getSearchValue={(steward) =>
+              `${steward.name} ${steward.employeeId ?? ''}`
+            }
+            placeholder="Välj kvartersvärd..."
+            searchPlaceholder="Sök kvartersvärd..."
+            emptyText="Ingen kvartersvärd hittades."
+            contentClassName="z-50"
+            renderItem={(steward) => (
+              <div className="flex flex-col">
+                <span>{steward.name}</span>
+                {(steward.employeeId || steward.phone) && (
+                  <span className="opacity-70 text-xs">
+                    {steward.employeeId}
+                    {steward.employeeId && steward.phone && ' • '}
+                    {steward.phone}
                   </span>
                 )}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[380px] p-0 z-50" align="start">
-              <Command>
-                <CommandInput placeholder="Sök kvartersvärd..." />
-                <CommandList>
-                  <CommandEmpty>Ingen kvartersvärd hittades.</CommandEmpty>
-                  <CommandGroup>
-                    {allStewards.map((steward) => (
-                      <CommandItem
-                        key={steward.id}
-                        value={`${steward.name} ${steward.employeeId ?? ''}`}
-                        onSelect={() => {
-                          setSelectedSteward(steward.id)
-                          setPopoverOpen(false)
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4',
-                            selectedSteward === steward.id
-                              ? 'opacity-100'
-                              : 'opacity-0'
-                          )}
-                        />
-                        <div className="flex flex-col">
-                          <span>{steward.name}</span>
-                          {(steward.employeeId || steward.phone) && (
-                            <span className="opacity-70 text-xs">
-                              {steward.employeeId}
-                              {steward.employeeId && steward.phone && ' • '}
-                              {steward.phone}
-                            </span>
-                          )}
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+              </div>
+            )}
+          />
         </div>
 
         <DialogFooter>
@@ -144,7 +97,7 @@ export function StewardAssignmentDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={selectedSteward === currentSteward.id}
+            disabled={selectedSteward.id === currentSteward.id}
           >
             Spara
           </Button>
