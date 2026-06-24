@@ -2,7 +2,6 @@ import knex from 'knex'
 import { ContactCode } from '@src/domain'
 import { RelatedContact, RelatedContactRole } from '@src/domain/contact'
 
-const REDACTED_CONTACT_CODE = 'RENSAD_GDPR'
 export const TRUSTEE_FORVTYP = 1
 export const ADMINISTRATOR_FORVTYP = 2
 
@@ -36,7 +35,7 @@ const toRelatedContact = (
   role?: RelatedContactRole
 ): RelatedContact | null => {
   const contactCode = row.contactCode?.trim()
-  if (!contactCode || contactCode === REDACTED_CONTACT_CODE) return null
+  if (!contactCode) return null
 
   const resolvedRole =
     role ?? (row.forvtyp ? ROLE_BY_FORVTYP[row.forvtyp] : undefined)
