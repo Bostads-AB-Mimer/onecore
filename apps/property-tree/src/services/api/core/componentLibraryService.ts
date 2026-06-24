@@ -21,7 +21,11 @@ import { DELETE, GET, POST, PUT } from './baseApi'
 export const componentLibraryService = {
   // ===== Category Operations =====
   async getCategories(): Promise<ComponentCategory[]> {
-    const { data, error } = await GET('/component-categories')
+    // Fetch all categories (backend caps limit at 100); pagination is
+    // handled client-side in DataTable since there are few categories.
+    const { data, error } = await GET('/component-categories', {
+      params: { query: { limit: 100 } },
+    })
     if (error) throw error
     return (data?.content || []) as ComponentCategory[]
   },
@@ -71,12 +75,10 @@ export const componentLibraryService = {
 
   // ===== Type Operations =====
   async getTypes(categoryId?: string): Promise<ComponentType[]> {
+    // Fetch all types (backend caps limit at 100); pagination is handled
+    // client-side in DataTable since there are few types.
     const { data, error } = await GET('/component-types', {
-      params: categoryId
-        ? {
-            query: { categoryId },
-          }
-        : undefined,
+      params: { query: { limit: 100, categoryId } },
     })
     if (error) throw error
     return (data?.content || []) as ComponentType[]
@@ -201,16 +203,19 @@ export const componentLibraryService = {
     subtypeId?: string,
     options?: { page?: number; limit?: number; search?: string }
   ): Promise<ComponentModel[]> {
-    const query: Record<string, string | number | undefined> = {}
+    // Fetch all models in one request (backend caps limit at 100) — pagination
+    // is handled client-side in ModelsTable since there are few models.
+    const query: Record<string, string | number | undefined> = {
+      limit: options?.limit || 100,
+    }
     if (subtypeId) query.subtypeId = subtypeId
     if (options?.page) query.page = options.page
-    if (options?.limit) query.limit = options.limit
     if (options?.search && options.search.trim().length >= 2) {
       query.modelName = options.search.trim()
     }
 
     const { data, error } = await GET('/component-models', {
-      params: Object.keys(query).length > 0 ? { query } : undefined,
+      params: { query },
     })
     if (error) throw error
     return (data?.content || []) as ComponentModel[]
