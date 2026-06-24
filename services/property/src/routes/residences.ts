@@ -281,26 +281,37 @@ export const routes = (router: KoaRouter) => {
         // Search for residences by rental id and name
         const residences = await searchResidences(q, ['rentalId', 'name'])
 
+        const content = residences.map(
+          (r): ResidenceSearchResult => ({
+            id: r.id,
+            code: r.code,
+            name: r.name || '',
+            deleted: Boolean(r.deleted),
+            validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
+            rentalId: r.propertyObject.propertyStructures[0].rentalId,
+            property: {
+              code: r.propertyObject.propertyStructures[0].propertyCode,
+              name: r.propertyObject.propertyStructures[0].propertyName,
+            },
+            building: {
+              code: r.propertyObject.propertyStructures[0].buildingCode,
+              name: r.propertyObject.propertyStructures[0].buildingName,
+            },
+          })
+        )
+
+        // rentalId comes from a nested to-many relation, so it can't be ordered
+        // in the Prisma query — sort the mapped results by object number here.
+        // Numeric collation keeps "…0010" after "…0002".
+        content.sort((a, b) =>
+          (a.rentalId ?? '').localeCompare(b.rentalId ?? '', 'sv', {
+            numeric: true,
+          })
+        )
+
         ctx.status = 200
         ctx.body = {
-          content: residences.map(
-            (r): ResidenceSearchResult => ({
-              id: r.id,
-              code: r.code,
-              name: r.name || '',
-              deleted: Boolean(r.deleted),
-              validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
-              rentalId: r.propertyObject.propertyStructures[0].rentalId,
-              property: {
-                code: r.propertyObject.propertyStructures[0].propertyCode,
-                name: r.propertyObject.propertyStructures[0].propertyName,
-              },
-              building: {
-                code: r.propertyObject.propertyStructures[0].buildingCode,
-                name: r.propertyObject.propertyStructures[0].buildingName,
-              },
-            })
-          ),
+          content,
           ...metadata,
         }
       } catch (err) {
