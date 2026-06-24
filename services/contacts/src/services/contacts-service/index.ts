@@ -201,8 +201,10 @@ export const routes = (
         'Lean by default — returns base contact fields with empty phone/' +
         'email/address arrays. Pass any combination of `includePhone`, ' +
         '`includeEmail`, `includeAddress` to include those joins; ' +
-        "`includeRelations` adds each contact's god man/förvaltare/ward " +
-        'relations. Missing contact codes are simply absent from the response.',
+        "`includeRelations` adds each contact's god man/förvaltare " +
+        'and annan fakturamottagare relations (both directions). Missing ' +
+        'contact codes are ' +
+        'simply absent from the response.',
       tags: ['Contacts'],
       query: {
         code: {
@@ -225,7 +227,8 @@ export const routes = (
         },
         includeRelations: {
           description:
-            'Include related contacts (guardians/wards) in the response.',
+            'Include related contacts (god man/förvaltare and annan ' +
+            'fakturamottagare, both directions) in the response.',
           schema: z.optional(z.boolean()),
         },
       },
@@ -349,7 +352,7 @@ export const routes = (
       description:
         'Returns the contacts that have the given contact registered as ' +
         'their trustee, as RelatedContact objects with role ' +
-        "'ward'. Empty list when the contact is not a trustee for anyone; " +
+        "'trusteeFor'. Empty list when the contact is not a trustee for anyone; " +
         '404 when the contact does not exist.',
       tags: ['Contacts'],
       params: {
@@ -362,7 +365,7 @@ export const routes = (
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const relations = await contactsRepository.getTrusteeWards(
+      const relations = await contactsRepository.getTrusteesFor(
         ctx.params.contactCode
       )
 
@@ -397,7 +400,7 @@ export const routes = (
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { contactCode } = ctx.params
-      const relations = await contactsRepository.getGuardians(contactCode)
+      const relations = await contactsRepository.getAdministrators(contactCode)
 
       if (relations === null) {
         ctx.status = 404
@@ -430,7 +433,7 @@ export const routes = (
       description:
         'Returns the contacts that have the given contact registered as ' +
         'their förvaltare, as RelatedContact objects with role ' +
-        "'ward'. Empty list when the contact is not a förvaltare for anyone; " +
+        "'administratorFor'. Empty list when the contact is not a förvaltare for anyone; " +
         '404 when the contact does not exist.',
       tags: ['Contacts'],
       params: {
@@ -443,7 +446,7 @@ export const routes = (
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const relations = await contactsRepository.getGuardianWards(
+      const relations = await contactsRepository.getAdministratorsFor(
         ctx.params.contactCode
       )
 
@@ -454,6 +457,81 @@ export const routes = (
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody({ relations }, metadata)
+    }
+  )
+
+  router.get(
+    '/contacts/:contactCode/other-invoice-recipients',
+    {
+      summary:
+        'List the other invoice recipients (annan fakturamottagare) of a contact',
+      description:
+        'Returns the contacts registered as annan fakturamottagare on the ' +
+        "contact's current leases, as RelatedContact objects with role " +
+        "'otherInvoiceRecipient'. Empty list when there are none; 404 when the " +
+        'contact does not exist.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      response: {
+        200: GetRelatedContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const relations = await contactsRepository.getOtherInvoiceRecipients(
+        ctx.params.contactCode
+      )
+
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { relations },
+        ...metadata,
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/:contactCode/other-invoice-recipient-for',
+    {
+      summary: 'List the contacts a person is annan fakturamottagare for',
+      description:
+        'Returns the current lease holders that have the given contact ' +
+        'registered as their annan fakturamottagare, as RelatedContact objects ' +
+        "with role 'otherInvoiceRecipientFor'. Empty list when there are none; " +
+        '404 when the contact does not exist.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      response: {
+        200: GetRelatedContactsResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const relations = await contactsRepository.getOtherInvoiceRecipientsFor(
+        ctx.params.contactCode
+      )
+
+      if (relations === null) {
+        ctx.status = 404
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { relations },
+        ...metadata,
+      }
     }
   )
 
