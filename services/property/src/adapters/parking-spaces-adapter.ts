@@ -41,6 +41,7 @@ export async function searchParkingSpaces(q: string, searchFields: string[]) {
           },
         })),
       },
+      orderBy: { rentalId: 'asc' },
     })
     .then(trimStrings)
 

@@ -158,6 +158,7 @@ const searchProperties = (
         where: {
           designation: { contains: q },
         },
+        orderBy: { code: 'asc' },
       })
       .then(trimStrings)
   } catch (err) {

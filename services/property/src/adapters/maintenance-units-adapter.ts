@@ -175,6 +175,7 @@ export const searchMaintenanceUnits = async (
       code: { contains: q },
     },
     select: maintenanceUnitWithPropertySelect,
+    orderBy: { code: 'asc' },
     take: 10,
   })
 

@@ -45,6 +45,7 @@ export async function searchFacilities(q: string, searchFields: string[]) {
           },
         })),
       },
+      orderBy: { rentalId: 'asc' },
       take: 10,
     })
     .then(trimStrings)
