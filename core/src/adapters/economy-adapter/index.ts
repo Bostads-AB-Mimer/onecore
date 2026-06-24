@@ -61,6 +61,27 @@ export async function getInvoicesByContactCode(
   return { ok: false, err: 'unknown' }
 }
 
+export type ImportInvoicesResult = {
+  errors: unknown[]
+  successfulInvoices: string[]
+  skippedInvoices: string[]
+}
+
+export async function importInvoices(
+  companyId: string
+): Promise<AdapterResult<ImportInvoicesResult, 'unknown'>> {
+  const response = await axios.post(
+    `${config.economyService.url}/accounting/import-invoices/${companyId}`
+  )
+
+  if (response.status === 200) {
+    return { ok: true, data: response.data }
+  }
+
+  logger.error(response.data, 'economy-adapter.importInvoices')
+  return { ok: false, err: 'unknown' }
+}
+
 export async function getInvoicesSentToDebtCollection(
   contactCode: string,
   from?: Date

@@ -622,15 +622,26 @@ export const createRentalLossAccounting = async (rentalLosses: RentalLoss[]): Pr
   })
 
   let voucherIndex = 0
+  let voucherRowCount = 0
+  let MAX_VOUCHER_ROWS = 500
 
   Object.values(rowChunks).forEach((chunkAggregatedRows) => {
-    const voucherNumber =
+    let voucherNumber =
       Date.now().toString().substring(6, 12) +
       voucherIndex.toString().padStart(3, '0')
     voucherIndex++
+    voucherRowCount = 0
 
     chunkAggregatedRows.forEach(aggregatedRow => {
+      if (voucherRowCount > MAX_VOUCHER_ROWS) {
+        voucherNumber =
+          Date.now().toString().substring(6, 12) +
+          voucherIndex.toString().padStart(3, '0')
+        voucherIndex++
+        voucherRowCount = 0
+      }
       aggregatedRow.voucherNumber = voucherNumber
+      voucherRowCount++
     })
   })
 
@@ -638,7 +649,6 @@ export const createRentalLossAccounting = async (rentalLosses: RentalLoss[]): Pr
 
   console.table(aggregateRows)
   console.log(aggregateRowsCsv)
-  //const aggregateRowsCsv = convertToRentalLossAggregateCsvRows(aggregateRows)
 
   return {
     aggregateRentalLossAccountingCsv: aggregateRowsCsv,
@@ -712,4 +722,21 @@ export const uploadCsvFiles = async (
 
   const ledgerFilename = `${company.xpandId}/${Date.now()}-${company.xpandId}-ledger.gl.csv`
   await uploadFile(ledgerFilename, ledgerAccountingCsv.join('\n'))
+}
+
+export const uploadRentalLossCsvFile = async (
+  companyId: string,
+  rentalLossAccountingCsv: string[]) => {
+
+  const company = config.companies.find(
+    (company) => company.xpandId.localeCompare(companyId) === 0
+  )
+
+  if (!company) {
+    logger.error({ companyId }, 'Could not find company')
+    throw new Error('Could not find company ' + companyId)
+  }
+
+  const aggregateFilename = `${company.xpandId}/${Date.now()}-${company.xpandId}-rental-loss.gl.csv`
+  await uploadFile(aggregateFilename, rentalLossAccountingCsv.join('\n'))
 }

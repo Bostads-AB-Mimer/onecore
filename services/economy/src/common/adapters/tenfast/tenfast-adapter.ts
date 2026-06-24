@@ -630,7 +630,7 @@ export const getRentalLosses = async (
 > => {
   console.log('Parsing rental loss')
 
-  const parsedResponse = TenfastRentalLossResponseSchema.safeParse(JSON.parse(
+  /*const parsedResponse = TenfastRentalLossResponseSchema.safeParse(JSON.parse(
     `[{
   "month": "2026-05",
   "hyresvard": {
@@ -734,7 +734,27 @@ export const getRentalLosses = async (
     }
   ]
   }]`
-  ))
+  ))*/
+
+  const reportId = '6a3276034ce55cc308bb2beb'
+  const result = await makeTenfastRequest(`/v1/hyresvard/reports/${reportId}/download`, {
+    params: {
+      hyresvard: company.tenfastId,
+      /*paginate:
+        'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
+      //ocrNumber: '552606000000733',
+    },
+  })
+
+  if (result.status !== 200) {
+    logger.error(
+      { error: result.statusText },
+      'Error getting invoices from Tenfast'
+    )
+    return { ok: false, err: result.statusText }
+  }
+
+  const parsedResponse = TenfastRentalLossResponseSchema.safeParse(result.data)
 
   if (parsedResponse.error) {
     console.log(parsedResponse.error)
