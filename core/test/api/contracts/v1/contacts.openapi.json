@@ -154,7 +154,10 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
@@ -347,7 +350,10 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
@@ -685,7 +691,10 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
@@ -878,7 +887,10 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
@@ -1115,7 +1127,10 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
@@ -1308,7 +1323,10 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
@@ -1427,7 +1445,7 @@
           },
           {
             "name": "includeRelations",
-            "description": "Include related contacts (guardians/wards) in the response.",
+            "description": "Include related contacts (god man/förvaltare and annan fakturamottagare, both directions) in the response.",
             "in": "query",
             "required": false,
             "schema": {
@@ -1584,7 +1602,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -1777,7 +1798,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -2010,7 +2034,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -2203,7 +2230,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -2436,7 +2466,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -2629,7 +2662,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -2862,7 +2898,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -3055,7 +3094,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -3288,7 +3330,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -3481,7 +3526,10 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
@@ -3702,7 +3750,10 @@
                       "enum": [
                         "trustee",
                         "administrator",
-                        "ward"
+                        "trusteeFor",
+                        "administratorFor",
+                        "otherInvoiceRecipient",
+                        "otherInvoiceRecipientFor"
                       ]
                     },
                     "fullName": {
@@ -3895,7 +3946,10 @@
                       "enum": [
                         "trustee",
                         "administrator",
-                        "ward"
+                        "trusteeFor",
+                        "administratorFor",
+                        "otherInvoiceRecipient",
+                        "otherInvoiceRecipientFor"
                       ]
                     },
                     "fullName": {

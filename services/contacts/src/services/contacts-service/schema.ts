@@ -3,7 +3,10 @@ import z from 'zod'
 export const RelatedContactRoleSchema = z.enum([
   'trustee', // god man
   'administrator', // förvaltare
-  'ward', // huvudman — a contact this contact is god man/förvaltare for
+  'trusteeFor', // the subject is god man for this contact (its huvudman)
+  'administratorFor', // the subject is förvaltare for this contact (its huvudman)
+  'otherInvoiceRecipient', // annan fakturamottagare — receives invoices for the subject's leases
+  'otherInvoiceRecipientFor', // the subject is the annan fakturamottagare for this contact
 ])
 
 export const RelatedContactSchema = z.object({
