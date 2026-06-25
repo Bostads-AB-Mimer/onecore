@@ -9,6 +9,24 @@ import he from 'he'
 // SMS sender ID registered with Infobip
 const SMS_SENDER = 'Mimer'
 
+// Builds the per-message `webhooks` block for an SMS send so Tele2/Infobip
+// pushes the delivery report to our endpoint. Returns an empty object when no
+// public URL is configured (dev without a tunnel) so the send is unaffected.
+// The webhook secret rides in the URL because per-message webhooks have no
+// header slot; our webhook validates it (see verifyWebhookAuth).
+const buildDeliveryWebhook = (): {
+  webhooks?: { delivery: { url: string }; contentType: string }
+} => {
+  const reportUrl = config.infobip.smsDeliveryReportUrl
+  if (!reportUrl) return {}
+
+  const url = config.infobip.webhookToken
+    ? `${reportUrl}?token=${encodeURIComponent(config.infobip.webhookToken)}`
+    : reportUrl
+
+  return { webhooks: { delivery: { url }, contentType: 'application/json' } }
+}
+
 // Response from POSTing to Infobip's /sms/3/messages (outbound SMS send).
 export type InfobipSendSmsResponse = {
   messages: Array<{
@@ -47,6 +65,12 @@ const sendSmsV3 = async (
           sender: SMS_SENDER,
           destinations,
           content: { text },
+          // Per-message delivery webhook: SMS runs through Tele2's separate
+          // Infobip account, which our Mimer subscription can't see, so we ask
+          // for the delivery report per send. The webhook secret rides in the
+          // URL (?token=) because per-message webhooks have no header slot.
+          // Omitted when unconfigured (dev without a public URL).
+          ...buildDeliveryWebhook(),
         },
       ],
     }),

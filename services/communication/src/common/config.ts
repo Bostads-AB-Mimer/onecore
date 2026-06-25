@@ -8,6 +8,19 @@ export interface Config {
     baseUrl: string
     apiKey: string
     parkingSpaceOfferTempalteId: number
+    // Basic-auth credentials Infobip presents when calling our delivery-report
+    // webhook (POST /webhooks/infobip). Used by the email subscription path.
+    // Empty in dev → auth check is skipped.
+    webhookUsername: string
+    webhookPassword: string
+    // Secret token for the SMS path: per-message SMS delivery webhooks can't
+    // send a Basic header, so the secret rides in the URL (?token=). The
+    // webhook accepts either Basic or this token.
+    webhookToken: string
+    // Public URL Tele2/Infobip should POST SMS delivery reports to, e.g.
+    // https://<host>/webhooks/infobip. Added per-message to the SMS send when
+    // set; empty (dev without a tunnel) → no delivery webhook is attached.
+    smsDeliveryReportUrl: string
   }
   tele2: {
     baseUrl: string
@@ -54,6 +67,10 @@ const config = configPackage({
     infobip: {
       baseUrl: '',
       apiKey: '',
+      webhookUsername: '',
+      webhookPassword: '',
+      webhookToken: '',
+      smsDeliveryReportUrl: '',
     },
     tele2: {
       baseUrl: '',
