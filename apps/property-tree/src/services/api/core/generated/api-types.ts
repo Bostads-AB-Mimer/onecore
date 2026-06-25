@@ -10287,6 +10287,7 @@ export interface components {
       /** @enum {string} */
       status: "Current" | "Upcoming" | "AboutToEnd" | "Ended" | "PreliminaryTerminated" | "PendingSignature" | "NotSent";
       tenantContactIds?: string[];
+      subletContactId?: string;
       rentalPropertyId: string;
       rentalObject?: {
         rentalObjectCode: string;
@@ -12719,6 +12720,7 @@ export interface components {
         /** @enum {string} */
         status: "Current" | "Upcoming" | "AboutToEnd" | "Ended" | "PreliminaryTerminated" | "PendingSignature" | "NotSent";
         tenantContactIds?: string[];
+        subletContactId?: string;
         rentalPropertyId: string;
         rentalObject?: {
           rentalObjectCode: string;
@@ -13027,6 +13029,7 @@ export interface components {
         /** @enum {string} */
         status: "Current" | "Upcoming" | "AboutToEnd" | "Ended" | "PreliminaryTerminated" | "PendingSignature" | "NotSent";
         tenantContactIds?: string[];
+        subletContactId?: string;
         rentalPropertyId: string;
         rentalObject?: {
           rentalObjectCode: string;
@@ -13445,6 +13448,7 @@ export interface components {
         /** @enum {string} */
         status: "Current" | "Upcoming" | "AboutToEnd" | "Ended" | "PreliminaryTerminated" | "PendingSignature" | "NotSent";
         tenantContactIds?: string[];
+        subletContactId?: string;
         rentalPropertyId: string;
         rentalObject?: {
           rentalObjectCode: string;
