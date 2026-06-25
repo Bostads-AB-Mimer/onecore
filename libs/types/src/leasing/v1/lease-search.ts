@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import { LeaseStatus, LeaseType } from '../../enums'
 
+export const LeaseContactTypeSchema = z.enum(['tenant', 'subletTenant'])
+
+export type LeaseContactType = z.infer<typeof LeaseContactTypeSchema>
+
 /**
  * Contact info schema - reusable for lease contacts
  */
@@ -9,6 +13,7 @@ export const ContactInfoSchema = z.object({
   contactCode: z.string(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
+  contactType: LeaseContactTypeSchema.optional(),
 })
 
 export type ContactInfo = z.infer<typeof ContactInfoSchema>

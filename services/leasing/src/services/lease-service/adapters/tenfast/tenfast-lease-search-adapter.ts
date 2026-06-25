@@ -248,7 +248,18 @@ function mapTenfastLeaseToSearchResult(
     contactCode: t.externalId,
     email: null,
     phone: null,
+    contactType: 'tenant' as const,
   }))
+
+  if (lease.andraHandHG?.externalId) {
+    contacts.push({
+      name: lease.andraHandHG.name ?? lease.andraHandHG.externalId,
+      contactCode: lease.andraHandHG.externalId,
+      email: lease.andraHandHG.email ?? null,
+      phone: lease.andraHandHG.phone ?? null,
+      contactType: 'subletTenant' as const,
+    })
+  }
 
   return {
     leaseId: lease.externalId,
@@ -288,7 +299,11 @@ function mapBatchGetLeaseToSearchResult(
     contactCode: t.externalId,
     email: null,
     phone: null,
+    contactType: 'tenant' as const,
   }))
+  // TODO: andraHandHG is not included in the batch-get API response — sublet contacts
+  // are silently absent for leases fetched via this path (buildingCodes/areaCodes/districtNames
+  // filters). Fix requires either enriching the batch-get endpoint or switching to single-fetch.
 
   return {
     leaseId: lease.externalId,

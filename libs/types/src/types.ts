@@ -82,6 +82,7 @@ interface Lease {
   leaseEndDate: Date | undefined
   status: LeaseStatus
   tenantContactIds: string[] | undefined
+  subletContactId?: string
   tenants: (Contact & { leaseContactType?: string })[] | undefined //SHould really be renamed contacts if it should sitll include second hand tenants and incvopice recipients
   rentalPropertyId: string
   rentalObject?: RentalObject

@@ -10429,6 +10429,8 @@ export interface components {
           contactCode: string;
           email: string | null;
           phone: string | null;
+          /** @enum {string} */
+          contactType?: "tenant" | "subletTenant";
         })[];
       address: string | null;
       postalCode: string | null;
@@ -10453,6 +10455,8 @@ export interface components {
       contactCode: string;
       email: string | null;
       phone: string | null;
+      /** @enum {string} */
+      contactType?: "tenant" | "subletTenant";
     };
     PaginationMeta: {
       totalRecords: number;
@@ -13895,10 +13899,6 @@ export interface components {
         firstName: string | null;
         lastName: string | null;
         fullName: string;
-      };
-      trustee?: {
-        contactCode: string;
-        fullName?: string;
       };
     }) | ({
       contactCode: string;
