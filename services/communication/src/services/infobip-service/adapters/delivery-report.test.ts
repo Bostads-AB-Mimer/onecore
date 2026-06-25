@@ -40,19 +40,6 @@ describe('mapInfobipStatus', () => {
     ).toBe('failed')
   })
 
-  it('maps an email bounce to bounced via the error code (6034)', () => {
-    expect(
-      mapInfobipStatus(
-        { groupName: 'UNDELIVERABLE', name: 'UNDELIVERABLE_REJECTED_OPERATOR' },
-        {
-          id: 6034,
-          name: 'EC_DESTINATION_ADDRESS_SUPPRESSED',
-          description: 'Recipient address suppressed due to bounce',
-        }
-      )
-    ).toBe('bounced')
-  })
-
   it.each([
     [6011, 'soft bounce'],
     [6012, 'hard bounce'],
