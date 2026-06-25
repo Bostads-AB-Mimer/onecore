@@ -525,10 +525,7 @@ export const routes = (
       }
 
       ctx.status = 200
-      ctx.body = {
-        content: { relations },
-        ...metadata,
-      }
+      ctx.body = makeSuccessResponseBody({ relations }, metadata)
     }
   )
 
