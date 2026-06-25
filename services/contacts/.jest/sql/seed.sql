@@ -314,6 +314,13 @@ UPDATE cmctc SET keycmctc2 = '_0J4157HHH     ', forvtyp = 2 WHERE cmctckod = 'P0
 UPDATE cmctc SET keycmctc2 = '_0J4157GGG     ', forvtyp = 2 WHERE cmctckod = 'P000999';
 UPDATE cmctc SET lagsokt = 1 WHERE cmctckod IN ('P000888', 'P000999');
 
+-- Structured first/last names (fnamn/enamn) for relation fixtures, so the
+-- relatedContacts firstName/lastName fields carry real values (cmctcben stays
+-- the Xpand "Lastname Firstname" form).
+UPDATE cmctc SET fnamn = 'Testy', enamn = 'McTestface' WHERE cmctckod = 'P000444';
+UPDATE cmctc SET fnamn = 'Fiktiv', enamn = 'Personsson' WHERE cmctckod = 'P000555';
+UPDATE cmctc SET fnamn = 'Testolina', enamn = 'Exempelsdotter' WHERE cmctckod = 'P000666';
+
 -- Annan fakturamottagare scenarios. These P9000xx contacts are kept
 -- out of FULL_TEST_DATA_SET so trimToDataSet strips them from other test files;
 -- the other-invoice-recipient e2e opts them in via its own dataSet.
@@ -329,6 +336,11 @@ INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, c
   -- tenantRows sistadeb and currentRelation filters independently.
   ('_OIRC900011    ', '_OIRO900011    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900011', 'Recipient TerminatedOnly', 1053, 'OIR9000011'),
   ('_OIRC900012    ', '_OIRO900012    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900012', 'Recipient ExpiredOnly', 1053, 'OIR9000012');
+
+-- Structured first/last names for the invoice-recipient fixtures asserted in
+-- the bake-in tests (cmctcben stays the "Lastname Firstname" form).
+UPDATE cmctc SET fnamn = 'Active', enamn = 'Holder' WHERE cmctckod = 'P900001';
+UPDATE cmctc SET fnamn = 'Normal', enamn = 'Recipient' WHERE cmctckod = 'P900010';
 
 -- Lease objects: OBJ2 terminated (sistadeb set), the rest active.
 INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES

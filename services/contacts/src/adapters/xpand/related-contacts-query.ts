@@ -32,6 +32,8 @@ type RelatedRow = {
   subjectCode?: string | null
   contactCode: string | null
   fullName: string | null
+  firstName?: string | null
+  lastName?: string | null
   protectedIdentity: unknown
   forvtyp?: number | null
 }
@@ -39,13 +41,15 @@ type RelatedRow = {
 const RELATED_COLUMNS = [
   'related.cmctckod as contactCode',
   'related.cmctcben as fullName',
+  'related.fnamn as firstName',
+  'related.enamn as lastName',
   'related.lagsokt as protectedIdentity',
 ]
 
-const redactName = (
-  fullName: string | null,
+const redactField = (
+  value: string | null | undefined,
   protectedIdentity: unknown
-): string => (protectedIdentity !== null ? 'redacted' : (fullName ?? '').trim())
+): string => (protectedIdentity !== null ? 'redacted' : (value ?? '').trim())
 
 // A role is either fixed (invoice directions) or derived from the row's
 // forvtyp (guardian directions, via ROLE_BY_FORVTYP / REVERSE_ROLE_BY_FORVTYP).
@@ -70,7 +74,9 @@ const toRelatedContact = (
   return {
     contactCode,
     role,
-    fullName: redactName(row.fullName, row.protectedIdentity),
+    fullName: redactField(row.fullName, row.protectedIdentity),
+    firstName: redactField(row.firstName, row.protectedIdentity),
+    lastName: redactField(row.lastName, row.protectedIdentity),
   }
 }
 
@@ -204,6 +210,8 @@ const invoiceRecipientRows = (
     'subject.cmctckod as subjectCode',
     'fm_c.cmctckod as contactCode',
     'fm_c.cmctcben as fullName',
+    'fm_c.fnamn as firstName',
+    'fm_c.enamn as lastName',
     'fm_c.lagsokt as protectedIdentity'
   )
 }
@@ -244,6 +252,8 @@ const tenantRows = (
     'subject.cmctckod as subjectCode',
     'ten_c.cmctckod as contactCode',
     'ten_c.cmctcben as fullName',
+    'ten_c.fnamn as firstName',
+    'ten_c.enamn as lastName',
     'ten_c.lagsokt as protectedIdentity'
   )
 }

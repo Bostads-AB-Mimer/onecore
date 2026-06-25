@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Receipt,
   StickyNote,
+  Users,
 } from 'lucide-react'
 import { parseAsString, useQueryState } from 'nuqs'
 
@@ -15,6 +16,7 @@ import {
   TenantLedgerTabContent,
   TenantNotesTabContent,
   TenantQueueSystemTabContent,
+  TenantRelatedContactsTabContent,
 } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
@@ -92,6 +94,10 @@ export const TenantTabs = ({
           <Key className="h-4 w-4" />
           <span className="hidden sm:inline">Nyckellån</span>
         </TabsTrigger>
+        <TabsTrigger value="related" className="flex items-center gap-1.5">
+          <Users className="h-4 w-4" />
+          <span className="hidden sm:inline">Relaterade kontakter</span>
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="contracts">
@@ -130,6 +136,10 @@ export const TenantTabs = ({
 
       <TabsContent value="keys">
         <TenantKeyLoans contactCode={contactCode} leases={leases} />
+      </TabsContent>
+
+      <TabsContent value="related">
+        <TenantRelatedContactsTabContent contactCode={contactCode} />
       </TabsContent>
     </Tabs>
   )

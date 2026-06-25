@@ -13,6 +13,8 @@ export const RelatedContactSchema = z.object({
   contactCode: z.string(),
   role: RelatedContactRoleSchema,
   fullName: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
 })
 
 export const PhoneNumberTypeSchema = z.enum([

@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Receipt,
   StickyNote,
+  Users,
 } from 'lucide-react'
 
 import {
@@ -14,6 +15,7 @@ import {
   TenantLedgerTabContent,
   TenantNotesTabContent,
   TenantQueueSystemTabContent,
+  TenantRelatedContactsTabContent,
 } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
@@ -102,6 +104,12 @@ export const TenantTabsMobile = ({
       icon: Key,
       title: 'Nyckellån',
       content: <TenantKeyLoans contactCode={contactCode} leases={leases} />,
+    },
+    {
+      id: 'related',
+      icon: Users,
+      title: 'Relaterade kontakter',
+      content: <TenantRelatedContactsTabContent contactCode={contactCode} />,
     },
   ]
 

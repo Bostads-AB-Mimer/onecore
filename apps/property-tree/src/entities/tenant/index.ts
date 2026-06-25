@@ -9,8 +9,15 @@ export { formatTenantAddress, formatTenantName } from './lib/formatting'
 
 // Classification utilities
 export { getTenantRoles, isOrganization } from './lib/classification'
+export {
+  RELATED_CONTACT_GROUP_LABELS,
+  RELATED_CONTACT_GROUP_ORDER,
+  getContactRoleTitle,
+  getIncomingRelationSummary,
+} from './lib/relations'
 
 // Hooks
+export { useRelatedContacts } from './hooks/useRelatedContacts'
 export { useTenant } from './hooks/useTenant'
 export { useTenantComments } from './hooks/useTenantComments'
 export { useTenantInvoices } from './hooks/useTenantInvoices'

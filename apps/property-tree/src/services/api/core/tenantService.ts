@@ -1,4 +1,9 @@
-import type { BulkEmailResult, BulkSmsResult, Tenant } from '@/services/types'
+import type {
+  BulkEmailResult,
+  BulkSmsResult,
+  RelatedContact,
+  Tenant,
+} from '@/services/types'
 
 import { GET, POST } from './baseApi'
 
@@ -35,6 +40,18 @@ async function getContactByContactCode(contactCode: string): Promise<any> {
   if (!response?.content) throw new Error('Response ok but missing content')
 
   return response.content
+}
+
+async function getRelatedContacts(
+  contactCode: string
+): Promise<RelatedContact[]> {
+  const { data, error } = await GET('/v1/contacts/{contactCode}', {
+    params: { path: { contactCode } },
+  })
+
+  if (error) throw error
+
+  return data?.content?.relatedContacts ?? []
 }
 
 async function searchContacts(query: string): Promise<ContactSearchResult[]> {
@@ -82,6 +99,7 @@ async function sendBulkEmail(
 export const tenantService = {
   getByContactCode,
   getContactByContactCode,
+  getRelatedContacts,
   searchContacts,
   sendBulkSms,
   sendBulkEmail,
