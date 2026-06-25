@@ -20,11 +20,28 @@ const buildDeliveryWebhook = (): {
   const reportUrl = config.infobip.smsDeliveryReportUrl
   if (!reportUrl) return {}
 
-  const url = config.infobip.webhookToken
-    ? `${reportUrl}?token=${encodeURIComponent(config.infobip.webhookToken)}`
-    : reportUrl
+  // The token and the URL are a pair: a per-message webhook can only carry the
+  // secret in the URL. Without a token the report would arrive unauthenticated
+  // and be rejected (401) by a webhook that enforces auth — so skip loudly
+  // rather than request a report that silently never lands.
+  if (!config.infobip.webhookToken) {
+    logger.warn(
+      'sms-adapter.buildDeliveryWebhook: smsDeliveryReportUrl set without webhookToken; skipping delivery webhook'
+    )
+    return {}
+  }
 
-  return { webhooks: { delivery: { url }, contentType: 'application/json' } }
+  // Build via the URL API so an existing query string is preserved and the
+  // token is correctly encoded.
+  const reportUrlWithToken = new URL(reportUrl)
+  reportUrlWithToken.searchParams.set('token', config.infobip.webhookToken)
+
+  return {
+    webhooks: {
+      delivery: { url: reportUrlWithToken.toString() },
+      contentType: 'application/json',
+    },
+  }
 }
 
 // Response from POSTing to Infobip's /sms/3/messages (outbound SMS send).
@@ -47,7 +64,8 @@ export type InfobipSendSmsResponse = {
 // Tele2 procurement credentials (config.tele2). Email still uses config.infobip.
 const sendSmsV3 = async (
   destinations: { to: string }[],
-  text: string
+  text: string,
+  opts: { withDeliveryReport?: boolean } = {}
 ): Promise<InfobipSendSmsResponse> => {
   const baseUrl = config.tele2.baseUrl.replace(/\/$/, '') // Remove trailing slash
   const url = `${baseUrl}/sms/3/messages`
@@ -67,10 +85,10 @@ const sendSmsV3 = async (
           content: { text },
           // Per-message delivery webhook: SMS runs through Tele2's separate
           // Infobip account, which our Mimer subscription can't see, so we ask
-          // for the delivery report per send. The webhook secret rides in the
-          // URL (?token=) because per-message webhooks have no header slot.
-          // Omitted when unconfigured (dev without a public URL).
-          ...buildDeliveryWebhook(),
+          // for the delivery report per send. Only requested for sends we
+          // actually persist (bulk) — otherwise the report would match no
+          // message_recipient row and just generate noise.
+          ...(opts.withDeliveryReport ? buildDeliveryWebhook() : {}),
         },
       ],
     }),
@@ -91,7 +109,7 @@ export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
     logger.info('SMS sent successfully')
     return response
   } catch (error) {
-    logger.error(error, 'Error sending SMS')
+    logger.error({ err: error }, 'sms-adapter.sendParkingSpaceOfferSms')
     throw error
   }
 }
@@ -109,7 +127,7 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
     logger.info('Work order SMS sent successfully')
     return response
   } catch (error) {
-    logger.error(error, 'Error sending SMS')
+    logger.error({ err: error }, 'sms-adapter.sendWorkOrderSms')
     throw error
   }
 }
@@ -130,14 +148,18 @@ export const sendBulkSms = async (sms: {
     const destinations = sms.phoneNumbers.map((phone: string) => ({
       to: phone,
     }))
-    const response = await sendSmsV3(destinations, sms.text)
+    // Only bulk sends persist a message_recipient row (logOutboundDispatch in
+    // the route), so only these request a delivery report to match against.
+    const response = await sendSmsV3(destinations, sms.text, {
+      withDeliveryReport: true,
+    })
     logger.info(
       { recipientCount: sms.phoneNumbers.length },
       'Bulk SMS sent successfully'
     )
     return response
   } catch (error) {
-    logger.error(error, 'Error sending bulk SMS')
+    logger.error({ err: error }, 'sms-adapter.sendBulkSms')
     throw error
   }
 }

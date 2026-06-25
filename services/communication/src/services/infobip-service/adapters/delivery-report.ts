@@ -1,25 +1,35 @@
+import { z } from 'zod'
 import { communication } from '@onecore/types'
 
 type RecipientStatus = communication.RecipientStatus
 
-// The subset of an Infobip delivery-report `status` object we map on.
-export type InfobipStatus = {
-  groupName: string
-  name?: string
-}
+// Field schemas for an Infobip delivery-report result. Defined here next to the
+// mapper — the single source of truth for the report shape — and reused by the
+// webhook route to validate the request body, so the validated payload and the
+// mapper's input types can't drift apart.
+export const InfobipStatusSchema = z.object({
+  groupId: z.number().optional(),
+  groupName: z.string(),
+  id: z.number().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+})
 
-// The subset of an Infobip delivery-report `error` object we inspect. For a
-// successful delivery Infobip sends groupName "OK"; for failures it carries the
-// provider error that distinguishes a plain failure from an email bounce.
-export type InfobipError = {
-  id?: number
-  name?: string
-  description?: string
-  // Error group, e.g. "USER_ERRORS" (recipient-side) vs "OPERATOR_ERRORS" /
-  // "SYSTEM_ERRORS"; and whether the failure is permanent (non-retryable).
-  groupName?: string
-  permanent?: boolean
-}
+// For a successful delivery Infobip sends groupName "OK"; for failures the error
+// carries the detail that distinguishes a plain failure from a bounce.
+// `groupName` is the error group (e.g. "USER_ERRORS" = recipient-side) and
+// `permanent` flags a non-retryable failure.
+export const InfobipErrorSchema = z.object({
+  groupId: z.number().optional(),
+  groupName: z.string().optional(),
+  id: z.number().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  permanent: z.boolean().optional(),
+})
+
+export type InfobipStatus = z.infer<typeof InfobipStatusSchema>
+export type InfobipError = z.infer<typeof InfobipErrorSchema>
 
 // Infobip email bounces are NOT surfaced as a distinct status group — they
 // arrive as groupName UNDELIVERABLE/REJECTED and are only identifiable from the

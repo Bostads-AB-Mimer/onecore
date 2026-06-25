@@ -6,33 +6,23 @@ import { z } from 'zod'
 import Config from '../../../common/config'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { updateRecipientStatusByExternalId } from '../../communication-log-service/adapters/db'
-import { mapInfobipStatus } from '../adapters/delivery-report'
+import {
+  mapInfobipStatus,
+  InfobipStatusSchema,
+  InfobipErrorSchema,
+} from '../adapters/delivery-report'
 
 // Infobip delivery-report payload (push to notifyUrl). The same `results[]`
 // envelope is used for both SMS and email; `messageId` matches what we stored
-// as `externalMessageId` at send time. Service-local (Infobip-specific, not
+// as `externalMessageId` at send time. The status/error field schemas live with
+// the mapper (single source of truth). Service-local (Infobip-specific, not
 // consumed by core) so it lives here rather than in @onecore/types.
 const InfobipDeliveryReportSchema = z.object({
   results: z.array(
     z.object({
       messageId: z.string(),
-      status: z.object({
-        groupId: z.number().optional(),
-        groupName: z.string(),
-        id: z.number().optional(),
-        name: z.string().optional(),
-        description: z.string().optional(),
-      }),
-      error: z
-        .object({
-          groupId: z.number().optional(),
-          groupName: z.string().optional(),
-          id: z.number().optional(),
-          name: z.string().optional(),
-          description: z.string().optional(),
-          permanent: z.boolean().optional(),
-        })
-        .optional(),
+      status: InfobipStatusSchema,
+      error: InfobipErrorSchema.optional(),
     })
   ),
 })
@@ -103,11 +93,21 @@ export const routes = (router: KoaRouter) => {
    *     summary: Webhook endpoint for Infobip SMS/email delivery reports
    *     description: >
    *       Consumes Infobip delivery reports and updates the matching
-   *       message_recipient row's status/error by externalMessageId. Secured
-   *       with HTTP Basic auth (configured via Infobip Subscriptions).
+   *       message_recipient row's status/error by externalMessageId.
+   *       Accepts either authentication mechanism: HTTP Basic auth (email, via
+   *       the Infobip account Subscription) or a secret `token` query parameter
+   *       (SMS, via the per-message delivery webhook, which has no header slot).
    *     tags: [Webhooks]
    *     security:
    *       - basicAuth: []
+   *       - {}
+   *     parameters:
+   *       - in: query
+   *         name: token
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Shared secret for the SMS per-message webhook (alternative to Basic auth)
    *     requestBody:
    *       required: true
    *       content:
@@ -123,7 +123,7 @@ export const routes = (router: KoaRouter) => {
    *       200:
    *         description: Delivery report processed (acknowledged even on 0 matches)
    *       401:
-   *         description: Missing or invalid Basic auth
+   *         description: Missing or invalid credentials (Basic auth or token)
    */
   router.post(
     '(.*)/webhooks/infobip',
@@ -134,22 +134,26 @@ export const routes = (router: KoaRouter) => {
       try {
         const { results } = ctx.request.body as InfobipDeliveryReport
 
-        for (const result of results) {
-          const status = mapInfobipStatus(result.status, result.error)
-          // null = non-terminal (PENDING): leave the row as-is.
-          if (status === null) continue
+        // Results are independent rows — update them concurrently (knex caps
+        // pool concurrency, so a large email batch won't exhaust connections).
+        await Promise.all(
+          results.map((result) => {
+            const status = mapInfobipStatus(result.status, result.error)
+            // null = non-terminal (PENDING): leave the row as-is.
+            if (status === null) return undefined
 
-          // Only carry the provider error onto failures/bounces; a delivered
-          // report's error is "OK"/"No Error" which we don't want to persist.
-          const errorText =
-            status === 'delivered' ? undefined : result.error?.description
+            // Only carry the provider error onto failures/bounces; a delivered
+            // report's error is "OK"/"No Error" which we don't want to persist.
+            const errorText =
+              status === 'delivered' ? undefined : result.error?.description
 
-          await updateRecipientStatusByExternalId(
-            result.messageId,
-            status,
-            errorText
-          )
-        }
+            return updateRecipientStatusByExternalId(
+              result.messageId,
+              status,
+              errorText
+            )
+          })
+        )
 
         ctx.status = 200
         ctx.body = { ...metadata }
