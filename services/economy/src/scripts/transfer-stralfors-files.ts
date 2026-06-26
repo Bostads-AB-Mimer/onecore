@@ -106,6 +106,16 @@ export async function transferStralforsFiles(): Promise<void> {
   let failed = 0
 
   const sftpClient = new SftpClient()
+  const sftpConfig = {
+    host: config.stralforsExport.sftp.host,
+    port: config.stralforsExport.sftp.port ?? 22,
+    username: config.stralforsExport.sftp.username,
+    directory: config.stralforsExport.sftp.directory,
+    hostFingerprintConfigured: Boolean(
+      config.stralforsExport.sftp.hostFingerprint
+    ),
+  }
+  logger.info(sftpConfig, 'DEBUG: SFTP connection config (no secrets)')
   try {
     await sftpClient.connect({
       host: config.stralforsExport.sftp.host,
@@ -114,6 +124,14 @@ export async function transferStralforsFiles(): Promise<void> {
       port: config.stralforsExport.sftp.port ?? 22,
       hostVerifier: (fingerprint: string) => {
         const expected = config.stralforsExport.sftp.hostFingerprint
+        logger.info(
+          {
+            fingerprintReceived: fingerprint,
+            fingerprintExpected: expected ?? '(not set)',
+            match: fingerprint === expected,
+          },
+          'DEBUG: hostVerifier called'
+        )
         if (!expected) {
           logger.warn(
             'STRALFORS_EXPORT__SFTP__HOST_FINGERPRINT is not set — skipping host verification'
@@ -172,6 +190,14 @@ export async function transferStralforsFiles(): Promise<void> {
       }
     }
   } catch (err) {
+    logger.error(
+      {
+        err,
+        errMessage: err instanceof Error ? err.message : String(err),
+        errCode: (err as NodeJS.ErrnoException).code,
+      },
+      'DEBUG: SFTP connection/transfer error details'
+    )
     await notifyFailure(err, 'SFTP-anslutning')
     throw err
   } finally {
