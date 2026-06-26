@@ -194,7 +194,7 @@ export async function transferStralforsFiles(): Promise<void> {
       {
         err,
         errMessage: err instanceof Error ? err.message : String(err),
-        errCode: (err as NodeJS.ErrnoException).code,
+        errCode: (err as { code?: string }).code,
       },
       'DEBUG: SFTP connection/transfer error details'
     )
