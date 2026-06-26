@@ -283,6 +283,8 @@ describe('relatedContacts endpoints', () => {
           contactCode: 'P000444',
           role: 'administrator',
           fullName: 'McTestface Testy',
+          firstName: 'Testy',
+          lastName: 'McTestface',
         },
       ])
     })
@@ -294,6 +296,8 @@ describe('relatedContacts endpoints', () => {
         contactCode: 'P000555',
         role: 'administratorFor',
         fullName: 'Personsson Fiktiv',
+        firstName: 'Fiktiv',
+        lastName: 'Personsson',
       })
     })
 
@@ -312,6 +316,8 @@ describe('relatedContacts endpoints', () => {
           contactCode: 'P000444',
           role: 'trustee',
           fullName: 'McTestface Testy',
+          firstName: 'Testy',
+          lastName: 'McTestface',
         },
       ])
     })
@@ -323,11 +329,15 @@ describe('relatedContacts endpoints', () => {
         contactCode: 'P000888',
         role: 'administrator',
         fullName: 'redacted',
+        firstName: 'redacted',
+        lastName: 'redacted',
       })
       expect(response.data.content.relatedContacts).toContainEqual({
         contactCode: 'P000999',
         role: 'administratorFor',
         fullName: 'redacted',
+        firstName: 'redacted',
+        lastName: 'redacted',
       })
     })
 
@@ -337,7 +347,9 @@ describe('relatedContacts endpoints', () => {
       expect(response.data.content.relatedContacts).toContainEqual({
         contactCode: 'P900010',
         role: 'otherInvoiceRecipient',
-        fullName: expect.any(String),
+        fullName: 'Recipient Normal',
+        firstName: 'Normal',
+        lastName: 'Recipient',
       })
     })
 
@@ -347,7 +359,9 @@ describe('relatedContacts endpoints', () => {
       expect(response.data.content.relatedContacts).toContainEqual({
         contactCode: 'P900001',
         role: 'otherInvoiceRecipientFor',
-        fullName: expect.any(String),
+        fullName: 'Holder Active',
+        firstName: 'Active',
+        lastName: 'Holder',
       })
     })
   })

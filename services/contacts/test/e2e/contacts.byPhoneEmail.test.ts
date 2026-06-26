@@ -38,6 +38,8 @@ describe('contact lookup by phone/email surfaces relatedContacts', () => {
       contactCode: 'P000444',
       role: 'administrator',
       fullName: 'McTestface Testy',
+      firstName: 'Testy',
+      lastName: 'McTestface',
     })
   })
 
@@ -55,6 +57,8 @@ describe('contact lookup by phone/email surfaces relatedContacts', () => {
       contactCode: 'P000444',
       role: 'administrator',
       fullName: 'McTestface Testy',
+      firstName: 'Testy',
+      lastName: 'McTestface',
     })
   })
 })

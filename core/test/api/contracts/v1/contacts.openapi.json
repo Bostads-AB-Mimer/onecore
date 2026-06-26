@@ -162,12 +162,20 @@
                                     },
                                     "fullName": {
                                       "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -358,12 +366,20 @@
                                     },
                                     "fullName": {
                                       "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -699,12 +715,20 @@
                                     },
                                     "fullName": {
                                       "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -895,12 +919,20 @@
                                     },
                                     "fullName": {
                                       "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -1135,12 +1167,20 @@
                                     },
                                     "fullName": {
                                       "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -1331,12 +1371,20 @@
                                     },
                                     "fullName": {
                                       "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -1610,12 +1658,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -1806,12 +1862,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2042,12 +2106,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2238,12 +2310,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2474,12 +2554,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2670,12 +2758,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2906,12 +3002,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -3102,12 +3206,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -3338,12 +3450,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -3534,12 +3654,20 @@
                                   },
                                   "fullName": {
                                     "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -3758,12 +3886,20 @@
                     },
                     "fullName": {
                       "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "contactCode",
                     "role",
-                    "fullName"
+                    "fullName",
+                    "firstName",
+                    "lastName"
                   ],
                   "additionalProperties": false
                 }
@@ -3954,12 +4090,20 @@
                     },
                     "fullName": {
                       "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "contactCode",
                     "role",
-                    "fullName"
+                    "fullName",
+                    "firstName",
+                    "lastName"
                   ],
                   "additionalProperties": false
                 }

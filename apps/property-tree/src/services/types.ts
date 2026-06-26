@@ -266,6 +266,22 @@ export interface Tenant {
   housingContracts: ContractType[]
 }
 
+export type RelatedContactRole =
+  | 'trustee'
+  | 'administrator'
+  | 'trusteeFor'
+  | 'administratorFor'
+  | 'otherInvoiceRecipient'
+  | 'otherInvoiceRecipientFor'
+
+export interface RelatedContact {
+  contactCode: string
+  role: RelatedContactRole
+  fullName: string
+  firstName: string
+  lastName: string
+}
+
 // Queue System Types
 export interface ParkingSpaceForPublishing {
   id: string

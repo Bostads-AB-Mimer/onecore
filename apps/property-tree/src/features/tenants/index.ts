@@ -10,6 +10,7 @@ export { TenantLeasesTabContent } from './ui/TenantLeasesTabContent'
 export { TenantLedgerTabContent } from './ui/TenantLedgerTabContent'
 export { TenantNotesTabContent } from './ui/TenantNotesTabContent'
 export { TenantQueueSystemTabContent } from './ui/TenantQueueSystemTabContent'
+export { TenantRelatedContactsTabContent } from './ui/TenantRelatedContactsTabContent'
 export { TenantsTabContent } from './ui/TenantsTabContent'
 
 // Hooks

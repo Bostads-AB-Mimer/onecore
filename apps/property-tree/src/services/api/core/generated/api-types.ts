@@ -10067,7 +10067,7 @@ export interface paths {
           includeEmail?: boolean;
           /** @description Include addresses in the response. */
           includeAddress?: boolean;
-          /** @description Include related contacts (guardians/wards) in the response. */
+          /** @description Include related contacts (god man/förvaltare and annan fakturamottagare, both directions) in the response. */
           includeRelations?: boolean;
         };
       };
@@ -13884,8 +13884,10 @@ export interface components {
       relatedContacts?: ({
           contactCode: string;
           /** @enum {string} */
-          role: "trustee" | "administrator" | "ward";
+          role: "trustee" | "administrator" | "trusteeFor" | "administratorFor" | "otherInvoiceRecipient" | "otherInvoiceRecipientFor";
           fullName: string;
+          firstName: string;
+          lastName: string;
         })[];
       /** @enum {string} */
       type: "individual";
@@ -13895,10 +13897,6 @@ export interface components {
         firstName: string | null;
         lastName: string | null;
         fullName: string;
-      };
-      trustee?: {
-        contactCode: string;
-        fullName?: string;
       };
     }) | ({
       contactCode: string;
@@ -13928,8 +13926,10 @@ export interface components {
       relatedContacts?: ({
           contactCode: string;
           /** @enum {string} */
-          role: "trustee" | "administrator" | "ward";
+          role: "trustee" | "administrator" | "trusteeFor" | "administratorFor" | "otherInvoiceRecipient" | "otherInvoiceRecipientFor";
           fullName: string;
+          firstName: string;
+          lastName: string;
         })[];
       /** @enum {string} */
       type: "organisation";
