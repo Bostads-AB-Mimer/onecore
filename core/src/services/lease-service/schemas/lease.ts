@@ -62,6 +62,7 @@ export const Lease = z.object({
     'NotSent',
   ]),
   tenantContactIds: z.array(z.string()).optional(),
+  subletContactId: z.string().optional(),
   rentalPropertyId: z.string(),
   rentalObject: z
     .object({
@@ -241,6 +242,7 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     leaseEndDate: lease.leaseEndDate,
     status: mapLeaseStatus(lease.status),
     tenantContactIds: lease.tenantContactIds,
+    subletContactId: lease.subletContactId,
     rentalPropertyId: lease.rentalPropertyId,
     rentalObject: lease.rentalObject,
     type: lease.type,

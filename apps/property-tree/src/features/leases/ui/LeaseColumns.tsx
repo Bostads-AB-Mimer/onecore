@@ -39,12 +39,19 @@ export const leaseColumns = [
         <div className="space-y-1">
           {lease.contacts.map((contact) => (
             <div key={contact.contactCode}>
-              <Link
-                to={paths.tenant(contact.contactCode)}
-                className="font-medium text-primary hover:underline"
-              >
-                {contact.name}
-              </Link>
+              <div className="flex items-center gap-1.5">
+                <Link
+                  to={paths.tenant(contact.contactCode)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {contact.name}
+                </Link>
+                {contact.contactType === 'subletTenant' && (
+                  <span className="rounded bg-muted px-1 py-0.5 text-xs text-muted-foreground">
+                    Andrahand
+                  </span>
+                )}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {contact.contactCode}
               </div>

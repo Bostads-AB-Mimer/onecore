@@ -10287,6 +10287,7 @@ export interface components {
       /** @enum {string} */
       status: "Current" | "Upcoming" | "AboutToEnd" | "Ended" | "PreliminaryTerminated" | "PendingSignature" | "NotSent";
       tenantContactIds?: string[];
+      subletContactId?: string;
       rentalPropertyId: string;
       rentalObject?: {
         rentalObjectCode: string;
@@ -10429,6 +10430,8 @@ export interface components {
           contactCode: string;
           email: string | null;
           phone: string | null;
+          /** @enum {string} */
+          contactType?: "tenant" | "subletTenant";
         })[];
       address: string | null;
       postalCode: string | null;
@@ -10453,6 +10456,8 @@ export interface components {
       contactCode: string;
       email: string | null;
       phone: string | null;
+      /** @enum {string} */
+      contactType?: "tenant" | "subletTenant";
     };
     PaginationMeta: {
       totalRecords: number;
@@ -12715,6 +12720,7 @@ export interface components {
         /** @enum {string} */
         status: "Current" | "Upcoming" | "AboutToEnd" | "Ended" | "PreliminaryTerminated" | "PendingSignature" | "NotSent";
         tenantContactIds?: string[];
+        subletContactId?: string;
         rentalPropertyId: string;
         rentalObject?: {
           rentalObjectCode: string;
@@ -13023,6 +13029,7 @@ export interface components {
         /** @enum {string} */
         status: "Current" | "Upcoming" | "AboutToEnd" | "Ended" | "PreliminaryTerminated" | "PendingSignature" | "NotSent";
         tenantContactIds?: string[];
+        subletContactId?: string;
         rentalPropertyId: string;
         rentalObject?: {
           rentalObjectCode: string;
@@ -13441,6 +13448,7 @@ export interface components {
         /** @enum {string} */
         status: "Current" | "Upcoming" | "AboutToEnd" | "Ended" | "PreliminaryTerminated" | "PendingSignature" | "NotSent";
         tenantContactIds?: string[];
+        subletContactId?: string;
         rentalPropertyId: string;
         rentalObject?: {
           rentalObjectCode: string;

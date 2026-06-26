@@ -107,6 +107,19 @@ export const TenfastTagSchema = z.object({
 export type TenfastTag = z.infer<typeof TenfastTagSchema>
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
 
+export const TenfastSubletTenantSchema = z.object({
+  startDate: z.coerce.date().optional().nullable(),
+  endDate: z.coerce.date().optional().nullable(),
+  externalId: z.string().optional().nullable(),
+  name: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  idbeteckning: z.string().nullable().optional(),
+  reason: z.string().nullable().optional(),
+})
+
+export type TenfastSubletTenant = z.infer<typeof TenfastSubletTenantSchema>
+
 // TODO byt namn
 export const TenfastContractSchema = z.object({
   _id: z.string(),
@@ -269,6 +282,7 @@ export const TenfastLeaseSchema = z.object({
       originalName: z.string(),
     })
   ),
+  andraHandHG: TenfastSubletTenantSchema.optional().nullable(),
   versions: z.unknown().optional(),
   createdAt: optionalDateField,
   updatedAt: optionalDateField,

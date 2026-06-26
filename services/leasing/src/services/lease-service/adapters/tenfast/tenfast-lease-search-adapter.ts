@@ -70,6 +70,12 @@ interface BatchGetLease {
   }>
   tenants: BatchGetTenant[]
   rentalObjects: BatchGetRentalObject[]
+  subletTenant?: {
+    externalId: string
+    name?: string
+    email?: string
+    phone?: string
+  }
 }
 
 /** Raw shapes from Tenfast batch-get response (before transformation) */
@@ -89,6 +95,13 @@ interface RawBatchGetAvtal {
   hyror?: Partial<BatchGetLease['hyror'][number]>[]
   hyresgaster?: Partial<BatchGetTenant>[]
   originalData?: { hyresgaster?: Partial<BatchGetTenant>[] }
+  andraHandHG?: {
+    externalId?: string
+    name?: string
+    email?: string
+    phone?: string
+    idbeteckning?: string
+  }
 }
 
 interface RawBatchGetRentalObject extends Partial<BatchGetRentalObject> {
@@ -147,6 +160,14 @@ function parseBatchGetResponse(
           name: t.name,
           idbeteckning: t.idbeteckning ?? '',
         })),
+        subletTenant: raw.andraHandHG?.externalId
+          ? {
+              externalId: raw.andraHandHG.externalId,
+              name: raw.andraHandHG.name,
+              email: raw.andraHandHG.email,
+              phone: raw.andraHandHG.phone,
+            }
+          : undefined,
         rentalObjects: [
           {
             externalId: ro.externalId ?? '',
@@ -248,7 +269,18 @@ function mapTenfastLeaseToSearchResult(
     contactCode: t.externalId,
     email: null,
     phone: null,
+    contactType: 'tenant' as const,
   }))
+
+  if (lease.andraHandHG?.externalId) {
+    contacts.push({
+      name: lease.andraHandHG.name ?? lease.andraHandHG.externalId,
+      contactCode: lease.andraHandHG.externalId,
+      email: lease.andraHandHG.email ?? null,
+      phone: lease.andraHandHG.phone ?? null,
+      contactType: 'subletTenant' as const,
+    })
+  }
 
   return {
     leaseId: lease.externalId,
@@ -288,7 +320,18 @@ function mapBatchGetLeaseToSearchResult(
     contactCode: t.externalId,
     email: null,
     phone: null,
+    contactType: 'tenant' as const,
   }))
+
+  if (lease.subletTenant?.externalId) {
+    contacts.push({
+      name: lease.subletTenant.name ?? lease.subletTenant.externalId,
+      contactCode: lease.subletTenant.externalId,
+      email: lease.subletTenant.email ?? null,
+      phone: lease.subletTenant.phone ?? null,
+      contactType: 'subletTenant' as const,
+    })
+  }
 
   return {
     leaseId: lease.externalId,

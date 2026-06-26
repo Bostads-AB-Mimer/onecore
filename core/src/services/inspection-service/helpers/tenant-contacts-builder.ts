@@ -45,7 +45,7 @@ export const buildTenantContactsResponse = async (
   if (newTenant?.tenants) {
     response.new_tenant = {
       contacts: newTenant.tenants
-        .filter((t) => t.emailAddress)
+        .filter((t) => t.emailAddress && t.leaseContactType !== 'subletTenant')
         .map((t) => ({
           fullName: t.fullName,
           emailAddress: t.emailAddress!,
@@ -58,7 +58,7 @@ export const buildTenantContactsResponse = async (
   if (tenant?.tenants) {
     response.tenant = {
       contacts: tenant.tenants
-        .filter((t) => t.emailAddress)
+        .filter((t) => t.emailAddress && t.leaseContactType !== 'subletTenant')
         .map((t) => ({
           fullName: t.fullName,
           emailAddress: t.emailAddress!,

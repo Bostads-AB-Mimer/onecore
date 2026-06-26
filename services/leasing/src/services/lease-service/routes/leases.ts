@@ -223,8 +223,14 @@ export const routes = (router: KoaRouter) => {
         rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
           leaseId: lease.leaseId,
           rentalObjectCode: lease.rentalObjectCode || '',
-          tenantName: joinField(lease.contacts, (c) => c.name),
-          contactCode: joinField(lease.contacts, (c) => c.contactCode),
+          tenantName: joinField(lease.contacts, (c) =>
+            c.contactType === 'subletTenant' ? `${c.name} (andrahand)` : c.name
+          ),
+          contactCode: joinField(lease.contacts, (c) =>
+            c.contactType === 'subletTenant'
+              ? `${c.contactCode} (andrahand)`
+              : c.contactCode
+          ),
           email: joinField(lease.contacts, (c) => c.email),
           phone: joinField(lease.contacts, (c) => c.phone),
           objectType: lease.parkingSpaceType || lease.objectTypeCode,
