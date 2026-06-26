@@ -107,7 +107,7 @@ export const TenfastTagSchema = z.object({
 export type TenfastTag = z.infer<typeof TenfastTagSchema>
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
 
-export const TenfastAndraHandHGSchema = z.object({
+export const TenfastSubletTenantSchema = z.object({
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
   externalId: z.string().optional().nullable(),
@@ -118,7 +118,7 @@ export const TenfastAndraHandHGSchema = z.object({
   reason: z.string().nullable().optional(),
 })
 
-export type TenfastAndraHandHG = z.infer<typeof TenfastAndraHandHGSchema>
+export type TenfastSubletTenant = z.infer<typeof TenfastSubletTenantSchema>
 
 // TODO byt namn
 export const TenfastContractSchema = z.object({
@@ -282,7 +282,7 @@ export const TenfastLeaseSchema = z.object({
       originalName: z.string(),
     })
   ),
-  andraHandHG: TenfastAndraHandHGSchema.optional().nullable(),
+  andraHandHG: TenfastSubletTenantSchema.optional().nullable(),
   versions: z.unknown().optional(),
   createdAt: optionalDateField,
   updatedAt: optionalDateField,
