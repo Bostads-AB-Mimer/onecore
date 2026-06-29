@@ -344,17 +344,13 @@ describe('minio-adapter', () => {
       )
     })
 
-    it('should re-apply the anonymous read policy when the bucket already exists', async () => {
+    it('should not re-apply the policy when the bucket already exists', async () => {
       mockMinioClient.bucketExists.mockResolvedValue(true)
-      mockMinioClient.setBucketPolicy.mockResolvedValue(undefined)
 
       await minioAdapter.initializePublicBucket()
 
       expect(mockMinioClient.makeBucket).not.toHaveBeenCalled()
-      expect(mockMinioClient.setBucketPolicy).toHaveBeenCalledWith(
-        'onecore-public',
-        expect.any(String)
-      )
+      expect(mockMinioClient.setBucketPolicy).not.toHaveBeenCalled()
     })
 
     it('should throw if bucket creation fails', async () => {
@@ -366,8 +362,9 @@ describe('minio-adapter', () => {
       )
     })
 
-    it('should throw if policy application fails', async () => {
-      mockMinioClient.bucketExists.mockResolvedValue(true)
+    it('should throw if policy application fails during creation', async () => {
+      mockMinioClient.bucketExists.mockResolvedValue(false)
+      mockMinioClient.makeBucket.mockResolvedValue(undefined)
       mockMinioClient.setBucketPolicy.mockRejectedValue(
         new Error('Policy failed')
       )

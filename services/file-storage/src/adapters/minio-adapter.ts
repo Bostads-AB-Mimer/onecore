@@ -48,26 +48,26 @@ export const initializeBucket = async (): Promise<void> => {
 
 /**
  * Ensure the public bucket exists with an anonymous-read policy applied.
- * Policy is re-applied on every startup so dev environments stay consistent
- * even if someone has tweaked it via the MinIO console.
+ * Policy is applied only at bucket-creation time — it persists in MinIO's
+ * bucket metadata across restarts, and re-applying on every startup would
+ * require the runtime credentials to hold s3:PutBucketPolicy, which is a
+ * larger IAM surface than we need.
  */
 export const initializePublicBucket = async (): Promise<void> => {
   try {
     const exists = await minioClient.bucketExists(PUBLIC_BUCKET_NAME)
     if (!exists) {
       await minioClient.makeBucket(PUBLIC_BUCKET_NAME, 'us-east-1')
-      console.log(`MinIO bucket '${PUBLIC_BUCKET_NAME}' created successfully`)
+      await minioClient.setBucketPolicy(
+        PUBLIC_BUCKET_NAME,
+        JSON.stringify(publicReadPolicy(PUBLIC_BUCKET_NAME))
+      )
+      console.log(
+        `MinIO bucket '${PUBLIC_BUCKET_NAME}' created with anonymous read policy`
+      )
     } else {
       console.log(`MinIO bucket '${PUBLIC_BUCKET_NAME}' already exists`)
     }
-
-    await minioClient.setBucketPolicy(
-      PUBLIC_BUCKET_NAME,
-      JSON.stringify(publicReadPolicy(PUBLIC_BUCKET_NAME))
-    )
-    console.log(
-      `MinIO bucket '${PUBLIC_BUCKET_NAME}' anonymous read policy applied`
-    )
   } catch (error) {
     console.error(
       `Failed to ensure public bucket '${PUBLIC_BUCKET_NAME}' exists:`,
