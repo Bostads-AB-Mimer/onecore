@@ -29,6 +29,35 @@ const InfobipDeliveryReportSchema = z.object({
 
 type InfobipDeliveryReport = z.infer<typeof InfobipDeliveryReportSchema>
 
+/**
+ * Apply a parsed Infobip delivery report to message_recipient rows. Shared by
+ * both entry points: the public token webhook (SMS, Tele2) and the internal
+ * /delivery-report endpoint that core forwards email reports to. Results are
+ * independent rows, so update them concurrently (knex caps pool concurrency).
+ */
+async function processDeliveryReport(
+  report: InfobipDeliveryReport
+): Promise<void> {
+  await Promise.all(
+    report.results.map((result) => {
+      const status = mapInfobipStatus(result.status, result.error)
+      // null = non-terminal (PENDING): leave the row as-is.
+      if (status === null) return undefined
+
+      // Only carry the provider error onto failures/bounces; a delivered
+      // report's error is "OK"/"No Error" which we don't want to persist.
+      const errorText =
+        status === 'delivered' ? undefined : result.error?.description
+
+      return updateRecipientStatusByExternalId(
+        result.messageId,
+        status,
+        errorText
+      )
+    })
+  )
+}
+
 // Constant-time string compare that never short-circuits on length.
 function safeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a)
@@ -38,51 +67,49 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 /**
- * Authenticate a delivery-report callback. Two providers, two mechanisms:
- *  - Email arrives via the Infobip account Subscription, which sends HTTP Basic
- *    (webhookUsername/webhookPassword).
- *  - SMS arrives via a per-message webhook on the Tele2 send, which has no
- *    header slot, so the secret rides in the URL (?token=webhookToken).
- * The request is accepted if EITHER matches. Enforced only when at least one
- * credential is configured (mirrors the keys-service webhook: dev/local with
- * empty config skips the check). Runs before body parsing so unauthenticated
- * callers can't probe the schema via 400s.
+ * Authenticate the public SMS delivery-report webhook. SMS arrives via a Tele2
+ * per-message webhook, which has no header slot, so the secret rides in the URL
+ * (?token=webhookToken). Enforced only when webhookToken is configured (dev/local
+ * skips). Email no longer hits this service — it comes through core (Keycloak)
+ * to the internal /delivery-report endpoint.
  */
-const verifyWebhookAuth: KoaRouter.Middleware = (ctx, next) => {
-  const { webhookUsername, webhookPassword, webhookToken } = Config.infobip
-  const basicConfigured = Boolean(webhookUsername && webhookPassword)
-
-  if (!basicConfigured && !webhookToken) {
+const verifyWebhookToken: KoaRouter.Middleware = (ctx, next) => {
+  const { webhookToken } = Config.infobip
+  if (!webhookToken) {
     return next()
   }
 
-  // SMS path: ?token= in the URL.
-  if (webhookToken) {
-    const provided = Array.isArray(ctx.query.token)
-      ? ctx.query.token[0]
-      : ctx.query.token
-    if (provided && safeEqual(provided, webhookToken)) {
-      return next()
-    }
-  }
+  const provided = Array.isArray(ctx.query.token)
+    ? ctx.query.token[0]
+    : ctx.query.token
 
-  // Email path: Basic auth header.
-  if (basicConfigured) {
-    const expected =
-      'Basic ' +
-      Buffer.from(`${webhookUsername}:${webhookPassword}`).toString('base64')
-    if (safeEqual(ctx.get('authorization'), expected)) {
-      return next()
-    }
+  if (provided && safeEqual(provided, webhookToken)) {
+    return next()
   }
 
   logger.warn(
-    { providedAuth: ctx.get('authorization') ? 'provided' : 'missing' },
-    'webhooks.infobip: invalid auth'
+    { providedToken: provided ? 'provided' : 'missing' },
+    'webhooks.infobip: invalid token'
   )
   ctx.status = 401
   ctx.body = { reason: 'Unauthorized', ...generateRouteMetadata(ctx) }
   return
+}
+
+// Shared handler: body is already validated by parseRequestBody.
+const handleDeliveryReport: KoaRouter.Middleware = async (ctx) => {
+  const metadata = generateRouteMetadata(ctx)
+  try {
+    await processDeliveryReport(ctx.request.body as InfobipDeliveryReport)
+    ctx.status = 200
+    ctx.body = { ...metadata }
+  } catch (err) {
+    logger.error({ err }, 'webhooks.infobip')
+    // 500 lets the caller retry — a transient DB outage shouldn't silently
+    // drop a delivery report.
+    ctx.status = 500
+    ctx.body = { reason: 'Internal server error', ...metadata }
+  }
 }
 
 export const routes = (router: KoaRouter) => {
@@ -90,80 +117,63 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /webhooks/infobip:
    *   post:
-   *     summary: Webhook endpoint for Infobip SMS/email delivery reports
+   *     summary: Public webhook for Infobip SMS delivery reports (Tele2)
    *     description: >
-   *       Consumes Infobip delivery reports and updates the matching
-   *       message_recipient row's status/error by externalMessageId.
-   *       Accepts either authentication mechanism: HTTP Basic auth (email, via
-   *       the Infobip account Subscription) or a secret `token` query parameter
-   *       (SMS, via the per-message delivery webhook, which has no header slot).
+   *       Consumes Infobip SMS delivery reports (Tele2 per-message webhook) and
+   *       updates the matching message_recipient row's status/error by
+   *       externalMessageId. Authenticated with a secret `token` query param
+   *       (per-message webhooks have no header slot). Email reports do NOT hit
+   *       this endpoint — they come through core (Keycloak) to /delivery-report.
    *     tags: [Webhooks]
-   *     security:
-   *       - basicAuth: []
-   *       - {}
    *     parameters:
    *       - in: query
    *         name: token
-   *         required: false
+   *         required: true
    *         schema:
    *           type: string
-   *         description: Shared secret for the SMS per-message webhook (alternative to Basic auth)
+   *         description: Shared secret for the SMS per-message webhook
    *     requestBody:
    *       required: true
    *       content:
    *         application/json:
    *           schema:
    *             type: object
-   *             properties:
-   *               results:
-   *                 type: array
-   *                 items:
-   *                   type: object
    *     responses:
    *       200:
    *         description: Delivery report processed (acknowledged even on 0 matches)
    *       401:
-   *         description: Missing or invalid credentials (Basic auth or token)
+   *         description: Missing or invalid token
    */
   router.post(
     '(.*)/webhooks/infobip',
-    verifyWebhookAuth,
+    verifyWebhookToken,
     parseRequestBody(InfobipDeliveryReportSchema),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      try {
-        const { results } = ctx.request.body as InfobipDeliveryReport
+    handleDeliveryReport
+  )
 
-        // Results are independent rows — update them concurrently (knex caps
-        // pool concurrency, so a large email batch won't exhaust connections).
-        await Promise.all(
-          results.map((result) => {
-            const status = mapInfobipStatus(result.status, result.error)
-            // null = non-terminal (PENDING): leave the row as-is.
-            if (status === null) return undefined
-
-            // Only carry the provider error onto failures/bounces; a delivered
-            // report's error is "OK"/"No Error" which we don't want to persist.
-            const errorText =
-              status === 'delivered' ? undefined : result.error?.description
-
-            return updateRecipientStatusByExternalId(
-              result.messageId,
-              status,
-              errorText
-            )
-          })
-        )
-
-        ctx.status = 200
-        ctx.body = { ...metadata }
-      } catch (err) {
-        logger.error({ err }, 'webhooks.infobip')
-        // 500 lets Infobip retry the batch — a transient DB outage shouldn't
-        // silently drop a delivery report.
-        ctx.status = 500
-        ctx.body = { reason: 'Internal server error', ...metadata }
-      }
-    }
+  /**
+   * @swagger
+   * /delivery-report:
+   *   post:
+   *     summary: Internal endpoint for Infobip delivery reports forwarded by core
+   *     description: >
+   *       Internal (not publicly exposed). Core authenticates Infobip's email
+   *       webhook via Keycloak and forwards the report here for the same
+   *       processing as /webhooks/infobip.
+   *     tags: [Webhooks]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Delivery report processed
+   */
+  router.post(
+    '(.*)/delivery-report',
+    parseRequestBody(InfobipDeliveryReportSchema),
+    handleDeliveryReport
   )
 }

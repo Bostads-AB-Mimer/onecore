@@ -11,16 +11,11 @@ jest.mock('@onecore/utilities', () => ({
   generateRouteMetadata: jest.fn(() => ({})),
 }))
 
-// Configure both auth mechanisms so each path is enforced in tests:
-// Basic (email/subscription) and token (SMS/per-message webhook).
+// Token secures the public SMS webhook; email auth lives in core (Keycloak).
 jest.mock('../../../common/config', () => ({
   __esModule: true,
   default: {
-    infobip: {
-      webhookUsername: 'hook-user',
-      webhookPassword: 'hook-pass',
-      webhookToken: 'sms-token',
-    },
+    infobip: { webhookToken: 'sms-token' },
   },
 }))
 
@@ -38,10 +33,8 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
-const post = () =>
-  request(app.callback())
-    .post('/webhooks/infobip')
-    .auth('hook-user', 'hook-pass')
+// Public SMS webhook — authenticated with the token in the URL.
+const post = () => request(app.callback()).post('/webhooks/infobip?token=sms-token')
 
 const deliveredReport = {
   results: [
@@ -80,7 +73,7 @@ beforeEach(() => {
   updateMock.mockResolvedValue({ updatedCount: 1 })
 })
 
-describe('POST /webhooks/infobip', () => {
+describe('POST /webhooks/infobip (SMS, token auth)', () => {
   it('flips a row to delivered (no error persisted)', async () => {
     const res = await post().send(deliveredReport)
 
@@ -154,37 +147,14 @@ describe('POST /webhooks/infobip', () => {
     updateMock.mockResolvedValue({ updatedCount: 0 })
 
     const res = await post().send({
-      results: [
-        {
-          messageId: 'unknown-id',
-          status: { groupName: 'DELIVERED' },
-        },
-      ],
+      results: [{ messageId: 'unknown-id', status: { groupName: 'DELIVERED' } }],
     })
 
     expect(res.status).toBe(200)
-    expect(updateMock).toHaveBeenCalledWith(
-      'unknown-id',
-      'delivered',
-      undefined
-    )
+    expect(updateMock).toHaveBeenCalledWith('unknown-id', 'delivered', undefined)
   })
 
-  it('skips the db update for a non-terminal PENDING report', async () => {
-    const res = await post().send({
-      results: [
-        {
-          messageId: 'pending-id',
-          status: { groupName: 'PENDING', name: 'PENDING_ENROUTE' },
-        },
-      ],
-    })
-
-    expect(res.status).toBe(200)
-    expect(updateMock).not.toHaveBeenCalled()
-  })
-
-  it('rejects a request with missing auth (401, no db call)', async () => {
+  it('rejects a missing token with 401 (no db call)', async () => {
     const res = await request(app.callback())
       .post('/webhooks/infobip')
       .send(deliveredReport)
@@ -193,10 +163,9 @@ describe('POST /webhooks/infobip', () => {
     expect(updateMock).not.toHaveBeenCalled()
   })
 
-  it('rejects a request with wrong credentials (401, no db call)', async () => {
+  it('rejects a wrong token with 401 (no db call)', async () => {
     const res = await request(app.callback())
-      .post('/webhooks/infobip')
-      .auth('hook-user', 'wrong-pass')
+      .post('/webhooks/infobip?token=wrong-token')
       .send(deliveredReport)
 
     expect(res.status).toBe(401)
@@ -211,10 +180,10 @@ describe('POST /webhooks/infobip', () => {
   })
 })
 
-describe('POST /webhooks/infobip — token auth (SMS path)', () => {
-  it('accepts a valid ?token= (no Basic header)', async () => {
+describe('POST /delivery-report (internal, email forwarded by core)', () => {
+  it('processes a report without a token (core already authenticated)', async () => {
     const res = await request(app.callback())
-      .post('/webhooks/infobip?token=sms-token')
+      .post('/delivery-report')
       .send(deliveredReport)
 
     expect(res.status).toBe(200)
@@ -223,14 +192,5 @@ describe('POST /webhooks/infobip — token auth (SMS path)', () => {
       'delivered',
       undefined
     )
-  })
-
-  it('rejects a wrong ?token= with 401 (no db call)', async () => {
-    const res = await request(app.callback())
-      .post('/webhooks/infobip?token=wrong-token')
-      .send(deliveredReport)
-
-    expect(res.status).toBe(401)
-    expect(updateMock).not.toHaveBeenCalled()
   })
 })

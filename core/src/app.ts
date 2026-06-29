@@ -67,6 +67,12 @@ app.use(async (ctx, next) => {
     return requireRole('scanner-upload')(ctx, next)
   }
 
+  // Infobip email delivery-report webhook — authenticated via a Keycloak
+  // service account (client_credentials) holding the infobip-webhook role.
+  if (ctx.path.startsWith('/webhooks/infobip')) {
+    return requireRole('infobip-webhook')(ctx, next)
+  }
+
   if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
     return requireRole(['api-access', 'contacts:read'])(ctx, next)
   }

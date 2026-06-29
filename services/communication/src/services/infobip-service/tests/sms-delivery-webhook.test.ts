@@ -54,10 +54,12 @@ describe('SMS per-message delivery webhook', () => {
     expect(msg.webhooks.contentType).toBe('application/json')
   })
 
-  it('does NOT attach a webhook for non-logged sends (work order)', async () => {
+  it('attaches the delivery webhook for all SMS sends (e.g. work order)', async () => {
     await sendWorkOrderSms({ phoneNumber: '46701234567', text: 'hi' })
 
-    expect(lastSentBody().messages[0].webhooks).toBeUndefined()
+    expect(lastSentBody().messages[0].webhooks.delivery.url).toBe(
+      'https://host/webhooks/infobip?token=tok'
+    )
   })
 
   it('skips the webhook when the report URL is set but the token is missing', async () => {

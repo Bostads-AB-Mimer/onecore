@@ -64,8 +64,7 @@ export type InfobipSendSmsResponse = {
 // Tele2 procurement credentials (config.tele2). Email still uses config.infobip.
 const sendSmsV3 = async (
   destinations: { to: string }[],
-  text: string,
-  opts: { withDeliveryReport?: boolean } = {}
+  text: string
 ): Promise<InfobipSendSmsResponse> => {
   const baseUrl = config.tele2.baseUrl.replace(/\/$/, '') // Remove trailing slash
   const url = `${baseUrl}/sms/3/messages`
@@ -85,10 +84,8 @@ const sendSmsV3 = async (
           content: { text },
           // Per-message delivery webhook: SMS runs through Tele2's separate
           // Infobip account, which our Mimer subscription can't see, so we ask
-          // for the delivery report per send. Only requested for sends we
-          // actually persist (bulk) — otherwise the report would match no
-          // message_recipient row and just generate noise.
-          ...(opts.withDeliveryReport ? buildDeliveryWebhook() : {}),
+          // for the delivery report per send.
+          ...buildDeliveryWebhook(),
         },
       ],
     }),
@@ -148,11 +145,7 @@ export const sendBulkSms = async (sms: {
     const destinations = sms.phoneNumbers.map((phone: string) => ({
       to: phone,
     }))
-    // Only bulk sends persist a message_recipient row (logOutboundDispatch in
-    // the route), so only these request a delivery report to match against.
-    const response = await sendSmsV3(destinations, sms.text, {
-      withDeliveryReport: true,
-    })
+    const response = await sendSmsV3(destinations, sms.text)
     logger.info(
       { recipientCount: sms.phoneNumbers.length },
       'Bulk SMS sent successfully'
