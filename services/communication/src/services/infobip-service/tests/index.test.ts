@@ -492,6 +492,44 @@ describe('parking space offer email logging', () => {
   })
 })
 
+describe('/sendBulkEmail logging', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    jest
+      .spyOn(emailAdapter, 'sendBulkEmail')
+      .mockResolvedValue(emailSendResult('mid-bulk'))
+  })
+
+  it('returns 200 with no warnings when logging succeeds', async () => {
+    const res = await request(app.callback()).post('/sendBulkEmail').send({
+      emails: ['tenant@example.com'],
+      subject: 'Hej',
+      text: 'Test',
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toBeUndefined()
+  })
+
+  it('returns 200 with a warning (non-blocking) when logging fails', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback()).post('/sendBulkEmail').send({
+      emails: ['tenant@example.com'],
+      subject: 'Hej',
+      text: 'Test',
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toEqual([
+      expect.stringContaining('Communication log failed'),
+    ])
+  })
+})
+
 describe('isValidBulkSms', () => {
   it('should return true for valid BulkSms objects', () => {
     const validSms = {

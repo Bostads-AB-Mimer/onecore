@@ -496,29 +496,39 @@ export const routes = (router: KoaRouter) => {
           text: body.text,
         })
 
-        // Strict: if logging fails the catch below turns it into a 500 even
-        // though the email already went out. Better an audit-complete log
-        // path with a noisy failure than a phantom send.
-        await logOutboundDispatch({
-          channel: 'email',
-          fromAddress: EMAIL_SENDER,
-          subject: body.subject,
-          body: body.text,
-          messageType: 'bulk_email',
-          provider: EMAIL_PROVIDER,
-          triggeredByUser: body.logMeta?.triggeredByUser,
-          audienceCriteria: body.logMeta?.audienceCriteria,
-          templateId: body.logMeta?.templateId,
-          // TODO: log-before-send. Today we log after Infobip's 200 ACK, so an API
-          // rejection leaves no audit row. Flip to: insert pending → call Infobip
-          // → update to failed if rejected. Webhook still handles delivered/failed.
-          recipients: validRecipients.map((r, i) => ({
-            contactCode: r.contactCode,
-            toAddress: r.emailAddress,
-            externalMessageId: sendResult.data.messages?.[i]?.messageId,
-            status: 'pending',
-          })),
-        })
+        // Strict but non-blocking: the email already went out, so a logging
+        // failure must not fail the request (that would falsely report the send
+        // as failed). Instead we log loudly for monitoring and surface a
+        // non-blocking warning to the caller via `warnings`.
+        const warnings: string[] = []
+        try {
+          await logOutboundDispatch({
+            channel: 'email',
+            fromAddress: EMAIL_SENDER,
+            subject: body.subject,
+            body: body.text,
+            messageType: 'bulk_email',
+            provider: EMAIL_PROVIDER,
+            triggeredByUser: body.logMeta?.triggeredByUser,
+            audienceCriteria: body.logMeta?.audienceCriteria,
+            templateId: body.logMeta?.templateId,
+            // TODO: log-before-send. Today we log after Infobip's 200 ACK, so an API
+            // rejection leaves no audit row. Flip to: insert pending → call Infobip
+            // → update to failed if rejected. Webhook still handles delivered/failed.
+            recipients: validRecipients.map((r, i) => ({
+              contactCode: r.contactCode,
+              toAddress: r.emailAddress,
+              externalMessageId: sendResult.data.messages?.[i]?.messageId,
+              status: 'pending',
+            })),
+          })
+        } catch (logError: any) {
+          warnings.push(`Communication log failed: ${logError.message}`)
+          logger.error(
+            { err: logError, messageType: 'bulk_email' },
+            'Failed to write communication-log entry for bulk email'
+          )
+        }
 
         const successful = validRecipients.map((r) => r.emailAddress)
         ctx.status = 200
@@ -529,6 +539,7 @@ export const routes = (router: KoaRouter) => {
             totalSent: successful.length,
             totalInvalid: invalidEmails.length,
           },
+          ...(warnings.length && { warnings }),
           ...metadata,
         }
       } catch (error: any) {

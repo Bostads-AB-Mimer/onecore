@@ -426,14 +426,21 @@ export const sendBulkSms = async (
 
 export const sendBulkEmail = async (
   body: BulkEmail
-): Promise<AdapterResult<BulkEmailResult, 'error'>> => {
+): Promise<
+  AdapterResult<{ content: BulkEmailResult; warnings?: string[] }, 'error'>
+> => {
   try {
     const result = await axios.post(
       `${config.communicationService.url}/sendBulkEmail`,
       body
     )
 
-    return { ok: true, data: result.data.content }
+    // warnings is a sibling of content (non-blocking issues, e.g. the email
+    // sent but communication-log writing failed). Preserve it for the caller.
+    return {
+      ok: true,
+      data: { content: result.data.content, warnings: result.data.warnings },
+    }
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       return { ok: false, err: 'error', statusCode: err.response.status }

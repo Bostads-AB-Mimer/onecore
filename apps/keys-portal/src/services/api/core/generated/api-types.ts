@@ -276,6 +276,8 @@ export interface paths {
           content: {
             "application/json": {
               content?: components["schemas"]["BulkEmailResult"];
+              /** @description Non-blocking issues (e.g. communication-log write failed); the email was still sent. */
+              warnings?: string[];
             };
           };
         };
@@ -13438,7 +13440,7 @@ export interface components {
         id: string;
         /** Format: uuid */
         dispatchId: string;
-        kundId: string | null;
+        contactCode: string | null;
         toAddress: string;
         /** @enum {string} */
         status: "pending" | "sent" | "delivered" | "failed" | "bounced" | "received";
@@ -13480,7 +13482,7 @@ export interface components {
           id: string;
           /** Format: uuid */
           dispatchId: string;
-          kundId: string | null;
+          contactCode: string | null;
           toAddress: string;
           /** @enum {string} */
           status: "pending" | "sent" | "delivered" | "failed" | "bounced" | "received";
