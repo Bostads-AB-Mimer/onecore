@@ -1,6 +1,7 @@
 import { Email, Sms } from './types'
 
 interface ParkingSpaceOfferEmail extends Email {
+  contactCode: string
   address: string
   firstName: string
   availableFrom: string
@@ -14,6 +15,7 @@ interface ParkingSpaceOfferEmail extends Email {
 }
 
 interface ParkingSpaceAcceptOfferEmail extends Email {
+  contactCode: string
   address: string
   firstName: string
   availableFrom: string
@@ -97,6 +99,7 @@ interface ParkingSpaceNotificationEmail extends Email {
 
 // External (NON_SCORED) parking space application emails
 interface NonScoredParkingSpaceApprovedEmail extends Email {
+  contactCode: string
   leaseId: string
   address: string
   availableFrom: string
@@ -107,6 +110,7 @@ interface NonScoredParkingSpaceApprovedEmail extends Email {
 }
 
 interface NonScoredParkingSpaceDeniedEmail extends Email {
+  contactCode: string
   address: string
   availableFrom: string
   parkingSpaceId: string

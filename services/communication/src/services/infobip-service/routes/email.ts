@@ -37,6 +37,49 @@ import { logOutboundDispatch } from '../../communication-log-service/adapters/db
 const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
 const EMAIL_PROVIDER = 'infobip'
 
+// triggeredByUser value for emails sent by the automated rental-offer flow,
+// which has no human initiator.
+const AUTOMATIC_DISPATCH_USER = 'Automatiskt utskick'
+
+// Records a customer-facing parking-space (rental offer) email in the
+// communication log. Strict but non-blocking: a logging failure is logged
+// loudly for monitoring but never fails the send/offer flow, since the email
+// has already gone out via Infobip. These routes have no human consumer
+// reading the response, so there is nothing to surface a warning to.
+const logParkingSpaceEmail = async (params: {
+  messageType: string
+  to: string
+  contactCode: string
+  subject: string
+  body: string
+  sendResult: { messages?: Array<{ messageId: string }> }
+}) => {
+  try {
+    await logOutboundDispatch({
+      channel: 'email',
+      fromAddress: EMAIL_SENDER,
+      subject: params.subject,
+      body: params.body,
+      messageType: params.messageType,
+      provider: EMAIL_PROVIDER,
+      triggeredByUser: AUTOMATIC_DISPATCH_USER,
+      recipients: [
+        {
+          contactCode: params.contactCode,
+          toAddress: params.to,
+          externalMessageId: params.sendResult.messages?.[0]?.messageId,
+          status: 'pending',
+        },
+      ],
+    })
+  } catch (logError) {
+    logger.error(
+      { err: logError, messageType: params.messageType, to: params.to },
+      'Failed to write communication-log entry for parking space email'
+    )
+  }
+}
+
 const toArray = (input: unknown) => {
   if (Array.isArray(input)) {
     return input
@@ -105,6 +148,14 @@ export const routes = (router: KoaRouter) => {
     }
     try {
       const result = await sendParkingSpaceOffer(emailData)
+      await logParkingSpaceEmail({
+        messageType: 'parking_space_offer',
+        to: emailData.to,
+        contactCode: emailData.contactCode,
+        subject: emailData.subject,
+        body: emailData.text,
+        sendResult: result.data,
+      })
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (error: any) {
@@ -118,6 +169,7 @@ export const routes = (router: KoaRouter) => {
 
   const ParkingSpaceAcceptOfferEmailSchema = z.object({
     to: z.string().email(),
+    contactCode: z.string(),
     subject: z.string(),
     text: z.string(),
     firstName: z.string(),
@@ -137,6 +189,14 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendParkingSpaceAcceptOffer(body)
+        await logParkingSpaceEmail({
+          messageType: 'parking_space_accept_offer',
+          to: body.to,
+          contactCode: body.contactCode,
+          subject: body.subject,
+          body: body.text,
+          sendResult: result.data,
+        })
         ctx.status = 204
         ctx.body = { content: result.data, ...metadata }
       } catch (error: any) {
@@ -155,6 +215,7 @@ export const routes = (router: KoaRouter) => {
 
   const NonScoredParkingSpaceApprovedEmailSchema = z.object({
     to: z.string().email(),
+    contactCode: z.string(),
     subject: z.string(),
     text: z.string(),
     leaseId: z.string(),
@@ -174,6 +235,14 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendNonScoredParkingSpaceApproved(body)
+        await logParkingSpaceEmail({
+          messageType: 'non_scored_parking_space_approved',
+          to: body.to,
+          contactCode: body.contactCode,
+          subject: body.subject,
+          body: body.text,
+          sendResult: result.data,
+        })
         ctx.status = 204
         ctx.body = { content: result.data, ...metadata }
       } catch (error: any) {
@@ -192,6 +261,7 @@ export const routes = (router: KoaRouter) => {
 
   const NonScoredParkingSpaceDeniedEmailSchema = z.object({
     to: z.string().email(),
+    contactCode: z.string(),
     subject: z.string(),
     text: z.string(),
     address: z.string(),
@@ -210,6 +280,14 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendNonScoredParkingSpaceDenied(body)
+        await logParkingSpaceEmail({
+          messageType: 'non_scored_parking_space_denied',
+          to: body.to,
+          contactCode: body.contactCode,
+          subject: body.subject,
+          body: body.text,
+          sendResult: result.data,
+        })
         ctx.status = 204
         ctx.body = { content: result.data, ...metadata }
       } catch (error: any) {
@@ -472,6 +550,7 @@ export const isParkingSpaceOfferEmail = (
     emailData !== null &&
     typeof emailData.to === 'string' &&
     validator.isEmail(emailData.to) &&
+    typeof emailData.contactCode === 'string' &&
     typeof emailData.subject === 'string' &&
     typeof emailData.text === 'string' &&
     typeof emailData.address === 'string' &&

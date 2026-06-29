@@ -240,6 +240,7 @@ export const createLeaseForExternalParkingSpace = async (
       if (applicantContact.emailAddress) {
         await sendNonScoredParkingSpaceApprovedEmail({
           to: applicantContact.emailAddress,
+          contactCode: applicantContact.contactCode,
           subject: 'Godkänd ansökan om bilplats',
           text: 'Din ansökan om bilplats har godkänts.',
           leaseId: leaseId,
@@ -275,6 +276,7 @@ export const createLeaseForExternalParkingSpace = async (
       if (applicantContact.emailAddress) {
         await sendNonScoredParkingSpaceDeniedEmail({
           to: applicantContact.emailAddress,
+          contactCode: applicantContact.contactCode,
           subject: 'Nekad ansökan om bilplats',
           text: 'Din ansökan om bilplats kunde inte godkännas.',
           address: rentalObject.address,

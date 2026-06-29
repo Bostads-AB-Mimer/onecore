@@ -126,6 +126,11 @@ export const sendParkingSpaceOfferEmail = async (
       axiosOptions
     )
 
+    // FIXME: the /sendParkingSpaceOffer route returns 200, not 204, so this
+    // check currently always treats a successful send as a failure. The error
+    // is swallowed at the call site (create-offer.ts logs + continues), so the
+    // email still goes out, but every offer logs a false "email failed". Align
+    // the route status and this check (the other offer routes use 204).
     if (result.status !== 204) {
       logger.error(
         { status: result.status, data: result.data },

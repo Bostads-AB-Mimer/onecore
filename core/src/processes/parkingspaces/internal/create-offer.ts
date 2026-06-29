@@ -203,6 +203,7 @@ export const createOfferForInternalParkingSpace = async (
       const acceptEmailResult =
         await communicationAdapter.sendParkingSpaceOfferEmail({
           to: contact.emailAddress,
+          contactCode: contact.contactCode,
           subject: 'Erbjudande om bilplats',
           text: 'Erbjudande om bilplats',
           address: listing.rentalObject.address,
