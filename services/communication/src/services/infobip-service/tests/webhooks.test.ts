@@ -11,14 +11,6 @@ jest.mock('@onecore/utilities', () => ({
   generateRouteMetadata: jest.fn(() => ({})),
 }))
 
-// Token secures the public SMS webhook; email auth lives in core (Keycloak).
-jest.mock('../../../common/config', () => ({
-  __esModule: true,
-  default: {
-    infobip: { webhookToken: 'sms-token' },
-  },
-}))
-
 jest.mock('../../communication-log-service/adapters/db', () => ({
   updateRecipientStatusByExternalId: jest
     .fn()
@@ -33,8 +25,9 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
-// Public SMS webhook — authenticated with the token in the URL.
-const post = () => request(app.callback()).post('/webhooks/infobip?token=sms-token')
+// Internal endpoint — core authenticates (email via Keycloak, SMS via token)
+// and forwards here. No auth on this route itself.
+const post = () => request(app.callback()).post('/delivery-report')
 
 const deliveredReport = {
   results: [
@@ -73,7 +66,7 @@ beforeEach(() => {
   updateMock.mockResolvedValue({ updatedCount: 1 })
 })
 
-describe('POST /webhooks/infobip (SMS, token auth)', () => {
+describe('POST /delivery-report', () => {
   it('flips a row to delivered (no error persisted)', async () => {
     const res = await post().send(deliveredReport)
 
@@ -154,43 +147,10 @@ describe('POST /webhooks/infobip (SMS, token auth)', () => {
     expect(updateMock).toHaveBeenCalledWith('unknown-id', 'delivered', undefined)
   })
 
-  it('rejects a missing token with 401 (no db call)', async () => {
-    const res = await request(app.callback())
-      .post('/webhooks/infobip')
-      .send(deliveredReport)
-
-    expect(res.status).toBe(401)
-    expect(updateMock).not.toHaveBeenCalled()
-  })
-
-  it('rejects a wrong token with 401 (no db call)', async () => {
-    const res = await request(app.callback())
-      .post('/webhooks/infobip?token=wrong-token')
-      .send(deliveredReport)
-
-    expect(res.status).toBe(401)
-    expect(updateMock).not.toHaveBeenCalled()
-  })
-
   it('rejects a malformed payload with 400', async () => {
     const res = await post().send({ notResults: [] })
 
     expect(res.status).toBe(400)
     expect(updateMock).not.toHaveBeenCalled()
-  })
-})
-
-describe('POST /delivery-report (internal, email forwarded by core)', () => {
-  it('processes a report without a token (core already authenticated)', async () => {
-    const res = await request(app.callback())
-      .post('/delivery-report')
-      .send(deliveredReport)
-
-    expect(res.status).toBe(200)
-    expect(updateMock).toHaveBeenCalledWith(
-      '4823051030417951492201',
-      'delivered',
-      undefined
-    )
   })
 })
