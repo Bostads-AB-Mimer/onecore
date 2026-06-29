@@ -140,7 +140,9 @@ describe('POST /delivery-report', () => {
     updateMock.mockResolvedValue({ updatedCount: 0 })
 
     const res = await post().send({
-      results: [{ messageId: 'unknown-id', status: { groupName: 'DELIVERED' } }],
+      results: [
+        { messageId: 'unknown-id', status: { groupName: 'DELIVERED' } },
+      ],
     })
 
     expect(res.status).toBe(200)
