@@ -27,12 +27,15 @@ export interface UseBulkMessagingOptions<TItem> {
     recipients: { contactCode?: string; phoneNumber: string }[],
     message: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
-  /** Send bulk email - returns result with totalSent/totalInvalid */
+  /** Send bulk email - returns the result plus any non-blocking warnings */
   sendBulkEmail: (
     recipients: { contactCode?: string; emailAddress: string }[],
     subject: string,
     body: string
-  ) => Promise<{ totalSent: number; totalInvalid: number }>
+  ) => Promise<{
+    content: { totalSent: number; totalInvalid: number }
+    warnings?: string[]
+  }>
 }
 
 export interface UseBulkMessagingReturn {
@@ -303,12 +306,22 @@ export function useBulkMessaging<TItem>({
 
         toast({
           title: 'E-post skickat',
-          description: `Skickade till ${result.totalSent} mottagare${
-            result.totalInvalid > 0
-              ? `. ${result.totalInvalid} ogiltiga e-postadresser.`
+          description: `Skickade till ${result.content.totalSent} mottagare${
+            result.content.totalInvalid > 0
+              ? `. ${result.content.totalInvalid} ogiltiga e-postadresser.`
               : ''
           }`,
         })
+
+        // Non-blocking: the email was sent, but something like communication-log
+        // writing failed. Surface it without blocking the success flow.
+        if (result.warnings?.length) {
+          toast({
+            title: 'E-posten skickades, men en åtgärd misslyckades',
+            description: result.warnings.join(' '),
+            variant: 'destructive',
+          })
+        }
 
         clearSelection()
         setShowEmailModal(false)
