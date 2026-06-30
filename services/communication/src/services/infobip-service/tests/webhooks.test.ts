@@ -146,7 +146,11 @@ describe('POST /delivery-report', () => {
     })
 
     expect(res.status).toBe(200)
-    expect(updateMock).toHaveBeenCalledWith('unknown-id', 'delivered', undefined)
+    expect(updateMock).toHaveBeenCalledWith(
+      'unknown-id',
+      'delivered',
+      undefined
+    )
   })
 
   it('rejects a malformed payload with 400', async () => {
