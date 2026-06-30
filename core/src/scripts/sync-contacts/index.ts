@@ -150,7 +150,7 @@ const syncContact = async (update: ContactUpdate): Promise<void> => {
 
     const leasingResults = await Promise.all(
       relatedContactsToUpdate.map((c) => {
-        var syncRelatedContactPayload: SyncContactToLeasingPayload = {
+        const syncRelatedContactPayload: SyncContactToLeasingPayload = {
           contactCode: c.contactCode,
           firstName: c.firstName,
           lastName: c.lastName,
@@ -189,7 +189,7 @@ const syncContact = async (update: ContactUpdate): Promise<void> => {
       })
     )
 
-    var failedResult = leasingResults.find((result) => !result.ok)
+    const failedResult = leasingResults.find((result) => !result.ok)
     if (failedResult) {
       throw new Error(
         `contact ${payload.contactCode} failed to sync related contacts: tenfast=${

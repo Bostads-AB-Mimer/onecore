@@ -852,7 +852,7 @@ function buildPatchTenantRequestDataFromPayload(
     The trustee (god man) and administrator (förvaltare) roles are both represented by the trustee property in Tenfast.
     The trustee.godMan flag indicates which role, where true means it is a trustee, and false means it is an administrator.
   */
-  var trusteeOrAdministrator:
+  let trusteeOrAdministrator:
     | { contact: RelatedContact; isTrustee: boolean }
     | undefined = undefined
 
