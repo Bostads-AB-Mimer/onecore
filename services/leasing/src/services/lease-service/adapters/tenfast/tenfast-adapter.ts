@@ -29,6 +29,7 @@ import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
 import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
+import { RelatedContact } from '@onecore/types/src/schemas/v1/contact-sync'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -844,6 +845,67 @@ function buildTenantRequestDataFromPayload(
   }
 }
 
+function buildPatchTenantRequestDataFromPayload(
+  payload: SyncContactToLeasingPayload
+) {
+  /*
+    The trustee (god man) and administrator (förvaltare) roles are both represented by the trustee property in Tenfast.
+    The trustee.godMan flag indicates which role, where true means it is a trustee, and false means it is an administrator.
+  */
+  let trusteeOrAdministrator:
+    | { contact: RelatedContact; isTrustee: boolean }
+    | undefined = undefined
+
+  if (payload.trustee) {
+    trusteeOrAdministrator = {
+      contact: payload.trustee,
+      isTrustee: true,
+    }
+  } else if (payload.administrator) {
+    trusteeOrAdministrator = {
+      contact: payload.administrator,
+      isTrustee: false,
+    }
+  }
+
+  return {
+    externalId: payload.contactCode,
+    idbeteckning: payload.nationalRegistrationNumber,
+    isCompany: false,
+    name: {
+      first: payload.firstName,
+      last: payload.lastName,
+    },
+    email: payload.emailAddress,
+    phone: payload.phoneNumber,
+    postadress: payload.street,
+    postnummer: payload.zipCode,
+    stad: payload.city,
+    trustee: trusteeOrAdministrator
+      ? {
+          name: trusteeOrAdministrator.contact.name,
+          idbeteckning:
+            trusteeOrAdministrator.contact.nationalRegistrationNumber,
+          email: trusteeOrAdministrator.contact.email,
+          phone: trusteeOrAdministrator.contact.phone,
+          postadress: trusteeOrAdministrator.contact.address,
+          postnummer: trusteeOrAdministrator.contact.zipCode,
+          godMan: trusteeOrAdministrator.isTrustee,
+        }
+      : undefined,
+    fakturaMottagare: payload.invoiceRecipient
+      ? {
+          name: payload.invoiceRecipient.name,
+          idbeteckning: payload.invoiceRecipient.nationalRegistrationNumber,
+          email: payload.invoiceRecipient.email,
+          phone: payload.invoiceRecipient.phone,
+          postadress: payload.invoiceRecipient.address,
+          postnummer: payload.invoiceRecipient.zipCode,
+        }
+      : undefined,
+  }
+}
+
 export const syncTenant = async (
   payload: SyncContactToLeasingPayload
 ): Promise<
@@ -870,7 +932,7 @@ export const syncTenant = async (
       return { ok: true, data: null }
     }
 
-    const requestData = buildTenantRequestDataFromPayload(payload)
+    const requestData = buildPatchTenantRequestDataFromPayload(payload)
 
     const tenantResponse = await tenfastApi.request({
       method: 'patch',

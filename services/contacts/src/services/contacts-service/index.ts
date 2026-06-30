@@ -95,6 +95,15 @@ export const routes = (
           description: 'ISO 8601 timestamp to query changes from',
           schema: z.optional(z.string()),
         },
+        includeRelations: {
+          description: 'Whether to include related contacts in the response',
+          schema: z
+            .enum(['true', 'false'])
+            .optional()
+            .transform((value) =>
+              value ? value.toLowerCase() === 'true' : false
+            ),
+        },
       },
       response: {
         200: SyncContactsResponseBodySchema,
@@ -118,7 +127,8 @@ export const routes = (
       const changedCodes =
         await contactsRepository.getChangedContactCodes(since)
       const fetchedContacts = await contactsRepository.getByContactCodes(
-        changedCodes.map((c) => c.contactCode)
+        changedCodes.map((c) => c.contactCode),
+        { includeRelations: ctx.query.includeRelations }
       )
       const contactByCode = new Map(
         fetchedContacts.map((c) => [c.contactCode, c])
