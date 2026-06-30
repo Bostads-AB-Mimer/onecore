@@ -186,6 +186,7 @@ export function useLeaseFilters() {
           value: u.id,
           description: u.attributes?.employeeId?.[0],
         }))
+        .sort((a, b) => a.label.localeCompare(b.label, 'sv'))
     },
     []
   )
