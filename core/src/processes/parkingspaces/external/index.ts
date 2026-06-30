@@ -35,7 +35,8 @@ import dayjs from 'dayjs'
 export const createLeaseForExternalParkingSpace = async (
   parkingSpaceId: string,
   contactId: string,
-  startDate: string | undefined
+  startDate: string | undefined,
+  triggeredBy?: string
 ): Promise<ProcessResult<unknown, unknown>> => {
   const log: string[] = [
     `Ansökan om extern bilplats`,
@@ -240,6 +241,8 @@ export const createLeaseForExternalParkingSpace = async (
       if (applicantContact.emailAddress) {
         await sendNonScoredParkingSpaceApprovedEmail({
           to: applicantContact.emailAddress,
+          contactCode: applicantContact.contactCode,
+          triggeredBy,
           subject: 'Godkänd ansökan om bilplats',
           text: 'Din ansökan om bilplats har godkänts.',
           leaseId: leaseId,
@@ -275,6 +278,8 @@ export const createLeaseForExternalParkingSpace = async (
       if (applicantContact.emailAddress) {
         await sendNonScoredParkingSpaceDeniedEmail({
           to: applicantContact.emailAddress,
+          contactCode: applicantContact.contactCode,
+          triggeredBy,
           subject: 'Nekad ansökan om bilplats',
           text: 'Din ansökan om bilplats kunde inte godkännas.',
           address: rentalObject.address,

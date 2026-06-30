@@ -1,6 +1,7 @@
 import { Email, Sms } from './types'
 
 interface ParkingSpaceOfferEmail extends Email {
+  contactCode: string
   address: string
   firstName: string
   availableFrom: string
@@ -14,6 +15,7 @@ interface ParkingSpaceOfferEmail extends Email {
 }
 
 interface ParkingSpaceAcceptOfferEmail extends Email {
+  contactCode: string
   address: string
   firstName: string
   availableFrom: string
@@ -95,8 +97,12 @@ interface ParkingSpaceNotificationEmail extends Email {
   parkingSpaceId: string
 }
 
-// External (NON_SCORED) parking space application emails
+// External (NON_SCORED) parking space application emails.
+// triggeredBy is the admin who initiated the lease creation (the approve/deny
+// outcome follows from their action), used for communication-log attribution.
 interface NonScoredParkingSpaceApprovedEmail extends Email {
+  contactCode: string
+  triggeredBy?: string
   leaseId: string
   address: string
   availableFrom: string
@@ -107,6 +113,8 @@ interface NonScoredParkingSpaceApprovedEmail extends Email {
 }
 
 interface NonScoredParkingSpaceDeniedEmail extends Email {
+  contactCode: string
+  triggeredBy?: string
   address: string
   availableFrom: string
   parkingSpaceId: string

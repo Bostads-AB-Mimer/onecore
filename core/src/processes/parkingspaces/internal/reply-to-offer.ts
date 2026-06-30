@@ -278,6 +278,7 @@ export const acceptOffer = async (
       const acceptEmailResult =
         await communicationAdapter.sendParkingSpaceAcceptOfferEmail({
           to: contactResult.data.emailAddress,
+          contactCode: offer.offeredApplicant.contactCode,
           subject: 'Du har tackat ja till en bilplats',
           text: 'Du har tackat ja till en bilplats hos Bostads Mimer.',
           address: listing.rentalObject.address,

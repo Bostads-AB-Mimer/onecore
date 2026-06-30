@@ -127,6 +127,11 @@ export const sendParkingSpaceOfferEmail = async (
       axiosOptions
     )
 
+    // FIXME: the /sendParkingSpaceOffer route returns 200, not 204, so this
+    // check currently always treats a successful send as a failure. The error
+    // is swallowed at the call site (create-offer.ts logs + continues), so the
+    // email still goes out, but every offer logs a false "email failed". Align
+    // the route status and this check (the other offer routes use 204).
     if (result.status !== 204) {
       logger.error(
         { status: result.status, data: result.data },
@@ -422,14 +427,21 @@ export const sendBulkSms = async (
 
 export const sendBulkEmail = async (
   body: BulkEmail
-): Promise<AdapterResult<BulkEmailResult, 'error'>> => {
+): Promise<
+  AdapterResult<{ content: BulkEmailResult; warnings?: string[] }, 'error'>
+> => {
   try {
     const result = await axios.post(
       `${config.communicationService.url}/sendBulkEmail`,
       body
     )
 
-    return { ok: true, data: result.data.content }
+    // warnings is a sibling of content (non-blocking issues, e.g. the email
+    // sent but communication-log writing failed). Preserve it for the caller.
+    return {
+      ok: true,
+      data: { content: result.data.content, warnings: result.data.warnings },
+    }
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       return { ok: false, err: 'error', statusCode: err.response.status }
