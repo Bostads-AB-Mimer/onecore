@@ -504,11 +504,13 @@ describe('/sendBulkEmail logging', () => {
   })
 
   it('returns 200 with no warnings when logging succeeds', async () => {
-    const res = await request(app.callback()).post('/sendBulkEmail').send({
-      emails: ['tenant@example.com'],
-      subject: 'Hej',
-      text: 'Test',
-    })
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Hej',
+        text: 'Test',
+      })
 
     expect(res.status).toBe(200)
     expect(res.body.warnings).toBeUndefined()
@@ -517,11 +519,13 @@ describe('/sendBulkEmail logging', () => {
   it('returns 200 with a warning (non-blocking) when logging fails', async () => {
     logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
 
-    const res = await request(app.callback()).post('/sendBulkEmail').send({
-      emails: ['tenant@example.com'],
-      subject: 'Hej',
-      text: 'Test',
-    })
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Hej',
+        text: 'Test',
+      })
 
     expect(res.status).toBe(200)
     expect(res.body.warnings).toEqual([
