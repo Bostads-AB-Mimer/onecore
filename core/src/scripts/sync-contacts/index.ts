@@ -1,12 +1,13 @@
 import fs from 'fs/promises'
 import { logger } from '@onecore/utilities'
+import { SyncContactToLeasingPayload } from '@onecore/types'
+import type { Contact, RelatedContactRole } from '@onecore/contacts/schema'
 import config from '../../common/config'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { sendEmail } from '../../adapters/communication-adapter'
 import { syncContactToLeasing } from '../../adapters/leasing-adapter'
 import { syncContactToEconomy } from '../../adapters/economy-adapter'
 import { syncContactToWorkOrder } from '../../adapters/work-order-adapter'
-import type { Contact } from '@onecore/contacts/schema'
 import { toSyncPayload } from './payload'
 import {
   addEntry,
@@ -130,6 +131,74 @@ const syncContact = async (update: ContactUpdate): Promise<void> => {
       }, odoo=${odooResult.ok ? 'ok' : odooResult.err}`
     )
   }
+
+  if (update.contact.relatedContacts) {
+    /*
+      If updated contact A is trustee, administrator (förvaltare) or invoice recipient for another contact B,
+      contact B must currently be manually updated in the leasing service whenever contact A is updated.
+    */
+    const relatedContactsToUpdate = update.contact.relatedContacts.filter(
+      (c) => {
+        const roles: RelatedContactRole[] = [
+          'trusteeFor',
+          'administratorFor',
+          'otherInvoiceRecipientFor',
+        ]
+        return roles.includes(c.role)
+      }
+    )
+
+    const leasingResults = await Promise.all(
+      relatedContactsToUpdate.map((c) => {
+        var syncRelatedContactPayload: SyncContactToLeasingPayload = {
+          contactCode: c.contactCode,
+          firstName: c.firstName,
+          lastName: c.lastName,
+        }
+
+        if (c.role === 'trusteeFor') {
+          syncRelatedContactPayload.trustee = {
+            name: payload.fullName,
+            nationalRegistrationNumber: payload.nationalId,
+            email: payload.emailAddress ?? null,
+            phone: payload.phoneNumber ?? null,
+            address: payload.street ?? null,
+            zipCode: payload.zipCode ?? null,
+          }
+        } else if (c.role === 'administratorFor') {
+          syncRelatedContactPayload.administrator = {
+            name: payload.fullName,
+            nationalRegistrationNumber: payload.nationalId,
+            email: payload.emailAddress ?? null,
+            phone: payload.phoneNumber ?? null,
+            address: payload.street ?? null,
+            zipCode: payload.zipCode ?? null,
+          }
+        } else if (c.role === 'otherInvoiceRecipientFor') {
+          syncRelatedContactPayload.invoiceRecipient = {
+            name: payload.fullName,
+            nationalRegistrationNumber: payload.nationalId,
+            email: payload.emailAddress ?? null,
+            phone: payload.phoneNumber ?? null,
+            address: payload.street ?? null,
+            zipCode: payload.zipCode ?? null,
+          }
+        }
+
+        return syncContactToLeasing(syncRelatedContactPayload)
+      })
+    )
+
+    var failedResult = leasingResults.find((result) => !result.ok)
+    if (failedResult) {
+      throw new Error(
+        `contact ${payload.contactCode} failed to sync related contacts: tenfast=${
+          failedResult.ok ? 'ok' : failedResult.err
+        }`
+      )
+    }
+  }
+
   logger.info({ contactCode: payload.contactCode }, 'contact synced')
 }
 
@@ -165,7 +234,10 @@ export const syncContacts = async (
     logger.info('no saved timestamp, syncing all')
   }
   const contactsAdapter = makeContactsAdapter(config.contactsService.url)
-  const result = await contactsAdapter.getUpdatedContacts(lastTimestamp)
+  const result = await contactsAdapter.getUpdatedContacts({
+    since: lastTimestamp,
+    includeRelations: true,
+  })
   if (!result.ok) {
     logger.error({ err: result.err }, 'Failed to fetch updated contacts')
     throw new Error(result.err)
