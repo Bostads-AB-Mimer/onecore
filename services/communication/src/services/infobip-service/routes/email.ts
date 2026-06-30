@@ -37,8 +37,8 @@ import { logOutboundDispatch } from '../../communication-log-service/adapters/db
 const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
 const EMAIL_PROVIDER = 'infobip'
 
-// triggeredByUser value for emails sent by the automated rental-offer flow,
-// which has no human initiator.
+// triggeredByUser value for emails with no human initiator (the automated
+// offer flow). Routes with a known initiator pass triggeredBy instead.
 const AUTOMATIC_DISPATCH_USER = 'Automatiskt utskick'
 
 // Records a customer-facing parking-space (rental offer) email in the
@@ -52,6 +52,9 @@ const logParkingSpaceEmail = async (params: {
   contactCode: string
   subject: string
   body: string
+  // The admin who initiated the send, if any; falls back to the automatic
+  // dispatch label for flows with no human initiator.
+  triggeredBy?: string
   sendResult: { messages?: Array<{ messageId: string }> }
 }) => {
   try {
@@ -62,7 +65,7 @@ const logParkingSpaceEmail = async (params: {
       body: params.body,
       messageType: params.messageType,
       provider: EMAIL_PROVIDER,
-      triggeredByUser: AUTOMATIC_DISPATCH_USER,
+      triggeredByUser: params.triggeredBy ?? AUTOMATIC_DISPATCH_USER,
       recipients: [
         {
           contactCode: params.contactCode,
@@ -216,6 +219,7 @@ export const routes = (router: KoaRouter) => {
   const NonScoredParkingSpaceApprovedEmailSchema = z.object({
     to: z.string().email(),
     contactCode: z.string(),
+    triggeredBy: z.string().optional(),
     subject: z.string(),
     text: z.string(),
     leaseId: z.string(),
@@ -239,6 +243,7 @@ export const routes = (router: KoaRouter) => {
           messageType: 'non_scored_parking_space_approved',
           to: body.to,
           contactCode: body.contactCode,
+          triggeredBy: body.triggeredBy,
           subject: body.subject,
           body: body.text,
           sendResult: result.data,
@@ -262,6 +267,7 @@ export const routes = (router: KoaRouter) => {
   const NonScoredParkingSpaceDeniedEmailSchema = z.object({
     to: z.string().email(),
     contactCode: z.string(),
+    triggeredBy: z.string().optional(),
     subject: z.string(),
     text: z.string(),
     address: z.string(),
@@ -284,6 +290,7 @@ export const routes = (router: KoaRouter) => {
           messageType: 'non_scored_parking_space_denied',
           to: body.to,
           contactCode: body.contactCode,
+          triggeredBy: body.triggeredBy,
           subject: body.subject,
           body: body.text,
           sendResult: result.data,
@@ -523,7 +530,9 @@ export const routes = (router: KoaRouter) => {
             })),
           })
         } catch (logError: any) {
-          warnings.push(`Communication log failed: ${logError.message}`)
+          // Keep the warning generic for the client; the real error (which can
+          // contain internal/DB detail) stays in logger.error only.
+          warnings.push('Communication log failed')
           logger.error(
             { err: logError, messageType: 'bulk_email' },
             'Failed to write communication-log entry for bulk email'
