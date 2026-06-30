@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata } from '@onecore/utilities'
 import { BulkSms, BulkEmail, communication } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
@@ -202,6 +202,50 @@ export const routes = (router: KoaRouter) => {
     if (result.ok) {
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /webhooks/infobip:
+   *   post:
+   *     summary: Infobip email delivery-report webhook
+   *     description: >
+   *       Receives Infobip email delivery reports and forwards them to the
+   *       communication service for processing. Authenticated via a Keycloak
+   *       service account holding the `infobip-webhook` realm role (enforced in
+   *       app.ts). SMS delivery reports do NOT use this route — they hit the
+   *       communication service directly (Tele2 per-message webhook + token).
+   *     tags:
+   *       - Communication service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       '200':
+   *         description: Delivery report accepted
+   *       '401':
+   *         description: Missing or invalid Keycloak credentials / role
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/webhooks/infobip', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.forwardDeliveryReport(
+      ctx.request.body
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { ...metadata }
     } else {
       ctx.status = result.statusCode ?? 500
       ctx.body = { error: result.err, ...metadata }
