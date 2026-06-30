@@ -98,7 +98,6 @@ const STATUS_META: Record<Status, { label: string; className: string }> = {
   },
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function StatusBadge({ status }: { status: Status }) {
   const meta = STATUS_META[status]
   return (
@@ -132,7 +131,7 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <ChannelBadge channel={dispatch.channel} />
                   <h3 className="font-medium text-foreground">{title}</h3>
-                  {/* TODO: <StatusBadge status={recipient.status} /> once statuses are implemented */}
+                  <StatusBadge status={recipient.status} />
                 </div>
                 <p className="text-sm text-muted-foreground break-words line-clamp-2">
                   till {recipient.toAddress} — {dispatch.body}
@@ -164,7 +163,10 @@ function MessageRow({ message }: { message: CustomerMessage }) {
               </p>
               <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-sm">
                 <DetailRow label="Mottagare" value={recipient.toAddress} />
-                {/* TODO: <DetailRow label="Status" value={STATUS_META[recipient.status].label} /> once statuses are implemented */}
+                <DetailRow
+                  label="Status"
+                  value={STATUS_META[recipient.status].label}
+                />
                 <DetailRow
                   label="Kanal"
                   value={channelLabel(dispatch.channel)}
