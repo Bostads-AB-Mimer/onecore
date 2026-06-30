@@ -10,6 +10,7 @@ import config from './common/config'
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
 import { routes as healthRoutes } from './services/health-service'
+import { routes as infobipSmsWebhookRoutes } from './services/communication-service/infobip-sms-webhook'
 
 import { requireAuth, requireRole } from './middlewares/keycloak-auth'
 import { routes as apiRoutes } from './api/index'
@@ -53,6 +54,9 @@ const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
+// SMS delivery-report webhook (Tele2): token-authenticated, so it lives on the
+// public router and bypasses the Keycloak chain (it validates the token itself).
+infobipSmsWebhookRoutes(publicRouter)
 app.use(publicRouter.routes())
 
 // Token extraction (cookie -> Bearer -> Basic Auth)
@@ -65,6 +69,12 @@ app.use(requireAuth)
 app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/scan-receipt')) {
     return requireRole('scanner-upload')(ctx, next)
+  }
+
+  // Infobip email delivery-report webhook — authenticated via a Keycloak
+  // service account (client_credentials) holding the infobip-webhook role.
+  if (ctx.path.startsWith('/webhooks/infobip')) {
+    return requireRole('infobip-webhook')(ctx, next)
   }
 
   if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {

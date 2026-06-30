@@ -81,6 +81,11 @@ export interface Config {
     allowedIps: string[]
     errorNotificationEmail: string
   }
+  infobip: {
+    // Shared secret core validates on the public SMS delivery-report webhook
+    // (/webhooks/infobip-sms). Same value communication embeds in the SMS send.
+    webhookToken: string
+  }
   health: {
     contacts: HealthCheck
     leasing: HealthCheck
@@ -160,6 +165,9 @@ const config = configPackage({
       allowedIps: [],
       errorNotificationEmail: '',
     },
+    infobip: {
+      webhookToken: '',
+    },
     health: {
       contacts: {
         systemName: 'contacts',
@@ -224,4 +232,5 @@ export default {
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
   scanner: config.get('scanner'),
+  infobip: config.get('infobip'),
 } as Config

@@ -9,6 +9,41 @@ import he from 'he'
 // SMS sender ID registered with Infobip
 const SMS_SENDER = 'Mimer'
 
+// Builds the per-message `webhooks` block for an SMS send so Tele2/Infobip
+// pushes the delivery report to our endpoint. Returns an empty object when no
+// public URL is configured (dev without a tunnel) so the send is unaffected.
+// The webhook secret rides in the URL because per-message webhooks have no
+// header slot; our webhook validates it (see verifyWebhookAuth).
+const buildDeliveryWebhook = (): {
+  webhooks?: { delivery: { url: string }; contentType: string }
+} => {
+  const reportUrl = config.infobip.smsDeliveryReportUrl
+  if (!reportUrl) return {}
+
+  // The token and the URL are a pair: a per-message webhook can only carry the
+  // secret in the URL. Without a token the report would arrive unauthenticated
+  // and be rejected (401) by a webhook that enforces auth — so skip loudly
+  // rather than request a report that silently never lands.
+  if (!config.infobip.webhookToken) {
+    logger.warn(
+      'sms-adapter.buildDeliveryWebhook: smsDeliveryReportUrl set without webhookToken; skipping delivery webhook'
+    )
+    return {}
+  }
+
+  // Build via the URL API so an existing query string is preserved and the
+  // token is correctly encoded.
+  const reportUrlWithToken = new URL(reportUrl)
+  reportUrlWithToken.searchParams.set('token', config.infobip.webhookToken)
+
+  return {
+    webhooks: {
+      delivery: { url: reportUrlWithToken.toString() },
+      contentType: 'application/json',
+    },
+  }
+}
+
 // Response from POSTing to Infobip's /sms/3/messages (outbound SMS send).
 export type InfobipSendSmsResponse = {
   messages: Array<{
@@ -47,6 +82,10 @@ const sendSmsV3 = async (
           sender: SMS_SENDER,
           destinations,
           content: { text },
+          // Per-message delivery webhook: SMS runs through Tele2's separate
+          // Infobip account, which our Mimer subscription can't see, so we ask
+          // for the delivery report per send.
+          ...buildDeliveryWebhook(),
         },
       ],
     }),
@@ -67,7 +106,7 @@ export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
     logger.info('SMS sent successfully')
     return response
   } catch (error) {
-    logger.error(error, 'Error sending SMS')
+    logger.error({ err: error }, 'sms-adapter.sendParkingSpaceOfferSms')
     throw error
   }
 }
@@ -85,7 +124,7 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
     logger.info('Work order SMS sent successfully')
     return response
   } catch (error) {
-    logger.error(error, 'Error sending SMS')
+    logger.error({ err: error }, 'sms-adapter.sendWorkOrderSms')
     throw error
   }
 }
@@ -113,7 +152,7 @@ export const sendBulkSms = async (sms: {
     )
     return response
   } catch (error) {
-    logger.error(error, 'Error sending bulk SMS')
+    logger.error({ err: error }, 'sms-adapter.sendBulkSms')
     throw error
   }
 }

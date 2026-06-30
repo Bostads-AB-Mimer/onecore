@@ -24,6 +24,7 @@ import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
 
 export * from './log-reads'
+export * from './delivery-reports'
 
 export const sendNotificationToContact = async (
   recipientContact: Contact,

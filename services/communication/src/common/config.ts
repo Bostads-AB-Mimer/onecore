@@ -8,6 +8,14 @@ export interface Config {
     baseUrl: string
     apiKey: string
     parkingSpaceOfferTempalteId: number
+    // Secret token for the public SMS delivery-report webhook. Tele2's
+    // per-message webhook has no header slot, so the secret rides in the URL
+    // (?token=). Email is authenticated via Keycloak in core, not here.
+    webhookToken: string
+    // Public URL Tele2/Infobip should POST SMS delivery reports to, e.g.
+    // https://<host>/webhooks/infobip. Added per-message to the SMS send when
+    // set; empty (dev without a tunnel) → no delivery webhook is attached.
+    smsDeliveryReportUrl: string
   }
   tele2: {
     baseUrl: string
@@ -54,6 +62,8 @@ const config = configPackage({
     infobip: {
       baseUrl: '',
       apiKey: '',
+      webhookToken: '',
+      smsDeliveryReportUrl: '',
     },
     tele2: {
       baseUrl: '',

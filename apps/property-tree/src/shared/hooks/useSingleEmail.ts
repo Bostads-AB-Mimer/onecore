@@ -44,7 +44,12 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
     async (subject: string, body: string) => {
       try {
         const result = await sendEmail(
-          [{ contactCode: state.contactCode, emailAddress: state.emailAddress }],
+          [
+            {
+              contactCode: state.contactCode,
+              emailAddress: state.emailAddress,
+            },
+          ],
           subject,
           body
         )
