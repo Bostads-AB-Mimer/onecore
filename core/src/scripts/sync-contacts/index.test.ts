@@ -296,4 +296,206 @@ describe('syncContacts', () => {
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(ts.toISOString())
   })
+
+  it('case 6: related contacts (all triggering roles) — additional leasing calls with correct payloads', async () => {
+    const relatedTrusteeFor = {
+      contactCode: 'P200001',
+      role: 'trusteeFor' as const,
+      fullName: 'Anna Andersson',
+      firstName: 'Anna',
+      lastName: 'Andersson',
+    }
+    const relatedAdministratorFor = {
+      contactCode: 'P200002',
+      role: 'administratorFor' as const,
+      fullName: 'Bo Bengtsson',
+      firstName: 'Bo',
+      lastName: 'Bengtsson',
+    }
+    const relatedInvoiceRecipientFor = {
+      contactCode: 'P200003',
+      role: 'otherInvoiceRecipientFor' as const,
+      fullName: 'Carin Carlsson',
+      firstName: 'Carin',
+      lastName: 'Carlsson',
+    }
+    const contact = factory.domainContact.build({
+      relatedContacts: [
+        relatedTrusteeFor,
+        relatedAdministratorFor,
+        relatedInvoiceRecipientFor,
+      ],
+    })
+    const ts = new Date('2026-05-02T10:00:00.000Z')
+
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [{ contact, timestamp: ts }],
+      }),
+    } as any)
+
+    const syncLeasingSpy = jest
+      .spyOn(leasingAdapter, 'syncContactToLeasing')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    jest
+      .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncContacts({ stateFile, queueFile })
+
+    // 1 call for main contact + 3 calls for related contacts
+    expect(syncLeasingSpy).toHaveBeenCalledTimes(4)
+
+    // trusteeFor: related contact called with trustee field
+    expect(syncLeasingSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: relatedTrusteeFor.contactCode,
+        firstName: relatedTrusteeFor.firstName,
+        lastName: relatedTrusteeFor.lastName,
+        trustee: expect.objectContaining({ name: expect.any(String) }),
+      })
+    )
+
+    // administratorFor: related contact called with administrator field
+    expect(syncLeasingSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: relatedAdministratorFor.contactCode,
+        firstName: relatedAdministratorFor.firstName,
+        lastName: relatedAdministratorFor.lastName,
+        administrator: expect.objectContaining({ name: expect.any(String) }),
+      })
+    )
+
+    // otherInvoiceRecipientFor: related contact called with invoiceRecipient field
+    expect(syncLeasingSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: relatedInvoiceRecipientFor.contactCode,
+        firstName: relatedInvoiceRecipientFor.firstName,
+        lastName: relatedInvoiceRecipientFor.lastName,
+        invoiceRecipient: expect.objectContaining({ name: expect.any(String) }),
+      })
+    )
+
+    expect(await readQueue(queueFile)).toHaveLength(0)
+  })
+
+  it('case 7: related contact leasing sync fails — main contact queued for retry', async () => {
+    const relatedContact = {
+      contactCode: 'P200004',
+      role: 'trusteeFor' as const,
+      fullName: 'Diana Davidsson',
+      firstName: 'Diana',
+      lastName: 'Davidsson',
+    }
+    const contact = factory.domainContact.build({
+      relatedContacts: [relatedContact],
+    })
+    const ts = new Date('2026-05-02T11:00:00.000Z')
+
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [{ contact, timestamp: ts }],
+      }),
+    } as any)
+
+    jest
+      .spyOn(leasingAdapter, 'syncContactToLeasing')
+      .mockResolvedValueOnce({ ok: true, data: { skipped: false } }) // main contact ok
+      .mockResolvedValueOnce({ ok: false, err: 'sync-failed' }) // related contact fails
+
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    jest
+      .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncContacts({ stateFile, queueFile })
+
+    // Main contact queued (not the related contact)
+    const queue = await readQueue(queueFile)
+    expect(queue).toHaveLength(1)
+    expect(queue[0].key).toBe(`${contact.contactCode}:${ts.toISOString()}`)
+    expect(queue[0].type).toBe('contact')
+
+    // Failure email sent
+    expect(sendEmailSpy).toHaveBeenCalledTimes(1)
+    expect(sendEmailSpy.mock.calls[0][0].subject).toMatch(
+      `sync-contacts: nytt fel på kontakt ${contact.contactCode}`
+    )
+  })
+
+  it('case 8: non-triggering roles (trustee, administrator, otherInvoiceRecipient) — no additional leasing calls', async () => {
+    const contact = factory.domainContact.build({
+      relatedContacts: [
+        {
+          contactCode: 'P300001',
+          role: 'trustee' as const,
+          fullName: 'Erik Eriksson',
+          firstName: 'Erik',
+          lastName: 'Eriksson',
+        },
+        {
+          contactCode: 'P300002',
+          role: 'administrator' as const,
+          fullName: 'Frida Friberg',
+          firstName: 'Frida',
+          lastName: 'Friberg',
+        },
+        {
+          contactCode: 'P300003',
+          role: 'otherInvoiceRecipient' as const,
+          fullName: 'Gustav Gustafsson',
+          firstName: 'Gustav',
+          lastName: 'Gustafsson',
+        },
+      ],
+    })
+    const ts = new Date('2026-05-02T12:00:00.000Z')
+
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [{ contact, timestamp: ts }],
+      }),
+    } as any)
+
+    const syncLeasingSpy = jest
+      .spyOn(leasingAdapter, 'syncContactToLeasing')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    jest
+      .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncContacts({ stateFile, queueFile })
+
+    // Only 1 leasing call — main contact only, non-triggering roles not synced
+    expect(syncLeasingSpy).toHaveBeenCalledTimes(1)
+    expect(await readQueue(queueFile)).toHaveLength(0)
+  })
 })
