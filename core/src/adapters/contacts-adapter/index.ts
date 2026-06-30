@@ -142,12 +142,18 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       return listResponse(response)
     },
 
-    async getUpdatedContacts(
+    async getUpdatedContacts({
+      since,
+      includeRelations = false,
+    }: {
       since: Date | null
-    ): Promise<
+      includeRelations: boolean
+    }): Promise<
       AdapterResult<{ contact: Contact; timestamp: Date }[], 'unknown'>
     > {
-      const params = since ? { since: since.toISOString() } : {}
+      const params = since
+        ? { since: since.toISOString(), includeRelations }
+        : {}
       const response = await axios<SyncContactsResponseBody>(`/contacts/sync`, {
         params,
       })
