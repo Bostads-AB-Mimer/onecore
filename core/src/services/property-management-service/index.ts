@@ -547,12 +547,15 @@ export const routes = (router: KoaRouter) => {
     }
 
     const startDate = ctx.request.body.startDate
+    const triggeredBy =
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
 
     try {
       const result = await createLeaseForExternalParkingSpace(
         parkingSpaceId,
         contactId,
-        startDate
+        startDate,
+        triggeredBy
       )
 
       ctx.status = result.httpStatus

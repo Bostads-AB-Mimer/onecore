@@ -15,7 +15,10 @@ interface UseSingleEmailOptions {
     recipients: { contactCode?: string; emailAddress: string }[],
     subject: string,
     text: string
-  ) => Promise<{ totalSent: number; totalInvalid: number }>
+  ) => Promise<{
+    content: { totalSent: number; totalInvalid: number }
+    warnings?: string[]
+  }>
 }
 
 export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
@@ -59,12 +62,22 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
 
         toast({
           title: 'Mejl skickat',
-          description: `Skickades till ${result.totalSent} mottagare${
-            result.totalInvalid > 0
-              ? `. ${result.totalInvalid} ogiltiga adresser.`
+          description: `Skickades till ${result.content.totalSent} mottagare${
+            result.content.totalInvalid > 0
+              ? `. ${result.content.totalInvalid} ogiltiga adresser.`
               : ''
           }`,
         })
+
+        // Non-blocking: the email was sent, but something like communication-log
+        // writing failed. Surface it without blocking the success flow.
+        if (result.warnings?.length) {
+          toast({
+            title: 'Mejlet skickades, men en åtgärd misslyckades',
+            description: result.warnings.join(' '),
+            variant: 'destructive',
+          })
+        }
 
         setState((prev) => ({ ...prev, open: false }))
       } catch (error) {
