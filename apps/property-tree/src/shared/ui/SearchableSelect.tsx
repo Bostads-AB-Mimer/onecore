@@ -67,6 +67,10 @@ export function SearchableSelect<T>({
   const [open, setOpen] = useState(false)
   const selectedKey = value ? getKey(value) : null
 
+  // Resolve which render function to use, falling back to sensible defaults.
+  const renderTriggerValue = renderValue ?? renderItem ?? getLabel
+  const renderRow = renderItem ?? getLabel
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -83,7 +87,7 @@ export function SearchableSelect<T>({
             className
           )}
         >
-          {value ? (renderValue ?? renderItem ?? getLabel)(value) : placeholder}
+          {value ? renderTriggerValue(value) : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -116,7 +120,7 @@ export function SearchableSelect<T>({
                         selectedKey === key ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    {(renderItem ?? getLabel)(item)}
+                    {renderRow(item)}
                   </CommandItem>
                 )
               })}
