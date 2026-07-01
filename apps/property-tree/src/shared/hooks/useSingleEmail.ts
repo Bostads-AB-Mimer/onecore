@@ -1,18 +1,20 @@
 import { useCallback, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from './useToast'
 
-interface SingleEmailState {
-  open: boolean
-  recipientName: string
+// A fully-resolved email recipient. Having one is the proof we can send: every
+// field is required, so there is no path to the API without a contactCode and
+// email address, and no empty-string placeholders to accidentally send.
+export interface SingleEmailRecipient {
+  name: string
   emailAddress: string
-  contactCode?: string
+  contactCode: string
 }
 
 interface UseSingleEmailOptions {
   sendEmail: (
-    recipients: { contactCode?: string; emailAddress: string }[],
+    recipients: { contactCode: string; emailAddress: string }[],
     subject: string,
     text: string
   ) => Promise<{
@@ -24,81 +26,86 @@ interface UseSingleEmailOptions {
 export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const [state, setState] = useState<SingleEmailState>({
-    open: false,
-    recipientName: '',
-    emailAddress: '',
-  })
 
-  const openEmailModal = useCallback(
-    (recipientName: string, emailAddress: string, contactCode?: string) => {
-      setState({ open: true, recipientName, emailAddress, contactCode })
-    },
-    []
-  )
+  // Selection is modal openness: null = closed, a recipient = open. There is
+  // never a half-filled "open but blank" object.
+  const [recipient, setRecipient] = useState<SingleEmailRecipient | null>(null)
 
-  const onOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setState((prev) => ({ ...prev, open: false }))
-    }
-  }, [])
+  const sendMutation = useMutation({
+    mutationFn: ({
+      recipient,
+      subject,
+      body,
+    }: {
+      recipient: SingleEmailRecipient
+      subject: string
+      body: string
+    }) =>
+      sendEmail(
+        [
+          {
+            contactCode: recipient.contactCode,
+            emailAddress: recipient.emailAddress,
+          },
+        ],
+        subject,
+        body
+      ),
+    onSuccess: (result) => {
+      // Refresh any open tenant communication log so the new message appears.
+      queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
+      toast({
+        title: 'Mejl skickat',
+        description: `Skickades till ${result.content.totalSent} mottagare${
+          result.content.totalInvalid > 0
+            ? `. ${result.content.totalInvalid} ogiltiga adresser.`
+            : ''
+        }`,
+      })
 
-  const handleSendEmail = useCallback(
-    async (subject: string, body: string) => {
-      try {
-        const result = await sendEmail(
-          [
-            {
-              contactCode: state.contactCode,
-              emailAddress: state.emailAddress,
-            },
-          ],
-          subject,
-          body
-        )
-
-        // Refresh any open tenant communication log so the new message appears.
-        queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
-
+      // Non-blocking: the email was sent, but something like communication-log
+      // writing failed. Surface it without blocking the success flow.
+      if (result.warnings?.length) {
         toast({
-          title: 'Mejl skickat',
-          description: `Skickades till ${result.content.totalSent} mottagare${
-            result.content.totalInvalid > 0
-              ? `. ${result.content.totalInvalid} ogiltiga adresser.`
-              : ''
-          }`,
-        })
-
-        // Non-blocking: the email was sent, but something like communication-log
-        // writing failed. Surface it without blocking the success flow.
-        if (result.warnings?.length) {
-          toast({
-            title: 'Mejlet skickades, men en åtgärd misslyckades',
-            description: result.warnings.join(' '),
-            variant: 'destructive',
-          })
-        }
-
-        setState((prev) => ({ ...prev, open: false }))
-      } catch (error) {
-        const errorMessage = extractErrorMessage(error)
-        toast({
-          title: 'Kunde inte skicka mejl',
-          description: errorMessage,
+          title: 'Mejlet skickades, men en åtgärd misslyckades',
+          description: result.warnings.join(' '),
           variant: 'destructive',
         })
       }
     },
-    [state.emailAddress, state.contactCode, sendEmail, toast, queryClient]
+    onError: (error) => {
+      toast({
+        title: 'Kunde inte skicka mejl',
+        description: extractErrorMessage(error),
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const openEmailModal = useCallback(
+    (r: SingleEmailRecipient) => setRecipient(r),
+    []
+  )
+  const closeEmail = useCallback(() => setRecipient(null), [])
+
+  const handleSendEmail = useCallback(
+    async (subject: string, body: string) => {
+      if (!recipient) return
+      try {
+        await sendMutation.mutateAsync({ recipient, subject, body })
+      } catch {
+        // Surfaced via onError; swallow so the modal doesn't see a rejection.
+      }
+    },
+    [recipient, sendMutation]
   )
 
   return {
-    emailModalOpen: state.open,
-    emailRecipientName: state.recipientName,
-    emailAddress: state.emailAddress,
+    recipient,
     openEmailModal,
-    onOpenChange,
+    closeEmail,
     handleSendEmail,
+    isSending: sendMutation.isPending,
   }
 }
 

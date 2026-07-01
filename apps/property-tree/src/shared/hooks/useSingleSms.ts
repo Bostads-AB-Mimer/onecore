@@ -1,18 +1,20 @@
 import { useCallback, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from './useToast'
 
-interface SingleSmsState {
-  open: boolean
-  recipientName: string
+// A fully-resolved SMS recipient. Having one is the proof we can send: every
+// field is required, so there is no path to the API without a contactCode and
+// phone number, and no empty-string placeholders to accidentally send.
+export interface SingleSmsRecipient {
+  name: string
   phoneNumber: string
-  contactCode?: string
+  contactCode: string
 }
 
 interface UseSingleSmsOptions {
   sendSms: (
-    recipients: { contactCode?: string; phoneNumber: string }[],
+    recipients: { contactCode: string; phoneNumber: string }[],
     message: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
 }
@@ -20,65 +22,73 @@ interface UseSingleSmsOptions {
 export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const [state, setState] = useState<SingleSmsState>({
-    open: false,
-    recipientName: '',
-    phoneNumber: '',
+
+  // Selection is modal openness: null = closed, a recipient = open. There is
+  // never a half-filled "open but blank" object.
+  const [recipient, setRecipient] = useState<SingleSmsRecipient | null>(null)
+
+  const sendMutation = useMutation({
+    mutationFn: ({
+      recipient,
+      message,
+    }: {
+      recipient: SingleSmsRecipient
+      message: string
+    }) =>
+      sendSms(
+        [
+          {
+            contactCode: recipient.contactCode,
+            phoneNumber: recipient.phoneNumber,
+          },
+        ],
+        message
+      ),
+    onSuccess: (result) => {
+      // Refresh any open tenant communication log so the new message appears.
+      queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
+      toast({
+        title: 'SMS skickat',
+        description: `Skickades till ${result.totalSent} mottagare${
+          result.totalInvalid > 0
+            ? `. ${result.totalInvalid} ogiltiga nummer.`
+            : ''
+        }`,
+      })
+    },
+    onError: (error) => {
+      toast({
+        title: 'Kunde inte skicka SMS',
+        description: extractErrorMessage(error),
+        variant: 'destructive',
+      })
+    },
   })
 
   const openSmsModal = useCallback(
-    (recipientName: string, phoneNumber: string, contactCode?: string) => {
-      setState({ open: true, recipientName, phoneNumber, contactCode })
-    },
+    (r: SingleSmsRecipient) => setRecipient(r),
     []
   )
-
-  const onOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setState((prev) => ({ ...prev, open: false }))
-    }
-  }, [])
+  const closeSms = useCallback(() => setRecipient(null), [])
 
   const handleSendSms = useCallback(
     async (message: string) => {
+      if (!recipient) return
       try {
-        const result = await sendSms(
-          [{ contactCode: state.contactCode, phoneNumber: state.phoneNumber }],
-          message
-        )
-
-        // Refresh any open tenant communication log so the new message appears.
-        queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
-
-        toast({
-          title: 'SMS skickat',
-          description: `Skickades till ${result.totalSent} mottagare${
-            result.totalInvalid > 0
-              ? `. ${result.totalInvalid} ogiltiga nummer.`
-              : ''
-          }`,
-        })
-
-        setState((prev) => ({ ...prev, open: false }))
-      } catch (error) {
-        const errorMessage = extractErrorMessage(error)
-        toast({
-          title: 'Kunde inte skicka SMS',
-          description: errorMessage,
-          variant: 'destructive',
-        })
+        await sendMutation.mutateAsync({ recipient, message })
+      } catch {
+        // Surfaced via onError; swallow so the modal doesn't see a rejection.
       }
     },
-    [state.phoneNumber, state.contactCode, sendSms, toast, queryClient]
+    [recipient, sendMutation]
   )
 
   return {
-    smsModalOpen: state.open,
-    smsRecipientName: state.recipientName,
-    smsPhoneNumber: state.phoneNumber,
+    recipient,
     openSmsModal,
-    onOpenChange,
+    closeSms,
     handleSendSms,
+    isSending: sendMutation.isPending,
   }
 }
 

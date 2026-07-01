@@ -24,12 +24,12 @@ export interface UseBulkMessagingOptions<TItem> {
   fetchAllContacts?: () => Promise<Contact[]>
   /** Send bulk SMS - returns result with totalSent/totalInvalid */
   sendBulkSms: (
-    recipients: { contactCode?: string; phoneNumber: string }[],
+    recipients: { contactCode: string; phoneNumber: string }[],
     message: string
   ) => Promise<{ totalSent: number; totalInvalid: number }>
   /** Send bulk email - returns the result plus any non-blocking warnings */
   sendBulkEmail: (
-    recipients: { contactCode?: string; emailAddress: string }[],
+    recipients: { contactCode: string; emailAddress: string }[],
     subject: string,
     body: string
   ) => Promise<{
