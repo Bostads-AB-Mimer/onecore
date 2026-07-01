@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import { randomUUID } from 'crypto'
+import dayjs from 'dayjs'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
 import { gql } from 'graphql-request'
@@ -257,15 +258,21 @@ const transformToInvoice = (invoiceData: any): Invoice => {
   // TODO? handle overpaid invoices (negative remainingAmount)?
   // TODO? DO we want a unique status for invoices paid after due date?
   function getPaymentStatus(invoice: Omit<Invoice, 'paymentStatus'>) {
+    //Can remainingAmount be negative? otherwise skip check
+    if (!invoice.remainingAmount || invoice.remainingAmount <= 0) {
+      return PaymentStatus.Paid
+    }
+
     const now = new Date()
     const overdueDate = invoice.defermentDate ?? invoice.expirationDate
 
-    //Can remainingAmount be negative? otherwise skip check
-    if (!invoice.remainingAmount || invoice.remainingAmount <= 0)
-      return PaymentStatus.Paid
-    if (overdueDate != null && now > overdueDate) return PaymentStatus.Overdue
-    if (invoice.remainingAmount < invoice.amount)
+    if (overdueDate && now > dayjs(overdueDate).endOf('day').toDate()) {
+      return PaymentStatus.Overdue
+    }
+    if (invoice.remainingAmount < invoice.amount) {
       return PaymentStatus.PartlyPaid
+    }
+
     return PaymentStatus.Unpaid
   }
 
