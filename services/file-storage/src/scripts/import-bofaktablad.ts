@@ -63,8 +63,7 @@ const main = async (): Promise<void> => {
   try {
     entries = await fs.readdir(sourceDir, { withFileTypes: true })
   } catch (err) {
-    console.error(`Failed to read source dir '${sourceDir}':`, err)
-    process.exit(1)
+    throw new Error(`Failed to read source dir '${sourceDir}': ${String(err)}`)
   }
 
   const jpgFiles = entries
@@ -126,11 +125,11 @@ const main = async (): Promise<void> => {
   }
 
   if (failed > 0) {
-    process.exit(1)
+    throw new Error(`Import completed with ${failed} failed uploads`)
   }
 }
 
 main().catch((err) => {
   console.error('Import script failed:', err)
-  process.exit(1)
+  process.exitCode = 1
 })
