@@ -268,6 +268,8 @@ export const sendWorkOrderSms = async ({
   phoneNumber,
   text,
   externalContractorName,
+  contactCode,
+  triggeredByUser,
 }: WorkOrderSms): Promise<AdapterResult<any, 'error'>> => {
   try {
     const axiosOptions = {
@@ -281,7 +283,13 @@ export const sendWorkOrderSms = async ({
       `${config.communicationService.url}/sendWorkOrderSms`,
       {
         ...axiosOptions,
-        data: { phoneNumber, text, externalContractorName },
+        data: {
+          phoneNumber,
+          text,
+          externalContractorName,
+          contactCode,
+          triggeredByUser,
+        },
       }
     )
 
@@ -300,6 +308,8 @@ export const sendWorkOrderEmail = async ({
   subject,
   text,
   externalContractorName,
+  contactCode,
+  triggeredByUser,
 }: WorkOrderEmail): Promise<AdapterResult<any, 'error'>> => {
   try {
     const axiosOptions = {
@@ -313,7 +323,14 @@ export const sendWorkOrderEmail = async ({
       `${config.communicationService.url}/sendWorkOrderEmail`,
       {
         ...axiosOptions,
-        data: { to, subject, text, externalContractorName },
+        data: {
+          to,
+          subject,
+          text,
+          externalContractorName,
+          contactCode,
+          triggeredByUser,
+        },
       }
     )
 

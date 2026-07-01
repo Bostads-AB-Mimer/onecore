@@ -175,6 +175,156 @@ describe('/sendWorkOrderEmail', () => {
   })
 })
 
+describe('work order tenant message logging', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+
+  // The SMS adapter returns the Infobip v3 response directly (no `.data`
+  // wrapper, unlike the email adapter), so the route reads messages[0] off it.
+  const smsSendResult = (messageId: string) => ({
+    messages: [
+      {
+        to: '46701234567',
+        messageId,
+        status: {
+          groupId: 1,
+          groupName: 'PENDING',
+          id: 26,
+          name: 'PENDING_ACCEPTED',
+          description: 'Message accepted',
+        },
+      },
+    ],
+  })
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+  })
+
+  it('logs the SMS with contactCode, messageId and the triggering user', async () => {
+    jest
+      .spyOn(smsAdapter, 'sendWorkOrderSms')
+      .mockResolvedValue(smsSendResult('mid-wo-sms'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
+      phoneNumber: '0701234567',
+      text: 'Ditt ärende är uppdaterat',
+      contactCode: 'P123456',
+      triggeredByUser: 'Anna Handläggare',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledTimes(1)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'sms',
+        messageType: 'work_order_tenant_sms',
+        triggeredByUser: 'Anna Handläggare',
+        recipients: [
+          expect.objectContaining({
+            contactCode: 'P123456',
+            toAddress: '46701234567',
+            externalMessageId: 'mid-wo-sms',
+            status: 'pending',
+          }),
+        ],
+      })
+    )
+  })
+
+  it('does not log the SMS when contactCode is absent (back-compat)', async () => {
+    jest
+      .spyOn(smsAdapter, 'sendWorkOrderSms')
+      .mockResolvedValue(smsSendResult('mid-wo-sms'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
+      phoneNumber: '0701234567',
+      text: 'hello',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a non-blocking warning when SMS logging throws', async () => {
+    jest
+      .spyOn(smsAdapter, 'sendWorkOrderSms')
+      .mockResolvedValue(smsSendResult('mid-wo-sms'))
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
+      phoneNumber: '0701234567',
+      text: 'hello',
+      contactCode: 'P123456',
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toEqual(['Communication log failed'])
+  })
+
+  it('logs the email with contactCode and messageId', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendWorkOrderEmail')
+      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
+      to: 'tenant@example.com',
+      subject: 'Ditt ärende',
+      text: 'Ditt ärende är uppdaterat',
+      contactCode: 'P123456',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledTimes(1)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'email',
+        messageType: 'work_order_tenant_mail',
+        recipients: [
+          expect.objectContaining({
+            contactCode: 'P123456',
+            toAddress: 'tenant@example.com',
+            externalMessageId: 'mid-wo-mail',
+            status: 'pending',
+          }),
+        ],
+      })
+    )
+  })
+
+  it('does not log the email when contactCode is absent (back-compat)', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendWorkOrderEmail')
+      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
+      to: 'tenant@example.com',
+      subject: 'subject',
+      text: 'hello',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a non-blocking warning when email logging throws', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendWorkOrderEmail')
+      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
+      to: 'tenant@example.com',
+      subject: 'subject',
+      text: 'hello',
+      contactCode: 'P123456',
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toEqual(['Communication log failed'])
+  })
+})
+
 describe('isMessageEmail', () => {
   it('should return true for valid email objects', () => {
     const validEmail = {
