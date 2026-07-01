@@ -6,7 +6,7 @@ import type {
   ResidenceDetails,
   ResidenceSummary,
 } from '../../types'
-import { GET } from './baseApi'
+import { GET, PUT } from './baseApi'
 
 const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
 
@@ -47,6 +47,21 @@ export const residenceService = {
     if (!data.content) throw new Error('No data returned from API')
 
     return data.content
+  },
+
+  async updateMalarEnergiFacilityId(
+    rentalId: string,
+    malarEnergiFacilityId: string
+  ): Promise<string> {
+    const { data, error } = await PUT(
+      '/residences/by-rental-id/{rentalId}/malar-energi-facility-id',
+      {
+        params: { path: { rentalId } },
+        body: { malarEnergiFacilityId },
+      }
+    )
+    if (error) throw error
+    return data.content?.malarEnergiFacilityId ?? malarEnergiFacilityId
   },
 
   async getRentalBlocksByRentalId(

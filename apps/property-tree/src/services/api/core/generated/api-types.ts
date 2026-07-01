@@ -4919,6 +4919,51 @@ export interface paths {
       };
     };
   };
+  "/residences/by-rental-id/{rentalId}/malar-energi-facility-id": {
+    /**
+     * Update or add a residence's Mälarenergi facility id.
+     * @description Forwards to property-base-service which upserts the "Anläggnings ID
+     * Mälarenergi" comment row (cmtex) in Xpand for the residence.
+     */
+    put: {
+      parameters: {
+        path: {
+          rentalId: string;
+        };
+      };
+      requestBody: {
+        content: {
+          "application/json": {
+            malarEnergiFacilityId: string;
+          };
+        };
+      };
+      responses: {
+        /** @description The updated Mälarenergi facility id. */
+        200: {
+          content: {
+            "application/json": {
+              content?: {
+                malarEnergiFacilityId?: string;
+              };
+            };
+          };
+        };
+        /** @description Invalid request body. */
+        400: {
+          content: never;
+        };
+        /** @description Residence not found. */
+        404: {
+          content: never;
+        };
+        /** @description Internal server error. */
+        500: {
+          content: never;
+        };
+      };
+    };
+  };
   "/residences/rental-blocks/by-rental-id/{rentalId}": {
     /**
      * Get rental blocks by rental ID

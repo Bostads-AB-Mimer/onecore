@@ -4,6 +4,7 @@ import { logger } from '@onecore/utilities'
 import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
+import { generateXpandId } from '@src/utils/generate-xpand-id'
 import {
   calculateYearlyRentFromYearRentRows,
   calculateEstimatedHyresbortfall,
@@ -1670,5 +1671,91 @@ export const getDistinctBlockReasons = async () => {
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getDistinctBlockReasons')
     throw err
+  }
+}
+
+export type UpsertMalarEnergiFacilityIdResult =
+  | { ok: true; data: string }
+  | {
+      ok: false
+      err: 'residence-not-found' | 'template-not-found' | 'unknown'
+    }
+
+/**
+ * Upserts a residence's "Anläggnings ID Mälarenergi" (Mälarenergi facility id).
+ *
+ * The value is not a column on the residence — it is a free-text comment row in
+ * the Xpand `cmtex` table (Prisma `TypeText`) linked to the residence
+ * (`cmtex.keycode` -> `balgh.keybalgh`) via the shared "Anläggningsid" template
+ * (`cmtep` where type='balgh', caption='Anläggningsid'). So this updates the
+ * existing comment row's `text` when present, otherwise inserts a new one.
+ *
+ * Char(15) key columns are space-padded in Xpand, but SQL Server's `=` compares
+ * char/varchar trailing-space-insensitively and INSERT right-pads automatically,
+ * so keying the write off the DB-resolved ids is safe.
+ */
+export const upsertMalarEnergiFacilityId = async (
+  rentalId: string,
+  value: string
+): Promise<UpsertMalarEnergiFacilityIdResult> => {
+  try {
+    // 1. Resolve the residence (balgh.keybalgh) from the rentalId. Also pull
+    // the residence's babuf timestamp — the cmtex row carries a non-null
+    // Char(10) Xpand row-version, and reusing an existing one is the same
+    // approach room-adapter uses for its inserts.
+    const residenceStructure = await prisma.propertyStructure.findFirst({
+      where: {
+        rentalId,
+        propertyObject: { objectTypeId: 'balgh' },
+        NOT: { rentalId: { endsWith: 'X' } },
+      },
+      select: { residenceId: true, timestamp: true },
+    })
+    if (!residenceStructure?.residenceId) {
+      return { ok: false, err: 'residence-not-found' }
+    }
+    const residenceId = residenceStructure.residenceId
+    const timestampVal = residenceStructure.timestamp
+
+    // 2. Resolve the single shared "Anläggningsid" template row (cmtep).
+    const template = await prisma.template.findFirst({
+      where: { type: 'balgh', caption: 'Anläggningsid' },
+      select: { id: true },
+    })
+    if (!template) {
+      return { ok: false, err: 'template-not-found' }
+    }
+    const templateId = template.id
+
+    // 3. Does a comment row already exist for this residence + template?
+    const existing = await prisma.typeText.findFirst({
+      where: { keycode: residenceId, keycmtep: templateId },
+      select: { id: true },
+    })
+
+    // 4. Update the existing row or insert a new one (single transaction).
+    await prisma.$transaction(async (tx) => {
+      if (existing) {
+        await tx.$executeRaw`
+          UPDATE cmtex
+          SET text = ${value}
+          WHERE keycode = ${residenceId} AND keycmtep = ${templateId}
+        `
+      } else {
+        const newCmtexId = generateXpandId()
+        await tx.$executeRaw`
+          INSERT INTO cmtex (keycmtex, keycmtep, keycode, text, timestamp)
+          VALUES (${newCmtexId}, ${templateId}, ${residenceId}, ${value}, ${timestampVal})
+        `
+      }
+    })
+
+    return { ok: true, data: value }
+  } catch (err) {
+    logger.error(
+      { err, rentalId },
+      'residence-adapter.upsertMalarEnergiFacilityId'
+    )
+    return { ok: false, err: 'unknown' }
   }
 }

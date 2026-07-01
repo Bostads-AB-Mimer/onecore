@@ -13,6 +13,7 @@ import {
 } from '@/shared/ui/Tooltip'
 
 import { ApartmentTemperature } from './ApartmentTemperature'
+import { MalarEnergiFacilityIdField } from './MalarEnergiFacilityIdField'
 
 interface ResidenceBasicInfoProps {
   residence: components['schemas']['ResidenceDetails']
@@ -173,8 +174,8 @@ export const ResidenceBasicInfo = ({
             label="Yta"
             value={residence.areaSize ? `${residence.areaSize} m²` : undefined}
           />
-          <CopyableField
-            label="Anläggnings ID Mälarenergi"
+          <MalarEnergiFacilityIdField
+            rentalId={residence.propertyObject.rentalId ?? undefined}
             value={residence.malarEnergiFacilityId || undefined}
           />
           <ApartmentTemperature

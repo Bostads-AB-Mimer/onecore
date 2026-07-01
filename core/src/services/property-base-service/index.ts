@@ -5,6 +5,7 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
@@ -1047,6 +1048,96 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /residences/by-rental-id/{rentalId}/malar-energi-facility-id:
+   *   put:
+   *     summary: Update or add a residence's Mälarenergi facility id.
+   *     description: |
+   *       Forwards to property-base-service which upserts the "Anläggnings ID
+   *       Mälarenergi" comment row (cmtex) in Xpand for the residence.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - malarEnergiFacilityId
+   *             properties:
+   *               malarEnergiFacilityId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: The updated Mälarenergi facility id.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     malarEnergiFacilityId:
+   *                       type: string
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: Residence not found.
+   *       500:
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put(
+    '(.*)/residences/by-rental-id/:rentalId/malar-energi-facility-id',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalId } = ctx.params
+
+      const parsed =
+        property.UpdateMalarEnergiFacilityIdRequestSchema.safeParse(
+          ctx.request.body
+        )
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = { errors: parsed.error.errors, ...metadata }
+        return
+      }
+
+      const result = await propertyBaseAdapter.updateMalarEnergiFacilityId(
+        rentalId,
+        parsed.data
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Residence not found', ...metadata }
+          return
+        }
+        logger.error(
+          { err: result.err, metadata },
+          'PUT /residences/by-rental-id/:rentalId/malar-energi-facility-id failed'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   /**
    * @swagger
