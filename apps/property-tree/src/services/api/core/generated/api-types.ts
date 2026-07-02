@@ -2992,6 +2992,48 @@ export interface paths {
       }
     }
   }
+  '/work-orders/by-code/{code}': {
+    /**
+     * Get a single work order by its errand code
+     * @description Retrieves a single Odoo work order (errand) by its code. The code may be provided with or without the `od-` prefix (e.g. `od-12345` or `12345`).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The errand code, with or without the `od-` prefix. */
+          code: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the work order. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['WorkOrder']
+            }
+          }
+        }
+        /** @description Work order not found. */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Work order not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve the work order. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/work-orders/xpand/{code}': {
     /**
      * Get work order details by rental property id from xpand
