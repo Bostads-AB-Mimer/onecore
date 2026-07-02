@@ -1,4 +1,5 @@
 import { logger, PaginatedResponse } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import createClient from 'openapi-fetch'
 import axios from 'axios'
 
@@ -381,6 +382,49 @@ export async function getResidenceByRentalId(
     )
   } catch (err) {
     logger.error({ err }, '@onecore/property-adapter.getResidenceByRentalId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function updateMalarEnergiFacilityId(
+  rentalId: string,
+  body: property.UpdateMalarEnergiFacilityIdRequest
+): Promise<
+  AdapterResult<
+    property.UpdateMalarEnergiFacilityIdResponse,
+    'not-found' | 'unknown'
+  >
+> {
+  try {
+    const fetchResponse = await client().PUT(
+      '/residences/rental-id/{rentalId}/malar-energi-facility-id',
+      {
+        params: { path: { rentalId } },
+        body,
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: {
+          malarEnergiFacilityId:
+            fetchResponse.data.content.malarEnergiFacilityId ??
+            body.malarEnergiFacilityId,
+        },
+      }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      { err },
+      '@onecore/property-adapter.updateMalarEnergiFacilityId'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

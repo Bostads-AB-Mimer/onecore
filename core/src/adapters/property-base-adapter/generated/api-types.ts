@@ -1155,6 +1155,54 @@ export interface paths {
       }
     }
   }
+  '/residences/rental-id/{rentalId}/malar-energi-facility-id': {
+    /**
+     * Update or add a residence's Mälarenergi facility id.
+     * @description Upserts the "Anläggnings ID Mälarenergi" for the residence identified
+     * by the rental id. The value is stored as a free-text comment row in
+     * Xpand (cmtex) under the shared "Anläggningsid" template — the existing
+     * row is updated when present, otherwise a new one is inserted.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The rental id of the residence. */
+          rentalId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            malarEnergiFacilityId: string
+          }
+        }
+      }
+      responses: {
+        /** @description The updated Mälarenergi facility id. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                malarEnergiFacilityId?: string
+              }
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
+        }
+        /** @description Residence not found for the supplied rentalId. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/residences/rental-id/{rentalId}/rental-blocks': {
     /**
      * Get rental blocks by rental ID

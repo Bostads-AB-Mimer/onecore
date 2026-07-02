@@ -9,6 +9,20 @@ export type UpdateComponentInspectionState = z.infer<
   typeof UpdateComponentInspectionStateSchema
 >
 
+// ---- Residence: Mälarenergi facility id ("Anläggnings ID Mälarenergi") ----
+// Request body for upserting a residence's Mälarenergi facility id. Shared
+// between the property service and the core proxy — source of truth, do not
+// re-declare in either consumer.
+export const UpdateMalarEnergiFacilityIdRequestSchema = z.object({
+  malarEnergiFacilityId: z.string().trim().min(1),
+})
+
+// Response shape for the upsert — shared so neither the service nor the core
+// proxy hand-declares it. Value is echoed back after a successful write.
+export const UpdateMalarEnergiFacilityIdResponseSchema = z.object({
+  malarEnergiFacilityId: z.string(),
+})
+
 // ---- Apartment temperatures (EcoGuard Curves) ----
 // Public request/response shapes shared between the property service and the
 // core proxy. Source of truth — do not re-declare these in either consumer.
