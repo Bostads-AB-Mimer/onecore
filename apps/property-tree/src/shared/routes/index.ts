@@ -61,6 +61,29 @@ export const paths = {
   tenant: (contactCode: string) => generatePath(routes.tenant, { contactCode }),
 }
 
+// Build a rental-object detail path from its type label + code. Folds the
+// varied labels (Bostad/Lägenhet, Lokal/Förråd, Bilplats/parkering); returns
+// null when unlinkable (e.g. Övrigt) or the code is missing.
+export function getRentalObjectPath(
+  type: string | null | undefined,
+  code: string | null | undefined
+): string | null {
+  if (!code) return null
+  switch (type?.toLowerCase()) {
+    case 'bostad':
+    case 'lägenhet':
+      return paths.residence(code)
+    case 'bilplats':
+    case 'parkering':
+      return paths.parkingSpace(code)
+    case 'lokal':
+    case 'förråd':
+      return paths.facility(code)
+    default:
+      return null
+  }
+}
+
 /**
  * Get the static prefix of a route pattern (everything before the first :param).
  * Useful for checking if a pathname belongs to a given route.
