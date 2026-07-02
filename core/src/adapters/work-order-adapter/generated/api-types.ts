@@ -3,11 +3,9 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
-  "openapi": {
-  };
-  "/health": {
+  openapi: {}
+  '/health': {
     /**
      * Check system health status
      * @description Retrieves the health status of the system and its subsystems.
@@ -17,61 +15,60 @@ export interface paths {
         /** @description Successful response with system health status */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               /**
                * @description Name of the system.
                * @example work-order
                */
-              name?: string;
+              name?: string
               /**
                * @description Overall status of the system ('active', 'impaired', 'failure', 'unknown').
                * @example active
                */
-              status?: string;
-              subsystems?: ({
-                  /** @description Name of the subsystem. */
-                  name?: string;
-                  /**
-                   * @description Status of the subsystem.
-                   * @enum {string}
-                   */
-                  status?: "active" | "impaired" | "failure" | "unknown";
-                  /** @description Additional details about the subsystem status. */
-                  details?: string;
-                })[];
-            };
-          };
-        };
-      };
-    };
-  };
-  "/health/db": {
+              status?: string
+              subsystems?: {
+                /** @description Name of the subsystem. */
+                name?: string
+                /**
+                 * @description Status of the subsystem.
+                 * @enum {string}
+                 */
+                status?: 'active' | 'impaired' | 'failure' | 'unknown'
+                /** @description Additional details about the subsystem status. */
+                details?: string
+              }[]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/health/db': {
     /** Database connection pool metrics */
     get: {
       responses: {
         /** @description Connection pool stats per configured DB connection. */
         200: {
           content: {
-            "application/json": {
-              connectionPools?: number;
+            'application/json': {
+              connectionPools?: number
               metrics?: {
-                  name?: string;
-                  pool?: {
-                    used?: number;
-                    free?: number;
-                    pendingCreates?: number;
-                    pendingAcquires?: number;
-                  };
-                }[];
-            };
-          };
-        };
-      };
-    };
-  };
-  "security": {
-  };
-  "/workOrders/contactCode/{contactCode}": {
+                name?: string
+                pool?: {
+                  used?: number
+                  free?: number
+                  pendingCreates?: number
+                  pendingAcquires?: number
+                }
+              }[]
+            }
+          }
+        }
+      }
+    }
+  }
+  security: {}
+  '/workOrders/contactCode/{contactCode}': {
     /**
      * Get work orders by contact code
      * @description Retrieves work orders based on the provided contact code.
@@ -80,37 +77,37 @@ export interface paths {
       parameters: {
         path: {
           /** @description The contact code to filter work orders. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["WorkOrder"][];
-              };
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/xpand/contactCode/{contactCode}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/xpand/contactCode/{contactCode}': {
     /**
      * Get work orders by contact code from xpand
      * @description Retrieves work orders from xpand based on the provided contact code.
@@ -119,45 +116,45 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The number of work orders to skip. */
-          skip?: number;
+          skip?: number
           /** @description The number of work orders to fetch. */
-          limit?: number;
+          limit?: number
           /** @description Whether to sort the work orders by ascending creation date. */
-          sortAscending?: boolean;
-        };
+          sortAscending?: boolean
+        }
         path: {
           /** @description The contact code to filter work orders. */
-          contactCode: string;
-        };
-      };
+          contactCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["XpandWorkOrder"][];
-              };
+                workOrders?: components['schemas']['XpandWorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/residenceId/{residenceId}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/residenceId/{residenceId}': {
     /**
      * Get work orders by residence id
      * @description Retrieves work orders based on the provided residence id.
@@ -166,37 +163,37 @@ export interface paths {
       parameters: {
         path: {
           /** @description The residence id to filter work orders. */
-          residenceId: string;
-        };
-      };
+          residenceId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["WorkOrder"][];
-              };
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/propertyId/{propertyId}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/propertyId/{propertyId}': {
     /**
      * Get work orders by property id
      * @description Retrieves work orders based on the provided property id.
@@ -205,37 +202,37 @@ export interface paths {
       parameters: {
         path: {
           /** @description The property id to filter work orders. */
-          propertyId: string;
-        };
-      };
+          propertyId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["WorkOrder"][];
-              };
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/buildingId/{buildingId}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/buildingId/{buildingId}': {
     /**
      * Get work orders by building id
      * @description Retrieves work orders based on the provided building id.
@@ -244,37 +241,37 @@ export interface paths {
       parameters: {
         path: {
           /** @description The building id to filter work orders. */
-          buildingId: string;
-        };
-      };
+          buildingId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["WorkOrder"][];
-              };
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/maintenanceUnitCode/{maintenanceUnitCode}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/maintenanceUnitCode/{maintenanceUnitCode}': {
     /**
      * Get work orders by maintenance unit code
      * @description Retrieves a list of work orders based on maintenance unit code.
@@ -283,37 +280,37 @@ export interface paths {
       parameters: {
         path: {
           /** @description The maintenance unit code to filter work orders. */
-          maintenanceUnitCode: string;
-        };
-      };
+          maintenanceUnitCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["WorkOrder"][];
-              };
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/xpand/residenceId/{residenceId}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/xpand/residenceId/{residenceId}': {
     /**
      * Get work orders by residence id from xpand
      * @description Retrieves work orders from xpand based on the provided residence id.
@@ -322,45 +319,45 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The number of work orders to skip. */
-          skip?: number;
+          skip?: number
           /** @description The number of work orders to fetch. */
-          limit?: number;
+          limit?: number
           /** @description Whether to sort the work orders by ascending creation date. */
-          sortAscending?: boolean;
-        };
+          sortAscending?: boolean
+        }
         path: {
           /** @description The residence id to filter work orders. */
-          residenceId: string;
-        };
-      };
+          residenceId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["XpandWorkOrder"][];
-              };
+                workOrders?: components['schemas']['XpandWorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/xpand/propertyId/{propertyId}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/xpand/propertyId/{propertyId}': {
     /**
      * Get work orders by property id from xpand
      * @description Retrieves work orders from xpand based on the provided property id.
@@ -369,45 +366,45 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The number of work orders to skip. */
-          skip?: number;
+          skip?: number
           /** @description The number of work orders to fetch. */
-          limit?: number;
+          limit?: number
           /** @description Whether to sort the work orders by ascending creation date. */
-          sortAscending?: boolean;
-        };
+          sortAscending?: boolean
+        }
         path: {
           /** @description The property id to filter work orders. */
-          propertyId: string;
-        };
-      };
+          propertyId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["XpandWorkOrder"][];
-              };
+                workOrders?: components['schemas']['XpandWorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/xpand/buildingId/{buildingId}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/xpand/buildingId/{buildingId}': {
     /**
      * Get work orders by building id from xpand
      * @description Retrieves work orders from xpand based on the provided building id.
@@ -416,45 +413,45 @@ export interface paths {
       parameters: {
         query?: {
           /** @description The number of work orders to skip. */
-          skip?: number;
+          skip?: number
           /** @description The number of work orders to fetch. */
-          limit?: number;
+          limit?: number
           /** @description Whether to sort the work orders by ascending creation date. */
-          sortAscending?: boolean;
-        };
+          sortAscending?: boolean
+        }
         path: {
           /** @description The building id to filter work orders. */
-          buildingId: string;
-        };
-      };
+          buildingId: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["XpandWorkOrder"][];
-              };
+                workOrders?: components['schemas']['XpandWorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/xpand/maintenanceUnitCode/{maintenanceUnitCode}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/xpand/maintenanceUnitCode/{maintenanceUnitCode}': {
     /**
      * Get work orders by maintenance unit code from xpand
      * @description Retrieves a list of work orders from xpand based on maintenance unit code.
@@ -463,56 +460,56 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Number of records to skip for pagination. */
-          skip?: number;
+          skip?: number
           /** @description Maximum number of records to return. */
-          limit?: number;
+          limit?: number
           /** @description Sort results in ascending order by creation time. */
-          sortAscending?: boolean;
-        };
+          sortAscending?: boolean
+        }
         path: {
           /** @description The maintenance unit code to filter work orders. */
-          maintenanceUnitCode: string;
-        };
-      };
+          maintenanceUnitCode: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work orders. */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
-                workOrders?: components["schemas"]["XpandWorkOrder"][];
-              };
+                workOrders?: components['schemas']['XpandWorkOrder'][]
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Bad request. Invalid query parameters. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @description Validation error details */
-              error?: Record<string, never>;
+              error?: Record<string, never>
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work orders. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/xpand/{code}": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/xpand/{code}': {
     /**
      * Get work order details by work order code from xpand
      * @description Retrieves work order details from xpand.
@@ -521,44 +518,44 @@ export interface paths {
       parameters: {
         path: {
           /** @description The work order code to fetch details for. */
-          code: string;
-        };
-      };
+          code: string
+        }
+      }
       responses: {
         /** @description Successfully retrieved work order. */
         200: {
           content: {
-            "application/json": {
-              content?: components["schemas"]["XpandWorkOrderDetails"];
+            'application/json': {
+              content?: components['schemas']['XpandWorkOrderDetails']
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Work order not found. */
         404: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Work order not found */
-              error?: string;
-            };
-          };
-        };
+              error?: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to retrieve work order. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders': {
     /**
      * Create a new work order
      * @description Creates a new work order based on the provided request body.
@@ -566,49 +563,49 @@ export interface paths {
     post: {
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CreateWorkOrderBody"];
-        };
-      };
+          'application/json': components['schemas']['CreateWorkOrderBody']
+        }
+      }
       responses: {
         /** @description Work order created successfully */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
                 /** @example 123 */
-                newWorkOrderId?: number;
-              };
+                newWorkOrderId?: number
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Bad request. Failed to create work order. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Error message from the adapter */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to create work order. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/{workOrderId}/update": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/{workOrderId}/update': {
     /**
      * Add a message to a work order
      * @description Adds a message to a work order based on the provided work order ID.
@@ -617,60 +614,60 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the work order to which the message will be added. */
-          workOrderId: string;
-        };
-      };
+          workOrderId: string
+        }
+      }
       requestBody: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * @description The message to be added to the work order.
              * @example This is a new message for the work order.
              */
-            message?: string;
-          };
-        };
-      };
+            message?: string
+          }
+        }
+      }
       responses: {
         /** @description Message added to the work order successfully */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
                 /** @example Message added to work order with ID {workOrderId} */
-                message?: string;
-              };
+                message?: string
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Bad request. Message is missing from the request body. */
         400: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Message is missing from the request body */
-              reason?: string;
+              reason?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to add message to the work order. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Internal server error */
-              error?: string;
+              error?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
-  "/workOrders/{workOrderId}/close": {
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/{workOrderId}/close': {
     /**
      * Close a work order
      * @description Closes a work order based on the provided work order ID.
@@ -679,269 +676,269 @@ export interface paths {
       parameters: {
         path: {
           /** @description The ID of the work order to be closed. */
-          workOrderId: string;
-        };
-      };
+          workOrderId: string
+        }
+      }
       responses: {
         /** @description Work order closed successfully */
         200: {
           content: {
-            "application/json": {
+            'application/json': {
               content?: {
                 /** @example Work order with ID {workOrderId} updated successfully */
-                message?: string;
-              };
+                message?: string
+              }
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
+              metadata?: Record<string, never>
+            }
+          }
+        }
         /** @description Internal server error. Failed to close work order. */
         500: {
           content: {
-            "application/json": {
+            'application/json': {
               /** @example Failed to update work order with ID {workOrderId} */
-              message?: string;
+              message?: string
               /** @description Route metadata */
-              metadata?: Record<string, never>;
-            };
-          };
-        };
-      };
-    };
-  };
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
-export type webhooks = Record<string, never>;
+export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
     WorkOrder: {
-      AccessCaption: string;
-      Caption: string;
-      Code: string;
-      ContactCode: string;
-      Description: string;
-      DetailsCaption: string;
-      ExternalResource: boolean;
-      Id: string;
+      AccessCaption: string
+      Caption: string
+      Code: string
+      ContactCode: string
+      Description: string
+      DetailsCaption: string
+      ExternalResource: boolean
+      Id: string
       /** Format: date-time */
-      LastChanged: string;
-      Priority: string;
+      LastChanged: string
+      Priority: string
       /** Format: date-time */
-      Registered: string;
-      DueDate: null | string;
-      RentalObjectCode: string;
-      Status: string;
-      UseMasterKey: boolean;
-      HiddenFromMyPages?: boolean;
-      WorkOrderRows: ({
-          Description: string | null;
-          LocationCode: string | null;
-          EquipmentCode: string | null;
-        })[];
+      Registered: string
+      DueDate: null | string
+      RentalObjectCode: string
+      Status: string
+      UseMasterKey: boolean
+      HiddenFromMyPages?: boolean
+      WorkOrderRows: {
+        Description: string | null
+        LocationCode: string | null
+        EquipmentCode: string | null
+      }[]
       Messages?: {
-          id: number;
-          body: string;
-          messageType: string;
-          author: string;
-          /** Format: date-time */
-          createDate: string;
-        }[];
-      Url?: string;
-    };
+        id: number
+        body: string
+        messageType: string
+        author: string
+        /** Format: date-time */
+        createDate: string
+      }[]
+      Url?: string
+    }
     XpandWorkOrder: {
-      AccessCaption: string;
-      Caption: string | null;
-      Code: string;
-      ContactCode: string | null;
-      Id: string;
+      AccessCaption: string
+      Caption: string | null
+      Code: string
+      ContactCode: string | null
+      Id: string
       /** Format: date-time */
-      LastChanged: string;
-      Priority: string | null;
+      LastChanged: string
+      Priority: string | null
       /** Format: date-time */
-      Registered: string;
-      DueDate: null | string;
-      RentalObjectCode: string;
-      Status: string;
-    };
+      Registered: string
+      DueDate: null | string
+      RentalObjectCode: string
+      Status: string
+    }
     XpandWorkOrderDetails: {
-      AccessCaption: string;
-      Caption: string | null;
-      Code: string;
-      ContactCode: string | null;
-      Description: string;
-      Id: string;
+      AccessCaption: string
+      Caption: string | null
+      Code: string
+      ContactCode: string | null
+      Description: string
+      Id: string
       /** Format: date-time */
-      LastChanged: string;
-      Priority: string | null;
+      LastChanged: string
+      Priority: string | null
       /** Format: date-time */
-      Registered: string;
-      DueDate: null | string;
-      RentalObjectCode: string;
-      Status: string;
-      WorkOrderRows: ({
-          Description: string | null;
-          LocationCode: string | null;
-          EquipmentCode: string | null;
-        })[];
-    };
+      Registered: string
+      DueDate: null | string
+      RentalObjectCode: string
+      Status: string
+      WorkOrderRows: {
+        Description: string | null
+        LocationCode: string | null
+        EquipmentCode: string | null
+      }[]
+    }
     CreateWorkOrderBody: {
       rentalProperty: {
-        id: string;
-        type: string;
+        id: string
+        type: string
         property: {
-          address: string;
-          code: string;
-          entrance: string;
-          floor: string;
-          hasElevator: boolean;
-          washSpace: string | null;
-          area: number;
-          estateCode: string | null;
-          estate: string | null;
-          buildingCode: string;
-          building: string;
-        };
-        maintenanceUnits?: ({
-            id: string;
-            rentalPropertyId: string;
-            code: string;
-            caption: string;
-            type: string;
-            estateCode: string | null;
-            estate: string | null;
-          })[];
-      };
+          address: string
+          code: string
+          entrance: string
+          floor: string
+          hasElevator: boolean
+          washSpace: string | null
+          area: number
+          estateCode: string | null
+          estate: string | null
+          buildingCode: string
+          building: string
+        }
+        maintenanceUnits?: {
+          id: string
+          rentalPropertyId: string
+          code: string
+          caption: string
+          type: string
+          estateCode: string | null
+          estate: string | null
+        }[]
+      }
       tenant: {
-        contactCode: string;
-        contactKey: string;
-        firstName?: string;
-        lastName?: string;
-        nationalRegistrationNumber?: string;
+        contactCode: string
+        contactKey: string
+        firstName?: string
+        lastName?: string
+        nationalRegistrationNumber?: string
         phoneNumbers?: {
-            phoneNumber: string;
-            type: string;
-            isMainNumber: number;
-          }[];
-        emailAddress?: string;
-      };
+          phoneNumber: string
+          type: string
+          isMainNumber: number
+        }[]
+        emailAddress?: string
+      }
       lease: {
-        leaseId: string;
-        leaseNumber: string;
-        type: string;
-        leaseStartDate: string;
-        leaseEndDate?: unknown;
-        contractDate?: string;
-        approvalDate?: string;
-      };
+        leaseId: string
+        leaseNumber: string
+        type: string
+        leaseStartDate: string
+        leaseEndDate?: unknown
+        contractDate?: string
+        approvalDate?: string
+      }
       details: {
-        ContactCode: string;
-        RentalObjectCode: string;
+        ContactCode: string
+        RentalObjectCode: string
         AccessOptions: {
-          Type: number;
-          PhoneNumber: string | null;
-          Email: string;
-          CallBetween: string;
-        };
-        HearingImpaired: boolean;
-        Pet: string;
+          Type: number
+          PhoneNumber: string | null
+          Email: string
+          CallBetween: string
+        }
+        HearingImpaired: boolean
+        Pet: string
         Rows: {
-            LocationCode: string;
-            PartOfBuildingCode: string;
-            Description: string;
-            MaintenanceUnitCode?: unknown;
-            MaintenanceUnitCaption?: unknown;
-          }[];
+          LocationCode: string
+          PartOfBuildingCode: string
+          Description: string
+          MaintenanceUnitCode?: unknown
+          MaintenanceUnitCaption?: unknown
+        }[]
         Images: {
-            Filename: string;
-            ImageType: number;
-            Base64String: string;
-          }[];
-      };
-    };
+          Filename: string
+          ImageType: number
+          Base64String: string
+        }[]
+      }
+    }
     CreateWorkOrderDetails: {
-      ContactCode: string;
-      RentalObjectCode: string;
+      ContactCode: string
+      RentalObjectCode: string
       AccessOptions: {
-        Type: number;
-        PhoneNumber: string | null;
-        Email: string;
-        CallBetween: string;
-      };
-      HearingImpaired: boolean;
-      Pet: string;
+        Type: number
+        PhoneNumber: string | null
+        Email: string
+        CallBetween: string
+      }
+      HearingImpaired: boolean
+      Pet: string
       Rows: {
-          LocationCode: string;
-          PartOfBuildingCode: string;
-          Description: string;
-          MaintenanceUnitCode?: unknown;
-          MaintenanceUnitCaption?: unknown;
-        }[];
+        LocationCode: string
+        PartOfBuildingCode: string
+        Description: string
+        MaintenanceUnitCode?: unknown
+        MaintenanceUnitCaption?: unknown
+      }[]
       Images: {
-          Filename: string;
-          ImageType: number;
-          Base64String: string;
-        }[];
-    };
+        Filename: string
+        ImageType: number
+        Base64String: string
+      }[]
+    }
     Lease: {
-      leaseId: string;
-      leaseNumber: string;
-      type: string;
-      leaseStartDate: string;
-      leaseEndDate?: unknown;
-      contractDate?: string;
-      approvalDate?: string;
-    };
+      leaseId: string
+      leaseNumber: string
+      type: string
+      leaseStartDate: string
+      leaseEndDate?: unknown
+      contractDate?: string
+      approvalDate?: string
+    }
     Tenant: {
-      contactCode: string;
-      contactKey: string;
-      firstName?: string;
-      lastName?: string;
-      nationalRegistrationNumber?: string;
+      contactCode: string
+      contactKey: string
+      firstName?: string
+      lastName?: string
+      nationalRegistrationNumber?: string
       phoneNumbers?: {
-          phoneNumber: string;
-          type: string;
-          isMainNumber: number;
-        }[];
-      emailAddress?: string;
-    };
+        phoneNumber: string
+        type: string
+        isMainNumber: number
+      }[]
+      emailAddress?: string
+    }
     RentalProperty: {
-      id: string;
-      type: string;
+      id: string
+      type: string
       property: {
-        address: string;
-        code: string;
-        entrance: string;
-        floor: string;
-        hasElevator: boolean;
-        washSpace: string | null;
-        area: number;
-        estateCode: string | null;
-        estate: string | null;
-        buildingCode: string;
-        building: string;
-      };
-      maintenanceUnits?: ({
-          id: string;
-          rentalPropertyId: string;
-          code: string;
-          caption: string;
-          type: string;
-          estateCode: string | null;
-          estate: string | null;
-        })[];
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+        address: string
+        code: string
+        entrance: string
+        floor: string
+        hasElevator: boolean
+        washSpace: string | null
+        area: number
+        estateCode: string | null
+        estate: string | null
+        buildingCode: string
+        building: string
+      }
+      maintenanceUnits?: {
+        id: string
+        rentalPropertyId: string
+        code: string
+        caption: string
+        type: string
+        estateCode: string | null
+        estate: string | null
+      }[]
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
 }
 
-export type $defs = Record<string, never>;
+export type $defs = Record<string, never>
 
-export type external = Record<string, never>;
+export type external = Record<string, never>
 
-export type operations = Record<string, never>;
+export type operations = Record<string, never>
