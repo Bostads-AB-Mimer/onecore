@@ -1686,9 +1686,10 @@ export type UpsertMalarEnergiFacilityIdResult =
  *
  * The value is not a column on the residence — it is a free-text comment row in
  * the Xpand `cmtex` table (Prisma `TypeText`) linked to the residence
- * (`cmtex.keycode` -> `balgh.keybalgh`) via the shared "Anläggningsid" template
- * (`cmtep` where type='balgh', caption='Anläggningsid'). So this updates the
- * existing comment row's `text` when present, otherwise inserts a new one.
+ * (`cmtex.keycode` -> `balgh.keybalgh`) via an "Anläggningsid" template
+ * (`cmtep` where type='balgh', caption='Anläggningsid'). More than one such
+ * template can exist, so this matches the comment across all of them (mirroring
+ * the read) — updating the existing row(s) when present, otherwise inserting one.
  *
  * Char(15) key columns are space-padded in Xpand, but SQL Server's `=` compares
  * char/varchar trailing-space-insensitively and INSERT right-pads automatically,
@@ -1699,52 +1700,60 @@ export const upsertMalarEnergiFacilityId = async (
   value: string
 ): Promise<UpsertMalarEnergiFacilityIdResult> => {
   try {
-    // 1. Resolve the residence (balgh.keybalgh) from the rentalId. Also pull
-    // the residence's babuf timestamp — the cmtex row carries a non-null
-    // Char(10) Xpand row-version, and reusing an existing one is the same
-    // approach room-adapter uses for its inserts.
+    // 1. Resolve the residence PRIMARY KEY (balgh.keybalgh) from the rentalId.
+    // cmtex.keycode references balgh.keybalgh (= Residence.id), so we must use
+    // that — NOT propertyStructure.residenceId, which maps to babuf.keyobjlgh
+    // (the residence's propertyObject/cmobj key) and would never match a real
+    // comment row. Resolve it via the same relation path the read uses. Also
+    // pull the babuf timestamp — the cmtex row carries a non-null Char(10)
+    // Xpand row-version, and reusing an existing one is what room-adapter does.
     const residenceStructure = await prisma.propertyStructure.findFirst({
       where: {
         rentalId,
         propertyObject: { objectTypeId: 'balgh' },
         NOT: { rentalId: { endsWith: 'X' } },
       },
-      select: { residenceId: true, timestamp: true },
+      select: {
+        timestamp: true,
+        propertyObject: { select: { residence: { select: { id: true } } } },
+      },
     })
-    if (!residenceStructure?.residenceId) {
+    const residenceId = residenceStructure?.propertyObject?.residence?.id
+    if (!residenceId) {
       return { ok: false, err: 'residence-not-found' }
     }
-    const residenceId = residenceStructure.residenceId
     const timestampVal = residenceStructure.timestamp
 
-    // 2. Resolve the single shared "Anläggningsid" template row (cmtep).
-    const template = await prisma.template.findFirst({
+    // 2. Resolve ALL "Anläggningsid" templates (cmtep). There can be more than
+    // one row with this type+caption, and Xpand may have stored a residence's
+    // comment under any of them — so the write must consider all of them, the
+    // same way the read filters comments by template type+caption (not by a
+    // single keycmtep). Keeping this symmetric with the read is what lets us
+    // update pre-existing values instead of writing a duplicate row.
+    const templates = await prisma.template.findMany({
       where: { type: 'balgh', caption: 'Anläggningsid' },
       select: { id: true },
     })
-    if (!template) {
+    if (templates.length === 0) {
       return { ok: false, err: 'template-not-found' }
     }
-    const templateId = template.id
+    const templateIds = templates.map((t) => t.id)
 
-    // 3. Check-then-write in a single transaction so the existence check and
-    // the resulting update/insert are atomic (no TOCTOU window between them).
+    // 3. Update-or-insert in a single transaction, driven by the update count
+    // so there is no separate existence check and no duplicate-row risk:
+    // updateMany hits the actually-displayed row regardless of which template
+    // it uses (and collapses any duplicates), and we only INSERT when the
+    // residence genuinely has no matching comment yet.
     await prisma.$transaction(async (tx) => {
-      const existing = await tx.typeText.findFirst({
-        where: { keycode: residenceId, keycmtep: templateId },
-        select: { id: true },
+      const updated = await tx.typeText.updateMany({
+        where: { keycode: residenceId, keycmtep: { in: templateIds } },
+        data: { text: value },
       })
-      if (existing) {
-        await tx.$executeRaw`
-          UPDATE cmtex
-          SET text = ${value}
-          WHERE keycode = ${residenceId} AND keycmtep = ${templateId}
-        `
-      } else {
+      if (updated.count === 0) {
         const newCmtexId = generateXpandId()
         await tx.$executeRaw`
           INSERT INTO cmtex (keycmtex, keycmtep, keycode, text, timestamp)
-          VALUES (${newCmtexId}, ${templateId}, ${residenceId}, ${value}, ${timestampVal})
+          VALUES (${newCmtexId}, ${templateIds[0]}, ${residenceId}, ${value}, ${timestampVal})
         `
       }
     })

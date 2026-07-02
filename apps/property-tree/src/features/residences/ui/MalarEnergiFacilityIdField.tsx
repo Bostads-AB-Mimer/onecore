@@ -107,6 +107,9 @@ export function MalarEnergiFacilityIdField({
         <Button
           variant="ghost"
           size="icon"
+          // Keep focus on the input so the container's onBlur (click-away
+          // cancel) doesn't fire and unmount this button before onClick saves.
+          onMouseDown={(e) => e.preventDefault()}
           onClick={save}
           disabled={isPending}
           className="h-6 w-6 shrink-0"
@@ -117,6 +120,7 @@ export function MalarEnergiFacilityIdField({
         <Button
           variant="ghost"
           size="icon"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={cancelEditing}
           disabled={isPending}
           className="h-6 w-6 shrink-0"
