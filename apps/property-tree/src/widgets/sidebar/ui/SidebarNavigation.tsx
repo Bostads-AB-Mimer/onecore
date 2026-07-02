@@ -12,6 +12,7 @@ import {
   FileText,
   Home,
   LayoutGrid,
+  Receipt,
   Settings,
   ShieldX,
 } from 'lucide-react'
@@ -158,6 +159,11 @@ function SidebarNavigationContent() {
           to={routes.inspections}
           icon={ClipboardList}
           label="Besiktningar"
+        />
+        <SidebarNavLink
+          to={routes.economy}
+          icon={Receipt}
+          label="Skapa ströfaktura"
         />
         <SidebarNavLink
           to={routes.components}
