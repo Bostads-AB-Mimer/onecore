@@ -1727,14 +1727,13 @@ export const upsertMalarEnergiFacilityId = async (
     }
     const templateId = template.id
 
-    // 3. Does a comment row already exist for this residence + template?
-    const existing = await prisma.typeText.findFirst({
-      where: { keycode: residenceId, keycmtep: templateId },
-      select: { id: true },
-    })
-
-    // 4. Update the existing row or insert a new one (single transaction).
+    // 3. Check-then-write in a single transaction so the existence check and
+    // the resulting update/insert are atomic (no TOCTOU window between them).
     await prisma.$transaction(async (tx) => {
+      const existing = await tx.typeText.findFirst({
+        where: { keycode: residenceId, keycmtep: templateId },
+        select: { id: true },
+      })
       if (existing) {
         await tx.$executeRaw`
           UPDATE cmtex

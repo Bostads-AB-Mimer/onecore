@@ -34,7 +34,10 @@ export function MalarEnergiFacilityIdField({
       setIsEditing(false)
     },
     onError: (error) => {
-      toast({ title: 'Kunde inte spara', description: error.message })
+      toast({
+        title: 'Kunde inte spara',
+        description: error?.message ?? 'Ett oväntat fel uppstod',
+      })
     },
   })
 
@@ -49,6 +52,9 @@ export function MalarEnergiFacilityIdField({
 
   const save = () => {
     const trimmed = draft.trim()
+    // An empty or unchanged draft intentionally just closes edit mode without
+    // writing — the value can be set or updated but not cleared (the shared
+    // schema requires min length 1).
     if (!rentalId || !trimmed || trimmed === value) {
       setIsEditing(false)
       return
@@ -80,7 +86,20 @@ export function MalarEnergiFacilityIdField({
   return (
     <div>
       <p className="text-sm text-muted-foreground">{LABEL}</p>
-      <div className="flex items-center gap-2">
+      <div
+        className="flex items-center gap-2"
+        onBlur={(e) => {
+          // Discard the draft when focus leaves the field entirely (click-away).
+          // relatedTarget stays inside when moving to Save/Cancel, so those keep
+          // working; skip while a save is in flight.
+          if (
+            !isPending &&
+            !e.currentTarget.contains(e.relatedTarget as Node)
+          ) {
+            cancelEditing()
+          }
+        }}
+      >
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

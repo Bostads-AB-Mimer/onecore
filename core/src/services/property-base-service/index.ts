@@ -1114,28 +1114,41 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const result = await propertyBaseAdapter.updateMalarEnergiFacilityId(
-        rentalId,
-        parsed.data
-      )
+      try {
+        const result = await propertyBaseAdapter.updateMalarEnergiFacilityId(
+          rentalId,
+          parsed.data
+        )
 
-      if (!result.ok) {
-        if (result.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { error: 'Residence not found', ...metadata }
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Residence not found', ...metadata }
+            return
+          }
+          logger.error(
+            { err: result.err, metadata },
+            'PUT /residences/by-rental-id/:rentalId/malar-energi-facility-id failed'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
           return
         }
+
+        ctx.status = 200
+        ctx.body = {
+          content:
+            result.data satisfies property.UpdateMalarEnergiFacilityIdResponse,
+          ...metadata,
+        }
+      } catch (err) {
         logger.error(
-          { err: result.err, metadata },
+          { err, metadata },
           'PUT /residences/by-rental-id/:rentalId/malar-energi-facility-id failed'
         )
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
-        return
       }
-
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
     }
   )
 

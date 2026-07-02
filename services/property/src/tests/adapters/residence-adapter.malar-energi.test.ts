@@ -60,7 +60,10 @@ describe('residence-adapter.upsertMalarEnergiFacilityId', () => {
     })
     mockPrisma.template.findFirst.mockResolvedValue({ id: TEMPLATE_ID })
     mockPrisma.typeText.findFirst.mockResolvedValue({ id: '_EXISTING' })
-    const tx = { $executeRaw: jest.fn().mockResolvedValue(undefined) }
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
+      typeText: { findFirst: mockPrisma.typeText.findFirst },
+    }
     mockPrisma.$transaction.mockImplementation((cb) => cb(tx))
 
     const result = await upsertMalarEnergiFacilityId(RENTAL_ID, VALUE)
@@ -77,7 +80,10 @@ describe('residence-adapter.upsertMalarEnergiFacilityId', () => {
     })
     mockPrisma.template.findFirst.mockResolvedValue({ id: TEMPLATE_ID })
     mockPrisma.typeText.findFirst.mockResolvedValue(null)
-    const tx = { $executeRaw: jest.fn().mockResolvedValue(undefined) }
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
+      typeText: { findFirst: mockPrisma.typeText.findFirst },
+    }
     mockPrisma.$transaction.mockImplementation((cb) => cb(tx))
 
     const result = await upsertMalarEnergiFacilityId(RENTAL_ID, VALUE)

@@ -386,13 +386,14 @@ export async function getResidenceByRentalId(
   }
 }
 
-type UpdateMalarEnergiFacilityIdResponse = { malarEnergiFacilityId: string }
-
 export async function updateMalarEnergiFacilityId(
   rentalId: string,
   body: property.UpdateMalarEnergiFacilityIdRequest
 ): Promise<
-  AdapterResult<UpdateMalarEnergiFacilityIdResponse, 'not-found' | 'unknown'>
+  AdapterResult<
+    property.UpdateMalarEnergiFacilityIdResponse,
+    'not-found' | 'unknown'
+  >
 > {
   try {
     const fetchResponse = await client().PUT(

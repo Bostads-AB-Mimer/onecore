@@ -599,7 +599,9 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = {
-        content: { malarEnergiFacilityId: result.data },
+        content: {
+          malarEnergiFacilityId: result.data,
+        } satisfies property.UpdateMalarEnergiFacilityIdResponse,
         ...metadata,
       }
     }
