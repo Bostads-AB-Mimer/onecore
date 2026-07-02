@@ -397,6 +397,39 @@ export const getXpandWorkOrderDetails = async (
   }
 }
 
+export const getWorkOrderByCode = async (
+  code: string
+): Promise<AdapterResult<OdooWorkOrder, 'not-found' | 'unknown'>> => {
+  try {
+    // Errand codes are formatted `od-<id>`; the id is the Odoo record id.
+    const id = code.replace(/^od-/i, '')
+
+    const fetchResponse = await client().GET('/workOrders/id/{id}', {
+      params: { path: { id } },
+    })
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data.content?.workOrder) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrder,
+    }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getWorkOrderByCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const createWorkOrder = async (
   CreateWorkOrder: components['schemas']['CreateWorkOrderBody']
 ): Promise<AdapterResult<CreateWorkOrderResponse, string>> => {

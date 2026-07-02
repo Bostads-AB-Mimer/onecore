@@ -23,7 +23,10 @@ jest.mock('@onecore/utilities', () => ({
   generateRouteMetadata: jest.fn(() => ({})),
 }))
 
-import { createWorkOrder } from '../../../adapters/odoo-adapter'
+import {
+  createWorkOrder,
+  getWorkOrderById,
+} from '../../../adapters/odoo-adapter'
 
 describe('odoo-adapter createWorkOrder', () => {
   const setupCreateMocks = () => {
@@ -155,5 +158,43 @@ describe('odoo-adapter createWorkOrder', () => {
       ),
     })
     expect(message).toMatch(/maintenance unit code provided but not found/i)
+  })
+})
+
+describe('odoo-adapter getWorkOrderById', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    odooMock.connect.mockResolvedValue(undefined)
+  })
+
+  it('returns the transformed work order with url and messages when found', async () => {
+    const odooWorkOrder = factory.odooWorkOrder.build({ id: 12345 })
+    const odooMessage = factory.odooWorkOrderMessage.build({ res_id: 12345 })
+
+    odooMock.searchRead
+      .mockResolvedValueOnce([odooWorkOrder]) // maintenance.request
+      .mockResolvedValueOnce([odooMessage]) // mail.message
+
+    const result = await getWorkOrderById(12345)
+
+    // maintenance.request queried by id
+    expect(odooMock.searchRead.mock.calls[0][0]).toBe('maintenance.request')
+    expect(odooMock.searchRead.mock.calls[0][1]).toEqual([['id', '=', 12345]])
+
+    expect(result).toMatchObject({
+      Code: 'od-12345',
+      Url: expect.stringContaining('id=12345'),
+    })
+    expect(result?.Messages).toHaveLength(1)
+  })
+
+  it('returns undefined when no work order matches the id', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([]) // maintenance.request
+
+    const result = await getWorkOrderById(999)
+
+    expect(result).toBeUndefined()
+    // Should not query messages when there is no work order
+    expect(odooMock.searchRead).toHaveBeenCalledTimes(1)
   })
 })
