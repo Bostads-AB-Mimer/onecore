@@ -10,6 +10,7 @@ import {
   getContactByContactCode,
   getCreditInformation,
   getActiveListingByRentalObjectCode,
+  getLeasesForContactCode,
   getParkingSpaceByCode,
   updateListingStatus,
 } from '../../../adapters/leasing-adapter'
@@ -24,8 +25,8 @@ import dayjs from 'dayjs'
 // Steps:
 // 1. Get parking space from mimer.nu API
 // 2. Get applicant from onecore-leasing
-// 3a. If applicant has no contracts, perform external credit check in onecore-leasing
-// 3b. If applicant has contracts, perform internal credit check by fetching payment history from onecore-leasing
+// 3a. If applicant has no current or upcoming contracts, perform external credit check in onecore-leasing
+// 3b. If applicant has current or upcoming contracts, perform internal credit check by fetching payment history from onecore-leasing
 // 4. If credit check is approved, create contract by calling Xpand soap service
 // 5a. If contract is created successfully, notify applicant and role uthyrning using onecore-communication
 // 5b. If contract could not be created, notify applicant and role uthyrning using onecore-communication
@@ -124,8 +125,18 @@ export const createLeaseForExternalParkingSpace = async (
     }
 
     let creditCheck = false
-    const applicantHasNoLease =
-      !applicantContact.leaseIds || applicantContact.leaseIds.length == 0
+
+    // Applicants with a current or upcoming lease (any object type) count as
+    // existing tenants and get the internal payment-history check.
+    const applicantLeases = await getLeasesForContactCode(
+      applicantContact.contactCode,
+      {
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
+        includeContacts: false,
+      }
+    )
+    const applicantHasNoLease = applicantLeases.length === 0
 
     if (applicantHasNoLease) {
       const creditInformation = await getCreditInformation(
