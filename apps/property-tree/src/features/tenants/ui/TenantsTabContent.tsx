@@ -56,37 +56,45 @@ export function TenantsTabContent({
                   tenant={tenant}
                   key={i}
                   onSendSms={(phone) =>
-                    sms.openSmsModal(
-                      formatTenantName(tenant),
-                      phone,
-                      tenant.contactCode
-                    )
+                    sms.openSmsModal({
+                      name: formatTenantName(tenant),
+                      phoneNumber: phone,
+                      contactCode: tenant.contactCode,
+                    })
                   }
                   onSendEmail={(addr) =>
-                    email.openEmailModal(
-                      formatTenantName(tenant),
-                      addr,
-                      tenant.contactCode
-                    )
+                    email.openEmailModal({
+                      name: formatTenantName(tenant),
+                      emailAddress: addr,
+                      contactCode: tenant.contactCode,
+                    })
                   }
                 />
               </>
             ))}
           </div>
-          <SmsModal
-            open={sms.smsModalOpen}
-            onOpenChange={sms.onOpenChange}
-            recipientName={sms.smsRecipientName}
-            phoneNumber={sms.smsPhoneNumber}
-            onSend={sms.handleSendSms}
-          />
-          <EmailModal
-            open={email.emailModalOpen}
-            onOpenChange={email.onOpenChange}
-            recipientName={email.emailRecipientName}
-            emailAddress={email.emailAddress}
-            onSend={email.handleSendEmail}
-          />
+          {sms.recipient && (
+            <SmsModal
+              open
+              onOpenChange={(open) => {
+                if (!open) sms.closeSms()
+              }}
+              recipientName={sms.recipient.name}
+              phoneNumber={sms.recipient.phoneNumber}
+              onSend={sms.handleSendSms}
+            />
+          )}
+          {email.recipient && (
+            <EmailModal
+              open
+              onOpenChange={(open) => {
+                if (!open) email.closeEmail()
+              }}
+              recipientName={email.recipient.name}
+              emailAddress={email.recipient.emailAddress}
+              onSend={email.handleSendEmail}
+            />
+          )}
         </>
       )}
     </TabLayout>

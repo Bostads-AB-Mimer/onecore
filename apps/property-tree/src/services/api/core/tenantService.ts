@@ -51,7 +51,7 @@ async function searchContacts(query: string): Promise<ContactSearchResult[]> {
 }
 
 async function sendBulkSms(
-  recipients: { contactCode?: string; phoneNumber: string }[],
+  recipients: { contactCode: string; phoneNumber: string }[],
   text: string
 ): Promise<BulkSmsResult> {
   const { data, error } = await POST('/sendBulkSms', {
@@ -65,7 +65,7 @@ async function sendBulkSms(
 }
 
 async function sendBulkEmail(
-  recipients: { contactCode?: string; emailAddress: string }[],
+  recipients: { contactCode: string; emailAddress: string }[],
   subject: string,
   text: string
 ): Promise<{ content: BulkEmailResult; warnings?: string[] }> {
