@@ -32,7 +32,19 @@ interface ParkingSpaceOfferSms extends Sms {
 
 interface WorkOrderSms extends Sms {
   text: string
+  // Sender attribution: the maintenance team name, set only when the Odoo
+  // sender is an external contractor. Shapes the SMS sign-off — NOT the
+  // initiator (use triggeredByUser for that).
   externalContractorName?: string
+  // The Odoo user who triggered the send, logged as triggeredByUser. Optional:
+  // older Odoo callers don't send it yet, and it degrades to null in the log.
+  triggeredByUser?: string
+  // TODO: TEMPORARILY OPTIONAL. Required for communication-log linkage to the
+  // customer timeline, but Odoo deploys independently of OneCore and older Odoo
+  // callers don't send it yet. While optional, the send route only logs the
+  // dispatch when contactCode is present. Once every Odoo caller sends it,
+  // make this required and drop the "only log when present" guard.
+  contactCode?: string
 }
 
 // Sidecar meta on bulk-send requests; shapes the dispatch row, not the send itself.
@@ -84,7 +96,19 @@ interface BulkEmailResult {
 }
 
 interface WorkOrderEmail extends Email {
+  // Sender attribution: the maintenance team name, set only when the Odoo
+  // sender is an external contractor. Selects the email template — NOT the
+  // initiator (use triggeredByUser for that).
   externalContractorName?: string
+  // The Odoo user who triggered the send, logged as triggeredByUser. Optional:
+  // older Odoo callers don't send it yet, and it degrades to null in the log.
+  triggeredByUser?: string
+  // TODO: TEMPORARILY OPTIONAL. Required for communication-log linkage to the
+  // customer timeline, but Odoo deploys independently of OneCore and older Odoo
+  // callers don't send it yet. While optional, the send route only logs the
+  // dispatch when contactCode is present. Once every Odoo caller sends it,
+  // make this required and drop the "only log when present" guard.
+  contactCode?: string
 }
 
 interface InspectionProtocolEmail extends Email {

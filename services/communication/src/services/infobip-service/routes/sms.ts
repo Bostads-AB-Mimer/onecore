@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { validator as phoneValidator, normalize } from 'telefonnummer'
 import { ParkingSpaceOfferSms, WorkOrderSms, BulkSms } from '@onecore/types'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
 
 import {
@@ -19,6 +19,47 @@ const SMS_SENDER = 'Mimer'
 const SMS_PROVIDER = 'tele2'
 
 export const MAX_BULK_SMS_RECIPIENTS = 15000
+
+// Records a tenant-facing work-order SMS (sent from Odoo via /sendWorkOrderSms)
+// in the communication log. Strict but non-blocking: the SMS already went out,
+// so a logging failure must not fail the request. Instead we log loudly for
+// monitoring and return a non-blocking warning the route surfaces via
+// `warnings` (same shape as the bulk routes). Returns [] on success.
+const logWorkOrderTenantSms = async (params: {
+  to: string
+  contactCode: string
+  body: string
+  triggeredByUser?: string
+  sendResult: { messages?: Array<{ messageId: string }> }
+}): Promise<string[]> => {
+  try {
+    await logOutboundDispatch({
+      channel: 'sms',
+      fromAddress: SMS_SENDER,
+      body: params.body,
+      messageType: 'work_order_tenant_sms',
+      provider: SMS_PROVIDER,
+      triggeredByUser: params.triggeredByUser,
+      recipients: [
+        {
+          contactCode: params.contactCode,
+          toAddress: params.to,
+          externalMessageId: params.sendResult.messages?.[0]?.messageId,
+          status: 'pending',
+        },
+      ],
+    })
+    return []
+  } catch (logError) {
+    // Keep the warning generic for the client; the real error (which can
+    // contain internal/DB detail) stays in logger.error only.
+    logger.error(
+      { err: logError, to: params.to },
+      'Failed to write communication-log entry for work order tenant SMS'
+    )
+    return ['Communication log failed']
+  }
+}
 
 /**
  * Extract a Swedish phone number from text that may contain names/labels.
@@ -97,8 +138,27 @@ export const routes = (router: KoaRouter) => {
         phoneNumber,
         externalContractorName: sms.externalContractorName,
       })
+
+      // TODO: contactCode is TEMPORARILY OPTIONAL while older Odoo callers are
+      // updated to send it. We only log the dispatch when it's present so the
+      // row attaches to the customer timeline. Once every caller sends it,
+      // make contactCode required and drop this `if`.
+      const warnings = sms.contactCode
+        ? await logWorkOrderTenantSms({
+            to: phoneNumber,
+            contactCode: sms.contactCode,
+            body: sms.text,
+            triggeredByUser: sms.triggeredByUser,
+            sendResult: result,
+          })
+        : []
+
       ctx.status = 200
-      ctx.body = { content: result, ...metadata }
+      ctx.body = {
+        content: result,
+        ...(warnings.length && { warnings }),
+        ...metadata,
+      }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {

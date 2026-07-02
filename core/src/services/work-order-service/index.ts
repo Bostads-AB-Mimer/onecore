@@ -1982,7 +1982,13 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('/work-orders/send-sms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { phoneNumber, text, externalContractorName } = ctx.request.body
+    const {
+      phoneNumber,
+      text,
+      externalContractorName,
+      contactCode,
+      triggeredByUser,
+    } = ctx.request.body
 
     if (!phoneNumber || !text) {
       ctx.status = 400
@@ -1998,6 +2004,8 @@ export const routes = (router: KoaRouter) => {
         phoneNumber,
         text,
         externalContractorName,
+        contactCode,
+        triggeredByUser,
       })
 
       if (result.ok) {
@@ -2087,7 +2095,14 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('/work-orders/send-email', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { to, subject, text, externalContractorName } = ctx.request.body
+    const {
+      to,
+      subject,
+      text,
+      externalContractorName,
+      contactCode,
+      triggeredByUser,
+    } = ctx.request.body
 
     if (to === undefined || subject === undefined || text === undefined) {
       ctx.status = 400
@@ -2104,6 +2119,8 @@ export const routes = (router: KoaRouter) => {
       subject,
       text,
       externalContractorName,
+      contactCode,
+      triggeredByUser,
     })
 
     if (result.ok) {
