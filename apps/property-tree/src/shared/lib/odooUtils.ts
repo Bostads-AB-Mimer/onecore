@@ -28,6 +28,19 @@ export const linkToWorkOrderInOdoo = (order: OdooLinkableWorkOrder) => {
   )
 }
 
+/**
+ * Extracts the numeric Odoo errand id from a search query.
+ *
+ * Errand codes are formatted `od-<number>`. An errand search must start with the
+ * `od-` prefix (e.g. `od-12345`); this both disambiguates errand searches from
+ * other numeric input and lets short ids like `od-1` clear the top search's
+ * 3-character minimum. Returns the numeric id as a string, otherwise `null`.
+ */
+export const parseErrandNumber = (query: string): string | null => {
+  const match = query.trim().match(/^od-(\d+)$/i)
+  return match ? match[1] : null
+}
+
 export interface WorkOrderMetadata {
   propertyName?: string
   type?: string

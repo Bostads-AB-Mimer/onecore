@@ -1356,6 +1356,111 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /work-orders/by-code/{code}:
+   *   get:
+   *     summary: Get a single work order by its errand code
+   *     tags:
+   *       - Work Order Service
+   *     description: >
+   *       Retrieves a single Odoo work order (errand) by its code. The code may be
+   *       provided with or without the `od-` prefix (e.g. `od-12345` or `12345`).
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The errand code, with or without the `od-` prefix.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/WorkOrder'
+   *       '404':
+   *         description: Work order not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Work order not found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve the work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/work-orders/by-code/:code', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const result = await workOrderAdapter.getWorkOrderByCode(ctx.params.code)
+
+      if (result.ok) {
+        const v = result.data
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            accessCaption: v.AccessCaption,
+            caption: v.Caption,
+            code: v.Code,
+            dueDate: v.DueDate ? new Date(v.DueDate) : null,
+            contactCode: v.ContactCode,
+            description: v.Description,
+            detailsCaption: v.DetailsCaption,
+            externalResource: v.ExternalResource,
+            id: v.Id,
+            lastChanged: new Date(v.LastChanged),
+            priority: v.Priority,
+            registered: new Date(v.Registered),
+            rentalObjectCode: v.RentalObjectCode,
+            status: v.Status,
+            url: v.Url,
+            workOrderRows: v.WorkOrderRows.map((row) => ({
+              description: row.Description,
+              locationCode: row.LocationCode,
+              equipmentCode: row.EquipmentCode,
+            })),
+          } satisfies schemas.CoreWorkOrder,
+          ...metadata,
+        }
+        return
+      }
+
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Work order not found', ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error getting work order by code'
+      )
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+    } catch (error) {
+      logger.error(error, 'Error getting work order by code')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /work-orders/xpand/{code}:
    *   get:
    *     summary: Get work order details by rental property id from xpand

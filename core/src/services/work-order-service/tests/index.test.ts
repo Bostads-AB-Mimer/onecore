@@ -300,6 +300,67 @@ describe('work-order-service index', () => {
     })
   })
 
+  describe('GET /work-orders/by-code/:code', () => {
+    const odooWorkOrderMock = factory.externalOdooWorkOrder.build({
+      Code: 'od-12345',
+      Url: 'https://odoo.example.com/web#id=12345&model=maintenance.request&view_type=form',
+    })
+
+    it('should return the work order and pass the code through unchanged', async () => {
+      const getWorkOrderByCodeSpy = jest
+        .spyOn(workOrderAdapter, 'getWorkOrderByCode')
+        .mockResolvedValue({ ok: true, data: odooWorkOrderMock })
+
+      const res = await request(app.callback()).get(
+        '/work-orders/by-code/od-12345'
+      )
+
+      expect(res.status).toBe(200)
+      expect(() =>
+        schemas.CoreWorkOrderSchema.parse(res.body.content)
+      ).not.toThrow()
+      expect(res.body.content.code).toBe('od-12345')
+      expect(getWorkOrderByCodeSpy).toHaveBeenCalledWith('od-12345')
+    })
+
+    it('should accept a bare numeric code without the od- prefix', async () => {
+      const getWorkOrderByCodeSpy = jest
+        .spyOn(workOrderAdapter, 'getWorkOrderByCode')
+        .mockResolvedValue({ ok: true, data: odooWorkOrderMock })
+
+      const res = await request(app.callback()).get(
+        '/work-orders/by-code/12345'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getWorkOrderByCodeSpy).toHaveBeenCalledWith('12345')
+    })
+
+    it('should return 404 when the work order is not found', async () => {
+      jest
+        .spyOn(workOrderAdapter, 'getWorkOrderByCode')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).get(
+        '/work-orders/by-code/od-99999'
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('should return 500 on an unknown error', async () => {
+      jest
+        .spyOn(workOrderAdapter, 'getWorkOrderByCode')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/work-orders/by-code/od-12345'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   describe('GET /work-orders/by-rental-property-id/:rentalPropertyId', () => {
     it('should return work orders by rental property id', async () => {
       const getWorkOrdersByRentalPropertyIdSpy = jest

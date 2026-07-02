@@ -538,6 +538,120 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /workOrders/id/{id}:
+   *   get:
+   *     summary: Get a single work order by its Odoo id
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves a single work order (errand) by its numeric Odoo id.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The numeric Odoo id of the work order.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrder:
+   *                       $ref: '#/components/schemas/WorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '400':
+   *         description: Bad request. The id is not a valid number.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid id
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '404':
+   *         description: Work order not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Work order not found
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve the work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/id/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = Number(ctx.params.id)
+    if (!Number.isInteger(id)) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid id', ...metadata }
+      return
+    }
+
+    try {
+      const workOrder = await odooAdapter.getWorkOrderById(id)
+
+      if (!workOrder) {
+        ctx.status = 404
+        ctx.body = {
+          error: `Work order with id ${id} not found`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          workOrder: workOrder satisfies WorkOrder,
+        },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /workOrders/xpand/residenceId/{residenceId}:
    *   get:
    *     summary: Get work orders by residence id from xpand

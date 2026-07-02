@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { debounce } from '@/shared/lib/debounce'
+import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
 import { paths } from '@/shared/routes'
 
 import { useCommandPalette } from '../hooks/useCommandPalette'
@@ -116,6 +117,17 @@ function getResultProps(item: CombinedSearchResult) {
           propertyCode: item.property.code,
         },
       }
+    case 'work-order':
+      return {
+        icon: Wrench,
+        label: item.code,
+        prefix: '[ÄRENDE]',
+        subtitle: item.caption,
+        // Errands live in Odoo, so selecting opens Odoo in a new tab instead of
+        // navigating within the app.
+        onSelect: () =>
+          linkToWorkOrderInOdoo({ url: item.url, code: item.code }),
+      }
     default:
       return null
   }
@@ -143,8 +155,14 @@ export function CommandPalette() {
     }
   }, [isOpen])
 
-  const handleSelect = (path: string, state: Record<string, unknown>) => {
-    navigate(path, { state })
+  const handleSelect = (
+    props: NonNullable<ReturnType<typeof getResultProps>>
+  ) => {
+    if ('onSelect' in props && props.onSelect) {
+      props.onSelect()
+    } else {
+      navigate(props.path, { state: props.state })
+    }
     close()
   }
 
@@ -163,7 +181,7 @@ export function CommandPalette() {
         {
           const props = getResultProps(searchQuery.data[selectedIndex])
           if (props) {
-            handleSelect(props.path, props.state)
+            handleSelect(props)
           }
         }
         break
@@ -236,7 +254,7 @@ export function CommandPalette() {
                         prefix={props.prefix}
                         subtitle={props.subtitle}
                         isSelected={selectedIndex === index}
-                        onClick={() => handleSelect(props.path, props.state)}
+                        onClick={() => handleSelect(props)}
                       />
                     )
                   })}

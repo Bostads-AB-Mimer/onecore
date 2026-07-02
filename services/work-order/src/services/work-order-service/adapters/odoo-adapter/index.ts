@@ -274,6 +274,40 @@ export const getWorkOrdersByMaintenanceUnitCode = async (
   }
 }
 
+export const getWorkOrderById = async (
+  id: number
+): Promise<WorkOrder | undefined> => {
+  try {
+    await odoo.connect()
+
+    const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
+      'maintenance.request',
+      [['id', '=', id]],
+      WORK_ORDER_FIELDS
+    )
+
+    const workOrder = odooWorkOrders[0]
+    if (!workOrder) {
+      return undefined
+    }
+
+    const odooWorkOrderMessages = await odoo.searchRead<OdooWorkOrderMessage>(
+      'mail.message',
+      MESSAGE_DOMAIN([workOrder.id]),
+      MESSAGE_FIELDS
+    )
+
+    return {
+      ...transformWorkOrder(workOrder),
+      Messages: transformMessages(odooWorkOrderMessages),
+      Url: WorkOrderUrl(workOrder.id),
+    }
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrderById')
+    throw err
+  }
+}
+
 export const createWorkOrder = async (
   rentalPropertyInfo: RentalProperty,
   tenant: Tenant,

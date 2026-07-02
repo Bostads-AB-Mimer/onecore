@@ -10,6 +10,21 @@ export type ExternalWorkOrder = {
 export type WorkOrder = InternalWorkOrder | ExternalWorkOrder
 
 export const workOrderService = {
+  async getWorkOrderByCode(code: string): Promise<InternalWorkOrder | null> {
+    const response = await GET('/work-orders/by-code/{code}', {
+      params: { path: { code } },
+    })
+
+    if (response.response.status === 404) {
+      return null
+    }
+
+    if (response.error) throw response.error
+    if (!response.data.content) throw new Error('No data returned from API')
+
+    return { _tag: 'internal', ...response.data.content }
+  },
+
   async getWorkOrderForProperty(propertyId: string): Promise<WorkOrder[]> {
     const internalWorkOrders = await GET(
       '/work-orders/by-property-id/{propertyId}',
