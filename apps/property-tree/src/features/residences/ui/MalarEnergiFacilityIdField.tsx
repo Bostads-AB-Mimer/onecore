@@ -1,6 +1,7 @@
+import { useRef, useState } from 'react'
 import { Check, Pencil, X } from 'lucide-react'
-import { useState } from 'react'
 
+import { useClickOutside } from '@/shared/hooks/useClickOutside'
 import { useToast } from '@/shared/hooks/useToast'
 import { Button } from '@/shared/ui/Button'
 import { CopyableField } from '@/shared/ui/CopyableField'
@@ -27,6 +28,7 @@ export function MalarEnergiFacilityIdField({
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const { mutate, isPending } = useUpdateMalarEnergiFacilityId({
     onSuccess: () => {
@@ -62,6 +64,9 @@ export function MalarEnergiFacilityIdField({
     mutate({ rentalId, malarEnergiFacilityId: trimmed })
   }
 
+  // Pressing/tapping outside the field discards the draft (skipped mid-save).
+  useClickOutside(containerRef, cancelEditing, isEditing && !isPending)
+
   if (!isEditing) {
     return (
       <CopyableField
@@ -84,22 +89,9 @@ export function MalarEnergiFacilityIdField({
   }
 
   return (
-    <div>
+    <div ref={containerRef}>
       <p className="text-sm text-muted-foreground">{LABEL}</p>
-      <div
-        className="flex items-center gap-2"
-        onBlur={(e) => {
-          // Discard the draft when focus leaves the field entirely (click-away).
-          // relatedTarget stays inside when moving to Save/Cancel, so those keep
-          // working; skip while a save is in flight.
-          if (
-            !isPending &&
-            !e.currentTarget.contains(e.relatedTarget as Node)
-          ) {
-            cancelEditing()
-          }
-        }}
-      >
+      <div className="flex items-center gap-2">
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -115,10 +107,6 @@ export function MalarEnergiFacilityIdField({
         <Button
           variant="ghost"
           size="icon"
-          // Safari (incl. iOS) doesn't focus buttons on tap, so without this the
-          // container's onBlur discards the draft before onClick fires —
-          // cancelling instead of saving. preventDefault keeps focus on input.
-          onMouseDown={(e) => e.preventDefault()}
           onClick={save}
           disabled={isPending}
           className="h-6 w-6 shrink-0"
@@ -129,7 +117,6 @@ export function MalarEnergiFacilityIdField({
         <Button
           variant="ghost"
           size="icon"
-          onMouseDown={(e) => e.preventDefault()} // keep focus; see Save button
           onClick={cancelEditing}
           disabled={isPending}
           className="h-6 w-6 shrink-0"

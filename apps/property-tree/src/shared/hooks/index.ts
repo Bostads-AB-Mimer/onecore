@@ -1,3 +1,4 @@
+export { useClickOutside } from './useClickOutside'
 export { useClipboardCopy } from './useClipboardCopy'
 export { useDebounce } from './useDebounce'
 export type {
