@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-07-02-v356-1",
+    "date": "2026-07-02",
+    "title": "Intern kreditkontroll för hyresgäster med kommande kontrakt",
+    "description": "Vid ansökan om en bilplats görs den automatiska kreditkontrollen nu internt (utifrån betalningshistorik hos oss) för sökande som har ett kommande kontrakt som ännu inte har börjat gälla. Tidigare skickades blivande hyresgäster med påskrivet men ej påbörjat kontrakt till extern kreditupplysning.",
+    "category": "improvement"
+  }
+]

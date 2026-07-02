@@ -18,6 +18,7 @@ import {
   mockedApplicantWithLeases,
   mockedApplicantWithoutAddress,
   mockedUnpaidInvoice,
+  mockedLease,
 } from './index.mocks'
 import { AdapterResult } from '../../../../adapters/types'
 
@@ -43,6 +44,7 @@ describe('parkingspaces', () => {
       [contactCode: string, from?: Date],
       any
     >
+    let getLeasesForContactCodeSpy: jest.SpyInstance
     let getParkingSpaceByCodeSpy: jest.SpyInstance
     let sendNonScoredParkingSpaceApprovedEmailSpy: jest.SpyInstance
     let sendNonScoredParkingSpaceDeniedEmailSpy: jest.SpyInstance
@@ -82,6 +84,9 @@ describe('parkingspaces', () => {
       getContactSpy = jest
         .spyOn(leasingAdapter, 'getContactByContactCode')
         .mockResolvedValue({ ok: true, data: mockedApplicantWithoutLeases })
+      getLeasesForContactCodeSpy = jest
+        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .mockResolvedValue([])
       getCreditInformationSpy = jest
         .spyOn(leasingAdapter, 'getCreditInformation')
         .mockResolvedValue(successfulConsumerReport)
@@ -273,6 +278,7 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy.mockReset()
       getCreditInformationSpy.mockReset()
 
@@ -289,11 +295,43 @@ describe('parkingspaces', () => {
       expect(getCreditInformationSpy).not.toHaveBeenCalled()
     })
 
+    it('requests current and upcoming leases when deciding the credit-check path', async () => {
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
+        mockedApplicantWithoutLeases.contactCode,
+        expect.objectContaining({ includeUpcomingLeases: true })
+      )
+    })
+
+    it('performs an internal credit check if applicant has an upcoming lease', async () => {
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
+      getInvoicesSentToDebtCollectionSpy.mockReset().mockResolvedValue({
+        ok: true,
+        data: [],
+      })
+      getCreditInformationSpy.mockReset()
+
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(getInvoicesSentToDebtCollectionSpy).toHaveBeenCalled()
+      expect(getCreditInformationSpy).not.toHaveBeenCalled()
+    })
+
     it('fails lease creation if internal credit check fails', async () => {
       getContactSpy.mockResolvedValue({
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
         ok: true,
         data: [mockedUnpaidInvoice],
@@ -371,6 +409,7 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy
         .mockReset()
         .mockResolvedValue({ ok: true, data: [] })
@@ -396,6 +435,7 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
         ok: true,
         data: [mockedUnpaidInvoice],
