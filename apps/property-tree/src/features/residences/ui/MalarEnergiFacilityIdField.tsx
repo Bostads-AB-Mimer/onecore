@@ -115,6 +115,10 @@ export function MalarEnergiFacilityIdField({
         <Button
           variant="ghost"
           size="icon"
+          // Safari (incl. iOS) doesn't focus buttons on tap, so without this the
+          // container's onBlur discards the draft before onClick fires —
+          // cancelling instead of saving. preventDefault keeps focus on input.
+          onMouseDown={(e) => e.preventDefault()}
           onClick={save}
           disabled={isPending}
           className="h-6 w-6 shrink-0"
@@ -125,6 +129,7 @@ export function MalarEnergiFacilityIdField({
         <Button
           variant="ghost"
           size="icon"
+          onMouseDown={(e) => e.preventDefault()} // keep focus; see Save button
           onClick={cancelEditing}
           disabled={isPending}
           className="h-6 w-6 shrink-0"
