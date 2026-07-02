@@ -5,5 +5,40 @@
     "title": "Intern kreditkontroll för hyresgäster med kommande kontrakt",
     "description": "Vid ansökan om en bilplats görs den automatiska kreditkontrollen nu internt (utifrån betalningshistorik hos oss) för sökande som har ett kommande kontrakt som ännu inte har börjat gälla. Tidigare skickades blivande hyresgäster med påskrivet men ej påbörjat kontrakt till extern kreditupplysning.",
     "category": "improvement"
+  },
+  {
+    "id": "rn-2026-07-02-v356-3",
+    "date": "2026-07-02",
+    "title": "Sök ärenden direkt från toppsöket",
+    "description": "Skriv ett ärendenummer som \"od-12345\" i toppsöket för att hoppa direkt till ärendet i Odoo – det öppnas i en ny flik. Övriga sökningar påverkas inte.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-07-02-v356-4",
+    "date": "2026-07-02",
+    "title": "Sökbar referens på ströfaktura",
+    "description": "Referens-fältet på ströfakturan är nu ett sökbart fält där du kan skriva för att filtrera på namn, istället för en vanlig rullgardinslista.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-07-02-v356-5",
+    "date": "2026-07-02",
+    "title": "Sökträffar i nummerordning",
+    "description": "Sökresultat sorteras nu i stigande objektnummerordning, vilket gör det enklare att hitta rätt objekt.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-07-02-v356-6",
+    "date": "2026-07-02",
+    "title": "Förfallna fakturor markeras automatiskt",
+    "description": "En faktura får nu status \"Förfallen\" automatiskt när förfallodatumet har passerat.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-07-02-v356-7",
+    "date": "2026-07-02",
+    "title": "Mindre förbättringar och rättningar",
+    "description": "Diverse mindre justeringar: felanmälningar taggas inte längre felaktigt mot tvättstugan, P-nummer visas på hyresgästkortet, förvaltarfiltret sorteras i bokstavsordning och en förtydligande hjälptext har lagts till på ströfakturasidan.",
+    "category": "fix"
   }
 ]
