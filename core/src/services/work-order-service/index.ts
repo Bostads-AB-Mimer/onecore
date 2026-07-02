@@ -1451,7 +1451,7 @@ export const routes = (router: KoaRouter) => {
         'Error getting work order by code'
       )
       ctx.status = 500
-      ctx.body = { error: result.err, ...metadata }
+      ctx.body = { error: 'Internal server error', ...metadata }
     } catch (error) {
       logger.error(error, 'Error getting work order by code')
       ctx.status = 500
