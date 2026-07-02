@@ -83,6 +83,50 @@ const logParkingSpaceEmail = async (params: {
   }
 }
 
+// Records a tenant-facing work-order email (sent from Odoo via
+// /sendWorkOrderEmail) in the communication log. Strict but non-blocking: the
+// email already went out, so a logging failure must not fail the send. Instead
+// we log loudly for monitoring and return a non-blocking warning the route
+// surfaces via `warnings` (same shape as the bulk routes). Returns [] on
+// success. Mirrors logWorkOrderTenantSms in sms.ts.
+const logWorkOrderTenantEmail = async (params: {
+  to: string
+  contactCode: string
+  subject: string
+  body: string
+  triggeredByUser?: string
+  sendResult: { messages?: Array<{ messageId: string }> }
+}): Promise<string[]> => {
+  try {
+    await logOutboundDispatch({
+      channel: 'email',
+      fromAddress: EMAIL_SENDER,
+      subject: params.subject,
+      body: params.body,
+      messageType: 'work_order_tenant_mail',
+      provider: EMAIL_PROVIDER,
+      triggeredByUser: params.triggeredByUser,
+      recipients: [
+        {
+          contactCode: params.contactCode,
+          toAddress: params.to,
+          externalMessageId: params.sendResult.messages?.[0]?.messageId,
+          status: 'pending',
+        },
+      ],
+    })
+    return []
+  } catch (logError) {
+    // Keep the warning generic for the client; the real error (which can
+    // contain internal/DB detail) stays in logger.error only.
+    logger.error(
+      { err: logError, to: params.to },
+      'Failed to write communication-log entry for work order tenant email'
+    )
+    return ['Communication log failed']
+  }
+}
+
 const toArray = (input: unknown) => {
   if (Array.isArray(input)) {
     return input
@@ -343,8 +387,28 @@ export const routes = (router: KoaRouter) => {
 
     try {
       const result = await sendWorkOrderEmail(emailData)
+
+      // TODO: contactCode is TEMPORARILY OPTIONAL while older Odoo callers are
+      // updated to send it. We only log the dispatch when it's present so the
+      // row attaches to the customer timeline. Once every caller sends it,
+      // make contactCode required and drop this `if`.
+      const warnings = emailData.contactCode
+        ? await logWorkOrderTenantEmail({
+            to: emailData.to,
+            contactCode: emailData.contactCode,
+            subject: emailData.subject,
+            body: emailData.text,
+            triggeredByUser: emailData.triggeredByUser,
+            sendResult: result.data,
+          })
+        : []
+
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = {
+        content: result.data,
+        ...(warnings.length && { warnings }),
+        ...metadata,
+      }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
