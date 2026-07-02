@@ -37,7 +37,7 @@
     "@types/easy-soap-request": "^5.6.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui": "^3.52.4",
-    "axios": "^1.9.0",
+    "axios": "^1.16.0",
     "date-fns": "^4.1.0",
     "dax-client": "workspace:*",
     "dedent": "^1.5.1",

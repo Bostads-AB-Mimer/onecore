@@ -44,7 +44,7 @@
     "@onecore/types": "workspace:*",
     "@onecore/utilities": "workspace:*",
     "@types/lodash": "^4.17.13",
-    "axios": "^1.9.0",
+    "axios": "^1.16.0",
     "axios-logger": "^2.8.0",
     "date-holidays": "^3.23.12",
     "dayjs": "^1.11.13",

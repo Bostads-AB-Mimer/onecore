@@ -35,7 +35,7 @@
     "@onecore/types": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
     "@tanstack/react-query-devtools": "^5.31.0",
-    "axios": "^1.9.0",
+    "axios": "^1.16.0",
     "currency.js": "^2.0.4",
     "dayjs": "^1.11.13",
     "material-ui-popup-state": "^5.0.10",
