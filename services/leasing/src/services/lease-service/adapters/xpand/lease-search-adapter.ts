@@ -45,6 +45,14 @@ const OBJECT_TYPE_MAP: Record<string, string> = {
 const normalizeObjectType = (type: string): string =>
   OBJECT_TYPE_MAP[type.toLowerCase()] ?? type
 
+/**
+ * Xpand hyobj.keyhyobt code for "Avtalsmall" (agreement template).
+ * Template rows are not real contracts — they have all dates NULL, so
+ * calculateStatus would classify them as "Gällande" and they'd leak into
+ * search results. Xpand's own UI hides them; excluded here from all searches.
+ */
+const XPAND_HYOBT_AVTALSMALL = '1'
+
 export interface LeaseSearchOptions {
   forExport?: boolean
   /**
@@ -94,11 +102,7 @@ export class LeaseSearchQueryBuilder {
       .innerJoin('cmobj', 'cmobj.keycmobj', 'hykop.keycmobj')
       .where('hyobj.deletemark', 0)
       .whereNot('hyobj.hyobjben', 'like', '%M%')
-      // keyhyobt = 1 is "Avtalsmall" — an agreement template, not a real contract.
-      // Template rows have all dates NULL, so calculateStatus classifies them as
-      // "Gällande" and they leak into search results. Xpand's own UI hides them and
-      // rental-object-adapter already excludes them via a keyhyobt whitelist.
-      .whereNot('hyobj.keyhyobt', '1')
+      .whereNot('hyobj.keyhyobt', XPAND_HYOBT_AVTALSMALL)
 
     this.joinedTables.add('hyobj')
     this.joinedTables.add('hyhav')
