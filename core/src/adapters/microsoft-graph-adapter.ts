@@ -10,6 +10,14 @@ export type GraphUser = {
   mobilePhone: string | null
   jobTitle: string | null
   officeLocation: string | null
+  managerUpn: string | null
+}
+
+// Graph `manager` relationship comes back as a nested object via $expand,
+// not a flat property. We flatten it to `managerUpn`; this is the raw shape
+// returned by Graph before flattening.
+type RawGraphUser = Omit<GraphUser, 'managerUpn'> & {
+  manager?: { id: string; userPrincipalName: string | null } | null
 }
 
 type GraphError = 'graph_unreachable' | 'unauthorized' | 'forbidden' | 'unknown'
@@ -63,19 +71,27 @@ export async function listUsers(): Promise<
       '$select',
       'id,userPrincipalName,employeeId,mobilePhone,jobTitle,officeLocation'
     )
-    url.searchParams.set('$top', '999')
+    // `manager` is a navigation property, so it must be $expand'ed, not $select'ed.
+    // $expand on the /users collection caps page size, so $top is lowered to 100.
+    url.searchParams.set('$expand', 'manager($select=id,userPrincipalName)')
+    url.searchParams.set('$top', '100')
 
     const users: GraphUser[] = []
     let nextUrl: string | undefined = url.toString()
 
     while (nextUrl) {
       const res: AxiosResponse<{
-        value: GraphUser[]
+        value: RawGraphUser[]
         '@odata.nextLink'?: string
       }> = await loggedAxios.get(nextUrl, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      users.push(...res.data.value)
+      users.push(
+        ...res.data.value.map(({ manager, ...rest }) => ({
+          ...rest,
+          managerUpn: manager?.userPrincipalName ?? null,
+        }))
+      )
       nextUrl = res.data['@odata.nextLink']
     }
 
