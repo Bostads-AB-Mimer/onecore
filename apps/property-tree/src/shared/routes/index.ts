@@ -60,6 +60,16 @@ export const paths = {
   company: (organizationNumber: string) =>
     generatePath(routes.company, { organizationNumber }),
   tenant: (contactCode: string) => generatePath(routes.tenant, { contactCode }),
+  economy: (params?: { contactCode?: string }) => {
+    if (!params?.contactCode) {
+      return routes.economy
+    }
+
+    const searchParams = new URLSearchParams({
+      contactCode: params.contactCode,
+    })
+    return `${routes.economy}?${searchParams.toString()}`
+  },
 }
 
 // Build a rental-object detail path from its type label + code. Folds the

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   MiscellaneousInvoicePayload,
   MiscellaneousInvoiceRow,
@@ -12,6 +13,7 @@ import { CalendarIcon } from 'lucide-react'
 
 import { useLeasesByContactCode } from '@/entities/lease'
 import { useRentalProperties } from '@/entities/rental-property'
+import { useTenant } from '@/entities/tenant'
 import { TenantSearchResult } from '@/entities/tenant/hooks/useTenantSearch'
 import { useUser } from '@/entities/user'
 
@@ -49,6 +51,7 @@ export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const submitInvoiceMutation = useMutation({
     mutationFn: async (invoice: MiscellaneousInvoicePayload) => {
@@ -121,13 +124,78 @@ export function MiscellaneousInvoiceForm() {
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
 
-  const handleSelectTenant = (tenant: TenantSearchResult | null) => {
-    setSelectedTenant(tenant)
-    setLeaseId(null)
-    setCostCentre(undefined)
-    setPropertyCode(undefined)
-    setErrors((prev) => ({ ...prev, contactCode: undefined }))
-  }
+  const setContactCodeParam = useCallback(
+    (code: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (code) {
+            next.set('contactCode', code)
+          } else {
+            next.delete('contactCode')
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
+
+  const handleSelectTenant = useCallback(
+    (tenant: TenantSearchResult | null) => {
+      setSelectedTenant(tenant)
+      setLeaseId(null)
+      setCostCentre(undefined)
+      setPropertyCode(undefined)
+      setErrors((prev) => ({ ...prev, contactCode: undefined }))
+      setContactCodeParam(tenant?.contactCode ?? null)
+    },
+    [setContactCodeParam]
+  )
+
+  const contactCodeFromUrl = searchParams.get('contactCode')
+  const { data: tenantFromUrl, isLoading: isLoadingTenant } = useTenant(
+    contactCodeFromUrl ?? undefined
+  )
+
+  useEffect(() => {
+    if (
+      contactCodeFromUrl &&
+      tenantFromUrl &&
+      selectedTenant?.contactCode !== contactCodeFromUrl
+    ) {
+      handleSelectTenant(tenantFromUrl)
+    }
+  }, [
+    contactCodeFromUrl,
+    handleSelectTenant,
+    selectedTenant?.contactCode,
+    tenantFromUrl,
+  ])
+
+  useEffect(() => {
+    if (
+      contactCodeFromUrl &&
+      !isLoadingTenant &&
+      !tenantFromUrl &&
+      !selectedTenant
+    ) {
+      toast({
+        title: 'Kund kunde inte hittas',
+        description: `Ingen kund med kundnummer ${contactCodeFromUrl} kunde hittas.`,
+        variant: 'destructive',
+      })
+      setContactCodeParam(null)
+    }
+  }, [
+    contactCodeFromUrl,
+    isLoadingTenant,
+    selectedTenant,
+    setContactCodeParam,
+    tenantFromUrl,
+    toast,
+  ])
 
   const handleLeaseSelect = (leaseId: string) => {
     setLeaseId(leaseId)
@@ -244,6 +312,7 @@ export function MiscellaneousInvoiceForm() {
     setAdministrativeCosts(false)
     setAttachedFile(null)
     setErrors({})
+    setContactCodeParam(null)
 
     // Wait a tick before scrolling up since other page updates can interfere with the scroll
     setTimeout(() => {
@@ -326,7 +395,11 @@ export function MiscellaneousInvoiceForm() {
           <div className="space-y-4">
             <h3 className="font-medium">Kundinformation</h3>
             <TenantSearchSection
-              tenantName={selectedTenant?.fullName}
+              tenantName={
+                isLoadingTenant && !selectedTenant
+                  ? 'Laddar kund...'
+                  : selectedTenant?.fullName
+              }
               onSelectTenant={handleSelectTenant}
               error={errors.contactCode}
             />

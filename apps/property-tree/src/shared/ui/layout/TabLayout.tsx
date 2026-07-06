@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import TableSkeleton from '@/shared/ui/TableSkeleton'
 
 interface TabLayoutProps {
   title?: string
@@ -19,16 +20,6 @@ interface TabLayoutProps {
   /** Custom error message */
   errorMessage?: string
 }
-
-const DefaultLoadingSkeleton = () => (
-  <div className="space-y-4">
-    <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-      <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
-    </div>
-  </div>
-)
 
 const ErrorDisplay = ({ message }: { message: string }) => (
   <div className="p-8 text-center">
@@ -55,7 +46,7 @@ export const TabLayout = ({
   // Determine what content to show
   const getContent = () => {
     if (isLoading) {
-      return loadingContent ?? <DefaultLoadingSkeleton />
+      return loadingContent ?? <TableSkeleton />
     }
     if (error) {
       return <ErrorDisplay message={errorMessage ?? 'Ett fel uppstod'} />

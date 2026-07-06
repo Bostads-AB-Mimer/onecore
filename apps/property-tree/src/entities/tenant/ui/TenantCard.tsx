@@ -20,7 +20,6 @@ export function TenantCard({
     <Card>
       <CardContent className="p-6">
         <h3 className="font-medium text-lg mb-6">Hyresgäst</h3>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-6">
           <TenantPersonalInfo tenant={tenant} />
           <TenantContactActions
