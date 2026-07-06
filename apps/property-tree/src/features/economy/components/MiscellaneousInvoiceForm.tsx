@@ -180,7 +180,12 @@ export function MiscellaneousInvoiceForm() {
   ])
 
   useEffect(() => {
-    if (contactCodeFromUrl && !isLoadingTenant && !tenantFromUrl) {
+    if (
+      contactCodeFromUrl &&
+      !isLoadingTenant &&
+      !tenantFromUrl &&
+      !selectedTenant
+    ) {
       toast({
         title: 'Kund kunde inte hittas',
         description: `Ingen kund med kundnummer ${contactCodeFromUrl} kunde hittas.`,
