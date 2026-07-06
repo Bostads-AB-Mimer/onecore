@@ -124,16 +124,23 @@ export function MiscellaneousInvoiceForm() {
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
   const [attachedFile, setAttachedFile] = useState<File | null>(null)
 
-  const clearContactCodeParam = useCallback(() => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev)
-        next.delete('contactCode')
-        return next
-      },
-      { replace: true }
-    )
-  }, [setSearchParams])
+  const setContactCodeParam = useCallback(
+    (code: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (code) {
+            next.set('contactCode', code)
+          } else {
+            next.delete('contactCode')
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
 
   const handleSelectTenant = useCallback(
     (tenant: TenantSearchResult | null) => {
@@ -142,21 +149,9 @@ export function MiscellaneousInvoiceForm() {
       setCostCentre(undefined)
       setPropertyCode(undefined)
       setErrors((prev) => ({ ...prev, contactCode: undefined }))
-
-      if (tenant) {
-        setSearchParams(
-          (prev) => {
-            const next = new URLSearchParams(prev)
-            next.set('contactCode', tenant.contactCode)
-            return next
-          },
-          { replace: true }
-        )
-      } else {
-        clearContactCodeParam()
-      }
+      setContactCodeParam(tenant?.contactCode ?? null)
     },
-    [clearContactCodeParam, setSearchParams]
+    [setContactCodeParam]
   )
 
   const contactCodeFromUrl = searchParams.get('contactCode')
@@ -191,13 +186,13 @@ export function MiscellaneousInvoiceForm() {
         description: `Ingen kund med kundnummer ${contactCodeFromUrl} kunde hittas.`,
         variant: 'destructive',
       })
-      clearContactCodeParam()
+      setContactCodeParam(null)
     }
   }, [
-    clearContactCodeParam,
     contactCodeFromUrl,
     isLoadingTenant,
     selectedTenant,
+    setContactCodeParam,
     tenantFromUrl,
     toast,
   ])
@@ -317,7 +312,7 @@ export function MiscellaneousInvoiceForm() {
     setAdministrativeCosts(false)
     setAttachedFile(null)
     setErrors({})
-    clearContactCodeParam()
+    setContactCodeParam(null)
 
     // Wait a tick before scrolling up since other page updates can interfere with the scroll
     setTimeout(() => {
