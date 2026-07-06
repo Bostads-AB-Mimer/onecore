@@ -160,27 +160,27 @@ export function MiscellaneousInvoiceForm() {
   )
 
   const contactCodeFromUrl = searchParams.get('contactCode')
-  const { data: tenant, isLoading: isLoadingTenant } = useTenant(
+  const { data: tenantFromUrl, isLoading: isLoadingTenant } = useTenant(
     contactCodeFromUrl ?? undefined
   )
 
   useEffect(() => {
     if (
       contactCodeFromUrl &&
-      tenant &&
+      tenantFromUrl &&
       selectedTenant?.contactCode !== contactCodeFromUrl
     ) {
-      handleSelectTenant(tenant)
+      handleSelectTenant(tenantFromUrl)
     }
   }, [
     contactCodeFromUrl,
     handleSelectTenant,
     selectedTenant?.contactCode,
-    tenant,
+    tenantFromUrl,
   ])
 
   useEffect(() => {
-    if (contactCodeFromUrl && !isLoadingTenant && !tenant) {
+    if (contactCodeFromUrl && !isLoadingTenant && !tenantFromUrl) {
       toast({
         title: 'Kund kunde inte hittas',
         description: `Ingen kund med kundnummer ${contactCodeFromUrl} kunde hittas.`,
@@ -192,7 +192,8 @@ export function MiscellaneousInvoiceForm() {
     clearContactCodeParam,
     contactCodeFromUrl,
     isLoadingTenant,
-    tenant,
+    selectedTenant,
+    tenantFromUrl,
     toast,
   ])
 
