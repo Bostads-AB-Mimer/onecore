@@ -395,7 +395,9 @@ export function MiscellaneousInvoiceForm() {
             <h3 className="font-medium">Kundinformation</h3>
             <TenantSearchSection
               tenantName={
-                isLoadingTenant ? 'Laddar kund...' : selectedTenant?.fullName
+                isLoadingTenant && !selectedTenant
+                  ? 'Laddar kund...'
+                  : selectedTenant?.fullName
               }
               onSelectTenant={handleSelectTenant}
               error={errors.contactCode}
