@@ -234,8 +234,9 @@ export function MiscellaneousInvoiceForm() {
       newErrors.leaseId = 'Hyreskontrakt måste väljas'
     }
 
-    const hasValidInvoiceRows = invoiceRows.some(
-      (row) => row.article?.id !== '' && !isNaN(parseFloat(row.price))
+    const hasValidInvoiceRows = invoiceRows.every(
+      (row) =>
+        row.article && row.article.id !== '' && !isNaN(parseFloat(row.price))
     )
     if (!hasValidInvoiceRows) {
       newErrors.articles = 'Minst en artikel eller tjänst måste läggas till'
