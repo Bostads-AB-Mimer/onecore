@@ -93,6 +93,7 @@ export function ArticleSection({
               <div className="space-y-2">
                 <Label htmlFor="artikel">Artikel</Label>
                 <Select
+                  key={row.article?.id ?? 'none'}
                   value={row.article?.id}
                   onValueChange={(articleId) =>
                     handleChangeRowArticle(index, articleId)
@@ -121,7 +122,7 @@ export function ArticleSection({
                 <Label htmlFor="artikelnummer">Artikelnummer</Label>
                 <Input
                   id="artikelnummer"
-                  value={row.article?.id}
+                  value={row.article?.id ?? ''}
                   readOnly
                   disabled
                   placeholder="Fylls i automatiskt"
