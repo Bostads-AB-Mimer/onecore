@@ -6,6 +6,7 @@ import bodyParser from 'koa-bodyparser'
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
 import * as commonXpandAdapter from '@src/services/common/adapters/xpand-db-adapter'
+import * as invoiceBaseService from '@src/services/invoice-service/invoice-base-service'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
@@ -292,6 +293,77 @@ describe('Invoice Service', () => {
         costCentre: '123',
         propertyCode: '456',
       })
+    })
+  })
+
+  describe('GET /invoice-bases', () => {
+    const invoiceBase = {
+      id: 1,
+      externalIdentifier: 'ext-1',
+      contactCode: 'P123456',
+      leaseId: '705-025-03-0205/01',
+      totalAmount: 150,
+      ourReference: { name: 'Ref Name' },
+      invoiceDate: new Date('2025-01-02T00:00:00.000Z'),
+      createdAt: new Date('2025-01-01T00:00:00.000Z'),
+      headerInfo: 'Header',
+      items: [
+        {
+          text: 'Row 1',
+          unitPrice: 100,
+          quantity: 1,
+          xledgerDbId: 'xdb-1',
+        },
+      ],
+    }
+
+    it('responds with 400 if invalid query params', async () => {
+      const res = await request(app.callback()).get(
+        `/invoice-bases?from=invalid`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with invoice bases', async () => {
+      jest
+        .spyOn(invoiceBaseService, 'getInvoiceBases')
+        .mockResolvedValueOnce([invoiceBase])
+
+      const res = await request(app.callback()).get(`/invoice-bases`)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(() =>
+        schemas.v1.InvoiceBaseSchema.array().parse(res.body.content)
+      ).not.toThrow()
+    })
+
+    it('forwards query params to invoice base service, defaulting pageSize to 500', async () => {
+      const getInvoiceBasesSpy = jest
+        .spyOn(invoiceBaseService, 'getInvoiceBases')
+        .mockResolvedValueOnce([])
+
+      await request(app.callback()).get(
+        `/invoice-bases?from=2025-01-01&to=2025-02-01&skip=10`
+      )
+
+      expect(getInvoiceBasesSpy).toHaveBeenCalledWith({
+        from: new Date('2025-01-01'),
+        to: new Date('2025-02-01'),
+        skip: 10,
+        pageSize: 500,
+      })
+    })
+
+    it('responds with 500 if invoice base service throws', async () => {
+      jest
+        .spyOn(invoiceBaseService, 'getInvoiceBases')
+        .mockRejectedValueOnce(new Error('boom'))
+
+      const res = await request(app.callback()).get(`/invoice-bases`)
+
+      expect(res.status).toBe(500)
     })
   })
 })
