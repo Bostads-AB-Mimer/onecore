@@ -310,6 +310,7 @@ describe('Invoice Service', () => {
       items: [
         {
           text: 'Row 1',
+          amount: 100,
           unitPrice: 100,
           quantity: 1,
           xledgerDbId: 'xdb-1',
