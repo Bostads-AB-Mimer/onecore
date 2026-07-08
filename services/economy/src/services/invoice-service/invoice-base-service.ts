@@ -57,5 +57,13 @@ export const getInvoiceBases = async ({
 export const createInvoiceBase = async (
   invoiceBasePayload: invoiceBaseDbAdapter.InvoiceBasePayload
 ) => {
-  return invoiceBaseDbAdapter.createInvoiceBase(invoiceBasePayload)
+  const result =
+    await invoiceBaseDbAdapter.createInvoiceBase(invoiceBasePayload)
+
+  if (!result.ok) {
+    logger.error(result.err, 'Failed to create invoice base')
+    return null
+  }
+
+  return result.data
 }

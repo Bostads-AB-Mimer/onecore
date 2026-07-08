@@ -309,24 +309,23 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const createInvoiceBaseResult = await createInvoiceBase({
+      const invoiceBase = await createInvoiceBase({
         contactCode: invoicePayload.contactCode,
         leaseId: invoicePayload.leaseId,
         externalIdentifier: submitResult.data.externalIdentifier,
         invoiceBaseItemXledgerDbIds: submitResult.data.invoiceBaseItemDbIds,
       })
 
-      if (!createInvoiceBaseResult.ok) {
+      if (invoiceBase === null) {
         logger.error(
-          createInvoiceBaseResult.err,
           `Failed to create invoice base in economy database, Xledger invoice base items still created with dbIds: ${submitResult.data.invoiceBaseItemDbIds}`
         )
       }
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(createInvoiceBaseResult, metadata) // TODO returnera vad?
-    } catch (error) {
-      logger.error({ err: error }, 'POST /invoices/miscellaneous')
+      ctx.body = makeSuccessResponseBody(invoiceBase, metadata)
+    } catch (error: any) {
+      logger.error(error)
       ctx.status = 500
       ctx.body = {
         type: SubmitMiscellaneousInvoiceErrorCodes.Unknown,

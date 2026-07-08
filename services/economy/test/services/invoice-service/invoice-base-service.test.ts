@@ -175,9 +175,16 @@ describe('invoice-base-service', () => {
         leaseId: '123-456',
         invoiceBaseItemXledgerDbIds: ['xdb-1', 'xdb-2'],
       }
+      const expectedInvoiceBase = {
+        Id: 1,
+        ContactCode: 'P12345',
+        ExternalIdentifier: 'ext-1',
+        LeaseId: '123-456',
+        CreatedAt: new Date(),
+      }
       invoiceBaseDbAdapter.createInvoiceBase.mockResolvedValue({
         ok: true,
-        data: 'result',
+        data: expectedInvoiceBase,
       })
 
       const result = await createInvoiceBase(payload)
@@ -185,7 +192,30 @@ describe('invoice-base-service', () => {
       expect(invoiceBaseDbAdapter.createInvoiceBase).toHaveBeenCalledWith(
         payload
       )
-      expect(result).toEqual({ ok: true, data: 'result' })
+      expect(result).toEqual(expectedInvoiceBase)
+    })
+
+    it('returns null and logs error when db adapter fails', async () => {
+      const loggerErrorSpy = jest.spyOn(logger, 'error')
+      const payload = {
+        contactCode: 'P12345',
+        externalIdentifier: 'ext-1',
+        leaseId: '123-456',
+        invoiceBaseItemXledgerDbIds: ['xdb-1', 'xdb-2'],
+      }
+      const err = new Error('boom')
+      invoiceBaseDbAdapter.createInvoiceBase.mockResolvedValue({
+        ok: false,
+        err,
+      })
+
+      const result = await createInvoiceBase(payload)
+
+      expect(result).toBeNull()
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        err,
+        'Failed to create invoice base'
+      )
     })
   })
 })
