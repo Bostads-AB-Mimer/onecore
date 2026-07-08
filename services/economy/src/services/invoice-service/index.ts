@@ -278,22 +278,21 @@ export const routes = (router: KoaRouter) => {
           attachment: ctx.request.files?.attachment,
         })
 
-      const result = await createInvoiceBase({
+      const invoiceBase = await createInvoiceBase({
         contactCode: invoicePayload.contactCode,
         leaseId: invoicePayload.leaseId,
         externalIdentifier,
         invoiceBaseItemXledgerDbIds: invoiceBaseItemDbIds,
       })
 
-      if (!result.ok) {
+      if (invoiceBase === null) {
         logger.error(
-          result.err,
           `Failed to create invoice base in economy database, Xledger invoice base items still created with dbIds: ${invoiceBaseItemDbIds}`
         )
       }
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(result, metadata)
+      ctx.body = makeSuccessResponseBody(invoiceBase, metadata)
     } catch (error: any) {
       logger.error(error)
       ctx.status = 500

@@ -45,16 +45,16 @@ export const createInvoiceBase = async ({
   externalIdentifier,
   leaseId,
   invoiceBaseItemXledgerDbIds,
-}: InvoiceBasePayload): Promise<AdapterResult<any, Error>> => {
+}: InvoiceBasePayload): Promise<AdapterResult<InvoiceBaseRow, Error>> => {
   try {
     const result = await db.transaction(async (tx) => {
-      const invoiceBases = await tx('invoice_base')
+      const invoiceBases = await tx<InvoiceBaseRow>('invoice_base')
         .insert({
           ContactCode: contactCode,
           LeaseId: leaseId,
           ExternalIdentifier: externalIdentifier,
         })
-        .returning('Id')
+        .returning('*')
 
       await tx('invoice_base_item').insert(
         invoiceBaseItemXledgerDbIds.map((dbId) => ({
@@ -63,12 +63,11 @@ export const createInvoiceBase = async ({
         }))
       )
 
-      return tx
+      return invoiceBases[0]
     })
 
-    return { ok: true, data: result } // TODO fix typing
+    return { ok: true, data: result }
   } catch (err: any) {
-    logger.error(err, 'Failed to insert InvoiceBase')
     return { ok: false, err }
   }
 }
