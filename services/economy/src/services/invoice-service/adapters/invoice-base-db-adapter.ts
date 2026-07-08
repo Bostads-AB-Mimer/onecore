@@ -20,6 +20,7 @@ interface InvoiceBaseRow {
   Id: number
   ContactCode: string
   ExternalIdentifier: string
+  LeaseId: string
   CreatedAt: Date
 }
 
@@ -90,7 +91,7 @@ const transformToInvoiceBase = (
     externalIdentifier: invoiceBaseRow.ExternalIdentifier,
     createdAt: invoiceBaseRow.CreatedAt,
     contactCode: invoiceBaseRow.ContactCode,
-    leaseId: '',
+    leaseId: invoiceBaseRow.LeaseId,
   }
 }
 
