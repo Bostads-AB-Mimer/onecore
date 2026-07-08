@@ -294,6 +294,7 @@ interface XledgerInvoiceBaseItem {
   quantity: number
   headerInfo: string
   contactCode: string
+  comment?: string
   attachment?: {
     fileName: string
     url: string
@@ -316,6 +317,7 @@ const transformToInvoiceBaseItem = (
     unitPrice: parseFloat(invoiceBaseItemData.node.unitPrice),
     quantity: parseFloat(invoiceBaseItemData.node.quantity),
     headerInfo: invoiceBaseItemData.node.headerInfo,
+    comment: invoiceBaseItemData.node.comment ?? undefined,
     attachment: invoiceBaseItemData.node.fileFile
       ? {
           fileName: invoiceBaseItemData.node.fileFile.fileName,
@@ -894,6 +896,7 @@ export const getInvoiceBaseItems = async (
               unitPrice
               quantity
               headerInfo
+              comment
               subledger {
                 code
               }

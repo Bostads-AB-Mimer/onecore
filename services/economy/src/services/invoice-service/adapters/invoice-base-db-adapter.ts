@@ -81,6 +81,7 @@ const transformToInvoiceBase = (
   | 'ourReference'
   | 'attachment'
   | 'headerInfo'
+  | 'comment'
   | 'totalAmount'
   | 'items'
 > => {

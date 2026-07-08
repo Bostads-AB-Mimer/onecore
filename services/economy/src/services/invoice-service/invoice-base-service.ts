@@ -34,6 +34,7 @@ export const getInvoiceBases = async ({
         attachment: items[0].attachment,
         headerInfo: items[0].headerInfo,
         invoiceDate: items[0].invoiceDate,
+        comment: items[0].comment,
         totalAmount: items.reduce((acc, xi) => acc + xi.amount, 0),
         items: items.map((xi) => ({
           xledgerDbId: xi.xledgerDbId,
