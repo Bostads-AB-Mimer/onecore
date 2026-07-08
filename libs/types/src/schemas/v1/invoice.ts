@@ -75,6 +75,32 @@ export const InvoiceSchema = z.object({
   costCentre: z.string().optional(), // TODO ska denna finnas i Invoice?
 })
 
+export const InvoiceBaseItemSchema = z.object({
+  text: z.string(),
+  unitPrice: z.number(),
+  quantity: z.number(),
+  xledgerDbId: z.string(),
+})
+
+export const InvoiceBaseSchema = z.object({
+  id: z.number(),
+  externalIdentifier: z.string(),
+  contactCode: z.string(),
+  leaseId: z.string(),
+  totalAmount: z.number(),
+  ourReference: z.string(),
+  invoiceDate: z.coerce.date(),
+  createdAt: z.coerce.date(),
+  headerInfo: z.string(),
+  items: InvoiceBaseItemSchema.array(),
+  attachment: z
+    .object({
+      fileName: z.string(),
+      url: z.string(),
+    })
+    .optional(),
+})
+
 // TODO can we consolidate this and InvoiceRowSchema?
 export const RentInvoiceRowSchema = z.object({
   type: z.enum(['Rent', 'Other']),
