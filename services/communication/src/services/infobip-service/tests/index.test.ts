@@ -510,9 +510,9 @@ describe('/sendBulkSms logging', () => {
   beforeEach(() => {
     logOutboundDispatchMock.mockReset()
     logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
-    jest.spyOn(smsAdapter, 'sendBulkSms').mockResolvedValue(
-      smsSendResult('mid-bulk')
-    )
+    jest
+      .spyOn(smsAdapter, 'sendBulkSms')
+      .mockResolvedValue(smsSendResult('mid-bulk'))
   })
 
   it('returns 200 with no warnings when logging succeeds', async () => {

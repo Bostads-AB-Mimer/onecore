@@ -25,6 +25,10 @@ import bodyParser from 'koa-bodyparser'
 import { routes } from '../infobip-sms-webhook'
 // Spy on the source module (see note in index.test.ts re: the barrel's getter).
 import * as deliveryReports from '../../../adapters/communication-adapter/delivery-reports'
+import config from '../../../common/config'
+
+// Same object reference the route reads — mutate it to toggle config per-test.
+const mockConfig = config as unknown as { infobip: { webhookToken: string } }
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -86,5 +90,38 @@ describe('POST /webhooks/infobip-sms (SMS token auth)', () => {
       .send(report)
 
     expect(res.status).toBe(502)
+  })
+})
+
+describe('POST /webhooks/infobip-sms (token unconfigured, fails closed)', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    mockConfig.infobip.webhookToken = ''
+  })
+
+  afterEach(() => {
+    mockConfig.infobip.webhookToken = 'sms-token'
+  })
+
+  it('rejects with 401 even when the request carries a token (no forward)', async () => {
+    const forwardSpy = jest.spyOn(deliveryReports, 'forwardDeliveryReport')
+
+    const res = await request(app.callback())
+      .post('/webhooks/infobip-sms?token=anything')
+      .send(report)
+
+    expect(res.status).toBe(401)
+    expect(forwardSpy).not.toHaveBeenCalled()
+  })
+
+  it('rejects with 401 when no token is provided (no forward)', async () => {
+    const forwardSpy = jest.spyOn(deliveryReports, 'forwardDeliveryReport')
+
+    const res = await request(app.callback())
+      .post('/webhooks/infobip-sms')
+      .send(report)
+
+    expect(res.status).toBe(401)
+    expect(forwardSpy).not.toHaveBeenCalled()
   })
 })

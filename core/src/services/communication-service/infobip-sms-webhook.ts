@@ -30,21 +30,26 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { webhookToken } = config.infobip
 
-    // Enforced only when configured (dev/local with empty token skips the check).
-    if (webhookToken) {
-      const provided = Array.isArray(ctx.query.token)
-        ? ctx.query.token[0]
-        : ctx.query.token
+    // Fail closed: reject any request without a token, then compare it against
+    // our configured token. Safe even when our token is unconfigured — the
+    // empty-vs-empty case is caught by `!provided`, and a non-empty provided
+    // token can't equal an empty webhookToken (safeEqual length mismatch), so
+    // every request is rejected. A forgotten env var locks the endpoint rather
+    // than opening it, with no dependency on NODE_ENV. No legitimate traffic is
+    // lost: a send only attaches the webhook when a token is set (see
+    // buildDeliveryWebhook), so without one no real reports arrive here.
+    const provided = Array.isArray(ctx.query.token)
+      ? ctx.query.token[0]
+      : ctx.query.token
 
-      if (!provided || !safeEqual(provided, webhookToken)) {
-        logger.warn(
-          { providedToken: provided ? 'provided' : 'missing' },
-          'webhooks.infobip-sms: invalid token'
-        )
-        ctx.status = 401
-        ctx.body = { reason: 'Unauthorized', ...metadata }
-        return
-      }
+    if (!provided || !safeEqual(provided, webhookToken)) {
+      logger.warn(
+        { providedToken: provided ? 'provided' : 'missing' },
+        'webhooks.infobip-sms: invalid token'
+      )
+      ctx.status = 401
+      ctx.body = { reason: 'Unauthorized', ...metadata }
+      return
     }
 
     const result = await communicationAdapter.forwardDeliveryReport(
