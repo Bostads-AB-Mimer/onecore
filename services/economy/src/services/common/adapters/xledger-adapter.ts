@@ -280,6 +280,46 @@ const transformToInvoice = (invoiceData: any): Invoice => {
   return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
 }
 
+interface XledgerInvoiceBaseItem {
+  externalIdentifier: string
+  xledgerDbId: string
+  text: string
+  invoiceDate: Date
+  ourReference: string
+  amount: number
+  unitPrice: number
+  quantity: number
+  headerInfo: string
+  contactCode: string
+  attachment?: {
+    fileName: string
+    url: string
+  }
+}
+
+const transformToInvoiceBaseItem = (
+  invoiceBaseItemData: any
+): XledgerInvoiceBaseItem => {
+  return {
+    contactCode: invoiceBaseItemData.node.subledger.code,
+    externalIdentifier: invoiceBaseItemData.node.extIdentifier,
+    xledgerDbId: invoiceBaseItemData.node.dbId,
+    text: invoiceBaseItemData.node.text,
+    invoiceDate: new Date(invoiceBaseItemData.node.invoiceDate),
+    ourReference: invoiceBaseItemData.node.ourRef.name,
+    amount: parseFloat(invoiceBaseItemData.node.amount),
+    unitPrice: parseFloat(invoiceBaseItemData.node.unitPrice),
+    quantity: parseFloat(invoiceBaseItemData.node.quantity),
+    headerInfo: invoiceBaseItemData.node.headerInfo,
+    attachment: invoiceBaseItemData.node.fileFile
+      ? {
+          fileName: invoiceBaseItemData.node.fileFile.fileName,
+          url: invoiceBaseItemData.node.fileFile.url,
+        }
+      : undefined,
+  }
+}
+
 export interface XledgerCustomer {
   contactCode: string
   address: {
@@ -827,6 +867,50 @@ export const getInvoices = async (from?: Date, to?: Date) => {
 
   const result = await makeXledgerRequest(query)
   return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
+}
+
+export const getInvoiceBaseItems = async (
+  dbIds: string[]
+): Promise<XledgerInvoiceBaseItem[]> => {
+  const query = {
+    query: gql`
+      query ($first: Int, $dbIds: [Int64String!]) {
+        invoiceBaseItems(first: $first, filter: { dbId_in: $dbIds }) {
+          edges {
+            node {
+              extIdentifier
+              dbId
+              text
+              invoiceDate
+              ourRef {
+                name
+              }
+              amount
+              unitPrice
+              quantity
+              headerInfo
+              subledger {
+                code
+              }
+              fileFile {
+                url
+                fileName
+              }
+            }
+          }
+        }
+      }
+    `,
+    variables: {
+      first: dbIds.length,
+      dbIds,
+    },
+  }
+
+  const result = await makeXledgerRequest(query)
+  return (
+    result.data?.invoiceBaseItems?.edges?.map(transformToInvoiceBaseItem) ?? []
+  )
 }
 
 export const getAllInvoicesWithMatchIds = async ({
