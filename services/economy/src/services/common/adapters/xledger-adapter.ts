@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
 import { gql } from 'graphql-request'
+import { nanoid } from 'nanoid'
 import {
   Invoice,
   InvoicePaymentEvent,
@@ -1286,16 +1287,19 @@ export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
 ): Promise<
   AdapterResult<
-    Array<{ node: { dbId: number } }>,
+    { externalIdentifier: string; invoiceBaseItemDbIds: string[] },
     SubmitMiscellaneousInvoiceErrorCodes
   >
 > => {
   const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.article.name).join(', ')}`
+  // Xledger truncates extIdentifier to 25 characters, so can't use regular uuids that are 36 characters.
+  const externalIdentifier = nanoid(25)
 
   const nodes = invoice.invoiceRows.map(
     (ir, index) => gql`
       {
         node: {
+          extIdentifier: ${JSON.stringify(externalIdentifier)}
           subledger: { code: ${JSON.stringify(invoice.contactCode)} }
           lineNumber: ${index}
           product: {
@@ -1360,8 +1364,16 @@ export const submitMiscellaneousInvoice = async (
       invoice.attachment
     )
 
-    return { ok: true, data: result.data.addInvoiceBaseItems.edges }
-  } catch (err) {
+    return {
+      ok: true,
+      data: {
+        externalIdentifier,
+        invoiceBaseItemDbIds: result.data.addInvoiceBaseItems.edges.map(
+          (e: any) => e.node.dbId
+        ),
+      },
+    }
+  } catch (err: unknown) {
     // Expected when the contact has never been registered as a customer in
     // Xledger — e.g. tenants whose only contract is upcoming. Handled with a
     // 404 upstream, so warn instead of error (makeXledgerRequest has already
