@@ -264,28 +264,40 @@ export const routes = (router: KoaRouter) => {
           text: body.text,
         })
 
-        // Strict: if logging fails the catch below turns it into a 500 even
-        // though the SMS already went out. Better an audit-complete log path
-        // with a noisy failure than a phantom send no one knows about.
-        await logOutboundDispatch({
-          channel: 'sms',
-          fromAddress: SMS_SENDER,
-          body: body.text,
-          messageType: 'bulk_sms',
-          provider: SMS_PROVIDER,
-          triggeredByUser: body.logMeta?.triggeredByUser,
-          audienceCriteria: body.logMeta?.audienceCriteria,
-          templateId: body.logMeta?.templateId,
-          // TODO: log-before-send. Today we log after Infobip's 200 ACK, so an API
-          // rejection leaves no audit row. Flip to: insert pending → call Infobip
-          // → update to failed if rejected. Webhook still handles delivered/failed.
-          recipients: validRecipients.map((r, i) => ({
-            contactCode: r.contactCode,
-            toAddress: r.normalizedPhone,
-            externalMessageId: sendResult.messages?.[i]?.messageId,
-            status: 'pending',
-          })),
-        })
+        // Strict but non-blocking: the SMS already went out, so a logging
+        // failure must not fail the request (that would falsely report the send
+        // as failed). Instead we log loudly for monitoring and surface a
+        // non-blocking warning to the caller via `warnings`. Mirrors bulk email.
+        const warnings: string[] = []
+        try {
+          await logOutboundDispatch({
+            channel: 'sms',
+            fromAddress: SMS_SENDER,
+            body: body.text,
+            messageType: 'bulk_sms',
+            provider: SMS_PROVIDER,
+            triggeredByUser: body.logMeta?.triggeredByUser,
+            audienceCriteria: body.logMeta?.audienceCriteria,
+            templateId: body.logMeta?.templateId,
+            // TODO: log-before-send. Today we log after Infobip's 200 ACK, so an API
+            // rejection leaves no audit row. Flip to: insert pending → call Infobip
+            // → update to failed if rejected. Webhook still handles delivered/failed.
+            recipients: validRecipients.map((r, i) => ({
+              contactCode: r.contactCode,
+              toAddress: r.normalizedPhone,
+              externalMessageId: sendResult.messages?.[i]?.messageId,
+              status: 'pending',
+            })),
+          })
+        } catch (logError: any) {
+          // Keep the warning generic for the client; the real error (which can
+          // contain internal/DB detail) stays in logger.error only.
+          warnings.push('Communication log failed')
+          logger.error(
+            { err: logError, messageType: 'bulk_sms' },
+            'Failed to write communication-log entry for bulk SMS'
+          )
+        }
 
         const successful = validRecipients.map((r) => r.normalizedPhone)
         ctx.status = 200
@@ -296,6 +308,7 @@ export const routes = (router: KoaRouter) => {
             totalSent: successful.length,
             totalInvalid: invalidPhones.length,
           },
+          ...(warnings.length && { warnings }),
           ...metadata,
         }
       } catch (error: any) {

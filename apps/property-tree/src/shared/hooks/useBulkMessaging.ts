@@ -22,11 +22,14 @@ export interface UseBulkMessagingOptions<TItem> {
   getContacts: (item: TItem) => Contact[]
   /** Fetch all contacts matching current filters (for "select all results") */
   fetchAllContacts?: () => Promise<Contact[]>
-  /** Send bulk SMS - returns result with totalSent/totalInvalid */
+  /** Send bulk SMS - returns the result plus any non-blocking warnings */
   sendBulkSms: (
     recipients: { contactCode: string; phoneNumber: string }[],
     message: string
-  ) => Promise<{ totalSent: number; totalInvalid: number }>
+  ) => Promise<{
+    content: { totalSent: number; totalInvalid: number }
+    warnings?: string[]
+  }>
   /** Send bulk email - returns the result plus any non-blocking warnings */
   sendBulkEmail: (
     recipients: { contactCode: string; emailAddress: string }[],
@@ -267,12 +270,22 @@ export function useBulkMessaging<TItem>({
 
         toast({
           title: 'SMS skickat',
-          description: `Skickades till ${result.totalSent} mottagare${
-            result.totalInvalid > 0
-              ? `. ${result.totalInvalid} ogiltiga nummer.`
+          description: `Skickades till ${result.content.totalSent} mottagare${
+            result.content.totalInvalid > 0
+              ? `. ${result.content.totalInvalid} ogiltiga nummer.`
               : ''
           }`,
         })
+
+        // Non-blocking: the SMS was sent, but something like communication-log
+        // writing failed. Surface it without blocking the success flow.
+        if (result.warnings?.length) {
+          toast({
+            title: 'SMS:et skickades, men en åtgärd misslyckades',
+            description: result.warnings.join(' '),
+            variant: 'destructive',
+          })
+        }
 
         clearSelection()
         setShowSmsModal(false)

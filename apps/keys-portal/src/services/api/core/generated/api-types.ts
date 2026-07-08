@@ -228,6 +228,8 @@ export interface paths {
           content: {
             'application/json': {
               content?: components['schemas']['BulkSmsResult']
+              /** @description Non-blocking issues (e.g. communication-log write failed); the SMS was still sent. */
+              warnings?: string[]
             }
           }
         }
@@ -280,6 +282,33 @@ export interface paths {
         }
         /** @description Invalid request */
         400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/webhooks/infobip': {
+    /**
+     * Infobip email delivery-report webhook
+     * @description Receives Infobip email delivery reports and forwards them to the communication service for processing. Authenticated via a Keycloak service account holding the `infobip-webhook` realm role (enforced in app.ts). SMS delivery reports do NOT use this route — they hit the communication service directly (Tele2 per-message webhook + token).
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+      responses: {
+        /** @description Delivery report accepted */
+        200: {
+          content: never
+        }
+        /** @description Missing or invalid Keycloak credentials / role */
+        401: {
           content: never
         }
         /** @description Internal server error */

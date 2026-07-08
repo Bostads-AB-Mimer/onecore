@@ -53,7 +53,7 @@ async function searchContacts(query: string): Promise<ContactSearchResult[]> {
 async function sendBulkSms(
   recipients: { contactCode: string; phoneNumber: string }[],
   text: string
-): Promise<BulkSmsResult> {
+): Promise<{ content: BulkSmsResult; warnings?: string[] }> {
   const { data, error } = await POST('/sendBulkSms', {
     body: { recipients, text },
   })
@@ -61,7 +61,9 @@ async function sendBulkSms(
   if (error) throw error
   if (!data?.content) throw new Error('Response ok but missing content')
 
-  return data.content
+  // warnings is a sibling of content: the SMS sent, but a non-blocking issue
+  // occurred (e.g. communication-log write failed).
+  return { content: data.content, warnings: data.warnings }
 }
 
 async function sendBulkEmail(

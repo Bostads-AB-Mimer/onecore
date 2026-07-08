@@ -486,6 +486,58 @@ describe('/sendBulkSms', () => {
   })
 })
 
+describe('/sendBulkSms logging', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+
+  // The SMS adapter returns the Infobip v3 response directly (no `.data`
+  // wrapper), so the route reads messageId off messages[i].
+  const smsSendResult = (messageId: string) => ({
+    messages: [
+      {
+        to: '46701234567',
+        messageId,
+        status: {
+          groupId: 1,
+          groupName: 'PENDING',
+          id: 26,
+          name: 'PENDING_ACCEPTED',
+          description: 'Message accepted',
+        },
+      },
+    ],
+  })
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    jest.spyOn(smsAdapter, 'sendBulkSms').mockResolvedValue(
+      smsSendResult('mid-bulk')
+    )
+  })
+
+  it('returns 200 with no warnings when logging succeeds', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toBeUndefined()
+  })
+
+  it('returns 200 with a warning (non-blocking) when logging fails', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toEqual([
+      expect.stringContaining('Communication log failed'),
+    ])
+  })
+})
+
 describe('parking space offer email logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
