@@ -285,7 +285,9 @@ interface XledgerInvoiceBaseItem {
   xledgerDbId: string
   text: string
   invoiceDate: Date
-  ourReference: string
+  ourReference: {
+    name: string
+  }
   amount: number
   unitPrice: number
   quantity: number
@@ -306,7 +308,9 @@ const transformToInvoiceBaseItem = (
     xledgerDbId: invoiceBaseItemData.node.dbId,
     text: invoiceBaseItemData.node.text,
     invoiceDate: new Date(invoiceBaseItemData.node.invoiceDate),
-    ourReference: invoiceBaseItemData.node.ourRef.name,
+    ourReference: {
+      name: invoiceBaseItemData.node.ourRef.name,
+    },
     amount: parseFloat(invoiceBaseItemData.node.amount),
     unitPrice: parseFloat(invoiceBaseItemData.node.unitPrice),
     quantity: parseFloat(invoiceBaseItemData.node.quantity),
