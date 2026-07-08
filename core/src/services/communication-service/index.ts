@@ -99,6 +99,11 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/BulkSmsResult'
+   *                 warnings:
+   *                   type: array
+   *                   description: Non-blocking issues (e.g. communication-log write failed); the SMS was still sent.
+   *                   items:
+   *                     type: string
    *       '400':
    *         description: Invalid request
    *       '500':
@@ -119,7 +124,16 @@ export const routes = (router: KoaRouter) => {
 
     if (result.ok) {
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      // warnings sits beside content: the SMS succeeded but a non-blocking
+      // issue occurred (e.g. communication-log writing failed). Included only
+      // when present so the response carries no empty/undefined warnings key.
+      ctx.body = {
+        content: result.data.content,
+        ...(result.data.warnings?.length && {
+          warnings: result.data.warnings,
+        }),
+        ...metadata,
+      }
     } else {
       ctx.status = result.statusCode ?? 500
       ctx.body = { error: result.err, ...metadata }
