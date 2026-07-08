@@ -38,7 +38,7 @@ describe('invoice-base-service', () => {
           id: 1,
           externalIdentifier: 'ext-1',
           contactCode: 'P12345',
-          leaseId: '',
+          leaseId: 'lease-1',
           createdAt: new Date('2025-01-01'),
         },
       ])
@@ -85,7 +85,7 @@ describe('invoice-base-service', () => {
           id: 1,
           externalIdentifier: 'ext-1',
           contactCode: 'P12345',
-          leaseId: '',
+          leaseId: 'lease-1',
           createdAt: new Date('2025-01-01'),
           ourReference: { name: 'Ref Name' },
           attachment: { fileName: 'file.pdf', url: 'http://example.com' },
