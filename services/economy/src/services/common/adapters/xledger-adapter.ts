@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
 import { gql } from 'graphql-request'
+import { nanoid } from 'nanoid'
 import {
   Invoice,
   InvoicePaymentEvent,
@@ -1254,13 +1255,16 @@ export const healthCheck = async () => {
 
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
-) => {
+): Promise<{ externalIdentifier: string; invoiceBaseItemDbIds: string[] }> => {
   const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.article.name).join(', ')}`
+  // Xledger truncates extIdentifier to 25 characters, so can't use regular uuids that are 36 characters.
+  const externalIdentifier = nanoid(25)
 
   const nodes = invoice.invoiceRows.map(
     (ir, index) => gql`
       {
         node: {
+          extIdentifier: ${JSON.stringify(externalIdentifier)}
           subledger: { code: ${JSON.stringify(invoice.contactCode)} }
           lineNumber: ${index}
           product: {
@@ -1325,7 +1329,12 @@ export const submitMiscellaneousInvoice = async (
       invoice.attachment
     )
 
-    return result.data.addInvoiceBaseItems.edges
+    return {
+      externalIdentifier,
+      invoiceBaseItemDbIds: result.data.addInvoiceBaseItems.edges.map(
+        (e: any) => e.node.dbId
+      ),
+    }
   } catch (err: unknown) {
     logger.error(err, 'Error creating miscellaneous invoice')
     throw err
