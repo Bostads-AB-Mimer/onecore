@@ -24,7 +24,7 @@ import {
   fetchPaymentEvents,
   getLeaseDetails,
 } from './service'
-import { getInvoiceBases } from './invoice-base-service'
+import { createInvoiceBase, getInvoiceBases } from './invoice-base-service'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -269,15 +269,31 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/invoices/miscellaneous', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const invoicePayload = JSON.parse(ctx.request.body.invoice) // TODO zod schema?
 
     try {
-      const success = await submitMiscellaneousInvoice({
-        ...JSON.parse(ctx.request.body.invoice),
-        attachment: ctx.request.files?.attachment,
+      const { externalIdentifier, invoiceBaseItemDbIds } =
+        await submitMiscellaneousInvoice({
+          ...invoicePayload,
+          attachment: ctx.request.files?.attachment,
+        })
+
+      const result = await createInvoiceBase({
+        contactCode: invoicePayload.contactCode,
+        leaseId: invoicePayload.leaseId,
+        externalIdentifier,
+        invoiceBaseItemXledgerDbIds: invoiceBaseItemDbIds,
       })
 
+      if (!result.ok) {
+        logger.error(
+          result.err,
+          `Failed to create invoice base in economy database, Xledger invoice base items still created with dbIds: ${invoiceBaseItemDbIds}`
+        )
+      }
+
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(success, metadata)
+      ctx.body = makeSuccessResponseBody(result, metadata)
     } catch (error: any) {
       logger.error(error)
       ctx.status = 500
