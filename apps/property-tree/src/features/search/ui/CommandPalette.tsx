@@ -48,7 +48,8 @@ function getResultProps(item: CombinedSearchResult) {
     case 'property':
       return {
         icon,
-        label: item.name,
+        label: item.code,
+        subtitle: item.name,
         path: paths.property(item.code),
         state: {},
       }

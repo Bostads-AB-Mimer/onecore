@@ -156,7 +156,7 @@ const searchProperties = (
     return prisma.property
       .findMany({
         where: {
-          designation: { contains: q },
+          OR: [{ designation: { contains: q } }, { code: { contains: q } }],
         },
         orderBy: { code: 'asc' },
       })
