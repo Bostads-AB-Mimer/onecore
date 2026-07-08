@@ -58,6 +58,7 @@ describe('invoice-base-service', () => {
           attachment: { fileName: 'file.pdf', url: 'http://example.com' },
           headerInfo: 'Header',
           invoiceDate: new Date('2025-01-02'),
+          comment: 'secret comment',
         },
         {
           contactCode: 'P12345',
@@ -71,6 +72,7 @@ describe('invoice-base-service', () => {
           attachment: undefined,
           headerInfo: 'Header',
           invoiceDate: new Date('2025-01-02'),
+          comment: 'secret comment',
         },
       ])
 
@@ -90,6 +92,7 @@ describe('invoice-base-service', () => {
           headerInfo: 'Header',
           invoiceDate: new Date('2025-01-02'),
           totalAmount: 150,
+          comment: 'secret comment',
           items: [
             {
               xledgerDbId: 'xdb-1',

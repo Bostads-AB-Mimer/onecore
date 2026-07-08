@@ -93,6 +93,7 @@ export const InvoiceBaseSchema = z.object({
   invoiceDate: z.coerce.date(),
   createdAt: z.coerce.date(),
   headerInfo: z.string(),
+  comment: z.string().optional(),
   items: InvoiceBaseItemSchema.array(),
   attachment: z
     .object({
