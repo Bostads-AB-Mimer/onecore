@@ -24,6 +24,7 @@ import {
   fetchPaymentEvents,
   getLeaseDetails,
 } from './service'
+import { getInvoiceBases } from './invoice-base-service'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -216,6 +217,30 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.get('(.*)/invoice-bases', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = economy.GetInvoiceBasesQueryParams.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    const { from, to, skip, pageSize = 500 } = queryParams.data
+
+    try {
+      const invoiceBases = await getInvoiceBases({ from, to, skip, pageSize })
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(invoiceBases, metadata)
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
   /* 
     Gets property information required to create a miscellaneous invoice for a lease.
     We could instead get the required information by making several queries to the leasing- and
