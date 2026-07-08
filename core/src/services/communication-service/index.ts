@@ -265,7 +265,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/webhooks/infobip', async (ctx) => {
+  router.post('/webhooks/infobip', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await communicationAdapter.forwardDeliveryReport(
       ctx.request.body
