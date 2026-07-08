@@ -30,7 +30,10 @@ const NonScoredParkingSpaceDeniedTemplateId = 205000000040765
 // Email sender identity
 const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
 
-// Infobip v4 Email API helper
+// TODO: set applicationId on each message (env public hostname, e.g.
+// epic-mim-1838.dev.mimer.nu / api.mimer.nu) and filter each Infobip
+// delivery-report subscription to its own application, so environments
+// only receive reports for their own sends (stops cross-env PII fan-out).
 const sendEmailV4 = async (
   messages: EmailV4Message[]
 ): Promise<EmailV4Response> => {
