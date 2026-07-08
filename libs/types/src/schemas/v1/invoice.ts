@@ -77,6 +77,7 @@ export const InvoiceSchema = z.object({
 
 export const InvoiceBaseItemSchema = z.object({
   text: z.string(),
+  amount: z.number(),
   unitPrice: z.number(),
   quantity: z.number(),
   xledgerDbId: z.string(),
