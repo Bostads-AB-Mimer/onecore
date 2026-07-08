@@ -29,7 +29,7 @@ import {
   fetchPaymentEvents,
   getLeaseDetails,
 } from './service'
-import { getInvoiceBases } from './invoice-base-service'
+import { createInvoiceBase, getInvoiceBases } from './invoice-base-service'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -274,21 +274,22 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/invoices/miscellaneous', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const invoicePayload = JSON.parse(ctx.request.body.invoice) // TODO zod schema?
 
     try {
-      const result = await submitMiscellaneousInvoice({
+      const submitResult = await submitMiscellaneousInvoice({
         ...JSON.parse(ctx.request.body.invoice),
         attachment: ctx.request.files?.attachment,
       })
 
-      if (!result.ok) {
+      if (!submitResult.ok) {
         if (
-          result.err ===
+          submitResult.err ===
           SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
         ) {
           ctx.status = 404
           ctx.body = {
-            type: result.err,
+            type: submitResult.err,
             title: 'Customer not found in Xledger',
             status: 404,
             detail:
@@ -300,7 +301,7 @@ export const routes = (router: KoaRouter) => {
 
         ctx.status = 500
         ctx.body = {
-          type: result.err,
+          type: submitResult.err,
           title: 'Error creating miscellaneous invoice',
           status: 500,
           ...metadata,
@@ -308,8 +309,22 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      const createInvoiceBaseResult = await createInvoiceBase({
+        contactCode: invoicePayload.contactCode,
+        leaseId: invoicePayload.leaseId,
+        externalIdentifier: submitResult.data.externalIdentifier,
+        invoiceBaseItemXledgerDbIds: submitResult.data.invoiceBaseItemDbIds,
+      })
+
+      if (!createInvoiceBaseResult.ok) {
+        logger.error(
+          createInvoiceBaseResult.err,
+          `Failed to create invoice base in economy database, Xledger invoice base items still created with dbIds: ${submitResult.data.invoiceBaseItemDbIds}`
+        )
+      }
+
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(result.data, metadata)
+      ctx.body = makeSuccessResponseBody(createInvoiceBaseResult, metadata) // TODO returnera vad?
     } catch (error) {
       logger.error({ err: error }, 'POST /invoices/miscellaneous')
       ctx.status = 500
