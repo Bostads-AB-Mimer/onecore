@@ -88,7 +88,7 @@ export const InvoiceBaseSchema = z.object({
   contactCode: z.string(),
   leaseId: z.string(),
   totalAmount: z.number(),
-  ourReference: z.string(),
+  ourReference: z.object({ name: z.string() }),
   invoiceDate: z.coerce.date(),
   createdAt: z.coerce.date(),
   headerInfo: z.string(),
