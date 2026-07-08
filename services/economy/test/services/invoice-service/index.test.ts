@@ -5,7 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
-import * as commonXpandAdapter from '@src/services/common/adapters/xpand-db-adapter'
+import * as xpandCommonAdapter from '@src/services/common/adapters/xpand-db-adapter'
 import * as invoiceBaseService from '@src/services/invoice-service/invoice-base-service'
 import { routes } from '@src/services/invoice-service'
 
@@ -281,7 +281,7 @@ describe('Invoice Service', () => {
   describe('GET /invoices/miscellaneous/:rentalId', () => {
     it('is not swallowed by the invoice number guard', async () => {
       jest
-        .spyOn(commonXpandAdapter, 'getPropertyCodeAndCostCentreForLease')
+        .spyOn(xpandCommonAdapter, 'getPropertyCodeAndCostCentreForLease')
         .mockResolvedValueOnce({ costCentre: '123', propertyCode: '456' })
 
       const res = await request(app.callback()).get(
@@ -363,6 +363,141 @@ describe('Invoice Service', () => {
         .mockRejectedValueOnce(new Error('boom'))
 
       const res = await request(app.callback()).get(`/invoice-bases`)
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /invoices/miscellaneous/:rentalId', () => {
+    it('responds with property code and cost centre for lease', async () => {
+      jest
+        .spyOn(xpandCommonAdapter, 'getPropertyCodeAndCostCentreForLease')
+        .mockResolvedValueOnce({
+          costCentre: 'cost-centre-1',
+          propertyCode: 'property-code-1',
+        })
+
+      const res = await request(app.callback()).get(
+        `/invoices/miscellaneous/705-025-03-0205%2F01`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        costCentre: 'cost-centre-1',
+        propertyCode: 'property-code-1',
+      })
+    })
+
+    it('responds with 500 if adapter throws', async () => {
+      jest
+        .spyOn(xpandCommonAdapter, 'getPropertyCodeAndCostCentreForLease')
+        .mockRejectedValueOnce(new Error('boom'))
+
+      const res = await request(app.callback()).get(
+        `/invoices/miscellaneous/705-025-03-0205%2F01`
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('POST /invoices/miscellaneous', () => {
+    const invoicePayload = {
+      reference: 'ref-1',
+      invoiceDate: '2025-01-01T00:00:00.000Z',
+      contactCode: 'P123456',
+      tenantName: 'Test Tenant',
+      leaseId: '705-025-03-0205/01',
+      costCentre: 'cost-centre-1',
+      propertyCode: 'property-code-1',
+      invoiceRows: [
+        {
+          amount: 1,
+          price: 100,
+          text: 'Row 1',
+          article: { id: 'article-1', name: 'Article 1' },
+        },
+      ],
+    }
+
+    it('creates invoice base from submitted invoice', async () => {
+      const submitMiscellaneousInvoiceSpy = jest
+        .spyOn(xledgerAdapter, 'submitMiscellaneousInvoice')
+        .mockResolvedValueOnce({
+          externalIdentifier: 'ext-1',
+          invoiceBaseItemDbIds: ['xdb-1'],
+        })
+
+      const invoiceBaseRow = {
+        Id: 1,
+        ContactCode: invoicePayload.contactCode,
+        ExternalIdentifier: 'ext-1',
+        LeaseId: invoicePayload.leaseId,
+        CreatedAt: new Date('2025-01-01T00:00:00.000Z'),
+      }
+
+      const createInvoiceBaseSpy = jest
+        .spyOn(invoiceBaseService, 'createInvoiceBase')
+        .mockResolvedValueOnce(invoiceBaseRow)
+
+      const res = await request(app.callback())
+        .post(`/invoices/miscellaneous`)
+        .type('form')
+        .send({ invoice: JSON.stringify(invoicePayload) })
+
+      expect(submitMiscellaneousInvoiceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...invoicePayload,
+          attachment: undefined,
+        })
+      )
+
+      expect(createInvoiceBaseSpy).toHaveBeenCalledWith({
+        contactCode: invoicePayload.contactCode,
+        leaseId: invoicePayload.leaseId,
+        externalIdentifier: 'ext-1',
+        invoiceBaseItemXledgerDbIds: ['xdb-1'],
+      })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(
+        expect.objectContaining({
+          Id: invoiceBaseRow.Id,
+          ExternalIdentifier: invoiceBaseRow.ExternalIdentifier,
+        })
+      )
+    })
+
+    it('responds with 200 and null content if invoice base creation fails', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'submitMiscellaneousInvoice')
+        .mockResolvedValueOnce({
+          externalIdentifier: 'ext-1',
+          invoiceBaseItemDbIds: ['xdb-1'],
+        })
+
+      jest
+        .spyOn(invoiceBaseService, 'createInvoiceBase')
+        .mockResolvedValueOnce(null)
+
+      const res = await request(app.callback())
+        .post(`/invoices/miscellaneous`)
+        .type('form')
+        .send({ invoice: JSON.stringify(invoicePayload) })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toBeNull()
+    })
+
+    it('responds with 500 if submitting invoice to xledger fails', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'submitMiscellaneousInvoice')
+        .mockRejectedValueOnce(new Error('boom'))
+
+      const res = await request(app.callback())
+        .post(`/invoices/miscellaneous`)
+        .type('form')
+        .send({ invoice: JSON.stringify(invoicePayload) })
 
       expect(res.status).toBe(500)
     })
