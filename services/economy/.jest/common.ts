@@ -18,3 +18,7 @@ jest.mock('@onecore/utilities', () => {
     makeSuccessResponseBody: utilities.makeSuccessResponseBody,
   }
 })
+
+jest.mock('nanoid', () => {
+  return { nanoid: () => {} }
+})
