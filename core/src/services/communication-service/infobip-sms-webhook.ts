@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { logger } from '@onecore/utilities'
 import crypto from 'node:crypto'
 
 import config from '../../common/config'
@@ -26,8 +26,10 @@ function safeEqual(a: string, b: string): boolean {
  * the shared api host.
  */
 export const routes = (router: KoaRouter) => {
+  // No generateRouteMetadata here: it reflects ctx.href — including the secret
+  // ?token= — into every response body, needlessly spreading the token into
+  // anything that captures bodies (APM, Infobip's delivery logs).
   router.post('/webhooks/infobip-sms', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
     const { webhookToken } = config.infobip
 
     // Fail closed: reject any request without a token, then compare it against
@@ -48,7 +50,7 @@ export const routes = (router: KoaRouter) => {
         'webhooks.infobip-sms: invalid token'
       )
       ctx.status = 401
-      ctx.body = { reason: 'Unauthorized', ...metadata }
+      ctx.body = { reason: 'Unauthorized' }
       return
     }
 
@@ -58,10 +60,10 @@ export const routes = (router: KoaRouter) => {
 
     if (result.ok) {
       ctx.status = 200
-      ctx.body = { ...metadata }
+      ctx.body = {}
     } else {
       ctx.status = result.statusCode ?? 500
-      ctx.body = { error: result.err, ...metadata }
+      ctx.body = { error: result.err }
     }
   })
 }
