@@ -13,7 +13,8 @@ export interface Config {
     // (?token=). Email is authenticated via Keycloak in core, not here.
     webhookToken: string
     // Public URL Tele2/Infobip should POST SMS delivery reports to, e.g.
-    // https://<host>/webhooks/infobip. Added per-message to the SMS send when
+    // https://<host>/webhooks/infobip-sms (NOT /webhooks/infobip — that's the
+    // Keycloak-gated email webhook). Added per-message to the SMS send when
     // set; empty (dev without a tunnel) → no delivery webhook is attached.
     smsDeliveryReportUrl: string
   }
