@@ -25,7 +25,9 @@ export const DispatchSchema = z.object({
   messageType: z.string(),
   provider: z.string(),
   triggeredByUser: z.string().nullable(),
-  triggeredAt: z.coerce.date(),
+  // Intended send time: insert time for instant sends, the target time for
+  // scheduled sends. `createdAt` holds when the dispatch was queued.
+  sendAt: z.coerce.date(),
   recipientCount: z.number().int().nonnegative(),
   audienceCriteria: z.string().nullable(),
   inReplyToDispatchId: z.string().uuid().nullable(),

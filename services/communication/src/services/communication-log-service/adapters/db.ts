@@ -163,7 +163,7 @@ export async function getCustomerMessages(
     .filter((p): p is CustomerMessage => p.dispatch !== undefined)
     .sort(
       (a, b) =>
-        new Date(b.dispatch.triggeredAt).getTime() -
-        new Date(a.dispatch.triggeredAt).getTime()
+        new Date(b.dispatch.sendAt).getTime() -
+        new Date(a.dispatch.sendAt).getTime()
     )
 }

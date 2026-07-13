@@ -13724,7 +13724,7 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
@@ -13772,7 +13772,7 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
