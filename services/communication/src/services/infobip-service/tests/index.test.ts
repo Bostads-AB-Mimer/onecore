@@ -2,10 +2,11 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import { Email, WorkOrderSms, BulkSms } from '@onecore/types'
+import { Email, WorkOrderSms } from '@onecore/types'
 
 import { isMessageEmail, isValidWorkOrderSms, isValidBulkSms } from '../index'
 import * as emailAdapter from '../adapters/email-adapter'
+import * as templateRender from '../adapters/email-template-render'
 import * as smsAdapter from '../adapters/sms-adapter'
 import { routes } from '../'
 import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
@@ -541,9 +542,23 @@ describe('/sendBulkSms logging', () => {
 describe('parking space offer email logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
+  // The route builds the templateId + placeholders from the request body (via
+  // parking-space-requests) and renders the log by fetching the Infobip
+  // template. Default to a generic template with the tokens the routes use;
+  // individual tests override it as needed.
+  let getTemplateMock: jest.SpyInstance
+
   beforeEach(() => {
     logOutboundDispatchMock.mockReset()
     logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    getTemplateMock = jest
+      .spyOn(templateRender, 'getEmailTemplate')
+      .mockResolvedValue({
+        subject: 'Standardämne',
+        html:
+          '<p>Hej {{firstName}}!</p><p>Adress: {{address}}</p>' +
+          '<p>Hyra: {{rent}}</p><p>Kontraktsnummer: {{leaseId}}</p>',
+      })
   })
 
   const offerBody = {
@@ -563,7 +578,13 @@ describe('parking space offer email logging', () => {
     offerURL: 'https://example.com/offer/42',
   }
 
-  it('logs the offer email to the communication log with contactCode and messageId', async () => {
+  it('logs the offer email with content rendered from the fetched template', async () => {
+    getTemplateMock.mockResolvedValue({
+      subject: 'Du har fått ett erbjudande om en bilplats',
+      html:
+        '<p>Hej {{firstName}}!</p><p>Adress: {{address}}</p>' +
+        '<p>Hyra: {{rent}}</p>',
+    })
     jest
       .spyOn(emailAdapter, 'sendParkingSpaceOffer')
       .mockResolvedValue(emailSendResult('mid-offer'))
@@ -579,6 +600,9 @@ describe('parking space offer email logging', () => {
         channel: 'email',
         messageType: 'parking_space_offer',
         triggeredByUser: 'Automatiskt utskick',
+        // Rendered from the fetched Infobip template, not the static label.
+        subject: 'Du har fått ett erbjudande om en bilplats',
+        body: expect.stringContaining('Hej Test!'),
         recipients: [
           expect.objectContaining({
             contactCode: 'P123456',
@@ -587,6 +611,53 @@ describe('parking space offer email logging', () => {
             status: 'pending',
           }),
         ],
+      })
+    )
+    // The logged body carries the real details, not a repeated title.
+    const loggedBody = logOutboundDispatchMock.mock.calls[0][0].body as string
+    expect(loggedBody).toContain('Adress: Testgatan 1')
+    expect(loggedBody).toContain('Hyra: 500 kr')
+  })
+
+  it('falls back to the label when the template cannot be fetched', async () => {
+    getTemplateMock.mockResolvedValue(null)
+    jest
+      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
+      .mockResolvedValue(emailSendResult('mid-offer'))
+
+    const res = await request(app.callback())
+      .post('/sendParkingSpaceOffer')
+      .send(offerBody)
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: offerBody.subject,
+        body: offerBody.text,
+      })
+    )
+  })
+
+  it('falls back to the label subject when the fetched template has no subject', async () => {
+    getTemplateMock.mockResolvedValue({
+      subject: '',
+      html: '<p>Hej {{firstName}}!</p>',
+    })
+    jest
+      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
+      .mockResolvedValue(emailSendResult('mid-offer'))
+
+    const res = await request(app.callback())
+      .post('/sendParkingSpaceOffer')
+      .send(offerBody)
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        // Empty rendered subject must not overwrite the meaningful label; the
+        // body still renders from the (non-empty) template html.
+        subject: offerBody.subject,
+        body: expect.stringContaining('Hej Test!'),
       })
     )
   })
@@ -661,6 +732,8 @@ describe('parking space offer email logging', () => {
     expect(logOutboundDispatchMock).toHaveBeenCalledWith(
       expect.objectContaining({
         messageType: 'non_scored_parking_space_approved',
+        subject: 'Standardämne',
+        body: expect.stringContaining('Kontraktsnummer: L-1'),
       })
     )
   })

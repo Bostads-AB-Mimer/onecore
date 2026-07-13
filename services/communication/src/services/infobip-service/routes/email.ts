@@ -26,6 +26,17 @@ import {
   sendNonScoredParkingSpaceDenied,
 } from '../adapters/email-adapter'
 import {
+  getEmailTemplate,
+  renderTemplate,
+} from '../adapters/email-template-render'
+import {
+  AdditionalParkingSpaceOfferTemplateId,
+  ReplaceParkingSpaceOfferTemplateId,
+  AcceptParkingSpaceOfferTemplateId,
+  NonScoredParkingSpaceApprovedTemplateId,
+  NonScoredParkingSpaceDeniedTemplateId,
+} from '../adapters/infobip-template-ids'
+import {
   sendEmailInfobipSdk,
   sendInspectionProtocolEmail,
 } from '../adapters/infobip-adapter'
@@ -195,12 +206,20 @@ export const routes = (router: KoaRouter) => {
     }
     try {
       const result = await sendParkingSpaceOffer(emailData)
+      const templateId =
+        emailData.applicationType === 'Replace'
+          ? ReplaceParkingSpaceOfferTemplateId
+          : AdditionalParkingSpaceOfferTemplateId
+      const template = await getEmailTemplate(templateId)
+      const rendered = template ? renderTemplate(template, emailData) : null
       await logParkingSpaceEmail({
         messageType: 'parking_space_offer',
         to: emailData.to,
         contactCode: emailData.contactCode,
-        subject: emailData.subject,
-        body: emailData.text,
+        // `||` not `??`: an empty rendered subject/body (e.g. a template with no
+        // subject) is never the intended log value, so fall back to the label.
+        subject: rendered?.subject || emailData.subject,
+        body: rendered?.body || emailData.text,
         sendResult: result.data,
       })
       ctx.status = 200
@@ -236,12 +255,16 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendParkingSpaceAcceptOffer(body)
+        const template = await getEmailTemplate(
+          AcceptParkingSpaceOfferTemplateId
+        )
+        const rendered = template ? renderTemplate(template, body) : null
         await logParkingSpaceEmail({
           messageType: 'parking_space_accept_offer',
           to: body.to,
           contactCode: body.contactCode,
-          subject: body.subject,
-          body: body.text,
+          subject: rendered?.subject || body.subject,
+          body: rendered?.body || body.text,
           sendResult: result.data,
         })
         ctx.status = 204
@@ -283,13 +306,17 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendNonScoredParkingSpaceApproved(body)
+        const template = await getEmailTemplate(
+          NonScoredParkingSpaceApprovedTemplateId
+        )
+        const rendered = template ? renderTemplate(template, body) : null
         await logParkingSpaceEmail({
           messageType: 'non_scored_parking_space_approved',
           to: body.to,
           contactCode: body.contactCode,
           triggeredBy: body.triggeredBy,
-          subject: body.subject,
-          body: body.text,
+          subject: rendered?.subject || body.subject,
+          body: rendered?.body || body.text,
           sendResult: result.data,
         })
         ctx.status = 204
@@ -330,13 +357,17 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendNonScoredParkingSpaceDenied(body)
+        const template = await getEmailTemplate(
+          NonScoredParkingSpaceDeniedTemplateId
+        )
+        const rendered = template ? renderTemplate(template, body) : null
         await logParkingSpaceEmail({
           messageType: 'non_scored_parking_space_denied',
           to: body.to,
           contactCode: body.contactCode,
           triggeredBy: body.triggeredBy,
-          subject: body.subject,
-          body: body.text,
+          subject: rendered?.subject || body.subject,
+          body: rendered?.body || body.text,
           sendResult: result.data,
         })
         ctx.status = 204
