@@ -15,6 +15,19 @@ export const toDatetimeLocalValue = (date: Date): string => {
   )
 }
 
+// Bounds for a <input type="datetime-local"> min/max, so the native picker
+// greys out past times and times beyond the channel cap. These only guide the
+// picker — validateScheduleInput remains the real gate (see SmsModal).
+export const getScheduleBounds = (
+  maxDaysAhead: number
+): { min: string; max: string } => {
+  const now = Date.now()
+  return {
+    min: toDatetimeLocalValue(new Date(now)),
+    max: toDatetimeLocalValue(new Date(now + maxDaysAhead * DAY_MS)),
+  }
+}
+
 // Validates a datetime-local input value against the channel's cap. Returns a
 // user-facing error message or null when the value is usable as a schedule time.
 export const validateScheduleInput = (

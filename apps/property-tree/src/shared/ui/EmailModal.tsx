@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 
 import {
+  getScheduleBounds,
   MAX_SCHEDULE_DAYS_AHEAD,
   toDatetimeLocalValue,
   validateScheduleInput,
@@ -80,6 +81,7 @@ export function EmailModal(props: EmailModalProps) {
   const scheduleError = isScheduling
     ? validateScheduleInput(sendAtLocal, MAX_SCHEDULE_DAYS_AHEAD.email)
     : null
+  const scheduleBounds = getScheduleBounds(MAX_SCHEDULE_DAYS_AHEAD.email)
 
   const recipients = props.recipients ?? []
 
@@ -309,6 +311,8 @@ export function EmailModal(props: EmailModalProps) {
                   type="datetime-local"
                   value={sendAtLocal}
                   onChange={(e) => setSendAtLocal(e.target.value)}
+                  min={scheduleBounds.min}
+                  max={scheduleBounds.max}
                 />
                 {scheduleError && (
                   <p className="mt-1 text-sm text-destructive">

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 
 import {
+  getScheduleBounds,
   MAX_SCHEDULE_DAYS_AHEAD,
   toDatetimeLocalValue,
   validateScheduleInput,
@@ -87,6 +88,7 @@ export function SmsModal(props: SmsModalProps) {
   const scheduleError = isScheduling
     ? validateScheduleInput(sendAtLocal, MAX_SCHEDULE_DAYS_AHEAD.sms)
     : null
+  const scheduleBounds = getScheduleBounds(MAX_SCHEDULE_DAYS_AHEAD.sms)
 
   const charactersLeft = MAX_SMS_LENGTH - message.length
 
@@ -345,6 +347,8 @@ export function SmsModal(props: SmsModalProps) {
                   type="datetime-local"
                   value={sendAtLocal}
                   onChange={(e) => setSendAtLocal(e.target.value)}
+                  min={scheduleBounds.min}
+                  max={scheduleBounds.max}
                 />
                 {scheduleError && (
                   <p className="mt-1 text-sm text-destructive">
