@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { useToast } from '@/shared/hooks/useToast'
+import { formatScheduleTimestamp } from '@/shared/lib/schedule'
 import type { EmailRecipient } from '@/shared/ui/EmailModal'
 import type { SmsRecipient } from '@/shared/ui/SmsModal'
 
@@ -25,7 +26,8 @@ export interface UseBulkMessagingOptions<TItem> {
   /** Send bulk SMS - returns the result plus any non-blocking warnings */
   sendBulkSms: (
     recipients: { contactCode: string; phoneNumber: string }[],
-    message: string
+    message: string,
+    sendAt?: string
   ) => Promise<{
     content: { totalSent: number; totalInvalid: number }
     warnings?: string[]
@@ -34,7 +36,8 @@ export interface UseBulkMessagingOptions<TItem> {
   sendBulkEmail: (
     recipients: { contactCode: string; emailAddress: string }[],
     subject: string,
-    body: string
+    body: string,
+    sendAt?: string
   ) => Promise<{
     content: { totalSent: number; totalInvalid: number }
     warnings?: string[]
@@ -66,11 +69,16 @@ export interface UseBulkMessagingReturn {
   // Handlers
   handleOpenSmsModal: () => Promise<void>
   handleOpenEmailModal: () => Promise<void>
-  handleSendSms: (message: string, recipients: SmsRecipient[]) => Promise<void>
+  handleSendSms: (
+    message: string,
+    recipients: SmsRecipient[],
+    sendAt?: string
+  ) => Promise<void>
   handleSendEmail: (
     subject: string,
     body: string,
-    recipients: EmailRecipient[]
+    recipients: EmailRecipient[],
+    sendAt?: string
   ) => Promise<void>
 
   // Loading state
@@ -258,7 +266,11 @@ export function useBulkMessaging<TItem>({
 
   // Send SMS handler
   const handleSendSms = useCallback(
-    async (message: string, validRecipients: SmsRecipient[]) => {
+    async (
+      message: string,
+      validRecipients: SmsRecipient[],
+      sendAt?: string
+    ) => {
       try {
         const recipients = validRecipients
           .filter(
@@ -266,11 +278,15 @@ export function useBulkMessaging<TItem>({
           )
           .map((r) => ({ contactCode: r.id, phoneNumber: r.phone }))
 
-        const result = await sendBulkSms(recipients, message)
+        const result = await sendBulkSms(recipients, message, sendAt)
 
         toast({
-          title: 'SMS skickat',
-          description: `Skickades till ${result.content.totalSent} mottagare${
+          title: sendAt ? 'SMS schemalagt' : 'SMS skickat',
+          description: `${
+            sendAt
+              ? `Skickas ${formatScheduleTimestamp(sendAt)} till`
+              : 'Skickades till'
+          } ${result.content.totalSent} mottagare${
             result.content.totalInvalid > 0
               ? `. ${result.content.totalInvalid} ogiltiga nummer.`
               : ''
@@ -306,7 +322,8 @@ export function useBulkMessaging<TItem>({
     async (
       subject: string,
       body: string,
-      validRecipients: EmailRecipient[]
+      validRecipients: EmailRecipient[],
+      sendAt?: string
     ) => {
       try {
         const recipients = validRecipients
@@ -315,11 +332,15 @@ export function useBulkMessaging<TItem>({
           )
           .map((r) => ({ contactCode: r.id, emailAddress: r.email }))
 
-        const result = await sendBulkEmail(recipients, subject, body)
+        const result = await sendBulkEmail(recipients, subject, body, sendAt)
 
         toast({
-          title: 'E-post skickat',
-          description: `Skickade till ${result.content.totalSent} mottagare${
+          title: sendAt ? 'E-post schemalagd' : 'E-post skickat',
+          description: `${
+            sendAt
+              ? `Skickas ${formatScheduleTimestamp(sendAt)} till`
+              : 'Skickade till'
+          } ${result.content.totalSent} mottagare${
             result.content.totalInvalid > 0
               ? `. ${result.content.totalInvalid} ogiltiga e-postadresser.`
               : ''

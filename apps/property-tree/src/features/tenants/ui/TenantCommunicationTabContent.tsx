@@ -87,6 +87,14 @@ const STATUS_META: Record<Status, { label: string; className: string }> = {
     label: 'Väntar',
     className: 'bg-amber-50 text-amber-700 border-amber-200',
   },
+  scheduled: {
+    label: 'Schemalagt',
+    className: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  cancelled: {
+    label: 'Avbrutet',
+    className: 'bg-gray-50 text-gray-600 border-gray-200',
+  },
   failed: {
     label: 'Misslyckades',
     className: 'bg-red-50 text-red-700 border-red-200',
