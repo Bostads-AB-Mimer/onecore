@@ -11,6 +11,14 @@ const BulkSmsResult = z.object({
   invalid: z.array(z.string()).describe('Invalid phone numbers'),
   totalSent: z.number(),
   totalInvalid: z.number(),
+  dispatchId: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: dispatch id (cancel/reschedule handle)'),
+  scheduledFor: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: target send time as ISO instant'),
 })
 
 const BulkEmailResult = z.object({
@@ -20,6 +28,14 @@ const BulkEmailResult = z.object({
   invalid: z.array(z.string()).describe('Invalid email addresses'),
   totalSent: z.number(),
   totalInvalid: z.number(),
+  dispatchId: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: dispatch id (cancel/reschedule handle)'),
+  scheduledFor: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: target send time as ISO instant'),
 })
 
 /**
@@ -81,6 +97,10 @@ export const routes = (router: KoaRouter) => {
    *                       type: string
    *               text:
    *                 type: string
+   *               sendAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
    *               logMeta:
    *                 type: object
    *                 properties:
@@ -177,6 +197,10 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *               text:
    *                 type: string
+   *               sendAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
    *               logMeta:
    *                 type: object
    *                 properties:

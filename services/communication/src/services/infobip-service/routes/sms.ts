@@ -1,8 +1,11 @@
 import KoaRouter from '@koa/router'
+import { randomUUID } from 'node:crypto'
 import { validator as phoneValidator, normalize } from 'telefonnummer'
 import { ParkingSpaceOfferSms, WorkOrderSms, BulkSms } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
+
+import { evaluateSendAt, MAX_SCHEDULE_DAYS_AHEAD } from '../schedule'
 
 import {
   sendParkingSpaceOfferSms,
@@ -183,6 +186,8 @@ export const routes = (router: KoaRouter) => {
       )
       .optional(),
     text: z.string().min(1).max(1600),
+    // ISO 8601 instant with offset/Z. Schedules the send; omit for immediate.
+    sendAt: z.string().datetime({ offset: true }).optional(),
     logMeta: z
       .object({
         triggeredByUser: z.string().optional(),
@@ -259,9 +264,43 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
+        const scheduleEvaluation = evaluateSendAt(
+          body.sendAt,
+          MAX_SCHEDULE_DAYS_AHEAD.sms
+        )
+        if (scheduleEvaluation.kind === 'invalid') {
+          ctx.status = 400
+          ctx.body = {
+            reason: scheduleEvaluation.code,
+            message: scheduleEvaluation.message,
+            ...metadata,
+          }
+          return
+        }
+
+        // Scheduled sends pre-generate the dispatch id: it doubles as the
+        // Infobip bulkId (the cancel/reschedule handle), and logging it before
+        // the call leaves a recovery trail if the schedule is accepted but the
+        // log write below fails.
+        const schedule =
+          scheduleEvaluation.kind === 'scheduled'
+            ? { bulkId: randomUUID(), sendAt: scheduleEvaluation.sendAt }
+            : undefined
+        if (schedule) {
+          logger.info(
+            {
+              dispatchId: schedule.bulkId,
+              sendAt: schedule.sendAt.toISOString(),
+              recipientCount: validRecipients.length,
+            },
+            'Scheduling bulk SMS'
+          )
+        }
+
         const sendResult = await sendBulkSms({
           phoneNumbers: validRecipients.map((r) => r.normalizedPhone),
           text: body.text,
+          schedule,
         })
 
         // Strict but non-blocking: the SMS already went out, so a logging
@@ -271,6 +310,10 @@ export const routes = (router: KoaRouter) => {
         const warnings: string[] = []
         try {
           await logOutboundDispatch({
+            ...(schedule && {
+              id: schedule.bulkId,
+              sendAt: schedule.sendAt,
+            }),
             channel: 'sms',
             fromAddress: SMS_SENDER,
             body: body.text,
@@ -286,7 +329,7 @@ export const routes = (router: KoaRouter) => {
               contactCode: r.contactCode,
               toAddress: r.normalizedPhone,
               externalMessageId: sendResult.messages?.[i]?.messageId,
-              status: 'pending',
+              status: schedule ? 'scheduled' : 'pending',
             })),
           })
         } catch (logError: any) {
@@ -307,6 +350,10 @@ export const routes = (router: KoaRouter) => {
             invalid: invalidPhones,
             totalSent: successful.length,
             totalInvalid: invalidPhones.length,
+            ...(schedule && {
+              dispatchId: schedule.bulkId,
+              scheduledFor: schedule.sendAt.toISOString(),
+            }),
           },
           ...(warnings.length && { warnings }),
           ...metadata,

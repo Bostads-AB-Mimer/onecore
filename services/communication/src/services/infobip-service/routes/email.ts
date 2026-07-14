@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import validator from 'validator'
 import fs from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import {
   Email,
   ParkingSpaceOfferEmail,
@@ -42,6 +43,7 @@ import {
 } from '../adapters/infobip-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
+import { evaluateSendAt, MAX_SCHEDULE_DAYS_AHEAD } from '../schedule'
 
 // Email sender used for fromAddress when logging outbound email dispatches.
 // Mirrors the constant in email-adapter.ts (kept private there).
@@ -533,6 +535,8 @@ export const routes = (router: KoaRouter) => {
       .optional(),
     subject: z.string().min(1),
     text: z.string().min(1),
+    // ISO 8601 instant with offset/Z. Schedules the send; omit for immediate.
+    sendAt: z.string().datetime({ offset: true }).optional(),
     logMeta: z
       .object({
         triggeredByUser: z.string().optional(),
@@ -592,10 +596,44 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
+        const scheduleEvaluation = evaluateSendAt(
+          body.sendAt,
+          MAX_SCHEDULE_DAYS_AHEAD.email
+        )
+        if (scheduleEvaluation.kind === 'invalid') {
+          ctx.status = 400
+          ctx.body = {
+            reason: scheduleEvaluation.code,
+            message: scheduleEvaluation.message,
+            ...metadata,
+          }
+          return
+        }
+
+        // Scheduled sends pre-generate the dispatch id: it doubles as the
+        // Infobip bulkId (the cancel/reschedule handle), and logging it before
+        // the call leaves a recovery trail if the schedule is accepted but the
+        // log write below fails.
+        const schedule =
+          scheduleEvaluation.kind === 'scheduled'
+            ? { bulkId: randomUUID(), sendAt: scheduleEvaluation.sendAt }
+            : undefined
+        if (schedule) {
+          logger.info(
+            {
+              dispatchId: schedule.bulkId,
+              sendAt: schedule.sendAt.toISOString(),
+              recipientCount: validRecipients.length,
+            },
+            'Scheduling bulk email'
+          )
+        }
+
         const sendResult = await sendBulkEmail({
           emails: validRecipients.map((r) => r.emailAddress),
           subject: body.subject,
           text: body.text,
+          schedule,
         })
 
         // Strict but non-blocking: the email already went out, so a logging
@@ -605,6 +643,10 @@ export const routes = (router: KoaRouter) => {
         const warnings: string[] = []
         try {
           await logOutboundDispatch({
+            ...(schedule && {
+              id: schedule.bulkId,
+              sendAt: schedule.sendAt,
+            }),
             channel: 'email',
             fromAddress: EMAIL_SENDER,
             subject: body.subject,
@@ -621,7 +663,7 @@ export const routes = (router: KoaRouter) => {
               contactCode: r.contactCode,
               toAddress: r.emailAddress,
               externalMessageId: sendResult.data.messages?.[i]?.messageId,
-              status: 'pending',
+              status: schedule ? 'scheduled' : 'pending',
             })),
           })
         } catch (logError: any) {
@@ -642,6 +684,10 @@ export const routes = (router: KoaRouter) => {
             invalid: invalidEmails,
             totalSent: successful.length,
             totalInvalid: invalidEmails.length,
+            ...(schedule && {
+              dispatchId: schedule.bulkId,
+              scheduledFor: schedule.sendAt.toISOString(),
+            }),
           },
           ...(warnings.length && { warnings }),
           ...metadata,

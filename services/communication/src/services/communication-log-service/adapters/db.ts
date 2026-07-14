@@ -35,8 +35,10 @@ export type CustomerMessage = {
 /**
  * Persist an outbound communication event. Writes one `dispatch` row and one
  * `message_recipient` row per recipient inside a transaction. Returns the
- * generated dispatch id. Provider-agnostic: callers pass the provider name
- * and (if known) per-recipient externalMessageId for later webhook matching.
+ * dispatch id. Provider-agnostic: callers pass the provider name and (if
+ * known) per-recipient externalMessageId for later webhook matching.
+ * Scheduled sends pass an explicit `id` (it doubles as the provider bulkId)
+ * and the target `sendAt`; both otherwise fall back to DB defaults.
  */
 export async function logOutboundDispatch(
   params: LogOutboundParams
@@ -44,6 +46,7 @@ export async function logOutboundDispatch(
   return db.transaction(async (trx) => {
     const [inserted] = await trx('dispatch')
       .insert({
+        ...(params.id && { id: params.id }),
         direction: 'outbound',
         channel: params.channel,
         fromAddress: params.fromAddress,
@@ -52,6 +55,7 @@ export async function logOutboundDispatch(
         messageType: params.messageType,
         provider: params.provider,
         triggeredByUser: params.triggeredByUser ?? null,
+        ...(params.sendAt && { sendAt: params.sendAt }),
         recipientCount: params.recipients.length,
         audienceCriteria: params.audienceCriteria
           ? JSON.stringify(params.audienceCriteria)
