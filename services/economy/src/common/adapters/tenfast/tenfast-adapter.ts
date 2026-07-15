@@ -454,6 +454,17 @@ export const getInvoicesNotExported = async (
       return { ok: false, err: result.statusText }
     }
 
+    if (!result.data.records || result.data.records.length === 0) {
+      return {
+        ok: true,
+        data: {
+          invoices: [],
+          errors: undefined
+        }
+      }
+    }
+
+
     const parsedResponse = TenfastInvoicesByExportedResponseSchema.safeParse(
       result.data
     )
@@ -628,114 +639,6 @@ export const getRentalLosses = async (
     string
   >
 > => {
-  console.log('Parsing rental loss')
-
-  /*const parsedResponse = TenfastRentalLossResponseSchema.safeParse(JSON.parse(
-    `[{
-  "month": "2026-05",
-  "hyresvard": {
-    "id": "6344b398b63ff59d5bde8257",
-    "name": "Bostadsaktiebolaget Mimer"
-  },
-  "hyresobjekt": {
-    "id": "6a01b4e104ff913fb088a24b",
-    "externalId": "110-004-01-0701",
-    "fastighetId": "6a01b4e104ff913fb08899bb",
-    "postadress": "Fyrbåksvägen 3",
-    "postnummer": "722 10",
-    "stad": "VÄSTERÅS",
-    "skvNummer": "1601",
-    "objektnummer": "0701",
-    "typ": "Bostad",
-    "hyror": [
-      {
-        "_id": "6a01cb1fdd5a3ddda8c6d3a5",
-        "label": "Hyra bostad",
-        "amount": 15,
-        "vat": 0,
-        "hyresobjekt": "6a01b4e104ff913fb088a24b",
-        "article": "67eb8aea545c8f1195bea0ae",
-        "includeInContract": true,
-        "from": "2025-01-01",
-        "to": null,
-        "consolidationLabel": "Hyra bostad"
-      },
-      {
-        "_id": "6a01cb22dd5a3ddda8c6fc8a",
-        "label": "Mimers Hemförsäkring",
-        "amount": 80,
-        "vat": 0,
-        "hyresobjekt": "6a01b4e104ff913fb088a24b",
-        "article": "67eb8aea545c8f1195bea0af",
-        "includeInContract": false,
-        "from": "2026-01-01",
-        "to": null,
-        "consolidationLabel": null
-      },
-      {
-        "_id": "6a01cb24dd5a3ddda8c70e6b",
-        "label": "Hyra bostad",
-        "amount": 58.45,
-        "vat": 0,
-        "hyresobjekt": "6a01b4e104ff913fb088a24b",
-        "article": "67eb8aea545c8f1195bea0b5",
-        "includeInContract": true,
-        "from": "2026-01-01",
-        "to": null,
-        "consolidationLabel": "Hyra bostad"
-      },
-      {
-        "_id": "6a01cb24dd5a3ddda8c70fe1",
-        "label": "Hyra bostad",
-        "amount": 12198.86,
-        "vat": 0,
-        "hyresobjekt": "6a01b4e104ff913fb088a24b",
-        "article": "69f9c53cd96d16781940304c",
-        "includeInContract": true,
-        "from": "2026-01-01",
-        "to": null,
-        "consolidationLabel": "Hyra bostad"
-      }
-    ]
-  },
-  "days": {
-    "month": 31,
-    "contracted": 21,
-    "uncontracted": 10
-  },
-  "uncontractedIntervals": [
-    {
-      "from": "2026-05-01",
-      "to": "2026-05-10"
-    }
-  ],
-  "avtalIds": [
-    "6a01b51304ff913fb089f593"
-  ],
-  "relatedAvtalCoverage": [
-    {
-      "avtalId": "6a01b51304ff913fb089f593",
-      "source": "current",
-      "reference": 3015,
-      "externalId": "110-004-01-0701/04",
-      "version": 1,
-      "hyresobjekt": [
-        "6a01b4e104ff913fb088a24b"
-      ],
-      "startDate": "2026-05-11T00:00:00.000Z",
-      "endDate": null,
-      "signed": true,
-      "signedAt": "2026-04-10T00:00:00.000Z",
-      "cancellation": {
-        "cancelled": false,
-        "doneAutomatically": false
-      },
-      "automaticExtension": null
-    }
-  ]
-  }]`
-  ))*/
-
   const reportId = '6a3276034ce55cc308bb2beb'
   const result = await makeTenfastRequest(`/v1/hyresvard/reports/${reportId}/download`, {
     params: {

@@ -37,15 +37,18 @@ export const routes = (router: KoaRouter) => {
       }
 
       const invoicesResult = await exportRentalInvoicesAccounting(companyId)
-      const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
-        await createAccounting(invoicesResult.exportedInvoices)
 
-      await uploadCsvFiles(
-        companyId,
-        aggregateAccountingCsv,
-        ledgerAccountingCsv
-      )
-      await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
+      if (invoicesResult.exportedInvoices.length > 0) {
+        const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
+          await createAccounting(invoicesResult.exportedInvoices)
+
+        await uploadCsvFiles(
+          companyId,
+          aggregateAccountingCsv,
+          ledgerAccountingCsv
+        )
+        await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
+      }
 
       ctx.status = 200
       ctx.body = {
