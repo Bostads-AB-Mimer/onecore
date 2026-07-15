@@ -126,7 +126,6 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
 export const TenfastRentArticleFactory = Factory.define<TenfastRentArticle>(
   ({ sequence }) => ({
     _id: `${sequence}`,
-    accountNr: '3012',
     createdAt: '2024-01-01T10:00:00Z',
     hyresvard: 'test-hyresvard',
     code: 'HYRAB',
@@ -140,6 +139,7 @@ export const TenfastRentArticleFactory = Factory.define<TenfastRentArticle>(
         costCenter: '',
         property: '',
         freeText: '',
+        projectCode: '',
       },
     ],
   })

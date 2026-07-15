@@ -6,6 +6,7 @@ import bodyParser from 'koa-bodyparser'
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
+import * as servicev2 from '@src/services/invoice-service/servicev2'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
@@ -19,6 +20,101 @@ routes(router)
 app.use(router.routes())
 
 describe('Invoice Service', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  describe('POST /accounting/import-invoices/:companyId', () => {
+    it('exports, builds accounting, uploads and marks invoices as exported', async () => {
+      const exportedInvoices = [{ invoiceId: 'exp-1' }] as any
+      const skippedInvoices = [{ invoiceId: 'skip-1' }] as any
+
+      jest.spyOn(servicev2, 'exportRentalInvoicesAccounting').mockResolvedValue({
+        exportedInvoices,
+        skippedInvoices,
+        errors: [],
+      })
+      const createAccounting = jest
+        .spyOn(servicev2, 'createAccounting')
+        .mockResolvedValue({
+          aggregateAccountingCsv: ['agg'],
+          ledgerAccountingCsv: ['ledger'],
+          errors: [],
+        })
+      const uploadCsvFiles = jest
+        .spyOn(servicev2, 'uploadCsvFiles')
+        .mockResolvedValue(undefined as any)
+      const markInvoicesAsExported = jest
+        .spyOn(servicev2, 'markInvoicesAsExported')
+        .mockResolvedValue(undefined as any)
+
+      const res = await request(app.callback()).post(
+        `/accounting/import-invoices/001`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.successfulInvoices).toEqual(['exp-1'])
+      expect(res.body.skippedInvoices).toEqual(['skip-1'])
+      expect(createAccounting).toHaveBeenCalledWith(exportedInvoices)
+      expect(uploadCsvFiles).toHaveBeenCalledWith('001', ['agg'], ['ledger'])
+      expect(markInvoicesAsExported).toHaveBeenCalledWith(
+        exportedInvoices.concat(skippedInvoices)
+      )
+    })
+
+    it('does not build accounting when there are no exported invoices', async () => {
+      jest.spyOn(servicev2, 'exportRentalInvoicesAccounting').mockResolvedValue({
+        exportedInvoices: [],
+        skippedInvoices: [],
+        errors: [],
+      })
+      const createAccounting = jest.spyOn(servicev2, 'createAccounting')
+
+      const res = await request(app.callback()).post(
+        `/accounting/import-invoices/001`
+      )
+
+      expect(res.status).toBe(200)
+      expect(createAccounting).not.toHaveBeenCalled()
+    })
+
+    it('responds with 500 when export fails', async () => {
+      jest
+        .spyOn(servicev2, 'exportRentalInvoicesAccounting')
+        .mockRejectedValue(new Error('boom'))
+
+      const res = await request(app.callback()).post(
+        `/accounting/import-invoices/001`
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('POST /acccounting/import-rental-loss/:companyId', () => {
+    it('exports rental losses, builds and uploads accounting', async () => {
+      const rentalLosses = [{ rentalObject: 'RO1' }] as any
+      jest
+        .spyOn(servicev2, 'exportRentalLosses')
+        .mockResolvedValue(rentalLosses)
+      const createRentalLossAccounting = jest
+        .spyOn(servicev2, 'createRentalLossAccounting')
+        .mockResolvedValue({
+          aggregateRentalLossAccountingCsv: ['agg'],
+          errors: [],
+        })
+      const uploadRentalLossCsvFile = jest
+        .spyOn(servicev2, 'uploadRentalLossCsvFile')
+        .mockResolvedValue(undefined as any)
+
+      const res = await request(app.callback()).post(
+        `/acccounting/import-rental-loss/001`
+      )
+
+      expect(res.status).toBe(200)
+      expect(createRentalLossAccounting).toHaveBeenCalledWith(rentalLosses)
+      expect(uploadRentalLossCsvFile).toHaveBeenCalledWith('001', ['agg'])
+    })
+  })
+
   describe('GET /invoices/bycontactcode/:contactCode', () => {
     it('responds with 400 if invalid query params', async () => {
       const res = await request(app.callback()).get(
