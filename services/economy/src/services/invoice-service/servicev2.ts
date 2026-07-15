@@ -82,6 +82,15 @@ export const exportRentalInvoicesAccounting = async (
       if (invoicesResult.data.errors) {
         errors.push(...invoicesResult.data.errors)
       }
+
+      if (!invoicesResult.data.invoices || invoicesResult.data.invoices.length === 0) {
+        return {
+          exportedInvoices: [],
+          skippedInvoices,
+          errors
+        }
+      }
+
       const counterPartCustomers = await getCounterPartCustomers()
 
       for (const invoice of chunkInvoices) {
