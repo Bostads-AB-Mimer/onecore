@@ -67,6 +67,9 @@ export interface Config {
     apiKey: string
   }
   companies: MimerCompany[]
+  // Article codes that are exempt from the requirement of having a rental
+  // object (hyresobjekt) on an invoice row with accounting.
+  rentalObjectRequirementExceptions: string[]
   health: {
     xledger: {
       systemName: string
@@ -156,6 +159,7 @@ const config = configPackage({
       baseUrl: '',
       apiKey: '',
     },
+    rentalObjectRequirementExceptions: ['FAKT AVG'],
     health: {
       xledger: {
         systemName: 'xledger',
@@ -173,7 +177,7 @@ const config = configPackage({
   },
 })
 
-export default {
+const resolvedConfig = {
   port: config.get('port'),
   xpandDatabase: config.get('xpandDatabase'),
   economyDatabase: config.get('economyDatabase'),
@@ -187,5 +191,29 @@ export default {
   infobip: config.get('infobip'),
   tenfast: config.get('tenfast'),
   companies: JSON.parse(config.get('companies')),
+  rentalObjectRequirementExceptions: config.get(
+    'rentalObjectRequirementExceptions'
+  ),
   health: config.get('health'),
 } as Config
+
+export default resolvedConfig
+
+/**
+ * Determines whether an invoice row with the given rental article code is
+ * exempt from the requirement of having a rental object (hyresobjekt).
+ * Comparison is case-insensitive and ignores surrounding whitespace.
+ */
+export const isRentalObjectRequirementException = (
+  rentArticleName: string | undefined | null
+): boolean => {
+  if (!rentArticleName) {
+    return false
+  }
+
+  const normalized = rentArticleName.trim().toUpperCase()
+
+  return resolvedConfig.rentalObjectRequirementExceptions.some(
+    (code) => code.trim().toUpperCase() === normalized
+  )
+}

@@ -93,6 +93,53 @@ describe(adapter.enrichInvoiceWithAccounting, () => {
       /Kunde inte hitta konteringsregler/
     )
   })
+
+  it('skips rows without a rental object when the article code is an exception', async () => {
+    mockQueryResults.push([]) // buildings
+    mockQueryResults.push([]) // areas
+
+    const invoice = {
+      invoiceId: '55123456',
+      invoiceDate: new Date('2026-06-15T00:00:00.000Z'),
+      invoiceRows: [
+        {
+          rentalObject: undefined,
+          rentArticleName: 'FAKT AVG',
+          account: '3012',
+          projectCode: 'ARTICLE-PC',
+        },
+      ],
+    } as any
+
+    // Must not throw even though there is no rental object / rule.
+    await adapter.enrichInvoiceWithAccounting(invoice)
+
+    // The article accounting is left untouched (no xpand rule applied).
+    expect(invoice.invoiceRows[0].projectCode).toBe('ARTICLE-PC')
+    expect(invoice.invoiceRows[0].costCode).toBeUndefined()
+    expect(invoice.invoiceRows[0].property).toBeUndefined()
+  })
+
+  it('throws when a row without a rental object is not an exception', async () => {
+    mockQueryResults.push([]) // buildings
+    mockQueryResults.push([]) // areas
+
+    const invoice = {
+      invoiceId: '55123456',
+      invoiceDate: new Date('2026-06-15T00:00:00.000Z'),
+      invoiceRows: [
+        {
+          rentalObject: undefined,
+          rentArticleName: 'HYRAB',
+          account: '3012',
+        },
+      ],
+    } as any
+
+    await expect(adapter.enrichInvoiceWithAccounting(invoice)).rejects.toThrow(
+      /saknar hyresobjekt/
+    )
+  })
 })
 
 describe(adapter.getInvoiceRows, () => {

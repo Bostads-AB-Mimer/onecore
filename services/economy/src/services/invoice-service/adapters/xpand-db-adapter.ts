@@ -9,7 +9,7 @@ import {
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
-import config from '@src/common/config'
+import config, { isRentalObjectRequirementException } from '@src/common/config'
 import {
   InvoiceDataRow,
   Invoice as InvoiceRecord,
@@ -59,17 +59,33 @@ export const enrichInvoiceWithAccounting = async (
   invoice: InvoiceWithAccounting
 ): Promise<InvoiceWithAccounting> => {
   const year = invoice.invoiceDate.getFullYear()
-  const rentalIds = invoice.invoiceRows.map(
-    (invoiceRow: InvoiceRowWithAccounting) => invoiceRow.rentalObject as string
-  )
+  const rentalIds = invoice.invoiceRows
+    .map((invoiceRow: InvoiceRowWithAccounting) => invoiceRow.rentalObject)
+    .filter((rentalObject): rentalObject is string => Boolean(rentalObject))
   const rentalSpecificRules = await getRentalSpecificRules(
     rentalIds,
     year.toString()
   )
 
   for (const invoiceRow of invoice.invoiceRows) {
-    const rentalSpecificRule =
-      rentalSpecificRules[invoiceRow.rentalObject as string]
+    // Rows exempt from the rental object requirement (e.g. invoice fees) have
+    // no rental object and therefore no rental-specific accounting rules to
+    // apply. Their accounting is resolved from the article configuration.
+    if (!invoiceRow.rentalObject) {
+      if (isRentalObjectRequirementException(invoiceRow.rentArticleName)) {
+        continue
+      }
+
+      logger.error(
+        { invoiceNumber: invoice.invoiceId },
+        'Invoice row is missing a rental object'
+      )
+      throw new Error(
+        `Minst en hyresrad på avin ${invoice.invoiceId} saknar hyresobjekt`
+      )
+    }
+
+    const rentalSpecificRule = rentalSpecificRules[invoiceRow.rentalObject]
     if (!rentalSpecificRule || Object.keys(rentalSpecificRule).length === 0) {
       logger.error(
         {

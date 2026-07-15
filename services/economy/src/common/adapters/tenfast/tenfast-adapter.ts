@@ -1,5 +1,5 @@
 import axios from 'axios'
-import config from '../../config'
+import config, { isRentalObjectRequirementException } from '../../config'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
 import {
@@ -338,18 +338,6 @@ const enrichInvoiceRowsWithAccounting = async (
       ...invoiceRow,
     }
 
-    if (!invoiceRow.rentalObject) {
-      logger.error(
-        { invoiceId: invoice.invoiceId },
-        'Minst en hyresrad på avin saknar hyresobjekt'
-      )
-      errors.push({
-        invoiceNumber: invoice.invoiceId,
-        error: `Minst en hyresrad på avin saknar hyresobjekt`,
-      })
-      continue
-    }
-
     if (invoiceRow.rentArticle) {
       const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
 
@@ -409,6 +397,26 @@ const enrichInvoiceRowsWithAccounting = async (
           continue
         }
       }
+    }
+
+    // A rental object (hyresobjekt) is normally required on every invoice row,
+    // but certain article codes (e.g. invoice fees) are exempt via
+    // configuration. The article code is resolved above into rentArticleName.
+    if (
+      !invoiceRow.rentalObject &&
+      !isRentalObjectRequirementException(
+        invoiceRowWithAccounting.rentArticleName
+      )
+    ) {
+      logger.error(
+        { invoiceId: invoice.invoiceId },
+        'Minst en hyresrad på avin saknar hyresobjekt'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: `Minst en hyresrad på avin saknar hyresobjekt`,
+      })
+      continue
     }
 
     invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
