@@ -83,7 +83,8 @@ export const enrichInvoiceWithAccounting = async (
         `Kunde inte hitta konteringsregler för hyresobjektet ${invoiceRow.rentalObject} på faktura ${invoice.invoiceId}`
       )
     }
-    invoiceRow.projectCode = rentalSpecificRule?.projectCode
+    invoiceRow.projectCode =
+      invoiceRow.projectCode ?? rentalSpecificRule?.projectCode
     invoiceRow.costCode = invoiceRow.costCode ?? rentalSpecificRule?.costCode
     invoiceRow.property = invoiceRow.property ?? rentalSpecificRule?.property
     invoiceRow.freeCode = invoiceRow.freeCode ?? rentalSpecificRule?.freeCode
