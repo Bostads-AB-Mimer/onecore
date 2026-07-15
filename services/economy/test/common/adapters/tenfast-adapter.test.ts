@@ -22,10 +22,16 @@ const mockAxios = axios as jest.Mocked<typeof axios>
 
 // Mock config
 jest.mock('@src/common/config', () => ({
-  tenfast: {
-    baseUrl: 'https://test-api.tenfast.com',
-    apiKey: 'test-api-key',
+  __esModule: true,
+  default: {
+    tenfast: {
+      baseUrl: 'https://test-api.tenfast.com',
+      apiKey: 'test-api-key',
+    },
+    rentalObjectRequirementExceptions: ['FAKT AVG'],
   },
+  isRentalObjectRequirementException: (rentArticleName?: string | null) =>
+    !!rentArticleName && rentArticleName.trim().toUpperCase() === 'FAKT AVG',
 }))
 
 describe('Tenfast Adapter', () => {

@@ -11,7 +11,7 @@ const exportRentalInvoicesScript = async () => {
 
   do {
     const exportResults = await exportRentalInvoicesAccounting('')
-    console.log(`Exported ${exportResults.invoices?.length} invoices`)
+    console.log(`Exported ${exportResults.exportedInvoices?.length} invoices`)
 
     if (exportResults.errors) {
       errors.push(...exportResults.errors)
@@ -25,7 +25,7 @@ const exportRentalInvoicesScript = async () => {
       )
     }
 
-    if (exportResults.invoices?.length <= 0) {
+    if (exportResults.exportedInvoices?.length <= 0) {
       keepGoing = false
     }
   } while (keepGoing)
