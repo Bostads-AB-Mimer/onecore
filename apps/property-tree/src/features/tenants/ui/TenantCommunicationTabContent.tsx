@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
 import {
+  AlertTriangle,
+  Ban,
+  CalendarClock,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -14,6 +17,15 @@ import { useTenantCommunication } from '@/entities/tenant'
 
 import type { CustomerMessage } from '@/services/api/core/communicationService'
 
+import { useToast } from '@/shared/hooks/useToast'
+import {
+  formatScheduleTimestamp,
+  getScheduleBounds,
+  MAX_SCHEDULE_DAYS_AHEAD,
+  scheduleSendErrorText,
+  toDatetimeLocalValue,
+  validateScheduleInput,
+} from '@/shared/lib/schedule'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
@@ -89,7 +101,7 @@ const STATUS_META: Record<Status, { label: string; className: string }> = {
   },
   scheduled: {
     label: 'Schemalagt',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
+    className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   },
   cancelled: {
     label: 'Avbrutet',
@@ -123,10 +135,71 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function MessageRow({ message }: { message: CustomerMessage }) {
+// Maps schedule-management error codes forwarded by core (409 'conflict',
+// 404 'not-found', and upstream 400 codes) to user-facing Swedish.
+const scheduleErrorMessage = (error: unknown): string => {
+  const code =
+    error && typeof error === 'object'
+      ? (error as { error?: string }).error
+      : undefined
+  return scheduleSendErrorText(code) ?? 'Ett fel uppstod.'
+}
+
+interface MessageRowProps {
+  message: CustomerMessage
+  onCancelSchedule: (dispatchId: string) => Promise<void>
+  onReschedule: (dispatchId: string, sendAt: string) => Promise<void>
+  isCancelling: boolean
+  isRescheduling: boolean
+}
+
+function MessageRow({
+  message,
+  onCancelSchedule,
+  onReschedule,
+  isCancelling,
+  isRescheduling,
+}: MessageRowProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { dispatch, recipient } = message
   const title = dispatch.subject ?? channelLabel(dispatch.channel)
+
+  const isScheduled =
+    recipient.status === 'scheduled' &&
+    new Date(dispatch.sendAt).getTime() > Date.now()
+  // Email only for now: the Tele2 account's API key lacks bulk-management
+  // permissions, so SMS cancel/reschedule 403s at Infobip.
+  // TODO(MIM-1897): when Tele2 grants the permissions, drop the channel check:
+  // const canManageSchedule = isScheduled
+  const canManageSchedule = isScheduled && dispatch.channel === 'email'
+
+  const [rescheduleLocal, setRescheduleLocal] = useState(() =>
+    toDatetimeLocalValue(new Date(dispatch.sendAt))
+  )
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const rescheduleError = validateScheduleInput(
+    rescheduleLocal,
+    MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]
+  )
+  const rescheduleBounds = getScheduleBounds(
+    MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]
+  )
+
+  const handleRescheduleClick = async () => {
+    if (rescheduleError) return
+    // datetime-local is parsed as local time; the API gets a UTC instant.
+    await onReschedule(dispatch.id, new Date(rescheduleLocal).toISOString())
+  }
+
+  const handleCancelClick = async () => {
+    // Two-click confirm: first click arms, second executes.
+    if (!confirmCancel) {
+      setConfirmCancel(true)
+      return
+    }
+    setConfirmCancel(false)
+    await onCancelSchedule(dispatch.id)
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -192,6 +265,61 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                   <DetailRow label="Fel" value={recipient.error} />
                 )}
               </div>
+
+              {canManageSchedule && (
+                <div className="mt-4 pt-4 border-t space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                    <CalendarClock className="h-4 w-4" />
+                    Hantera schemalagt utskick
+                  </h4>
+                  {dispatch.recipientCount > 1 && (
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span className="text-sm">
+                        Utskicket har {dispatch.recipientCount} mottagare —
+                        avbokning och ombokning gäller alla mottagare, inte bara
+                        denna kund.
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      type="datetime-local"
+                      value={rescheduleLocal}
+                      onChange={(e) => setRescheduleLocal(e.target.value)}
+                      min={rescheduleBounds.min}
+                      max={rescheduleBounds.max}
+                      className="w-auto"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRescheduleClick}
+                      disabled={!!rescheduleError || isRescheduling}
+                    >
+                      {isRescheduling ? 'Bokar om...' : 'Boka om'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleCancelClick}
+                      disabled={isCancelling}
+                    >
+                      <Ban className="h-4 w-4 mr-1" />
+                      {isCancelling
+                        ? 'Avbokar...'
+                        : confirmCancel
+                          ? 'Bekräfta avbokning'
+                          : 'Avboka utskick'}
+                    </Button>
+                  </div>
+                  {rescheduleError && (
+                    <p className="text-sm text-destructive">
+                      {rescheduleError}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </CollapsibleContent>
@@ -207,9 +335,47 @@ interface TenantCommunicationTabContentProps {
 export function TenantCommunicationTabContent({
   contactCode,
 }: TenantCommunicationTabContentProps) {
-  const { data, isLoading, error } = useTenantCommunication(contactCode)
+  const {
+    data,
+    isLoading,
+    error,
+    cancelDispatch,
+    isCancelling,
+    rescheduleDispatch,
+    isRescheduling,
+  } = useTenantCommunication(contactCode)
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all')
+
+  const handleCancelSchedule = async (dispatchId: string) => {
+    try {
+      await cancelDispatch(dispatchId)
+      toast({ title: 'Utskicket avbokades' })
+    } catch (err) {
+      toast({
+        title: 'Kunde inte avboka utskicket',
+        description: scheduleErrorMessage(err),
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleReschedule = async (dispatchId: string, sendAt: string) => {
+    try {
+      await rescheduleDispatch({ dispatchId, sendAt })
+      toast({
+        title: 'Utskicket ombokades',
+        description: `Skickas ${formatScheduleTimestamp(sendAt)}`,
+      })
+    } catch (err) {
+      toast({
+        title: 'Kunde inte boka om utskicket',
+        description: scheduleErrorMessage(err),
+        variant: 'destructive',
+      })
+    }
+  }
 
   const allMessages = useMemo(() => data ?? [], [data])
 
@@ -290,7 +456,14 @@ export function TenantCommunicationTabContent({
       ) : (
         <div className="space-y-3">
           {filteredMessages.map((message) => (
-            <MessageRow key={message.recipient.id} message={message} />
+            <MessageRow
+              key={message.recipient.id}
+              message={message}
+              onCancelSchedule={handleCancelSchedule}
+              onReschedule={handleReschedule}
+              isCancelling={isCancelling}
+              isRescheduling={isRescheduling}
+            />
           ))}
         </div>
       )}

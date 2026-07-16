@@ -46,6 +46,32 @@ export const validateScheduleInput = (
   return null
 }
 
+// Maps schedule-related error codes — as forwarded by core from the
+// communication service (bulk sends use `reason`, cancel/reschedule use
+// `error`) — to user-facing Swedish. Returns null for unrecognized codes so
+// callers can fall back to their generic message.
+export const scheduleSendErrorText = (code: unknown): string | null => {
+  switch (code) {
+    case 'conflict':
+      return 'Utskicket har redan skickats eller håller på att skickas.'
+    case 'not-found':
+      return 'Utskicket kunde inte hittas.'
+    case 'NOT_SCHEDULED':
+      return 'Utskicket är inte längre schemalagt.'
+    case 'SEND_AT_IN_PAST':
+    case 'SEND_AT_TOO_SOON':
+      return 'Tidpunkten måste vara i framtiden.'
+    case 'SEND_AT_TOO_FAR_AHEAD':
+      return 'Tidpunkten är för långt fram i tiden.'
+    case 'SCHEDULE_LOG_FAILED':
+      return 'Schemaläggningen misslyckades. Ingenting skickades — försök igen.'
+    case 'TOO_MANY_RECIPIENTS':
+      return 'För många mottagare.'
+    default:
+      return null
+  }
+}
+
 export const formatScheduleTimestamp = (iso: string): string =>
   new Date(iso).toLocaleString('sv-SE', {
     year: 'numeric',

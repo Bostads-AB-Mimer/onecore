@@ -385,6 +385,103 @@ export interface paths {
       }
     }
   }
+  '/communication-log/dispatches/{id}/cancel': {
+    /**
+     * Cancel a scheduled dispatch
+     * @description Cancels the scheduled bulk at Infobip and marks the dispatch's recipients as cancelled. Idempotent for already-cancelled dispatches.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Cancelled */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                dispatchId?: string
+                cancelledRecipients?: number
+              }
+            }
+          }
+        }
+        /** @description Dispatch is not scheduled */
+        400: {
+          content: never
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description The bulk was already sent or is processing; nothing was changed */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/reschedule': {
+    /**
+     * Move a scheduled dispatch to a new send time
+     * @description Reschedules the bulk at Infobip and updates the dispatch's sendAt. The new time must be in the future and within the channel cap (sms 90 days, email 5 days).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date-time
+             * @description New send time as ISO 8601 instant with offset/Z.
+             */
+            sendAt: string
+          }
+        }
+      }
+      responses: {
+        /** @description Rescheduled */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                dispatchId?: string
+                sendAt?: string
+              }
+            }
+          }
+        }
+        /** @description Dispatch is not scheduled, or sendAt is invalid for the channel */
+        400: {
+          content: never
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description The bulk was already sent or is processing; nothing was changed */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/getLinearTickets': {
     /**
      * Get Linear tickets with mimer-visible label

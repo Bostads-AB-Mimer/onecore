@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { useToast } from '@/shared/hooks/useToast'
-import { formatScheduleTimestamp } from '@/shared/lib/schedule'
+import {
+  formatScheduleTimestamp,
+  scheduleSendErrorText,
+} from '@/shared/lib/schedule'
 import type { EmailRecipient } from '@/shared/ui/EmailModal'
 import type { SmsRecipient } from '@/shared/ui/SmsModal'
 
@@ -408,7 +411,15 @@ export function useBulkMessaging<TItem>({
 function extractErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   if (error && typeof error === 'object') {
-    const apiError = error as { message?: string; reason?: string }
+    const apiError = error as {
+      message?: string
+      reason?: string
+      error?: string
+    }
+    // Core forwards the communication service's error code in `error`
+    // (e.g. SEND_AT_TOO_FAR_AHEAD); show its Swedish text when known.
+    const mapped = scheduleSendErrorText(apiError.error ?? apiError.reason)
+    if (mapped) return mapped
     if (apiError.message) return apiError.message
     if (apiError.reason) return apiError.reason
   }

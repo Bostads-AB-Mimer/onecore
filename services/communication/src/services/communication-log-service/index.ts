@@ -4,10 +4,21 @@ import { logger } from '@onecore/utilities'
 import { z } from 'zod'
 
 import {
+  cancelScheduledRecipients,
   getCustomerMessages,
   getDispatchById,
   logOutboundDispatch,
+  updateDispatchSendAt,
 } from './adapters/db'
+import {
+  cancelScheduledBulk,
+  rescheduleScheduledBulk,
+  ScheduledBulkConflictError,
+} from '../infobip-service/adapters/schedule-adapter'
+import {
+  evaluateSendAt,
+  MAX_SCHEDULE_DAYS_AHEAD,
+} from '../infobip-service/schedule'
 
 const LogOutboundResponseSchema = z.object({
   dispatchId: z.string().uuid(),
@@ -15,6 +26,20 @@ const LogOutboundResponseSchema = z.object({
 
 const ErrorResponseSchema = z.object({
   error: z.string(),
+  // Provider detail for 409s (what Infobip actually said) — internal service,
+  // so surfacing it aids debugging without leaking to end users via core.
+  message: z.string().optional(),
+})
+
+const CancelDispatchResponseSchema = z.object({
+  dispatchId: z.string().uuid(),
+  // 0 when the dispatch was already cancelled (idempotent no-op).
+  cancelledRecipients: z.number().int().nonnegative(),
+})
+
+const RescheduleDispatchResponseSchema = z.object({
+  dispatchId: z.string().uuid(),
+  sendAt: z.string(),
 })
 
 export const routes = (router: OkapiRouter) => {
@@ -78,6 +103,156 @@ export const routes = (router: OkapiRouter) => {
         ctx.body = result
       } catch (error) {
         logger.error({ err: error }, 'failed to get dispatch')
+        ctx.status = 500
+        ctx.body = {
+          error: error instanceof Error ? error.message : 'unknown error',
+        }
+      }
+    }
+  )
+
+  router.post(
+    '/communication-log/dispatches/:id/cancel',
+    {
+      summary: 'Cancel a scheduled dispatch',
+      description:
+        'Cancels the Infobip scheduled bulk (bulkId = dispatch id) and marks ' +
+        "every still-'scheduled' recipient as 'cancelled'. Idempotent: a " +
+        'dispatch whose recipients are already cancelled returns 200 without ' +
+        'calling Infobip. 409 when Infobip refuses (bulk already sent or ' +
+        'processing) — recipient statuses are then left for delivery reports ' +
+        'to finalize.',
+      tags: ['Communication log'],
+      params: {
+        id: { description: 'Dispatch id (UUID)', schema: z.string().uuid() },
+      },
+      response: {
+        200: CancelDispatchResponseSchema,
+        400: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    async (ctx) => {
+      try {
+        const dispatch = await getDispatchById(ctx.params.id)
+        if (!dispatch) {
+          ctx.status = 404
+          ctx.body = { error: 'Dispatch not found' }
+          return
+        }
+
+        const statuses = dispatch.recipients.map((r) => r.status)
+        if (statuses.length > 0 && statuses.every((s) => s === 'cancelled')) {
+          ctx.status = 200
+          ctx.body = { dispatchId: ctx.params.id, cancelledRecipients: 0 }
+          return
+        }
+        if (!statuses.includes('scheduled')) {
+          ctx.status = 400
+          ctx.body = { error: 'NOT_SCHEDULED' }
+          return
+        }
+
+        await cancelScheduledBulk(dispatch.dispatch.channel, ctx.params.id)
+        const { updatedCount } = await cancelScheduledRecipients(ctx.params.id)
+
+        ctx.status = 200
+        ctx.body = {
+          dispatchId: ctx.params.id,
+          cancelledRecipients: updatedCount,
+        }
+      } catch (error) {
+        if (error instanceof ScheduledBulkConflictError) {
+          ctx.status = 409
+          ctx.body = { error: 'ALREADY_PROCESSED', message: error.message }
+          return
+        }
+        logger.error({ err: error }, 'failed to cancel scheduled dispatch')
+        ctx.status = 500
+        ctx.body = {
+          error: error instanceof Error ? error.message : 'unknown error',
+        }
+      }
+    }
+  )
+
+  router.post(
+    '/communication-log/dispatches/:id/reschedule',
+    {
+      summary: 'Move a scheduled dispatch to a new send time',
+      description:
+        'Reschedules the Infobip bulk (bulkId = dispatch id) and updates the ' +
+        "dispatch's sendAt. The new time must be in the future and within " +
+        'the channel cap (sms 90 days, email 5 days). 409 when Infobip ' +
+        'refuses (bulk already sent or processing).',
+      tags: ['Communication log'],
+      params: {
+        id: { description: 'Dispatch id (UUID)', schema: z.string().uuid() },
+      },
+      body: z.object({
+        // ISO 8601 instant with offset/Z.
+        sendAt: z.string().datetime({ offset: true }),
+      }),
+      response: {
+        200: RescheduleDispatchResponseSchema,
+        400: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    async (ctx) => {
+      try {
+        const dispatch = await getDispatchById(ctx.params.id)
+        if (!dispatch) {
+          ctx.status = 404
+          ctx.body = { error: 'Dispatch not found' }
+          return
+        }
+        if (!dispatch.recipients.some((r) => r.status === 'scheduled')) {
+          ctx.status = 400
+          ctx.body = { error: 'NOT_SCHEDULED' }
+          return
+        }
+
+        const evaluation = evaluateSendAt(
+          ctx.request.body.sendAt,
+          MAX_SCHEDULE_DAYS_AHEAD[dispatch.dispatch.channel]
+        )
+        // 'immediate' (within the grace window) is not a valid reschedule
+        // target — the point of rescheduling is a concrete future time.
+        if (evaluation.kind === 'invalid') {
+          ctx.status = 400
+          ctx.body = { error: evaluation.code }
+          return
+        }
+        if (evaluation.kind !== 'scheduled') {
+          ctx.status = 400
+          ctx.body = { error: 'SEND_AT_TOO_SOON' }
+          return
+        }
+
+        await rescheduleScheduledBulk(
+          dispatch.dispatch.channel,
+          ctx.params.id,
+          evaluation.sendAt
+        )
+        await updateDispatchSendAt(ctx.params.id, evaluation.sendAt)
+
+        ctx.status = 200
+        ctx.body = {
+          dispatchId: ctx.params.id,
+          sendAt: evaluation.sendAt.toISOString(),
+        }
+      } catch (error) {
+        if (error instanceof ScheduledBulkConflictError) {
+          ctx.status = 409
+          ctx.body = { error: 'ALREADY_PROCESSED', message: error.message }
+          return
+        }
+        logger.error({ err: error }, 'failed to reschedule dispatch')
         ctx.status = 500
         ctx.body = {
           error: error instanceof Error ? error.message : 'unknown error',

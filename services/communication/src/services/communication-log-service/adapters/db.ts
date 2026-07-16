@@ -67,20 +67,39 @@ export async function logOutboundDispatch(
     const dispatchId = inserted.id
 
     if (params.recipients.length > 0) {
-      // batchInsert chunks the rows; needed because MSSQL caps a single
-      // statement at 2100 parameters and `message_recipient` has 6 inserted
-      // columns → ~262 rows max per INSERT. 200 is the safe chunk size.
-      await trx.batchInsert(
-        'message_recipient',
-        params.recipients.map((r) => ({
+      // Single INSERT ... SELECT FROM OPENJSON: the whole recipient list rides
+      // in ONE bind parameter, sidestepping MSSQL's 2100-parameter cap that
+      // would otherwise force chunked inserts (~10x slower at 15k rows) and
+      // shrinking the window where the transaction's escalated lock blocks
+      // delivery-report updates.
+      // NOTE: the WITH clause duplicates the column types from migration
+      // 202606081001_create_dispatch_tables.js — if a migration changes a
+      // column, update it here too, or OPENJSON silently truncates values.
+      await trx.raw(
+        `
+        INSERT INTO message_recipient
+          (dispatchId, contactCode, toAddress, status, externalMessageId, error)
+        SELECT ?, j.contactCode, j.toAddress, j.status, j.externalMessageId, j.error
+        FROM OPENJSON(?) WITH (
+          contactCode NVARCHAR(50) '$.contactCode',
+          toAddress NVARCHAR(255) '$.toAddress',
+          status VARCHAR(20) '$.status',
+          externalMessageId NVARCHAR(100) '$.externalMessageId',
+          error NVARCHAR(MAX) '$.error'
+        ) j
+      `,
+        [
           dispatchId,
-          contactCode: r.contactCode ?? null,
-          toAddress: r.toAddress,
-          status: r.status ?? 'sent',
-          externalMessageId: r.externalMessageId ?? null,
-          error: r.error ?? null,
-        })),
-        200
+          JSON.stringify(
+            params.recipients.map((r) => ({
+              contactCode: r.contactCode ?? null,
+              toAddress: r.toAddress,
+              status: r.status ?? 'sent',
+              externalMessageId: r.externalMessageId ?? null,
+              error: r.error ?? null,
+            }))
+          ),
+        ]
       )
     }
 
@@ -119,6 +138,82 @@ export async function updateRecipientStatusByExternalId(
     )
   }
 
+  return { updatedCount }
+}
+
+/**
+ * Remove a dispatch (recipients cascade). Used to undo the log-before-send
+ * row of a scheduled dispatch when Infobip rejects the schedule — the
+ * operation failed entirely, so no audit row should remain.
+ */
+export async function deleteDispatch(dispatchId: string): Promise<void> {
+  await db('dispatch').where('id', dispatchId).delete()
+  logger.info({ dispatchId }, 'deleted dispatch')
+}
+
+/**
+ * Backfill provider message ids onto a dispatch's recipients after a
+ * log-before-send flow (scheduled sends log first, so the ids from Infobip's
+ * response arrive later). Single statement via OPENJSON to stay well under
+ * MSSQL's parameter cap for large bulks. Matches on toAddress; if two
+ * recipients share an address they get the same id, which delivery-report
+ * matching tolerates.
+ */
+export async function setRecipientExternalIds(
+  dispatchId: string,
+  pairs: { toAddress: string; externalMessageId: string }[]
+): Promise<void> {
+  if (pairs.length === 0) return
+
+  await db.raw(
+    `
+    UPDATE mr SET externalMessageId = j.externalMessageId
+    FROM message_recipient mr
+    JOIN OPENJSON(?) WITH (
+      toAddress NVARCHAR(255) '$.toAddress',
+      externalMessageId NVARCHAR(100) '$.externalMessageId'
+    ) j ON j.toAddress = mr.toAddress
+    WHERE mr.dispatchId = ?
+  `,
+    [JSON.stringify(pairs), dispatchId]
+  )
+
+  logger.info(
+    { dispatchId, pairCount: pairs.length },
+    'backfilled recipient external ids'
+  )
+}
+
+/**
+ * Mark every still-'scheduled' recipient of a dispatch as 'cancelled'.
+ * Called after Infobip has confirmed the bulk cancellation, so rows that a
+ * delivery report already moved past 'scheduled' are left untouched.
+ * Returns the number of rows updated.
+ */
+export async function cancelScheduledRecipients(
+  dispatchId: string
+): Promise<{ updatedCount: number }> {
+  const updatedCount = await db('message_recipient')
+    .where({ dispatchId, status: 'scheduled' })
+    .update({ status: 'cancelled', statusUpdatedAt: new Date() })
+
+  logger.info({ dispatchId, updatedCount }, 'cancelled scheduled recipients')
+  return { updatedCount }
+}
+
+/**
+ * Update a dispatch's intended send time. Called after Infobip has confirmed
+ * a reschedule; recipient statuses stay 'scheduled'.
+ */
+export async function updateDispatchSendAt(
+  dispatchId: string,
+  sendAt: Date
+): Promise<{ updatedCount: number }> {
+  const updatedCount = await db('dispatch')
+    .where('id', dispatchId)
+    .update({ sendAt })
+
+  logger.info({ dispatchId, sendAt }, 'rescheduled dispatch')
   return { updatedCount }
 }
 

@@ -1,23 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
-import {
-  AlertTriangle,
-  CalendarClock,
-  ChevronDown,
-  Info,
-  Mail,
-  User,
-} from 'lucide-react'
+import { AlertTriangle, ChevronDown, Info, Mail, User } from 'lucide-react'
 
-import {
-  getScheduleBounds,
-  MAX_SCHEDULE_DAYS_AHEAD,
-  toDatetimeLocalValue,
-  validateScheduleInput,
-} from '@/shared/lib/schedule'
+import { useScheduleField } from '@/shared/hooks/useScheduleField'
+import { MAX_SCHEDULE_DAYS_AHEAD } from '@/shared/lib/schedule'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
-import { Checkbox } from '@/shared/ui/Checkbox'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +16,7 @@ import {
 } from '@/shared/ui/Dialog'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import { ScheduleField } from '@/shared/ui/ScheduleField'
 import { Textarea } from '@/shared/ui/Textarea'
 
 export interface EmailRecipient {
@@ -74,14 +63,7 @@ export function EmailModal(props: EmailModalProps) {
   const [body, setBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
-  // Scheduling (bulk only): a datetime-local value; empty until the user picks.
-  const [isScheduling, setIsScheduling] = useState(false)
-  const [sendAtLocal, setSendAtLocal] = useState('')
-
-  const scheduleError = isScheduling
-    ? validateScheduleInput(sendAtLocal, MAX_SCHEDULE_DAYS_AHEAD.email)
-    : null
-  const scheduleBounds = getScheduleBounds(MAX_SCHEDULE_DAYS_AHEAD.email)
+  const schedule = useScheduleField(MAX_SCHEDULE_DAYS_AHEAD.email)
 
   const recipients = props.recipients ?? []
 
@@ -104,14 +86,10 @@ export function EmailModal(props: EmailModalProps) {
 
     if (isBulk) {
       if (validRecipients.length === 0 || !props.onSend) return
-      if (isScheduling && scheduleError) return
+      if (schedule.isScheduling && schedule.error) return
 
       setIsSending(true)
       try {
-        // datetime-local is parsed as local time; the API gets a UTC instant.
-        const sendAt = isScheduling
-          ? new Date(sendAtLocal).toISOString()
-          : undefined
         await (
           props.onSend as (
             subject: string,
@@ -119,33 +97,27 @@ export function EmailModal(props: EmailModalProps) {
             recipients: EmailRecipient[],
             sendAt?: string
           ) => Promise<void>
-        )(subject, body, validRecipients, sendAt)
+        )(subject, body, validRecipients, schedule.sendAtIso())
         setSubject('')
         setBody('')
-        setIsScheduling(false)
-        setSendAtLocal('')
+        schedule.reset()
       } finally {
         setIsSending(false)
       }
     } else {
-      if (isScheduling && scheduleError) return
+      if (schedule.isScheduling && schedule.error) return
       setIsSending(true)
       try {
-        // datetime-local is parsed as local time; the API gets a UTC instant.
-        const sendAt = isScheduling
-          ? new Date(sendAtLocal).toISOString()
-          : undefined
         await (
           props.onSend as (
             subject: string,
             body: string,
             sendAt?: string
           ) => Promise<void>
-        )(subject, body, sendAt)
+        )(subject, body, schedule.sendAtIso())
         setSubject('')
         setBody('')
-        setIsScheduling(false)
-        setSendAtLocal('')
+        schedule.reset()
         onOpenChange(false)
       } finally {
         setIsSending(false)
@@ -157,9 +129,7 @@ export function EmailModal(props: EmailModalProps) {
     isSending,
     isBulk,
     validRecipients,
-    isScheduling,
-    sendAtLocal,
-    scheduleError,
+    schedule,
     props.onSend,
     onOpenChange,
   ])
@@ -167,8 +137,7 @@ export function EmailModal(props: EmailModalProps) {
   const handleClose = () => {
     setSubject('')
     setBody('')
-    setIsScheduling(false)
-    setSendAtLocal('')
+    schedule.reset()
     onOpenChange(false)
   }
 
@@ -282,46 +251,7 @@ export function EmailModal(props: EmailModalProps) {
             />
           </div>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="email-schedule"
-                checked={isScheduling}
-                onCheckedChange={(checked) => {
-                  setIsScheduling(checked === true)
-                  if (checked === true && !sendAtLocal) {
-                    // Suggest one hour ahead so the field starts valid.
-                    setSendAtLocal(
-                      toDatetimeLocalValue(new Date(Date.now() + 3600_000))
-                    )
-                  }
-                }}
-              />
-              <Label
-                htmlFor="email-schedule"
-                className="text-sm font-medium flex items-center gap-1.5 cursor-pointer"
-              >
-                <CalendarClock className="h-4 w-4" />
-                Schemalägg utskick
-              </Label>
-            </div>
-            {isScheduling && (
-              <div className="mt-2">
-                <Input
-                  type="datetime-local"
-                  value={sendAtLocal}
-                  onChange={(e) => setSendAtLocal(e.target.value)}
-                  min={scheduleBounds.min}
-                  max={scheduleBounds.max}
-                />
-                {scheduleError && (
-                  <p className="mt-1 text-sm text-destructive">
-                    {scheduleError}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          <ScheduleField id="email-schedule" field={schedule} />
         </div>
 
         <DialogFooter>
@@ -334,19 +264,19 @@ export function EmailModal(props: EmailModalProps) {
               !subject.trim() ||
               !body.trim() ||
               (isBulk && validRecipients.length === 0) ||
-              (isScheduling && !!scheduleError) ||
+              (schedule.isScheduling && !!schedule.error) ||
               isSending
             }
           >
             {isSending
-              ? isScheduling
+              ? schedule.isScheduling
                 ? 'Schemalägger...'
                 : 'Skickar...'
               : isBulk
-                ? isScheduling
+                ? schedule.isScheduling
                   ? `Schemalägg till ${validRecipients.length} mottagare`
                   : `Skicka till ${validRecipients.length} mottagare`
-                : isScheduling
+                : schedule.isScheduling
                   ? 'Schemalägg mejl'
                   : 'Skicka mejl'}
           </Button>
