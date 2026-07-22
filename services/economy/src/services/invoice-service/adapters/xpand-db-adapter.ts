@@ -276,7 +276,7 @@ const getAdditionalColumns = async (
   if (row.company === '001' && !additionalColumns['costCode'] && contractCode) {
     specificRule =
       rentalSpecificRules[(row.fromDate as string).substring(0, 4)][
-        contractCode.split('/')[0]
+      contractCode.split('/')[0]
       ]
     if (!specificRule) {
       logger.error(
@@ -624,9 +624,9 @@ inner join cmarg on cmart.keycmarg = cmarg.keycmarg
 inner Join repsk on cmart.keycmart = repsk.keycode
 inner join repsr on repsk.keyrepsr = repsr.keyrepsr
 where repsr.keycode IN (` +
-      keycodes.map((_) => "'" + _ + "'").join(',') +
-      ')' +
-      `and cmcmp.code = ?
+    keycodes.map((_) => "'" + _ + "'").join(',') +
+    ')' +
+    `and cmcmp.code = ?
 and krfkh.fromdate >= ? AND krfkh.fromdate < ?
 and not invoice is null
 and not invoice like 'IH%'`,
@@ -646,8 +646,8 @@ export const getBatchTotalAmount = async (invoiceNumbers: string[]) => {
 	as invoicesTotal \
 	from krfkh \
 	where invoice in (' +
-      invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
-      ')'
+    invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
+    ')'
   )
 
   return total[0].invoicesTotal as number
@@ -797,3 +797,5 @@ function getPaymentStatus(paymentStatusNumber: number) {
 
   return paymentStatus
 }
+
+function getActiveBlocks
