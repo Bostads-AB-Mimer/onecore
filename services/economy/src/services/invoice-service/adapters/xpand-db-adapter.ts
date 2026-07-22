@@ -858,5 +858,3 @@ function getPaymentStatus(paymentStatusNumber: number) {
 
   return paymentStatus
 }
-
-function getActiveBlocks

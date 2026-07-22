@@ -70,7 +70,6 @@ export const routes = (router: KoaRouter) => {
     '(.*)/accounting/import-rental-loss/{:companyId}',
     async (ctx) => {
       const companyId = ctx.params.companyId
-      const activeRentalBlocks = RentalBlock[]
 
       if (!companyId) {
         ctx.status = 400
@@ -78,9 +77,6 @@ export const routes = (router: KoaRouter) => {
       }
 
       const rentalLosses = await exportRentalLosses(companyId)
-      console.log(JSON.stringify(rentalLosses.slice(0, 30), null, 2))
-      ctx.status = 200
-      return
       const { aggregateRentalLossAccountingCsv, errors } = await createRentalLossAccounting(rentalLosses)
 
       await uploadRentalLossCsvFile(
