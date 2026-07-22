@@ -608,7 +608,6 @@ export const exportRentalLosses = async (companyId: string): Promise<RentalLoss[
     throw new Error('Could not retrieve rental loss information: ' + rentalLossResults.err)
   }
 
-  console.log(JSON.stringify(rentalLossResults.data.rentalLosses, null, 2))
   return rentalLossResults.data.rentalLosses
 }
 
