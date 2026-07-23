@@ -590,9 +590,7 @@ describe('economy-service routes', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(mockData)
-      expect(economyAdapter.getInvoiceChannels).toHaveBeenCalledWith(
-        recipients
-      )
+      expect(economyAdapter.getInvoiceChannels).toHaveBeenCalledWith(recipients)
     })
 
     it('returns 400 when recipients is missing', async () => {
