@@ -9,6 +9,7 @@ import {
   ChevronRight,
   ClipboardList,
   Contact,
+  FileClock,
   FileText,
   Home,
   LayoutGrid,
@@ -53,8 +54,10 @@ function SidebarNavigationContent() {
   const [isFastighetsdataExpanded, setIsFastighetsdataExpanded] =
     React.useState(true)
   const [isForetagExpanded, setIsForetagExpanded] = React.useState(false)
+  const [isEkonomiExpanded, setIsEkonomiExpanded] = React.useState(false)
 
   const isPropertiesActive = location.pathname === routes.properties
+  const isEconomyActive = location.pathname.startsWith(routes.economy)
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -160,11 +163,65 @@ function SidebarNavigationContent() {
           icon={ClipboardList}
           label="Besiktningar"
         />
-        <SidebarNavLink
-          to={routes.economy}
-          icon={Receipt}
-          label="Skapa ströfaktura"
-        />
+        {/* EKONOMI - Parent collapsible section */}
+        <Collapsible
+          open={isEkonomiExpanded}
+          onOpenChange={setIsEkonomiExpanded}
+          className="group/collapsible"
+        >
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isEconomyActive}
+                    tooltip="Ekonomi"
+                  >
+                    <Link to={routes.economy}>
+                      <Receipt />
+                      <span>Ekonomi</span>
+                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                    </Link>
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            location.pathname === routes.economyStrofaktura
+                          }
+                        >
+                          <Link to={routes.economyStrofaktura}>
+                            <Receipt />
+                            <span>Skapa ströfaktura</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            location.pathname === routes.economyPlaceholder
+                          }
+                        >
+                          <Link to={routes.economyPlaceholder}>
+                            <FileClock />
+                            <span>Kommande</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </Collapsible>
         <SidebarNavLink
           to={routes.components}
           icon={Settings}

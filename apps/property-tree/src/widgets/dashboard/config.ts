@@ -162,7 +162,7 @@ export const dashboardCards: DashboardCard[] = [
     title: 'Skapa ströfaktura',
     icon: Receipt,
     description: 'Skapa ströfakturor',
-    path: routes.economy,
+    path: routes.economyStrofaktura,
     isExternal: false,
     isDisabled: false,
   },
