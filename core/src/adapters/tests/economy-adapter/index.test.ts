@@ -1,4 +1,5 @@
 import nock from 'nock'
+import { economy } from '@onecore/types'
 
 import config from '../../../common/config'
 import * as economyAdapter from '../../economy-adapter'
@@ -129,57 +130,52 @@ describe('economy-adapter', () => {
   })
 
   describe('getInvoiceChannels', () => {
+    const recipients: economy.LookupRecipient[] = [
+      { recipientId: '191212121212', recipientType: 'individual' },
+      { recipientId: '198112172385', recipientType: 'individual' },
+    ]
+
     const mockChannels = [
       {
-        channel: 'Kivra',
-        matchedCandidates: ['191212121212'],
-        error: null,
+        referenceId: '191212121212',
+        availableInChannels: ['Kivra'],
+        notAvailableInChannels: ['eInvoiceB2C'],
       },
       {
-        channel: 'eInvoiceB2C',
-        matchedCandidates: ['198112172385'],
-        error: null,
+        referenceId: '198112172385',
+        availableInChannels: ['eInvoiceB2C'],
+        notAvailableInChannels: ['Kivra'],
       },
     ]
 
-    it('returns invoice channels for given national registration numbers', async () => {
+    it('returns invoice channels for given recipients', async () => {
       nock(config.economyService.url)
-        .post('/invoice-channels', {
-          nationalRegistrationNumbers: ['191212121212', '198112172385'],
-        })
+        .post('/invoice-channels', { recipients })
         .reply(200, { content: mockChannels })
 
-      const result = await economyAdapter.getInvoiceChannels([
-        '191212121212',
-        '198112172385',
-      ])
+      const result = await economyAdapter.getInvoiceChannels(recipients)
 
       expect(result).toEqual({ ok: true, data: mockChannels })
     })
 
-    it('passes national registration numbers in request body', async () => {
+    it('passes recipients in request body', async () => {
+      const threeRecipients: economy.LookupRecipient[] = [
+        ...recipients,
+        { recipientId: '5512345678', recipientType: 'organization' },
+      ]
+
       nock(config.economyService.url)
-        .post('/invoice-channels', {
-          nationalRegistrationNumbers: [
-            '191212121212',
-            '198112172385',
-            '197102125866',
-          ],
-        })
+        .post('/invoice-channels', { recipients: threeRecipients })
         .reply(200, { content: [] })
 
-      const result = await economyAdapter.getInvoiceChannels([
-        '191212121212',
-        '198112172385',
-        '197102125866',
-      ])
+      const result = await economyAdapter.getInvoiceChannels(threeRecipients)
 
       expect(result).toEqual({ ok: true, data: [] })
     })
 
     it('returns empty array when no channels found', async () => {
       nock(config.economyService.url)
-        .post('/invoice-channels', { nationalRegistrationNumbers: [] })
+        .post('/invoice-channels', { recipients: [] })
         .reply(200, { content: [] })
 
       const result = await economyAdapter.getInvoiceChannels([])
@@ -187,24 +183,17 @@ describe('economy-adapter', () => {
       expect(result).toEqual({ ok: true, data: [] })
     })
 
-    it('returns channel with error when lookup fails for a candidate', async () => {
-      const channelsWithError = [
-        {
-          channel: 'Kivra',
-          matchedCandidates: null,
-          error: 'Lookup failed',
-        },
-      ]
-
+    it('returns unknown error when lookup fails', async () => {
       nock(config.economyService.url)
-        .post('/invoice-channels', {
-          nationalRegistrationNumbers: ['191212121212'],
-        })
-        .reply(200, { content: channelsWithError })
+        .post('/invoice-channels', { recipients: [recipients[0]] })
+        .reply(500, { message: 'Lookup failed' })
 
-      const result = await economyAdapter.getInvoiceChannels(['191212121212'])
+      const result = await economyAdapter.getInvoiceChannels([recipients[0]])
 
-      expect(result).toEqual({ ok: true, data: channelsWithError })
+      expect(result).toEqual({
+        ok: false,
+        err: 'Lookup failed',
+      })
     })
   })
 })

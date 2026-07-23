@@ -17,18 +17,29 @@ const mockPostResponse = {
   data: { correlationId: 'corr-123' },
 }
 
-const mockChannels = [
+const recipients = [
+  { recipientId: '191212121212', recipientType: 'individual' as const },
+  { recipientId: '5512345678', recipientType: 'organization' as const },
+]
+
+const mockCandidates = [
   {
-    channel: 'Kivra' as const,
-    matchedCandidates: ['191212121212'],
-    error: null,
+    referenceId: '191212121212____individual',
+    availableInChannels: ['Kivra'],
+    notAvailableInChannels: ['eInvoiceB2C'],
   },
-  { channel: 'eInvoiceB2C' as const, matchedCandidates: null, error: null },
+  {
+    referenceId: '5512345678____organization',
+    availableInChannels: ['eInvoiceB2B'],
+    notAvailableInChannels: [],
+  },
 ]
 
 const mockGetResponse = {
-  data: { results: mockChannels },
+  data: { candidates: mockCandidates, channelErrors: [] },
 }
+
+const notReadyError = Object.assign(new Error('Not Found'), { status: 404 })
 
 describe('stralforsAdapter', () => {
   beforeEach(() => {
@@ -36,16 +47,50 @@ describe('stralforsAdapter', () => {
   })
 
   describe('postChannelLookup', () => {
-    it('returns channel results', async () => {
+    it('returns channel results with the referenceId suffix stripped', async () => {
       jest.mocked(axios.post).mockResolvedValue(mockAuthResponse)
       jest
         .mocked(axios)
         .mockResolvedValueOnce(mockPostResponse)
         .mockResolvedValueOnce(mockGetResponse)
 
-      const result = await postChannelLookup(['191212121212'])
+      const result = await postChannelLookup(recipients)
 
-      expect(result).toEqual(mockChannels)
+      expect(result).toEqual({
+        candidates: [
+          {
+            referenceId: '191212121212',
+            availableInChannels: ['Kivra'],
+            notAvailableInChannels: ['eInvoiceB2C'],
+          },
+          {
+            referenceId: '5512345678',
+            availableInChannels: ['eInvoiceB2B'],
+            notAvailableInChannels: [],
+          },
+        ],
+        channelErrors: [],
+      })
+    })
+
+    it('passes through channelErrors from the response', async () => {
+      jest.mocked(axios.post).mockResolvedValue(mockAuthResponse)
+      const responseWithErrors = {
+        data: {
+          candidates: mockCandidates,
+          channelErrors: [{ channel: 'Kivra', error: 'timeout' }],
+        },
+      }
+      jest
+        .mocked(axios)
+        .mockResolvedValueOnce(mockPostResponse)
+        .mockResolvedValueOnce(responseWithErrors)
+
+      const result = await postChannelLookup(recipients)
+
+      expect(result.channelErrors).toEqual([
+        { channel: 'Kivra', error: 'timeout' },
+      ])
     })
 
     it('polls GET until result is ready', async () => {
@@ -53,14 +98,13 @@ describe('stralforsAdapter', () => {
       jest
         .mocked(axios)
         .mockResolvedValueOnce(mockPostResponse)
-        .mockResolvedValueOnce({ data: { results: null } })
-        .mockResolvedValueOnce({ data: { results: null } })
+        .mockRejectedValueOnce(notReadyError)
+        .mockRejectedValueOnce(notReadyError)
         .mockResolvedValueOnce(mockGetResponse)
 
-      const result = await postChannelLookup(['191212121212'])
+      const result = await postChannelLookup(recipients)
 
-      expect(result).toEqual(mockChannels)
-      // 1 POST + 3 GETs
+      expect(result.candidates).toHaveLength(2)
       expect(jest.mocked(axios)).toHaveBeenCalledTimes(4)
     })
 
@@ -69,9 +113,9 @@ describe('stralforsAdapter', () => {
       jest
         .mocked(axios)
         .mockResolvedValueOnce(mockPostResponse)
-        .mockResolvedValue({ data: { results: null } })
+        .mockRejectedValue(notReadyError)
 
-      await expect(postChannelLookup(['191212121212'])).rejects.toThrow()
+      await expect(postChannelLookup(recipients)).rejects.toThrow()
     })
 
     it('throws when POST request fails', async () => {
@@ -79,7 +123,7 @@ describe('stralforsAdapter', () => {
       const error = Object.assign(new Error('Network error'), { status: 500 })
       jest.mocked(axios).mockRejectedValueOnce(error)
 
-      await expect(postChannelLookup(['191212121212'])).rejects.toThrow()
+      await expect(postChannelLookup(recipients)).rejects.toThrow()
     })
 
     it('sends Bearer token in Authorization header', async () => {
@@ -89,7 +133,7 @@ describe('stralforsAdapter', () => {
         .mockResolvedValueOnce(mockPostResponse)
         .mockResolvedValueOnce(mockGetResponse)
 
-      await postChannelLookup(['191212121212'])
+      await postChannelLookup(recipients)
 
       expect(jest.mocked(axios)).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -100,21 +144,106 @@ describe('stralforsAdapter', () => {
       )
     })
 
-    it('sends correct POST body', async () => {
+    it('sends correct POST body, mapping individuals to a single Kivra/eInvoiceB2C candidate and organizations to eInvoiceB2B', async () => {
       jest.mocked(axios.post).mockResolvedValue(mockAuthResponse)
       jest
         .mocked(axios)
         .mockResolvedValueOnce(mockPostResponse)
         .mockResolvedValueOnce(mockGetResponse)
 
-      await postChannelLookup(['191212121212', '198112172385'])
+      await postChannelLookup(recipients)
 
       expect(jest.mocked(axios)).toHaveBeenCalledWith(
         expect.objectContaining({
           method: 'POST',
           data: {
-            channels: ['Kivra', 'eInvoiceB2C'],
-            candidates: ['191212121212', '198112172385'],
+            candidates: [
+              {
+                referenceId: '191212121212____individual',
+                kivraRecipient: { ssn: '191212121212' },
+                einvoiceB2CRecipient: { ssn: '191212121212' },
+              },
+              {
+                referenceId: '5512345678____organization',
+                einvoiceB2BRecipient: {
+                  lookupId: '5512345678',
+                  format: 'INVOICE',
+                  iso6523Code: '0007',
+                },
+              },
+            ],
+          },
+        })
+      )
+    })
+
+    it('strips non-numeric characters from recipientId, but keeps them in the referenceId suffix', async () => {
+      jest.mocked(axios.post).mockResolvedValue(mockAuthResponse)
+      jest
+        .mocked(axios)
+        .mockResolvedValueOnce(mockPostResponse)
+        .mockResolvedValueOnce(mockGetResponse)
+
+      await postChannelLookup([
+        { recipientId: '19121212-1212', recipientType: 'individual' },
+        { recipientId: '556123-4567', recipientType: 'organization' },
+      ])
+
+      expect(jest.mocked(axios)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'POST',
+          data: {
+            candidates: [
+              {
+                referenceId: '19121212-1212____individual',
+                kivraRecipient: { ssn: '191212121212' },
+                einvoiceB2CRecipient: { ssn: '191212121212' },
+              },
+              {
+                referenceId: '556123-4567____organization',
+                einvoiceB2BRecipient: {
+                  lookupId: '5512345678',
+                  format: 'INVOICE',
+                  iso6523Code: '0007',
+                },
+              },
+            ],
+          },
+        })
+      )
+    })
+
+    it('gives an individual and organization sharing the same recipientId distinct referenceIds', async () => {
+      jest.mocked(axios.post).mockResolvedValue(mockAuthResponse)
+      jest
+        .mocked(axios)
+        .mockResolvedValueOnce(mockPostResponse)
+        .mockResolvedValueOnce(mockGetResponse)
+
+      await postChannelLookup([
+        { recipientId: '191212121212', recipientType: 'individual' },
+        { recipientId: '191212121212', recipientType: 'organization' },
+      ])
+
+      expect(jest.mocked(axios)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'POST',
+          data: {
+            candidates: [
+              {
+                referenceId: '191212121212____individual',
+                kivraRecipient: { ssn: '191212121212' },
+                einvoiceB2CRecipient: { ssn: '191212121212' },
+              },
+              {
+                referenceId: '191212121212____organization',
+                einvoiceB2BRecipient: {
+                  lookupId: '191212121212',
+                  format: 'INVOICE',
+                  iso6523Code: '0007',
+                },
+              },
+            ],
           },
         })
       )

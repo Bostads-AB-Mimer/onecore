@@ -560,10 +560,23 @@ describe('economy-service routes', () => {
   })
 
   describe('POST /invoice-channels', () => {
+    const recipients = [
+      { recipientId: 'P000111', recipientType: 'individual' },
+      { recipientId: 'P000222', recipientType: 'individual' },
+    ]
+
     it('returns 200 with channel data on success', async () => {
       const mockData = [
-        { channel: 'Kivra', matchedCandidates: ['P000111'], error: null },
-        { channel: 'eInvoiceB2C', matchedCandidates: ['P000222'], error: null },
+        {
+          referenceId: 'P000111',
+          availableInChannels: ['Kivra'],
+          notAvailableInChannels: ['eInvoiceB2C'],
+        },
+        {
+          referenceId: 'P000222',
+          availableInChannels: ['eInvoiceB2C'],
+          notAvailableInChannels: ['Kivra'],
+        },
       ]
 
       jest.spyOn(economyAdapter, 'getInvoiceChannels').mockResolvedValue({
@@ -573,17 +586,16 @@ describe('economy-service routes', () => {
 
       const res = await request(app.callback())
         .post('/invoice-channels')
-        .send({ nationalRegistrationNumbers: ['P000111', 'P000222'] })
+        .send({ recipients })
 
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(mockData)
-      expect(economyAdapter.getInvoiceChannels).toHaveBeenCalledWith([
-        'P000111',
-        'P000222',
-      ])
+      expect(economyAdapter.getInvoiceChannels).toHaveBeenCalledWith(
+        recipients
+      )
     })
 
-    it('returns 400 when nationalRegistrationNumbers is missing', async () => {
+    it('returns 400 when recipients is missing', async () => {
       const res = await request(app.callback())
         .post('/invoice-channels')
         .send({})
@@ -599,7 +611,7 @@ describe('economy-service routes', () => {
 
       const res = await request(app.callback())
         .post('/invoice-channels')
-        .send({ nationalRegistrationNumbers: ['P000111'] })
+        .send({ recipients })
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('unknown')

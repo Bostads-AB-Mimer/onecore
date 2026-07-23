@@ -306,12 +306,10 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/invoice-channels', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { nationalRegistrationNumbers } = ctx.request.body
+    const { recipients } = ctx.request.body
 
     try {
-      const results = await stralforsPostChannelLookup(
-        nationalRegistrationNumbers
-      )
+      const results = await stralforsPostChannelLookup(recipients)
 
       ctx.status = 200
       ctx.body = {
