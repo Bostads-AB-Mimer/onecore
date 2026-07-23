@@ -1,7 +1,4 @@
-import {
-  ChannelLookupChannel,
-  ChannelLookupResponse,
-} from '@onecore/types/src/economy'
+import { economy } from '@onecore/types'
 import { parseAsString, useQueryState } from 'nuqs'
 
 import { useTenantAutogiroConsent } from '@/entities/tenant/hooks/useTenantAutogiroConsent'
@@ -37,36 +34,34 @@ const InfoRow = ({
   </div>
 )
 
+const CHANNEL_LABELS: Record<string, string> = {
+  eInvoiceB2C: 'E-faktura',
+  eInvoiceB2B: 'E-faktura',
+  Kivra: 'Kivra',
+}
+
 const getInvoiceDeliveryMethod = (
-  nationalRegistrationNumber: string,
-  invoiceChannels: ChannelLookupResponse
+  invoiceChannels: economy.ChannelLookupResponse
 ) => {
-  const methods: Record<ChannelLookupChannel, string> = {
-    eInvoiceB2C: 'E-faktura',
-    Kivra: 'Kivra',
-  }
-
-  let method = 'Pappersfaktura'
-
-  if (invoiceChannels.length) {
-    const foundChannel = invoiceChannels.find((channel) =>
-      channel.matchedCandidates?.includes(nationalRegistrationNumber)
+  const availableChannel =
+    invoiceChannels.candidates[0]?.availableInChannels.find(
+      (channel) => channel in CHANNEL_LABELS
     )
 
-    if (foundChannel) {
-      method = methods[foundChannel.channel]
-    }
-  }
-
-  return method
+  return availableChannel ? CHANNEL_LABELS[availableChannel] : 'Pappersfaktura'
 }
 
 const PaymentInformation = ({
   nationalRegistrationNumber,
+  isIndividual,
 }: {
   nationalRegistrationNumber: string
+  isIndividual: boolean
 }) => {
-  const invoiceChannels = useTenantInvoiceChannels(nationalRegistrationNumber)
+  const invoiceChannels = useTenantInvoiceChannels({
+    recipientId: nationalRegistrationNumber,
+    recipientType: isIndividual ? 'individual' : 'organization',
+  })
   const autogiroConsent = useTenantAutogiroConsent(nationalRegistrationNumber)
 
   const isLoading = invoiceChannels.isLoading || autogiroConsent.isLoading
@@ -87,10 +82,7 @@ const PaymentInformation = ({
                 value={
                   autogiroConsent.data
                     ? 'Autogiro'
-                    : getInvoiceDeliveryMethod(
-                        nationalRegistrationNumber,
-                        invoiceChannels.data
-                      )
+                    : getInvoiceDeliveryMethod(invoiceChannels.data)
                 }
               />
             </div>
@@ -139,6 +131,9 @@ export const TenantLedgerTabContent = ({
     <div className="space-y-6">
       <PaymentInformation
         nationalRegistrationNumber={nationalRegistrationNumber}
+        // TODO Resolving contact type like this is good enough for now, but should ideally
+        // use Contact type from contacts service instead of Tenant type from leasing service
+        isIndividual={contactCode.startsWith('P')}
       />
       <InvoicesCard contactCode={contactCode} />
     </div>

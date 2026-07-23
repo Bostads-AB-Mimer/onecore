@@ -1,4 +1,9 @@
-import { Invoice, InvoicePaymentEvent, XledgerProject } from '@onecore/types'
+import {
+  economy,
+  Invoice,
+  InvoicePaymentEvent,
+  XledgerProject,
+} from '@onecore/types'
 import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
 import { XledgerContact } from '@onecore/types/src/types'
 
@@ -48,10 +53,10 @@ async function getInvoicePaymentEvents(
   return response.content as InvoicePaymentEvent[]
 }
 
-async function getInvoiceChannels(nationalRegistrationNumber: string) {
+async function getInvoiceChannels(recipient: economy.LookupRecipient) {
   const { data, error } = await POST('/invoice-channels', {
     body: {
-      nationalRegistrationNumbers: [nationalRegistrationNumber],
+      recipients: [recipient],
     },
   })
 

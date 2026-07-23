@@ -7042,15 +7042,19 @@ export interface paths {
   };
   "/invoice-channels": {
     /**
-     * Look up invoice channels for national registration numbers
-     * @description Returns the invoice delivery channel for each provided national registration number.
+     * Look up invoice channels for recipients
+     * @description Returns the invoice delivery channel for each provided recipient.
      */
     post: {
       requestBody: {
         content: {
           "application/json": {
-            /** @description List of national registration numbers to look up */
-            nationalRegistrationNumbers: string[];
+            /** @description List of recipients to look up */
+            recipients: ({
+                recipientId: string;
+                /** @enum {string} */
+                recipientType: "individual" | "organization";
+              })[];
           };
         };
       };
@@ -7059,12 +7063,17 @@ export interface paths {
         200: {
           content: {
             "application/json": {
-              content: ({
-                  /** @enum {string} */
-                  channel: "Kivra" | "eInvoiceB2C";
-                  matchedCandidates: string[] | null;
-                  error: string | null;
-                })[];
+              content: {
+                candidates: {
+                    referenceId: string;
+                    availableInChannels: string[];
+                    notAvailableInChannels: string[];
+                  }[];
+                channelErrors?: {
+                    channel: string;
+                    error: string;
+                  }[];
+              };
             };
           };
         };
