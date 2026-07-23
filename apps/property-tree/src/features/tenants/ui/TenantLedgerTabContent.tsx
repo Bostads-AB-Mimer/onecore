@@ -28,7 +28,7 @@ export const TenantLedgerTabContent = ({
   return (
     <TabLayout title="Fakturor" showCard={true}>
       <Button asChild variant="outline" size="sm">
-        <Link to={paths.economy({ contactCode })}>
+        <Link to={paths.economyStrofaktura({ contactCode })}>
           <Receipt className="h-4 w-4 mr-2" />
           Skapa ströfaktura
         </Link>

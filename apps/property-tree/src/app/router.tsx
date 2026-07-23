@@ -5,6 +5,7 @@ import { CompanyPage } from '@/pages/CompanyPage'
 import ComponentLibraryPage from '@/pages/ComponentLibraryPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { EconomyPage } from '@/pages/EconomyPage'
+import { EconomyPlaceholderPage } from '@/pages/EconomyPlaceholderPage'
 import { FacilityPage } from '@/pages/FacilityPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
@@ -17,6 +18,7 @@ import { ResidencePage } from '@/pages/ResidencePage'
 import { RoomPage } from '@/pages/RoomPage'
 import { SearchPage } from '@/pages/SearchPage'
 import { StaircasePage } from '@/pages/StaircasePage'
+import { StrofakturaPage } from '@/pages/StrofakturaPage'
 import { TenantPage } from '@/pages/TenantPage'
 import { TenantsPage } from '@/pages/TenantsPage'
 
@@ -135,8 +137,18 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Hyreskontrakt' },
           },
           {
-            path: 'economy',
+            path: routes.economy,
             element: <EconomyPage />,
+            handle: { title: 'Ekonomi' },
+          },
+          {
+            path: routes.economyStrofaktura,
+            element: <StrofakturaPage />,
+            handle: { title: 'Skapa ströfaktura' },
+          },
+          {
+            path: routes.economyPlaceholder,
+            element: <EconomyPlaceholderPage />,
             handle: { title: 'Ekonomi' },
           },
           {
