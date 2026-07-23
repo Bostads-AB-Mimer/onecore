@@ -165,6 +165,7 @@ describe('stralforsAdapter', () => {
               },
               {
                 referenceId: '5512345678____organization',
+                kivraRecipient: { ssn: '5512345678' },
                 einvoiceB2BRecipient: {
                   lookupId: '5512345678',
                   format: 'INVOICE',
@@ -186,7 +187,7 @@ describe('stralforsAdapter', () => {
 
       await postChannelLookup([
         { recipientId: '19121212-1212', recipientType: 'individual' },
-        { recipientId: '556123-4567', recipientType: 'organization' },
+        { recipientId: '551234-5678', recipientType: 'organization' },
       ])
 
       expect(jest.mocked(axios)).toHaveBeenCalledWith(
@@ -200,7 +201,8 @@ describe('stralforsAdapter', () => {
                 einvoiceB2CRecipient: { ssn: '191212121212' },
               },
               {
-                referenceId: '556123-4567____organization',
+                referenceId: '551234-5678____organization',
+                kivraRecipient: { ssn: '5512345678' },
                 einvoiceB2BRecipient: {
                   lookupId: '5512345678',
                   format: 'INVOICE',
@@ -237,6 +239,7 @@ describe('stralforsAdapter', () => {
               },
               {
                 referenceId: '191212121212____organization',
+                kivraRecipient: { ssn: '191212121212' },
                 einvoiceB2BRecipient: {
                   lookupId: '191212121212',
                   format: 'INVOICE',
