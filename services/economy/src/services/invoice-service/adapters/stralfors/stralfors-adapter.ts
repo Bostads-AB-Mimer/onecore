@@ -115,6 +115,9 @@ export async function postChannelLookup(recipients: economy.LookupRecipient[]) {
       }))
       .with('organization', () => ({
         referenceId: `${r.recipientId}${suffixSeparator}organization`,
+        kivraRecipient: {
+          ssn: strippedRecipientId,
+        },
         einvoiceB2BRecipient: {
           lookupId: strippedRecipientId,
           format: 'INVOICE',
