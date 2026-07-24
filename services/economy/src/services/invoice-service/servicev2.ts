@@ -5,6 +5,7 @@ import {
 import {
   getRoundOffInformation,
   enrichInvoiceWithAccounting,
+  getActiveRentalBlocksWithAccounting,
 } from './adapters/xpand-db-adapter'
 import {
   InvoiceWithAccounting,
@@ -608,7 +609,7 @@ export const exportRentalLosses = async (companyId: string): Promise<RentalLoss[
     throw new Error('Could not retrieve rental loss information: ' + rentalLossResults.err)
   }
 
-  return rentalLossResults.data.rentalLosses
+  return rentalLossResults.data.rentalLosses.slice(0, 100)
 }
 
 export const createRentalLossAccounting = async (rentalLosses: RentalLoss[]): Promise<{ aggregateRentalLossAccountingCsv: string[], errors: { rentalObject: string, error: string }[] }> => {
@@ -708,6 +709,28 @@ const createRentalLossAggregateRows = async (rentalLosses: RentalLoss[]) => {
   })
 
   return exportedRows
+}
+
+export const handleRentalBlocks = async (rentalLosses: RentalLoss[]) => {
+  const rentalLossesWithBlocks: RentalLoss[] = []
+
+  for (const rentalLoss of rentalLosses) {
+    // 1. check for active block
+    // 2. get accounting for active block - if exists, replace rental loss row (fully or partially based on date ranges) with block accounting
+    // TODO: adapt to singe uncontracted interval on each row after changing
+    const rentalBlocks = await getActiveRentalBlocksWithAccounting(rentalLoss.rentalObject, rentalLoss.uncontractedIntervals[0].from, rentalLoss.uncontractedIntervals[0].to)
+
+    if (!rentalBlocks) {
+      rentalLossesWithBlocks.push(rentalLoss)
+    } else {
+      console.log('Block', rentalBlocks)
+
+      // TODO: Calculate intervals. If block affects the whole period for the rental loss row, replace rental loss row with block
+      // If there are intersections, create multiple rows (rental loss/blocks one per distinct interval)
+    }
+  }
+
+  return rentalLossesWithBlocks
 }
 //#endregion
 

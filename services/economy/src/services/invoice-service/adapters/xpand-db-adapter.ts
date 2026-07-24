@@ -21,6 +21,7 @@ import { match, P } from 'ts-pattern'
 import {
   InvoiceRowWithAccounting,
   InvoiceWithAccounting,
+  RentalBlockWithAccounting,
 } from '@src/common/types/typesv2'
 
 type RentalSpecificRule = {
@@ -796,4 +797,38 @@ function getPaymentStatus(paymentStatusNumber: number) {
   const paymentStatus = paymentStatusTranslation[paymentStatusNumber]
 
   return paymentStatus
+}
+
+const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounting => {
+  return {
+    account: dbRow.p1.trim(),
+    costCode: dbRow.p2?.toString().trimEnd(),
+    property: dbRow.p3?.toString().trimEnd(),
+    projectCode: dbRow.p4?.toString().trimEnd(),
+    freeCode: dbRow.p5?.toString().trimEnd(),
+    description: dbRow.caption?.toString().trimEnd(),
+    fromDate: dbRow.fromDate,
+    toDate: dbRow.toDate
+  }
+}
+
+/**
+ * Returns an active rental block with accounting information for a given rental object, if the 
+ * block is active within the date range and has accounting information. Rental blocks without
+ * accounting information are not returned even if they are active within the date range.
+ */
+export const getActiveRentalBlocksWithAccounting = async (rentalId: string, from: Date, to: Date) => {
+  const year = from.toISOString().substring(0, 4)
+
+  const blockWithAccounting = await db.raw(`select p1, p5, hyspt.fdate as fromDate, hyspt.tdate as toDate, hyspa.caption as caption from hyspt 
+  inner join hyspa on hyspt.keyhyspa = hyspa.keyhyspa
+  inner join repsk on hyspa.keyhyspa = repsk.keycode
+  inner join babuf ON hyspt.keycmobj = babuf.keycmobj
+  inner join cmobj on hyspt.keycmobj = cmobj.keycmobj
+  where babuf.hyresid = ?
+  and hyspt.fdate < ? 
+  and (hyspt.tdate > ? or hyspt.tdate is null)
+  and repsk.year = ?`, [rentalId, from, to, year])
+
+  return blockWithAccounting.map(transformRentalBlockWithAccounting)
 }
