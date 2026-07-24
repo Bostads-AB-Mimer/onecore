@@ -1,5 +1,6 @@
 import { Contact, Invoice, InvoiceRow } from '@onecore/types'
 import { TenfastRentalLoss } from '../adapters/tenfast/schemas'
+import { z } from 'zod'
 
 export const TOTAL_ACCOUNT = '2970'
 export const CUSTOMER_LEDGER_ACCOUNT = '1530'
@@ -188,4 +189,15 @@ export type MimerCompany = {
   xpandId: string
   tenfastId: string
   roundOffCostCode?: string
+}
+
+export type RentalBlockWithAccounting = {
+  account: string
+  projectCode?: string
+  costCode?: string
+  property?: string
+  freeCode?: string
+  fromDate: Date
+  toDate: Date
+  description: string
 }
