@@ -1,3 +1,5 @@
+// fetch is stable in Node.js 20 LTS but eslint-plugin-n still flags it as experimental
+/* eslint-disable n/no-unsupported-features/node-builtins */
 import {
   cancelScheduledBulk,
   rescheduleScheduledBulk,
@@ -43,7 +45,7 @@ afterEach(() => {
 
 // (url, body) pairs of every fetch call, for asserting the PUT sequence.
 const calls = () =>
-  fetchMock.mock.calls.map(([url, init]: [string, RequestInit]) => ({
+  fetchMock.mock.calls.map(([url, init]: [string, { body: string }]) => ({
     url,
     body: JSON.parse(String(init.body)),
   }))
