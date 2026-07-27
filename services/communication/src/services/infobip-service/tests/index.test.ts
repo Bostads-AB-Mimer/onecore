@@ -42,21 +42,19 @@ jest.mock('../../communication-log-service/adapters/db', () => ({
 
 // Builds a full Infobip v4 send response so spy return types match the adapter.
 const emailSendResult = (messageId: string) => ({
-  data: {
-    messages: [
-      {
-        messageId,
-        to: 'tenant@example.com',
-        status: {
-          groupId: 1,
-          groupName: 'PENDING',
-          id: 26,
-          name: 'PENDING_ACCEPTED',
-          description: 'Message accepted',
-        },
+  messages: [
+    {
+      messageId,
+      to: 'tenant@example.com',
+      status: {
+        groupId: 1,
+        groupName: 'PENDING',
+        id: 26,
+        name: 'PENDING_ACCEPTED',
+        description: 'Message accepted',
       },
-    ],
-  },
+    },
+  ],
 })
 
 const app = new Koa()
@@ -185,8 +183,8 @@ describe('/sendWorkOrderEmail', () => {
 describe('work order tenant message logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
-  // The SMS adapter returns the Infobip v3 response directly (no `.data`
-  // wrapper, unlike the email adapter), so the route reads messages[0] off it.
+  // The SMS adapter returns the Infobip v3 response directly, so the route
+  // reads messages[0] off it.
   const smsSendResult = (messageId: string) => ({
     messages: [
       {
@@ -496,8 +494,8 @@ describe('/sendBulkSms', () => {
 describe('/sendBulkSms logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
-  // The SMS adapter returns the Infobip v3 response directly (no `.data`
-  // wrapper), so the route reads messageId off messages[i].
+  // The SMS adapter returns the Infobip v3 response directly, so the route
+  // reads messageId off messages[i].
   const smsSendResult = (messageId: string) => ({
     messages: [
       {

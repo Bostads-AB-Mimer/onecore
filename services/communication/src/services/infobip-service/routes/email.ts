@@ -170,7 +170,7 @@ export const routes = (router: KoaRouter) => {
         text: message.text,
       })
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = { content: result, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
@@ -191,7 +191,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await sendEmail(message)
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = { content: result, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
@@ -226,10 +226,10 @@ export const routes = (router: KoaRouter) => {
         // subject) is never the intended log value, so fall back to the label.
         subject: rendered?.subject || emailData.subject,
         body: rendered?.body || emailData.text,
-        sendResult: result.data,
+        sendResult: result,
       })
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = { content: result, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
@@ -271,10 +271,10 @@ export const routes = (router: KoaRouter) => {
           contactCode: body.contactCode,
           subject: rendered?.subject || body.subject,
           body: rendered?.body || body.text,
-          sendResult: result.data,
+          sendResult: result,
         })
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result, ...metadata }
       } catch (error: any) {
         logger.error(
           { error: error.message },
@@ -323,10 +323,10 @@ export const routes = (router: KoaRouter) => {
           triggeredBy: body.triggeredBy,
           subject: rendered?.subject || body.subject,
           body: rendered?.body || body.text,
-          sendResult: result.data,
+          sendResult: result,
         })
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result, ...metadata }
       } catch (error: any) {
         logger.error(
           { error: error.message },
@@ -374,10 +374,10 @@ export const routes = (router: KoaRouter) => {
           triggeredBy: body.triggeredBy,
           subject: rendered?.subject || body.subject,
           body: rendered?.body || body.text,
-          sendResult: result.data,
+          sendResult: result,
         })
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result, ...metadata }
       } catch (error: any) {
         logger.error(
           { error: error.message },
@@ -403,7 +403,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await sendParkingSpaceAssignedToOther(applicants)
       ctx.status = 200
-      ctx.body = result.data
+      ctx.body = result
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
@@ -436,13 +436,13 @@ export const routes = (router: KoaRouter) => {
             subject: emailData.subject,
             body: emailData.text,
             triggeredByUser: emailData.triggeredByUser,
-            sendResult: result.data,
+            sendResult: result,
           })
         : []
 
       ctx.status = 200
       ctx.body = {
-        content: result.data,
+        content: result,
         ...(warnings.length && { warnings }),
         ...metadata,
       }
@@ -622,7 +622,7 @@ export const routes = (router: KoaRouter) => {
             : undefined
 
         const logParams = (sendResult?: {
-          data: { messages?: Array<{ messageId: string }> }
+          messages?: Array<{ messageId: string }>
         }) => ({
           ...(schedule && {
             id: schedule.bulkId,
@@ -640,7 +640,7 @@ export const routes = (router: KoaRouter) => {
           recipients: validRecipients.map((r, i) => ({
             contactCode: r.contactCode,
             toAddress: r.emailAddress,
-            externalMessageId: sendResult?.data.messages?.[i]?.messageId,
+            externalMessageId: sendResult?.messages?.[i]?.messageId,
             status: (schedule ? 'scheduled' : 'pending') as
               | 'scheduled'
               | 'pending',
@@ -713,7 +713,7 @@ export const routes = (router: KoaRouter) => {
               schedule.bulkId,
               validRecipients.flatMap((r, i) => {
                 const externalMessageId =
-                  sendResult.data.messages?.[i]?.messageId
+                  sendResult.messages?.[i]?.messageId
                 return externalMessageId
                   ? [{ toAddress: r.emailAddress, externalMessageId }]
                   : []

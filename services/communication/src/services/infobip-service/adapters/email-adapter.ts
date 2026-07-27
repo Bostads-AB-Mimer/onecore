@@ -104,7 +104,7 @@ export const sendEmail = async (message: Email) => {
       { to: message.to, subject: message.subject },
       'Sending email complete'
     )
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -144,7 +144,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -183,7 +183,7 @@ export const sendParkingSpaceAcceptOffer = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -222,7 +222,7 @@ export const sendNonScoredParkingSpaceApproved = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -259,7 +259,7 @@ export const sendNonScoredParkingSpaceDenied = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -286,7 +286,7 @@ export const sendParkingSpaceAssignedToOther = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -317,7 +317,7 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -357,7 +357,7 @@ export const sendBulkEmail = async (email: {
       { recipientCount: email.emails.length },
       'Bulk email sent successfully'
     )
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error, 'Error sending bulk email')
     throw error
