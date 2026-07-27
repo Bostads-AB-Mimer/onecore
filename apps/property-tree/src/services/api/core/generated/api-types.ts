@@ -267,7 +267,7 @@ export interface paths {
             text: string
             /**
              * Format: date-time
-             * @description ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 5 days ahead, Infobip's email limit); omit for immediate.
              */
             sendAt?: string
             logMeta?: {

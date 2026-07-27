@@ -123,18 +123,27 @@ export async function updateRecipientStatusByExternalId(
   status: communication.RecipientStatus,
   error?: string
 ): Promise<{ updatedCount: number }> {
-  const updatedCount = await db('message_recipient')
-    .where('externalMessageId', externalMessageId)
-    .update({
-      status,
-      statusUpdatedAt: new Date(),
-      error: error ?? null,
-    })
+  const query = db('message_recipient').where(
+    'externalMessageId',
+    externalMessageId
+  )
+  // A failure report for a never-sent cancelled message must not repaint a
+  // deliberate cancel as 'failed'. Anything else (delivered, future statuses
+  // like 'read') means the message really reached the recipient — let it win.
+  if (status === 'failed' || status === 'bounced') {
+    query.whereNot('status', 'cancelled')
+  }
+
+  const updatedCount = await query.update({
+    status,
+    statusUpdatedAt: new Date(),
+    error: error ?? null,
+  })
 
   if (updatedCount === 0) {
     logger.warn(
       { externalMessageId },
-      'no message_recipient found for external id'
+      'no updatable message_recipient found for external id'
     )
   }
 
@@ -147,8 +156,16 @@ export async function updateRecipientStatusByExternalId(
  * operation failed entirely, so no audit row should remain.
  */
 export async function deleteDispatch(dispatchId: string): Promise<void> {
-  await db('dispatch').where('id', dispatchId).delete()
-  logger.info({ dispatchId }, 'deleted dispatch')
+  try {
+    await db('dispatch').where('id', dispatchId).delete()
+    logger.info({ dispatchId }, 'deleted dispatch')
+  } catch (err) {
+    logger.error(
+      { err, dispatchId },
+      'communication-log-adapter.deleteDispatch'
+    )
+    throw err
+  }
 }
 
 /**
@@ -165,23 +182,31 @@ export async function setRecipientExternalIds(
 ): Promise<void> {
   if (pairs.length === 0) return
 
-  await db.raw(
-    `
-    UPDATE mr SET externalMessageId = j.externalMessageId
-    FROM message_recipient mr
-    JOIN OPENJSON(?) WITH (
-      toAddress NVARCHAR(255) '$.toAddress',
-      externalMessageId NVARCHAR(100) '$.externalMessageId'
-    ) j ON j.toAddress = mr.toAddress
-    WHERE mr.dispatchId = ?
-  `,
-    [JSON.stringify(pairs), dispatchId]
-  )
+  try {
+    await db.raw(
+      `
+      UPDATE mr SET externalMessageId = j.externalMessageId
+      FROM message_recipient mr
+      JOIN OPENJSON(?) WITH (
+        toAddress NVARCHAR(255) '$.toAddress',
+        externalMessageId NVARCHAR(100) '$.externalMessageId'
+      ) j ON j.toAddress = mr.toAddress
+      WHERE mr.dispatchId = ?
+    `,
+      [JSON.stringify(pairs), dispatchId]
+    )
 
-  logger.info(
-    { dispatchId, pairCount: pairs.length },
-    'backfilled recipient external ids'
-  )
+    logger.info(
+      { dispatchId, pairCount: pairs.length },
+      'backfilled recipient external ids'
+    )
+  } catch (err) {
+    logger.error(
+      { err, dispatchId },
+      'communication-log-adapter.setRecipientExternalIds'
+    )
+    throw err
+  }
 }
 
 /**
@@ -193,12 +218,20 @@ export async function setRecipientExternalIds(
 export async function cancelScheduledRecipients(
   dispatchId: string
 ): Promise<{ updatedCount: number }> {
-  const updatedCount = await db('message_recipient')
-    .where({ dispatchId, status: 'scheduled' })
-    .update({ status: 'cancelled', statusUpdatedAt: new Date() })
+  try {
+    const updatedCount = await db('message_recipient')
+      .where({ dispatchId, status: 'scheduled' })
+      .update({ status: 'cancelled', statusUpdatedAt: new Date() })
 
-  logger.info({ dispatchId, updatedCount }, 'cancelled scheduled recipients')
-  return { updatedCount }
+    logger.info({ dispatchId, updatedCount }, 'cancelled scheduled recipients')
+    return { updatedCount }
+  } catch (err) {
+    logger.error(
+      { err, dispatchId },
+      'communication-log-adapter.cancelScheduledRecipients'
+    )
+    throw err
+  }
 }
 
 /**
@@ -209,12 +242,20 @@ export async function updateDispatchSendAt(
   dispatchId: string,
   sendAt: Date
 ): Promise<{ updatedCount: number }> {
-  const updatedCount = await db('dispatch')
-    .where('id', dispatchId)
-    .update({ sendAt })
+  try {
+    const updatedCount = await db('dispatch')
+      .where('id', dispatchId)
+      .update({ sendAt })
 
-  logger.info({ dispatchId, sendAt }, 'rescheduled dispatch')
-  return { updatedCount }
+    logger.info({ dispatchId, sendAt }, 'rescheduled dispatch')
+    return { updatedCount }
+  } catch (err) {
+    logger.error(
+      { err, dispatchId },
+      'communication-log-adapter.updateDispatchSendAt'
+    )
+    throw err
+  }
 }
 
 /**

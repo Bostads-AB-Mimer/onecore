@@ -142,6 +142,37 @@ describe('POST /communication-log/dispatches/:id/cancel', () => {
     expect(cancelScheduledRecipientsMock).toHaveBeenCalledWith(DISPATCH_ID)
   })
 
+  it('retries the recipient update after a transient DB failure', async () => {
+    getDispatchByIdMock.mockResolvedValue(
+      dispatchWithStatuses('sms', ['scheduled', 'scheduled'])
+    )
+    cancelScheduledRecipientsMock
+      .mockRejectedValueOnce(new Error('deadlock'))
+      .mockResolvedValueOnce({ updatedCount: 2 })
+
+    const res = await cancel()
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      dispatchId: DISPATCH_ID,
+      cancelledRecipients: 2,
+    })
+    expect(cancelScheduledRecipientsMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('returns CANCEL_STATUS_UPDATE_FAILED when the DB update keeps failing after the Infobip cancel', async () => {
+    getDispatchByIdMock.mockResolvedValue(
+      dispatchWithStatuses('sms', ['scheduled'])
+    )
+    cancelScheduledRecipientsMock.mockRejectedValue(new Error('db down'))
+
+    const res = await cancel()
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('CANCEL_STATUS_UPDATE_FAILED')
+    expect(cancelScheduledRecipientsMock).toHaveBeenCalledTimes(2)
+  })
+
   it('uses the dispatch channel to pick the Infobip API (email)', async () => {
     getDispatchByIdMock.mockResolvedValue(
       dispatchWithStatuses('email', ['scheduled'])

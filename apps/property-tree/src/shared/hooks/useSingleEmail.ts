@@ -24,7 +24,7 @@ interface UseSingleEmailOptions {
     text: string,
     sendAt?: string
   ) => Promise<{
-    content: { totalSent: number; totalInvalid: number }
+    content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
   }>
 }
@@ -60,14 +60,17 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
         body,
         sendAt
       ),
-    onSuccess: (result, { sendAt }) => {
+    onSuccess: (result) => {
       // Refresh any open tenant communication log so the new message appears.
       queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
+      // Key on the server's outcome, not the request: a sendAt within the
+      // grace window is sent immediately (no scheduledFor in the response).
+      const scheduledFor = result.content.scheduledFor
       toast({
-        title: sendAt ? 'Mejl schemalagt' : 'Mejl skickat',
+        title: scheduledFor ? 'Mejl schemalagt' : 'Mejl skickat',
         description: `${
-          sendAt
-            ? `Skickas ${formatScheduleTimestamp(sendAt)} till`
+          scheduledFor
+            ? `Skickas ${formatScheduleTimestamp(scheduledFor)} till`
             : 'Skickades till'
         } ${result.content.totalSent} mottagare${
           result.content.totalInvalid > 0

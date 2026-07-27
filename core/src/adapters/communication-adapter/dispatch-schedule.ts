@@ -1,4 +1,5 @@
 import { loggedAxios as axios } from '@onecore/utilities'
+import { communication } from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from '../types'
@@ -31,10 +32,7 @@ const mapError = (
 export const cancelDispatch = async (
   id: string
 ): Promise<
-  AdapterResult<
-    { dispatchId: string; cancelledRecipients: number },
-    ScheduleError
-  >
+  AdapterResult<communication.CancelDispatchResponse, ScheduleError>
 > => {
   try {
     const result = await axios.post(
@@ -50,7 +48,7 @@ export const rescheduleDispatch = async (
   id: string,
   sendAt: string
 ): Promise<
-  AdapterResult<{ dispatchId: string; sendAt: string }, ScheduleError>
+  AdapterResult<communication.RescheduleDispatchResponse, ScheduleError>
 > => {
   try {
     const result = await axios.post(

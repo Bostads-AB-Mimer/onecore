@@ -397,7 +397,7 @@ export const routes = (router: KoaRouter) => {
           // logger.error only. Mirrors bulk email.
           try {
             await logOutboundDispatch(logParams(sendResult))
-          } catch (logError: any) {
+          } catch (logError) {
             logger.error(
               { err: logError, messageType: 'bulk_sms' },
               'Failed to write communication-log entry for bulk SMS'

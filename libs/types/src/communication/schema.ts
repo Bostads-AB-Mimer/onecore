@@ -122,3 +122,16 @@ export const CustomerMessageSchema = z.object({
   dispatch: DispatchSchema,
   recipient: MessageRecipientSchema,
 })
+
+// Response shapes for the scheduled-dispatch management routes, shared with
+// core's communication adapter so the shapes can't drift.
+export const CancelDispatchResponseSchema = z.object({
+  dispatchId: z.string().uuid(),
+  // 0 when the dispatch was already cancelled (idempotent no-op).
+  cancelledRecipients: z.number().int().nonnegative(),
+})
+
+export const RescheduleDispatchResponseSchema = z.object({
+  dispatchId: z.string().uuid(),
+  sendAt: z.string(),
+})

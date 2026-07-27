@@ -31,16 +31,28 @@ const ErrorResponseSchema = z.object({
   message: z.string().optional(),
 })
 
-const CancelDispatchResponseSchema = z.object({
-  dispatchId: z.string().uuid(),
-  // 0 when the dispatch was already cancelled (idempotent no-op).
-  cancelledRecipients: z.number().int().nonnegative(),
-})
+const RETRY_DELAY_MS = 250
 
-const RescheduleDispatchResponseSchema = z.object({
-  dispatchId: z.string().uuid(),
-  sendAt: z.string(),
-})
+// Retry a transient failure a few times before giving up. Used where an
+// Infobip mutation has already succeeded and the follow-up DB write is the
+// only thing standing between us and a permanently divergent state.
+async function withRetries<T>(
+  attempts: number,
+  fn: () => Promise<T>
+): Promise<T> {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+      }
+    }
+  }
+  throw lastError
+}
 
 export const routes = (router: OkapiRouter) => {
   router.post(
@@ -127,7 +139,7 @@ export const routes = (router: OkapiRouter) => {
         id: { description: 'Dispatch id (UUID)', schema: z.string().uuid() },
       },
       response: {
-        200: CancelDispatchResponseSchema,
+        200: communication.CancelDispatchResponseSchema,
         400: ErrorResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
@@ -156,12 +168,26 @@ export const routes = (router: OkapiRouter) => {
         }
 
         await cancelScheduledBulk(dispatch.dispatch.channel, ctx.params.id)
-        const { updatedCount } = await cancelScheduledRecipients(ctx.params.id)
 
-        ctx.status = 200
-        ctx.body = {
-          dispatchId: ctx.params.id,
-          cancelledRecipients: updatedCount,
+        // Infobip has cancelled the bulk — from here the DB write must land,
+        // or the rows stay 'scheduled' forever for a bulk that will never
+        // send (nothing else writes 'cancelled'). Retry before failing.
+        try {
+          const { updatedCount } = await withRetries(2, () =>
+            cancelScheduledRecipients(ctx.params.id)
+          )
+          ctx.status = 200
+          ctx.body = {
+            dispatchId: ctx.params.id,
+            cancelledRecipients: updatedCount,
+          }
+        } catch (error) {
+          logger.error(
+            { err: error, dispatchId: ctx.params.id },
+            "bulk cancelled at Infobip but recipients could not be marked 'cancelled' — log still shows scheduled"
+          )
+          ctx.status = 500
+          ctx.body = { error: 'CANCEL_STATUS_UPDATE_FAILED' }
         }
       } catch (error) {
         if (error instanceof ScheduledBulkConflictError) {
@@ -171,9 +197,7 @@ export const routes = (router: OkapiRouter) => {
         }
         logger.error({ err: error }, 'failed to cancel scheduled dispatch')
         ctx.status = 500
-        ctx.body = {
-          error: error instanceof Error ? error.message : 'unknown error',
-        }
+        ctx.body = { error: 'CANCEL_FAILED' }
       }
     }
   )
@@ -196,7 +220,7 @@ export const routes = (router: OkapiRouter) => {
         sendAt: z.string().datetime({ offset: true }),
       }),
       response: {
-        200: RescheduleDispatchResponseSchema,
+        200: communication.RescheduleDispatchResponseSchema,
         400: ErrorResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
@@ -254,9 +278,7 @@ export const routes = (router: OkapiRouter) => {
         }
         logger.error({ err: error }, 'failed to reschedule dispatch')
         ctx.status = 500
-        ctx.body = {
-          error: error instanceof Error ? error.message : 'unknown error',
-        }
+        ctx.body = { error: 'RESCHEDULE_FAILED' }
       }
     }
   )

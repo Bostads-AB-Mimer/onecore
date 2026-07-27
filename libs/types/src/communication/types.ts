@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  CancelDispatchResponseSchema,
   ChannelSchema,
   CustomerMessageSchema,
   DirectionSchema,
@@ -10,6 +11,7 @@ import {
   LogOutboundRecipientSchema,
   MessageRecipientSchema,
   RecipientStatusSchema,
+  RescheduleDispatchResponseSchema,
   TemplateSchema,
 } from './schema'
 
@@ -29,3 +31,10 @@ export type DispatchWithRecipients = z.infer<
   typeof DispatchWithRecipientsSchema
 >
 export type CustomerMessage = z.infer<typeof CustomerMessageSchema>
+
+export type CancelDispatchResponse = z.infer<
+  typeof CancelDispatchResponseSchema
+>
+export type RescheduleDispatchResponse = z.infer<
+  typeof RescheduleDispatchResponseSchema
+>

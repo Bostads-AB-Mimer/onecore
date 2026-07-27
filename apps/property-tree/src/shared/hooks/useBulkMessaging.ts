@@ -32,7 +32,7 @@ export interface UseBulkMessagingOptions<TItem> {
     message: string,
     sendAt?: string
   ) => Promise<{
-    content: { totalSent: number; totalInvalid: number }
+    content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
   }>
   /** Send bulk email - returns the result plus any non-blocking warnings */
@@ -42,7 +42,7 @@ export interface UseBulkMessagingOptions<TItem> {
     body: string,
     sendAt?: string
   ) => Promise<{
-    content: { totalSent: number; totalInvalid: number }
+    content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
   }>
 }
@@ -283,11 +283,14 @@ export function useBulkMessaging<TItem>({
 
         const result = await sendBulkSms(recipients, message, sendAt)
 
+        // Key on the server's outcome, not the request: a sendAt within the
+        // grace window is sent immediately (no scheduledFor in the response).
+        const scheduledFor = result.content.scheduledFor
         toast({
-          title: sendAt ? 'SMS schemalagt' : 'SMS skickat',
+          title: scheduledFor ? 'SMS schemalagt' : 'SMS skickat',
           description: `${
-            sendAt
-              ? `Skickas ${formatScheduleTimestamp(sendAt)} till`
+            scheduledFor
+              ? `Skickas ${formatScheduleTimestamp(scheduledFor)} till`
               : 'Skickades till'
           } ${result.content.totalSent} mottagare${
             result.content.totalInvalid > 0
@@ -337,11 +340,14 @@ export function useBulkMessaging<TItem>({
 
         const result = await sendBulkEmail(recipients, subject, body, sendAt)
 
+        // Key on the server's outcome, not the request: a sendAt within the
+        // grace window is sent immediately (no scheduledFor in the response).
+        const scheduledFor = result.content.scheduledFor
         toast({
-          title: sendAt ? 'E-post schemalagd' : 'E-post skickat',
+          title: scheduledFor ? 'E-post schemalagd' : 'E-post skickat',
           description: `${
-            sendAt
-              ? `Skickas ${formatScheduleTimestamp(sendAt)} till`
+            scheduledFor
+              ? `Skickas ${formatScheduleTimestamp(scheduledFor)} till`
               : 'Skickade till'
           } ${result.content.totalSent} mottagare${
             result.content.totalInvalid > 0
