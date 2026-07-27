@@ -712,8 +712,7 @@ export const routes = (router: KoaRouter) => {
             await setRecipientExternalIds(
               schedule.bulkId,
               validRecipients.flatMap((r, i) => {
-                const externalMessageId =
-                  sendResult.messages?.[i]?.messageId
+                const externalMessageId = sendResult.messages?.[i]?.messageId
                 return externalMessageId
                   ? [{ toAddress: r.emailAddress, externalMessageId }]
                   : []
