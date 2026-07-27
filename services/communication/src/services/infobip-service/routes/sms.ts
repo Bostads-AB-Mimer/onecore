@@ -1,24 +1,19 @@
 import KoaRouter from '@koa/router'
-import { randomUUID } from 'node:crypto'
 import { validator as phoneValidator, normalize } from 'telefonnummer'
 import { ParkingSpaceOfferSms, WorkOrderSms, BulkSms } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
 
 import { evaluateSendAt, MAX_SCHEDULE_DAYS_AHEAD } from '../schedule'
+import { runScheduledBulk } from '../bulk-send'
 
 import {
   sendParkingSpaceOfferSms,
   sendWorkOrderSms,
   sendBulkSms,
-  InfobipSendSmsResponse,
 } from '../adapters/sms-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import {
-  deleteDispatch,
-  logOutboundDispatch,
-  setRecipientExternalIds,
-} from '../../communication-log-service/adapters/db'
+import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
 
 // SMS sender used for fromAddress when logging outbound SMS dispatches.
 // Mirrors the constant in sms-adapter.ts (kept private there).
@@ -283,127 +278,33 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        // Scheduled sends pre-generate the dispatch id: it doubles as the
-        // Infobip bulkId (the cancel/reschedule handle).
-        const schedule =
-          scheduleEvaluation.kind === 'scheduled'
-            ? { bulkId: randomUUID(), sendAt: scheduleEvaluation.sendAt }
-            : undefined
-
-        const logParams = (sendResult?: InfobipSendSmsResponse) => ({
-          ...(schedule && {
-            id: schedule.bulkId,
-            sendAt: schedule.sendAt,
-          }),
-          channel: 'sms' as const,
-          fromAddress: SMS_SENDER,
-          body: body.text,
+        const outcome = await runScheduledBulk({
+          channel: 'sms',
           messageType: 'bulk_sms',
+          fromAddress: SMS_SENDER,
           provider: SMS_PROVIDER,
-          triggeredByUser: body.logMeta?.triggeredByUser,
-          audienceCriteria: body.logMeta?.audienceCriteria,
-          templateId: body.logMeta?.templateId,
-          recipients: validRecipients.map((r, i) => ({
+          body: body.text,
+          logMeta: body.logMeta,
+          recipients: validRecipients.map((r) => ({
             contactCode: r.contactCode,
             toAddress: r.normalizedPhone,
-            externalMessageId: sendResult?.messages?.[i]?.messageId,
-            status: (schedule ? 'scheduled' : 'pending') as
-              | 'scheduled'
-              | 'pending',
           })),
+          evaluation: scheduleEvaluation,
+          send: (schedule) =>
+            sendBulkSms({
+              phoneNumbers: validRecipients.map((r) => r.normalizedPhone),
+              text: body.text,
+              schedule,
+            }),
         })
-
-        // Scheduled sends log BEFORE calling Infobip: the dispatch row is the
-        // only cancel/reschedule handle, so it must exist whenever a schedule
-        // exists. If the log write fails Infobip is never called; if Infobip
-        // rejects, we undo our own row — compensating against our own DB
-        // instead of a remote provider.
-        if (schedule) {
-          try {
-            await logOutboundDispatch(logParams())
-          } catch (logError) {
-            logger.error(
-              { err: logError, messageType: 'bulk_sms' },
-              'Failed to write communication-log entry for scheduled bulk SMS — nothing was sent'
-            )
-            ctx.status = 500
-            ctx.body = {
-              reason: 'SCHEDULE_LOG_FAILED',
-              message:
-                'The scheduled send could not be logged. Nothing was sent — try again.',
-              ...metadata,
-            }
-            return
+        if (!outcome.ok) {
+          ctx.status = 500
+          ctx.body = {
+            reason: outcome.reason,
+            message: outcome.message,
+            ...metadata,
           }
-          logger.info(
-            {
-              dispatchId: schedule.bulkId,
-              sendAt: schedule.sendAt.toISOString(),
-              recipientCount: validRecipients.length,
-            },
-            'Scheduling bulk SMS'
-          )
-        }
-
-        let sendResult: InfobipSendSmsResponse
-        try {
-          sendResult = await sendBulkSms({
-            phoneNumbers: validRecipients.map((r) => r.normalizedPhone),
-            text: body.text,
-            schedule,
-          })
-        } catch (sendError) {
-          if (schedule) {
-            try {
-              await deleteDispatch(schedule.bulkId)
-            } catch (deleteError) {
-              // Worst case: a stale 'scheduled' row that never sends —
-              // harmless next to a live unmanaged bulk, but log it.
-              logger.error(
-                { err: deleteError, dispatchId: schedule.bulkId },
-                'Failed to delete dispatch after rejected schedule — stale scheduled row remains'
-              )
-            }
-          }
-          throw sendError
-        }
-
-        const warnings: string[] = []
-        if (schedule) {
-          // Backfill the provider message ids the log-before-send row lacks.
-          // Best-effort: on failure only delivery-report matching degrades;
-          // cancel/reschedule key on the dispatch id and are unaffected.
-          try {
-            await setRecipientExternalIds(
-              schedule.bulkId,
-              validRecipients.flatMap((r, i) => {
-                const externalMessageId = sendResult.messages?.[i]?.messageId
-                return externalMessageId
-                  ? [{ toAddress: r.normalizedPhone, externalMessageId }]
-                  : []
-              })
-            )
-          } catch (backfillError) {
-            logger.error(
-              { err: backfillError, dispatchId: schedule.bulkId },
-              'Failed to backfill externalMessageIds — delivery reports will not match this dispatch'
-            )
-            warnings.push('Communication log is missing provider message ids')
-          }
-        } else {
-          // Immediate send: the SMS already went out, so a logging failure
-          // must not fail the request (that would falsely report the send as
-          // failed). Warn non-blockingly; the real error stays in
-          // logger.error only. Mirrors bulk email.
-          try {
-            await logOutboundDispatch(logParams(sendResult))
-          } catch (logError) {
-            logger.error(
-              { err: logError, messageType: 'bulk_sms' },
-              'Failed to write communication-log entry for bulk SMS'
-            )
-            warnings.push('Communication log failed')
-          }
+          return
         }
 
         const successful = validRecipients.map((r) => r.normalizedPhone)
@@ -414,12 +315,12 @@ export const routes = (router: KoaRouter) => {
             invalid: invalidPhones,
             totalSent: successful.length,
             totalInvalid: invalidPhones.length,
-            ...(schedule && {
-              dispatchId: schedule.bulkId,
-              scheduledFor: schedule.sendAt.toISOString(),
+            ...(outcome.schedule && {
+              dispatchId: outcome.schedule.bulkId,
+              scheduledFor: outcome.schedule.sendAt.toISOString(),
             }),
           },
-          ...(warnings.length && { warnings }),
+          ...(outcome.warnings.length && { warnings: outcome.warnings }),
           ...metadata,
         }
       } catch (error: any) {
