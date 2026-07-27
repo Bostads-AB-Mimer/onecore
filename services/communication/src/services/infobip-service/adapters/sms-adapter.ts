@@ -165,7 +165,7 @@ export const sendBulkSms = async (sms: {
     const response = await sendSmsV3(destinations, sms.text, sms.schedule)
     logger.info(
       { recipientCount: sms.phoneNumbers.length },
-      'Bulk SMS sent successfully'
+      'Bulk SMS submitted to Infobip'
     )
     return response
   } catch (error) {

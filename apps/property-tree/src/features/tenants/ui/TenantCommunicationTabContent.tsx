@@ -181,9 +181,14 @@ function MessageRow({
     rescheduleLocal,
     MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]
   )
-  const rescheduleBounds = getScheduleBounds(
-    MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]
-  )
+  const rescheduleBounds = {
+    ...getScheduleBounds(MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]),
+    // Infobip only postpones — it silently ignores moves to an earlier time —
+    // so the picker floor is one minute after the current send time.
+    min: toDatetimeLocalValue(
+      new Date(new Date(dispatch.sendAt).getTime() + 60 * 1000)
+    ),
+  }
 
   const handleRescheduleClick = async () => {
     if (rescheduleError) return

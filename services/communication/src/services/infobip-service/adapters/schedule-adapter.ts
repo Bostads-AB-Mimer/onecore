@@ -81,6 +81,9 @@ export async function cancelScheduledBulk(
 // Moves the bulk's send time. Infobip only reschedules PAUSED bulks — a
 // PENDING bulk gets 404 "No bulks eligible for rescheduling" (undocumented;
 // verified live 2026-07-14) — so the sequence is pause -> move -> resume.
+// Only LATER times actually apply: an earlier move returns 200 and shows in
+// GET /bulks, but messages still fire at the old time (verified live
+// 2026-07-27). Callers must enforce sendAt > the current schedule.
 export async function rescheduleScheduledBulk(
   channel: 'sms' | 'email',
   bulkId: string,

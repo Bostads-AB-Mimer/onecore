@@ -355,7 +355,7 @@ export const sendBulkEmail = async (email: {
 
     logger.info(
       { recipientCount: email.emails.length },
-      'Bulk email sent successfully'
+      'Bulk email submitted to Infobip'
     )
     return response
   } catch (error) {

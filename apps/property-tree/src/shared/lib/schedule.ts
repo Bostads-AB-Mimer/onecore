@@ -63,6 +63,8 @@ export const scheduleSendErrorText = (code: unknown): string | null => {
       return 'Tidpunkten måste vara i framtiden.'
     case 'SEND_AT_TOO_FAR_AHEAD':
       return 'Tidpunkten är för långt fram i tiden.'
+    case 'SEND_AT_NOT_LATER':
+      return 'Utskicket kan bara flyttas till en senare tid. För en tidigare tid: avbryt och schemalägg ett nytt utskick.'
     case 'SCHEDULE_LOG_FAILED':
       return 'Schemaläggningen misslyckades. Ingenting skickades — försök igen.'
     case 'TOO_MANY_RECIPIENTS':

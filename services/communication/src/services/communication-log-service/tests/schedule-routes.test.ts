@@ -62,12 +62,14 @@ app.use(okapi.routes())
 
 const DISPATCH_ID = '5a748f19-fca0-4562-9f8d-05eb0e16d076'
 
-// Only the fields the routes actually read.
+// Only the fields the routes actually read. Default sendAt is 30 minutes out
+// so reschedule targets a day or more ahead count as "later".
 const dispatchWithStatuses = (
   channel: 'sms' | 'email',
-  statuses: string[]
+  statuses: string[],
+  sendAt: string | Date = new Date(Date.now() + 30 * 60 * 1000)
 ) => ({
-  dispatch: { id: DISPATCH_ID, channel },
+  dispatch: { id: DISPATCH_ID, channel, sendAt },
   recipients: statuses.map((status, i) => ({ id: `r${i}`, status })),
 })
 
@@ -249,6 +251,18 @@ describe('POST /communication-log/dispatches/:id/reschedule', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('SEND_AT_TOO_SOON')
+    expect(rescheduleScheduledBulkMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects a sendAt at or before the current schedule (Infobip only postpones)', async () => {
+    getDispatchByIdMock.mockResolvedValue(
+      dispatchWithStatuses('sms', ['scheduled'], daysFromNow(3))
+    )
+
+    const res = await reschedule(daysFromNow(2))
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('SEND_AT_NOT_LATER')
     expect(rescheduleScheduledBulkMock).not.toHaveBeenCalled()
   })
 

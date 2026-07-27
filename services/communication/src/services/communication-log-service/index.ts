@@ -205,12 +205,14 @@ export const routes = (router: OkapiRouter) => {
   router.post(
     '/communication-log/dispatches/:id/reschedule',
     {
-      summary: 'Move a scheduled dispatch to a new send time',
+      summary: 'Move a scheduled dispatch to a later send time',
       description:
         'Reschedules the Infobip bulk (bulkId = dispatch id) and updates the ' +
-        "dispatch's sendAt. The new time must be in the future and within " +
-        'the channel cap (sms 90 days, email 5 days). 409 when Infobip ' +
-        'refuses (bulk already sent or processing).',
+        "dispatch's sendAt. The new time must be LATER than the currently " +
+        'scheduled time — Infobip can postpone a queued bulk but silently ' +
+        'ignores moves to an earlier time — and within the channel cap ' +
+        '(sms 90 days, email 5 days). 409 when Infobip refuses (bulk ' +
+        'already sent or processing).',
       tags: ['Communication log'],
       params: {
         id: { description: 'Dispatch id (UUID)', schema: z.string().uuid() },
@@ -255,6 +257,13 @@ export const routes = (router: OkapiRouter) => {
         if (evaluation.kind !== 'scheduled') {
           ctx.status = 400
           ctx.body = { error: 'SEND_AT_TOO_SOON' }
+          return
+        }
+        // Infobip can postpone a queued bulk but silently ignores moves to an
+        // earlier time (verified live 2026-07-27) — only allow later times.
+        if (evaluation.sendAt <= new Date(dispatch.dispatch.sendAt)) {
+          ctx.status = 400
+          ctx.body = { error: 'SEND_AT_NOT_LATER' }
           return
         }
 
