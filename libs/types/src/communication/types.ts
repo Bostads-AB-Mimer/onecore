@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  CancelDispatchResponseSchema,
   ChannelSchema,
   CreateReleaseNoteParamsSchema,
   CreateReleaseNoteSchema,
@@ -15,6 +16,7 @@ import {
   ReleaseNoteAppSchema,
   ReleaseNoteCategorySchema,
   ReleaseNoteSchema,
+  RescheduleDispatchResponseSchema,
   TemplateSchema,
   UpdateReleaseNoteSchema,
 } from './schema'
@@ -43,4 +45,10 @@ export type CreateReleaseNote = z.infer<typeof CreateReleaseNoteSchema>
 export type UpdateReleaseNote = z.infer<typeof UpdateReleaseNoteSchema>
 export type CreateReleaseNoteParams = z.infer<
   typeof CreateReleaseNoteParamsSchema
+>
+export type CancelDispatchResponse = z.infer<
+  typeof CancelDispatchResponseSchema
+>
+export type RescheduleDispatchResponse = z.infer<
+  typeof RescheduleDispatchResponseSchema
 >

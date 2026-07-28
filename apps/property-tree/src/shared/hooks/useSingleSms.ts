@@ -1,6 +1,11 @@
 import { useCallback, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import {
+  formatScheduleTimestamp,
+  scheduleSendErrorText,
+} from '@/shared/lib/schedule'
+
 import { useToast } from './useToast'
 
 // A fully-resolved SMS recipient. Having one is the proof we can send: every
@@ -15,9 +20,10 @@ export interface SingleSmsRecipient {
 interface UseSingleSmsOptions {
   sendSms: (
     recipients: { contactCode: string; phoneNumber: string }[],
-    message: string
+    message: string,
+    sendAt?: string
   ) => Promise<{
-    content: { totalSent: number; totalInvalid: number }
+    content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
   }>
 }
@@ -34,9 +40,11 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
     mutationFn: ({
       recipient,
       message,
+      sendAt,
     }: {
       recipient: SingleSmsRecipient
       message: string
+      sendAt?: string
     }) =>
       sendSms(
         [
@@ -45,14 +53,22 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
             phoneNumber: recipient.phoneNumber,
           },
         ],
-        message
+        message,
+        sendAt
       ),
     onSuccess: (result) => {
       // Refresh any open tenant communication log so the new message appears.
       queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
+      // Key on the server's outcome, not the request: a sendAt within the
+      // grace window is sent immediately (no scheduledFor in the response).
+      const scheduledFor = result.content.scheduledFor
       toast({
-        title: 'SMS skickat',
-        description: `Skickades till ${result.content.totalSent} mottagare${
+        title: scheduledFor ? 'SMS schemalagt' : 'SMS skickat',
+        description: `${
+          scheduledFor
+            ? `Skickas ${formatScheduleTimestamp(scheduledFor)} till`
+            : 'Skickades till'
+        } ${result.content.totalSent} mottagare${
           result.content.totalInvalid > 0
             ? `. ${result.content.totalInvalid} ogiltiga nummer.`
             : ''
@@ -85,10 +101,10 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const closeSms = useCallback(() => setRecipient(null), [])
 
   const handleSendSms = useCallback(
-    async (message: string) => {
+    async (message: string, sendAt?: string) => {
       if (!recipient) return
       try {
-        await sendMutation.mutateAsync({ recipient, message })
+        await sendMutation.mutateAsync({ recipient, message, sendAt })
       } catch {
         // Surfaced via onError; swallow so the modal doesn't see a rejection.
       }
@@ -108,7 +124,15 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
 function extractErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   if (error && typeof error === 'object') {
-    const apiError = error as { message?: string; reason?: string }
+    const apiError = error as {
+      message?: string
+      reason?: string
+      error?: string
+    }
+    // Core forwards the communication service's error code in `error`
+    // (e.g. SEND_AT_TOO_FAR_AHEAD); show its Swedish text when known.
+    const mapped = scheduleSendErrorText(apiError.error ?? apiError.reason)
+    if (mapped) return mapped
     if (apiError.message) return apiError.message
     if (apiError.reason) return apiError.reason
   }

@@ -73,6 +73,8 @@ interface BulkSms {
   phoneNumbers?: string[]
   recipients?: BulkSmsRecipient[]
   text: string
+  // ISO 8601 instant (with offset/Z). Schedules the send; omit for immediate.
+  sendAt?: string
   logMeta?: CommunicationLogMeta
 }
 
@@ -82,6 +84,8 @@ interface BulkEmail {
   recipients?: BulkEmailRecipient[]
   subject: string
   text: string
+  // ISO 8601 instant (with offset/Z). Schedules the send; omit for immediate.
+  sendAt?: string
   logMeta?: CommunicationLogMeta
 }
 
@@ -90,6 +94,10 @@ interface BulkSmsResult {
   invalid: string[]
   totalSent: number
   totalInvalid: number
+  // Present when the send was scheduled: the dispatch id (= provider bulkId,
+  // the handle for cancel/reschedule) and the target time as an ISO instant.
+  dispatchId?: string
+  scheduledFor?: string
 }
 
 interface BulkEmailResult {
@@ -97,6 +105,10 @@ interface BulkEmailResult {
   invalid: string[]
   totalSent: number
   totalInvalid: number
+  // Present when the send was scheduled: the dispatch id (= provider bulkId,
+  // the handle for cancel/reschedule) and the target time as an ISO instant.
+  dispatchId?: string
+  scheduledFor?: string
 }
 
 interface WorkOrderEmail extends Email {
