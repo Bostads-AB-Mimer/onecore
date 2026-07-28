@@ -106,6 +106,7 @@ const LeasesPage = () => {
   const {
     allResultsSelected,
     selectedCount,
+    excludedRecipientsCount,
     toggleSelection,
     toggleSelectAll,
     clearSelection,
@@ -364,6 +365,7 @@ const LeasesPage = () => {
         onOpenChange={setShowSmsModal}
         recipients={smsRecipients}
         totalSelectedItems={selectedCount}
+        excludedRecipientsCount={excludedRecipientsCount}
         onSend={handleSendSms}
       />
 
@@ -372,6 +374,7 @@ const LeasesPage = () => {
         onOpenChange={setShowEmailModal}
         recipients={emailRecipients}
         totalSelectedItems={selectedCount}
+        excludedRecipientsCount={excludedRecipientsCount}
         onSend={handleSendEmail}
       />
     </ViewLayout>

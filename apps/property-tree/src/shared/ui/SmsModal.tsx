@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  AlertTriangle,
-  ChevronDown,
-  Info,
-  MessageSquare,
-  User,
-  X,
-} from 'lucide-react'
+import { AlertTriangle, ChevronDown, Info, MessageSquare } from 'lucide-react'
 
+import { useRemovableRecipients } from '@/shared/hooks/useRemovableRecipients'
 import { cn } from '@/shared/lib/utils'
-import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
@@ -19,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
+import { RecipientChipList } from '@/shared/ui/RecipientChipList'
 import { Textarea } from '@/shared/ui/Textarea'
 
 const MAX_SMS_LENGTH = 1600
@@ -46,11 +40,14 @@ interface SmsModalSingleProps extends SmsModalBaseProps {
   onSend: (message: string) => Promise<void>
   recipients?: undefined
   totalSelectedItems?: undefined
+  excludedRecipientsCount?: undefined
 }
 
 interface SmsModalBulkProps extends SmsModalBaseProps {
   recipients: SmsRecipient[]
   totalSelectedItems?: number
+  /** Contacts excluded by unchecking rows in the table (all-results mode) */
+  excludedRecipientsCount?: number
   onSend?: (message: string, recipients: SmsRecipient[]) => Promise<void>
   recipientName?: undefined
   phoneNumber?: undefined
@@ -66,16 +63,14 @@ export function SmsModal(props: SmsModalProps) {
   const [isSending, setIsSending] = useState(false)
   const [showCostConfirmation, setShowCostConfirmation] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
-  // Recipients manually removed via the ✕ on their chip (bulk mode only)
-  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
 
   // Single reset path for all per-session state, on both open and close.
   // Esc/overlay dismissal calls onOpenChange directly and bypasses
   // handleClose, so nothing may rely on handleClose for cleanup.
+  // (useRemovableRecipients resets its removal state on `open` the same way.)
   useEffect(() => {
     setMessage('')
     setShowCostConfirmation(false)
-    setRemovedIds(new Set())
     setShowAllInvalid(false)
   }, [open])
 
@@ -83,10 +78,8 @@ export function SmsModal(props: SmsModalProps) {
 
   const recipients = props.recipients ?? []
 
-  const activeRecipients = useMemo(
-    () => recipients.filter((r) => !removedIds.has(r.id)),
-    [recipients, removedIds]
-  )
+  const { activeRecipients, removedCount, removeRecipient } =
+    useRemovableRecipients(recipients, open)
 
   const { validRecipients, invalidRecipients } = useMemo(() => {
     if (!isBulk) return { validRecipients: [], invalidRecipients: [] }
@@ -94,12 +87,6 @@ export function SmsModal(props: SmsModalProps) {
     const invalid = activeRecipients.filter((r) => !hasPhoneNumber(r.phone))
     return { validRecipients: valid, invalidRecipients: invalid }
   }, [isBulk, activeRecipients])
-
-  const removeRecipient = useCallback((id: string) => {
-    setRemovedIds((prev) => new Set(prev).add(id))
-  }, [])
-
-  const removedCount = recipients.length - activeRecipients.length
 
   const estimatedCost = validRecipients.length * SMS_COST_SEK
   const duplicatesRemoved =
@@ -160,14 +147,24 @@ export function SmsModal(props: SmsModalProps) {
     onOpenChange(false)
   }
 
+  // Contacts excluded via table-row unchecking, shown so the header numbers
+  // reconcile with the selected-contract count
+  const excludedSuffix =
+    isBulk && props.excludedRecipientsCount
+      ? ` \u00b7 ${props.excludedRecipientsCount} ${
+          props.excludedRecipientsCount === 1 ? 'exkluderad' : 'exkluderade'
+        }`
+      : ''
+
   // Deliberately based on the ORIGINAL recipient list: this line explains the
   // contracts\u2192contacts deduplication, which manual removals must not skew.
   // Removals are surfaced separately next to the "Mottagare" label.
   const description = isBulk
-    ? props.totalSelectedItems != null &&
+    ? (props.totalSelectedItems != null &&
       props.totalSelectedItems !== recipients.length
-      ? `${props.totalSelectedItems} valda hyreskontrakt \u2192 ${recipients.length} unika kontakter`
-      : `Skicka SMS till ${validRecipients.length} av ${recipients.length} valda kunder`
+        ? `${props.totalSelectedItems} valda hyreskontrakt \u2192 ${recipients.length} unika kontakter`
+        : `Skicka SMS till ${validRecipients.length} av ${recipients.length} valda kunder`) +
+      excludedSuffix
     : `Till ${props.recipientName} (${props.phoneNumber})`
 
   return (
@@ -194,26 +191,10 @@ export function SmsModal(props: SmsModalProps) {
                     </span>
                   )}
                 </label>
-                <div className="mt-2 flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 border rounded-md bg-muted/30">
-                  {validRecipients.map((recipient) => (
-                    <Badge
-                      key={recipient.id}
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      <User className="h-3 w-3" />
-                      {recipient.name}
-                      <button
-                        type="button"
-                        aria-label={`Ta bort ${recipient.name}`}
-                        className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
-                        onClick={() => removeRecipient(recipient.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
+                <RecipientChipList
+                  recipients={validRecipients}
+                  onRemove={removeRecipient}
+                />
               </div>
 
               {(duplicatesRemoved > 0 || invalidRecipients.length > 0) && (
