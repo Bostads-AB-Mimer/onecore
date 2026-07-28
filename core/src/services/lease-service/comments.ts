@@ -29,10 +29,6 @@ export const routes = (router: KoaRouter) => {
     typeof leasing.v1.AddCommentRequestParamsSchema
   >
 
-  type UpdateCommentRequest = z.infer<
-    typeof leasing.v1.UpdateCommentRequestParamsSchema
-  >
-
   router.post('(.*)/comments/:targetType/thread/:targetId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -112,6 +108,15 @@ export const routes = (router: KoaRouter) => {
    *          application/json:
    *             schema:
    *               type: object
+   *               required:
+   *                 - type
+   *                 - comment
+   *               properties:
+   *                 type:
+   *                   type: string
+   *                   enum: [COMMENT, WARNING, STOP]
+   *                 comment:
+   *                   type: string
    *     responses:
    *       200:
    *         description: The updated comment
@@ -123,6 +128,8 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: object
    *                   description: The updated comment
+   *       400:
+   *         description: Invalid request body
    *       404:
    *         description: The comment was not found in the given thread
    *       500:
@@ -137,12 +144,26 @@ export const routes = (router: KoaRouter) => {
 
       const { targetType, targetId, commentId } = ctx.params
       const threadId = { targetType, targetId: Number(targetId) }
-      const comment = <UpdateCommentRequest>ctx.request.body
+
+      const parseResult = leasing.v1.UpdateCommentRequestParamsSchema.safeParse(
+        ctx.request.body
+      )
+
+      if (!parseResult.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          invalid: ctx.request.body,
+          detail: parseResult.error,
+          ...metadata,
+        }
+        return
+      }
 
       const result = await leasingAdapter.updateComment(
         threadId,
         Number(commentId),
-        comment
+        parseResult.data
       )
 
       if (!result.ok) {

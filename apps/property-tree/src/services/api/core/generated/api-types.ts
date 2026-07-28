@@ -510,7 +510,11 @@ export interface paths {
       }
       requestBody: {
         content: {
-          'application/json': Record<string, never>
+          'application/json': {
+            /** @enum {string} */
+            type: 'COMMENT' | 'WARNING' | 'STOP'
+            comment: string
+          }
         }
       }
       responses: {
@@ -522,6 +526,10 @@ export interface paths {
               content?: Record<string, never>
             }
           }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
         }
         /** @description The comment was not found in the given thread */
         404: {

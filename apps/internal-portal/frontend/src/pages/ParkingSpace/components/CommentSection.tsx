@@ -181,6 +181,7 @@ const CommentCard = ({
                   size="small"
                   onClick={handleSave}
                   loading={isSaving}
+                  disabled={!editComment.trim()}
                 >
                   Spara
                 </LoadingButton>

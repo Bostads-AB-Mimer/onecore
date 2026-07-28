@@ -4,6 +4,7 @@ import {
   CommentThreadId,
   leasing,
 } from '@onecore/types'
+import { AxiosError } from 'axios'
 import { loggedAxios as axios } from '@onecore/utilities'
 import z from 'zod'
 import { AdapterResult } from '../types'
@@ -76,21 +77,25 @@ const updateComment = async (
   threadId: CommentThreadId,
   commentId: number,
   comment: UpdateCommentRequest
-): Promise<AdapterResult<Comment, 'unknown'>> => {
-  const response = await axios.put<{ content: Comment }>(
-    `${tenantsLeasesServiceUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}/${commentId}`,
-    comment
-  )
+): Promise<AdapterResult<Comment, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.put<{ content: Comment }>(
+      `${tenantsLeasesServiceUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}/${commentId}`,
+      comment
+    )
 
-  if (response.status === 200) {
     return {
       ok: true,
       data: response.data.content,
       statusCode: response.status,
     }
-  }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
 
-  return { ok: false, err: 'unknown', statusCode: response.status }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
 }
 
 export { addComment, getCommentThread, removeComment, updateComment }

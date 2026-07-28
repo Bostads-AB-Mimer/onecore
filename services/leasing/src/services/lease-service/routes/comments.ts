@@ -245,6 +245,15 @@ export const routes = (router: KoaRouter) => {
    *          application/json:
    *             schema:
    *               type: object
+   *               required:
+   *                 - type
+   *                 - comment
+   *               properties:
+   *                 type:
+   *                   type: string
+   *                   enum: [COMMENT, WARNING, STOP]
+   *                 comment:
+   *                   type: string
    *     responses:
    *       200:
    *         description: The comment was successfully updated
