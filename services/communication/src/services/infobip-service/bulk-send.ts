@@ -32,12 +32,16 @@ export type RunScheduledBulkParams = {
     audienceCriteria?: communication.LogOutboundParams['audienceCriteria']
     templateId?: string
   }
-  // toAddress already validated/normalized by the route. Order must match
-  // what `send` submits so messages[i] pairs with recipients[i].
+  // toAddress already validated/normalized by the route.
   recipients: BulkRecipient[]
   // Route-validated: 'invalid' has already been rejected with a 400.
   evaluation: Exclude<SendAtEvaluation, { kind: 'invalid' }>
-  send: (schedule?: ScheduleOptions) => Promise<BulkSendResponse>
+  // Receives the address list derived from `recipients` (same order), so the
+  // submitted destinations can't drift from the rows messages[i] is matched to.
+  send: (
+    toAddresses: string[],
+    schedule?: ScheduleOptions
+  ) => Promise<BulkSendResponse>
 }
 
 export type RunScheduledBulkOutcome =
@@ -115,7 +119,10 @@ export async function runScheduledBulk(
 
   let sendResult: BulkSendResponse
   try {
-    sendResult = await params.send(schedule)
+    sendResult = await params.send(
+      recipients.map((r) => r.toAddress),
+      schedule
+    )
   } catch (sendError) {
     if (schedule) {
       try {

@@ -307,6 +307,33 @@ describe('POST /communication-log/dispatches/:id/reschedule', () => {
     )
   })
 
+  it('retries the sendAt update after a transient DB failure', async () => {
+    getDispatchByIdMock.mockResolvedValue(
+      dispatchWithStatuses('sms', ['scheduled'])
+    )
+    updateDispatchSendAtMock
+      .mockRejectedValueOnce(new Error('deadlock'))
+      .mockResolvedValueOnce({ updatedCount: 1 })
+
+    const res = await reschedule(daysFromNow(2))
+
+    expect(res.status).toBe(200)
+    expect(updateDispatchSendAtMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('returns RESCHEDULE_STATUS_UPDATE_FAILED when the DB update keeps failing after the Infobip move', async () => {
+    getDispatchByIdMock.mockResolvedValue(
+      dispatchWithStatuses('sms', ['scheduled'])
+    )
+    updateDispatchSendAtMock.mockRejectedValue(new Error('db down'))
+
+    const res = await reschedule(daysFromNow(2))
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('RESCHEDULE_STATUS_UPDATE_FAILED')
+    expect(updateDispatchSendAtMock).toHaveBeenCalledTimes(2)
+  })
+
   it('returns 409 and leaves sendAt untouched when Infobip refuses', async () => {
     getDispatchByIdMock.mockResolvedValue(
       dispatchWithStatuses('sms', ['scheduled'])

@@ -623,9 +623,9 @@ export const routes = (router: KoaRouter) => {
             toAddress: r.emailAddress,
           })),
           evaluation: scheduleEvaluation,
-          send: (schedule) =>
+          send: (toAddresses, schedule) =>
             sendBulkEmail({
-              emails: validRecipients.map((r) => r.emailAddress),
+              emails: toAddresses,
               subject: body.subject,
               text: body.text,
               schedule,

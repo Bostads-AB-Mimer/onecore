@@ -290,9 +290,9 @@ export const routes = (router: KoaRouter) => {
             toAddress: r.normalizedPhone,
           })),
           evaluation: scheduleEvaluation,
-          send: (schedule) =>
+          send: (toAddresses, schedule) =>
             sendBulkSms({
-              phoneNumbers: validRecipients.map((r) => r.normalizedPhone),
+              phoneNumbers: toAddresses,
               text: body.text,
               schedule,
             }),

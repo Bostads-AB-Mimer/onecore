@@ -272,12 +272,26 @@ export const routes = (router: OkapiRouter) => {
           ctx.params.id,
           evaluation.sendAt
         )
-        await updateDispatchSendAt(ctx.params.id, evaluation.sendAt)
 
-        ctx.status = 200
-        ctx.body = {
-          dispatchId: ctx.params.id,
-          sendAt: evaluation.sendAt.toISOString(),
+        // Infobip has moved the bulk — from here the DB write must land, or
+        // the log keeps showing the old time for a send that will fire at
+        // the new one. Retry before failing. Mirrors the cancel route.
+        try {
+          await withRetries(2, () =>
+            updateDispatchSendAt(ctx.params.id, evaluation.sendAt)
+          )
+          ctx.status = 200
+          ctx.body = {
+            dispatchId: ctx.params.id,
+            sendAt: evaluation.sendAt.toISOString(),
+          }
+        } catch (error) {
+          logger.error(
+            { err: error, dispatchId: ctx.params.id },
+            'bulk rescheduled at Infobip but dispatch sendAt could not be updated — log still shows the old time'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'RESCHEDULE_STATUS_UPDATE_FAILED' }
         }
       } catch (error) {
         if (error instanceof ScheduledBulkConflictError) {

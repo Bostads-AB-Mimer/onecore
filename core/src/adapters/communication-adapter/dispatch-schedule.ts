@@ -38,7 +38,12 @@ export const cancelDispatch = async (
     const result = await axios.post(
       `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/cancel`
     )
-    return { ok: true, data: result.data }
+    // Runtime guarantee at the service boundary: axios types the body as
+    // `any`, so validate against the shared schema instead of asserting.
+    return {
+      ok: true,
+      data: communication.CancelDispatchResponseSchema.parse(result.data),
+    }
   } catch (err) {
     return mapError(err)
   }
@@ -55,7 +60,10 @@ export const rescheduleDispatch = async (
       `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/reschedule`,
       { sendAt }
     )
-    return { ok: true, data: result.data }
+    return {
+      ok: true,
+      data: communication.RescheduleDispatchResponseSchema.parse(result.data),
+    }
   } catch (err) {
     return mapError(err)
   }
