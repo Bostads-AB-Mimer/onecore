@@ -8,6 +8,7 @@ import {
   Receipt,
   StickyNote,
 } from 'lucide-react'
+import { parseAsString, useQueryState } from 'nuqs'
 
 import {
   TenantCommunicationTabContent,
@@ -44,6 +45,10 @@ export const TenantTabsMobile = ({
   isLoadingLeases,
   isLoadingProperties,
 }: TenantTabsMobileProps) => {
+  // Honor `?tab=` deep links (e.g. from invoice search hits) like desktop
+  // TenantTabs does; nested content such as the ledger reads `?open=` itself.
+  const [tab] = useQueryState('tab', parseAsString.withDefault('contracts'))
+
   const accordionItems: MobileAccordionItem[] = [
     {
       id: 'contracts',
@@ -106,10 +111,14 @@ export const TenantTabsMobile = ({
     },
   ]
 
+  const initialOpen = accordionItems.some((item) => item.id === tab)
+    ? tab
+    : 'contracts'
+
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['contracts']}
+      defaultOpen={[initialOpen]}
       className="space-y-3"
     />
   )

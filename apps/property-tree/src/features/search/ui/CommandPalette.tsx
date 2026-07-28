@@ -8,11 +8,14 @@ import {
   Command,
   DoorOpen,
   Loader2,
+  Receipt,
   SquareUser,
   Store,
   User2,
   Wrench,
 } from 'lucide-react'
+
+import { formatCurrency, formatDate } from '@/entities/lease'
 
 import { debounce } from '@/shared/lib/debounce'
 import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
@@ -31,6 +34,7 @@ const iconMap = {
   'maintenance-unit': Wrench,
   facility: Store,
   staircase: DoorOpen,
+  invoice: Receipt,
 } as const
 
 function getResultProps(item: CombinedSearchResult) {
@@ -117,6 +121,16 @@ function getResultProps(item: CombinedSearchResult) {
           buildingCode: item.building.code,
           propertyCode: item.property.code,
         },
+      }
+    case 'invoice':
+      return {
+        icon,
+        label: item.invoice.invoiceId,
+        prefix: '[FAKTURA]',
+        subtitle: `${formatCurrency(item.invoice.amount)} · ${formatDate(item.invoice.invoiceDate)}`,
+        // `reference` is the Xledger customer code (= ONECore contactCode)
+        path: `${paths.tenant(item.invoice.reference)}?tab=ledger&open=${item.invoice.invoiceId}`,
+        state: {},
       }
     case 'work-order':
       return {
@@ -217,7 +231,7 @@ export function CommandPalette() {
                 type="text"
                 onChange={(e) => onSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Sök fastigheter, lägenheter, kunder..."
+                placeholder="Sök fastigheter, lägenheter, kunder, fakturor..."
                 className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400 text-sm md:text-base"
               />
             </div>
