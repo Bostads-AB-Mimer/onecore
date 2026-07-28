@@ -104,7 +104,6 @@ const LeasesPage = () => {
   }
 
   const {
-    selectedIds: selectedLeaseIds,
     allResultsSelected,
     selectedCount,
     toggleSelection,
@@ -139,15 +138,35 @@ const LeasesPage = () => {
     sendBulkEmail: tenantService.sendBulkEmail,
   })
 
+  // Clear selection when the filtered result set changes. Keyed on the
+  // serialized filter values (sort excluded — same rows, different order)
+  // rather than object identity, since searchParams gets a new identity on
+  // ANY url change, including pagination, which must NOT wipe the selection.
+  const filterKey = JSON.stringify({
+    ...filters.searchParams,
+    sortBy: undefined,
+    sortOrder: undefined,
+  })
   useEffect(() => {
     clearSelection()
-  }, [filters.searchParams, clearSelection])
+  }, [filterKey, clearSelection])
+
+  // Header checkbox: fully checked only when ALL results are selected with no
+  // exclusions; "indeterminate" when something (possibly on another page) is
+  // selected — clicking it then clears, which the dash-state communicates.
+  const totalRecords = filters.meta?.totalRecords ?? 0
+  const headerCheckboxState =
+    allResultsSelected && totalRecords > 0 && selectedCount === totalRecords
+      ? true
+      : selectedCount > 0
+        ? ('indeterminate' as const)
+        : false
 
   const selectColumn = {
     key: 'select',
     label: (
       <Checkbox
-        checked={allResultsSelected || selectedLeaseIds.length > 0}
+        checked={headerCheckboxState}
         onCheckedChange={toggleSelectAll}
         aria-label="Välj alla"
       />

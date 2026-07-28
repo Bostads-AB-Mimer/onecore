@@ -88,9 +88,21 @@ export function useBulkMessaging<TItem>({
 }: UseBulkMessagingOptions<TItem>): UseBulkMessagingReturn {
   const { toast } = useToast()
 
-  // Selection state
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  // Selection state: itemId -> contacts of that row, captured at selection
+  // time. Carrying the contacts lets a selection survive pagination — the
+  // items of other pages are not available for lookup later.
+  const [selectedItems, setSelectedItems] = useState<Map<string, Contact[]>>(
+    new Map()
+  )
   const [allResultsSelected, setAllResultsSelected] = useState(false)
+  // Rows unchecked while "all results" is selected: itemId -> contactCodes of
+  // that row, captured at uncheck time (the row is on-screen when unchecked).
+  // A Map (not a Set) so re-checking a row removes exactly its contribution,
+  // and a contact shared by two excluded rows stays excluded until both are
+  // re-checked.
+  const [excludedItems, setExcludedItems] = useState<Map<string, string[]>>(
+    new Map()
+  )
 
   // Modal state
   const [showSmsModal, setShowSmsModal] = useState(false)
@@ -105,49 +117,99 @@ export function useBulkMessaging<TItem>({
     EmailRecipient[] | null
   >(null)
 
-  // Computed selection count
-  const selectedCount = allResultsSelected ? totalCount : selectedIds.length
+  const selectedIds = useMemo(
+    () => Array.from(selectedItems.keys()),
+    [selectedItems]
+  )
 
-  // Toggle single item selection
-  const toggleSelection = useCallback((id: string) => {
-    setAllResultsSelected(false)
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    )
-  }, [])
+  // Computed selection count
+  const selectedCount = allResultsSelected
+    ? totalCount - excludedItems.size
+    : selectedItems.size
+
+  // ContactCodes of all excluded rows. Note: exclusion is effectively per
+  // CONTACT — if an excluded row's contact also appears on another selected
+  // item, they are excluded from the send entirely. That matches the intent
+  // ("don't message this person") and is what makes a frontend-only exclusion
+  // possible, since fetched contacts carry no item association.
+  const excludedContactCodes = useMemo(() => {
+    const codes = new Set<string>()
+    excludedItems.forEach((contactCodes) => {
+      contactCodes.forEach((code) => codes.add(code))
+    })
+    return codes
+  }, [excludedItems])
+
+  // Toggle single item selection. In "all results" mode, unchecking a row
+  // excludes it from the selection instead of collapsing the mode back to
+  // the current page.
+  const toggleSelection = useCallback(
+    (id: string) => {
+      if (allResultsSelected) {
+        setExcludedItems((prev) => {
+          const next = new Map(prev)
+          if (next.has(id)) {
+            next.delete(id)
+          } else {
+            const item = items.find((i) => getItemId(i) === id)
+            next.set(
+              id,
+              item ? getContacts(item).map((c) => c.contactCode) : []
+            )
+          }
+          return next
+        })
+        return
+      }
+      setSelectedItems((prev) => {
+        const next = new Map(prev)
+        if (next.has(id)) {
+          next.delete(id)
+        } else {
+          const item = items.find((i) => getItemId(i) === id)
+          next.set(id, item ? getContacts(item) : [])
+        }
+        return next
+      })
+    },
+    [allResultsSelected, items, getItemId, getContacts]
+  )
 
   // Toggle select all (selects ALL results, not just current page)
   const toggleSelectAll = useCallback(() => {
-    if (allResultsSelected || selectedIds.length > 0) {
-      setSelectedIds([])
+    setExcludedItems(new Map())
+    if (allResultsSelected || selectedItems.size > 0) {
+      setSelectedItems(new Map())
       setAllResultsSelected(false)
     } else {
       setAllResultsSelected(true)
-      setSelectedIds(items.map(getItemId))
+      setSelectedItems(
+        new Map(items.map((item) => [getItemId(item), getContacts(item)]))
+      )
     }
-  }, [allResultsSelected, selectedIds.length, items, getItemId])
+  }, [allResultsSelected, selectedItems.size, items, getItemId, getContacts])
 
   // Clear all selection
   const clearSelection = useCallback(() => {
-    setSelectedIds([])
+    setSelectedItems(new Map())
     setAllResultsSelected(false)
+    setExcludedItems(new Map())
   }, [])
 
   // Check if item is selected
   const isSelected = useCallback(
-    (id: string) => allResultsSelected || selectedIds.includes(id),
-    [allResultsSelected, selectedIds]
+    (id: string) =>
+      allResultsSelected ? !excludedItems.has(id) : selectedItems.has(id),
+    [allResultsSelected, excludedItems, selectedItems]
   )
 
-  // Derive SMS recipients from selected items on current page
-  const smsRecipientsFromPage: SmsRecipient[] = useMemo(() => {
-    const selectedItems = items.filter((item) =>
-      selectedIds.includes(getItemId(item))
-    )
+  // Derive SMS recipients from the hand-picked selection (contacts captured
+  // at selection time, so the selection works across pages)
+  const smsRecipientsFromSelection: SmsRecipient[] = useMemo(() => {
     const contactMap = new Map<string, SmsRecipient>()
 
-    selectedItems.forEach((item) => {
-      getContacts(item).forEach((contact) => {
+    selectedItems.forEach((contacts) => {
+      contacts.forEach((contact) => {
         if (!contactMap.has(contact.contactCode)) {
           contactMap.set(contact.contactCode, {
             id: contact.contactCode,
@@ -159,17 +221,14 @@ export function useBulkMessaging<TItem>({
     })
 
     return Array.from(contactMap.values())
-  }, [items, selectedIds, getItemId, getContacts])
+  }, [selectedItems])
 
-  // Derive email recipients from selected items on current page
-  const emailRecipientsFromPage: EmailRecipient[] = useMemo(() => {
-    const selectedItems = items.filter((item) =>
-      selectedIds.includes(getItemId(item))
-    )
+  // Derive email recipients from the hand-picked selection
+  const emailRecipientsFromSelection: EmailRecipient[] = useMemo(() => {
     const contactMap = new Map<string, EmailRecipient>()
 
-    selectedItems.forEach((item) => {
-      getContacts(item).forEach((contact) => {
+    selectedItems.forEach((contacts) => {
+      contacts.forEach((contact) => {
         if (!contactMap.has(contact.contactCode)) {
           contactMap.set(contact.contactCode, {
             id: contact.contactCode,
@@ -181,11 +240,11 @@ export function useBulkMessaging<TItem>({
     })
 
     return Array.from(contactMap.values())
-  }, [items, selectedIds, getItemId, getContacts])
+  }, [selectedItems])
 
-  // Use fetched recipients if available, otherwise use page-derived ones
-  const smsRecipients = fetchedSmsRecipients ?? smsRecipientsFromPage
-  const emailRecipients = fetchedEmailRecipients ?? emailRecipientsFromPage
+  // Use fetched recipients if available, otherwise use selection-derived ones
+  const smsRecipients = fetchedSmsRecipients ?? smsRecipientsFromSelection
+  const emailRecipients = fetchedEmailRecipients ?? emailRecipientsFromSelection
 
   // Open SMS modal - fetch all contacts if "all results" selected
   const handleOpenSmsModal = useCallback(async () => {
@@ -193,11 +252,13 @@ export function useBulkMessaging<TItem>({
       setIsLoadingContacts(true)
       try {
         const contacts = await fetchAllContacts()
-        const recipients: SmsRecipient[] = contacts.map((c) => ({
-          id: c.contactCode,
-          name: c.name,
-          phone: c.phone,
-        }))
+        const recipients: SmsRecipient[] = contacts
+          .filter((c) => !excludedContactCodes.has(c.contactCode))
+          .map((c) => ({
+            id: c.contactCode,
+            name: c.name,
+            phone: c.phone,
+          }))
         setFetchedSmsRecipients(recipients)
         setShowSmsModal(true)
       } catch (error) {
@@ -214,7 +275,7 @@ export function useBulkMessaging<TItem>({
       setFetchedSmsRecipients(null)
       setShowSmsModal(true)
     }
-  }, [allResultsSelected, fetchAllContacts, toast])
+  }, [allResultsSelected, fetchAllContacts, excludedContactCodes, toast])
 
   // Open Email modal - fetch all contacts if "all results" selected
   const handleOpenEmailModal = useCallback(async () => {
@@ -222,11 +283,13 @@ export function useBulkMessaging<TItem>({
       setIsLoadingContacts(true)
       try {
         const contacts = await fetchAllContacts()
-        const recipients: EmailRecipient[] = contacts.map((c) => ({
-          id: c.contactCode,
-          name: c.name,
-          email: c.email,
-        }))
+        const recipients: EmailRecipient[] = contacts
+          .filter((c) => !excludedContactCodes.has(c.contactCode))
+          .map((c) => ({
+            id: c.contactCode,
+            name: c.name,
+            email: c.email,
+          }))
         setFetchedEmailRecipients(recipients)
         setShowEmailModal(true)
       } catch (error) {
@@ -243,7 +306,7 @@ export function useBulkMessaging<TItem>({
       setFetchedEmailRecipients(null)
       setShowEmailModal(true)
     }
-  }, [allResultsSelected, fetchAllContacts, toast])
+  }, [allResultsSelected, fetchAllContacts, excludedContactCodes, toast])
 
   // Handle modal close - clear fetched recipients
   const handleSetShowSmsModal = useCallback((open: boolean) => {

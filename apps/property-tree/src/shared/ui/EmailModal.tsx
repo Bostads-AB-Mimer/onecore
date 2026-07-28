@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
-import { AlertTriangle, ChevronDown, Info, Mail, User } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, ChevronDown, Info, Mail, User, X } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
@@ -57,15 +57,38 @@ export function EmailModal(props: EmailModalProps) {
   const [body, setBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
+  // Recipients manually removed via the ✕ on their chip (bulk mode only)
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
+
+  // Single reset path for all per-session state, on both open and close.
+  // Esc/overlay dismissal calls onOpenChange directly and bypasses
+  // handleClose, so nothing may rely on handleClose for cleanup.
+  useEffect(() => {
+    setSubject('')
+    setBody('')
+    setRemovedIds(new Set())
+    setShowAllInvalid(false)
+  }, [open])
 
   const recipients = props.recipients ?? []
 
+  const activeRecipients = useMemo(
+    () => recipients.filter((r) => !removedIds.has(r.id)),
+    [recipients, removedIds]
+  )
+
   const { validRecipients, invalidRecipients } = useMemo(() => {
     if (!isBulk) return { validRecipients: [], invalidRecipients: [] }
-    const valid = recipients.filter((r) => r.email)
-    const invalid = recipients.filter((r) => !r.email)
+    const valid = activeRecipients.filter((r) => r.email)
+    const invalid = activeRecipients.filter((r) => !r.email)
     return { validRecipients: valid, invalidRecipients: invalid }
-  }, [isBulk, recipients])
+  }, [isBulk, activeRecipients])
+
+  const removeRecipient = useCallback((id: string) => {
+    setRemovedIds((prev) => new Set(prev).add(id))
+  }, [])
+
+  const removedCount = recipients.length - activeRecipients.length
 
   const duplicatesRemoved =
     isBulk &&
@@ -118,11 +141,12 @@ export function EmailModal(props: EmailModalProps) {
   ])
 
   const handleClose = () => {
-    setSubject('')
-    setBody('')
     onOpenChange(false)
   }
 
+  // Deliberately based on the ORIGINAL recipient list: this line explains the
+  // contracts\u2192contacts deduplication, which manual removals must not skew.
+  // Removals are surfaced separately next to the "Mottagare" label.
   const description = isBulk
     ? props.totalSelectedItems != null &&
       props.totalSelectedItems !== recipients.length
@@ -147,6 +171,12 @@ export function EmailModal(props: EmailModalProps) {
               <div>
                 <Label className="text-sm font-medium">
                   Mottagare ({validRecipients.length})
+                  {removedCount > 0 && (
+                    <span className="ml-2 font-normal text-muted-foreground">
+                      {removedCount}{' '}
+                      {removedCount === 1 ? 'borttagen' : 'borttagna'}
+                    </span>
+                  )}
                 </Label>
                 <div className="mt-2 flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 border rounded-md bg-muted/30">
                   {validRecipients.map((recipient) => (
@@ -157,6 +187,14 @@ export function EmailModal(props: EmailModalProps) {
                     >
                       <User className="h-3 w-3" />
                       {recipient.name}
+                      <button
+                        type="button"
+                        aria-label={`Ta bort ${recipient.name}`}
+                        className="ml-0.5 rounded-full hover:bg-muted-foreground/20"
+                        onClick={() => removeRecipient(recipient.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </Badge>
                   ))}
                 </div>
