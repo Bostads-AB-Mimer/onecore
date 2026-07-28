@@ -90,19 +90,13 @@ export function useBulkMessaging<TItem>({
 }: UseBulkMessagingOptions<TItem>): UseBulkMessagingReturn {
   const { toast } = useToast()
 
-  // Selection state: itemId -> contacts of that row, captured at selection
-  // time. Carrying the contacts lets a selection survive pagination — the
-  // items of other pages are not available for lookup later.
+  // itemId -> contacts, captured at click time so selections survive pagination
   const [selectedItems, setSelectedItems] = useState<Map<string, Contact[]>>(
     new Map()
   )
   const [allResultsSelected, setAllResultsSelected] = useState(false)
-  // Rows unchecked while "all results" is selected: itemId -> contacts of
-  // that row, captured at uncheck time (the row is on-screen when unchecked).
-  // A Map (not a Set) so re-checking a row removes exactly its contribution,
-  // and a contact shared by two excluded rows stays excluded until both are
-  // re-checked. Same shape as selectedItems so both toggles share one code
-  // path.
+  // Rows unchecked in all-results mode (itemId -> contacts). A Map so
+  // re-checking a row removes exactly that row's contribution.
   const [excludedItems, setExcludedItems] = useState<Map<string, Contact[]>>(
     new Map()
   )
@@ -130,11 +124,8 @@ export function useBulkMessaging<TItem>({
     ? totalCount - excludedItems.size
     : selectedItems.size
 
-  // ContactCodes of all excluded rows. Note: exclusion is effectively per
-  // CONTACT — if an excluded row's contact also appears on another selected
-  // item, they are excluded from the send entirely. That matches the intent
-  // ("don't message this person") and is what makes a frontend-only exclusion
-  // possible, since fetched contacts carry no item association.
+  // Exclusion is per CONTACT: an excluded row's contact is dropped from the
+  // whole send, even if they appear on other selected contracts.
   const excludedContactCodes = useMemo(
     () =>
       new Set(
@@ -145,9 +136,8 @@ export function useBulkMessaging<TItem>({
     [excludedItems]
   )
 
-  // Toggle single item selection. In "all results" mode, unchecking a row
-  // excludes it from the selection instead of collapsing the mode back to
-  // the current page.
+  // In all-results mode, unchecking a row excludes it instead of collapsing
+  // the mode back to the current page.
   const toggleSelection = useCallback(
     (id: string) => {
       const currentMap = allResultsSelected ? excludedItems : selectedItems
@@ -165,10 +155,8 @@ export function useBulkMessaging<TItem>({
       const item = items.find((i) => getItemId(i) === id)
       const contacts = item ? getContacts(item) : []
       if (allResultsSelected && contacts.length === 0) {
-        // Exclusion works by filtering the row's contactCodes out of the
-        // fetched recipient list. With no captured contacts the exclusion
-        // would be a silent no-op (the tenant would still be messaged), so
-        // refuse the uncheck instead of pretending it worked.
+        // Without captured contacts the exclusion would be a silent no-op
+        // (the tenant would still be messaged) — refuse the uncheck
         toast({
           title: 'Raden kan inte undantas',
           description: 'Kontaktuppgifter saknas för raden.',
@@ -217,11 +205,8 @@ export function useBulkMessaging<TItem>({
     [allResultsSelected, excludedItems, selectedItems]
   )
 
-  // Unique contacts of the hand-picked selection (contacts captured at
-  // selection time, so the selection works across pages). First occurrence
-  // wins per contactCode. The exclusion filter is applied here too so every
-  // recipient path respects exclusions by construction — in hand-picked mode
-  // excludedContactCodes is always empty, making it a no-op there.
+  // Unique contacts of the hand-picked selection (first-wins per
+  // contactCode), minus exclusions
   const uniqueSelectedContacts = useMemo(() => {
     const byCode = new Map<string, Contact>()
     selectedItems.forEach((contacts) => {
@@ -260,25 +245,20 @@ export function useBulkMessaging<TItem>({
   const smsRecipients = fetchedSmsRecipients ?? smsRecipientsFromSelection
   const emailRecipients = fetchedEmailRecipients ?? emailRecipientsFromSelection
 
-  // Guards for the async contact fetch below: the exclusion set is read
-  // through a ref so a fetch resolving AFTER the user unchecked another row
-  // filters against the current set, and a generation counter discards
-  // out-of-order responses (double-click) and resolutions after unmount.
+  // Stale-fetch guards: exclusions are read via ref at resolve time, and a
+  // generation counter discards out-of-order/unmounted resolutions
   const excludedContactCodesRef = useRef(excludedContactCodes)
   excludedContactCodesRef.current = excludedContactCodes
   const openRequestIdRef = useRef(0)
   useEffect(
     () => () => {
-      // Invalidate any in-flight fetch on unmount
       openRequestIdRef.current++
     },
     []
   )
 
-  // Open a bulk modal. In "all results" mode the full filtered contact list
-  // is fetched and exclusions are applied; otherwise recipients derive from
-  // the hand-picked selection. Shared by the SMS and email handlers, which
-  // differ only in how a Contact maps to their recipient shape.
+  // Shared open handler: fetch the full contact list (all-results mode) and
+  // apply exclusions, else fall back to the hand-picked selection
   const openBulkModal = useCallback(
     async <R>(
       toRecipient: (c: Contact) => R,
@@ -311,9 +291,7 @@ export function useBulkMessaging<TItem>({
         }
       } else {
         if (allResultsSelected) {
-          // Recipients then derive from selectedItems, which only holds the
-          // page captured at select-all time — a consumer bug, not a user
-          // flow, hence the dev-facing warning.
+          // Consumer bug: recipients only cover the page captured at select-all
           console.warn(
             'useBulkMessaging: allResultsSelected without fetchAllContacts — recipients are limited to the captured page'
           )

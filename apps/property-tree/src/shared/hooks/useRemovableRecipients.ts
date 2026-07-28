@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 /**
- * Manual removal of recipients (the ✕ on recipient chips) for the bulk send
- * modals. Removal state resets whenever the modal opens or closes, so a
- * dismissed modal never leaks removals into the next send.
+ * Manual removal of recipients (the ✕ on chips) for the bulk send modals.
+ * Removal state resets on open/close so removals never leak into the next send.
  */
 export function useRemovableRecipients<T extends { id: string }>(
   recipients: T[],
@@ -12,12 +11,10 @@ export function useRemovableRecipients<T extends { id: string }>(
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    // Avoid a pointless allocation + re-render when nothing was removed
     setRemovedIds((prev) => (prev.size === 0 ? prev : new Set()))
   }, [open])
 
-  // Keep the input identity when nothing was removed so memoized consumers
-  // (e.g. the chip list) don't re-render for free
+  // Keeps input identity when nothing is removed, so memoized consumers skip
   const activeRecipients = useMemo(
     () =>
       removedIds.size === 0

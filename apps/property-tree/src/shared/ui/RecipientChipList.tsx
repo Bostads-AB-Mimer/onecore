@@ -3,10 +3,8 @@ import { User, X } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/Badge'
 
-// Display cap: rendering thousands of chips freezes the UI for seconds
-// (measured ~9s at 12.7k chips), so only this many get DOM elements up
-// front. This is DISPLAY-ONLY — every recipient stays in state, in all
-// counters, and in the send payload regardless of what is rendered.
+// Display-only cap — rendering thousands of chips freezes the UI. Every
+// recipient stays in state, counters and the send payload regardless.
 const INITIAL_VISIBLE = 100
 const VISIBLE_INCREMENT = 200
 
@@ -16,9 +14,8 @@ interface RecipientChipListProps {
 }
 
 /**
- * Chip list for bulk-send recipients with a remove button per chip.
- * Memoized so keystrokes in the surrounding form can't re-render what may be
- * a very large list.
+ * Bulk-send recipient chips with a remove button per chip. Memoized so
+ * keystrokes in the surrounding form don't re-render a large list.
  */
 export const RecipientChipList = memo(function RecipientChipList({
   recipients,

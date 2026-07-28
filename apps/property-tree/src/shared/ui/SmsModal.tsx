@@ -64,10 +64,8 @@ export function SmsModal(props: SmsModalProps) {
   const [showCostConfirmation, setShowCostConfirmation] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
 
-  // Single reset path for all per-session state, on both open and close.
-  // Esc/overlay dismissal calls onOpenChange directly and bypasses
-  // handleClose, so nothing may rely on handleClose for cleanup.
-  // (useRemovableRecipients resets its removal state on `open` the same way.)
+  // Single reset path for per-session state — Esc/overlay dismissal bypasses
+  // handleClose, so resets must not live there
   useEffect(() => {
     setMessage('')
     setShowCostConfirmation(false)
@@ -147,8 +145,7 @@ export function SmsModal(props: SmsModalProps) {
     onOpenChange(false)
   }
 
-  // Contacts excluded via table-row unchecking, shown so the header numbers
-  // reconcile with the selected-contract count
+  // Contacts excluded via table-row unchecking
   const excludedSuffix =
     isBulk && props.excludedRecipientsCount
       ? ` \u00b7 ${props.excludedRecipientsCount} ${
@@ -156,9 +153,8 @@ export function SmsModal(props: SmsModalProps) {
         }`
       : ''
 
-  // Deliberately based on the ORIGINAL recipient list: this line explains the
-  // contracts\u2192contacts deduplication, which manual removals must not skew.
-  // Removals are surfaced separately next to the "Mottagare" label.
+  // Based on the ORIGINAL list: this line explains deduplication, which
+  // manual removals must not skew (removals shown at the "Mottagare" label)
   const description = isBulk
     ? (props.totalSelectedItems != null &&
       props.totalSelectedItems !== recipients.length

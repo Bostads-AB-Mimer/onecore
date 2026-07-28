@@ -139,10 +139,9 @@ const LeasesPage = () => {
     sendBulkEmail: tenantService.sendBulkEmail,
   })
 
-  // Clear selection when the filtered result set changes. Keyed on the
-  // serialized filter values (sort excluded — same rows, different order)
-  // rather than object identity, since searchParams gets a new identity on
-  // ANY url change, including pagination, which must NOT wipe the selection.
+  // Clear selection when the filters change. Keyed on serialized values (sort
+  // excluded) — searchParams gets a new identity on any url change, and
+  // pagination/sorting must NOT wipe the selection.
   const filterKey = JSON.stringify({
     ...filters.searchParams,
     sortBy: undefined,
@@ -152,9 +151,8 @@ const LeasesPage = () => {
     clearSelection()
   }, [filterKey, clearSelection])
 
-  // Header checkbox: fully checked only when ALL results are selected with no
-  // exclusions; "indeterminate" when something (possibly on another page) is
-  // selected — clicking it then clears, which the dash-state communicates.
+  // Fully checked only when all results are selected with no exclusions;
+  // indeterminate when something (possibly on another page) is selected
   const totalRecords = filters.meta?.totalRecords ?? 0
   const headerCheckboxState =
     allResultsSelected && totalRecords > 0 && selectedCount === totalRecords
