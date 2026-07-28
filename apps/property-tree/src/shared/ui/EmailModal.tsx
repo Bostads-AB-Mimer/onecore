@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { AlertTriangle, ChevronDown, Info, Mail, User } from 'lucide-react'
 
+import { useScheduleField } from '@/shared/hooks/useScheduleField'
+import { MAX_SCHEDULE_DAYS_AHEAD } from '@/shared/lib/schedule'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -14,6 +16,7 @@ import {
 } from '@/shared/ui/Dialog'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import { ScheduleField } from '@/shared/ui/ScheduleField'
 import { Textarea } from '@/shared/ui/Textarea'
 
 export interface EmailRecipient {
@@ -30,7 +33,8 @@ interface EmailModalBaseProps {
 interface EmailModalSingleProps extends EmailModalBaseProps {
   recipientName: string
   emailAddress: string
-  onSend: (subject: string, body: string) => Promise<void>
+  // sendAt (ISO instant) is set when the user chose to schedule the send.
+  onSend: (subject: string, body: string, sendAt?: string) => Promise<void>
   recipients?: undefined
   totalSelectedItems?: undefined
 }
@@ -38,10 +42,12 @@ interface EmailModalSingleProps extends EmailModalBaseProps {
 interface EmailModalBulkProps extends EmailModalBaseProps {
   recipients: EmailRecipient[]
   totalSelectedItems?: number
+  // sendAt (ISO instant) is set when the user chose to schedule the send.
   onSend?: (
     subject: string,
     body: string,
-    recipients: EmailRecipient[]
+    recipients: EmailRecipient[],
+    sendAt?: string
   ) => Promise<void>
   recipientName?: undefined
   emailAddress?: undefined
@@ -57,6 +63,7 @@ export function EmailModal(props: EmailModalProps) {
   const [body, setBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
+  const schedule = useScheduleField(MAX_SCHEDULE_DAYS_AHEAD.email)
 
   const recipients = props.recipients ?? []
 
@@ -79,6 +86,7 @@ export function EmailModal(props: EmailModalProps) {
 
     if (isBulk) {
       if (validRecipients.length === 0 || !props.onSend) return
+      if (schedule.isScheduling && schedule.error) return
 
       setIsSending(true)
       try {
@@ -86,22 +94,30 @@ export function EmailModal(props: EmailModalProps) {
           props.onSend as (
             subject: string,
             body: string,
-            recipients: EmailRecipient[]
+            recipients: EmailRecipient[],
+            sendAt?: string
           ) => Promise<void>
-        )(subject, body, validRecipients)
+        )(subject, body, validRecipients, schedule.sendAtIso())
         setSubject('')
         setBody('')
+        schedule.reset()
       } finally {
         setIsSending(false)
       }
     } else {
+      if (schedule.isScheduling && schedule.error) return
       setIsSending(true)
       try {
         await (
-          props.onSend as (subject: string, body: string) => Promise<void>
-        )(subject, body)
+          props.onSend as (
+            subject: string,
+            body: string,
+            sendAt?: string
+          ) => Promise<void>
+        )(subject, body, schedule.sendAtIso())
         setSubject('')
         setBody('')
+        schedule.reset()
         onOpenChange(false)
       } finally {
         setIsSending(false)
@@ -113,6 +129,7 @@ export function EmailModal(props: EmailModalProps) {
     isSending,
     isBulk,
     validRecipients,
+    schedule,
     props.onSend,
     onOpenChange,
   ])
@@ -120,6 +137,7 @@ export function EmailModal(props: EmailModalProps) {
   const handleClose = () => {
     setSubject('')
     setBody('')
+    schedule.reset()
     onOpenChange(false)
   }
 
@@ -232,6 +250,8 @@ export function EmailModal(props: EmailModalProps) {
               className="mt-2 min-h-[150px] resize-none"
             />
           </div>
+
+          <ScheduleField id="email-schedule" field={schedule} />
         </div>
 
         <DialogFooter>
@@ -244,14 +264,21 @@ export function EmailModal(props: EmailModalProps) {
               !subject.trim() ||
               !body.trim() ||
               (isBulk && validRecipients.length === 0) ||
+              (schedule.isScheduling && !!schedule.error) ||
               isSending
             }
           >
             {isSending
-              ? 'Skickar...'
+              ? schedule.isScheduling
+                ? 'Schemalägger...'
+                : 'Skickar...'
               : isBulk
-                ? `Skicka till ${validRecipients.length} mottagare`
-                : 'Skicka mejl'}
+                ? schedule.isScheduling
+                  ? `Schemalägg till ${validRecipients.length} mottagare`
+                  : `Skicka till ${validRecipients.length} mottagare`
+                : schedule.isScheduling
+                  ? 'Schemalägg mejl'
+                  : 'Skicka mejl'}
           </Button>
         </DialogFooter>
       </DialogContent>

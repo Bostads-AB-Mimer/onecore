@@ -11,6 +11,14 @@ const BulkSmsResult = z.object({
   invalid: z.array(z.string()).describe('Invalid phone numbers'),
   totalSent: z.number(),
   totalInvalid: z.number(),
+  dispatchId: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: dispatch id (cancel/reschedule handle)'),
+  scheduledFor: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: target send time as ISO instant'),
 })
 
 const BulkEmailResult = z.object({
@@ -20,6 +28,14 @@ const BulkEmailResult = z.object({
   invalid: z.array(z.string()).describe('Invalid email addresses'),
   totalSent: z.number(),
   totalInvalid: z.number(),
+  dispatchId: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: dispatch id (cancel/reschedule handle)'),
+  scheduledFor: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: target send time as ISO instant'),
 })
 
 /**
@@ -81,6 +97,10 @@ export const routes = (router: KoaRouter) => {
    *                       type: string
    *               text:
    *                 type: string
+   *               sendAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
    *               logMeta:
    *                 type: object
    *                 properties:
@@ -177,6 +197,10 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *               text:
    *                 type: string
+   *               sendAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: ISO 8601 instant with offset/Z. Schedules the send (max 5 days ahead, Infobip's email limit); omit for immediate.
    *               logMeta:
    *                 type: object
    *                 properties:
@@ -373,6 +397,141 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: result.err, ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /communication-log/dispatches/{id}/cancel:
+   *   post:
+   *     summary: Cancel a scheduled dispatch
+   *     description: Cancels the scheduled bulk at Infobip and marks the dispatch's recipients as cancelled. Idempotent for already-cancelled dispatches.
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Dispatch id (UUID)
+   *     responses:
+   *       '200':
+   *         description: Cancelled
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     dispatchId:
+   *                       type: string
+   *                     cancelledRecipients:
+   *                       type: integer
+   *       '400':
+   *         description: Dispatch is not scheduled
+   *       '404':
+   *         description: Dispatch not found
+   *       '409':
+   *         description: The bulk was already sent or is processing; nothing was changed
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/communication-log/dispatches/:id/cancel', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.cancelDispatch(ctx.params.id)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /communication-log/dispatches/{id}/reschedule:
+   *   post:
+   *     summary: Move a scheduled dispatch to a new send time
+   *     description: Reschedules the bulk at Infobip and updates the dispatch's sendAt. The new time must be in the future and within the channel cap (sms 90 days, email 5 days).
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Dispatch id (UUID)
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - sendAt
+   *             properties:
+   *               sendAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: New send time as ISO 8601 instant with offset/Z.
+   *     responses:
+   *       '200':
+   *         description: Rescheduled
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     dispatchId:
+   *                       type: string
+   *                     sendAt:
+   *                       type: string
+   *       '400':
+   *         description: Dispatch is not scheduled, or sendAt is invalid for the channel
+   *       '404':
+   *         description: Dispatch not found
+   *       '409':
+   *         description: The bulk was already sent or is processing; nothing was changed
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '(.*)/communication-log/dispatches/:id/reschedule',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as { sendAt?: string }
+
+      if (!body?.sendAt || typeof body.sendAt !== 'string') {
+        ctx.status = 400
+        ctx.body = { error: 'sendAt is required', ...metadata }
+        return
+      }
+
+      const result = await communicationAdapter.rescheduleDispatch(
+        ctx.params.id,
+        body.sendAt
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger

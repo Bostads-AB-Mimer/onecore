@@ -4,6 +4,9 @@ import { ParkingSpaceOfferSms, WorkOrderSms, BulkSms } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
 
+import { evaluateSendAt, MAX_SCHEDULE_DAYS_AHEAD } from '../schedule'
+import { runScheduledBulk } from '../bulk-send'
+
 import {
   sendParkingSpaceOfferSms,
   sendWorkOrderSms,
@@ -183,6 +186,8 @@ export const routes = (router: KoaRouter) => {
       )
       .optional(),
     text: z.string().min(1).max(1600),
+    // ISO 8601 instant with offset/Z. Schedules the send; omit for immediate.
+    sendAt: z.string().datetime({ offset: true }).optional(),
     logMeta: z
       .object({
         triggeredByUser: z.string().optional(),
@@ -259,44 +264,47 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const sendResult = await sendBulkSms({
-          phoneNumbers: validRecipients.map((r) => r.normalizedPhone),
-          text: body.text,
-        })
+        const scheduleEvaluation = evaluateSendAt(
+          body.sendAt,
+          MAX_SCHEDULE_DAYS_AHEAD.sms
+        )
+        if (scheduleEvaluation.kind === 'invalid') {
+          ctx.status = 400
+          ctx.body = {
+            reason: scheduleEvaluation.code,
+            message: scheduleEvaluation.message,
+            ...metadata,
+          }
+          return
+        }
 
-        // Strict but non-blocking: the SMS already went out, so a logging
-        // failure must not fail the request (that would falsely report the send
-        // as failed). Instead we log loudly for monitoring and surface a
-        // non-blocking warning to the caller via `warnings`. Mirrors bulk email.
-        const warnings: string[] = []
-        try {
-          await logOutboundDispatch({
-            channel: 'sms',
-            fromAddress: SMS_SENDER,
-            body: body.text,
-            messageType: 'bulk_sms',
-            provider: SMS_PROVIDER,
-            triggeredByUser: body.logMeta?.triggeredByUser,
-            audienceCriteria: body.logMeta?.audienceCriteria,
-            templateId: body.logMeta?.templateId,
-            // TODO: log-before-send. Today we log after Infobip's 200 ACK, so an API
-            // rejection leaves no audit row. Flip to: insert pending → call Infobip
-            // → update to failed if rejected. Webhook still handles delivered/failed.
-            recipients: validRecipients.map((r, i) => ({
-              contactCode: r.contactCode,
-              toAddress: r.normalizedPhone,
-              externalMessageId: sendResult.messages?.[i]?.messageId,
-              status: 'pending',
-            })),
-          })
-        } catch (logError: any) {
-          // Keep the warning generic for the client; the real error (which can
-          // contain internal/DB detail) stays in logger.error only.
-          warnings.push('Communication log failed')
-          logger.error(
-            { err: logError, messageType: 'bulk_sms' },
-            'Failed to write communication-log entry for bulk SMS'
-          )
+        const outcome = await runScheduledBulk({
+          channel: 'sms',
+          messageType: 'bulk_sms',
+          fromAddress: SMS_SENDER,
+          provider: SMS_PROVIDER,
+          body: body.text,
+          logMeta: body.logMeta,
+          recipients: validRecipients.map((r) => ({
+            contactCode: r.contactCode,
+            toAddress: r.normalizedPhone,
+          })),
+          evaluation: scheduleEvaluation,
+          send: (toAddresses, schedule) =>
+            sendBulkSms({
+              phoneNumbers: toAddresses,
+              text: body.text,
+              schedule,
+            }),
+        })
+        if (!outcome.ok) {
+          ctx.status = 500
+          ctx.body = {
+            reason: outcome.reason,
+            message: outcome.message,
+            ...metadata,
+          }
+          return
         }
 
         const successful = validRecipients.map((r) => r.normalizedPhone)
@@ -307,8 +315,12 @@ export const routes = (router: KoaRouter) => {
             invalid: invalidPhones,
             totalSent: successful.length,
             totalInvalid: invalidPhones.length,
+            ...(outcome.schedule && {
+              dispatchId: outcome.schedule.bulkId,
+              scheduledFor: outcome.schedule.sendAt.toISOString(),
+            }),
           },
-          ...(warnings.length && { warnings }),
+          ...(outcome.warnings.length && { warnings: outcome.warnings }),
           ...metadata,
         }
       } catch (error: any) {
