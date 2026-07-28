@@ -231,7 +231,7 @@ export function CommandPalette() {
                 type="text"
                 onChange={(e) => onSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Sök fastigheter, lägenheter, kunder..."
+                placeholder="Sök fastigheter, lägenheter, kunder, fakturor..."
                 className="flex-1 bg-transparent border-0 focus:outline-none focus:ring-0 text-gray-900 dark:text-white placeholder-gray-400 text-sm md:text-base"
               />
             </div>
