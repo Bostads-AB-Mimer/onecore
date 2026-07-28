@@ -29,6 +29,10 @@ export const routes = (router: KoaRouter) => {
     typeof leasing.v1.AddCommentRequestParamsSchema
   >
 
+  type UpdateCommentRequest = z.infer<
+    typeof leasing.v1.UpdateCommentRequestParamsSchema
+  >
+
   router.post('(.*)/comments/:targetType/thread/:targetId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -71,6 +75,84 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = { content: null, ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
+   * /comments/{targetType}/thread/{targetId}/{commentId}:
+   *   put:
+   *     summary: Update a comment in a comment thread
+   *     description: |
+   *       Update the text and/or type of an existing comment in the comment
+   *       thread identified by targetType/targetId and the comment id.
+   *     tags: [Comment]
+   *     parameters:
+   *       - in: path
+   *         name: targetType
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The object type that the comment thread belongs to.
+   *       - in: path
+   *         name: targetId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: The object id that the comment thread belongs to.
+   *       - in: path
+   *         name: commentId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: The unique ID of the comment to update.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *     responses:
+   *       200:
+   *         description: The updated comment
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   description: The updated comment
+   *       404:
+   *         description: The comment was not found in the given thread
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put(
+    '(.*)/comments/:targetType/thread/:targetId/:commentId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const { targetType, targetId, commentId } = ctx.params
+      const threadId = { targetType, targetId: Number(targetId) }
+      const comment = <UpdateCommentRequest>ctx.request.body
+
+      const result = await leasingAdapter.updateComment(
+        threadId,
+        Number(commentId),
+        comment
+      )
+
+      if (!result.ok) {
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
     }
   )
 }

@@ -206,4 +206,102 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /comments/{targetType}/thread/{targetId}/{commentId}:
+   *   put:
+   *     summary: Update a Comment in a CommentThread
+   *     description: |
+   *       Update the text and/or type of an existing comment in a comment
+   *       thread, identified by the logical threadId of targetType/targetId
+   *       together with the comment id.
+   *     tags: [Comment]
+   *     parameters:
+   *       - in: path
+   *         name: targetType
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: |
+   *           The object type that the comment thread belongs to.
+   *       - in: path
+   *         name: targetId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: |
+   *           The object id that the comment thread belongs to.
+   *       - in: path
+   *         name: commentId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: |
+   *           The unique ID of the comment to update.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *          application/json:
+   *             schema:
+   *               type: object
+   *     responses:
+   *       200:
+   *         description: The comment was successfully updated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: object
+   *                   description: The updated comment
+   *       400:
+   *         description: Invalid request body
+   *       404:
+   *         description: The comment was not found in the given thread
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put(
+    '(.*)/comments/:targetType/thread/:targetId/:commentId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const { targetType, targetId, commentId } = ctx.params
+      const threadId = { targetType, targetId: Number(targetId) }
+
+      const parseResult = leasing.v1.UpdateCommentRequestParamsSchema.safeParse(
+        ctx.request.body
+      )
+
+      if (!parseResult.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          invalid: ctx.request.body,
+          detail: parseResult.error,
+          ...metadata,
+        }
+        return
+      }
+
+      const updated = await commentAdapter.updateComment(
+        threadId,
+        Number(commentId),
+        parseResult.data
+      )
+
+      if (!updated) {
+        ctx.status = 404
+        ctx.body = { error: 'not-found', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: updated, ...metadata }
+    }
+  )
 }

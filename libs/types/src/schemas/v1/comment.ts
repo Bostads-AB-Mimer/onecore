@@ -14,6 +14,7 @@ export const CommentSchema = z.object({
   authorId: z.string(),
   comment: z.string(),
   createdAt: z.date(),
+  updatedAt: z.date().optional(),
 })
 
 export const CommentThreadSchema = z.object({

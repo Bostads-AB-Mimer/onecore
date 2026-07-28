@@ -92,6 +92,7 @@ export const routes = (router: KoaRouter) => {
       } else if (comment.authorId !== ctx.session?.account.username) {
         ctx.status = 401
         ctx.body = { error: 'access-denied', ...metadata }
+        return
       }
 
       const result = await coreAdapter.removeComment(threadId, commentId)
@@ -104,6 +105,66 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = { content: null, ...metadata }
+    }
+  )
+
+  router.put(
+    '(.*)/comments/:targetType/thread/:targetId/:commentId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { targetType, targetId } = ctx.params
+      const threadId = { targetType, targetId: Number(targetId) }
+      const commentId = Number(ctx.params.commentId)
+
+      const parseResult = leasing.v1.UpdateCommentRequestParamsSchema.safeParse(
+        ctx.request.body
+      )
+
+      if (!parseResult.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          invalid: ctx.request.body,
+          detail: parseResult.error,
+          ...metadata,
+        }
+        return
+      }
+
+      const threadResult = await coreAdapter.getCommentThread(threadId)
+      if (!threadResult.ok) {
+        ctx.status = threadResult.statusCode || 500
+        ctx.body = { error: threadResult.err, ...metadata }
+        return
+      }
+
+      const comment = threadResult.data.comments.find(
+        (c: Comment) => c.id === commentId
+      )
+      if (!comment) {
+        ctx.status = 404
+        ctx.body = { error: 'not-found', ...metadata }
+        return
+      } else if (comment.authorId !== ctx.session?.account.username) {
+        ctx.status = 401
+        ctx.body = { error: 'access-denied', ...metadata }
+        return
+      }
+
+      const result = await coreAdapter.updateComment(
+        threadId,
+        commentId,
+        parseResult.data
+      )
+
+      if (!result.ok) {
+        ctx.status = result.statusCode
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
     }
   )
 }

@@ -68,4 +68,29 @@ const removeComment = async (
   return { ok: false, err: 'unknown', statusCode: response.status }
 }
 
-export { addComment, getCommentThread, removeComment }
+type UpdateCommentRequest = z.infer<
+  typeof leasing.v1.UpdateCommentRequestParamsSchema
+>
+
+const updateComment = async (
+  threadId: CommentThreadId,
+  commentId: number,
+  comment: UpdateCommentRequest
+): Promise<AdapterResult<Comment, 'unknown'>> => {
+  const response = await axios.put<{ content: Comment }>(
+    `${tenantsLeasesServiceUrl}/comments/${threadId.targetType}/thread/${threadId.targetId}/${commentId}`,
+    comment
+  )
+
+  if (response.status === 200) {
+    return {
+      ok: true,
+      data: response.data.content,
+      statusCode: response.status,
+    }
+  }
+
+  return { ok: false, err: 'unknown', statusCode: response.status }
+}
+
+export { addComment, getCommentThread, removeComment, updateComment }

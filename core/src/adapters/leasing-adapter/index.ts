@@ -1094,7 +1094,12 @@ export {
   updateOfferSentAt,
 } from './offers'
 
-export { getCommentThread, addComment, removeComment } from './comments'
+export {
+  getCommentThread,
+  addComment,
+  removeComment,
+  updateComment,
+} from './comments'
 
 export {
   getAllVacantParkingSpaces,

@@ -28,9 +28,12 @@ import { CommentThreadId, Comment, CommentType } from '@onecore/types'
 import { toast } from 'react-toastify'
 
 import { useProfile, Account } from '../../../common/hooks/useProfile'
+import { RequestError } from '../../../types'
 import { useCommentThread } from '../hooks/useCommentThread'
 import { useAddComment } from '../hooks/useAddComment'
 import { useRemoveComment } from '../hooks/useRemoveComment'
+import { useUpdateComment } from '../hooks/useUpdateComment'
+import { UpdateCommentRequestErrorCodes } from '../hooks/updateCommentRequestErrors'
 
 dayjs.extend(relativeTime)
 dayjs.locale('sv')
@@ -58,53 +61,157 @@ const CommentCard = ({
   comment,
   isOwnComment,
   onDeleteClick,
+  onEditSave,
 }: {
   comment: Comment
   isOwnComment: boolean
   onDeleteClick: (id: number) => void
-}) => (
-  <Paper
-    sx={{
-      padding: '8px',
-      marginTop: '16px',
-      backgroundColor: commentTypeColors[comment.type],
-    }}
-  >
-    <Box
-      className="invisible-parent"
-      display="flex"
-      columnGap={1}
-      justifyContent="space-between"
-      alignItems="flex-start"
+  onEditSave: (
+    id: number,
+    values: { comment: string; type: CommentType }
+  ) => Promise<void>
+}) => {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editComment, setEditComment] = useState(comment.comment)
+  const [editType, setEditType] = useState<CommentType>(comment.type)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleStartEdit = () => {
+    // Reseed from the current comment so a background refetch that landed
+    // while the card was mounted can't leave stale text in the editor.
+    setEditComment(comment.comment)
+    setEditType(comment.type)
+    setIsEditing(true)
+  }
+
+  const handleCancel = () => {
+    setEditComment(comment.comment)
+    setEditType(comment.type)
+    setIsEditing(false)
+  }
+
+  const handleSave = async () => {
+    if (!editComment.trim()) return
+    setIsSaving(true)
+    try {
+      await onEditSave(comment.id, { comment: editComment, type: editType })
+      setIsEditing(false)
+    } catch {
+      // Keep edit mode open; the error is surfaced to the user by the parent.
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <Paper
+      sx={{
+        padding: '8px',
+        marginTop: '16px',
+        backgroundColor: commentTypeColors[isEditing ? editType : comment.type],
+      }}
     >
-      <Box display="flex" columnGap={1} flexGrow={1}>
-        {commentIcons[comment.type]}
-        <div>
-          <Typography variant="body2">
-            {dayjs(comment.createdAt).fromNow()}
-          </Typography>
-          <Typography variant="subtitle2" fontWeight="bold">
-            {comment.authorName}
-          </Typography>
-          <Typography variant="body1">{comment.comment}</Typography>
-        </div>
+      <Box
+        className="invisible-parent"
+        display="flex"
+        columnGap={1}
+        justifyContent="space-between"
+        alignItems="flex-start"
+      >
+        <Box display="flex" columnGap={1} flexGrow={1}>
+          {commentIcons[isEditing ? editType : comment.type]}
+          <Box flexGrow={1}>
+            <Typography variant="body2">
+              {dayjs(comment.createdAt).fromNow()}
+              {comment.updatedAt && ' (redigerad)'}
+            </Typography>
+            <Typography variant="subtitle2" fontWeight="bold">
+              {comment.authorName}
+            </Typography>
+            {isEditing ? (
+              <Box
+                display="flex"
+                flexDirection="column"
+                rowGap={1}
+                marginTop={1}
+              >
+                <ToggleButtonGroup
+                  value={editType}
+                  exclusive
+                  size="small"
+                  onChange={(_, val) => val && setEditType(val)}
+                  aria-label="Typ av kommentar"
+                >
+                  <ToggleButton value="COMMENT" aria-label="Kommentar">
+                    <ChatBubbleOutlineIcon />
+                  </ToggleButton>
+                  <ToggleButton value="WARNING" aria-label="Varning">
+                    <WarningAmberIcon />
+                  </ToggleButton>
+                  <ToggleButton value="STOP" aria-label="Allvarlig varning">
+                    <BlockIcon />
+                  </ToggleButton>
+                </ToggleButtonGroup>
+                <TextareaAutosize
+                  minRows={3}
+                  value={editComment}
+                  onChange={(e) => setEditComment(e.target.value)}
+                />
+              </Box>
+            ) : (
+              <Typography variant="body1">{comment.comment}</Typography>
+            )}
+          </Box>
+        </Box>
+        <Box display="flex" columnGap={1}>
+          {isOwnComment &&
+            (isEditing ? (
+              <>
+                <Button
+                  variant="dark-outlined-utility"
+                  size="small"
+                  color="primary"
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                >
+                  Avbryt
+                </Button>
+                <LoadingButton
+                  variant="dark"
+                  size="small"
+                  onClick={handleSave}
+                  loading={isSaving}
+                >
+                  Spara
+                </LoadingButton>
+              </>
+            ) : (
+              <>
+                <Button
+                  className="invisible-child"
+                  variant="dark-outlined-utility"
+                  size="small"
+                  color="primary"
+                  onClick={handleStartEdit}
+                >
+                  Redigera
+                </Button>
+                <Button
+                  className="invisible-child"
+                  variant="dark-outlined-utility"
+                  size="small"
+                  color="primary"
+                  onClick={() => onDeleteClick(comment.id)}
+                >
+                  Ta bort
+                </Button>
+              </>
+            ))}
+        </Box>
       </Box>
-      <div>
-        {isOwnComment && (
-          <Button
-            className="invisible-child"
-            variant="dark-outlined-utility"
-            size="small"
-            color="primary"
-            onClick={() => onDeleteClick(comment.id)}
-          >
-            Ta bort
-          </Button>
-        )}
-      </div>
-    </Box>
-  </Paper>
-)
+    </Paper>
+  )
+}
 
 const CommentSection = (props: { threadId: CommentThreadId }) => {
   const { data: profile } = useProfile()
@@ -149,14 +256,45 @@ const CommentSection = (props: { threadId: CommentThreadId }) => {
           setComments([newComment, ...comments])
           reset({ type: 'COMMENT', comment: '' })
         },
-        onError: () => {
-          toast('Ett fel inträffade när din kommentar skulle sparas.', {
-            type: 'error',
-            hideProgressBar: true,
-          })
+        onError: (error) => {
+          toast(
+            error?.errorMessage ??
+              'Ett fel inträffade när din kommentar skulle sparas.',
+            {
+              type: 'error',
+              hideProgressBar: true,
+            }
+          )
         },
       }
     )
+  }
+
+  const updateComment = useUpdateComment()
+  const handleEditSave = async (
+    id: number,
+    values: { comment: string; type: CommentType }
+  ): Promise<void> => {
+    try {
+      const updated = await updateComment.mutateAsync({
+        threadId,
+        commentId: id,
+        comment: values,
+      })
+      setComments((current) => current.map((c) => (c.id === id ? updated : c)))
+    } catch (error) {
+      const mapped = error as RequestError<UpdateCommentRequestErrorCodes>
+      toast(
+        mapped?.errorMessage ??
+          'Ett fel inträffade när din kommentar skulle uppdateras.',
+        {
+          type: 'error',
+          hideProgressBar: true,
+        }
+      )
+      // Rethrow so the card keeps edit mode open with the user's changes.
+      throw error
+    }
   }
 
   const removeComment = useRemoveComment()
@@ -170,6 +308,17 @@ const CommentSection = (props: { threadId: CommentThreadId }) => {
         onSuccess: () => {
           setDeleteDialog({ open: false })
           setComments((comments) => comments.filter((c) => c.id !== id))
+        },
+        onError: (error) => {
+          setDeleteDialog({ open: false })
+          toast(
+            error?.errorMessage ??
+              'Ett fel inträffade när kommentaren skulle tas bort.',
+            {
+              type: 'error',
+              hideProgressBar: true,
+            }
+          )
         },
       }
     )
@@ -290,6 +439,7 @@ const CommentSection = (props: { threadId: CommentThreadId }) => {
                     comment={comment}
                     isOwnComment={account?.username === comment.authorId}
                     onDeleteClick={() => handleDeleteClick(comment.id)}
+                    onEditSave={handleEditSave}
                   />
                 </Collapse>
               ))}
