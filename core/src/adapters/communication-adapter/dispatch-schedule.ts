@@ -7,9 +7,9 @@ import { AdapterResult } from '../types'
 // Error mapping shared by both scheduled-dispatch operations:
 // 'not-found' -> unknown dispatch id
 // 'conflict'  -> Infobip already sent/started the bulk; nothing was changed
-// 400s forward the upstream code so the client can distinguish
-// NOT_SCHEDULED from sendAt validation failures (SEND_AT_IN_PAST,
-// SEND_AT_TOO_FAR_AHEAD, SEND_AT_TOO_SOON).
+// 400s forward the upstream code (NOT_SCHEDULED, SEND_AT_IN_PAST,
+// SEND_AT_TOO_FAR_AHEAD, SEND_AT_TOO_SOON, SEND_AT_NOT_LATER); a 400
+// without a code falls back to the generic 'error'.
 type ScheduleError = 'not-found' | 'conflict' | 'error' | string
 
 const mapError = (
@@ -21,7 +21,7 @@ const mapError = (
     if (status === 400) {
       const upstream = (err.response.data as { error?: string } | undefined)
         ?.error
-      return { ok: false, err: upstream ?? 'NOT_SCHEDULED', statusCode: 400 }
+      return { ok: false, err: upstream ?? 'error', statusCode: 400 }
     }
     if (status === 409) return { ok: false, err: 'conflict', statusCode: 409 }
     return { ok: false, err: 'error', statusCode: status }
