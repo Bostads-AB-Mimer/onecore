@@ -213,6 +213,11 @@ export interface paths {
               phoneNumber: string
             }[]
             text: string
+            /**
+             * Format: date-time
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
+             */
+            sendAt?: string
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown
@@ -260,6 +265,11 @@ export interface paths {
             }[]
             subject: string
             text: string
+            /**
+             * Format: date-time
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 5 days ahead, Infobip's email limit); omit for immediate.
+             */
+            sendAt?: string
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown
@@ -366,6 +376,103 @@ export interface paths {
         }
         /** @description Dispatch not found */
         404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/cancel': {
+    /**
+     * Cancel a scheduled dispatch
+     * @description Cancels the scheduled bulk at Infobip and marks the dispatch's recipients as cancelled. Idempotent for already-cancelled dispatches.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Cancelled */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                dispatchId?: string
+                cancelledRecipients?: number
+              }
+            }
+          }
+        }
+        /** @description Dispatch is not scheduled */
+        400: {
+          content: never
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description The bulk was already sent or is processing; nothing was changed */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/reschedule': {
+    /**
+     * Move a scheduled dispatch to a new send time
+     * @description Reschedules the bulk at Infobip and updates the dispatch's sendAt. The new time must be in the future and within the channel cap (sms 90 days, email 5 days).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date-time
+             * @description New send time as ISO 8601 instant with offset/Z.
+             */
+            sendAt: string
+          }
+        }
+      }
+      responses: {
+        /** @description Rescheduled */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                dispatchId?: string
+                sendAt?: string
+              }
+            }
+          }
+        }
+        /** @description Dispatch is not scheduled, or sendAt is invalid for the channel */
+        400: {
+          content: never
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description The bulk was already sent or is processing; nothing was changed */
+        409: {
           content: never
         }
         /** @description Internal server error */
@@ -13751,6 +13858,10 @@ export interface components {
       invalid: string[]
       totalSent: number
       totalInvalid: number
+      /** @description Present when scheduled: dispatch id (cancel/reschedule handle) */
+      dispatchId?: string
+      /** @description Present when scheduled: target send time as ISO instant */
+      scheduledFor?: string
     }
     BulkEmailResult: {
       /** @description Email addresses that received email */
@@ -13759,6 +13870,10 @@ export interface components {
       invalid: string[]
       totalSent: number
       totalInvalid: number
+      /** @description Present when scheduled: dispatch id (cancel/reschedule handle) */
+      dispatchId?: string
+      /** @description Present when scheduled: target send time as ISO instant */
+      scheduledFor?: string
     }
     CustomerMessage: {
       dispatch: {
@@ -13775,7 +13890,7 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
@@ -13800,6 +13915,8 @@ export interface components {
           | 'failed'
           | 'bounced'
           | 'received'
+          | 'scheduled'
+          | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -13823,7 +13940,7 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
@@ -13848,6 +13965,8 @@ export interface components {
           | 'failed'
           | 'bounced'
           | 'received'
+          | 'scheduled'
+          | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null

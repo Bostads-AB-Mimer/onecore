@@ -7,6 +7,8 @@ import {
   User,
 } from 'lucide-react'
 
+import { useScheduleField } from '@/shared/hooks/useScheduleField'
+import { MAX_SCHEDULE_DAYS_AHEAD } from '@/shared/lib/schedule'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -18,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
+import { ScheduleField } from '@/shared/ui/ScheduleField'
 import { Textarea } from '@/shared/ui/Textarea'
 
 const MAX_SMS_LENGTH = 1600
@@ -42,7 +45,8 @@ interface SmsModalBaseProps {
 interface SmsModalSingleProps extends SmsModalBaseProps {
   recipientName: string
   phoneNumber: string
-  onSend: (message: string) => Promise<void>
+  // sendAt (ISO instant) is set when the user chose to schedule the send.
+  onSend: (message: string, sendAt?: string) => Promise<void>
   recipients?: undefined
   totalSelectedItems?: undefined
 }
@@ -50,7 +54,12 @@ interface SmsModalSingleProps extends SmsModalBaseProps {
 interface SmsModalBulkProps extends SmsModalBaseProps {
   recipients: SmsRecipient[]
   totalSelectedItems?: number
-  onSend?: (message: string, recipients: SmsRecipient[]) => Promise<void>
+  // sendAt (ISO instant) is set when the user chose to schedule the send.
+  onSend?: (
+    message: string,
+    recipients: SmsRecipient[],
+    sendAt?: string
+  ) => Promise<void>
   recipientName?: undefined
   phoneNumber?: undefined
 }
@@ -65,6 +74,7 @@ export function SmsModal(props: SmsModalProps) {
   const [isSending, setIsSending] = useState(false)
   const [showCostConfirmation, setShowCostConfirmation] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
+  const schedule = useScheduleField(MAX_SCHEDULE_DAYS_AHEAD.sms)
 
   const charactersLeft = MAX_SMS_LENGTH - message.length
 
@@ -90,6 +100,7 @@ export function SmsModal(props: SmsModalProps) {
 
     if (isBulk) {
       if (validRecipients.length === 0 || !props.onSend) return
+      if (schedule.isScheduling && schedule.error) return
 
       if (
         validRecipients.length > COST_WARNING_THRESHOLD &&
@@ -104,19 +115,25 @@ export function SmsModal(props: SmsModalProps) {
         await (
           props.onSend as (
             message: string,
-            recipients: SmsRecipient[]
+            recipients: SmsRecipient[],
+            sendAt?: string
           ) => Promise<void>
-        )(message, validRecipients)
+        )(message, validRecipients, schedule.sendAtIso())
         setMessage('')
         setShowCostConfirmation(false)
+        schedule.reset()
       } finally {
         setIsSending(false)
       }
     } else {
+      if (schedule.isScheduling && schedule.error) return
       setIsSending(true)
       try {
-        await (props.onSend as (message: string) => Promise<void>)(message)
+        await (
+          props.onSend as (message: string, sendAt?: string) => Promise<void>
+        )(message, schedule.sendAtIso())
         setMessage('')
+        schedule.reset()
         onOpenChange(false)
       } finally {
         setIsSending(false)
@@ -128,6 +145,7 @@ export function SmsModal(props: SmsModalProps) {
     isBulk,
     validRecipients,
     showCostConfirmation,
+    schedule,
     props.onSend,
     onOpenChange,
   ])
@@ -135,6 +153,7 @@ export function SmsModal(props: SmsModalProps) {
   const handleClose = () => {
     setMessage('')
     setShowCostConfirmation(false)
+    schedule.reset()
     onOpenChange(false)
   }
 
@@ -271,6 +290,8 @@ export function SmsModal(props: SmsModalProps) {
               className="min-h-[120px] resize-none"
             />
           </div>
+
+          <ScheduleField id="sms-schedule" field={schedule} />
         </div>
 
         {showCostConfirmation ? (
@@ -300,7 +321,13 @@ export function SmsModal(props: SmsModalProps) {
                 Avbryt
               </Button>
               <Button onClick={handleSend} disabled={isSending}>
-                {isSending ? 'Skickar...' : 'Ja, skicka SMS'}
+                {isSending
+                  ? schedule.isScheduling
+                    ? 'Schemalägger...'
+                    : 'Skickar...'
+                  : schedule.isScheduling
+                    ? 'Ja, schemalägg SMS'
+                    : 'Ja, skicka SMS'}
               </Button>
             </DialogFooter>
           </div>
@@ -318,14 +345,21 @@ export function SmsModal(props: SmsModalProps) {
               disabled={
                 !message.trim() ||
                 (isBulk && validRecipients.length === 0) ||
+                (schedule.isScheduling && !!schedule.error) ||
                 isSending
               }
             >
               {isSending
-                ? 'Skickar...'
+                ? schedule.isScheduling
+                  ? 'Schemalägger...'
+                  : 'Skickar...'
                 : isBulk
-                  ? `Skicka till ${validRecipients.length} mottagare`
-                  : 'Skicka SMS'}
+                  ? schedule.isScheduling
+                    ? `Schemalägg till ${validRecipients.length} mottagare`
+                    : `Skicka till ${validRecipients.length} mottagare`
+                  : schedule.isScheduling
+                    ? 'Schemalägg SMS'
+                    : 'Skicka SMS'}
             </Button>
           </DialogFooter>
         )}

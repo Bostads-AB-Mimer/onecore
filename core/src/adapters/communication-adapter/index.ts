@@ -25,6 +25,7 @@ import { AdapterResult } from '../types'
 
 export * from './log-reads'
 export * from './delivery-reports'
+export * from './dispatch-schedule'
 
 export const sendNotificationToContact = async (
   recipientContact: Contact,
@@ -424,10 +425,28 @@ export const sendInspectionProtocolEmail = async (
   }
 }
 
+// Forwards the communication service's error code (`reason`, e.g.
+// TOO_MANY_RECIPIENTS or the sendAt validation codes) instead of flattening
+// to 'error', so the frontend can show what actually went wrong.
+const bulkSendError = (
+  err: unknown
+): { ok: false; err: string; statusCode: number } => {
+  if (axios.isAxiosError(err) && err.response) {
+    const reason = (err.response.data as { reason?: string } | undefined)
+      ?.reason
+    return {
+      ok: false,
+      err: reason ?? 'error',
+      statusCode: err.response.status,
+    }
+  }
+  return { ok: false, err: 'error', statusCode: 500 }
+}
+
 export const sendBulkSms = async (
   body: BulkSms
 ): Promise<
-  AdapterResult<{ content: BulkSmsResult; warnings?: string[] }, 'error'>
+  AdapterResult<{ content: BulkSmsResult; warnings?: string[] }, string>
 > => {
   try {
     const result = await axios.post(
@@ -442,17 +461,14 @@ export const sendBulkSms = async (
       data: { content: result.data.content, warnings: result.data.warnings },
     }
   } catch (err) {
-    if (axios.isAxiosError(err) && err.response) {
-      return { ok: false, err: 'error', statusCode: err.response.status }
-    }
-    return { ok: false, err: 'error', statusCode: 500 }
+    return bulkSendError(err)
   }
 }
 
 export const sendBulkEmail = async (
   body: BulkEmail
 ): Promise<
-  AdapterResult<{ content: BulkEmailResult; warnings?: string[] }, 'error'>
+  AdapterResult<{ content: BulkEmailResult; warnings?: string[] }, string>
 > => {
   try {
     const result = await axios.post(
@@ -467,10 +483,7 @@ export const sendBulkEmail = async (
       data: { content: result.data.content, warnings: result.data.warnings },
     }
   } catch (err) {
-    if (axios.isAxiosError(err) && err.response) {
-      return { ok: false, err: 'error', statusCode: err.response.status }
-    }
-    return { ok: false, err: 'error', statusCode: 500 }
+    return bulkSendError(err)
   }
 }
 

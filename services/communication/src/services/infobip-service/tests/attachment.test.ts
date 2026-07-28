@@ -39,7 +39,7 @@ describe('/sendMessageWithAttachment', () => {
   })
 
   it('should send email with PDF attachment', async () => {
-    sendEmailSpy.mockResolvedValue({ data: { messageId: '123' } })
+    sendEmailSpy.mockResolvedValue({ messages: [{ messageId: '123' }] })
 
     const pdfContent = Buffer.from('mock pdf content').toString('base64')
 
@@ -78,7 +78,7 @@ describe('/sendMessageWithAttachment', () => {
   })
 
   it('should send email with multiple attachments', async () => {
-    sendEmailSpy.mockResolvedValue({ data: { messageId: '123' } })
+    sendEmailSpy.mockResolvedValue({ messages: [{ messageId: '123' }] })
 
     const emailWithAttachments: Email = {
       to: 'test@example.com',
@@ -114,7 +114,7 @@ describe('/sendMessageWithAttachment', () => {
   })
 
   it('should send email without attachments', async () => {
-    sendEmailSpy.mockResolvedValue({ data: { messageId: '123' } })
+    sendEmailSpy.mockResolvedValue({ messages: [{ messageId: '123' }] })
 
     const emailWithoutAttachment: Email = {
       to: 'test@example.com',
@@ -137,7 +137,7 @@ describe('/sendMessageWithAttachment', () => {
   })
 
   it('should return 400 for invalid email object', async () => {
-    sendEmailSpy.mockResolvedValue({ data: { messageId: '123' } })
+    sendEmailSpy.mockResolvedValue({ messages: [{ messageId: '123' }] })
 
     const invalidEmail = {
       to: 'invalid-email',

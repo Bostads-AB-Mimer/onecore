@@ -9,7 +9,11 @@ import * as emailAdapter from '../adapters/email-adapter'
 import * as templateRender from '../adapters/email-template-render'
 import * as smsAdapter from '../adapters/sms-adapter'
 import { routes } from '../'
-import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
+import {
+  deleteDispatch,
+  logOutboundDispatch,
+  setRecipientExternalIds,
+} from '../../communication-log-service/adapters/db'
 
 jest.mock('@onecore/utilities', () => {
   return {
@@ -32,25 +36,25 @@ jest.mock('@onecore/utilities', () => {
 // behavior, not persistence. The dedicated db-adapter tests cover that path.
 jest.mock('../../communication-log-service/adapters/db', () => ({
   logOutboundDispatch: jest.fn().mockResolvedValue({ dispatchId: 'test-id' }),
+  deleteDispatch: jest.fn().mockResolvedValue(undefined),
+  setRecipientExternalIds: jest.fn().mockResolvedValue(undefined),
 }))
 
 // Builds a full Infobip v4 send response so spy return types match the adapter.
 const emailSendResult = (messageId: string) => ({
-  data: {
-    messages: [
-      {
-        messageId,
-        to: 'tenant@example.com',
-        status: {
-          groupId: 1,
-          groupName: 'PENDING',
-          id: 26,
-          name: 'PENDING_ACCEPTED',
-          description: 'Message accepted',
-        },
+  messages: [
+    {
+      messageId,
+      to: 'tenant@example.com',
+      status: {
+        groupId: 1,
+        groupName: 'PENDING',
+        id: 26,
+        name: 'PENDING_ACCEPTED',
+        description: 'Message accepted',
       },
-    ],
-  },
+    },
+  ],
 })
 
 const app = new Koa()
@@ -179,8 +183,8 @@ describe('/sendWorkOrderEmail', () => {
 describe('work order tenant message logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
-  // The SMS adapter returns the Infobip v3 response directly (no `.data`
-  // wrapper, unlike the email adapter), so the route reads messages[0] off it.
+  // The SMS adapter returns the Infobip v3 response directly, so the route
+  // reads messages[0] off it.
   const smsSendResult = (messageId: string) => ({
     messages: [
       {
@@ -490,8 +494,8 @@ describe('/sendBulkSms', () => {
 describe('/sendBulkSms logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
-  // The SMS adapter returns the Infobip v3 response directly (no `.data`
-  // wrapper), so the route reads messageId off messages[i].
+  // The SMS adapter returns the Infobip v3 response directly, so the route
+  // reads messageId off messages[i].
   const smsSendResult = (messageId: string) => ({
     messages: [
       {
@@ -536,6 +540,295 @@ describe('/sendBulkSms logging', () => {
     expect(res.body.warnings).toEqual([
       expect.stringContaining('Communication log failed'),
     ])
+  })
+})
+
+describe('/sendBulkSms scheduling', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+  let sendBulkSmsSpy: jest.SpyInstance
+
+  const isoFromNow = (ms: number) => new Date(Date.now() + ms).toISOString()
+  const DAY_MS = 24 * 3600 * 1000
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    sendBulkSmsSpy = jest.spyOn(smsAdapter, 'sendBulkSms')
+    sendBulkSmsSpy.mockReset()
+    sendBulkSmsSpy.mockResolvedValue({
+      messages: [
+        {
+          to: '46701234567',
+          messageId: 'mid-scheduled',
+          status: {
+            groupId: 1,
+            groupName: 'PENDING',
+            id: 26,
+            name: 'PENDING_ACCEPTED',
+            description: 'Message accepted',
+          },
+        },
+      ],
+    })
+  })
+
+  it('passes the schedule to the adapter and logs recipients as scheduled under the bulkId', async () => {
+    const sendAt = isoFromNow(DAY_MS)
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test', sendAt })
+
+    expect(res.status).toBe(200)
+    const { schedule } = sendBulkSmsSpy.mock.calls[0][0]
+    expect(schedule).toEqual({
+      bulkId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      sendAt: new Date(sendAt),
+    })
+    // The dispatch row is keyed by the same id Infobip got as bulkId, so the
+    // schedule can be managed later.
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: schedule.bulkId,
+        sendAt: new Date(sendAt),
+        recipients: [expect.objectContaining({ status: 'scheduled' })],
+      })
+    )
+    expect(res.body.content.dispatchId).toBe(schedule.bulkId)
+    expect(res.body.content.scheduledFor).toBe(new Date(sendAt).toISOString())
+  })
+
+  it('treats sendAt within the grace window as an immediate send', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: isoFromNow(5 * 1000),
+      })
+
+    expect(res.status).toBe(200)
+    expect(sendBulkSmsSpy.mock.calls[0][0].schedule).toBeUndefined()
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipients: [expect.objectContaining({ status: 'pending' })],
+      })
+    )
+    expect(res.body.content.dispatchId).toBeUndefined()
+  })
+
+  it('rejects sendAt in the past', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: isoFromNow(-60 * 1000),
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('SEND_AT_IN_PAST')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects sendAt beyond the max-days cap', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: isoFromNow(91 * DAY_MS),
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('SEND_AT_TOO_FAR_AHEAD')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('rejects sendAt without a timezone offset', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        // No Z/offset: not an absolute instant, so the schema must reject it.
+        sendAt: '2026-08-01T10:00:00',
+      })
+
+    expect(res.status).toBe(400)
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('logs before calling Infobip: a failed log write means nothing is scheduled', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: isoFromNow(DAY_MS),
+      })
+
+    // Log-before-send: without a dispatch row there is no cancel handle, so
+    // the route must not create the schedule at all. The reason code drives
+    // the user-facing "nothing was sent, try again" toast.
+    expect(res.status).toBe(500)
+    expect(res.body.reason).toBe('SCHEDULE_LOG_FAILED')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('deletes the dispatch row when Infobip rejects the schedule', async () => {
+    const deleteDispatchMock = deleteDispatch as jest.Mock
+    deleteDispatchMock.mockClear()
+    sendBulkSmsSpy.mockRejectedValueOnce(new Error('Infobip 400'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: isoFromNow(DAY_MS),
+      })
+
+    // The provider has nothing, so our own row must go too — no phantom
+    // 'scheduled' entries in the log.
+    expect(res.status).toBe(500)
+    const loggedId = logOutboundDispatchMock.mock.calls[0][0].id
+    expect(deleteDispatchMock).toHaveBeenCalledWith(loggedId)
+  })
+
+  it('backfills externalMessageIds after Infobip accepts the schedule', async () => {
+    const setRecipientExternalIdsMock = setRecipientExternalIds as jest.Mock
+    setRecipientExternalIdsMock.mockClear()
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: isoFromNow(DAY_MS),
+      })
+
+    expect(res.status).toBe(200)
+    const { schedule } = sendBulkSmsSpy.mock.calls[0][0]
+    expect(setRecipientExternalIdsMock).toHaveBeenCalledWith(schedule.bulkId, [
+      { toAddress: '46701234567', externalMessageId: 'mid-scheduled' },
+    ])
+    // And the log write happened before the Infobip call.
+    expect(logOutboundDispatchMock.mock.invocationCallOrder[0]).toBeLessThan(
+      sendBulkSmsSpy.mock.invocationCallOrder[0]
+    )
+  })
+})
+
+describe('/sendBulkEmail scheduling', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+  let sendBulkEmailSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    sendBulkEmailSpy = jest.spyOn(emailAdapter, 'sendBulkEmail')
+    sendBulkEmailSpy.mockReset()
+    sendBulkEmailSpy.mockResolvedValue(emailSendResult('mid-scheduled'))
+  })
+
+  it('passes the schedule to the adapter and logs recipients as scheduled under the bulkId', async () => {
+    const sendAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString()
+
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt,
+      })
+
+    expect(res.status).toBe(200)
+    const { schedule } = sendBulkEmailSpy.mock.calls[0][0]
+    expect(schedule).toEqual({
+      bulkId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      sendAt: new Date(sendAt),
+    })
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: schedule.bulkId,
+        sendAt: new Date(sendAt),
+        recipients: [expect.objectContaining({ status: 'scheduled' })],
+      })
+    )
+    expect(res.body.content.dispatchId).toBe(schedule.bulkId)
+    expect(res.body.content.scheduledFor).toBe(new Date(sendAt).toISOString())
+  })
+
+  it('rejects sendAt in the past', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt: new Date(Date.now() - 60 * 1000).toISOString(),
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('SEND_AT_IN_PAST')
+    expect(sendBulkEmailSpy).not.toHaveBeenCalled()
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects sendAt beyond the email cap (5 days) even though SMS allows it', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt: new Date(Date.now() + 6 * 24 * 3600 * 1000).toISOString(),
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('SEND_AT_TOO_FAR_AHEAD')
+    expect(sendBulkEmailSpy).not.toHaveBeenCalled()
+  })
+
+  it('logs before calling Infobip: a failed log write means nothing is scheduled', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+      })
+
+    expect(res.status).toBe(500)
+    expect(res.body.reason).toBe('SCHEDULE_LOG_FAILED')
+    expect(sendBulkEmailSpy).not.toHaveBeenCalled()
+  })
+
+  it('deletes the dispatch row when Infobip rejects the schedule', async () => {
+    const deleteDispatchMock = deleteDispatch as jest.Mock
+    deleteDispatchMock.mockClear()
+    sendBulkEmailSpy.mockRejectedValueOnce(new Error('Infobip 400'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+      })
+
+    expect(res.status).toBe(500)
+    const loggedId = logOutboundDispatchMock.mock.calls[0][0].id
+    expect(deleteDispatchMock).toHaveBeenCalledWith(loggedId)
   })
 })
 

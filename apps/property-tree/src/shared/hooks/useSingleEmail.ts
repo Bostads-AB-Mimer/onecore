@@ -1,6 +1,11 @@
 import { useCallback, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import {
+  formatScheduleTimestamp,
+  scheduleSendErrorText,
+} from '@/shared/lib/schedule'
+
 import { useToast } from './useToast'
 
 // A fully-resolved email recipient. Having one is the proof we can send: every
@@ -16,9 +21,10 @@ interface UseSingleEmailOptions {
   sendEmail: (
     recipients: { contactCode: string; emailAddress: string }[],
     subject: string,
-    text: string
+    text: string,
+    sendAt?: string
   ) => Promise<{
-    content: { totalSent: number; totalInvalid: number }
+    content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
   }>
 }
@@ -36,10 +42,12 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
       recipient,
       subject,
       body,
+      sendAt,
     }: {
       recipient: SingleEmailRecipient
       subject: string
       body: string
+      sendAt?: string
     }) =>
       sendEmail(
         [
@@ -49,14 +57,22 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
           },
         ],
         subject,
-        body
+        body,
+        sendAt
       ),
     onSuccess: (result) => {
       // Refresh any open tenant communication log so the new message appears.
       queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
+      // Key on the server's outcome, not the request: a sendAt within the
+      // grace window is sent immediately (no scheduledFor in the response).
+      const scheduledFor = result.content.scheduledFor
       toast({
-        title: 'Mejl skickat',
-        description: `Skickades till ${result.content.totalSent} mottagare${
+        title: scheduledFor ? 'Mejl schemalagt' : 'Mejl skickat',
+        description: `${
+          scheduledFor
+            ? `Skickas ${formatScheduleTimestamp(scheduledFor)} till`
+            : 'Skickades till'
+        } ${result.content.totalSent} mottagare${
           result.content.totalInvalid > 0
             ? `. ${result.content.totalInvalid} ogiltiga adresser.`
             : ''
@@ -89,10 +105,10 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
   const closeEmail = useCallback(() => setRecipient(null), [])
 
   const handleSendEmail = useCallback(
-    async (subject: string, body: string) => {
+    async (subject: string, body: string, sendAt?: string) => {
       if (!recipient) return
       try {
-        await sendMutation.mutateAsync({ recipient, subject, body })
+        await sendMutation.mutateAsync({ recipient, subject, body, sendAt })
       } catch {
         // Surfaced via onError; swallow so the modal doesn't see a rejection.
       }
@@ -112,7 +128,15 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
 function extractErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   if (error && typeof error === 'object') {
-    const apiError = error as { message?: string; reason?: string }
+    const apiError = error as {
+      message?: string
+      reason?: string
+      error?: string
+    }
+    // Core forwards the communication service's error code in `error`
+    // (e.g. SEND_AT_TOO_FAR_AHEAD); show its Swedish text when known.
+    const mapped = scheduleSendErrorText(apiError.error ?? apiError.reason)
+    if (mapped) return mapped
     if (apiError.message) return apiError.message
     if (apiError.reason) return apiError.reason
   }

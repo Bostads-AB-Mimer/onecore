@@ -13,6 +13,7 @@ import {
 import { logger } from '@onecore/utilities'
 
 import { EmailV4Message, EmailV4Response } from './types'
+import { ScheduleOptions } from '../schedule'
 import {
   AcceptParkingSpaceOfferTemplateId,
   AdditionalParkingSpaceOfferTemplateId,
@@ -40,15 +41,18 @@ const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
 // epic-mim-1838.dev.mimer.nu / api.mimer.nu) and filter each Infobip
 // delivery-report subscription to its own application, so environments
 // only receive reports for their own sends (stops cross-env PII fan-out).
+// `schedule` queues the send at Infobip for future delivery; bulkId is our
+// dispatch id so the schedule can be managed (cancelled/rescheduled) later.
 const sendEmailV4 = async (
-  messages: EmailV4Message[]
+  messages: EmailV4Message[],
+  schedule?: ScheduleOptions
 ): Promise<EmailV4Response> => {
   const baseUrl = config.infobip.baseUrl.replace(/\/$/, '') // Remove trailing slash
   const url = `${baseUrl}/email/4/messages`
   const apiKey = config.infobip.apiKey
 
   logger.info(
-    { url, messageCount: messages.length },
+    { url, messageCount: messages.length, scheduled: !!schedule },
     'Sending email via v4 API'
   )
 
@@ -58,7 +62,20 @@ const sendEmailV4 = async (
       Authorization: `App ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({
+      messages,
+      ...(schedule && {
+        options: {
+          schedule: {
+            bulkId: schedule.bulkId,
+            // Email v4 rejects the RFC 822 offset format SMS v3 uses
+            // ("Invalid date time format") — it wants a strict ISO 8601
+            // instant with 'Z'.
+            sendAt: schedule.sendAt.toISOString(),
+          },
+        },
+      }),
+    }),
   })
 
   if (!response.ok) {
@@ -87,7 +104,7 @@ export const sendEmail = async (message: Email) => {
       { to: message.to, subject: message.subject },
       'Sending email complete'
     )
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -127,7 +144,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -166,7 +183,7 @@ export const sendParkingSpaceAcceptOffer = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -205,7 +222,7 @@ export const sendNonScoredParkingSpaceApproved = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -242,7 +259,7 @@ export const sendNonScoredParkingSpaceDenied = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -269,7 +286,7 @@ export const sendParkingSpaceAssignedToOther = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -300,7 +317,7 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -311,28 +328,36 @@ export const sendBulkEmail = async (email: {
   emails: string[]
   subject: string
   text: string
+  schedule?: ScheduleOptions
 }) => {
   logger.info(
-    { recipientCount: email.emails.length, baseUrl: config.infobip.baseUrl },
+    {
+      recipientCount: email.emails.length,
+      baseUrl: config.infobip.baseUrl,
+      scheduled: !!email.schedule,
+    },
     'Sending bulk email'
   )
 
   try {
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: email.emails.map((addr) => ({
-          to: [{ destination: addr }],
-        })),
-        content: { subject: email.subject, text: email.text },
-      },
-    ])
+    const response = await sendEmailV4(
+      [
+        {
+          sender: EMAIL_SENDER,
+          destinations: email.emails.map((addr) => ({
+            to: [{ destination: addr }],
+          })),
+          content: { subject: email.subject, text: email.text },
+        },
+      ],
+      email.schedule
+    )
 
     logger.info(
       { recipientCount: email.emails.length },
-      'Bulk email sent successfully'
+      'Bulk email submitted to Infobip'
     )
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error, 'Error sending bulk email')
     throw error

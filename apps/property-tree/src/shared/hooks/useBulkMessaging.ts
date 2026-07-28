@@ -1,6 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { useToast } from '@/shared/hooks/useToast'
+import {
+  formatScheduleTimestamp,
+  scheduleSendErrorText,
+} from '@/shared/lib/schedule'
 import type { EmailRecipient } from '@/shared/ui/EmailModal'
 import type { SmsRecipient } from '@/shared/ui/SmsModal'
 
@@ -25,18 +29,20 @@ export interface UseBulkMessagingOptions<TItem> {
   /** Send bulk SMS - returns the result plus any non-blocking warnings */
   sendBulkSms: (
     recipients: { contactCode: string; phoneNumber: string }[],
-    message: string
+    message: string,
+    sendAt?: string
   ) => Promise<{
-    content: { totalSent: number; totalInvalid: number }
+    content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
   }>
   /** Send bulk email - returns the result plus any non-blocking warnings */
   sendBulkEmail: (
     recipients: { contactCode: string; emailAddress: string }[],
     subject: string,
-    body: string
+    body: string,
+    sendAt?: string
   ) => Promise<{
-    content: { totalSent: number; totalInvalid: number }
+    content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
   }>
 }
@@ -66,11 +72,16 @@ export interface UseBulkMessagingReturn {
   // Handlers
   handleOpenSmsModal: () => Promise<void>
   handleOpenEmailModal: () => Promise<void>
-  handleSendSms: (message: string, recipients: SmsRecipient[]) => Promise<void>
+  handleSendSms: (
+    message: string,
+    recipients: SmsRecipient[],
+    sendAt?: string
+  ) => Promise<void>
   handleSendEmail: (
     subject: string,
     body: string,
-    recipients: EmailRecipient[]
+    recipients: EmailRecipient[],
+    sendAt?: string
   ) => Promise<void>
 
   // Loading state
@@ -258,7 +269,11 @@ export function useBulkMessaging<TItem>({
 
   // Send SMS handler
   const handleSendSms = useCallback(
-    async (message: string, validRecipients: SmsRecipient[]) => {
+    async (
+      message: string,
+      validRecipients: SmsRecipient[],
+      sendAt?: string
+    ) => {
       try {
         const recipients = validRecipients
           .filter(
@@ -266,11 +281,18 @@ export function useBulkMessaging<TItem>({
           )
           .map((r) => ({ contactCode: r.id, phoneNumber: r.phone }))
 
-        const result = await sendBulkSms(recipients, message)
+        const result = await sendBulkSms(recipients, message, sendAt)
 
+        // Key on the server's outcome, not the request: a sendAt within the
+        // grace window is sent immediately (no scheduledFor in the response).
+        const scheduledFor = result.content.scheduledFor
         toast({
-          title: 'SMS skickat',
-          description: `Skickades till ${result.content.totalSent} mottagare${
+          title: scheduledFor ? 'SMS schemalagt' : 'SMS skickat',
+          description: `${
+            scheduledFor
+              ? `Skickas ${formatScheduleTimestamp(scheduledFor)} till`
+              : 'Skickades till'
+          } ${result.content.totalSent} mottagare${
             result.content.totalInvalid > 0
               ? `. ${result.content.totalInvalid} ogiltiga nummer.`
               : ''
@@ -306,7 +328,8 @@ export function useBulkMessaging<TItem>({
     async (
       subject: string,
       body: string,
-      validRecipients: EmailRecipient[]
+      validRecipients: EmailRecipient[],
+      sendAt?: string
     ) => {
       try {
         const recipients = validRecipients
@@ -315,11 +338,18 @@ export function useBulkMessaging<TItem>({
           )
           .map((r) => ({ contactCode: r.id, emailAddress: r.email }))
 
-        const result = await sendBulkEmail(recipients, subject, body)
+        const result = await sendBulkEmail(recipients, subject, body, sendAt)
 
+        // Key on the server's outcome, not the request: a sendAt within the
+        // grace window is sent immediately (no scheduledFor in the response).
+        const scheduledFor = result.content.scheduledFor
         toast({
-          title: 'E-post skickat',
-          description: `Skickade till ${result.content.totalSent} mottagare${
+          title: scheduledFor ? 'E-post schemalagd' : 'E-post skickat',
+          description: `${
+            scheduledFor
+              ? `Skickas ${formatScheduleTimestamp(scheduledFor)} till`
+              : 'Skickade till'
+          } ${result.content.totalSent} mottagare${
             result.content.totalInvalid > 0
               ? `. ${result.content.totalInvalid} ogiltiga e-postadresser.`
               : ''
@@ -387,7 +417,15 @@ export function useBulkMessaging<TItem>({
 function extractErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   if (error && typeof error === 'object') {
-    const apiError = error as { message?: string; reason?: string }
+    const apiError = error as {
+      message?: string
+      reason?: string
+      error?: string
+    }
+    // Core forwards the communication service's error code in `error`
+    // (e.g. SEND_AT_TOO_FAR_AHEAD); show its Swedish text when known.
+    const mapped = scheduleSendErrorText(apiError.error ?? apiError.reason)
+    if (mapped) return mapped
     if (apiError.message) return apiError.message
     if (apiError.reason) return apiError.reason
   }

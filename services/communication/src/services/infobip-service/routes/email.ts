@@ -42,6 +42,8 @@ import {
 } from '../adapters/infobip-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
+import { evaluateSendAt, MAX_SCHEDULE_DAYS_AHEAD } from '../schedule'
+import { runScheduledBulk } from '../bulk-send'
 
 // Email sender used for fromAddress when logging outbound email dispatches.
 // Mirrors the constant in email-adapter.ts (kept private there).
@@ -164,7 +166,7 @@ export const routes = (router: KoaRouter) => {
         text: message.text,
       })
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = { content: result, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
@@ -185,7 +187,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await sendEmail(message)
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = { content: result, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
@@ -220,10 +222,10 @@ export const routes = (router: KoaRouter) => {
         // subject) is never the intended log value, so fall back to the label.
         subject: rendered?.subject || emailData.subject,
         body: rendered?.body || emailData.text,
-        sendResult: result.data,
+        sendResult: result,
       })
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      ctx.body = { content: result, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
@@ -265,10 +267,10 @@ export const routes = (router: KoaRouter) => {
           contactCode: body.contactCode,
           subject: rendered?.subject || body.subject,
           body: rendered?.body || body.text,
-          sendResult: result.data,
+          sendResult: result,
         })
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result, ...metadata }
       } catch (error: any) {
         logger.error(
           { error: error.message },
@@ -317,10 +319,10 @@ export const routes = (router: KoaRouter) => {
           triggeredBy: body.triggeredBy,
           subject: rendered?.subject || body.subject,
           body: rendered?.body || body.text,
-          sendResult: result.data,
+          sendResult: result,
         })
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result, ...metadata }
       } catch (error: any) {
         logger.error(
           { error: error.message },
@@ -368,10 +370,10 @@ export const routes = (router: KoaRouter) => {
           triggeredBy: body.triggeredBy,
           subject: rendered?.subject || body.subject,
           body: rendered?.body || body.text,
-          sendResult: result.data,
+          sendResult: result,
         })
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result, ...metadata }
       } catch (error: any) {
         logger.error(
           { error: error.message },
@@ -397,7 +399,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await sendParkingSpaceAssignedToOther(applicants)
       ctx.status = 200
-      ctx.body = result.data
+      ctx.body = result
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
@@ -430,13 +432,13 @@ export const routes = (router: KoaRouter) => {
             subject: emailData.subject,
             body: emailData.text,
             triggeredByUser: emailData.triggeredByUser,
-            sendResult: result.data,
+            sendResult: result,
           })
         : []
 
       ctx.status = 200
       ctx.body = {
-        content: result.data,
+        content: result,
         ...(warnings.length && { warnings }),
         ...metadata,
       }
@@ -533,6 +535,8 @@ export const routes = (router: KoaRouter) => {
       .optional(),
     subject: z.string().min(1),
     text: z.string().min(1),
+    // ISO 8601 instant with offset/Z. Schedules the send; omit for immediate.
+    sendAt: z.string().datetime({ offset: true }).optional(),
     logMeta: z
       .object({
         triggeredByUser: z.string().optional(),
@@ -592,46 +596,49 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const sendResult = await sendBulkEmail({
-          emails: validRecipients.map((r) => r.emailAddress),
-          subject: body.subject,
-          text: body.text,
-        })
+        const scheduleEvaluation = evaluateSendAt(
+          body.sendAt,
+          MAX_SCHEDULE_DAYS_AHEAD.email
+        )
+        if (scheduleEvaluation.kind === 'invalid') {
+          ctx.status = 400
+          ctx.body = {
+            reason: scheduleEvaluation.code,
+            message: scheduleEvaluation.message,
+            ...metadata,
+          }
+          return
+        }
 
-        // Strict but non-blocking: the email already went out, so a logging
-        // failure must not fail the request (that would falsely report the send
-        // as failed). Instead we log loudly for monitoring and surface a
-        // non-blocking warning to the caller via `warnings`.
-        const warnings: string[] = []
-        try {
-          await logOutboundDispatch({
-            channel: 'email',
-            fromAddress: EMAIL_SENDER,
-            subject: body.subject,
-            body: body.text,
-            messageType: 'bulk_email',
-            provider: EMAIL_PROVIDER,
-            triggeredByUser: body.logMeta?.triggeredByUser,
-            audienceCriteria: body.logMeta?.audienceCriteria,
-            templateId: body.logMeta?.templateId,
-            // TODO: log-before-send. Today we log after Infobip's 200 ACK, so an API
-            // rejection leaves no audit row. Flip to: insert pending → call Infobip
-            // → update to failed if rejected. Webhook still handles delivered/failed.
-            recipients: validRecipients.map((r, i) => ({
-              contactCode: r.contactCode,
-              toAddress: r.emailAddress,
-              externalMessageId: sendResult.data.messages?.[i]?.messageId,
-              status: 'pending',
-            })),
-          })
-        } catch (logError: any) {
-          // Keep the warning generic for the client; the real error (which can
-          // contain internal/DB detail) stays in logger.error only.
-          warnings.push('Communication log failed')
-          logger.error(
-            { err: logError, messageType: 'bulk_email' },
-            'Failed to write communication-log entry for bulk email'
-          )
+        const outcome = await runScheduledBulk({
+          channel: 'email',
+          messageType: 'bulk_email',
+          fromAddress: EMAIL_SENDER,
+          provider: EMAIL_PROVIDER,
+          subject: body.subject,
+          body: body.text,
+          logMeta: body.logMeta,
+          recipients: validRecipients.map((r) => ({
+            contactCode: r.contactCode,
+            toAddress: r.emailAddress,
+          })),
+          evaluation: scheduleEvaluation,
+          send: (toAddresses, schedule) =>
+            sendBulkEmail({
+              emails: toAddresses,
+              subject: body.subject,
+              text: body.text,
+              schedule,
+            }),
+        })
+        if (!outcome.ok) {
+          ctx.status = 500
+          ctx.body = {
+            reason: outcome.reason,
+            message: outcome.message,
+            ...metadata,
+          }
+          return
         }
 
         const successful = validRecipients.map((r) => r.emailAddress)
@@ -642,8 +649,12 @@ export const routes = (router: KoaRouter) => {
             invalid: invalidEmails,
             totalSent: successful.length,
             totalInvalid: invalidEmails.length,
+            ...(outcome.schedule && {
+              dispatchId: outcome.schedule.bulkId,
+              scheduledFor: outcome.schedule.sendAt.toISOString(),
+            }),
           },
-          ...(warnings.length && { warnings }),
+          ...(outcome.warnings.length && { warnings: outcome.warnings }),
           ...metadata,
         }
       } catch (error: any) {

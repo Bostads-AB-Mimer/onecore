@@ -35,8 +35,10 @@ export type CustomerMessage = {
 /**
  * Persist an outbound communication event. Writes one `dispatch` row and one
  * `message_recipient` row per recipient inside a transaction. Returns the
- * generated dispatch id. Provider-agnostic: callers pass the provider name
- * and (if known) per-recipient externalMessageId for later webhook matching.
+ * dispatch id. Provider-agnostic: callers pass the provider name and (if
+ * known) per-recipient externalMessageId for later webhook matching.
+ * Scheduled sends pass an explicit `id` (it doubles as the provider bulkId)
+ * and the target `sendAt`; both otherwise fall back to DB defaults.
  */
 export async function logOutboundDispatch(
   params: LogOutboundParams
@@ -44,6 +46,7 @@ export async function logOutboundDispatch(
   return db.transaction(async (trx) => {
     const [inserted] = await trx('dispatch')
       .insert({
+        ...(params.id && { id: params.id }),
         direction: 'outbound',
         channel: params.channel,
         fromAddress: params.fromAddress,
@@ -52,6 +55,7 @@ export async function logOutboundDispatch(
         messageType: params.messageType,
         provider: params.provider,
         triggeredByUser: params.triggeredByUser ?? null,
+        ...(params.sendAt && { sendAt: params.sendAt }),
         recipientCount: params.recipients.length,
         audienceCriteria: params.audienceCriteria
           ? JSON.stringify(params.audienceCriteria)
@@ -63,20 +67,39 @@ export async function logOutboundDispatch(
     const dispatchId = inserted.id
 
     if (params.recipients.length > 0) {
-      // batchInsert chunks the rows; needed because MSSQL caps a single
-      // statement at 2100 parameters and `message_recipient` has 6 inserted
-      // columns → ~262 rows max per INSERT. 200 is the safe chunk size.
-      await trx.batchInsert(
-        'message_recipient',
-        params.recipients.map((r) => ({
+      // Single INSERT ... SELECT FROM OPENJSON: the whole recipient list rides
+      // in ONE bind parameter, sidestepping MSSQL's 2100-parameter cap that
+      // would otherwise force chunked inserts (~10x slower at 15k rows) and
+      // shrinking the window where the transaction's escalated lock blocks
+      // delivery-report updates.
+      // NOTE: the WITH clause duplicates the column types from migration
+      // 202606081001_create_dispatch_tables.js — if a migration changes a
+      // column, update it here too, or OPENJSON silently truncates values.
+      await trx.raw(
+        `
+        INSERT INTO message_recipient
+          (dispatchId, contactCode, toAddress, status, externalMessageId, error)
+        SELECT ?, j.contactCode, j.toAddress, j.status, j.externalMessageId, j.error
+        FROM OPENJSON(?) WITH (
+          contactCode NVARCHAR(50) '$.contactCode',
+          toAddress NVARCHAR(255) '$.toAddress',
+          status VARCHAR(20) '$.status',
+          externalMessageId NVARCHAR(100) '$.externalMessageId',
+          error NVARCHAR(MAX) '$.error'
+        ) j
+      `,
+        [
           dispatchId,
-          contactCode: r.contactCode ?? null,
-          toAddress: r.toAddress,
-          status: r.status ?? 'sent',
-          externalMessageId: r.externalMessageId ?? null,
-          error: r.error ?? null,
-        })),
-        200
+          JSON.stringify(
+            params.recipients.map((r) => ({
+              contactCode: r.contactCode ?? null,
+              toAddress: r.toAddress,
+              status: r.status ?? 'sent',
+              externalMessageId: r.externalMessageId ?? null,
+              error: r.error ?? null,
+            }))
+          ),
+        ]
       )
     }
 
@@ -100,22 +123,139 @@ export async function updateRecipientStatusByExternalId(
   status: communication.RecipientStatus,
   error?: string
 ): Promise<{ updatedCount: number }> {
-  const updatedCount = await db('message_recipient')
-    .where('externalMessageId', externalMessageId)
-    .update({
-      status,
-      statusUpdatedAt: new Date(),
-      error: error ?? null,
-    })
+  const query = db('message_recipient').where(
+    'externalMessageId',
+    externalMessageId
+  )
+  // A failure report for a never-sent cancelled message must not repaint a
+  // deliberate cancel as 'failed'. Anything else (delivered, future statuses
+  // like 'read') means the message really reached the recipient — let it win.
+  if (status === 'failed' || status === 'bounced') {
+    query.whereNot('status', 'cancelled')
+  }
+
+  const updatedCount = await query.update({
+    status,
+    statusUpdatedAt: new Date(),
+    error: error ?? null,
+  })
 
   if (updatedCount === 0) {
     logger.warn(
       { externalMessageId },
-      'no message_recipient found for external id'
+      'no updatable message_recipient found for external id'
     )
   }
 
   return { updatedCount }
+}
+
+/**
+ * Remove a dispatch (recipients cascade). Used to undo the log-before-send
+ * row of a scheduled dispatch when Infobip rejects the schedule — the
+ * operation failed entirely, so no audit row should remain.
+ */
+export async function deleteDispatch(dispatchId: string): Promise<void> {
+  try {
+    await db('dispatch').where('id', dispatchId).delete()
+    logger.info({ dispatchId }, 'deleted dispatch')
+  } catch (err) {
+    logger.error(
+      { err, dispatchId },
+      'communication-log-adapter.deleteDispatch'
+    )
+    throw err
+  }
+}
+
+/**
+ * Backfill provider message ids onto a dispatch's recipients after a
+ * log-before-send flow (scheduled sends log first, so the ids from Infobip's
+ * response arrive later). Single statement via OPENJSON to stay well under
+ * MSSQL's parameter cap for large bulks. Matches on toAddress; if two
+ * recipients share an address they get the same id, which delivery-report
+ * matching tolerates.
+ */
+export async function setRecipientExternalIds(
+  dispatchId: string,
+  pairs: { toAddress: string; externalMessageId: string }[]
+): Promise<void> {
+  if (pairs.length === 0) return
+
+  try {
+    await db.raw(
+      `
+      UPDATE mr SET externalMessageId = j.externalMessageId
+      FROM message_recipient mr
+      JOIN OPENJSON(?) WITH (
+        toAddress NVARCHAR(255) '$.toAddress',
+        externalMessageId NVARCHAR(100) '$.externalMessageId'
+      ) j ON j.toAddress = mr.toAddress
+      WHERE mr.dispatchId = ?
+    `,
+      [JSON.stringify(pairs), dispatchId]
+    )
+
+    logger.info(
+      { dispatchId, pairCount: pairs.length },
+      'backfilled recipient external ids'
+    )
+  } catch (err) {
+    logger.error(
+      { err, dispatchId },
+      'communication-log-adapter.setRecipientExternalIds'
+    )
+    throw err
+  }
+}
+
+/**
+ * Mark every still-'scheduled' recipient of a dispatch as 'cancelled'.
+ * Called after Infobip has confirmed the bulk cancellation, so rows that a
+ * delivery report already moved past 'scheduled' are left untouched.
+ * Returns the number of rows updated.
+ */
+export async function cancelScheduledRecipients(
+  dispatchId: string
+): Promise<{ updatedCount: number }> {
+  try {
+    const updatedCount = await db('message_recipient')
+      .where({ dispatchId, status: 'scheduled' })
+      .update({ status: 'cancelled', statusUpdatedAt: new Date() })
+
+    logger.info({ dispatchId, updatedCount }, 'cancelled scheduled recipients')
+    return { updatedCount }
+  } catch (err) {
+    logger.error(
+      { err, dispatchId },
+      'communication-log-adapter.cancelScheduledRecipients'
+    )
+    throw err
+  }
+}
+
+/**
+ * Update a dispatch's intended send time. Called after Infobip has confirmed
+ * a reschedule; recipient statuses stay 'scheduled'.
+ */
+export async function updateDispatchSendAt(
+  dispatchId: string,
+  sendAt: Date
+): Promise<{ updatedCount: number }> {
+  try {
+    const updatedCount = await db('dispatch')
+      .where('id', dispatchId)
+      .update({ sendAt })
+
+    logger.info({ dispatchId, sendAt }, 'rescheduled dispatch')
+    return { updatedCount }
+  } catch (err) {
+    logger.error(
+      { err, dispatchId },
+      'communication-log-adapter.updateDispatchSendAt'
+    )
+    throw err
+  }
 }
 
 /**
@@ -163,7 +303,7 @@ export async function getCustomerMessages(
     .filter((p): p is CustomerMessage => p.dispatch !== undefined)
     .sort(
       (a, b) =>
-        new Date(b.dispatch.triggeredAt).getTime() -
-        new Date(a.dispatch.triggeredAt).getTime()
+        new Date(b.dispatch.sendAt).getTime() -
+        new Date(a.dispatch.sendAt).getTime()
     )
 }
