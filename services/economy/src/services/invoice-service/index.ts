@@ -125,6 +125,14 @@ export const routes = (router: KoaRouter) => {
   // Also doesn't get invoice rows
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    // Xledger invoice numbers are digits with an optional K suffix; reject
+    // anything else before it reaches the GraphQL string interpolation.
+    if (!/^\d{1,20}K?$/i.test(ctx.params.invoiceNumber)) {
+      ctx.status = 404
+      return
+    }
+
     try {
       const result = await getInvoiceByInvoiceNumber(ctx.params.invoiceNumber)
       if (!result) {
@@ -144,6 +152,14 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/invoices/:invoiceNumber/payment-events', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    // Xledger invoice numbers are digits with an optional K suffix; reject
+    // anything else before it reaches the GraphQL string interpolation.
+    if (!/^\d{1,20}K?$/i.test(ctx.params.invoiceNumber)) {
+      ctx.status = 404
+      return
+    }
+
     try {
       const matchId = await getInvoiceMatchId(ctx.params.invoiceNumber)
       if (!matchId) {
