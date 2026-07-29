@@ -35,6 +35,7 @@ import { getArticleById } from '@/data/articles/miscellaneousInvoiceArticles'
 import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
 import { useXledgerContacts } from '../hooks/useXledgerContacts'
 import { useXledgerProjects } from '../hooks/useXledgerProjects'
+import { MergeFileError, mergeFilesToPdf } from '../lib/mergeFilesToPdf'
 import { AdditionalInfoSection } from './AdditionalInfoSection'
 import { ArticleSection } from './ArticleSection'
 import { LeaseContractSection } from './LeaseContractSection'
@@ -122,7 +123,7 @@ export function MiscellaneousInvoiceForm() {
   )
   const [comment, setComment] = useState('')
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
-  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([])
 
   const setContactCodeParam = useCallback(
     (code: string | null) => {
@@ -246,7 +247,7 @@ export function MiscellaneousInvoiceForm() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateForm()) {
@@ -284,6 +285,28 @@ export function MiscellaneousInvoiceForm() {
 
     setIsSubmitting(true)
 
+    // Xledger only accepts one attachment, so multiple files are merged into
+    // a single PDF. A single file is sent as-is, whatever its type.
+    let attachment: File | undefined
+    if (attachedFiles.length === 1) {
+      attachment = attachedFiles[0]
+    } else if (attachedFiles.length > 1) {
+      try {
+        attachment = await mergeFilesToPdf(attachedFiles)
+      } catch (error) {
+        toast({
+          title: 'Fel',
+          description:
+            error instanceof MergeFileError
+              ? `${error.message}. Underlaget skickades inte.`
+              : 'Filerna kunde inte slås ihop. Underlaget skickades inte.',
+          variant: 'destructive',
+        })
+        setIsSubmitting(false)
+        return
+      }
+    }
+
     const invoicePayload: MiscellaneousInvoicePayload = {
       reference: reference?.dbId || '',
       invoiceDate: invoiceDate,
@@ -296,7 +319,7 @@ export function MiscellaneousInvoiceForm() {
       comment: comment,
       invoiceRows: rows,
       administrativeCosts: administrativeCosts,
-      attachment: attachedFile ?? undefined,
+      attachment,
     }
 
     submitInvoiceMutation.mutate(invoicePayload)
@@ -311,7 +334,7 @@ export function MiscellaneousInvoiceForm() {
     setSelectedProject(null)
     setComment('')
     setAdministrativeCosts(false)
-    setAttachedFile(null)
+    setAttachedFiles([])
     setErrors({})
     setContactCodeParam(null)
 
@@ -450,8 +473,8 @@ export function MiscellaneousInvoiceForm() {
               comment={comment}
               onProjectChange={setSelectedProject}
               onCommentChange={setComment}
-              onFileAttached={setAttachedFile}
-              attachedFile={attachedFile}
+              onFilesChanged={setAttachedFiles}
+              attachedFiles={attachedFiles}
             />
           </div>
 

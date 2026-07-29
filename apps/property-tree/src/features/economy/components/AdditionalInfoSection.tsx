@@ -1,8 +1,8 @@
-import { FileText, Paperclip, X } from 'lucide-react'
+import { useState } from 'react'
 import { XledgerProject } from '@onecore/types'
+import { FileText, Paperclip, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
-import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 import {
   Select,
@@ -13,6 +13,8 @@ import {
 } from '@/shared/ui/Select'
 import { Textarea } from '@/shared/ui/Textarea'
 
+import { isMergeableFileType } from '../lib/mergeFilesToPdf'
+
 interface AdditionalInfoSectionProps {
   selectedProject: XledgerProject | null
   projects?: XledgerProject[]
@@ -20,9 +22,11 @@ interface AdditionalInfoSectionProps {
   comment: string
   onProjectChange: (project: XledgerProject | null) => void
   onCommentChange: (value: string) => void
-  onFileAttached: (file: File | null) => void
-  attachedFile?: File | null
+  onFilesChanged: (files: File[]) => void
+  attachedFiles: File[]
 }
+
+const fileKey = (file: File) => `${file.name}:${file.size}`
 
 export function AdditionalInfoSection({
   selectedProject,
@@ -31,9 +35,11 @@ export function AdditionalInfoSection({
   comment,
   onProjectChange,
   onCommentChange,
-  onFileAttached,
-  attachedFile,
+  onFilesChanged,
+  attachedFiles,
 }: AdditionalInfoSectionProps) {
+  const [fileError, setFileError] = useState<string | null>(null)
+
   const handleProjectSelect = (projectCode: string) => {
     if (projectCode === 'none') {
       onProjectChange(null)
@@ -44,15 +50,62 @@ export function AdditionalInfoSection({
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      onFileAttached(file)
-    }
+    const pickedFiles = e.target.files ? Array.from(e.target.files) : []
+    // Reset so the same file can be picked again after removal
     e.target.value = ''
+
+    if (pickedFiles.length === 0) {
+      return
+    }
+
+    // A single attachment of any type is uploaded as-is (like before), but
+    // multiple attachments are merged into one PDF and must all be
+    // PDF/JPG/PNG. So the list is either one file of any type, or several
+    // mergeable files.
+    if (attachedFiles.length === 0 && pickedFiles.length === 1) {
+      setFileError(null)
+      onFilesChanged(pickedFiles)
+      return
+    }
+
+    const nonMergeableAttached = attachedFiles.find(
+      (file) => !isMergeableFileType(file)
+    )
+    if (nonMergeableAttached) {
+      setFileError(
+        `Fler filer kan inte läggas till eftersom "${nonMergeableAttached.name}" inte är en PDF-, JPG- eller PNG-fil. Ta bort den först.`
+      )
+      return
+    }
+
+    const unsupportedFiles = pickedFiles.filter(
+      (file) => !isMergeableFileType(file)
+    )
+    const supportedFiles = pickedFiles.filter(isMergeableFileType)
+
+    const existingKeys = new Set(attachedFiles.map(fileKey))
+    const newFiles = supportedFiles.filter(
+      (file) => !existingKeys.has(fileKey(file))
+    )
+
+    setFileError(
+      unsupportedFiles.length > 0
+        ? `Endast PDF-, JPG- och PNG-filer kan kombineras. Följande filer lades inte till: ${unsupportedFiles
+            .map((file) => file.name)
+            .join(', ')}`
+        : null
+    )
+
+    if (newFiles.length > 0) {
+      onFilesChanged([...attachedFiles, ...newFiles])
+    }
   }
 
-  const removeFile = () => {
-    onFileAttached(null)
+  const removeFile = (file: File) => {
+    setFileError(null)
+    onFilesChanged(
+      attachedFiles.filter((attached) => fileKey(attached) !== fileKey(file))
+    )
   }
 
   return (
@@ -100,30 +153,41 @@ export function AdditionalInfoSection({
       </div>
 
       <div className="space-y-2">
-        <Label>Bifogad fil</Label>
+        <Label>Bifogade filer</Label>
         <div className="space-y-2">
-          {attachedFile && (
-            <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">
+          {attachedFiles.map((file) => (
+            <div
+              key={fileKey(file)}
+              className="flex items-center justify-between gap-2 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm"
+            >
               <div className="flex items-center gap-2 min-w-0">
                 <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="truncate">{attachedFile.name}</span>
+                <span className="truncate">{file.name}</span>
               </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 shrink-0"
-                onClick={removeFile}
+                onClick={() => removeFile(file)}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
+          ))}
+          {attachedFiles.length > 1 && (
+            <p className="text-xs text-muted-foreground">
+              Filerna slås ihop till en PDF när underlaget skickas.
+            </p>
           )}
+          {fileError && <p className="text-sm text-destructive">{fileError}</p>}
           <div>
             <input
               type="file"
               id="file-upload"
               className="sr-only"
+              multiple
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
               onChange={handleFileChange}
             />
             <label htmlFor="file-upload">
@@ -136,7 +200,7 @@ export function AdditionalInfoSection({
               >
                 <span>
                   <Paperclip className="h-4 w-4 mr-2" />
-                  Bifoga fil
+                  Bifoga filer
                 </span>
               </Button>
             </label>
