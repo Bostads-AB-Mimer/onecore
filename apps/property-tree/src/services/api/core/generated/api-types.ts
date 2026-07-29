@@ -491,6 +491,57 @@ export interface paths {
       }
     }
   }
+  '/comments/{targetType}/thread/{targetId}/{commentId}': {
+    /**
+     * Update a comment in a comment thread
+     * @description Update the text and/or type of an existing comment in the comment
+     * thread identified by targetType/targetId and the comment id.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The object type that the comment thread belongs to. */
+          targetType: string
+          /** @description The object id that the comment thread belongs to. */
+          targetId: number
+          /** @description The unique ID of the comment to update. */
+          commentId: number
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            type: 'COMMENT' | 'WARNING' | 'STOP'
+            comment: string
+          }
+        }
+      }
+      responses: {
+        /** @description The updated comment */
+        200: {
+          content: {
+            'application/json': {
+              /** @description The updated comment */
+              content?: Record<string, never>
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description The comment was not found in the given thread */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/leases/search': {
     /**
      * Search and filter leases

@@ -2,31 +2,31 @@ import { AxiosError } from 'axios'
 
 import { RequestError } from '../../../types'
 
-export enum RemoveCommentRequestErrorCodes {
+export enum UpdateCommentRequestErrorCodes {
   AccessDenied = 'access-denied',
   Unknown = 'unknown',
 }
 
-export function mapRemoveCommentErrors(
+export function mapUpdateCommentErrors(
   e: AxiosError<{
-    error?: RemoveCommentRequestErrorCodes
+    error?: UpdateCommentRequestErrorCodes
     errorMessage: string
   }>
-): RequestError<RemoveCommentRequestErrorCodes> {
+): RequestError<UpdateCommentRequestErrorCodes> {
   switch (e.response?.data?.error) {
-    case RemoveCommentRequestErrorCodes.AccessDenied:
+    case UpdateCommentRequestErrorCodes.AccessDenied:
       return {
         status: e.response.status,
         errorHeading: 'Ej tillåtet',
-        errorCode: RemoveCommentRequestErrorCodes.AccessDenied,
-        errorMessage: 'Du kan endast ta bort dina egna kommentarer.',
+        errorCode: UpdateCommentRequestErrorCodes.AccessDenied,
+        errorMessage: 'Du kan endast redigera dina egna kommentarer.',
       }
-    case RemoveCommentRequestErrorCodes.Unknown:
+    case UpdateCommentRequestErrorCodes.Unknown:
     default:
       return {
         status: 500,
         errorHeading: 'Något gick fel...',
-        errorCode: RemoveCommentRequestErrorCodes.Unknown,
+        errorCode: UpdateCommentRequestErrorCodes.Unknown,
         errorMessage: 'Försök igen eller kontakta support',
       }
   }
