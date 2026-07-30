@@ -310,6 +310,67 @@ export interface paths {
       }
     }
   }
+  '/workOrders/id/{id}': {
+    /**
+     * Get a single work order by its Odoo id
+     * @description Retrieves a single work order (errand) by its numeric Odoo id.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The numeric Odoo id of the work order. */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the work order. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                workOrder?: components['schemas']['WorkOrder']
+              }
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Bad request. The id is not a valid number. */
+        400: {
+          content: {
+            'application/json': {
+              /** @example Invalid id */
+              error?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Work order not found. */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Work order not found */
+              error?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve the work order. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
   '/workOrders/xpand/residenceId/{residenceId}': {
     /**
      * Get work orders by residence id from xpand
