@@ -5,6 +5,7 @@ import { InspectionsTable } from '@/features/inspections'
 import { INSPECTION_STATUS_FILTER } from '@/features/inspections/constants/inspectionTypes'
 import { useInspectionFilters } from '@/features/inspections/hooks/useInspectionFilters'
 import { useInspections } from '@/features/inspections/hooks/useInspections'
+import { formatInspectorIdentity } from '@/features/inspections/lib/inspectorIdentity'
 
 import { useUser } from '@/entities/user/hooks/useUser'
 
@@ -34,7 +35,15 @@ const MY_INSPECTIONS_TAB = 'mine' as const
 
 export default function InspectionsPage() {
   const userState = useUser()
-  const userName = userState.tag === 'success' ? userState.user.name : undefined
+  const user = userState.tag === 'success' ? userState.user : undefined
+  // Canonical inspector identity, matching the format written by the
+  // inspection forms and by Xpand's cmctc.cmctcben ("Name (YY1234)") — so
+  // the "Mina besiktningar" tab also matches Xpand-assigned inspections.
+  // Falls back to the bare name while the employeeId claim is absent
+  // (MIM-1851).
+  const userName = user
+    ? formatInspectorIdentity(user.name, user.employeeId)
+    : undefined
 
   const [activeTab, setActiveTab] = useState<string>(
     INSPECTION_STATUS_FILTER.ONGOING

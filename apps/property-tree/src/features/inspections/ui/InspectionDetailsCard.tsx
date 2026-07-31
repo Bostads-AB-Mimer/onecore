@@ -17,6 +17,7 @@ import {
   type InspectionType,
 } from '../constants/inspectionTypes'
 import { useInspectors } from '../hooks/useInspectors'
+import { formatInspectorName } from '../lib/inspectorIdentity'
 
 interface InspectionDetailsCardProps {
   inspectorName: string
@@ -93,7 +94,7 @@ export function InspectionDetailsCard({
             </SelectTrigger>
             <SelectContent>
               {inspectors?.map((user) => {
-                const name = `${user.firstName} ${user.lastName}`
+                const name = formatInspectorName(user)
                 return (
                   <SelectItem key={user.id} value={name}>
                     <div className="flex items-center gap-2">

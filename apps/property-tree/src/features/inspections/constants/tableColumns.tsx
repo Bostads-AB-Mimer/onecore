@@ -29,6 +29,7 @@ import {
   isXpandSource,
   XPAND_ACTION_LABEL,
 } from './statuses'
+import { formatInspectorName } from '../lib/inspectorIdentity'
 
 type Inspection = components['schemas']['InspectionWithSource']
 type KeycloakUser = components['schemas']['KeycloakUser']
@@ -85,11 +86,16 @@ export function createInspectorColumn(
           onValueChange={(value) => onUpdateInspector(inspection.id, value)}
         >
           <SelectTrigger className="h-8 w-[180px] py-6">
-            <SelectValue placeholder="Välj besiktningsman" />
+            {/* Render the stored value directly: rows written before the
+                canonical "Name (YYxxxx)" format (MIM-1851) hold bare names
+                that no longer match any option value and would show blank. */}
+            <SelectValue placeholder="Välj besiktningsman">
+              {inspection.inspector || null}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {inspectors.map((user) => {
-              const name = `${user.firstName} ${user.lastName}`
+              const name = formatInspectorName(user)
               return (
                 <SelectItem key={user.id} value={name}>
                   {name}
