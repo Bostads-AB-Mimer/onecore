@@ -123,6 +123,64 @@ export const CustomerMessageSchema = z.object({
   recipient: MessageRecipientSchema,
 })
 
+// --- Dispatch centre (MIM-1911) ---
+
+// Derived dispatch-level status. Recipient rows carry raw RECIPIENT_STATUS;
+// a dispatch's status is computed from its recipients (deriveDispatchStatus in
+// services/communication). Lifecycle order.
+export const DISPATCH_STATUS = [
+  'scheduled',
+  'sending',
+  'delivered',
+  'partially_delivered',
+  'failed',
+  'cancelled',
+] as const
+export const DispatchStatusSchema = z.enum(DISPATCH_STATUS)
+
+// One persisted audience-filter criterion (row of dispatch_audience_criterion).
+// `type` is the leasing filter key (e.g. 'buildingCodes'); `value` a single code.
+export const AudienceCriterionSchema = z.object({
+  type: z.string(),
+  value: z.string(),
+})
+
+// Repeatable query param: single string or array -> array. Query strings arrive
+// as string | string[]; koa-okapi-router does not coerce, so we do it here.
+const repeatableStringParam = z
+  .union([z.string(), z.array(z.string())])
+  .transform((v) => (Array.isArray(v) ? v : [v]))
+  .optional()
+
+export const DispatchSearchQueryParamsSchema = z.object({
+  q: z.string().optional(),
+  channel: repeatableStringParam,
+  messageType: repeatableStringParam,
+  status: repeatableStringParam,
+  source: z.enum(['manual', 'automatic']).optional(),
+  triggeredByUser: z.string().optional(),
+  sendAtFrom: z.string().optional(),
+  sendAtTo: z.string().optional(),
+  contactCode: z.string().optional(),
+  minRecipients: z.coerce.number().int().nonnegative().optional(),
+  audienceDistrictNames: repeatableStringParam,
+  audienceBuildingCodes: repeatableStringParam,
+  audienceAreaCodes: repeatableStringParam,
+  sortBy: z.enum(['sendAt', 'recipientCount']).optional().default('sendAt'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+})
+
+// A dispatch as returned by the search endpoint: dispatch row (minus the legacy
+// raw-JSON audienceCriteria column) + recipient-status rollup + derived status
+// + normalized audience criteria.
+export const DispatchListItemSchema = DispatchSchema.omit({
+  audienceCriteria: true,
+}).extend({
+  status: DispatchStatusSchema,
+  statusSummary: z.record(RecipientStatusSchema, z.number()),
+  audience: z.array(AudienceCriterionSchema),
+})
+
 // Response shapes for the scheduled-dispatch management routes, shared with
 // core's communication adapter so the shapes can't drift.
 export const CancelDispatchResponseSchema = z.object({

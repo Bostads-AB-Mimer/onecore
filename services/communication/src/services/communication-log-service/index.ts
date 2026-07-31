@@ -1,5 +1,5 @@
 import { OkapiRouter } from 'koa-okapi-router'
-import { communication } from '@onecore/types'
+import { communication, paginatedResponseSchema } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { z } from 'zod'
 
@@ -7,7 +7,9 @@ import {
   cancelScheduledRecipients,
   getCustomerMessages,
   getDispatchById,
+  getDispatchRecipients,
   logOutboundDispatch,
+  searchDispatches,
   updateDispatchSendAt,
 } from './adapters/db'
 import {
@@ -330,6 +332,161 @@ export const routes = (router: OkapiRouter) => {
         ctx.body = result
       } catch (error) {
         logger.error({ err: error }, 'failed to get customer messages')
+        ctx.status = 500
+        ctx.body = {
+          error: error instanceof Error ? error.message : 'unknown error',
+        }
+      }
+    }
+  )
+
+  router.get(
+    '/communication-log/dispatches',
+    {
+      summary: 'Search and list dispatches',
+      description:
+        'Paginated dispatch search. Filters: q (subject/body LIKE), channel, ' +
+        'messageType, derived status, source (manual/automatic), sendAt range, ' +
+        'contactCode, minRecipients, and audience codes (district/building/' +
+        'area). Newest first by default.',
+      tags: ['Communication log'],
+      query: {
+        q: {
+          description: 'Content search (subject/body)',
+          schema: z.string().optional(),
+        },
+        channel: {
+          description: "'sms' | 'email' (repeatable)",
+          schema: z.optional(z.array(z.string())),
+        },
+        messageType: {
+          description: 'Category (repeatable)',
+          schema: z.optional(z.array(z.string())),
+        },
+        status: {
+          description: 'Derived status (repeatable)',
+          schema: z.optional(z.array(z.string())),
+        },
+        source: {
+          description: 'manual | automatic',
+          schema: z.optional(z.enum(['manual', 'automatic'])),
+        },
+        sendAtFrom: {
+          description: 'ISO date lower bound',
+          schema: z.string().optional(),
+        },
+        sendAtTo: {
+          description: 'ISO date upper bound',
+          schema: z.string().optional(),
+        },
+        contactCode: {
+          description: 'Dispatches that reached this contact',
+          schema: z.string().optional(),
+        },
+        minRecipients: {
+          description: 'Minimum recipient count',
+          schema: z.optional(z.number()),
+        },
+        audienceDistrictNames: {
+          description: 'Audience district (repeatable)',
+          schema: z.optional(z.array(z.string())),
+        },
+        audienceBuildingCodes: {
+          description: 'Audience building code (repeatable)',
+          schema: z.optional(z.array(z.string())),
+        },
+        audienceAreaCodes: {
+          description: 'Audience area code (repeatable)',
+          schema: z.optional(z.array(z.string())),
+        },
+        sortBy: {
+          description: 'sendAt | recipientCount',
+          schema: z.optional(z.enum(['sendAt', 'recipientCount'])),
+        },
+        sortOrder: {
+          description: 'asc | desc',
+          schema: z.optional(z.enum(['asc', 'desc'])),
+        },
+        page: { description: 'Page (1-based)', schema: z.optional(z.number()) },
+        limit: { description: 'Page size', schema: z.optional(z.number()) },
+      },
+      response: {
+        200: paginatedResponseSchema(communication.DispatchListItemSchema),
+        400: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+      },
+    },
+    async (ctx) => {
+      const parsed = communication.DispatchSearchQueryParamsSchema.safeParse(
+        ctx.query
+      )
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid query parameters',
+          message: parsed.error.message,
+        }
+        return
+      }
+      try {
+        ctx.status = 200
+        ctx.body = await searchDispatches(parsed.data, ctx)
+      } catch (error) {
+        logger.error({ err: error }, 'failed to search dispatches')
+        ctx.status = 500
+        ctx.body = {
+          error: error instanceof Error ? error.message : 'unknown error',
+        }
+      }
+    }
+  )
+
+  router.get(
+    '/communication-log/dispatches/:id/recipients',
+    {
+      summary: 'Paginated recipients of a dispatch',
+      description:
+        "Page through a dispatch's recipients, optionally filtered by status " +
+        'or a toAddress/contactCode substring. Use instead of the full ' +
+        'dispatch-by-id read for large bulks.',
+      tags: ['Communication log'],
+      params: {
+        id: { description: 'Dispatch id (UUID)', schema: z.string().uuid() },
+      },
+      query: {
+        status: {
+          description: 'Recipient status (repeatable)',
+          schema: z.optional(z.array(z.string())),
+        },
+        q: {
+          description: 'toAddress/contactCode substring',
+          schema: z.string().optional(),
+        },
+        page: { description: 'Page (1-based)', schema: z.optional(z.number()) },
+        limit: { description: 'Page size', schema: z.optional(z.number()) },
+      },
+      response: {
+        200: paginatedResponseSchema(communication.MessageRecipientSchema),
+        500: ErrorResponseSchema,
+      },
+    },
+    async (ctx) => {
+      try {
+        const rawStatus = ctx.query.status
+        const status = rawStatus
+          ? Array.isArray(rawStatus)
+            ? rawStatus
+            : [rawStatus]
+          : undefined
+        const q = typeof ctx.query.q === 'string' ? ctx.query.q : undefined
+        ctx.status = 200
+        ctx.body = await getDispatchRecipients(
+          ctx.params.id,
+          { status, q },
+          ctx
+        )
+      } catch (error) {
+        logger.error({ err: error }, 'failed to get dispatch recipients')
         ctx.status = 500
         ctx.body = {
           error: error instanceof Error ? error.message : 'unknown error',

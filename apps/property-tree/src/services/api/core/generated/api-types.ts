@@ -328,63 +328,6 @@ export interface paths {
       }
     }
   }
-  '/communication-log/customers/{contactCode}/messages': {
-    /**
-     * Get the communication timeline for a customer
-     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description Customer id (contactCode) */
-          contactCode: string
-        }
-      }
-      responses: {
-        /** @description Array of (dispatch + recipient) pairs, newest first */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['CustomerMessage'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/communication-log/dispatches/{id}': {
-    /** Get a dispatch and its recipients by dispatch id */
-    get: {
-      parameters: {
-        path: {
-          /** @description Dispatch id (UUID) */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Dispatch + recipients */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['DispatchWithRecipients']
-            }
-          }
-        }
-        /** @description Dispatch not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/communication-log/dispatches/{id}/cancel': {
     /**
      * Cancel a scheduled dispatch
@@ -551,6 +494,115 @@ export interface paths {
       responses: {
         /** @description Linear labels fetched successfully */
         200: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/customers/{contactCode}/messages': {
+    /**
+     * Get the communication timeline for a customer
+     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Customer id (contactCode) */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Array of (dispatch + recipient) pairs, newest first */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CustomerMessage'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches': {
+    /**
+     * Search and list dispatches
+     * @description Paginated dispatch search. Filters by content (q), channel, messageType, derived status, source (manual/automatic), sendAt range, contactCode, minRecipients, and audience codes (district/building/area). Newest first by default.
+     */
+    get: {
+      responses: {
+        /** @description Paginated dispatches */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DispatchListItem'][]
+              _meta?: Record<string, never>
+              _links?: Record<string, never>[]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/recipients': {
+    /**
+     * Paginated recipients of a dispatch
+     * @description Page through a dispatch's recipients, optionally filtered by status or a toAddress/contactCode substring. Use instead of the full dispatch-by-id read for large bulks.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Paginated recipients */
+        200: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}': {
+    /** Get a dispatch and its recipients by dispatch id */
+    get: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Dispatch + recipients */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DispatchWithRecipients']
+            }
+          }
+        }
+        /** @description Dispatch not found */
+        404: {
           content: never
         }
         /** @description Internal server error */
@@ -13973,6 +14025,51 @@ export interface components {
         error: string | null
         /** Format: date-time */
         createdAt: string
+      }[]
+    }
+    DispatchListItem: {
+      /** Format: uuid */
+      id: string
+      /** @enum {string} */
+      direction: 'outbound' | 'inbound'
+      /** @enum {string} */
+      channel: 'sms' | 'email'
+      fromAddress: string
+      subject: string | null
+      body: string
+      messageType: string
+      provider: string
+      triggeredByUser: string | null
+      /** Format: date-time */
+      sendAt: string
+      recipientCount: number
+      /** Format: uuid */
+      inReplyToDispatchId: string | null
+      /** Format: uuid */
+      templateId: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** @enum {string} */
+      status:
+        | 'scheduled'
+        | 'sending'
+        | 'delivered'
+        | 'partially_delivered'
+        | 'failed'
+        | 'cancelled'
+      statusSummary: {
+        pending: number
+        sent: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        delivered: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        failed: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        bounced: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        received: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        scheduled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        cancelled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+      }
+      audience: {
+        type: string
+        value: string
       }[]
     }
     KeycloakUser: {

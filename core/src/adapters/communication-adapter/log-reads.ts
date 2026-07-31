@@ -1,4 +1,4 @@
-import { loggedAxios as axios } from '@onecore/utilities'
+import { loggedAxios as axios, PaginatedResponse } from '@onecore/utilities'
 import { communication } from '@onecore/types'
 
 import config from '../../common/config'
@@ -28,6 +28,51 @@ export const getDispatchById = async (
   try {
     const result = await axios.get(
       `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}`
+    )
+    return { ok: true, data: result.data }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      if (err.response.status === 404) {
+        return { ok: false, err: 'not-found', statusCode: 404 }
+      }
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const searchDispatches = async (
+  query: Record<string, string | string[] | undefined>
+): Promise<
+  AdapterResult<PaginatedResponse<communication.DispatchListItem>, 'error'>
+> => {
+  try {
+    const result = await axios.get(
+      `${config.communicationService.url}/communication-log/dispatches`,
+      { params: query }
+    )
+    return { ok: true, data: result.data }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const getDispatchRecipients = async (
+  id: string,
+  query: Record<string, string | string[] | undefined>
+): Promise<
+  AdapterResult<
+    PaginatedResponse<communication.MessageRecipient>,
+    'error' | 'not-found'
+  >
+> => {
+  try {
+    const result = await axios.get(
+      `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/recipients`,
+      { params: query }
     )
     return { ok: true, data: result.data }
   } catch (err) {

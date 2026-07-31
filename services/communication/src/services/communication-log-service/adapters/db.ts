@@ -1,8 +1,11 @@
 import knex from 'knex'
+import { Context } from 'koa'
 import { communication } from '@onecore/types'
-import { logger } from '@onecore/utilities'
+import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
 
 import Config from '../../../common/config'
+import { audienceCriteriaToRows } from '../audience-criteria'
+import { deriveDispatchStatus } from '../dispatch-status'
 
 export const createDbClient = () =>
   knex({
@@ -100,6 +103,24 @@ export async function logOutboundDispatch(
             }))
           ),
         ]
+      )
+    }
+
+    // Persist the audience filter as normalized rows so the dispatch is
+    // filterable by the scope it targeted (MIM-1911). Stored exactly as
+    // selected — no hierarchy expansion.
+    const audienceRows = audienceCriteriaToRows(params.audienceCriteria)
+    if (audienceRows.length > 0) {
+      await trx.raw(
+        `
+        INSERT INTO dispatch_audience_criterion (dispatchId, type, value)
+        SELECT ?, j.type, j.value
+        FROM OPENJSON(?) WITH (
+          type VARCHAR(40) '$.type',
+          value NVARCHAR(200) '$.value'
+        ) j
+      `,
+        [dispatchId, JSON.stringify(audienceRows)]
       )
     }
 
@@ -306,4 +327,216 @@ export async function getCustomerMessages(
         new Date(b.dispatch.sendAt).getTime() -
         new Date(a.dispatch.sendAt).getTime()
     )
+}
+
+// Escape MSSQL LIKE metacharacters; used with `ESCAPE '\'`.
+const escapeLike = (s: string) => s.replace(/[\\%_[]/g, (c) => `\\${c}`)
+
+const AUTOMATIC_USER = 'Automatiskt utskick'
+
+// Correlated EXISTS/NOT EXISTS predicates over message_recipient that reproduce
+// deriveDispatchStatus at the SQL level, so a status filter paginates correctly.
+// `mr` is correlated to `dispatch.id`.
+const STATUS_PREDICATE_SQL: Record<string, string> = {
+  scheduled: `EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status = 'scheduled')`,
+  cancelled: `EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id)
+     AND NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status <> 'cancelled')`,
+  sending: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status = 'scheduled')
+     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('pending','sent'))`,
+  delivered: `EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id)
+     AND NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status <> 'delivered')`,
+  failed: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','pending','sent','delivered'))
+     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('failed','bounced'))`,
+  partially_delivered: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','pending','sent'))
+     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status = 'delivered')
+     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('failed','bounced'))`,
+}
+
+// Preserve filters in pagination _links (scalar/array params only).
+function buildDispatchSearchLinkParams(
+  params: communication.DispatchSearchQueryParams
+): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(params)) {
+    if (v == null) continue
+    out[k] = Array.isArray(v) ? v.join(',') : String(v)
+  }
+  return out
+}
+
+/**
+ * Paginated dispatch search. Filters on the dispatch row directly, on recipient
+ * rows via EXISTS (contactCode, derived status), and on audience criteria via
+ * EXISTS over dispatch_audience_criterion. Each returned dispatch is enriched
+ * with a per-status recipient rollup, its derived status, and its audience
+ * criteria. See MIM-1911.
+ */
+export async function searchDispatches(
+  params: communication.DispatchSearchQueryParams,
+  ctx: Context
+): Promise<PaginatedResponse<communication.DispatchListItem>> {
+  const query = db<Dispatch>('dispatch').select('dispatch.*')
+
+  if (params.channel?.length) query.whereIn('dispatch.channel', params.channel)
+  if (params.messageType?.length)
+    query.whereIn('dispatch.messageType', params.messageType)
+  if (params.triggeredByUser)
+    query.where('dispatch.triggeredByUser', params.triggeredByUser)
+  if (params.source === 'automatic')
+    query.where('dispatch.triggeredByUser', AUTOMATIC_USER)
+  if (params.source === 'manual')
+    query
+      .whereNot('dispatch.triggeredByUser', AUTOMATIC_USER)
+      .whereNotNull('dispatch.triggeredByUser')
+  if (params.sendAtFrom)
+    query.where('dispatch.sendAt', '>=', new Date(params.sendAtFrom))
+  if (params.sendAtTo)
+    query.where('dispatch.sendAt', '<=', new Date(params.sendAtTo))
+  if (params.minRecipients != null)
+    query.where('dispatch.recipientCount', '>=', params.minRecipients)
+
+  if (params.q) {
+    const like = `%${escapeLike(params.q)}%`
+    query.where((b) =>
+      b
+        .whereRaw("dispatch.body LIKE ? ESCAPE '\\'", [like])
+        .orWhereRaw("dispatch.subject LIKE ? ESCAPE '\\'", [like])
+    )
+  }
+
+  if (params.contactCode) {
+    const contactCode = params.contactCode
+    query.whereExists((b) =>
+      b
+        .select(db.raw('1'))
+        .from('message_recipient as mr')
+        .whereRaw('mr.dispatchId = dispatch.id')
+        .where('mr.contactCode', contactCode)
+    )
+  }
+
+  // Derived-status filter: OR the requested statuses' SQL predicates.
+  const statuses = (params.status ?? []).filter((s) => STATUS_PREDICATE_SQL[s])
+  if (statuses.length) {
+    query.where((b) => {
+      for (const s of statuses) b.orWhereRaw(`(${STATUS_PREDICATE_SQL[s]})`)
+    })
+  }
+
+  // Audience code filters (exact membership on the criterion table).
+  const audienceFilters: { type: string; values: string[] | undefined }[] = [
+    { type: 'districtNames', values: params.audienceDistrictNames },
+    { type: 'buildingCodes', values: params.audienceBuildingCodes },
+    { type: 'areaCodes', values: params.audienceAreaCodes },
+  ]
+  for (const { type, values } of audienceFilters) {
+    if (values?.length) {
+      query.whereExists((b) =>
+        b
+          .select(db.raw('1'))
+          .from('dispatch_audience_criterion as dac')
+          .whereRaw('dac.dispatchId = dispatch.id')
+          .where('dac.type', type)
+          .whereIn('dac.value', values)
+      )
+    }
+  }
+
+  const sortColumn =
+    params.sortBy === 'recipientCount'
+      ? 'dispatch.recipientCount'
+      : 'dispatch.sendAt'
+  query.orderBy(sortColumn, params.sortOrder ?? 'desc')
+
+  const page = await paginateKnex<Dispatch>(
+    query,
+    ctx,
+    buildDispatchSearchLinkParams(params)
+  )
+
+  const ids = page.content.map((d) => d.id)
+  const [rollupRows, criterionRows] = await Promise.all([
+    ids.length
+      ? db('message_recipient')
+          .select('dispatchId', 'status')
+          .count('* as count')
+          .whereIn('dispatchId', ids)
+          .groupBy('dispatchId', 'status')
+      : Promise.resolve([]),
+    ids.length
+      ? db('dispatch_audience_criterion')
+          .select('dispatchId', 'type', 'value')
+          .whereIn('dispatchId', ids)
+      : Promise.resolve([]),
+  ])
+
+  const summaryByDispatch = new Map<string, Record<string, number>>()
+  for (const r of rollupRows as {
+    dispatchId: string
+    status: string
+    count: number
+  }[]) {
+    const summary = summaryByDispatch.get(r.dispatchId) ?? {}
+    summary[r.status] = Number(r.count)
+    summaryByDispatch.set(r.dispatchId, summary)
+  }
+  const audienceByDispatch = new Map<
+    string,
+    communication.AudienceCriterion[]
+  >()
+  for (const c of criterionRows as {
+    dispatchId: string
+    type: string
+    value: string
+  }[]) {
+    const list = audienceByDispatch.get(c.dispatchId) ?? []
+    list.push({ type: c.type, value: c.value })
+    audienceByDispatch.set(c.dispatchId, list)
+  }
+
+  const content: communication.DispatchListItem[] = page.content.map((d) => {
+    const statusSummary = summaryByDispatch.get(d.id) ?? {}
+    const statuses = Object.entries(statusSummary).flatMap(([s, n]) =>
+      Array<communication.RecipientStatus>(n).fill(
+        s as communication.RecipientStatus
+      )
+    )
+    // Strip the legacy raw-JSON column from the list item.
+    const { audienceCriteria: _legacy, ...rest } = d
+    return {
+      ...rest,
+      status: deriveDispatchStatus(statuses),
+      statusSummary,
+      audience: audienceByDispatch.get(d.id) ?? [],
+    }
+  })
+
+  return { ...page, content }
+}
+
+/**
+ * Paginated recipients of a single dispatch, optionally filtered by status or a
+ * toAddress/contactCode substring. Use instead of the full dispatch-by-id read
+ * for large bulks. See MIM-1911.
+ */
+export async function getDispatchRecipients(
+  dispatchId: string,
+  opts: { status?: string[]; q?: string },
+  ctx: Context
+): Promise<PaginatedResponse<MessageRecipient>> {
+  const query = db<MessageRecipient>('message_recipient')
+    .where('dispatchId', dispatchId)
+    .orderBy('createdAt', 'asc')
+
+  if (opts.status?.length) query.whereIn('status', opts.status)
+  if (opts.q) {
+    const like = `%${escapeLike(opts.q)}%`
+    query.where((b) =>
+      b
+        .whereRaw("toAddress LIKE ? ESCAPE '\\'", [like])
+        .orWhereRaw("contactCode LIKE ? ESCAPE '\\'", [like])
+    )
+  }
+
+  return paginateKnex<MessageRecipient>(query, ctx)
 }
