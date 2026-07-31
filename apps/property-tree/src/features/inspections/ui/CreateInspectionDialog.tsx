@@ -29,6 +29,7 @@ import {
 import { INSPECTION_STATUS } from '../constants/statuses'
 import { useCreateInspection } from '../hooks/useCreateInspection'
 import { useInspectors } from '../hooks/useInspectors'
+import { formatInspectorName } from '../lib/inspectorIdentity'
 
 type CreateInspectionRequest = components['schemas']['CreateInspectionRequest']
 type DetailedInspection = components['schemas']['DetailedInspection']
@@ -229,7 +230,7 @@ export function CreateInspectionDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {inspectors?.map((user) => {
-                    const name = `${user.firstName} ${user.lastName}`
+                    const name = formatInspectorName(user)
                     return (
                       <SelectItem key={user.id} value={name}>
                         {name}
