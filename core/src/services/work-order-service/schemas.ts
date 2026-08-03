@@ -75,35 +75,14 @@ export const CreateWorkOrderResponseSchema = z.object({
   newWorkOrderId: z.number(),
 })
 
-// Odoo "Resursgrupp" (maintenance team) shown in the inspection picker.
-export const MaintenanceTeamSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-})
-
-// Frontend → core: the inspector groups damaged components by resursgrupp. Core
-// resolves the rental property from `rentalObjectCode` before calling the service.
-const CreateInspectionWorkOrdersGroupSchema = z.object({
-  maintenanceTeamId: z.number(),
-  maintenanceTeamName: z.string(),
-  descriptionHtml: z.string(),
-})
-
-export const CreateInspectionWorkOrdersRequestSchema = z.object({
-  rentalObjectCode: z.string(),
-  groups: z.array(CreateInspectionWorkOrdersGroupSchema).min(1),
-})
-
-const CreateInspectionWorkOrderResultSchema = z.object({
-  maintenanceTeamId: z.number(),
-  ok: z.boolean(),
-  workOrderId: z.number().optional(),
-  err: z.string().optional(),
-})
-
-export const CreateInspectionWorkOrdersResponseSchema = z.object({
-  results: z.array(CreateInspectionWorkOrderResultSchema),
-})
+// Shared with the work-order service via @onecore/types
+// (libs/types/src/work-order/schema.ts) — re-exported so core's swagger
+// registration and consumers keep a single import path.
+export {
+  MaintenanceTeamSchema,
+  CreateInspectionWorkOrdersRequestSchema,
+  CreateInspectionWorkOrdersResponseSchema,
+} from '@onecore/types'
 
 export const GetWorkOrdersFromXpandQuerySchema = z.object({
   skip: z.coerce.number().optional(),
@@ -123,7 +102,7 @@ export type CoreXpandWorkOrderDetails = z.infer<
 export type CreateWorkOrderResponse = z.infer<
   typeof CreateWorkOrderResponseSchema
 >
-export type MaintenanceTeam = z.infer<typeof MaintenanceTeamSchema>
-export type CreateInspectionWorkOrdersResponse = z.infer<
-  typeof CreateInspectionWorkOrdersResponseSchema
->
+export type {
+  MaintenanceTeam,
+  CreateInspectionWorkOrdersResponse,
+} from '@onecore/types'

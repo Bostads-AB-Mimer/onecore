@@ -10,10 +10,19 @@ import { useToast } from '@/shared/hooks/useToast'
 import {
   buildInspectionWorkOrderGroups,
   getDamagedComponents,
+  type InspectionWorkOrderGroup,
 } from '../lib/buildInspectionWorkOrderGroups'
 import { useMaintenanceTeams } from './useMaintenanceTeams'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
+
+/**
+ * Submission state of a group relative to what has already been created in
+ * Odoo this session: 'pending' = never created, 'created' = created with this
+ * exact content, 'changed' = created but the group's components changed since
+ * — it will be re-submitted and the backend updates the existing request.
+ */
+export type InspectionWorkOrderGroupStatus = 'pending' | 'created' | 'changed'
 
 interface UseInspectionWorkOrdersParams {
   inspectionData: Record<string, InspectionRoom>
@@ -40,9 +49,14 @@ export const useInspectionWorkOrders = ({
 
   const [assignments, setAssignments] = useState<Record<string, number>>({})
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
-  // Teams whose work order was already created — excluded on retry so a
-  // partially failed batch never duplicates the errands that succeeded.
-  const [createdTeamIds, setCreatedTeamIds] = useState<Set<number>>(new Set())
+  // descriptionHtml per team at the time its work order was successfully
+  // created/updated in Odoo. A team only counts as "already created" while its
+  // group content still matches this snapshot — assigning another component to
+  // the team afterwards re-submits the group (the backend upserts the existing
+  // request), so a retry never silently drops late additions.
+  const [submittedHtmlByTeam, setSubmittedHtmlByTeam] = useState<
+    Map<number, string>
+  >(new Map())
 
   const assignTeam = (key: string, teamId: number | null) =>
     setAssignments((prev) => {
@@ -67,14 +81,35 @@ export const useInspectionWorkOrders = ({
   const assignedCount = damaged.filter((c) => assignments[c.key]).length
   const unassignedCount = damaged.length - assignedCount
 
+  const groupStatus = (
+    group: InspectionWorkOrderGroup
+  ): InspectionWorkOrderGroupStatus => {
+    const submitted = submittedHtmlByTeam.get(group.maintenanceTeamId)
+    if (submitted === undefined) return 'pending'
+    return submitted === group.descriptionHtml ? 'created' : 'changed'
+  }
+
   const createMutation = useMutation({
     mutationFn: workOrderService.createInspectionWorkOrders,
-    onSuccess: ({ results }) => {
+    onSuccess: ({ results }, variables) => {
+      const sentHtmlByTeam = new Map(
+        variables.groups.map((group) => [
+          group.maintenanceTeamId,
+          group.descriptionHtml,
+        ])
+      )
       const succeededTeamIds = results
         .filter((result) => result.ok)
         .map((result) => result.maintenanceTeamId)
       if (succeededTeamIds.length > 0) {
-        setCreatedTeamIds((prev) => new Set([...prev, ...succeededTeamIds]))
+        setSubmittedHtmlByTeam((prev) => {
+          const next = new Map(prev)
+          for (const teamId of succeededTeamIds) {
+            const html = sentHtmlByTeam.get(teamId)
+            if (html !== undefined) next.set(teamId, html)
+          }
+          return next
+        })
       }
 
       const failed = results.length - succeededTeamIds.length
@@ -103,18 +138,20 @@ export const useInspectionWorkOrders = ({
   /**
    * Creates the assigned work orders in Odoo. Returns true when there was
    * nothing to create or everything succeeded; false if any group failed (so
-   * the caller can keep the confirm dialog open for a retry). Only groups not
-   * already created are submitted, so a retry re-creates just the failed ones.
+   * the caller can keep the confirm dialog open for a retry). Groups already
+   * created with unchanged content are skipped; changed groups are re-sent
+   * and upserted server-side (keyed on inspection + team).
    */
   const createWorkOrders = async (): Promise<boolean> => {
     const pendingGroups = groups.filter(
-      (group) => !createdTeamIds.has(group.maintenanceTeamId)
+      (group) => groupStatus(group) !== 'created'
     )
     if (!rentalId || pendingGroups.length === 0) return true
 
     try {
       const { results } = await createMutation.mutateAsync({
         rentalObjectCode: rentalId,
+        inspectionId: meta.id,
         groups: pendingGroups.map((group) => ({
           maintenanceTeamId: group.maintenanceTeamId,
           maintenanceTeamName: group.maintenanceTeamName,
@@ -130,12 +167,16 @@ export const useInspectionWorkOrders = ({
 
   return {
     teams,
+    // Nothing used to read the query state, so an Odoo outage rendered every
+    // resursgrupp picker silently empty — keep these surfaced in the UI.
+    teamsLoading: teamsQuery.isLoading,
+    teamsError: teamsQuery.isError,
     assignments,
     assignTeam,
     damaged,
     groups,
     unassignedCount,
-    createdTeamIds,
+    groupStatus,
     isConfirmOpen,
     openConfirm: () => setIsConfirmOpen(true),
     closeConfirm: () => setIsConfirmOpen(false),

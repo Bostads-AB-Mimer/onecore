@@ -1,3 +1,5 @@
+import { inspection } from '@onecore/types'
+
 import type { components } from '@/services/api/core/generated/api-types'
 
 /**
@@ -15,12 +17,9 @@ export type Checklist = Required<
   NonNullable<components['schemas']['InternalInspection']['checklist']>
 >
 
-export const CHECKLIST_DEFAULT: Checklist = {
-  groundFaultBreaker: false,
-  smokeDetector: false,
-  electricalSchema: false,
-  electricalSystem: false,
-}
+// Single source of truth in @onecore/types — the same default the backend
+// zod schema applies when a persisted inspection has no checklist yet.
+export const CHECKLIST_DEFAULT: Checklist = inspection.CHECKLIST_DEFAULT
 
 export const CHECKLIST_ITEMS: ReadonlyArray<{
   key: keyof Checklist

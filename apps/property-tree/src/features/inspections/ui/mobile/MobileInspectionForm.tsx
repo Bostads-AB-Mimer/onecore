@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, User } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
   TenantInfoCardData,
-  TenantSnapshot,
 } from '@/features/inspections/types/index'
 
 import type { components } from '@/services/api/core/generated/api-types'
@@ -83,18 +82,11 @@ export function MobileInspectionForm({
     setInspectionTime,
     inspectionType,
     setInspectionType,
-    needsMasterKey,
     isFurnished,
     setIsFurnished,
     rooms,
     inspectionData,
     handleAddRoom,
-    handleConditionUpdate,
-    handleActionUpdate,
-    handleComponentNoteUpdate,
-    handleComponentPhotoAdd,
-    handleComponentPhotoRemove,
-    handleComponentCostResponsibilityUpdate,
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
@@ -117,6 +109,7 @@ export function MobileInspectionForm({
     checklist,
     setChecklistItem,
     isChecklistComplete,
+    buildSubmitData,
     validation,
   } = useInspectionForm(initialRooms, existingInspection)
 
@@ -138,46 +131,19 @@ export function MobileInspectionForm({
   // Delegates to the shared validation hook (includes checklist gating).
   const canComplete = validation.canComplete
 
+  // Stable reference — a fresh object literal here would defeat the groups
+  // useMemo inside the hook on every render.
+  const workOrderMeta = useMemo(
+    () => ({ id: existingInspection.id, address }),
+    [existingInspection.id, address]
+  )
+
   // Resursgrupp assignment + work-order creation on the summary step.
   const workOrders = useInspectionWorkOrders({
     inspectionData,
     rooms,
-    meta: { id: existingInspection.id, address },
+    meta: workOrderMeta,
     rentalId,
-  })
-
-  // Create tenant snapshot for saving
-  const createTenantSnapshot = (): TenantSnapshot | undefined => {
-    if (!tenant) return undefined
-    return {
-      name: tenant.fullName ?? '',
-      personalNumber: '',
-    }
-  }
-
-  // Combines the existing inspection's calendar day with the picker's HH:MM
-  // — mirror of InspectionForm.composeInspectionDate.
-  const composeInspectionDate = (): string => {
-    const base = existingInspection?.date
-      ? new Date(existingInspection.date)
-      : new Date()
-    const [h, m] = inspectionTime.split(':').map((s) => Number(s))
-    base.setHours(Number.isFinite(h) ? h : 0)
-    base.setMinutes(Number.isFinite(m) ? m : 0)
-    base.setSeconds(0)
-    base.setMilliseconds(0)
-    return base.toISOString()
-  }
-
-  const buildSubmitData = (): InspectionSubmitData => ({
-    needsMasterKey,
-    isFurnished,
-    isTenantPresent,
-    isNewTenantPresent,
-    checklist,
-    date: composeInspectionDate(),
-    type: inspectionType,
-    tenant: createTenantSnapshot(),
   })
 
   const handlePrevious = () => {
@@ -193,13 +159,18 @@ export function MobileInspectionForm({
   }
 
   const handleConfirmSaveDraft = () => {
-    onSave(inspectorName, inspectionData, 'draft', buildSubmitData())
+    onSave(inspectorName, inspectionData, 'draft', buildSubmitData(tenant))
     setIsDraftConfirmOpen(false)
   }
 
   const handleSubmit = () => {
     if (canComplete) {
-      onSave(inspectorName, inspectionData, 'completed', buildSubmitData())
+      onSave(
+        inspectorName,
+        inspectionData,
+        'completed',
+        buildSubmitData(tenant)
+      )
     }
   }
 
@@ -499,6 +470,8 @@ export function MobileInspectionForm({
                   inspectionData={inspectionData}
                   rooms={rooms}
                   teams={workOrders.teams}
+                  teamsLoading={workOrders.teamsLoading}
+                  teamsError={workOrders.teamsError}
                   assignments={workOrders.assignments}
                   onAssignTeam={workOrders.assignTeam}
                   onComponentCostByIdUpdate={handleComponentCostUpdateById}

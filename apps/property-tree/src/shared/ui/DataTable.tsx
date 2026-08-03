@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
@@ -63,6 +63,20 @@ export function DataTable<T extends { id: string }>({
       setCurrentPage(totalPages)
     }
   }, [currentPage, totalPages])
+
+  // Jump back to the first page when new rows appear (e.g. clearing a search
+  // restores the unfiltered set) — staying on a high page would show an
+  // arbitrary slice. Removal-only changes keep the current page; the clamp
+  // above handles pages that fall out of range.
+  const knownIdsRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const ids = new Set(data.map((item) => item.id))
+    const hasNewIds = [...ids].some((id) => !knownIdsRef.current.has(id))
+    knownIdsRef.current = ids
+    if (hasNewIds) {
+      setCurrentPage(1)
+    }
+  }, [data])
 
   if (isLoading) {
     return (
