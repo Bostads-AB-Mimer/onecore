@@ -76,6 +76,23 @@ export const logReadRoutes = (router: KoaRouter) => {
    *     description: Paginated dispatch search. Filters by content (q), channel, messageType, derived status, source (manual/automatic), sendAt range, contactCode, minRecipients, and audience codes (district/building/area). Newest first by default.
    *     tags:
    *       - Communication service
+   *     parameters:
+   *       - { in: query, name: q, schema: { type: string } }
+   *       - { in: query, name: channel, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: messageType, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: status, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: source, schema: { type: string, enum: [manual, automatic] } }
+   *       - { in: query, name: sendAtFrom, schema: { type: string } }
+   *       - { in: query, name: sendAtTo, schema: { type: string } }
+   *       - { in: query, name: contactCode, schema: { type: string } }
+   *       - { in: query, name: minRecipients, schema: { type: integer } }
+   *       - { in: query, name: audienceDistrictNames, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: audienceBuildingCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: audienceAreaCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: sortBy, schema: { type: string, enum: [sendAt, recipientCount, createdAt] } }
+   *       - { in: query, name: sortOrder, schema: { type: string, enum: [asc, desc] } }
+   *       - { in: query, name: page, schema: { type: integer } }
+   *       - { in: query, name: limit, schema: { type: integer } }
    *     responses:
    *       '200':
    *         description: Paginated dispatches
@@ -131,6 +148,24 @@ export const logReadRoutes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Dispatch id (UUID)
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
    *     responses:
    *       '200':
    *         description: Paginated recipients

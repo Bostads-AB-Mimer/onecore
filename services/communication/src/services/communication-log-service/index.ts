@@ -400,8 +400,8 @@ export const routes = (router: OkapiRouter) => {
           schema: z.optional(z.array(z.string())),
         },
         sortBy: {
-          description: 'sendAt | recipientCount',
-          schema: z.optional(z.enum(['sendAt', 'recipientCount'])),
+          description: 'sendAt | recipientCount | createdAt',
+          schema: z.optional(z.enum(['sendAt', 'recipientCount', 'createdAt'])),
         },
         sortOrder: {
           description: 'asc | desc',

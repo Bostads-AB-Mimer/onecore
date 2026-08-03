@@ -537,6 +537,26 @@ export interface paths {
      * @description Paginated dispatch search. Filters by content (q), channel, messageType, derived status, source (manual/automatic), sendAt range, contactCode, minRecipients, and audience codes (district/building/area). Newest first by default.
      */
     get: {
+      parameters: {
+        query?: {
+          q?: string
+          channel?: string[]
+          messageType?: string[]
+          status?: string[]
+          source?: 'manual' | 'automatic'
+          sendAtFrom?: string
+          sendAtTo?: string
+          contactCode?: string
+          minRecipients?: number
+          audienceDistrictNames?: string[]
+          audienceBuildingCodes?: string[]
+          audienceAreaCodes?: string[]
+          sortBy?: 'sendAt' | 'recipientCount' | 'createdAt'
+          sortOrder?: 'asc' | 'desc'
+          page?: number
+          limit?: number
+        }
+      }
       responses: {
         /** @description Paginated dispatches */
         200: {
@@ -566,6 +586,12 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          status?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
         path: {
           /** @description Dispatch id (UUID) */
           id: string

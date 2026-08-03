@@ -442,10 +442,12 @@ export async function searchDispatches(
     }
   }
 
-  const sortColumn =
-    params.sortBy === 'recipientCount'
-      ? 'dispatch.recipientCount'
-      : 'dispatch.sendAt'
+  const SORT_COLUMNS: Record<string, string> = {
+    sendAt: 'dispatch.sendAt',
+    recipientCount: 'dispatch.recipientCount',
+    createdAt: 'dispatch.createdAt',
+  }
+  const sortColumn = SORT_COLUMNS[params.sortBy ?? 'sendAt'] ?? 'dispatch.sendAt'
   query.orderBy(sortColumn, params.sortOrder ?? 'desc')
 
   const page = await paginateKnex<Dispatch>(

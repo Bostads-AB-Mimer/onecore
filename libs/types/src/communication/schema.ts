@@ -166,7 +166,10 @@ export const DispatchSearchQueryParamsSchema = z.object({
   audienceDistrictNames: repeatableStringParam,
   audienceBuildingCodes: repeatableStringParam,
   audienceAreaCodes: repeatableStringParam,
-  sortBy: z.enum(['sendAt', 'recipientCount']).optional().default('sendAt'),
+  sortBy: z
+    .enum(['sendAt', 'recipientCount', 'createdAt'])
+    .optional()
+    .default('sendAt'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
