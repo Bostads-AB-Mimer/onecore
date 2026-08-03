@@ -11,7 +11,7 @@ import {
   type DispatchSearchQueryParams,
 } from '@/services/api/core/communicationService'
 
-export type { DispatchListItem,DispatchSearchQueryParams }
+export type { DispatchListItem, DispatchSearchQueryParams }
 
 export function useDispatchSearch(
   params: DispatchSearchQueryParams,

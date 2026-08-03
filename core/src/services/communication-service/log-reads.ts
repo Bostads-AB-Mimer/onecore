@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { communication } from '@onecore/types'
+import { communication, schemas as typesSchemas } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { registerSchema } from '../../utils/openapi'
@@ -17,6 +17,9 @@ export const logReadRoutes = (router: KoaRouter) => {
     communication.DispatchWithRecipientsSchema
   )
   registerSchema('DispatchListItem', communication.DispatchListItemSchema)
+  registerSchema('MessageRecipient', communication.MessageRecipientSchema)
+  registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
+  registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
 
   /**
    * @swagger
@@ -100,17 +103,18 @@ export const logReadRoutes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               type: object
+   *               required: [content, _meta, _links]
    *               properties:
    *                 content:
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/DispatchListItem'
    *                 _meta:
-   *                   type: object
+   *                   $ref: '#/components/schemas/PaginationMeta'
    *                 _links:
    *                   type: array
    *                   items:
-   *                     type: object
+   *                     $ref: '#/components/schemas/PaginationLinks'
    *       '400':
    *         description: Invalid query parameters
    *       '500':
@@ -169,6 +173,22 @@ export const logReadRoutes = (router: KoaRouter) => {
    *     responses:
    *       '200':
    *         description: Paginated recipients
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [content, _meta, _links]
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MessageRecipient'
+   *                 _meta:
+   *                   $ref: '#/components/schemas/PaginationMeta'
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/PaginationLinks'
    *       '500':
    *         description: Internal server error
    *     security:

@@ -1,11 +1,11 @@
 import { useRef } from 'react'
 
 import type { DispatchListItem } from '@/entities/dispatch'
-import { useDispatchFilters } from '@/entities/dispatch'
 import {
   ChannelBadge,
   DispatchStatusBadge,
-} from '@/entities/dispatch/ui/CommunicationBadges'
+  useDispatchFilters,
+} from '@/entities/dispatch'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import {

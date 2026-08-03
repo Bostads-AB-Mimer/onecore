@@ -8,11 +8,15 @@ import {
   Clock,
   Filter,
   Inbox,
-  Mail,
-  MessageSquare,
   Search,
 } from 'lucide-react'
 
+import {
+  ChannelBadge,
+  channelLabel,
+  RECIPIENT_STATUS_META,
+  RecipientStatusBadge,
+} from '@/entities/dispatch'
 import { useTenantCommunication } from '@/entities/tenant'
 
 import type { CustomerMessage } from '@/services/api/core/communicationService'
@@ -26,7 +30,6 @@ import {
   toDatetimeLocalValue,
   validateScheduleInput,
 } from '@/shared/lib/schedule'
-import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
 import {
@@ -47,7 +50,6 @@ import {
 
 type Channel = CustomerMessage['dispatch']['channel']
 type ChannelFilter = Channel | 'all'
-type Status = CustomerMessage['recipient']['status']
 
 const formatTimestamp = (iso: string): string =>
   new Date(iso).toLocaleString('sv-SE', {
@@ -57,74 +59,6 @@ const formatTimestamp = (iso: string): string =>
     hour: '2-digit',
     minute: '2-digit',
   })
-
-const channelLabel = (channel: Channel) =>
-  channel === 'sms' ? 'SMS' : 'E-post'
-
-function ChannelBadge({ channel }: { channel: Channel }) {
-  const isSms = channel === 'sms'
-  return (
-    <Badge
-      variant="outline"
-      className={`gap-1 px-2 py-0.5 ${
-        isSms
-          ? 'bg-blue-50 text-blue-700 border-blue-200'
-          : 'bg-purple-50 text-purple-700 border-purple-200'
-      }`}
-    >
-      {isSms ? (
-        <MessageSquare className="h-3 w-3" />
-      ) : (
-        <Mail className="h-3 w-3" />
-      )}
-      {channelLabel(channel)}
-    </Badge>
-  )
-}
-
-const STATUS_META: Record<Status, { label: string; className: string }> = {
-  delivered: {
-    label: 'Levererat',
-    className: 'bg-green-50 text-green-700 border-green-200',
-  },
-  sent: {
-    label: 'Skickat',
-    className: 'bg-green-50 text-green-700 border-green-200',
-  },
-  received: {
-    label: 'Mottaget',
-    className: 'bg-blue-50 text-blue-700 border-blue-200',
-  },
-  pending: {
-    label: 'Väntar',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
-  },
-  scheduled: {
-    label: 'Schemalagt',
-    className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  },
-  cancelled: {
-    label: 'Avbrutet',
-    className: 'bg-gray-50 text-gray-600 border-gray-200',
-  },
-  failed: {
-    label: 'Misslyckades',
-    className: 'bg-red-50 text-red-700 border-red-200',
-  },
-  bounced: {
-    label: 'Studsade',
-    className: 'bg-red-50 text-red-700 border-red-200',
-  },
-}
-
-function StatusBadge({ status }: { status: Status }) {
-  const meta = STATUS_META[status]
-  return (
-    <Badge variant="outline" className={`px-2 py-0.5 ${meta.className}`}>
-      {meta.label}
-    </Badge>
-  )
-}
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -216,7 +150,7 @@ function MessageRow({
                 <div className="flex items-center gap-2 flex-wrap">
                   <ChannelBadge channel={dispatch.channel} />
                   <h3 className="font-medium text-foreground">{title}</h3>
-                  <StatusBadge status={recipient.status} />
+                  <RecipientStatusBadge status={recipient.status} />
                 </div>
                 <p className="text-sm text-muted-foreground break-words line-clamp-2">
                   till {recipient.toAddress} — {dispatch.body}
@@ -250,7 +184,7 @@ function MessageRow({
                 <DetailRow label="Mottagare" value={recipient.toAddress} />
                 <DetailRow
                   label="Status"
-                  value={STATUS_META[recipient.status].label}
+                  value={RECIPIENT_STATUS_META[recipient.status].label}
                 />
                 <DetailRow
                   label="Kanal"

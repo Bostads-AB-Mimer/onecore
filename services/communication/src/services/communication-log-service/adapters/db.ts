@@ -5,7 +5,7 @@ import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
 
 import Config from '../../../common/config'
 import { audienceCriteriaToRows } from '../audience-criteria'
-import { deriveDispatchStatus } from '../dispatch-status'
+import { deriveDispatchStatusFromCounts } from '../dispatch-status'
 
 export const createDbClient = () =>
   knex({
@@ -335,31 +335,46 @@ const escapeLike = (s: string) => s.replace(/[\\%_[]/g, (c) => `\\${c}`)
 const AUTOMATIC_USER = 'Automatiskt utskick'
 
 // Correlated EXISTS/NOT EXISTS predicates over message_recipient that reproduce
-// deriveDispatchStatus at the SQL level, so a status filter paginates correctly.
-// `mr` is correlated to `dispatch.id`.
+// deriveDispatchStatusFromCounts at the SQL level, so a status filter paginates
+// correctly. `mr` is correlated to `dispatch.id`. These MUST stay in sync with
+// the JS derivation — dispatch-status.test.ts asserts agreement for every
+// status combination. Non-terminal (in-flight) statuses: pending/sent/received.
 const STATUS_PREDICATE_SQL: Record<string, string> = {
   scheduled: `EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status = 'scheduled')`,
+  // all recipients cancelled
   cancelled: `EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id)
      AND NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status <> 'cancelled')`,
+  // not scheduled, and something still in flight
   sending: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status = 'scheduled')
-     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('pending','sent'))`,
+     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('pending','sent','received'))`,
+  // all recipients delivered
   delivered: `EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id)
      AND NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status <> 'delivered')`,
-  failed: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','pending','sent','delivered'))
-     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('failed','bounced'))`,
-  partially_delivered: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','pending','sent'))
+  // all terminal, at least one delivered AND at least one non-delivered
+  // (failed/bounced/cancelled) — includes the delivered+cancelled mix
+  partially_delivered: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','pending','sent','received'))
      AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status = 'delivered')
+     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status <> 'delivered')`,
+  // all terminal, none delivered, at least one failed/bounced
+  failed: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','pending','sent','received','delivered'))
      AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('failed','bounced'))`,
 }
 
-// Preserve filters in pagination _links (scalar/array params only).
+// Preserve filters in pagination _links. Dates are ISO-serialized; arrays are
+// comma-joined and so don't round-trip through the array query params — that's
+// acceptable because nothing consumes _links today.
 function buildDispatchSearchLinkParams(
   params: communication.DispatchSearchQueryParams
 ): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [k, v] of Object.entries(params)) {
     if (v == null) continue
-    out[k] = Array.isArray(v) ? v.join(',') : String(v)
+    out[k] =
+      v instanceof Date
+        ? v.toISOString()
+        : Array.isArray(v)
+          ? v.join(',')
+          : String(v)
   }
   return out
 }
@@ -388,10 +403,8 @@ export async function searchDispatches(
     query
       .whereNot('dispatch.triggeredByUser', AUTOMATIC_USER)
       .whereNotNull('dispatch.triggeredByUser')
-  if (params.sendAtFrom)
-    query.where('dispatch.sendAt', '>=', new Date(params.sendAtFrom))
-  if (params.sendAtTo)
-    query.where('dispatch.sendAt', '<=', new Date(params.sendAtTo))
+  if (params.sendAtFrom) query.where('dispatch.sendAt', '>=', params.sendAtFrom)
+  if (params.sendAtTo) query.where('dispatch.sendAt', '<=', params.sendAtTo)
   if (params.minRecipients != null)
     query.where('dispatch.recipientCount', '>=', params.minRecipients)
 
@@ -447,8 +460,14 @@ export async function searchDispatches(
     recipientCount: 'dispatch.recipientCount',
     createdAt: 'dispatch.createdAt',
   }
-  const sortColumn = SORT_COLUMNS[params.sortBy ?? 'sendAt'] ?? 'dispatch.sendAt'
-  query.orderBy(sortColumn, params.sortOrder ?? 'desc')
+  const sortColumn =
+    SORT_COLUMNS[params.sortBy ?? 'sendAt'] ?? 'dispatch.sendAt'
+  // id tiebreaker: the sort columns are non-unique (many dispatches share a
+  // sendAt/createdAt), and MSSQL OFFSET paging over a tied sort is
+  // nondeterministic — without this rows can duplicate or vanish across pages.
+  query
+    .orderBy(sortColumn, params.sortOrder ?? 'desc')
+    .orderBy('dispatch.id', 'asc')
 
   const page = await paginateKnex<Dispatch>(
     query,
@@ -472,15 +491,25 @@ export async function searchDispatches(
       : Promise.resolve([]),
   ])
 
-  const summaryByDispatch = new Map<string, Record<string, number>>()
+  // Seed every dispatch's summary with all statuses at 0 so the runtime shape
+  // matches the schema's record type (all keys present), then overlay counts.
+  const zeroSummary = (): Record<communication.RecipientStatus, number> =>
+    Object.fromEntries(
+      communication.RECIPIENT_STATUS.map((s) => [s, 0])
+    ) as Record<communication.RecipientStatus, number>
+
+  const summaryByDispatch = new Map<
+    string,
+    Record<communication.RecipientStatus, number>
+  >()
+  for (const id of ids) summaryByDispatch.set(id, zeroSummary())
   for (const r of rollupRows as {
     dispatchId: string
-    status: string
+    status: communication.RecipientStatus
     count: number
   }[]) {
-    const summary = summaryByDispatch.get(r.dispatchId) ?? {}
-    summary[r.status] = Number(r.count)
-    summaryByDispatch.set(r.dispatchId, summary)
+    const summary = summaryByDispatch.get(r.dispatchId)
+    if (summary) summary[r.status] = Number(r.count)
   }
   const audienceByDispatch = new Map<
     string,
@@ -497,17 +526,12 @@ export async function searchDispatches(
   }
 
   const content: communication.DispatchListItem[] = page.content.map((d) => {
-    const statusSummary = summaryByDispatch.get(d.id) ?? {}
-    const statuses = Object.entries(statusSummary).flatMap(([s, n]) =>
-      Array<communication.RecipientStatus>(n).fill(
-        s as communication.RecipientStatus
-      )
-    )
+    const statusSummary = summaryByDispatch.get(d.id) ?? zeroSummary()
     // Strip the legacy raw-JSON column from the list item.
     const { audienceCriteria: _legacy, ...rest } = d
     return {
       ...rest,
-      status: deriveDispatchStatus(statuses),
+      status: deriveDispatchStatusFromCounts(statusSummary),
       statusSummary,
       audience: audienceByDispatch.get(d.id) ?? [],
     }
@@ -528,7 +552,10 @@ export async function getDispatchRecipients(
 ): Promise<PaginatedResponse<MessageRecipient>> {
   const query = db<MessageRecipient>('message_recipient')
     .where('dispatchId', dispatchId)
+    // id tiebreaker: all recipients of a bulk share createdAt (one insert), so
+    // OFFSET paging over createdAt alone is nondeterministic across pages.
     .orderBy('createdAt', 'asc')
+    .orderBy('id', 'asc')
 
   if (opts.status?.length) query.whereIn('status', opts.status)
   if (opts.q) {

@@ -562,9 +562,9 @@ export interface paths {
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['DispatchListItem'][]
-              _meta?: Record<string, never>
-              _links?: Record<string, never>[]
+              content: components['schemas']['DispatchListItem'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
             }
           }
         }
@@ -600,7 +600,13 @@ export interface paths {
       responses: {
         /** @description Paginated recipients */
         200: {
-          content: never
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageRecipient'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
+            }
+          }
         }
         /** @description Internal server error */
         500: {
@@ -14097,6 +14103,30 @@ export interface components {
         type: string
         value: string
       }[]
+    }
+    MessageRecipient: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      dispatchId: string
+      contactCode: string | null
+      toAddress: string
+      /** @enum {string} */
+      status:
+        | 'pending'
+        | 'sent'
+        | 'delivered'
+        | 'failed'
+        | 'bounced'
+        | 'received'
+        | 'scheduled'
+        | 'cancelled'
+      /** Format: date-time */
+      statusUpdatedAt: string
+      externalMessageId: string | null
+      error: string | null
+      /** Format: date-time */
+      createdAt: string
     }
     KeycloakUser: {
       id: string

@@ -49,7 +49,10 @@ export const searchDispatches = async (
   try {
     const result = await axios.get(
       `${config.communicationService.url}/communication-log/dispatches`,
-      { params: query }
+      // indexes: null serializes arrays as `channel=sms&channel=email`
+      // (repeated keys) instead of axios' default `channel[]=...`, which the
+      // service's query schema would not recognize.
+      { params: query, paramsSerializer: { indexes: null } }
     )
     return { ok: true, data: result.data }
   } catch (err) {
@@ -72,7 +75,7 @@ export const getDispatchRecipients = async (
   try {
     const result = await axios.get(
       `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/recipients`,
-      { params: query }
+      { params: query, paramsSerializer: { indexes: null } }
     )
     return { ok: true, data: result.data }
   } catch (err) {

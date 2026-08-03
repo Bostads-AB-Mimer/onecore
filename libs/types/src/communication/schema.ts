@@ -145,22 +145,47 @@ export const AudienceCriterionSchema = z.object({
   value: z.string(),
 })
 
-// Repeatable query param: single string or array -> array. Query strings arrive
-// as string | string[]; koa-okapi-router does not coerce, so we do it here.
-const repeatableStringParam = z
-  .union([z.string(), z.array(z.string())])
-  .transform((v) => (Array.isArray(v) ? v : [v]))
-  .optional()
+// Repeatable query param (single value or repeated) normalized to an array and
+// validated against `schema`. Query strings arrive as string | string[] and
+// koa-okapi-router does not coerce, so we do it here. Passing an enum schema
+// means a typo (e.g. status=bogus) 400s instead of being silently dropped.
+const repeatableParam = <T extends z.ZodTypeAny>(schema: T) =>
+  z
+    .union([schema, z.array(schema)])
+    // Cast pins the output to T[]; under a generic, Array.isArray doesn't narrow
+    // the ternary cleanly and TS widens it to a union of array types.
+    .transform((v) => (Array.isArray(v) ? v : [v]) as z.infer<T>[])
+    .optional()
+
+const repeatableStringParam = repeatableParam(z.string())
+
+// Inclusive upper date bound. A date-only value ('2026-07-01') means "through
+// the end of that day", so bump it to 23:59:59.999 — otherwise `sendAt <=`
+// midnight would exclude everything sent that day.
+// NOTE: date-only strings parse as UTC midnight, so a dispatch in the Swedish
+// 00:00–02:00 window lands on the previous UTC day; day-boundary filtering is
+// approximate until it keys off the Swedish-local day.
+const inclusiveUpperDate = z.string().transform((s, ctx) => {
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid date' })
+    return z.NEVER
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s.trim())) d.setUTCHours(23, 59, 59, 999)
+  return d
+})
 
 export const DispatchSearchQueryParamsSchema = z.object({
   q: z.string().optional(),
-  channel: repeatableStringParam,
+  channel: repeatableParam(ChannelSchema),
   messageType: repeatableStringParam,
-  status: repeatableStringParam,
+  status: repeatableParam(DispatchStatusSchema),
   source: z.enum(['manual', 'automatic']).optional(),
   triggeredByUser: z.string().optional(),
-  sendAtFrom: z.string().optional(),
-  sendAtTo: z.string().optional(),
+  // Accepts date ('2026-07-01') and full ISO strings; coerces to Date and
+  // rejects unparseable input with a 400 rather than reaching knex.
+  sendAtFrom: z.coerce.date().optional(),
+  sendAtTo: inclusiveUpperDate.optional(),
   contactCode: z.string().optional(),
   minRecipients: z.coerce.number().int().nonnegative().optional(),
   audienceDistrictNames: repeatableStringParam,

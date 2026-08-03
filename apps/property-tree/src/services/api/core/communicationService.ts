@@ -5,10 +5,7 @@ export type CustomerMessage = components['schemas']['CustomerMessage']
 export type DispatchWithRecipients =
   components['schemas']['DispatchWithRecipients']
 export type DispatchListItem = components['schemas']['DispatchListItem']
-// MessageRecipient is not a top-level component schema; derive it from the
-// DispatchWithRecipients recipients array.
-export type MessageRecipient =
-  components['schemas']['DispatchWithRecipients']['recipients'][number]
+export type MessageRecipient = components['schemas']['MessageRecipient']
 export type PaginationMeta = components['schemas']['PaginationMeta']
 export type PaginationLinks = components['schemas']['PaginationLinks']
 
@@ -57,17 +54,7 @@ export const communicationService = {
       params: { query: { ...params, page, limit } },
     })
     if (error) throw error
-
-    const response = data as {
-      content?: DispatchListItem[]
-      _meta?: PaginationMeta
-      _links?: PaginationLinks[]
-    }
-    return {
-      content: response.content ?? [],
-      _meta: response._meta!,
-      _links: response._links ?? [],
-    }
+    return data
   },
 
   /** Paginated recipients of a single dispatch (for the detail view). */
@@ -84,17 +71,7 @@ export const communicationService = {
       }
     )
     if (error) throw error
-
-    const response = data as {
-      content?: MessageRecipient[]
-      _meta?: PaginationMeta
-      _links?: PaginationLinks[]
-    }
-    return {
-      content: response.content ?? [],
-      _meta: response._meta!,
-      _links: response._links ?? [],
-    }
+    return data
   },
 
   /** Cancel a scheduled dispatch (idempotent; 409 if it already fired). */
