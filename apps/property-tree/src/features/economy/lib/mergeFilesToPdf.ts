@@ -14,9 +14,38 @@ const A4_WIDTH_POINTS = 595.28
 const A4_HEIGHT_POINTS = 841.89
 
 export class MergeFileError extends Error {
-  constructor(public readonly fileName: string) {
+  constructor(fileName: string) {
     super(`Kunde inte läsa filen "${fileName}"`)
     this.name = 'MergeFileError'
+  }
+}
+
+// pdf-lib's embedJpg ignores EXIF rotation, so portrait phone photos would
+// render sideways. Redrawing through a canvas applies the orientation.
+async function normalizeJpeg(bytes: ArrayBuffer): Promise<ArrayBuffer> {
+  const bitmap = await createImageBitmap(new Blob([bytes]), {
+    imageOrientation: 'from-image',
+  })
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = bitmap.width
+    canvas.height = bitmap.height
+    const context = canvas.getContext('2d')
+    if (!context) {
+      throw new Error('Could not get canvas context')
+    }
+    context.drawImage(bitmap, 0, 0)
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (result) =>
+          result ? resolve(result) : reject(new Error('canvas.toBlob failed')),
+        'image/jpeg',
+        0.92
+      )
+    })
+    return await blob.arrayBuffer()
+  } finally {
+    bitmap.close()
   }
 }
 
@@ -49,7 +78,7 @@ export async function mergeFilesToPdf(files: File[]): Promise<File> {
         const image =
           file.type === 'image/png'
             ? await mergedDocument.embedPng(bytes)
-            : await mergedDocument.embedJpg(bytes)
+            : await mergedDocument.embedJpg(await normalizeJpeg(bytes))
         // Scale down to fit within A4 (1 px = 1 pt would make photos huge),
         // but never upscale small images
         const scale = Math.min(
@@ -69,6 +98,8 @@ export async function mergeFilesToPdf(files: File[]): Promise<File> {
 
   const mergedBytes = await mergedDocument.save()
 
+  // The copy re-types pdf-lib's Uint8Array<ArrayBufferLike> as ArrayBuffer-
+  // backed, which BlobPart requires
   return new File([new Uint8Array(mergedBytes)], 'strofaktura-bilagor.pdf', {
     type: 'application/pdf',
   })

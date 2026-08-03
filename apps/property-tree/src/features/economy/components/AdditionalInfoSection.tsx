@@ -26,7 +26,7 @@ interface AdditionalInfoSectionProps {
   attachedFiles: File[]
 }
 
-const fileKey = (file: File) => `${file.name}:${file.size}`
+const fileKey = (file: File) => `${file.name}:${file.size}:${file.lastModified}`
 
 export function AdditionalInfoSection({
   selectedProject,
@@ -187,7 +187,13 @@ export function AdditionalInfoSection({
               id="file-upload"
               className="sr-only"
               multiple
-              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              // A lone attachment may be of any type, so the picker is only
+              // restricted to mergeable types once a file is attached
+              accept={
+                attachedFiles.length === 0
+                  ? undefined
+                  : '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png'
+              }
               onChange={handleFileChange}
             />
             <label htmlFor="file-upload">
