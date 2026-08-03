@@ -55,11 +55,6 @@ export interface ResidenceInfo {
   size: number | null
 }
 
-// Checklist is defined in constants/checklist.ts (derived from the generated
-// swagger types). Re-exported here for backward compatibility with existing
-// import paths.
-export type { Checklist } from '@/features/inspections/constants/checklist'
-
 import type { Checklist } from '@/features/inspections/constants/checklist'
 
 /**
@@ -68,9 +63,10 @@ import type { Checklist } from '@/features/inspections/constants/checklist'
  *
  * `date` carries the calendar day combined with the Klockslag (HH:MM) chosen
  * in the conduct dialog's "Info om besiktning" card. `type` is the value
- * behind the "Typ av besiktning" radio. Both flow through to the backend
- * save-draft endpoint and update the inspection.date / inspection.type
- * columns directly.
+ * behind the "Typ av besiktning" radio. Both are only set when the inspector
+ * actually edited them — the save-draft endpoint keeps the stored values when
+ * they are absent, so an untouched draft save never re-schedules the
+ * inspection to the picker's display fallback.
  */
 export interface InspectionSubmitData {
   needsMasterKey: boolean
@@ -78,8 +74,8 @@ export interface InspectionSubmitData {
   isTenantPresent: boolean
   isNewTenantPresent: boolean
   checklist: Checklist
-  date: string
-  type: string
+  date?: string
+  type?: string
   tenant?: TenantSnapshot
 }
 

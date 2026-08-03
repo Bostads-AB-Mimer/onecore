@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
@@ -1863,16 +1864,8 @@ export const routes = (router: KoaRouter) => {
   router.post('/work-orders/from-inspection', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const parsed = schemas.CreateInspectionWorkOrdersRequestSchema.safeParse(
-        ctx.request.body
-      )
-      if (!parsed.success) {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid request body', ...metadata }
-        return
-      }
-
-      const { rentalObjectCode, groups } = parsed.data
+      const { rentalObjectCode, inspectionId, groups } =
+        schemas.CreateInspectionWorkOrdersRequestSchema.parse(ctx.request.body)
 
       const rentalPropertyInfo =
         await propertyManagementAdapter.getRentalPropertyInfo(rentalObjectCode)
@@ -1893,6 +1886,7 @@ export const routes = (router: KoaRouter) => {
 
       const result = await workOrderAdapter.createInspectionWorkOrders({
         rentalProperty: rentalPropertyInfo,
+        inspectionId,
         groups,
       })
 
@@ -1912,6 +1906,15 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Invalid request body',
+          error: error.issues.map(({ message, path }) => ({ message, path })),
+          ...metadata,
+        }
+        return
+      }
       logger.error({ err: error }, 'Error creating inspection work orders')
       ctx.status = 500
       ctx.body = {

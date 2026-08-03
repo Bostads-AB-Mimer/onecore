@@ -141,8 +141,11 @@ export function CreateInspectionDialog({
       // the source of truth.
       isFurnished: true,
       leaseId: submittedLeaseId,
-      // Real values are captured later in the "Kontrollfrågor" step.
-      isTenantPresent: false,
+      // Real values are captured later in the "Kontrollfrågor" step; the DB
+      // columns are NOT NULL so seeds are required. The outgoing tenant is
+      // usually present (common-case default Ja, mirroring isFurnished); the
+      // new tenant almost never is.
+      isTenantPresent: true,
       isNewTenantPresent: false,
       masterKeyAccess: masterKeyAccess.trim() || null,
       hasRemarks: false,

@@ -8,7 +8,10 @@ import {
   DialogTitle,
 } from '@/shared/ui/Dialog'
 
-import type { useInspectionWorkOrders } from '../hooks/useInspectionWorkOrders'
+import type {
+  useInspectionWorkOrders,
+  InspectionWorkOrderGroupStatus,
+} from '../hooks/useInspectionWorkOrders'
 import type { InspectionWorkOrderGroup } from '../lib/buildInspectionWorkOrderGroups'
 
 interface InspectionWorkOrdersConfirmFlowProps {
@@ -34,7 +37,8 @@ export function InspectionWorkOrdersConfirmFlow({
       }}
       groups={workOrders.groups}
       unassignedCount={workOrders.unassignedCount}
-      createdTeamIds={workOrders.createdTeamIds}
+      groupStatus={workOrders.groupStatus}
+      teamsUnavailable={workOrders.teamsError && workOrders.damaged.length > 0}
       isCreating={workOrders.isCreating}
       onConfirm={async () => {
         const ok = await workOrders.createWorkOrders()
@@ -52,27 +56,46 @@ interface CreateInspectionWorkOrdersDialogProps {
   onOpenChange: (open: boolean) => void
   groups: InspectionWorkOrderGroup[]
   unassignedCount: number
-  createdTeamIds: Set<number>
+  groupStatus: (
+    group: InspectionWorkOrderGroup
+  ) => InspectionWorkOrderGroupStatus
+  // True when the resursgrupp list failed to load while there are damaged
+  // components — completing would silently skip creating any work orders.
+  teamsUnavailable: boolean
   isCreating: boolean
   onConfirm: () => void
+}
+
+const GROUP_STATUS_LABEL = (
+  group: InspectionWorkOrderGroup,
+  status: InspectionWorkOrderGroupStatus
+): string => {
+  if (status === 'created') return 'Redan skapad ✓'
+  const count = group.componentLabels.length
+  const components = `${count} komponent${count === 1 ? '' : 'er'}`
+  // 'changed': the group was created earlier but components were added or
+  // edited since — the existing Odoo request is updated, not duplicated.
+  return status === 'changed' ? `Uppdateras – ${components}` : components
 }
 
 /**
  * Previews the work orders that will be created (one per resursgrupp) before the
  * inspection is completed, and surfaces any Skadad components left unassigned.
- * Groups already created in a previous attempt are marked and won't be resent.
+ * Groups already created in a previous attempt are marked and won't be resent
+ * unless their content changed — in that case the existing request is updated.
  */
 export function CreateInspectionWorkOrdersDialog({
   open,
   onOpenChange,
   groups,
   unassignedCount,
-  createdTeamIds,
+  groupStatus,
+  teamsUnavailable,
   isCreating,
   onConfirm,
 }: CreateInspectionWorkOrdersDialogProps) {
   const pendingCount = groups.filter(
-    (group) => !createdTeamIds.has(group.maintenanceTeamId)
+    (group) => groupStatus(group) !== 'created'
   ).length
 
   return (
@@ -98,9 +121,7 @@ export function CreateInspectionWorkOrdersDialog({
               >
                 <span className="font-medium">{group.maintenanceTeamName}</span>
                 <span className="text-muted-foreground">
-                  {createdTeamIds.has(group.maintenanceTeamId)
-                    ? 'Redan skapad ✓'
-                    : `${group.componentLabels.length} komponent${group.componentLabels.length === 1 ? '' : 'er'}`}
+                  {GROUP_STATUS_LABEL(group, groupStatus(group))}
                 </span>
               </li>
             ))}
@@ -115,6 +136,14 @@ export function CreateInspectionWorkOrdersDialog({
           </p>
         )}
 
+        {teamsUnavailable && (
+          <p className="text-sm text-destructive">
+            Resursgrupperna kunde inte hämtas – skadade komponenter kan inte
+            tilldelas och inga ärenden skapas. Spara besiktningen som utkast och
+            försök igen senare.
+          </p>
+        )}
+
         <DialogFooter>
           <Button
             variant="outline"
@@ -123,7 +152,7 @@ export function CreateInspectionWorkOrdersDialog({
           >
             Avbryt
           </Button>
-          <Button onClick={onConfirm} disabled={isCreating}>
+          <Button onClick={onConfirm} disabled={isCreating || teamsUnavailable}>
             {isCreating ? 'Skapar…' : 'Skapa och slutför'}
           </Button>
         </DialogFooter>

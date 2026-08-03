@@ -1074,6 +1074,7 @@ export interface components {
           estate: string | null
         }[]
       }
+      inspectionId?: string
       groups: {
         maintenanceTeamId: number
         maintenanceTeamName: string

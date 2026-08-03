@@ -63,6 +63,7 @@ export function useInspectionForm(
     checklist: inspectorInfo.checklist,
     setChecklistItem: inspectorInfo.setChecklistItem,
     isChecklistComplete: inspectorInfo.isChecklistComplete,
+    buildSubmitData: inspectorInfo.buildSubmitData,
 
     // Form state
     rooms: formState.rooms,

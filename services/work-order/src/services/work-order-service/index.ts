@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import { z } from 'zod'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
@@ -1437,22 +1438,13 @@ export const routes = (router: KoaRouter) => {
   router.post('(.*)/workOrders/fromInspection', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const parsedBody = CreateInspectionWorkOrdersBodySchema.safeParse(
-        ctx.request.body
-      )
-      if (!parsedBody.success) {
-        ctx.status = 400
-        ctx.body = {
-          error: parsedBody.error,
-          ...metadata,
-        }
-        return
-      }
+      const { rentalProperty, inspectionId, groups } =
+        CreateInspectionWorkOrdersBodySchema.parse(ctx.request.body)
 
-      const { rentalProperty, groups } = parsedBody.data
       const result = await odooAdapter.createInspectionWorkOrders(
         rentalProperty,
-        groups
+        groups,
+        inspectionId
       )
 
       if (result.ok) {
@@ -1469,6 +1461,14 @@ export const routes = (router: KoaRouter) => {
         }
       }
     } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        ctx.status = 400
+        ctx.body = {
+          error: error.issues.map(({ message, path }) => ({ message, path })),
+          ...metadata,
+        }
+        return
+      }
       logger.error(
         { err: error },
         'work-order-service.createInspectionWorkOrders'

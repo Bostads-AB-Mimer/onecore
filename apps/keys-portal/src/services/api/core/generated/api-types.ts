@@ -10459,6 +10459,7 @@ export interface components {
     }
     CreateInspectionWorkOrdersRequest: {
       rentalObjectCode: string
+      inspectionId?: string
       groups: {
         maintenanceTeamId: number
         maintenanceTeamName: string

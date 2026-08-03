@@ -2,7 +2,12 @@ import { useState } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
-import { type Checklist, CHECKLIST_DEFAULT } from '../constants/checklist'
+import type { InspectionSubmitData, TenantInfoCardData } from '../types/index'
+import {
+  type Checklist,
+  CHECKLIST_DEFAULT,
+  CHECKLIST_ITEMS,
+} from '../constants/checklist'
 import {
   INSPECTION_TYPE,
   type InspectionType,
@@ -33,6 +38,7 @@ export interface UseInspectorInfoReturn extends InspectorInfo {
   setChecklistItem: (key: keyof Checklist, value: boolean) => void
   isValid: boolean
   isChecklistComplete: boolean
+  buildSubmitData: (tenant?: TenantInfoCardData) => InspectionSubmitData
 }
 
 const pad = (n: number) => n.toString().padStart(2, '0')
@@ -43,6 +49,8 @@ const pad = (n: number) => n.toString().padStart(2, '0')
 // *UTC* midnight as "no time set" because CreateInspectionDialog persists the
 // inspection at UTC midnight (`new Date('YYYY-MM-DD').toISOString()`); a real
 // scheduled time set via this picker is stored with a non-zero UTC component.
+// The fallback is display-only: buildSubmitData never persists it unless the
+// inspector actually edits Klockslag.
 function deriveInitialTime(date: Date | string | undefined | null): string {
   if (date) {
     const d = new Date(date)
@@ -67,14 +75,33 @@ export function useInspectorInfo(
     existingInspection?.inspector || ''
   )
 
-  const [inspectionTime, setInspectionTime] = useState(() =>
+  const [inspectionTime, setInspectionTimeState] = useState(() =>
     deriveInitialTime(existingInspection?.date)
   )
 
-  const [inspectionType, setInspectionType] = useState<InspectionType>(() => {
-    const raw = existingInspection?.type
-    return raw && isValidInspectionType(raw) ? raw : INSPECTION_TYPE.MOVE_OUT
-  })
+  const [inspectionType, setInspectionTypeState] = useState<InspectionType>(
+    () => {
+      const raw = existingInspection?.type
+      return raw && isValidInspectionType(raw) ? raw : INSPECTION_TYPE.MOVE_OUT
+    }
+  )
+
+  // The picker states above hold display fallbacks (wall-clock time, coerced
+  // type) when the inspection has no real stored value. Only values the
+  // inspector actually edited may be persisted — otherwise a plain draft save
+  // would silently overwrite the stored schedule with the fallback.
+  const [hasEditedTime, setHasEditedTime] = useState(false)
+  const [hasEditedType, setHasEditedType] = useState(false)
+
+  const setInspectionTime = (time: string) => {
+    setHasEditedTime(true)
+    setInspectionTimeState(time)
+  }
+
+  const setInspectionType = (type: InspectionType) => {
+    setHasEditedType(true)
+    setInspectionTypeState(type)
+  }
 
   const [needsMasterKey, setNeedsMasterKey] = useState(
     Boolean(existingInspection?.masterKeyAccess)
@@ -89,9 +116,10 @@ export function useInspectorInfo(
 
   // Tenant presence is captured during the conduct flow rather than at
   // create time. Hydrate from the persisted inspection so reopening a draft
-  // restores the inspector's previous choice. Default true for the outgoing
-  // tenant — same "common case" reasoning as isFurnished — and false for the
-  // new tenant, who is almost never on-site at avflytt.
+  // restores the inspector's previous choice. CreateInspectionDialog seeds
+  // true for the outgoing tenant (same "common case" reasoning as isFurnished)
+  // and false for the new tenant, who is almost never on-site at avflytt —
+  // the fallbacks here only apply when there is no persisted inspection.
   const [isTenantPresent, setIsTenantPresent] = useState(
     existingInspection?.isTenantPresent ?? true
   )
@@ -110,14 +138,47 @@ export function useInspectorInfo(
     setChecklist((prev) => ({ ...prev, [key]: value }))
   }
 
-  const isChecklistComplete =
-    checklist.groundFaultBreaker &&
-    checklist.smokeDetector &&
-    checklist.electricalSchema &&
-    checklist.electricalSystem
+  const isChecklistComplete = CHECKLIST_ITEMS.every(
+    (item) => checklist[item.key]
+  )
 
   // Validation: inspector name is required
   const isValid = Boolean(inspectorName.trim() && inspectionTime)
+
+  // Combines the existing inspection's calendar day with the picker's HH:MM.
+  // We keep the day from `existingInspection.date` (set at create time) and
+  // only overwrite the time, so the inspector editing Klockslag doesn't
+  // accidentally re-schedule the inspection to today.
+  const composeInspectionDate = (): string => {
+    const base = existingInspection?.date
+      ? new Date(existingInspection.date)
+      : new Date()
+    const [h, m] = inspectionTime.split(':').map((s) => Number(s))
+    base.setHours(Number.isFinite(h) ? h : 0)
+    base.setMinutes(Number.isFinite(m) ? m : 0)
+    base.setSeconds(0)
+    base.setMilliseconds(0)
+    return base.toISOString()
+  }
+
+  // Assembles the payload both forms hand to onSave for draft saves and
+  // completion. Shared here so the desktop and mobile forms can't drift.
+  // `date`/`type` are omitted unless edited — the save endpoint keeps the
+  // stored values for absent fields.
+  const buildSubmitData = (
+    tenant?: TenantInfoCardData
+  ): InspectionSubmitData => ({
+    needsMasterKey,
+    isFurnished,
+    isTenantPresent,
+    isNewTenantPresent,
+    checklist,
+    date: hasEditedTime ? composeInspectionDate() : undefined,
+    type: hasEditedType ? inspectionType : undefined,
+    tenant: tenant
+      ? { name: tenant.fullName ?? '', personalNumber: '' }
+      : undefined,
+  })
 
   return {
     inspectorName,
@@ -138,5 +199,6 @@ export function useInspectorInfo(
     setChecklistItem,
     isValid,
     isChecklistComplete,
+    buildSubmitData,
   }
 }

@@ -108,22 +108,38 @@ function CostInput({
 
 function ResursgruppSelect({
   teams,
+  teamsLoading,
+  teamsError,
   value,
   onChange,
   ariaLabel,
 }: {
   teams: MaintenanceTeam[]
+  teamsLoading: boolean
+  teamsError: boolean
   value: number | undefined
   onChange: (teamId: number | null) => void
   ariaLabel: string
 }) {
+  if (teamsError) {
+    return (
+      <p className="text-sm text-destructive">
+        Resursgrupperna kunde inte hämtas.
+      </p>
+    )
+  }
   return (
     <Select
       value={value?.toString() ?? ''}
       onValueChange={(v) => onChange(v ? Number(v) : null)}
+      disabled={teamsLoading}
     >
       <SelectTrigger aria-label={ariaLabel}>
-        <SelectValue placeholder="Välj resursgrupp" />
+        <SelectValue
+          placeholder={
+            teamsLoading ? 'Laddar resursgrupper…' : 'Välj resursgrupp'
+          }
+        />
       </SelectTrigger>
       <SelectContent>
         {teams.map((team) => (
@@ -140,6 +156,8 @@ interface RoomSectionProps {
   room: Room
   roomData: InspectionRoom | undefined
   teams: MaintenanceTeam[]
+  teamsLoading: boolean
+  teamsError: boolean
   assignments: Record<string, number>
   onAssignTeam: (key: string, teamId: number | null) => void
   onComponentCostByIdUpdate: (
@@ -170,6 +188,8 @@ function RoomSummarySection({
   room,
   roomData,
   teams,
+  teamsLoading,
+  teamsError,
   assignments,
   onAssignTeam,
   onComponentCostByIdUpdate,
@@ -319,6 +339,8 @@ function RoomSummarySection({
                   </label>
                   <ResursgruppSelect
                     teams={teams}
+                    teamsLoading={teamsLoading}
+                    teamsError={teamsError}
                     value={assignments[assignmentKey]}
                     onChange={(teamId) => onAssignTeam(assignmentKey, teamId)}
                     ariaLabel={`Resursgrupp för ${remark.label}`}
@@ -389,6 +411,8 @@ function RoomSummarySection({
                     {showResponsibility && (
                       <ResursgruppSelect
                         teams={teams}
+                        teamsLoading={teamsLoading}
+                        teamsError={teamsError}
                         value={assignments[assignmentKey]}
                         onChange={(teamId) =>
                           onAssignTeam(assignmentKey, teamId)
@@ -411,6 +435,8 @@ interface InspectionSummaryProps {
   inspectionData: Record<string, InspectionRoom>
   rooms: Room[]
   teams: MaintenanceTeam[]
+  teamsLoading: boolean
+  teamsError: boolean
   assignments: Record<string, number>
   onAssignTeam: (key: string, teamId: number | null) => void
   onComponentCostByIdUpdate: (
@@ -441,6 +467,8 @@ export function InspectionSummary({
   inspectionData,
   rooms,
   teams,
+  teamsLoading,
+  teamsError,
   assignments,
   onAssignTeam,
   onComponentCostByIdUpdate,
@@ -484,6 +512,8 @@ export function InspectionSummary({
           room={room}
           roomData={roomData}
           teams={teams}
+          teamsLoading={teamsLoading}
+          teamsError={teamsError}
           assignments={assignments}
           onAssignTeam={onAssignTeam}
           onComponentCostByIdUpdate={onComponentCostByIdUpdate}

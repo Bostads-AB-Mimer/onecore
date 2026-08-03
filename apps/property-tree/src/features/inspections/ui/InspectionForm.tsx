@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, Plus, Trash2 } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
   TenantInfoCardData,
-  TenantSnapshot,
 } from '@/features/inspections/types/index'
 
 import type { components } from '@/services/api/core/generated/api-types'
@@ -71,8 +70,6 @@ export function InspectionForm({
     setInspectionTime,
     inspectionType,
     setInspectionType,
-    needsMasterKey,
-    setNeedsMasterKey,
     isFurnished,
     setIsFurnished,
     isTenantPresent,
@@ -82,16 +79,11 @@ export function InspectionForm({
     checklist,
     setChecklistItem,
     isChecklistComplete,
+    buildSubmitData,
     rooms,
     inspectionData,
     handleAddRoom,
     handleRemoveRoom,
-    handleConditionUpdate,
-    handleActionUpdate,
-    handleComponentNoteUpdate,
-    handleComponentPhotoAdd,
-    handleComponentPhotoRemove,
-    handleComponentCostResponsibilityUpdate,
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
@@ -124,11 +116,18 @@ export function InspectionForm({
   // with the checklist gating (all four checks required).
   const canComplete = validation.canComplete
 
+  // Stable reference — a fresh object literal here would defeat the groups
+  // useMemo inside the hook on every render.
+  const workOrderMeta = useMemo(
+    () => ({ id: existingInspection.id, address }),
+    [existingInspection.id, address]
+  )
+
   // Resursgrupp assignment + work-order creation on the summary step.
   const workOrders = useInspectionWorkOrders({
     inspectionData,
     rooms,
-    meta: { id: existingInspection.id, address },
+    meta: workOrderMeta,
     rentalId,
   })
 
@@ -191,49 +190,19 @@ export function InspectionForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomIdsKey, step])
 
-  const createTenantSnapshot = (): TenantSnapshot | undefined => {
-    if (!tenant) return undefined
-    return {
-      name: tenant.fullName ?? '',
-      personalNumber: '',
-    }
-  }
-
-  // Combines the existing inspection's calendar day with the picker's HH:MM.
-  // We keep the day from `existingInspection.date` (set at create time) and
-  // only overwrite the time, so the inspector editing Klockslag doesn't
-  // accidentally re-schedule the inspection to today.
-  const composeInspectionDate = (): string => {
-    const base = existingInspection?.date
-      ? new Date(existingInspection.date)
-      : new Date()
-    const [h, m] = inspectionTime.split(':').map((s) => Number(s))
-    base.setHours(Number.isFinite(h) ? h : 0)
-    base.setMinutes(Number.isFinite(m) ? m : 0)
-    base.setSeconds(0)
-    base.setMilliseconds(0)
-    return base.toISOString()
-  }
-
-  const buildSubmitData = (): InspectionSubmitData => ({
-    needsMasterKey,
-    isFurnished,
-    isTenantPresent,
-    isNewTenantPresent,
-    checklist,
-    date: composeInspectionDate(),
-    type: inspectionType,
-    tenant: createTenantSnapshot(),
-  })
-
   const handleSubmit = () => {
     if (canComplete) {
-      onSave(inspectorName, inspectionData, 'completed', buildSubmitData())
+      onSave(
+        inspectorName,
+        inspectionData,
+        'completed',
+        buildSubmitData(tenant)
+      )
     }
   }
 
   const handleConfirmSaveDraft = () => {
-    onSave(inspectorName, inspectionData, 'draft', buildSubmitData())
+    onSave(inspectorName, inspectionData, 'draft', buildSubmitData(tenant))
     setIsDraftConfirmOpen(false)
   }
 
@@ -525,6 +494,8 @@ export function InspectionForm({
               inspectionData={inspectionData}
               rooms={rooms}
               teams={workOrders.teams}
+              teamsLoading={workOrders.teamsLoading}
+              teamsError={workOrders.teamsError}
               assignments={workOrders.assignments}
               onAssignTeam={workOrders.assignTeam}
               onComponentCostByIdUpdate={handleComponentCostUpdateById}

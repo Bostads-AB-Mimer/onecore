@@ -85,11 +85,21 @@ export const getDamagedComponents = (
   return result
 }
 
+// descriptionHtml lands in an Odoo Html field — free-text values (labels,
+// notes, room names, address) must be escaped or a stray `<` truncates the
+// rendered work order when Odoo sanitizes the markup.
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
 const formatLine = (component: DamagedComponent): string => {
-  let line = component.label
+  let line = escapeHtml(component.label)
   if (component.actions.length > 0)
     line += ` – ${component.actions.map(getActionLabel).join(', ')}`
-  if (component.note.trim()) line += `: ${component.note.trim()}`
+  if (component.note.trim()) line += `: ${escapeHtml(component.note.trim())}`
 
   if (component.cost > 0) {
     const responsibility = component.costResponsibility
@@ -123,7 +133,7 @@ export const buildInspectionWorkOrderGroups = (
   }
 
   const header = meta.address
-    ? `Besiktning ${meta.id} – ${meta.address}`
+    ? `Besiktning ${meta.id} – ${escapeHtml(meta.address)}`
     : `Besiktning ${meta.id}`
 
   return [...byTeam.entries()].map(([teamId, components]) => {
@@ -137,7 +147,7 @@ export const buildInspectionWorkOrderGroups = (
 
     const roomBlocks = [...byRoom.entries()].map(
       ([roomName, roomComponents]) =>
-        `${roomName}:<br>${roomComponents.map(formatLine).join('<br>')}`
+        `${escapeHtml(roomName)}:<br>${roomComponents.map(formatLine).join('<br>')}`
     )
 
     return {
