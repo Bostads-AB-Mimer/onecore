@@ -226,8 +226,8 @@ export async function createExcelFromPaginated<T>(
 
   // Create a PassThrough stream to collect the output
   const passThrough = new PassThrough()
-  const chunks: Buffer[] = []
-  passThrough.on('data', (chunk: Buffer) => chunks.push(chunk))
+  const chunks: Uint8Array[] = []
+  passThrough.on('data', (chunk: Uint8Array) => chunks.push(chunk))
 
   // Set up promise to collect final buffer (must be created before writing)
   const bufferPromise = new Promise<Buffer>((resolve, reject) => {
