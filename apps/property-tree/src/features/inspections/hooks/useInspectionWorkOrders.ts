@@ -49,13 +49,15 @@ export const useInspectionWorkOrders = ({
 
   const [assignments, setAssignments] = useState<Record<string, number>>({})
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
-  // descriptionHtml per team at the time its work order was successfully
-  // created/updated in Odoo. A team only counts as "already created" while its
-  // group content still matches this snapshot — assigning another component to
-  // the team afterwards re-submits the group (the backend upserts the existing
-  // request), so a retry never silently drops late additions.
-  const [submittedHtmlByTeam, setSubmittedHtmlByTeam] = useState<
-    Map<number, string>
+  // Snapshot per team of what was successfully created/updated in Odoo this
+  // session. A team only counts as "already created" while its group content
+  // still matches `descriptionHtml` — assigning another component to the team
+  // afterwards re-submits the group (the backend upserts the existing
+  // request), so a retry never silently drops late additions. `workOrderId`
+  // lets us close the request again if the team later loses all its
+  // components (see createWorkOrders).
+  const [submittedByTeam, setSubmittedByTeam] = useState<
+    Map<number, { descriptionHtml: string; workOrderId?: number }>
   >(new Map())
 
   const assignTeam = (key: string, teamId: number | null) =>
@@ -84,9 +86,11 @@ export const useInspectionWorkOrders = ({
   const groupStatus = (
     group: InspectionWorkOrderGroup
   ): InspectionWorkOrderGroupStatus => {
-    const submitted = submittedHtmlByTeam.get(group.maintenanceTeamId)
+    const submitted = submittedByTeam.get(group.maintenanceTeamId)
     if (submitted === undefined) return 'pending'
-    return submitted === group.descriptionHtml ? 'created' : 'changed'
+    return submitted.descriptionHtml === group.descriptionHtml
+      ? 'created'
+      : 'changed'
   }
 
   const createMutation = useMutation({
@@ -98,30 +102,33 @@ export const useInspectionWorkOrders = ({
           group.descriptionHtml,
         ])
       )
-      const succeededTeamIds = results
-        .filter((result) => result.ok)
-        .map((result) => result.maintenanceTeamId)
-      if (succeededTeamIds.length > 0) {
-        setSubmittedHtmlByTeam((prev) => {
+      const succeeded = results.filter((result) => result.ok)
+      if (succeeded.length > 0) {
+        setSubmittedByTeam((prev) => {
           const next = new Map(prev)
-          for (const teamId of succeededTeamIds) {
-            const html = sentHtmlByTeam.get(teamId)
-            if (html !== undefined) next.set(teamId, html)
+          for (const result of succeeded) {
+            const html = sentHtmlByTeam.get(result.maintenanceTeamId)
+            if (html !== undefined) {
+              next.set(result.maintenanceTeamId, {
+                descriptionHtml: html,
+                workOrderId: result.workOrderId,
+              })
+            }
           }
           return next
         })
       }
 
-      const failed = results.length - succeededTeamIds.length
+      const failed = results.length - succeeded.length
       if (failed === 0) {
         toast({
           title: 'Ärenden skapade',
-          description: `${succeededTeamIds.length} ärende(n) skapades i Odoo.`,
+          description: `${succeeded.length} ärende(n) skapades i Odoo.`,
         })
       } else {
         toast({
           title: 'Vissa ärenden kunde inte skapas',
-          description: `${succeededTeamIds.length} skapades, ${failed} misslyckades. Försök igen.`,
+          description: `${succeeded.length} skapades, ${failed} misslyckades. Försök igen.`,
           variant: 'destructive',
         })
       }
@@ -136,17 +143,83 @@ export const useInspectionWorkOrders = ({
   })
 
   /**
+   * Closes work orders created earlier this session for teams that no longer
+   * have any assigned components — the inspector reassigned them, so leaving
+   * the request open would dispatch two resursgrupper to the same damage.
+   * Returns false if any close failed (the team stays in the map for retry).
+   */
+  const closeStaleWorkOrders = async (staleTeamIds: number[]) => {
+    const results = await Promise.all(
+      staleTeamIds.map(async (teamId) => {
+        const workOrderId = submittedByTeam.get(teamId)?.workOrderId
+        // Without an id there is nothing we can close — drop the team rather
+        // than blocking the inspector behind a retry that can never succeed.
+        if (workOrderId === undefined) return { teamId, ok: true }
+        try {
+          await workOrderService.closeWorkOrder(workOrderId)
+          return { teamId, ok: true }
+        } catch {
+          return { teamId, ok: false }
+        }
+      })
+    )
+
+    const closedTeamIds = results.filter((r) => r.ok).map((r) => r.teamId)
+    if (closedTeamIds.length > 0) {
+      setSubmittedByTeam((prev) => {
+        const next = new Map(prev)
+        for (const teamId of closedTeamIds) next.delete(teamId)
+        return next
+      })
+    }
+
+    const ok = results.every((r) => r.ok)
+    if (!ok) {
+      toast({
+        title: 'Fel',
+        description:
+          'Ett tidigare skapat ärende kunde inte stängas i Odoo. Försök igen.',
+        variant: 'destructive',
+      })
+    }
+    return ok
+  }
+
+  /**
    * Creates the assigned work orders in Odoo. Returns true when there was
-   * nothing to create or everything succeeded; false if any group failed (so
-   * the caller can keep the confirm dialog open for a retry). Groups already
+   * nothing to do or everything succeeded; false if any step failed (so the
+   * caller can keep the confirm dialog open for a retry). Groups already
    * created with unchanged content are skipped; changed groups are re-sent
-   * and upserted server-side (keyed on inspection + team).
+   * and upserted server-side (keyed on inspection + team); teams whose
+   * components were all reassigned since a previous submit get their Odoo
+   * request closed.
    */
   const createWorkOrders = async (): Promise<boolean> => {
     const pendingGroups = groups.filter(
       (group) => groupStatus(group) !== 'created'
     )
-    if (!rentalId || pendingGroups.length === 0) return true
+    const staleTeamIds = [...submittedByTeam.keys()].filter(
+      (teamId) => !groups.some((g) => g.maintenanceTeamId === teamId)
+    )
+    if (pendingGroups.length === 0 && staleTeamIds.length === 0) return true
+
+    const staleOk =
+      staleTeamIds.length === 0 || (await closeStaleWorkOrders(staleTeamIds))
+
+    if (pendingGroups.length === 0) return staleOk
+
+    if (!rentalId) {
+      // Distinct from "nothing to do" above: there ARE groups to create, but
+      // no rental object to key them to — succeeding silently here would
+      // complete the inspection without any work orders.
+      toast({
+        title: 'Fel',
+        description:
+          'Ärenden kan inte skapas: hyresobjektet kunde inte identifieras.',
+        variant: 'destructive',
+      })
+      return false
+    }
 
     try {
       const { results } = await createMutation.mutateAsync({
@@ -158,7 +231,7 @@ export const useInspectionWorkOrders = ({
           descriptionHtml: group.descriptionHtml,
         })),
       })
-      return results.every((result) => result.ok)
+      return staleOk && results.every((result) => result.ok)
     } catch {
       // Toast already shown by onError; the caller only needs the outcome.
       return false

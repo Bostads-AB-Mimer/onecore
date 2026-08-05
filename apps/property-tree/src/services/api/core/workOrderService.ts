@@ -230,4 +230,13 @@ export const workOrderService = {
 
     return response.data.content
   },
+
+  // Moves the work order to its done stage in Odoo.
+  async closeWorkOrder(workOrderId: number): Promise<void> {
+    const response = await POST('/work-orders/{workOrderId}/close', {
+      params: { path: { workOrderId: String(workOrderId) } },
+    })
+
+    if (response.error) throw new Error('Failed to close work order')
+  },
 }

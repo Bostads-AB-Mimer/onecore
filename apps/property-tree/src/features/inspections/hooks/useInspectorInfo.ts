@@ -48,7 +48,8 @@ const pad = (n: number) => n.toString().padStart(2, '0')
 // freshly-opened dialog showing a value the user can't re-select. We treat
 // *UTC* midnight as "no time set" because CreateInspectionDialog persists the
 // inspection at UTC midnight (`new Date('YYYY-MM-DD').toISOString()`); a real
-// scheduled time set via this picker is stored with a non-zero UTC component.
+// scheduled time set via this picker is stored with a non-zero UTC component
+// (composeInspectionDate nudges exact-UTC-midnight picks to guarantee this).
 // The fallback is display-only: buildSubmitData never persists it unless the
 // inspector actually edits Klockslag.
 function deriveInitialTime(date: Date | string | undefined | null): string {
@@ -158,6 +159,17 @@ export function useInspectorInfo(
     base.setMinutes(Number.isFinite(m) ? m : 0)
     base.setSeconds(0)
     base.setMilliseconds(0)
+    // A local pick that lands exactly on UTC midnight (01:00 CET / 02:00 CEST)
+    // would read back as the create-dialog "no time set" sentinel in
+    // deriveInitialTime and get discarded on reopen. Nudge it by one second —
+    // the time is only ever displayed as HH:MM.
+    if (
+      base.getUTCHours() === 0 &&
+      base.getUTCMinutes() === 0 &&
+      base.getUTCSeconds() === 0
+    ) {
+      base.setUTCSeconds(1)
+    }
     return base.toISOString()
   }
 

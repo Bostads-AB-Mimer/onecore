@@ -86,13 +86,20 @@ const LOGO_PATH = path.join(
 // HELPER FUNCTIONS
 // ============================================================================
 
+// Formatting is pinned to Europe/Stockholm — the server may run in UTC, and
+// an inspection scheduled around local midnight would otherwise render as the
+// previous calendar day.
+const SWEDISH_TIME_ZONE = 'Europe/Stockholm'
+
 /**
  * Formats a date string to Swedish locale format (YYYY-MM-DD)
  */
 function formatSwedishDate(date: string | Date | undefined | null): string {
   if (!date) return ''
   try {
-    return new Date(date).toLocaleDateString('sv-SE')
+    return new Date(date).toLocaleDateString('sv-SE', {
+      timeZone: SWEDISH_TIME_ZONE,
+    })
   } catch {
     return ''
   }
@@ -103,7 +110,7 @@ function formatSwedishDate(date: string | Date | undefined | null): string {
  */
 function formatSwedishDateTime(): string {
   const now = new Date()
-  return `${now.toLocaleDateString('sv-SE')} ${now.toLocaleTimeString('sv-SE')}`
+  return `${now.toLocaleDateString('sv-SE', { timeZone: SWEDISH_TIME_ZONE })} ${now.toLocaleTimeString('sv-SE', { timeZone: SWEDISH_TIME_ZONE })}`
 }
 
 /**
