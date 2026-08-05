@@ -795,7 +795,7 @@ export const getInvoicesByContactCode = async (
 
   const result = await makeXledgerRequest(query)
 
-  return result.data?.arTransactions?.edges.map(transformToInvoice) ?? []
+  return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
 }
 
 export const getInvoices = async (from?: Date, to?: Date) => {
@@ -825,7 +825,7 @@ export const getInvoices = async (from?: Date, to?: Date) => {
   }
 
   const result = await makeXledgerRequest(query)
-  return result.data?.arTransactions?.edges.map(transformToInvoice) ?? []
+  return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
 }
 
 export const getAllInvoicesWithMatchIds = async ({

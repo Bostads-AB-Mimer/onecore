@@ -45,6 +45,31 @@ describe(adapter.getInvoicesByContactCode, () => {
     expect(result).toEqual([])
   })
 
+  it('returns [] when Xledger returns null edges', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          customers: {
+            edges: [{ node: { dbId: 1234 } }],
+          },
+        },
+      })
+
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: null,
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByContactCode('P12345')
+    expect(result).toEqual([])
+  })
+
   it('returns invoices when customer exists and has invoices', async () => {
     // First POST: customers query → return a dbId
     nock(origin)

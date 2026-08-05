@@ -111,7 +111,7 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody(invoicesWithRows, metadata)
     } catch (error: any) {
       logger.error(
-        { error, contactCode: contactCode },
+        { err: error, contactCode: contactCode },
         'Error getting invoices for contact code'
       )
       ctx.status = 500
