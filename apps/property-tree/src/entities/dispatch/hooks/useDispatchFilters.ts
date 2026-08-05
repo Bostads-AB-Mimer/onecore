@@ -19,11 +19,6 @@ const FILTER_KEYS = [
   'sortOrder',
 ] as const
 
-const VALID_SORT_KEYS = ['sendAt', 'recipientCount', 'createdAt'] as const
-type ValidSortKey = (typeof VALID_SORT_KEYS)[number]
-const isValidSortKey = (v: string | null): v is ValidSortKey =>
-  VALID_SORT_KEYS.includes(v as ValidSortKey)
-
 export function useDispatchFilters() {
   const filters = useUrlFilters({
     filterKeys: FILTER_KEYS,
@@ -49,12 +44,12 @@ export function useDispatchFilters() {
   const sendAtFrom = urlSearchParams.get('sendAtFrom') || ''
   const sendAtTo = urlSearchParams.get('sendAtTo') || ''
 
-  const rawSortBy = urlSearchParams.get('sortBy')
-  const sortBy: ValidSortKey | undefined =
-    rawSortBy && isValidSortKey(rawSortBy) ? rawSortBy : undefined
-  const rawSortOrder = urlSearchParams.get('sortOrder')
-  const sortOrder: 'asc' | 'desc' | undefined =
-    rawSortOrder === 'asc' || rawSortOrder === 'desc' ? rawSortOrder : undefined
+  // Forwarded as-is (an invalid value 400s rather than being silently dropped,
+  // consistent with the channel/status/source filters).
+  const sortBy = (urlSearchParams.get('sortBy') ||
+    undefined) as DispatchSearchQueryParams['sortBy']
+  const sortOrder = (urlSearchParams.get('sortOrder') ||
+    undefined) as DispatchSearchQueryParams['sortOrder']
 
   const searchParams = useMemo<DispatchSearchQueryParams>(
     () => ({

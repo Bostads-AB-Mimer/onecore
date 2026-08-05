@@ -22,6 +22,7 @@ import { useTenantCommunication } from '@/entities/tenant'
 import type { CustomerMessage } from '@/services/api/core/communicationService'
 
 import { useToast } from '@/shared/hooks/useToast'
+import { formatTimestamp } from '@/shared/lib/formatters'
 import {
   formatScheduleTimestamp,
   getScheduleBounds,
@@ -50,15 +51,6 @@ import {
 
 type Channel = CustomerMessage['dispatch']['channel']
 type ChannelFilter = Channel | 'all'
-
-const formatTimestamp = (iso: string): string =>
-  new Date(iso).toLocaleString('sv-SE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (

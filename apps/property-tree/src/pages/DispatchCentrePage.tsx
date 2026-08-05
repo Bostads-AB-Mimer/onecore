@@ -7,6 +7,7 @@ import {
   useDispatchFilters,
 } from '@/entities/dispatch'
 
+import { formatTimestamp } from '@/shared/lib/formatters'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import {
   DateRangeFilterDropdown,
@@ -55,15 +56,6 @@ const categoryLabel = (messageType: string) =>
 const categoryOptions = Object.entries(CATEGORY_LABELS).map(
   ([value, label]) => ({ value, label })
 )
-
-const formatTimestamp = (iso: string): string =>
-  new Date(iso).toLocaleString('sv-SE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 
 const truncate = (s: string | null, n = 60) =>
   !s ? '' : s.length > n ? `${s.slice(0, n)}…` : s

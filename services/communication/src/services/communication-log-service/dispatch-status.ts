@@ -12,7 +12,8 @@ type StatusCounts = Partial<Record<RecipientStatus, number>>
  * 'cancelled' = all cancelled. See MIM-1911.
  */
 export function deriveDispatchStatusFromCounts(
-  counts: StatusCounts
+  counts: StatusCounts,
+  sendAtInFuture: boolean
 ): DispatchStatus {
   const has = (s: RecipientStatus) => (counts[s] ?? 0) > 0
   const total = Object.values(counts).reduce<number>((a, b) => a + (b ?? 0), 0)
@@ -22,9 +23,13 @@ export function deriveDispatchStatusFromCounts(
   // dispatch, so a zero-recipient row would badge 'failed' but not appear under
   // the failed filter (out of domain in practice).
   if (total === 0) return 'failed'
-  if (has('scheduled')) return 'scheduled'
+  // 'scheduled' only while the send time is still in the future; once it has
+  // fired, leftover 'scheduled' recipients are stragglers awaiting delivery
+  // reports and count as in-flight ('sending'), not scheduled.
+  if (sendAtInFuture && has('scheduled')) return 'scheduled'
   if (total === (counts.cancelled ?? 0)) return 'cancelled'
-  if (has('pending') || has('sent') || has('received')) return 'sending'
+  if (has('pending') || has('sent') || has('received') || has('scheduled'))
+    return 'sending'
   if (total === (counts.delivered ?? 0)) return 'delivered'
   if (has('delivered')) return 'partially_delivered'
   return 'failed'
@@ -34,9 +39,10 @@ export function deriveDispatchStatusFromCounts(
  * Array convenience wrapper — folds statuses into counts and delegates.
  */
 export function deriveDispatchStatus(
-  statuses: RecipientStatus[]
+  statuses: RecipientStatus[],
+  sendAtInFuture: boolean
 ): DispatchStatus {
   const counts: StatusCounts = {}
   for (const s of statuses) counts[s] = (counts[s] ?? 0) + 1
-  return deriveDispatchStatusFromCounts(counts)
+  return deriveDispatchStatusFromCounts(counts, sendAtInFuture)
 }
