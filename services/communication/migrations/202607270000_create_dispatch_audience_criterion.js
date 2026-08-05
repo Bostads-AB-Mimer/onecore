@@ -1,7 +1,10 @@
 /**
  * Dispatch-centre (MIM-1911): normalized audience-filter storage so dispatches
  * become filterable by the audience they targeted, plus a (dispatchId, status)
- * index for the derived-status rollup/filter.
+ * index for the derived-status rollup/filter. MSSQL doesn't auto-index FKs, so
+ * dispatch_audience_criterion also gets a dispatchId index — covering the
+ * per-page enrichment select and the ON DELETE CASCADE, which would otherwise
+ * scan (idx_dac_type_value only covers the type/value filter direction).
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
@@ -19,6 +22,9 @@ exports.up = function (knex) {
 
       CREATE INDEX idx_dac_type_value
         ON dispatch_audience_criterion(type, value) INCLUDE (dispatchId);
+
+      CREATE INDEX idx_dac_dispatchId
+        ON dispatch_audience_criterion(dispatchId) INCLUDE (type, value);
 
       CREATE INDEX idx_message_recipient_dispatchId_status
         ON message_recipient(dispatchId, status);
