@@ -3223,6 +3223,63 @@ export interface paths {
       }
     }
   }
+  '/work-orders/maintenance-teams': {
+    /**
+     * List maintenance teams (resursgrupper)
+     * @description Returns the selectable Odoo maintenance teams (resursgrupper) for the inspection work-order picker.
+     */
+    get: {
+      responses: {
+        /** @description Maintenance teams retrieved successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceTeam'][]
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/work-orders/from-inspection': {
+    /**
+     * Create work orders from an inspection (one per resursgrupp)
+     * @description Resolves the apartment from rentalObjectCode, then creates one work order per resursgrupp group. Each group is an independent Odoo commit, so the response reports per-group success/failure.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateInspectionWorkOrdersRequest']
+        }
+      }
+      responses: {
+        /** @description Work orders processed (see per-group results) */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CreateInspectionWorkOrdersResponse']
+            }
+          }
+        }
+        /** @description Bad request (invalid body or not an apartment). */
+        400: {
+          content: never
+        }
+        /** @description Rental property not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/work-orders/{workOrderId}/update': {
     /**
      * Update a work order with a message
@@ -10396,6 +10453,27 @@ export interface components {
       rentalObjectCode: string
       status: string
     }
+    MaintenanceTeam: {
+      id: number
+      name: string
+    }
+    CreateInspectionWorkOrdersRequest: {
+      rentalObjectCode: string
+      inspectionId?: string
+      groups: {
+        maintenanceTeamId: number
+        maintenanceTeamName: string
+        descriptionHtml: string
+      }[]
+    }
+    CreateInspectionWorkOrdersResponse: {
+      results: {
+        maintenanceTeamId: number
+        ok: boolean
+        workOrderId?: number
+        err?: string
+      }[]
+    }
     Building: {
       id: string
       code: string
@@ -12868,6 +12946,14 @@ export interface components {
               type: string
               label: string
               note: string
+              /** @default */
+              condition?: string
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
             }[]
             /** @default [] */
             components?: {
@@ -12938,6 +13024,14 @@ export interface components {
         type: string
         label: string
         note: string
+        /** @default */
+        condition?: string
+        cost?: number
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        costResponsibility?: 'tenant' | 'landlord' | null
       }[]
       /** @default [] */
       components?: {
@@ -12980,6 +13074,24 @@ export interface components {
       notes: string | null
       totalCost: number | null
       remarkCount: number
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
       rooms: {
         room: string
         remarks: {
@@ -13345,6 +13457,24 @@ export interface components {
       hasRemarks: boolean
       notes: string | null
       totalCost: number | null
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
       rooms: {
         room: string
         remarks: {
@@ -13516,6 +13646,24 @@ export interface components {
       notes: string | null
       totalCost: number | null
       remarkCount: number
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
       rooms:
         | {
             roomId: string
@@ -13552,6 +13700,14 @@ export interface components {
               type: string
               label: string
               note: string
+              /** @default */
+              condition?: string
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
             }[]
             /** @default [] */
             components?: {
@@ -13610,6 +13766,14 @@ export interface components {
           type: string
           label: string
           note: string
+          /** @default */
+          condition?: string
+          cost?: number
+          /**
+           * @default null
+           * @enum {string|null}
+           */
+          costResponsibility?: 'tenant' | 'landlord' | null
         }[]
         /** @default [] */
         components?: {
@@ -13630,6 +13794,21 @@ export interface components {
         isAddedInThisInspection?: boolean
       }[]
       isFurnished: boolean
+      isTenantPresent?: boolean
+      isNewTenantPresent?: boolean
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
+      /** Format: date-time */
+      date?: string
+      type?: string
     }
     ComponentWriteBackError: {
       componentId: string

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
@@ -7,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
+import { Pagination } from '@/shared/ui/Pagination'
 
 import { ResponsiveTableComponents } from './ResponsiveTableComponents'
 
@@ -35,6 +37,8 @@ export interface DataTableProps<T extends { id: string }> {
   emptyMessage?: string
   actions?: DataTableAction<T>[]
   expandableContent?: (item: T) => React.ReactNode | null
+  /** Rows per page for client-side pagination. Defaults to 20. */
+  pageSize?: number
 }
 
 export function DataTable<T extends { id: string }>({
@@ -47,7 +51,33 @@ export function DataTable<T extends { id: string }>({
   emptyMessage = 'Inga objekt att visa',
   actions = [],
   expandableContent,
+  pageSize = 20,
 }: DataTableProps<T>) {
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const totalPages = Math.max(1, Math.ceil(data.length / pageSize))
+
+  // Reset to a valid page when the data set shrinks (search, filter, delete)
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  // Jump back to the first page when new rows appear (e.g. clearing a search
+  // restores the unfiltered set) — staying on a high page would show an
+  // arbitrary slice. Removal-only changes keep the current page; the clamp
+  // above handles pages that fall out of range.
+  const knownIdsRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const ids = new Set(data.map((item) => item.id))
+    const hasNewIds = [...ids].some((id) => !knownIdsRef.current.has(id))
+    knownIdsRef.current = ids
+    if (hasNewIds) {
+      setCurrentPage(1)
+    }
+  }, [data])
+
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">
@@ -179,15 +209,29 @@ export function DataTable<T extends { id: string }>({
     </div>
   )
 
+  const paginatedData = data.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  )
+
   return (
-    <ResponsiveTableComponents
-      data={data}
-      columns={columnsWithActions}
-      keyExtractor={(item) => item.id}
-      emptyMessage={emptyMessage}
-      onRowClick={onRowClick}
-      expandableContent={expandableContent}
-      mobileCardRenderer={mobileCardRenderer}
-    />
+    <>
+      <ResponsiveTableComponents
+        data={paginatedData}
+        columns={columnsWithActions}
+        keyExtractor={(item) => item.id}
+        emptyMessage={emptyMessage}
+        onRowClick={onRowClick}
+        expandableContent={expandableContent}
+        mobileCardRenderer={mobileCardRenderer}
+      />
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalRecords={data.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
+    </>
   )
 }

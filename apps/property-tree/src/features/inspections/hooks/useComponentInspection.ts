@@ -59,6 +59,21 @@ export interface UseComponentInspectionReturn {
     componentId: string,
     note: string
   ) => void
+  updateDetailComponentCondition: (
+    roomId: string,
+    componentId: string,
+    value: string
+  ) => void
+  updateDetailComponentCost: (
+    roomId: string,
+    componentId: string,
+    cost: number
+  ) => void
+  updateDetailComponentCostResponsibility: (
+    roomId: string,
+    componentId: string,
+    value: CostResponsibility
+  ) => void
   updateComponentCondition: (
     roomId: string,
     componentId: string,
@@ -172,10 +187,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Toggle an action for a component in a room
-   * If action exists, removes it; if not, adds it
-   */
   const updateAction = useCallback(
     (
       roomId: string,
@@ -203,9 +214,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Update note for a component in a room
-   */
   const updateNote = useCallback(
     (
       roomId: string,
@@ -246,9 +254,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Add photo to a component in a room
-   */
   const addPhoto = useCallback(
     (
       roomId: string,
@@ -269,9 +274,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Remove photo from a component in a room
-   */
   const removePhoto = useCallback(
     (
       roomId: string,
@@ -294,9 +296,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Update cost responsibility for a component in a room
-   */
   const updateComponentCostResponsibility = useCallback(
     (
       roomId: string,
@@ -317,9 +316,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Add a detail component to a room
-   */
   const addDetailComponent = useCallback(
     (roomId: string, component: { type: string; label: string }) => {
       setInspectionData((prev) => ({
@@ -341,9 +337,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Remove a detail component from a room
-   */
   const removeDetailComponent = useCallback(
     (roomId: string, componentId: string) => {
       setInspectionData((prev) => ({
@@ -359,9 +352,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Update the note for a detail component
-   */
   const updateDetailComponentNote = useCallback(
     (roomId: string, componentId: string, note: string) => {
       setInspectionData((prev) => ({
@@ -378,10 +368,83 @@ export function useComponentInspection(
   )
 
   /**
+   * Update condition for a detail component. Mirrors updateComponentCondition:
+   * when condition is anything other than Skadad, clear cost+responsibility so
+   * stale Skadad values don't get persisted into the draft.
+   */
+  const updateDetailComponentCondition = useCallback(
+    (roomId: string, componentId: string, value: string) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: (prev[roomId].detailComponents ?? []).map((c) =>
+            c.id === componentId
+              ? {
+                  ...c,
+                  condition: value,
+                  ...(value !== CONDITION_TYPE.DAMAGED
+                    ? { cost: 0, costResponsibility: null }
+                    : {}),
+                }
+              : c
+          ),
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  const updateDetailComponentCost = useCallback(
+    (roomId: string, componentId: string, cost: number) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: (prev[roomId].detailComponents ?? []).map((c) =>
+            c.id === componentId ? { ...c, cost } : c
+          ),
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  /**
+   * Update cost responsibility for a detail component. Landlord-borne costs
+   * aren't entered by the inspector, so clear any previously entered cost when
+   * switching to landlord (mirrors updateComponentCostResponsibilityById).
+   */
+  const updateDetailComponentCostResponsibility = useCallback(
+    (roomId: string, componentId: string, value: CostResponsibility) => {
+      setInspectionData((prev) => ({
+        ...prev,
+        [roomId]: {
+          ...prev[roomId],
+          detailComponents: (prev[roomId].detailComponents ?? []).map((c) =>
+            c.id === componentId
+              ? {
+                  ...c,
+                  costResponsibility: value,
+                  ...(value === COST_RESPONSIBILITY.LANDLORD
+                    ? { cost: 0 }
+                    : {}),
+                }
+              : c
+          ),
+        },
+      }))
+    },
+    [setInspectionData]
+  )
+
+  /**
    * Update condition for a fetched component (keyed by componentId).
-   * Cost responsibility only applies to Skadad; clear it (and any cost) when
-   * the condition becomes anything else so stale data isn't persisted. Mirrors
-   * the surface-keyed rule in updateCondition.
+   * Cost, cost responsibility and actions only apply to Skadad; clear them
+   * when the condition becomes anything else so stale data isn't persisted —
+   * the action toggles are hidden on non-Skadad, and a leftover action would
+   * otherwise surface the component in the protocol PDF. Mirrors the
+   * surface-keyed rule in updateCondition.
    */
   const updateComponentCondition = useCallback(
     (roomId: string, componentId: string, label: string, value: string) => {
@@ -397,7 +460,7 @@ export function useComponentInspection(
               ...c,
               condition: value,
               ...(value !== CONDITION_TYPE.DAMAGED
-                ? { costResponsibility: null, cost: 0 }
+                ? { costResponsibility: null, cost: 0, action: [] }
                 : {}),
             })
           ),
@@ -407,9 +470,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Toggle an action on a fetched component.
-   */
   const updateComponentAction = useCallback(
     (roomId: string, componentId: string, label: string, action: string) => {
       setInspectionData((prev) => ({
@@ -433,9 +493,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Update note on a fetched component.
-   */
   const updateComponentNote = useCallback(
     (roomId: string, componentId: string, label: string, note: string) => {
       setInspectionData((prev) => ({
@@ -454,9 +511,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Append a photo to a fetched component.
-   */
   const addComponentPhoto = useCallback(
     (roomId: string, componentId: string, label: string, photoPath: string) => {
       setInspectionData((prev) => ({
@@ -493,9 +547,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Remove a photo by index from a fetched component.
-   */
   const removeComponentPhoto = useCallback(
     (
       roomId: string,
@@ -522,9 +573,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Update cost for a fetched component (keyed by componentId).
-   */
   const updateComponentCostById = useCallback(
     (roomId: string, componentId: string, label: string, cost: number) => {
       setInspectionData((prev) => ({
@@ -543,9 +591,6 @@ export function useComponentInspection(
     [setInspectionData]
   )
 
-  /**
-   * Update cost responsibility for a fetched component (keyed by componentId).
-   */
   const updateComponentCostResponsibilityById = useCallback(
     (
       roomId: string,
@@ -625,6 +670,9 @@ export function useComponentInspection(
     addDetailComponent,
     removeDetailComponent,
     updateDetailComponentNote,
+    updateDetailComponentCondition,
+    updateDetailComponentCost,
+    updateDetailComponentCostResponsibility,
     updateComponentCondition,
     updateComponentAction,
     updateComponentNote,

@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2, ChevronLeft, Plus, Trash2 } from 'lucide-react'
 
 import type {
   InspectionSubmitData,
   TenantInfoCardData,
-  TenantSnapshot,
 } from '@/features/inspections/types/index'
 
 import type { components } from '@/services/api/core/generated/api-types'
@@ -19,7 +18,11 @@ import {
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
+import { FORM_STEP, type FormStep } from '../constants/formSteps'
 import { useInspectionForm } from '../hooks/useInspectionForm'
+import { useInspectionWorkOrders } from '../hooks/useInspectionWorkOrders'
+import { InspectionWorkOrdersConfirmFlow } from './CreateInspectionWorkOrdersDialog'
+import { InspectionChecklistStep } from './InspectionChecklistStep'
 import { InspectionInfoSection } from './InspectionInfoSection'
 import { InspectionMoreMenu } from './InspectionMoreMenu'
 import { InspectionSummary } from './InspectionSummary'
@@ -63,23 +66,30 @@ export function InspectionForm({
   const {
     inspectorName,
     setInspectorName,
-    needsMasterKey,
-    setNeedsMasterKey,
+    inspectionTime,
+    setInspectionTime,
+    inspectionType,
+    setInspectionType,
     isFurnished,
     setIsFurnished,
+    isTenantPresent,
+    setIsTenantPresent,
+    isNewTenantPresent,
+    setIsNewTenantPresent,
+    checklist,
+    setChecklistItem,
+    isChecklistComplete,
+    buildSubmitData,
     rooms,
     inspectionData,
     handleAddRoom,
     handleRemoveRoom,
-    handleConditionUpdate,
-    handleActionUpdate,
-    handleComponentNoteUpdate,
-    handleComponentPhotoAdd,
-    handleComponentPhotoRemove,
-    handleComponentCostResponsibilityUpdate,
     handleDetailComponentAdd,
     handleDetailComponentRemove,
     handleDetailComponentNoteUpdate,
+    handleDetailComponentConditionUpdate,
+    handleDetailComponentCostUpdate,
+    handleDetailComponentCostResponsibilityUpdate,
     handleComponentConditionUpdate,
     handleComponentActionUpdate,
     handleComponentNoteUpdateById,
@@ -89,6 +99,7 @@ export function InspectionForm({
     handleComponentCostResponsibilityUpdateById,
     handleMarkRoomNoRemarks,
     handleRoomHandledSet,
+    validation,
   } = useInspectionForm(initialRooms, existingInspection)
 
   useEffect(() => {
@@ -101,10 +112,27 @@ export function InspectionForm({
     (room) => room.isHandled
   ).length
 
-  const canComplete = inspectorName && completedRooms === rooms.length
+  // canComplete delegates to the shared validation hook so it stays in sync
+  // with the checklist gating (all four checks required).
+  const canComplete = validation.canComplete
+
+  // Stable reference — a fresh object literal here would defeat the groups
+  // useMemo inside the hook on every render.
+  const workOrderMeta = useMemo(
+    () => ({ id: existingInspection.id, address }),
+    [existingInspection.id, address]
+  )
+
+  // Resursgrupp assignment + work-order creation on the summary step.
+  const workOrders = useInspectionWorkOrders({
+    inspectionData,
+    rooms,
+    meta: workOrderMeta,
+    rentalId,
+  })
 
   const [isDraftConfirmOpen, setIsDraftConfirmOpen] = useState(false)
-  const [step, setStep] = useState<'rooms' | 'summary'>('rooms')
+  const [step, setStep] = useState<FormStep>(FORM_STEP.ROOMS)
   const [removeTargetRoomId, setRemoveTargetRoomId] = useState<string | null>(
     null
   )
@@ -140,7 +168,7 @@ export function InspectionForm({
   // active pill matches the room the inspector is actually reading, not the
   // one that just scrolled into the bottom edge.
   useEffect(() => {
-    if (step !== 'rooms') return
+    if (step !== FORM_STEP.ROOMS) return
     const root = scrollContainerRef.current
     if (!root) return
     const observer = new IntersectionObserver(
@@ -162,30 +190,19 @@ export function InspectionForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomIdsKey, step])
 
-  const createTenantSnapshot = (): TenantSnapshot | undefined => {
-    if (!tenant) return undefined
-    return {
-      name: tenant.fullName ?? '',
-      personalNumber: '',
-    }
-  }
-
   const handleSubmit = () => {
     if (canComplete) {
-      onSave(inspectorName, inspectionData, 'completed', {
-        needsMasterKey,
-        isFurnished,
-        tenant: createTenantSnapshot(),
-      })
+      onSave(
+        inspectorName,
+        inspectionData,
+        'completed',
+        buildSubmitData(tenant)
+      )
     }
   }
 
   const handleConfirmSaveDraft = () => {
-    onSave(inspectorName, inspectionData, 'draft', {
-      needsMasterKey,
-      isFurnished,
-      tenant: createTenantSnapshot(),
-    })
+    onSave(inspectorName, inspectionData, 'draft', buildSubmitData(tenant))
     setIsDraftConfirmOpen(false)
   }
 
@@ -199,6 +216,10 @@ export function InspectionForm({
         <InspectionInfoSection
           inspectorName={inspectorName}
           setInspectorName={setInspectorName}
+          inspectionTime={inspectionTime}
+          setInspectionTime={setInspectionTime}
+          inspectionType={inspectionType}
+          setInspectionType={setInspectionType}
           tenant={tenant}
           address={address}
           apartmentCode={apartmentCode}
@@ -213,7 +234,7 @@ export function InspectionForm({
           </span>
         </div>
 
-        {step === 'rooms' && (
+        {step === FORM_STEP.ROOMS && (
           <>
             <div className="sticky top-0 z-20 -mt-2 pt-2 pb-2 bg-background border-b">
               <div
@@ -321,6 +342,33 @@ export function InspectionForm({
                               note
                             )
                           }
+                          onDetailComponentConditionUpdate={(
+                            componentId,
+                            value
+                          ) =>
+                            handleDetailComponentConditionUpdate(
+                              room.id,
+                              componentId,
+                              value
+                            )
+                          }
+                          onDetailComponentCostUpdate={(componentId, cost) =>
+                            handleDetailComponentCostUpdate(
+                              room.id,
+                              componentId,
+                              cost
+                            )
+                          }
+                          onDetailComponentCostResponsibilityUpdate={(
+                            componentId,
+                            value
+                          ) =>
+                            handleDetailComponentCostResponsibilityUpdate(
+                              room.id,
+                              componentId,
+                              value
+                            )
+                          }
                           onFetchedComponentConditionUpdate={(
                             componentId,
                             label,
@@ -409,53 +457,56 @@ export function InspectionForm({
           </>
         )}
 
-        {step === 'summary' && (
+        {step === FORM_STEP.CHECKLIST && (
           <>
             <Button
               variant="link"
-              onClick={() => setStep('rooms')}
+              onClick={() => setStep(FORM_STEP.ROOMS)}
               className="h-auto p-0"
             >
               <ChevronLeft />
               Tillbaka till rum
             </Button>
+            <InspectionChecklistStep
+              isTenantPresent={isTenantPresent}
+              onIsTenantPresentChange={setIsTenantPresent}
+              isNewTenantPresent={isNewTenantPresent}
+              onIsNewTenantPresentChange={setIsNewTenantPresent}
+              isFurnished={isFurnished}
+              onIsFurnishedChange={setIsFurnished}
+              checklist={checklist}
+              onChecklistItemChange={setChecklistItem}
+            />
+          </>
+        )}
+
+        {step === FORM_STEP.SUMMARY && (
+          <>
+            <Button
+              variant="link"
+              onClick={() => setStep(FORM_STEP.CHECKLIST)}
+              className="h-auto p-0"
+            >
+              <ChevronLeft />
+              Tillbaka till kontrollfrågor
+            </Button>
             <InspectionSummary
               inspectionData={inspectionData}
               rooms={rooms}
+              teams={workOrders.teams}
+              teamsLoading={workOrders.teamsLoading}
+              teamsError={workOrders.teamsError}
+              assignments={workOrders.assignments}
+              onAssignTeam={workOrders.assignTeam}
               onComponentCostByIdUpdate={handleComponentCostUpdateById}
               onComponentCostResponsibilityByIdUpdate={
                 handleComponentCostResponsibilityUpdateById
               }
+              onDetailComponentCostUpdate={handleDetailComponentCostUpdate}
+              onDetailComponentCostResponsibilityUpdate={
+                handleDetailComponentCostResponsibilityUpdate
+              }
             />
-            <div
-              className="p-4 border rounded-lg space-y-3"
-              role="radiogroup"
-              aria-label="Är bostaden möblerad vid besiktningstillfället?"
-            >
-              <div className="text-sm font-medium">
-                Är bostaden möblerad vid besiktningstillfället?
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  role="radio"
-                  aria-checked={isFurnished}
-                  variant={isFurnished ? 'default' : 'outline'}
-                  onClick={() => setIsFurnished(true)}
-                >
-                  Ja
-                </Button>
-                <Button
-                  type="button"
-                  role="radio"
-                  aria-checked={!isFurnished}
-                  variant={!isFurnished ? 'default' : 'outline'}
-                  onClick={() => setIsFurnished(false)}
-                >
-                  Nej
-                </Button>
-              </div>
-            </div>
           </>
         )}
       </div>
@@ -480,16 +531,31 @@ export function InspectionForm({
             Spara utkast
           </Button>
 
-          {step === 'rooms' && (
+          {step === FORM_STEP.ROOMS && (
             <Button
-              onClick={() => setStep('summary')}
+              onClick={() => setStep(FORM_STEP.CHECKLIST)}
               disabled={!inspectorName.trim()}
+            >
+              Kontrollfrågor
+            </Button>
+          )}
+          {step === FORM_STEP.CHECKLIST && (
+            <Button
+              onClick={() => setStep(FORM_STEP.SUMMARY)}
+              disabled={!isChecklistComplete}
             >
               Sammanställning
             </Button>
           )}
-          {step === 'summary' && (
-            <Button onClick={handleSubmit} disabled={!canComplete}>
+          {step === FORM_STEP.SUMMARY && (
+            <Button
+              onClick={() =>
+                workOrders.damaged.length > 0
+                  ? workOrders.openConfirm()
+                  : handleSubmit()
+              }
+              disabled={!canComplete}
+            >
               Slutför besiktning
             </Button>
           )}
@@ -500,6 +566,11 @@ export function InspectionForm({
         open={isDraftConfirmOpen}
         onOpenChange={setIsDraftConfirmOpen}
         onConfirm={handleConfirmSaveDraft}
+      />
+
+      <InspectionWorkOrdersConfirmFlow
+        workOrders={workOrders}
+        onCompleted={handleSubmit}
       />
 
       <RemoveInspectionRoomDialog

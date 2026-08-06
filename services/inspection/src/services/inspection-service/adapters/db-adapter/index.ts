@@ -62,6 +62,12 @@ function mapDbInspectionToResponse<R>(
     notes: inspection.notes,
     totalCost: inspection.totalCost,
     remarkCount: inspection.remarkCount,
+    checklist: {
+      groundFaultBreaker: inspection.groundFaultBreaker,
+      smokeDetector: inspection.smokeDetector,
+      electricalSchema: inspection.electricalSchema,
+      electricalSystem: inspection.electricalSystem,
+    },
     rooms,
   }
 }
@@ -447,15 +453,37 @@ export async function saveInspectionDraft(
       return { ok: false, err: 'not-found' }
     }
 
-    await dbConnection('inspection')
-      .where('id', inspectionId)
-      .update({
-        inspector: params.inspectorName,
-        draftRooms: JSON.stringify(params.rooms),
-        isFurnished: params.isFurnished,
-        status: INSPECTION_STATUS.STARTED,
-        startedAt: new Date(),
-      })
+    // Build the update object — only include the optional fields when they
+    // were supplied. Older clients send no value for these, and we want to
+    // leave the previously persisted column alone in that case rather than
+    // overwrite with `undefined`.
+    const update: Record<string, unknown> = {
+      inspector: params.inspectorName,
+      draftRooms: JSON.stringify(params.rooms),
+      isFurnished: params.isFurnished,
+      status: INSPECTION_STATUS.STARTED,
+      startedAt: new Date(),
+    }
+    if (params.isTenantPresent !== undefined) {
+      update.isTenantPresent = params.isTenantPresent
+    }
+    if (params.isNewTenantPresent !== undefined) {
+      update.isNewTenantPresent = params.isNewTenantPresent
+    }
+    if (params.checklist !== undefined) {
+      update.groundFaultBreaker = params.checklist.groundFaultBreaker
+      update.smokeDetector = params.checklist.smokeDetector
+      update.electricalSchema = params.checklist.electricalSchema
+      update.electricalSystem = params.checklist.electricalSystem
+    }
+    if (params.date !== undefined) {
+      update.date = params.date
+    }
+    if (params.type !== undefined) {
+      update.type = params.type
+    }
+
+    await dbConnection('inspection').where('id', inspectionId).update(update)
 
     return { ok: true, data: undefined }
   } catch (error) {
@@ -628,7 +656,11 @@ export async function getInspectionById(
         'notes',
         'totalCost',
         'remarkCount',
-        'draftRooms'
+        'draftRooms',
+        'groundFaultBreaker',
+        'smokeDetector',
+        'electricalSchema',
+        'electricalSystem'
       )
       .from<DbInspection>('inspection')
       .where('id', inspectionId)

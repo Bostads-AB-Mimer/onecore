@@ -17,8 +17,9 @@ import { keySystemSearchService } from '@/services/api/keySystemSearchService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
 import { LoanMaintenanceKeysDialog } from '@/components/maintenance/dialogs/LoanMaintenanceKeysDialog'
+import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 import { parseNumberFilter } from '@/utils/parseNumberFilter'
-import { Pencil, Trash2, KeyRound } from 'lucide-react'
+import { Pencil, Trash2, KeyRound, Undo2 } from 'lucide-react'
 
 const Index = () => {
   const pagination = useUrlPagination()
@@ -63,6 +64,7 @@ const Index = () => {
   const [showBulkEditForm, setShowBulkEditForm] = useState(false)
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
   const [showLoanDialog, setShowLoanDialog] = useState(false)
+  const [showReturnDialog, setShowReturnDialog] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [keysWithActiveLoans, setKeysWithActiveLoans] = useState<Key[]>([])
 
@@ -755,6 +757,11 @@ const Index = () => {
             onClick: () => setShowLoanDialog(true),
           },
           {
+            label: 'Återlämna',
+            icon: <Undo2 className="mr-2 h-4 w-4" />,
+            onClick: () => setShowReturnDialog(true),
+          },
+          {
             label: hasNonDeletableSelected
               ? 'Ta bort (innehåller skyddade nycklar)'
               : 'Ta bort',
@@ -771,6 +778,18 @@ const Index = () => {
         open={showLoanDialog}
         onOpenChange={setShowLoanDialog}
         keys={selectedKeys}
+        onSuccess={() => {
+          keySelection.deselectAll()
+          fetchKeys(pagination.currentPage, pagination.currentLimit)
+        }}
+      />
+
+      {/* Return Keys Dialog */}
+      <ReturnKeysDialog
+        open={showReturnDialog}
+        onOpenChange={setShowReturnDialog}
+        keyIds={keySelection.selectedIds}
+        allKeys={selectedKeys}
         onSuccess={() => {
           keySelection.deselectAll()
           fetchKeys(pagination.currentPage, pagination.currentLimit)

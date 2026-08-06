@@ -1,5 +1,8 @@
 import { Lease, RentalPropertyInfo, Tenant } from '../types'
 
+export * from './schema'
+export * from './types'
+
 interface WorkOrder {
   AccessCaption: string
   Caption: string

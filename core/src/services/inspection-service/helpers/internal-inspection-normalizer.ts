@@ -5,6 +5,7 @@ import type { components as propertyBaseComponents } from '../../../adapters/pro
 type DetailedXpandInspectionRemark = inspection.DetailedXpandInspectionRemark
 type DetailedXpandInspectionRoom = inspection.DetailedXpandInspectionRoom
 type InspectionComponent = inspection.InspectionComponent
+type DetailComponent = inspection.DetailComponent
 type InspectionRoom = inspection.InspectionRoom
 type PropertyBaseRoom = propertyBaseComponents['schemas']['Room']
 
@@ -87,6 +88,25 @@ const componentToSeed = (
   actions: component.action,
 })
 
+// Detail components (added ad-hoc by the inspector via "Lägg till detalj")
+// don't carry a label snapshot at write-time the way fetched components do,
+// so we read the live `label`/`note` directly. The id is unique within the
+// inspection so `roomId:id` stays a stable remark key. Detail components have
+// no actions yet (item 2 only adds inline actions to fetched components),
+// so seed an empty actions array.
+const detailComponentToSeed = (
+  roomId: string,
+  detail: DetailComponent
+): RemarkSeed => ({
+  remarkId: `${roomId}:detail-${detail.id}`,
+  buildingComponent: detail.label,
+  notes: detail.note,
+  cost: detail.cost ?? 0,
+  costResponsibility: detail.costResponsibility ?? null,
+  condition: detail.condition ?? '',
+  actions: [],
+})
+
 const resolveRoomLabel = (
   room: InspectionRoom,
   propertyBaseRoomsById: Map<string, PropertyBaseRoom>
@@ -117,8 +137,10 @@ export const mapInternalRoomsToProtocolRooms = (
 
   return rooms.map((room) => {
     const components: InspectionComponent[] = room.components ?? []
+    const detailComponents: DetailComponent[] = room.detailComponents ?? []
     const seeds: RemarkSeed[] = [
       ...components.map((c) => componentToSeed(room.roomId, c)),
+      ...detailComponents.map((d) => detailComponentToSeed(room.roomId, d)),
     ]
 
     const remarks = seeds.filter(shouldKeep).map(seedToRemark)

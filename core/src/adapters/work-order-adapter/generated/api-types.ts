@@ -666,6 +666,59 @@ export interface paths {
       }
     }
   }
+  '/workOrders/maintenanceTeams': {
+    /**
+     * List maintenance teams (resursgrupper)
+     * @description Returns the selectable Odoo maintenance teams (resursgrupper).
+     */
+    get: {
+      responses: {
+        /** @description Maintenance teams retrieved successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceTeam'][]
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/workOrders/fromInspection': {
+    /**
+     * Create work orders from an inspection (one per resursgrupp)
+     * @description Creates one maintenance.request per resursgrupp group. Each group is an independent Odoo commit, so the response reports per-group success/failure.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateInspectionWorkOrdersBody']
+        }
+      }
+      responses: {
+        /** @description Work orders processed (see per-group results) */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CreateInspectionWorkOrdersResponse']
+            }
+          }
+        }
+        /** @description Bad request. Invalid body. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/workOrders/{workOrderId}/update': {
     /**
      * Add a message to a work order
@@ -988,6 +1041,52 @@ export interface components {
         type: string
         estateCode: string | null
         estate: string | null
+      }[]
+    }
+    MaintenanceTeam: {
+      id: number
+      name: string
+    }
+    CreateInspectionWorkOrdersBody: {
+      rentalProperty: {
+        id: string
+        type: string
+        property: {
+          address: string
+          code: string
+          entrance: string
+          floor: string
+          hasElevator: boolean
+          washSpace: string | null
+          area: number
+          estateCode: string | null
+          estate: string | null
+          buildingCode: string
+          building: string
+        }
+        maintenanceUnits?: {
+          id: string
+          rentalPropertyId: string
+          code: string
+          caption: string
+          type: string
+          estateCode: string | null
+          estate: string | null
+        }[]
+      }
+      inspectionId?: string
+      groups: {
+        maintenanceTeamId: number
+        maintenanceTeamName: string
+        descriptionHtml: string
+      }[]
+    }
+    CreateInspectionWorkOrdersResponse: {
+      results: {
+        maintenanceTeamId: number
+        ok: boolean
+        workOrderId?: number
+        err?: string
       }[]
     }
   }
