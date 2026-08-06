@@ -367,7 +367,19 @@ const getTenantByContactCode = async (
       `${tenantsLeasesServiceUrl}/contacts/${contactCode}/tenant`
     )
 
-    if (res.status === 404) return { ok: false, err: 'contact-not-tenant' }
+    if (res.status === 404) {
+      // Expected outcome when the contact is not a tenant — not an error.
+      // Leasing distinguishes the cause via the `type` field in the body.
+      if (res.data?.type === 'contact-not-found') {
+        return { ok: false, err: 'contact-not-found' }
+      }
+      if (res.data?.type === 'no-valid-housing-contract') {
+        return { ok: false, err: 'no-valid-housing-contract' }
+      }
+      // 'contact-not-tenant' and 'contact-leases-not-found' both mean the
+      // contact has no tenancy.
+      return { ok: false, err: 'contact-not-tenant' }
+    }
 
     if (!res.data.content) {
       return { ok: false, err: 'unknown' }

@@ -259,4 +259,68 @@ describe('leasing-adapter', () => {
       ).not.toThrow()
     })
   })
+
+  describe(leasingAdapter.getTenantByContactCode, () => {
+    it('returns tenant when leasing responds with 200', async () => {
+      const tenant = factory.tenant.build()
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/P123456/tenant')
+        .reply(200, { content: JSON.parse(JSON.stringify(tenant)) })
+
+      const result = await leasingAdapter.getTenantByContactCode('P123456')
+
+      assert(result.ok)
+      expect(result.data.contactCode).toEqual(tenant.contactCode)
+    })
+
+    it('returns contact-not-found when leasing responds with 404 contact-not-found', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/P123456/tenant')
+        .reply(404, { type: 'contact-not-found' })
+
+      const result = await leasingAdapter.getTenantByContactCode('P123456')
+
+      expect(result).toEqual({ ok: false, err: 'contact-not-found' })
+    })
+
+    it('returns contact-not-tenant when leasing responds with 404 contact-not-tenant', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/P123456/tenant')
+        .reply(404, { type: 'contact-not-tenant' })
+
+      const result = await leasingAdapter.getTenantByContactCode('P123456')
+
+      expect(result).toEqual({ ok: false, err: 'contact-not-tenant' })
+    })
+
+    it('returns contact-not-tenant when leasing responds with 404 contact-leases-not-found', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/P123456/tenant')
+        .reply(404, { type: 'contact-leases-not-found' })
+
+      const result = await leasingAdapter.getTenantByContactCode('P123456')
+
+      expect(result).toEqual({ ok: false, err: 'contact-not-tenant' })
+    })
+
+    it('returns no-valid-housing-contract when leasing responds with 404 no-valid-housing-contract', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/P123456/tenant')
+        .reply(404, { type: 'no-valid-housing-contract' })
+
+      const result = await leasingAdapter.getTenantByContactCode('P123456')
+
+      expect(result).toEqual({ ok: false, err: 'no-valid-housing-contract' })
+    })
+
+    it('returns err from response body type when leasing responds with 500', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/P123456/tenant')
+        .reply(500, { type: 'get-contact' })
+
+      const result = await leasingAdapter.getTenantByContactCode('P123456')
+
+      expect(result).toEqual({ ok: false, err: 'get-contact' })
+    })
+  })
 })

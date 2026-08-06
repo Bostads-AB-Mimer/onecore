@@ -18,15 +18,31 @@ type GetTenantError =
 
 type NonEmptyArray<T> = [T, ...T[]]
 
+// Expected outcomes when the contact simply is not a (current) tenant — not
+// system failures, so they must not be logged as errors.
+const NOT_TENANT_ERRORS: GetTenantError[] = [
+  'contact-not-found',
+  'contact-not-tenant',
+  'contact-leases-not-found',
+  'no-valid-housing-contract',
+]
+
 export async function getTenant(params: {
   contactCode: string
 }): Promise<AdapterResult<Tenant, GetTenantError>> {
   const result = await fetchTenant(params)
   if (!result.ok) {
-    logger.error(
-      { errorCode: result.err },
-      `Failed to fetch tenant by contact code: ${params.contactCode}`
-    )
+    if (NOT_TENANT_ERRORS.includes(result.err)) {
+      logger.info(
+        { errorCode: result.err },
+        `No tenant found for contact code: ${params.contactCode}`
+      )
+    } else {
+      logger.error(
+        { errorCode: result.err },
+        `Failed to fetch tenant by contact code: ${params.contactCode}`
+      )
+    }
   }
 
   return result
