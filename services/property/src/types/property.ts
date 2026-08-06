@@ -70,7 +70,7 @@ export const PropertyDetailsSchema = z.object({
   consolidationNumber: z.string().nullable(),
   ownershipType: z.string(),
   registrationDate: z.date().nullable(),
-  acquisitionDate: z.string().nullable(),
+  acquisitionDate: z.date().nullable(),
   isLeasehold: z.number().int(),
   leaseholdTerminationDate: z.string().nullable(),
   area: z.string().nullable(),
