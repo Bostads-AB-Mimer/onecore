@@ -1,0 +1,23 @@
+[
+  {
+    "id": "rn-2026-08-06-v360-1",
+    "date": "2026-08-06",
+    "title": "Sök fakturor från toppsöket",
+    "description": "Skriv ett fakturanummer i toppsöket för att gå direkt till fakturan. Fakturasökningen har också gjorts stabilare med bättre hantering av ogiltiga fakturanummer och tomma svar från Xledger.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-08-06-v360-2",
+    "date": "2026-08-06",
+    "title": "Redigera egna kommentarer på annonser",
+    "description": "Du kan nu redigera kommentarer som du själv har skrivit på en annons.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-08-06-v360-3",
+    "date": "2026-08-06",
+    "title": "Rätt sida efter inloggning",
+    "description": "Länkar med filter och parametrar behålls nu genom inloggningen, så att du hamnar på rätt sida med rätt innehåll istället för på startsidan.",
+    "category": "fix"
+  }
+]
