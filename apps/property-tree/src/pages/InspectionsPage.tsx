@@ -285,7 +285,9 @@ export default function InspectionsPage() {
           className="space-y-6"
           onValueChange={setActiveTab}
         >
-          <TabsList className="grid w-full grid-cols-3">
+          {/* Scrollable pills on mobile (labels + counts overflow a fixed
+              grid), equal-width grid from sm up. */}
+          <TabsList className="w-full justify-start overflow-x-auto sm:grid sm:grid-cols-3">
             <TabsTrigger value={INSPECTION_STATUS_FILTER.ONGOING}>
               Pågående ({ongoingTotalRecords})
             </TabsTrigger>
