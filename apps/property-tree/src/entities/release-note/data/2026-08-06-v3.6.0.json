@@ -2,22 +2,65 @@
   {
     "id": "rn-2026-08-06-v360-1",
     "date": "2026-08-06",
+    "title": "Nytt flöde för lägenhetsbesiktningar",
+    "description": "Besiktningsflödet är omgjort med ny design och fungerar nu lika bra i mobilen som på datorn. Du guidas rum för rum och bedömer skicket (God/Ok/Skadad) på ytor och komponenter, lägger till detaljer, anteckningar och foton, och avslutar med kontrollfrågor och en sammanställning innan besiktningen slutförs.",
+    "category": "feature",
+    "pinned": true
+  },
+  {
+    "id": "rn-2026-08-06-v360-2",
+    "date": "2026-08-06",
+    "title": "Skapa ärenden i Odoo från en besiktning",
+    "description": "Skadade komponenter kan tilldelas resursgrupper i besiktningens sammanställning. När besiktningen slutförs skapas ett ärende per resursgrupp i Odoo, med rum, åtgärder och kostnader i beskrivningen.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-08-06-v360-3",
+    "date": "2026-08-06",
+    "title": "Flera filer på ströfaktura",
+    "description": "Du kan nu bifoga flera filer när du skapar en ströfaktura. Filerna slås automatiskt ihop till en enda PDF.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-08-06-v360-4",
+    "date": "2026-08-06",
+    "title": "Återlämna nyckellån från nyckellistan",
+    "description": "I nyckelportalen kan du nu återlämna lånade nycklar direkt från nyckellistan, utan att först gå in på det enskilda lånet.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-08-06-v360-5",
+    "date": "2026-08-06",
     "title": "Sök fakturor från toppsöket",
     "description": "Skriv ett fakturanummer i toppsöket för att gå direkt till fakturan. Fakturasökningen har också gjorts stabilare med bättre hantering av ogiltiga fakturanummer och tomma svar från Xledger.",
     "category": "feature"
   },
   {
-    "id": "rn-2026-08-06-v360-2",
+    "id": "rn-2026-08-06-v360-6",
     "date": "2026-08-06",
     "title": "Redigera egna kommentarer på annonser",
     "description": "Du kan nu redigera kommentarer som du själv har skrivit på en annons.",
     "category": "improvement"
   },
   {
-    "id": "rn-2026-08-06-v360-3",
+    "id": "rn-2026-08-06-v360-7",
     "date": "2026-08-06",
     "title": "Rätt sida efter inloggning",
     "description": "Länkar med filter och parametrar behålls nu genom inloggningen, så att du hamnar på rätt sida med rätt innehåll istället för på startsidan.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-08-06-v360-8",
+    "date": "2026-08-06",
+    "title": "Mobilvyn fastnade i skrivbordsläge",
+    "description": "Ett fel gjorde att appen ibland visade skrivbordsvyn på mobilen tills sidan laddades om. Nu visas rätt vy direkt.",
+    "category": "fix"
+  },
+  {
+    "id": "rn-2026-08-06-v360-9",
+    "date": "2026-08-06",
+    "title": "Fastighetsuppgifter kunde inte hämtas",
+    "description": "Ett fel gjorde att uppgifter för vissa fastigheter inte kunde hämtas. Detta är nu åtgärdat.",
     "category": "fix"
   }
 ]
