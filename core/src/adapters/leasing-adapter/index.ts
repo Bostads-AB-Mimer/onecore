@@ -378,7 +378,19 @@ const getTenantByContactCode = async (
       }
       // 'contact-not-tenant' and 'contact-leases-not-found' both mean the
       // contact has no tenancy.
-      return { ok: false, err: 'contact-not-tenant' }
+      if (
+        res.data?.type === 'contact-not-tenant' ||
+        res.data?.type === 'contact-leases-not-found'
+      ) {
+        return { ok: false, err: 'contact-not-tenant' }
+      }
+      // A 404 without a recognized leasing error type is not a business
+      // outcome — e.g. a proxy/gateway 404 or a misrouted service URL.
+      logger.error(
+        { status: res.status, body: res.data },
+        'leasing-adapter.getTenantByContactCode: unrecognized 404 response'
+      )
+      return { ok: false, err: 'unknown' }
     }
 
     if (!res.data.content) {
@@ -390,9 +402,6 @@ const getTenantByContactCode = async (
     logger.error({ err }, 'leasing-adapter.getTenantByContactCode')
 
     if (err instanceof AxiosError) {
-      if (err.response?.data?.type === 'contact-leases-not-found') {
-        return { ok: false, err: 'contact-not-tenant' }
-      }
       return { ok: false, err: err.response?.data?.type }
     }
     return { ok: false, err: 'unknown' }

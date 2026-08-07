@@ -313,6 +313,18 @@ describe('leasing-adapter', () => {
       expect(result).toEqual({ ok: false, err: 'no-valid-housing-contract' })
     })
 
+    it('returns unknown when the 404 has no recognized error type', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/P123456/tenant')
+        .reply(404, '<html>gateway not found</html>', {
+          'Content-Type': 'text/html',
+        })
+
+      const result = await leasingAdapter.getTenantByContactCode('P123456')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
     it('returns err from response body type when leasing responds with 500', async () => {
       nock(config.tenantsLeasesService.url)
         .get('/contacts/P123456/tenant')
