@@ -157,12 +157,6 @@ const getTenantByContactCode = async (
       return { ok: false, err: err.response?.data?.type, statusCode: 404 }
     }
 
-    // Core versions before MIM-1940 responded 500 for not-a-tenant outcomes,
-    // with the same `type` field in the body.
-    if (err instanceof AxiosError && err.response?.status === 500) {
-      return { ok: false, err: err.response?.data?.type, statusCode: 500 }
-    }
-
     return { ok: false, err, statusCode: 500 }
   }
 }
