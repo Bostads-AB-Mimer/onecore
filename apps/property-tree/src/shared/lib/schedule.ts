@@ -74,11 +74,7 @@ export const scheduleSendErrorText = (code: unknown): string | null => {
   }
 }
 
-export const formatScheduleTimestamp = (iso: string): string =>
-  new Date(iso).toLocaleString('sv-SE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+// Semantic alias for the shared timestamp formatter, kept for send-confirmation
+// call sites that read as "Skickas {time}". One implementation lives in
+// shared/lib/formatters.
+export { formatTimestamp as formatScheduleTimestamp } from './formatters'
