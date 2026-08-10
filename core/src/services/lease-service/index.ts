@@ -22,6 +22,7 @@ import * as propertyManagementAdapter from '../../adapters/property-management-a
 import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
+import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
 import { makeAdminApplicationProfileRequestParams } from './helpers/application-profile'
 import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
@@ -2711,6 +2712,221 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = { ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
+   * /parking-spaces/{parkingSpaceId}/leases:
+   *   post:
+   *     summary: Create lease for an external parking space
+   *     tags:
+   *       - Lease service
+   *     description: Creates a new lease for the specified external parking space.
+   *     parameters:
+   *       - in: path
+   *         name: parkingSpaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID of the parking space for which the lease is being created.
+   *       - in: body
+   *         name: Lease details
+   *         required: true
+   *         description: Lease information including contact ID and start date.
+   *         schema:
+   *           type: object
+   *           required:
+   *             - contactId
+   *             - startDate
+   *           properties:
+   *             contactId:
+   *               type: string
+   *               description: ID of the contact associated with the lease.
+   *             startDate:
+   *               type: string
+   *               format: date-time
+   *               description: Start date of the lease.
+   *     responses:
+   *       '201':
+   *         description: Lease successfully created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       '400':
+   *         description: Bad request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Parking space id is missing. It needs to be passed in the url.
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: A technical error has occured.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/parking-spaces/:parkingSpaceId/leases', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parkingSpaceId = ctx.params.parkingSpaceId
+
+    if (!parkingSpaceId) {
+      ctx.status = 400
+      ctx.body = {
+        message:
+          'Parking space id is missing. It needs to be passed in the url.',
+        ...metadata,
+      }
+      return
+    }
+
+    // Accept both contactId and contactCode for backward compatibility
+    const contactId = ctx.request.body.contactId || ctx.request.body.contactCode
+
+    if (!contactId) {
+      ctx.status = 400
+      ctx.body = {
+        reason:
+          'Contact id/code is missing. It needs to be passed in the body (contactId or contactCode)',
+        ...metadata,
+      }
+      return
+    }
+
+    const startDate = ctx.request.body.startDate
+    const triggeredBy =
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
+
+    try {
+      const result = await createLeaseForExternalParkingSpace(
+        parkingSpaceId,
+        contactId,
+        startDate,
+        triggeredBy
+      )
+      ctx.status = result.httpStatus
+      ctx.body = { content: result.response, ...metadata }
+    } catch (error) {
+      logger.error(error, 'Error')
+      ctx.status = 500
+      ctx.body = { error: 'A technical error has occured', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /parking-spaces/{parkingSpaceId}/note-of-interests:
+   *   post:
+   *     summary: Create a note of interest for an internal parking space
+   *     tags:
+   *       - Lease service
+   *     description: Creates a new note of interest for the specified internal parking space.
+   *     parameters:
+   *       - in: path
+   *         name: parkingSpaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID of the parking space for which the note of interest is being created.
+   *       - in: body
+   *         name: Note of interest details
+   *         required: true
+   *         description: Note of interest information including contact code and application type.
+   *         schema:
+   *           type: object
+   *           required:
+   *             - contactCode
+   *           properties:
+   *             contactCode:
+   *               type: string
+   *               description: Code of the contact associated with the note of interest.
+   *             applicationType:
+   *               type: string
+   *               description: Optional. Type of application for the note of interest.
+   *     responses:
+   *       '201':
+   *         description: Note of interest successfully created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       '400':
+   *         description: Bad request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Contact code is missing. It needs to be passed in the body (contactCode)
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: A technical error has occured.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/parking-spaces/:parkingSpaceId/note-of-interests',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const parkingSpaceId = ctx.params.parkingSpaceId
+
+      const contactCode = ctx.request.body.contactCode
+
+      if (!contactCode) {
+        ctx.status = 400
+        ctx.body = {
+          reason:
+            'Contact code is missing. It needs to be passed in the body (contactCode)',
+          ...metadata,
+        }
+        return
+      }
+
+      const applicationType = ctx.request.body.applicationType
+      if (applicationType && applicationType == '') {
+        ctx.status = 400
+        ctx.body = {
+          reason:
+            'Application type is missing. It needs to be passed in the body (applicationType)',
+          ...metadata,
+        }
+        return
+      }
+
+      try {
+        const result =
+          await internalParkingSpaceProcesses.createNoteOfInterestForInternalParkingSpace(
+            parkingSpaceId,
+            contactCode,
+            applicationType
+          )
+        ctx.status = result.httpStatus
+        ctx.body = { content: result.response, ...metadata }
+      } catch (err) {
+        logger.error({ err }, 'Error when creating note of interest')
+        ctx.status = 500
+        ctx.body = { error: 'A technical error has occured', ...metadata }
+      }
     }
   )
 }
