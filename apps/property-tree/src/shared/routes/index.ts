@@ -27,6 +27,7 @@ export const routes = {
   tenant: '/hyresgaster/:contactCode', // klar
   rentalBlocks: '/sparrar',
   leases: '/hyreskontrakt',
+  dispatchCentre: '/utskick',
   inspections: '/besiktningar',
   economy: '/economy',
   components: '/komponenter',

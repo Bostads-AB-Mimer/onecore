@@ -1,10 +1,11 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { BulkSms, BulkEmail, communication } from '@onecore/types'
+import { BulkSms, BulkEmail } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { registerSchema } from '../../utils/openapi'
+import { logReadRoutes } from './log-reads'
 
 const BulkSmsResult = z.object({
   successful: z.array(z.string()).describe('Phone numbers that received SMS'),
@@ -57,11 +58,8 @@ const BulkEmailResult = z.object({
 export const routes = (router: KoaRouter) => {
   registerSchema('BulkSmsResult', BulkSmsResult)
   registerSchema('BulkEmailResult', BulkEmailResult)
-  registerSchema('CustomerMessage', communication.CustomerMessageSchema)
-  registerSchema(
-    'DispatchWithRecipients',
-    communication.DispatchWithRecipientsSchema
-  )
+
+  logReadRoutes(router)
 
   /**
    * @swagger
@@ -298,100 +296,6 @@ export const routes = (router: KoaRouter) => {
     if (result.ok) {
       ctx.status = 200
       ctx.body = { ...metadata }
-    } else {
-      ctx.status = result.statusCode ?? 500
-      ctx.body = { error: result.err, ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /communication-log/customers/{contactCode}/messages:
-   *   get:
-   *     summary: Get the communication timeline for a customer
-   *     description: Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
-   *     tags:
-   *       - Communication service
-   *     parameters:
-   *       - in: path
-   *         name: contactCode
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Customer id (contactCode)
-   *     responses:
-   *       '200':
-   *         description: Array of (dispatch + recipient) pairs, newest first
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/CustomerMessage'
-   *       '500':
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get(
-    '(.*)/communication-log/customers/:contactCode/messages',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const result = await communicationAdapter.getCustomerMessages(
-        ctx.params.contactCode
-      )
-
-      if (result.ok) {
-        ctx.status = 200
-        ctx.body = { content: result.data, ...metadata }
-      } else {
-        ctx.status = result.statusCode ?? 500
-        ctx.body = { error: result.err, ...metadata }
-      }
-    }
-  )
-
-  /**
-   * @swagger
-   * /communication-log/dispatches/{id}:
-   *   get:
-   *     summary: Get a dispatch and its recipients by dispatch id
-   *     tags:
-   *       - Communication service
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Dispatch id (UUID)
-   *     responses:
-   *       '200':
-   *         description: Dispatch + recipients
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/DispatchWithRecipients'
-   *       '404':
-   *         description: Dispatch not found
-   *       '500':
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('(.*)/communication-log/dispatches/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await communicationAdapter.getDispatchById(ctx.params.id)
-
-    if (result.ok) {
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
     } else {
       ctx.status = result.statusCode ?? 500
       ctx.body = { error: result.err, ...metadata }
