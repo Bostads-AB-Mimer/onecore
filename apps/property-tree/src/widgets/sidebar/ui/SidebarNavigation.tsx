@@ -13,6 +13,7 @@ import {
   Home,
   LayoutGrid,
   Receipt,
+  Send,
   Settings,
   ShieldX,
 } from 'lucide-react'
@@ -154,6 +155,11 @@ function SidebarNavigationContent() {
           to={routes.leases}
           icon={FileText}
           label="Hyreskontrakt"
+        />
+        <SidebarNavLink
+          to={routes.dispatchCentre}
+          icon={Send}
+          label="Utskick"
         />
         <SidebarNavLink
           to={routes.inspections}

@@ -1,11 +1,15 @@
 import { z } from 'zod'
 import {
+  AudienceCriterionSchema,
   CancelDispatchResponseSchema,
   ChannelSchema,
   CustomerMessageSchema,
   DirectionSchema,
   DispatchAttachmentSchema,
+  DispatchListItemSchema,
   DispatchSchema,
+  DispatchSearchQueryParamsSchema,
+  DispatchStatusSchema,
   DispatchWithRecipientsSchema,
   LogOutboundParamsSchema,
   LogOutboundRecipientSchema,
@@ -31,6 +35,13 @@ export type DispatchWithRecipients = z.infer<
   typeof DispatchWithRecipientsSchema
 >
 export type CustomerMessage = z.infer<typeof CustomerMessageSchema>
+
+export type DispatchStatus = z.infer<typeof DispatchStatusSchema>
+export type AudienceCriterion = z.infer<typeof AudienceCriterionSchema>
+export type DispatchSearchQueryParams = z.infer<
+  typeof DispatchSearchQueryParamsSchema
+>
+export type DispatchListItem = z.infer<typeof DispatchListItemSchema>
 
 export type CancelDispatchResponse = z.infer<
   typeof CancelDispatchResponseSchema

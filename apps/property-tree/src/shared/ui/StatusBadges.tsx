@@ -7,6 +7,13 @@ import { Badge } from '@/shared/ui/Badge'
 // Lease Status Badge — re-exported from entity
 export { LeaseStatusBadge } from '@/entities/lease'
 
+// Communication badges — re-exported from the dispatch entity
+export {
+  ChannelBadge,
+  DispatchStatusBadge,
+  RecipientStatusBadge,
+} from '@/entities/dispatch'
+
 // Object Type Badges
 export const ObjectTypeBadge = ({ type }: { type: string | null }) => {
   const normalizedType = type?.toLowerCase()
