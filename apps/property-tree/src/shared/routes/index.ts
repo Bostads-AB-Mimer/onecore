@@ -28,6 +28,8 @@ export const routes = {
   leases: '/hyreskontrakt',
   inspections: '/besiktningar',
   economy: '/economy',
+  economyStrofaktura: '/economy/strofaktura',
+  economyPlaceholder: '/economy/placeholder',
   components: '/komponenter',
   callback: '/callback',
 } as const
@@ -60,15 +62,15 @@ export const paths = {
   company: (organizationNumber: string) =>
     generatePath(routes.company, { organizationNumber }),
   tenant: (contactCode: string) => generatePath(routes.tenant, { contactCode }),
-  economy: (params?: { contactCode?: string }) => {
+  economyStrofaktura: (params?: { contactCode?: string }) => {
     if (!params?.contactCode) {
-      return routes.economy
+      return routes.economyStrofaktura
     }
 
     const searchParams = new URLSearchParams({
       contactCode: params.contactCode,
     })
-    return `${routes.economy}?${searchParams.toString()}`
+    return `${routes.economyStrofaktura}?${searchParams.toString()}`
   },
 }
 

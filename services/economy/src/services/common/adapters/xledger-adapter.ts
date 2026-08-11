@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import SftpClient from 'ssh2-sftp-client'
 import { Readable } from 'stream'
 import { gql } from 'graphql-request'
+import { nanoid } from 'nanoid'
 import {
   Invoice,
   InvoicePaymentEvent,
@@ -277,6 +278,52 @@ const transformToInvoice = (invoiceData: any): Invoice => {
   }
 
   return { ...invoice, paymentStatus: getPaymentStatus(invoice) }
+}
+
+interface XledgerInvoiceBaseItem {
+  externalIdentifier: string
+  xledgerDbId: string
+  text: string
+  invoiceDate: Date
+  ourReference: {
+    name: string
+  }
+  amount: number
+  unitPrice: number
+  quantity: number
+  headerInfo: string
+  contactCode: string
+  comment?: string
+  attachment?: {
+    fileName: string
+    url: string
+  }
+}
+
+const transformToInvoiceBaseItem = (
+  invoiceBaseItemData: any
+): XledgerInvoiceBaseItem => {
+  return {
+    contactCode: invoiceBaseItemData.node.subledger.code,
+    externalIdentifier: invoiceBaseItemData.node.extIdentifier,
+    xledgerDbId: invoiceBaseItemData.node.dbId,
+    text: invoiceBaseItemData.node.text,
+    invoiceDate: new Date(invoiceBaseItemData.node.invoiceDate),
+    ourReference: {
+      name: invoiceBaseItemData.node.ourRef.name,
+    },
+    amount: parseFloat(invoiceBaseItemData.node.amount),
+    unitPrice: parseFloat(invoiceBaseItemData.node.unitPrice),
+    quantity: parseFloat(invoiceBaseItemData.node.quantity),
+    headerInfo: invoiceBaseItemData.node.headerInfo,
+    comment: invoiceBaseItemData.node.comment ?? undefined,
+    attachment: invoiceBaseItemData.node.fileFile
+      ? {
+          fileName: invoiceBaseItemData.node.fileFile.fileName,
+          url: invoiceBaseItemData.node.fileFile.url,
+        }
+      : undefined,
+  }
 }
 
 export interface XledgerCustomer {
@@ -828,6 +875,51 @@ export const getInvoices = async (from?: Date, to?: Date) => {
   return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
 }
 
+export const getInvoiceBaseItems = async (
+  dbIds: string[]
+): Promise<XledgerInvoiceBaseItem[]> => {
+  const query = {
+    query: gql`
+      query ($first: Int, $dbIds: [Int64String!]) {
+        invoiceBaseItems(first: $first, filter: { dbId_in: $dbIds }) {
+          edges {
+            node {
+              extIdentifier
+              dbId
+              text
+              invoiceDate
+              ourRef {
+                name
+              }
+              amount
+              unitPrice
+              quantity
+              headerInfo
+              comment
+              subledger {
+                code
+              }
+              fileFile {
+                url
+                fileName
+              }
+            }
+          }
+        }
+      }
+    `,
+    variables: {
+      first: dbIds.length,
+      dbIds,
+    },
+  }
+
+  const result = await makeXledgerRequest(query)
+  return (
+    result.data?.invoiceBaseItems?.edges?.map(transformToInvoiceBaseItem) ?? []
+  )
+}
+
 export const getAllInvoicesWithMatchIds = async ({
   from,
   to,
@@ -1254,13 +1346,16 @@ export const healthCheck = async () => {
 
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
-) => {
+): Promise<{ externalIdentifier: string; invoiceBaseItemDbIds: string[] }> => {
   const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.article.name).join(', ')}`
+  // Xledger truncates extIdentifier to 25 characters, so can't use regular uuids that are 36 characters.
+  const externalIdentifier = nanoid(25)
 
   const nodes = invoice.invoiceRows.map(
     (ir, index) => gql`
       {
         node: {
+          extIdentifier: ${JSON.stringify(externalIdentifier)}
           subledger: { code: ${JSON.stringify(invoice.contactCode)} }
           lineNumber: ${index}
           product: {
@@ -1325,7 +1420,12 @@ export const submitMiscellaneousInvoice = async (
       invoice.attachment
     )
 
-    return result.data.addInvoiceBaseItems.edges
+    return {
+      externalIdentifier,
+      invoiceBaseItemDbIds: result.data.addInvoiceBaseItems.edges.map(
+        (e: any) => e.node.dbId
+      ),
+    }
   } catch (err: unknown) {
     logger.error(err, 'Error creating miscellaneous invoice')
     throw err
