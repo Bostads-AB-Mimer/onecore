@@ -150,8 +150,15 @@ const getTenantByContactCode = async (
 
     return { ok: true, data: result.content }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 500) {
-      return { ok: false, err: err.response?.data?.type, statusCode: 500 }
+    if (err instanceof AxiosError && err.response?.data?.type) {
+      // 404 carries the expected not-a-tenant outcomes (contact-not-found,
+      // contact-not-tenant, no-valid-housing-contract); other statuses pass
+      // their semantic type through as well.
+      return {
+        ok: false,
+        err: err.response.data.type,
+        statusCode: err.response.status,
+      }
     }
 
     return { ok: false, err, statusCode: 500 }

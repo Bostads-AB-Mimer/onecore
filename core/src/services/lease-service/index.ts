@@ -1567,7 +1567,10 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   description: The tenant data.
    *       404:
-   *         description: Not found.
+   *         description: >
+   *           No tenant found for this contact code. The response body `type`
+   *           distinguishes the cause: `contact-not-found`, `contact-not-tenant`
+   *           or `no-valid-housing-contract`.
    *       500:
    *         description: Internal server error. Failed to retrieve Tenant information.
    *     security:
@@ -1592,11 +1595,11 @@ export const routes = (router: KoaRouter) => {
       }
 
       if (res.err === 'no-valid-housing-contract') {
-        ctx.status = 500
+        ctx.status = 404
         ctx.body = {
           type: res.err,
           title: 'No valid housing contract found',
-          status: 500,
+          status: 404,
           detail: 'No active or upcoming contract found.',
           ...metadata,
         } satisfies RouteErrorResponse
@@ -1605,11 +1608,11 @@ export const routes = (router: KoaRouter) => {
       }
 
       if (res.err === 'contact-not-tenant') {
-        ctx.status = 500
+        ctx.status = 404
         ctx.body = {
           type: res.err,
           title: 'Contact is not a tenant',
-          status: 500,
+          status: 404,
           detail: 'No active or upcoming contract found.',
           ...metadata,
         } satisfies RouteErrorResponse
