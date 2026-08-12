@@ -2,6 +2,7 @@ import axios from 'axios'
 import config, { isRentalObjectRequirementException } from '../../config'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
+import { z } from 'zod'
 import {
   TenfastTenantByContactCodeResponseSchema,
   TenfastInvoicesByTenantIdResponseSchema,
@@ -225,27 +226,53 @@ export const getInvoiceByOcr = async (
   }
 }
 
+let rentArticles: TenfastRentArticle[]
+
+const retrieveRentArticles = async () => {
+  const result = await makeTenfastRequest(`/v1/hyresvard/articles`)
+
+  if (result.status !== 200) {
+    logger.error(result.status)
+    throw new Error('Could not retrieve rent articles from Tenfast')
+  }
+
+  console.log('Got', result.data.length, 'articles')
+
+  const correctArticles = result.data.filter((article: any) => article.category)
+
+  console.log('Filtered to', correctArticles.length, 'articles')
+
+  const parsedResponse = z
+    .array(TenfastRentArticleSchema)
+    .safeParse(correctArticles)
+  if (!parsedResponse.success) {
+    logger.error(parsedResponse)
+    throw new Error('Could not retrieve rent articles from Tenfast')
+  }
+
+  rentArticles = parsedResponse.data
+}
+
 export const getInvoiceArticle = async (
   articleId: string
 ): Promise<AdapterResult<TenfastRentArticle, string>> => {
-  try {
-    const result = await makeTenfastRequest(
-      `/v1/hyresvard/articles/${articleId}`
-    )
-    if (result.status !== 200) {
-      return { ok: false, err: result.statusText }
-    }
+  if (!rentArticles || rentArticles.length === 0) {
+    console.log('Getting rentArticles because', rentArticles)
+    await retrieveRentArticles()
+  }
 
-    const parsedResponse = TenfastRentArticleSchema.safeParse(result.data)
-    if (!parsedResponse.success) {
-      logger.error(parsedResponse)
-      return { ok: false, err: 'schema-error' }
-    }
+  const article = rentArticles.find((article) => article.code === articleId)
 
-    return { ok: true, data: parsedResponse.data }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+  if (article) {
+    return {
+      ok: true,
+      data: article,
+    }
+  } else {
+    return {
+      ok: false,
+      err: 'Could not find article ' + articleId,
+    }
   }
 }
 
@@ -359,17 +386,17 @@ const enrichInvoiceRowsWithAccounting = async (
               accountConfiguration.accountNr.toString()
             invoiceRowWithAccounting.costCode =
               accountConfiguration.costCenter &&
-                accountConfiguration.costCenter !== ''
+              accountConfiguration.costCenter !== ''
                 ? accountConfiguration.costCenter
                 : undefined
             invoiceRowWithAccounting.property =
               accountConfiguration.property &&
-                accountConfiguration.property !== ''
+              accountConfiguration.property !== ''
                 ? accountConfiguration.property
                 : undefined
             invoiceRowWithAccounting.projectCode =
               accountConfiguration.projectCode &&
-                accountConfiguration.projectCode !== ''
+              accountConfiguration.projectCode !== ''
                 ? accountConfiguration.projectCode
                 : undefined
 
@@ -467,11 +494,10 @@ export const getInvoicesNotExported = async (
         ok: true,
         data: {
           invoices: [],
-          errors: undefined
-        }
+          errors: undefined,
+        },
       }
     }
-
 
     const parsedResponse = TenfastInvoicesByExportedResponseSchema.safeParse(
       result.data
@@ -527,14 +553,34 @@ const emptyToUndefined = (
   value: string | null | undefined
 ): string | undefined => (value && value !== '' ? value : undefined)
 
+// Number of days in a closed date interval [from, to] (inclusive on both ends),
+// e.g. [2026-07-01, 2026-07-31] = 31.
+const daysInclusive = (from: Date, to: Date): number => {
+  const ms = to.getTime() - from.getTime()
+  if (ms < 0) return 0
+  return Math.floor(ms / (24 * 60 * 60 * 1000)) + 1
+}
+
+const roundCurrency = (value: number): number =>
+  Math.round((value + Number.EPSILON) * 100) / 100
+
+// Maps one Tenfast rental loss to one RentalLoss per uncontracted interval.
+// Tenfast reports every uncontracted interval of the month on a single record;
+// downstream accounting (rental blocks, proration, voucher dates) works on a
+// single continuous interval, so we split here instead.
 export const mapToRentalLoss = async (
   tenfastRentalLoss: TenfastRentalLoss
 ): Promise<{
-  rentalLoss: RentalLoss
+  rentalLosses: RentalLoss[]
   errors: { invoiceNumber: string; error: string }[]
 }> => {
   const errors: { invoiceNumber: string; error: string }[] = []
-  const rentalLossRows: RentalLossRow[] = []
+  // Accounting and article data per rent row, without amounts. Amounts depend
+  // on the interval and are calculated per split rental loss below.
+  const rentalLossRowTemplates: {
+    monthlyAmount: number
+    row: Omit<RentalLossRow, 'amount' | 'totalAmount'>
+  }[] = []
   const rentalObjectExternalId = tenfastRentalLoss.hyresobjekt.externalId
 
   for (const hyra of tenfastRentalLoss.hyresobjekt.hyror) {
@@ -573,8 +619,7 @@ export const mapToRentalLoss = async (
     }
 
     const incomeConfiguration = rentalLossConfigurations.find(
-      (accountConfiguration) =>
-        accountConfiguration.categoryCode === 'Intäkter'
+      (accountConfiguration) => accountConfiguration.categoryCode === 'Intäkter'
     )
     const costConfiguration = rentalLossConfigurations.find(
       (accountConfiguration) =>
@@ -593,47 +638,73 @@ export const mapToRentalLoss = async (
       continue
     }
 
-    const uncontractedAmount =
-      (hyra.amount * tenfastRentalLoss.days.uncontracted) /
-      tenfastRentalLoss.days.month
-
-    rentalLossRows.push({
-      amount: Math.round((uncontractedAmount + Number.EPSILON) * 100) / 100,
-      totalAmount: Math.round((uncontractedAmount * (1 + (hyra.vat ?? 0)) + Number.EPSILON) * 100) / 100,
-      vat: hyra.vat,
-      rentArticleName: article.code,
-      rentalObject: rentalObjectExternalId,
-      incomeAccount: incomeConfiguration.accountNr,
-      incomeProjectCode: emptyToUndefined(incomeConfiguration.projectCode),
-      incomeProperty: emptyToUndefined(incomeConfiguration.property),
-      incomeFreeCode: emptyToUndefined(incomeConfiguration.freeText),
-      incomeCostCode: emptyToUndefined(incomeConfiguration.costCenter),
-      costAccount: costConfiguration.accountNr,
-      costProjectCode: emptyToUndefined(costConfiguration.projectCode),
-      costProperty: emptyToUndefined(costConfiguration.property),
-      costFreeCode: emptyToUndefined(costConfiguration.freeText),
-      costCostCode: emptyToUndefined(costConfiguration.costCenter),
+    rentalLossRowTemplates.push({
+      monthlyAmount: hyra.amount,
+      row: {
+        vat: hyra.vat,
+        rentArticleName: article.code,
+        rentalObject: rentalObjectExternalId,
+        incomeAccount: incomeConfiguration.accountNr,
+        incomeProjectCode: emptyToUndefined(incomeConfiguration.projectCode),
+        incomeProperty: emptyToUndefined(incomeConfiguration.property),
+        incomeFreeCode: emptyToUndefined(incomeConfiguration.freeText),
+        incomeCostCode: emptyToUndefined(incomeConfiguration.costCenter),
+        costAccount: costConfiguration.accountNr,
+        costProjectCode: emptyToUndefined(costConfiguration.projectCode),
+        costProperty: emptyToUndefined(costConfiguration.property),
+        costFreeCode: emptyToUndefined(costConfiguration.freeText),
+        costCostCode: emptyToUndefined(costConfiguration.costCenter),
+      },
     })
   }
 
-  const rentalLoss: RentalLoss = {
-    rentalLossRows,
-    rentalObject: rentalObjectExternalId,
-    month: tenfastRentalLoss.month,
-    days: {
-      totalInMonth: tenfastRentalLoss.days.month,
-      contracted: tenfastRentalLoss.days.contracted,
-      uncontracted: tenfastRentalLoss.days.uncontracted,
-    },
-    uncontractedIntervals: tenfastRentalLoss.uncontractedIntervals.map(
-      (interval) => ({
-        from: new Date(interval.from),
-        to: new Date(interval.to),
-      })
-    ),
+  const intervals = tenfastRentalLoss.uncontractedIntervals.map((interval) => ({
+    from: new Date(interval.from),
+    to: new Date(interval.to),
+  }))
+
+  if (intervals.length === 0) {
+    logger.error(
+      { rentalObject: rentalObjectExternalId, month: tenfastRentalLoss.month },
+      'Rental loss has no uncontracted intervals'
+    )
+    errors.push({
+      invoiceNumber: rentalObjectExternalId,
+      error: `Hyresbortfallet för ${rentalObjectExternalId} ${tenfastRentalLoss.month} saknar avtalslösa perioder`,
+    })
+
+    return { rentalLosses: [], errors }
   }
 
-  return { rentalLoss, errors }
+  const rentalLosses = intervals.map((uncontractedInterval) => {
+    const uncontractedDays = daysInclusive(
+      uncontractedInterval.from,
+      uncontractedInterval.to
+    )
+
+    return {
+      rentalLossRows: rentalLossRowTemplates.map(({ monthlyAmount, row }) => {
+        const uncontractedAmount =
+          (monthlyAmount * uncontractedDays) / tenfastRentalLoss.days.month
+
+        return {
+          ...row,
+          amount: roundCurrency(uncontractedAmount),
+          totalAmount: roundCurrency(uncontractedAmount * (1 + (row.vat ?? 0))),
+        }
+      }),
+      rentalObject: rentalObjectExternalId,
+      month: tenfastRentalLoss.month,
+      days: {
+        totalInMonth: tenfastRentalLoss.days.month,
+        contracted: tenfastRentalLoss.days.contracted,
+        uncontracted: uncontractedDays,
+      },
+      uncontractedInterval,
+    }
+  })
+
+  return { rentalLosses, errors }
 }
 
 export const getRentalLosses = async (
@@ -648,14 +719,17 @@ export const getRentalLosses = async (
   >
 > => {
   const reportId = '6a3276034ce55cc308bb2beb'
-  const result = await makeTenfastRequest(`/v1/hyresvard/reports/${reportId}/download`, {
-    params: {
-      hyresvard: company.tenfastId,
-      /*paginate:
+  const result = await makeTenfastRequest(
+    `/v1/hyresvard/reports/${reportId}/download`,
+    {
+      params: {
+        hyresvard: company.tenfastId,
+        /*paginate:
         'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
-      //ocrNumber: '552606000000733',
-    },
-  })
+        //ocrNumber: '552606000000733',
+      },
+    }
+  )
 
   if (result.status !== 200) {
     logger.error(
@@ -672,24 +746,30 @@ export const getRentalLosses = async (
     return { ok: false, err: 'schema-error' }
   }
 
+  console.log('Got report', parsedResponse.data.length)
+
   const rentalLosses: RentalLoss[] = []
   const errors: { invoiceNumber: string; error: string }[] = []
 
-  const rentalLossResults = parsedResponse.data.filter(rentalLoss => {
+  const rentalLossResults = parsedResponse.data.filter((rentalLoss) => {
     return rentalLoss.days.uncontracted > 0
   })
 
+  console.log('Actual rental losses', rentalLossResults.length)
+
   for (const tenfastRentalLoss of rentalLossResults) {
-    const { rentalLoss, errors: rentalLossErrors } =
+    const { rentalLosses: mappedRentalLosses, errors: rentalLossErrors } =
       await mapToRentalLoss(tenfastRentalLoss)
-    rentalLosses.push(rentalLoss)
+    rentalLosses.push(...mappedRentalLosses)
     errors.push(...rentalLossErrors)
   }
+
+  console.log('Without errors', rentalLosses.length)
 
   return {
     ok: true,
     data: {
-      rentalLosses,
+      rentalLosses: rentalLosses.slice(0, 10),
       errors: errors.length ? errors : undefined,
     },
   }
