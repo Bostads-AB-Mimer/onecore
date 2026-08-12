@@ -135,18 +135,20 @@ describe('economy-adapter', () => {
       { recipientId: '198112172385', recipientType: 'individual' },
     ]
 
-    const mockChannels = [
-      {
-        referenceId: '191212121212',
-        availableInChannels: ['Kivra'],
-        notAvailableInChannels: ['eInvoiceB2C'],
-      },
-      {
-        referenceId: '198112172385',
-        availableInChannels: ['eInvoiceB2C'],
-        notAvailableInChannels: ['Kivra'],
-      },
-    ]
+    const mockChannels = {
+      candidates: [
+        {
+          referenceId: '191212121212',
+          availableInChannels: ['Kivra'],
+          notAvailableInChannels: ['eInvoiceB2C'],
+        },
+        {
+          referenceId: '198112172385',
+          availableInChannels: ['eInvoiceB2C'],
+          notAvailableInChannels: ['Kivra'],
+        },
+      ],
+    }
 
     it('returns invoice channels for given recipients', async () => {
       nock(config.economyService.url)
@@ -166,21 +168,32 @@ describe('economy-adapter', () => {
 
       nock(config.economyService.url)
         .post('/invoice-channels', { recipients: threeRecipients })
-        .reply(200, { content: [] })
+        .reply(200, { content: { candidates: [] } })
 
       const result = await economyAdapter.getInvoiceChannels(threeRecipients)
 
-      expect(result).toEqual({ ok: true, data: [] })
+      expect(result).toEqual({ ok: true, data: { candidates: [] } })
     })
 
-    it('returns empty array when no channels found', async () => {
+    it('returns channelErrors alongside candidates', async () => {
+      const mockWithErrors = {
+        candidates: [
+          {
+            referenceId: '191212121212',
+            availableInChannels: ['Kivra'],
+            notAvailableInChannels: [],
+          },
+        ],
+        channelErrors: [{ channel: 'eInvoiceB2C', error: 'timeout' }],
+      }
+
       nock(config.economyService.url)
-        .post('/invoice-channels', { recipients: [] })
-        .reply(200, { content: [] })
+        .post('/invoice-channels', { recipients: [recipients[0]] })
+        .reply(200, { content: mockWithErrors })
 
-      const result = await economyAdapter.getInvoiceChannels([])
+      const result = await economyAdapter.getInvoiceChannels([recipients[0]])
 
-      expect(result).toEqual({ ok: true, data: [] })
+      expect(result).toEqual({ ok: true, data: mockWithErrors })
     })
 
     it('returns unknown error when lookup fails', async () => {
