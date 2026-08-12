@@ -16,6 +16,8 @@ import {
   LedgerRow,
   xledgerDateString,
   RentalLoss,
+  RentalLossRow,
+  RentalBlockWithAccounting,
 } from '../../common/types/typesv2'
 import {
   getPeriodInformationFromDateStrings,
@@ -23,7 +25,10 @@ import {
   uploadFile,
 } from '../common/adapters/xledger-adapter'
 import { logger } from '@onecore/utilities'
-import { getInvoicesNotExported, getRentalLosses } from '@src/common/adapters/tenfast/tenfast-adapter'
+import {
+  getInvoicesNotExported,
+  getRentalLosses,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
 import config from '@src/common/config'
 
 export { markInvoicesAsExported } from '@src/common/adapters/tenfast/tenfast-adapter'
@@ -84,11 +89,14 @@ export const exportRentalInvoicesAccounting = async (
         errors.push(...invoicesResult.data.errors)
       }
 
-      if (!invoicesResult.data.invoices || invoicesResult.data.invoices.length === 0) {
+      if (
+        !invoicesResult.data.invoices ||
+        invoicesResult.data.invoices.length === 0
+      ) {
         return {
           exportedInvoices: [],
           skippedInvoices,
-          errors
+          errors,
         }
       }
 
@@ -418,7 +426,10 @@ const groupAggregateRows = (
           taxRule: o.taxRule,
         }
 
-        aggregatedRow.amount = safeAdd(aggregatedRow.amount, o.amount ? -1 * o.amount : 0)
+        aggregatedRow.amount = safeAdd(
+          aggregatedRow.amount,
+          o.amount ? -1 * o.amount : 0
+        )
         aggregatedRow.totalAmount = safeAdd(
           aggregatedRow.totalAmount,
           o.totalAmount ? -1 * o.totalAmount : 0
@@ -594,7 +605,9 @@ const convertToLedgerCsvRows = (ledgerRows: LedgerRow[]) => {
 //#endregion
 
 //#region Rental Loss Accounting
-export const exportRentalLosses = async (companyId: string): Promise<RentalLoss[]> => {
+export const exportRentalLosses = async (
+  companyId: string
+): Promise<RentalLoss[]> => {
   const company = config.companies.find(
     (company) => company.xpandId.localeCompare(companyId) === 0
   )
@@ -605,23 +618,30 @@ export const exportRentalLosses = async (companyId: string): Promise<RentalLoss[
 
   const rentalLossResults = await getRentalLosses(company)
   if (rentalLossResults.ok !== true) {
-    logger.error({ error: rentalLossResults.err }, 'Could not retrieve rental loss information')
-    throw new Error('Could not retrieve rental loss information: ' + rentalLossResults.err)
+    logger.error(
+      { error: rentalLossResults.err },
+      'Could not retrieve rental loss information'
+    )
+    throw new Error(
+      'Could not retrieve rental loss information: ' + rentalLossResults.err
+    )
   }
 
-  return rentalLossResults.data.rentalLosses.slice(0, 100)
+  return rentalLossResults.data.rentalLosses
 }
 
-export const createRentalLossAccounting = async (rentalLosses: RentalLoss[]): Promise<{ aggregateRentalLossAccountingCsv: string[], errors: { rentalObject: string, error: string }[] }> => {
+export const createRentalLossAccounting = async (
+  rentalLosses: RentalLoss[]
+): Promise<{
+  aggregateRentalLossAccountingCsv: string[]
+  errors: { rentalObject: string; error: string }[]
+}> => {
   const aggregateRows = await createRentalLossAggregateRows(rentalLosses)
 
   const rowChunks: Record<string, AggregatedRow[]> = {}
 
-  aggregateRows.forEach(aggregatedRow => {
-    const key =
-      aggregatedRow.fromDate +
-      ':' +
-      aggregatedRow.toDate
+  aggregateRows.forEach((aggregatedRow) => {
+    const key = aggregatedRow.fromDate + ':' + aggregatedRow.toDate
 
     if (!rowChunks[key]) {
       rowChunks[key] = []
@@ -641,7 +661,7 @@ export const createRentalLossAccounting = async (rentalLosses: RentalLoss[]): Pr
     voucherIndex++
     voucherRowCount = 0
 
-    chunkAggregatedRows.forEach(aggregatedRow => {
+    chunkAggregatedRows.forEach((aggregatedRow) => {
       if (voucherRowCount > MAX_VOUCHER_ROWS) {
         voucherNumber =
           Date.now().toString().substring(6, 12) +
@@ -661,15 +681,19 @@ export const createRentalLossAccounting = async (rentalLosses: RentalLoss[]): Pr
 
   return {
     aggregateRentalLossAccountingCsv: aggregateRowsCsv,
-    errors: []
+    errors: [],
   }
 }
 
 const createRentalLossAggregateRows = async (rentalLosses: RentalLoss[]) => {
   const exportedRows: AggregatedRow[] = []
 
-  rentalLosses.forEach(rentalLoss => {
-    rentalLoss.rentalLossRows.forEach(rentalLossRow => {
+  rentalLosses.forEach((rentalLoss) => {
+    rentalLoss.rentalLossRows.forEach((rentalLossRow) => {
+      const rowFrom =
+        rentalLossRow.fromDate ?? rentalLoss.uncontractedInterval.from
+      const rowTo = rentalLossRow.toDate ?? rentalLoss.uncontractedInterval.to
+
       const exportedRentalLossIncomeRow = {
         amount: rentalLossRow.amount,
         vat: rentalLossRow.vat,
@@ -680,10 +704,10 @@ const createRentalLossAggregateRows = async (rentalLosses: RentalLoss[]) => {
         freeCode: rentalLossRow.incomeFreeCode,
         costCode: rentalLossRow.incomeCostCode,
         property: rentalLossRow.incomeProperty,
-        fromDate: dateString(rentalLoss.uncontractedIntervals[0].from) ?? '',
-        toDate: dateString(rentalLoss.uncontractedIntervals[0].to) ?? '',
-        voucherDate: dateString(rentalLoss.uncontractedIntervals[0].from) ?? '',
-        totalAccount: ''
+        fromDate: dateString(rowFrom) ?? '',
+        toDate: dateString(rowTo) ?? '',
+        voucherDate: dateString(rowFrom) ?? '',
+        totalAccount: '',
       }
 
       exportedRows.push(exportedRentalLossIncomeRow)
@@ -698,10 +722,10 @@ const createRentalLossAggregateRows = async (rentalLosses: RentalLoss[]) => {
         freeCode: rentalLossRow.costFreeCode,
         costCode: rentalLossRow.costCostCode,
         property: rentalLossRow.costProperty,
-        fromDate: dateString(rentalLoss.uncontractedIntervals[0].from) ?? '',
-        toDate: dateString(rentalLoss.uncontractedIntervals[0].to) ?? '',
-        voucherDate: dateString(rentalLoss.uncontractedIntervals[0].from) ?? '',
-        totalAccount: ''
+        fromDate: dateString(rowFrom) ?? '',
+        toDate: dateString(rowTo) ?? '',
+        voucherDate: dateString(rowFrom) ?? '',
+        totalAccount: '',
       }
 
       exportedRows.push(exportedRentalLossCostRow)
@@ -717,20 +741,217 @@ export const handleRentalBlocks = async (rentalLosses: RentalLoss[]) => {
   for (const rentalLoss of rentalLosses) {
     // 1. check for active block
     // 2. get accounting for active block - if exists, replace rental loss row (fully or partially based on date ranges) with block accounting
-    // TODO: adapt to singe uncontracted interval on each row after changing
-    const rentalBlocks = await getActiveRentalBlocksWithAccounting(rentalLoss.rentalObject, rentalLoss.uncontractedIntervals[0].from, rentalLoss.uncontractedIntervals[0].to)
+    const rentalBlocks = await getActiveRentalBlocksWithAccounting(
+      rentalLoss.rentalObject,
+      rentalLoss.uncontractedInterval.from,
+      rentalLoss.uncontractedInterval.to
+    )
 
-    if (!rentalBlocks) {
+    console.log('Blocks for', rentalLoss.rentalObject, rentalBlocks[0])
+
+    if (!rentalBlocks || rentalBlocks.length === 0) {
       rentalLossesWithBlocks.push(rentalLoss)
-    } else {
-      console.log('Block', rentalBlocks)
-
-      // TODO: Calculate intervals. If block affects the whole period for the rental loss row, replace rental loss row with block
-      // If there are intersections, create multiple rows (rental loss/blocks one per distinct interval)
+      continue
     }
+
+    // Earliest block wins on overlaps. Stable by fromDate, then description.
+    const orderedBlocks = [...rentalBlocks].sort((a, b) => {
+      const fromDelta = a.fromDate.getTime() - b.fromDate.getTime()
+      return fromDelta !== 0
+        ? fromDelta
+        : a.description.localeCompare(b.description)
+    })
+
+    const lossInterval = rentalLoss.uncontractedInterval
+    const lossTotalDays = daysInclusive(lossInterval.from, lossInterval.to)
+    if (lossTotalDays <= 0) {
+      rentalLossesWithBlocks.push(rentalLoss)
+      continue
+    }
+
+    // Build the distinct sub-intervals. Iterate blocks in priority order; for each
+    // as-yet-uncovered portion of [lossFrom, lossTo] that a block intersects,
+    // emit a block-covered interval. Gaps between blocks remain as plain loss.
+    //
+    // All interval math is performed on start-of-day UTC timestamps so splits
+    // land on midnight boundaries regardless of any time component on the
+    // source dates.
+    const startOfDay = (d: Date) => {
+      const u = new Date(d.getTime())
+      u.setUTCHours(0, 0, 0, 0)
+      return u
+    }
+    const DAY_MS = 24 * 60 * 60 * 1000
+    const lossStart = startOfDay(lossInterval.from).getTime()
+    const lossEnd = startOfDay(lossInterval.to).getTime()
+
+    const blockIntervals: {
+      from: Date
+      to: Date
+      block: RentalBlockWithAccounting
+    }[] = []
+    const uncovered: { from: Date; to: Date }[] = [
+      { from: new Date(lossStart), to: new Date(lossEnd) },
+    ]
+
+    for (const block of orderedBlocks) {
+      if (uncovered.length === 0) break
+      const blockFrom = startOfDay(block.fromDate).getTime()
+      // Open-ended blocks (null toDate) extend to the end of the loss interval.
+      const blockTo = startOfDay(block.toDate ?? lossInterval.to).getTime()
+      if (blockTo < lossStart || blockFrom > lossEnd) continue
+
+      const stillUncovered: { from: Date; to: Date }[] = []
+      for (const piece of uncovered) {
+        const pieceFrom = piece.from.getTime()
+        const pieceTo = piece.to.getTime()
+        if (blockTo < pieceFrom || blockFrom > pieceTo) {
+          stillUncovered.push(piece)
+          continue
+        }
+        const overlapFrom = Math.max(pieceFrom, blockFrom)
+        const overlapTo = Math.min(pieceTo, blockTo)
+        blockIntervals.push({
+          from: new Date(overlapFrom),
+          to: new Date(overlapTo),
+          block,
+        })
+        if (pieceFrom < overlapFrom) {
+          stillUncovered.push({
+            from: piece.from,
+            to: new Date(overlapFrom - DAY_MS),
+          })
+        }
+        if (pieceTo > overlapTo) {
+          stillUncovered.push({
+            from: new Date(overlapTo + DAY_MS),
+            to: piece.to,
+          })
+        }
+      }
+      uncovered.length = 0
+      uncovered.push(...stillUncovered)
+    }
+
+    // Merge contiguous block intervals that share the same block, so we don't
+    // produce redundant rows when one block covers a fragmented range.
+    const mergedBlockIntervals = mergeContiguousBlockIntervals(blockIntervals)
+
+    // The chronological segments the original rows are split across: block
+    // intervals carry the block's cost-side accounting, gaps keep the original.
+    const segments: {
+      from: Date
+      to: Date
+      block?: RentalBlockWithAccounting
+    }[] = [...mergedBlockIntervals, ...uncovered].sort(
+      (a, b) => a.from.getTime() - b.from.getTime()
+    )
+
+    // Build the new set of rental loss rows, one per original row and segment.
+    const newRows: RentalLossRow[] = []
+    for (const row of rentalLoss.rentalLossRows) {
+      // A single whole-period gap with no blocks just clones the original row
+      // (no proration) so the no-op case is byte-identical to the input.
+      if (mergedBlockIntervals.length === 0) {
+        newRows.push({ ...row })
+        continue
+      }
+
+      const splitRows = segments.map((segment): RentalLossRow => {
+        const factor = daysInclusive(segment.from, segment.to) / lossTotalDays
+        const splitRow: RentalLossRow = {
+          ...row,
+          amount: roundCurrency(row.amount * factor),
+          totalAmount: roundCurrency(row.totalAmount * factor),
+          fromDate: segment.from,
+          toDate: segment.to,
+        }
+
+        if (!segment.block) return splitRow
+
+        return {
+          ...splitRow,
+          costAccount: Number(segment.block.account),
+          costProjectCode: segment.block.projectCode,
+          costProperty: segment.block.property,
+          costFreeCode: segment.block.freeCode,
+          costCostCode: segment.block.costCode,
+          isBlock: true,
+        }
+      })
+
+      // Each segment is prorated and rounded independently, so the parts can
+      // miss the original row by a few öre. The chronologically last segment
+      // absorbs the residual, making the splits sum back to the original.
+      const lastRow = splitRows[splitRows.length - 1]
+      if (lastRow) {
+        const amountSum = splitRows.reduce((sum, r) => sum + r.amount, 0)
+        const totalAmountSum = splitRows.reduce(
+          (sum, r) => sum + r.totalAmount,
+          0
+        )
+        lastRow.amount = roundCurrency(
+          lastRow.amount + (row.amount - amountSum)
+        )
+        lastRow.totalAmount = roundCurrency(
+          lastRow.totalAmount + (row.totalAmount - totalAmountSum)
+        )
+      }
+
+      newRows.push(...splitRows)
+    }
+
+    rentalLossesWithBlocks.push({
+      ...rentalLoss,
+      rentalLossRows: newRows,
+    })
   }
 
+  console.table(rentalLossesWithBlocks)
+
   return rentalLossesWithBlocks
+}
+
+// Number of days in a closed date interval [from, to] (inclusive on both ends).
+// Days are counted at the millisecond boundary, so [2026-07-01, 2026-07-31] = 31.
+const daysInclusive = (from: Date, to: Date): number => {
+  const ms = to.getTime() - from.getTime()
+  if (ms < 0) return 0
+  return Math.floor(ms / (24 * 60 * 60 * 1000)) + 1
+}
+
+const roundCurrency = (value: number): number =>
+  Math.round((value + Number.EPSILON) * 100) / 100
+
+const datesAreContiguous = (a: Date, b: Date): boolean => {
+  // a ends the day before b starts: a.to = 2026-07-10 -> b.from = 2026-07-11
+  return a.getTime() + 24 * 60 * 60 * 1000 === b.getTime()
+}
+
+const mergeContiguousBlockIntervals = (
+  intervals: { from: Date; to: Date; block: RentalBlockWithAccounting }[]
+): { from: Date; to: Date; block: RentalBlockWithAccounting }[] => {
+  if (intervals.length === 0) return []
+  const sorted = [...intervals].sort(
+    (a, b) => a.from.getTime() - b.from.getTime()
+  )
+  const merged: { from: Date; to: Date; block: RentalBlockWithAccounting }[] = [
+    sorted[0],
+  ]
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = merged[merged.length - 1]
+    const curr = sorted[i]
+    if (
+      curr.block === prev.block &&
+      (datesAreContiguous(prev.to, curr.from) ||
+        prev.to.getTime() === curr.from.getTime())
+    ) {
+      prev.to = new Date(Math.max(prev.to.getTime(), curr.to.getTime()))
+    } else {
+      merged.push(curr)
+    }
+  }
+  return merged
 }
 //#endregion
 
@@ -757,8 +978,8 @@ export const uploadCsvFiles = async (
 
 export const uploadRentalLossCsvFile = async (
   companyId: string,
-  rentalLossAccountingCsv: string[]) => {
-
+  rentalLossAccountingCsv: string[]
+) => {
   const company = config.companies.find(
     (company) => company.xpandId.localeCompare(companyId) === 0
   )

@@ -56,10 +56,16 @@ export type RentalLoss = {
   month: string
   days: {
     totalInMonth: number
+    // Days covered by a contract during the month, as reported by the source
+    // system. Unaffected by the interval split below.
     contracted: number
+    // Days in this rental loss' uncontractedInterval, not in the whole month.
     uncontracted: number
-  },
-  uncontractedIntervals: RentalLossInterval[]
+  }
+  // A rental loss always covers exactly one uncontracted interval. A source
+  // rental loss with several uncontracted intervals in the same month is split
+  // into one RentalLoss per interval, with the amounts prorated accordingly.
+  uncontractedInterval: RentalLossInterval
 }
 
 export type RentalLossRow = {
@@ -80,6 +86,15 @@ export type RentalLossRow = {
   costFreeCode?: string
   costCostCode?: string
   taxRule?: string
+  // Present when a rental block split this row into a sub-interval of the
+  // rental loss' uncontractedInterval. When absent, the rental loss'
+  // uncontractedInterval applies.
+  fromDate?: Date
+  toDate?: Date
+  // True when this row was produced by a rental block (i.e. the cost side
+  // has been replaced with the block's accounting). False/absent for plain
+  // rental loss rows.
+  isBlock?: boolean
 }
 
 export type RentalLossInterval = {
@@ -198,6 +213,7 @@ export type RentalBlockWithAccounting = {
   property?: string
   freeCode?: string
   fromDate: Date
-  toDate: Date
+  // Null when the block has no defined end date (open-ended block).
+  toDate: Date | null
   description: string
 }
