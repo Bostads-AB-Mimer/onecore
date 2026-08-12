@@ -1,11 +1,13 @@
 import axios, { AxiosError, AxiosResponse } from 'axios'
+import { match } from 'ts-pattern'
+import { economy } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 import config from '@src/common/config'
 import {
   StralforsAccessTokenResponseSchema,
   StralforsGetChannelLookupResponseSchema,
   StralforsPostChannelLookupResponseSchema,
 } from './schema'
-import { logger } from '@onecore/utilities'
 
 let accessToken: string | null = null
 
@@ -18,7 +20,7 @@ async function getAccessToken(): Promise<string> {
     {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${btoa(`${config.stralfors.clientId}:${config.stralfors.clientSecret}`)}`,
+        Authorization: `Basic ${Buffer.from(`${config.stralfors.clientId}:${config.stralfors.clientSecret}`).toString('base64')}`,
       },
     }
   )
@@ -78,32 +80,60 @@ async function makeStralforsRequest(
 
 async function getChannelLookup(correlationId: string) {
   const response = await makeStralforsRequest(
-    `${config.stralfors.baseUrl}/rest/outputmanagement/channellookup/v1/lookup/${correlationId}`,
+    `${config.stralfors.baseUrl}/rest/outputmanagement/channellookup/v1/extendedlookup/${correlationId}`,
     {
       method: 'GET',
     }
   )
 
-  if (response.error?.status === 404) {
+  if (!response.data) {
     return null
   }
 
-  return (
-    StralforsGetChannelLookupResponseSchema.parse(response.data).results ?? null
-  )
+  return StralforsGetChannelLookupResponseSchema.parse(response.data)
 }
 
-export async function postChannelLookup(nationalIdentityNumbers: string[]) {
+export async function postChannelLookup(recipients: economy.LookupRecipient[]) {
+  // Strålfors API does not accept using the same referenceId for multiple candidates,
+  // which could happen if the same recipient is present as both individual and organization (enskild firma).
+  // So we add a suffix in the request to Strålfors and then strip the suffix from our response.
+  const suffixSeparator = '____'
+
+  const candidates = recipients.map((r) => {
+    // Strålfors API accepts only numeric characters in national identity/organization numbers
+    const strippedRecipientId = r.recipientId.replaceAll(/[^0-9]/g, '')
+
+    return match(r.recipientType)
+      .with('individual', () => ({
+        referenceId: `${r.recipientId}${suffixSeparator}individual`,
+        kivraRecipient: {
+          ssn: strippedRecipientId,
+        },
+        einvoiceB2CRecipient: {
+          ssn: strippedRecipientId,
+        },
+      }))
+      .with('organization', () => ({
+        referenceId: `${r.recipientId}${suffixSeparator}organization`,
+        kivraRecipient: {
+          ssn: strippedRecipientId,
+        },
+        einvoiceB2BRecipient: {
+          lookupId: strippedRecipientId,
+          format: 'INVOICE',
+          // We currently only support swedish organization numbers, which should use ISO 6523 ICD code 0007.
+          // List of ICD codes: https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/
+          iso6523Code: '0007',
+        },
+      }))
+      .exhaustive()
+  })
+
   const response = await makeStralforsRequest(
-    `${config.stralfors.baseUrl}/rest/outputmanagement/channellookup/v1/lookup`,
+    `${config.stralfors.baseUrl}/rest/outputmanagement/channellookup/v1/extendedlookup`,
     {
       method: 'POST',
-      data: {
-        channels: ['Kivra', 'eInvoiceB2C'],
-        candidates: nationalIdentityNumbers.map(
-          (n) => n.replaceAll(/[^0-9]/g, '') // Strålfors API accepts only numeric characters in national identity number
-        ),
-      },
+      data: { candidates },
     }
   )
 
@@ -135,5 +165,13 @@ export async function postChannelLookup(nationalIdentityNumbers: string[]) {
     return result
   }
 
-  return pollGetChannelLookup()
+  const result = await pollGetChannelLookup()
+
+  return {
+    ...result,
+    candidates: result.candidates.map((c) => ({
+      ...c,
+      referenceId: c.referenceId.split(suffixSeparator)[0],
+    })),
+  }
 }
