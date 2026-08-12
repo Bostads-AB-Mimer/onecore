@@ -2,7 +2,15 @@ import KoaRouter from '@koa/router'
 import { leasing, schemas } from '@onecore/types'
 import { mapLeasesToLfExportRows } from '../services/lf-export'
 import { z } from 'zod'
-import { getParkingSpaceTypes } from '../adapters/xpand/lease-search-adapter'
+import {
+  getLeases,
+  getContacts,
+  getContactByContactCode,
+} from '../adapters/xpand/tenant-lease-adapter'
+import {
+  searchLeases,
+  getParkingSpaceTypes,
+} from '../adapters/xpand/lease-search-adapter'
 import {
   logger,
   generateRouteMetadata,
@@ -13,15 +21,6 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 
-import {
-  getContactByContactCode,
-  getContacts,
-  getLeases,
-} from '../adapters/xpand/tenant-lease-adapter'
-import {
-  searchLeases,
-  getBuildingManagers,
-} from '../adapters/xpand/lease-search-adapter'
 import { LeaseStatusLabel } from '@onecore/types'
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
@@ -38,27 +37,226 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
  */
 
 export const routes = (router: KoaRouter) => {
-  // TODO: Move to new microservice governing organization. For now here just to make it available for the filter in /leases
-  router.get('/leases/building-managers', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
 
-    try {
-      const result = await getBuildingManagers()
-      ctx.status = 200
-      ctx.body = { content: result, ...metadata }
-    } catch (error: unknown) {
-      logger.error({ error, metadata }, 'Error fetching building managers')
-      ctx.status = 500
-      ctx.body = {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unknown error occurred fetching building managers',
-        ...metadata,
-      }
-    }
-  })
 
+  /**
+   * @swagger
+   * /leases/search:
+   *   get:
+   *     summary: Search and filter leases
+   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *       - in: query
+   *         name: objectType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Object type codes (balgh, babps, balok)
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [current, upcoming, aboutToEnd, ended, "0", "1", "2", "3"]
+   *         description: "Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)"
+   *       - in: query
+   *         name: startDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: startDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum start date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum last debit date (YYYY-MM-DD)
+   *       - in: query
+   *         name: endDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum last debit date (YYYY-MM-DD)
+   *       - in: query
+   *         name: property
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Property/estate names
+   *       - in: query
+   *         name: buildingCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building codes
+   *       - in: query
+   *         name: areaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Area codes (Område)
+   *       - in: query
+   *         name: districtNames
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: District names
+   *       - in: query
+   *         name: kvvAreaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: KVV-area codes (bafen.code) — filters leases to those in the listed förvaltningsområden
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 20
+   *           maximum: 100
+   *         description: Items per page
+   *       - in: query
+   *         name: includeEnded
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include Upphört (ended) contracts. Excluded by default for performance.
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *         description: Sort field
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: desc
+   *         description: Sort direction
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved lease search results with pagination
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       leaseId:
+   *                         type: string
+   *                       objectTypeCode:
+   *                         type: string
+   *                       leaseType:
+   *                         type: string
+   *                       contacts:
+   *                         type: array
+   *                         items:
+   *                           type: object
+   *                           properties:
+   *                             name:
+   *                               type: string
+   *                             contactCode:
+   *                               type: string
+   *                             email:
+   *                               type: string
+   *                               nullable: true
+   *                             phone:
+   *                               type: string
+   *                               nullable: true
+   *                       rentalObjectCode:
+   *                         type: string
+   *                         nullable: true
+   *                       address:
+   *                         type: string
+   *                         nullable: true
+   *                       startDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       lastDebitDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       status:
+   *                         type: integer
+   *                         enum: [0, 1, 2, 3]
+   *                         description: "LeaseStatus: 0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended"
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   */
+  /**
+   * @swagger
+   * /leases/parking-space-types:
+   *   get:
+   *     summary: Get all parking space types
+   *     tags: [Leases]
+   *     description: Returns a list of all parking space types (P-platstyper) from the babpt table.
+   *     responses:
+   *       '200':
+   *         description: List of parking space types
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                       caption:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error
+   */
   router.get('(.*)/leases/parking-space-types', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -173,7 +371,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManager',
+      'kvvAreaCodes',
       'parkingSpaceType',
       'sortBy',
       'sortOrder',
@@ -510,12 +708,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names
    *       - in: query
-   *         name: buildingManager
+   *         name: kvvAreaCodes
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names
+   *         description: KVV-area codes (bafen.code)
    *     responses:
    *       200:
    *         description: Unique contacts matching the filters
@@ -546,7 +744,7 @@ export const routes = (router: KoaRouter) => {
       'buildingCodes',
       'areaCodes',
       'districtNames',
-      'buildingManager',
+      'kvvAreaCodes',
     ])
 
     const queryParams = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(

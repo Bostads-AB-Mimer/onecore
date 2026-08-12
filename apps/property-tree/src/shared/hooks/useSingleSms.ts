@@ -1,75 +1,107 @@
 import { useCallback, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from './useToast'
 
-interface SingleSmsState {
-  open: boolean
-  recipientName: string
+// A fully-resolved SMS recipient. Having one is the proof we can send: every
+// field is required, so there is no path to the API without a contactCode and
+// phone number, and no empty-string placeholders to accidentally send.
+export interface SingleSmsRecipient {
+  name: string
   phoneNumber: string
+  contactCode: string
 }
 
 interface UseSingleSmsOptions {
   sendSms: (
-    phoneNumbers: string[],
+    recipients: { contactCode: string; phoneNumber: string }[],
     message: string
-  ) => Promise<{ totalSent: number; totalInvalid: number }>
+  ) => Promise<{
+    content: { totalSent: number; totalInvalid: number }
+    warnings?: string[]
+  }>
 }
 
 export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const { toast } = useToast()
-  const [state, setState] = useState<SingleSmsState>({
-    open: false,
-    recipientName: '',
-    phoneNumber: '',
-  })
+  const queryClient = useQueryClient()
 
-  const openSmsModal = useCallback(
-    (recipientName: string, phoneNumber: string) => {
-      setState({ open: true, recipientName, phoneNumber })
-    },
-    []
-  )
+  // Selection is modal openness: null = closed, a recipient = open. There is
+  // never a half-filled "open but blank" object.
+  const [recipient, setRecipient] = useState<SingleSmsRecipient | null>(null)
 
-  const onOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setState((prev) => ({ ...prev, open: false }))
-    }
-  }, [])
+  const sendMutation = useMutation({
+    mutationFn: ({
+      recipient,
+      message,
+    }: {
+      recipient: SingleSmsRecipient
+      message: string
+    }) =>
+      sendSms(
+        [
+          {
+            contactCode: recipient.contactCode,
+            phoneNumber: recipient.phoneNumber,
+          },
+        ],
+        message
+      ),
+    onSuccess: (result) => {
+      // Refresh any open tenant communication log so the new message appears.
+      queryClient.invalidateQueries({ queryKey: ['tenant-communication'] })
+      toast({
+        title: 'SMS skickat',
+        description: `Skickades till ${result.content.totalSent} mottagare${
+          result.content.totalInvalid > 0
+            ? `. ${result.content.totalInvalid} ogiltiga nummer.`
+            : ''
+        }`,
+      })
 
-  const handleSendSms = useCallback(
-    async (message: string) => {
-      try {
-        const result = await sendSms([state.phoneNumber], message)
-
+      // Non-blocking: the SMS was sent, but something like communication-log
+      // writing failed. Surface it without blocking the success flow.
+      if (result.warnings?.length) {
         toast({
-          title: 'SMS skickat',
-          description: `Skickades till ${result.totalSent} mottagare${
-            result.totalInvalid > 0
-              ? `. ${result.totalInvalid} ogiltiga nummer.`
-              : ''
-          }`,
-        })
-
-        setState((prev) => ({ ...prev, open: false }))
-      } catch (error) {
-        const errorMessage = extractErrorMessage(error)
-        toast({
-          title: 'Kunde inte skicka SMS',
-          description: errorMessage,
+          title: 'SMS:et skickades, men en åtgärd misslyckades',
+          description: result.warnings.join(' '),
           variant: 'destructive',
         })
       }
     },
-    [state.phoneNumber, sendSms, toast]
+    onError: (error) => {
+      toast({
+        title: 'Kunde inte skicka SMS',
+        description: extractErrorMessage(error),
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const openSmsModal = useCallback(
+    (r: SingleSmsRecipient) => setRecipient(r),
+    []
+  )
+  const closeSms = useCallback(() => setRecipient(null), [])
+
+  const handleSendSms = useCallback(
+    async (message: string) => {
+      if (!recipient) return
+      try {
+        await sendMutation.mutateAsync({ recipient, message })
+      } catch {
+        // Surfaced via onError; swallow so the modal doesn't see a rejection.
+      }
+    },
+    [recipient, sendMutation]
   )
 
   return {
-    smsModalOpen: state.open,
-    smsRecipientName: state.recipientName,
-    smsPhoneNumber: state.phoneNumber,
+    recipient,
     openSmsModal,
-    onOpenChange,
+    closeSms,
     handleSendSms,
+    isSending: sendMutation.isPending,
   }
 }
 

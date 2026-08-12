@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
 import { generateRouteMetadata } from '@onecore/utilities'
+import { BulkSms, BulkEmail, communication } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { registerSchema } from '../../utils/openapi'
@@ -40,13 +41,18 @@ const BulkEmailResult = z.object({
 export const routes = (router: KoaRouter) => {
   registerSchema('BulkSmsResult', BulkSmsResult)
   registerSchema('BulkEmailResult', BulkEmailResult)
+  registerSchema('CustomerMessage', communication.CustomerMessageSchema)
+  registerSchema(
+    'DispatchWithRecipients',
+    communication.DispatchWithRecipientsSchema
+  )
 
   /**
    * @swagger
    * /sendBulkSms:
    *   post:
    *     summary: Send SMS to multiple contacts
-   *     description: Send SMS messages to multiple phone numbers
+   *     description: Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
    *     tags:
    *       - Communication service
    *     requestBody:
@@ -56,17 +62,33 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - phoneNumbers
    *               - text
    *             properties:
    *               phoneNumbers:
    *                 type: array
    *                 items:
    *                   type: string
-   *                 description: Array of phone numbers
+   *               recipients:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - phoneNumber
+   *                   properties:
+   *                     contactCode:
+   *                       type: string
+   *                     phoneNumber:
+   *                       type: string
    *               text:
    *                 type: string
-   *                 description: SMS message content
+   *               logMeta:
+   *                 type: object
+   *                 properties:
+   *                   audienceCriteria:
+   *                     type: object
+   *                     additionalProperties: true
+   *                   templateId:
+   *                     type: string
    *     responses:
    *       '200':
    *         description: SMS sent successfully
@@ -77,6 +99,11 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/BulkSmsResult'
+   *                 warnings:
+   *                   type: array
+   *                   description: Non-blocking issues (e.g. communication-log write failed); the SMS was still sent.
+   *                   items:
+   *                     type: string
    *       '400':
    *         description: Invalid request
    *       '500':
@@ -86,11 +113,27 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/sendBulkSms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await communicationAdapter.sendBulkSms(ctx.request.body)
+    const body = ctx.request.body as BulkSms
+    const triggeredByUser =
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
+
+    const result = await communicationAdapter.sendBulkSms({
+      ...body,
+      logMeta: { ...body.logMeta, triggeredByUser },
+    })
 
     if (result.ok) {
       ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      // warnings sits beside content: the SMS succeeded but a non-blocking
+      // issue occurred (e.g. communication-log writing failed). Included only
+      // when present so the response carries no empty/undefined warnings key.
+      ctx.body = {
+        content: result.data.content,
+        ...(result.data.warnings?.length && {
+          warnings: result.data.warnings,
+        }),
+        ...metadata,
+      }
     } else {
       ctx.status = result.statusCode ?? 500
       ctx.body = { error: result.err, ...metadata }
@@ -102,7 +145,7 @@ export const routes = (router: KoaRouter) => {
    * /sendBulkEmail:
    *   post:
    *     summary: Send email to multiple contacts
-   *     description: Send email messages to multiple email addresses
+   *     description: Either `emails` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
    *     tags:
    *       - Communication service
    *     requestBody:
@@ -112,7 +155,6 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - emails
    *               - subject
    *               - text
    *             properties:
@@ -120,13 +162,29 @@ export const routes = (router: KoaRouter) => {
    *                 type: array
    *                 items:
    *                   type: string
-   *                 description: Array of email addresses
+   *               recipients:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - emailAddress
+   *                   properties:
+   *                     contactCode:
+   *                       type: string
+   *                     emailAddress:
+   *                       type: string
    *               subject:
    *                 type: string
-   *                 description: Email subject
    *               text:
    *                 type: string
-   *                 description: Email message content
+   *               logMeta:
+   *                 type: object
+   *                 properties:
+   *                   audienceCriteria:
+   *                     type: object
+   *                     additionalProperties: true
+   *                   templateId:
+   *                     type: string
    *     responses:
    *       '200':
    *         description: Email sent successfully
@@ -137,6 +195,11 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/BulkEmailResult'
+   *                 warnings:
+   *                   type: array
+   *                   description: Non-blocking issues (e.g. communication-log write failed); the email was still sent.
+   *                   items:
+   *                     type: string
    *       '400':
    *         description: Invalid request
    *       '500':
@@ -146,7 +209,161 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('(.*)/sendBulkEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await communicationAdapter.sendBulkEmail(ctx.request.body)
+    const body = ctx.request.body as BulkEmail
+    const triggeredByUser =
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
+
+    const result = await communicationAdapter.sendBulkEmail({
+      ...body,
+      logMeta: { ...body.logMeta, triggeredByUser },
+    })
+
+    if (result.ok) {
+      ctx.status = 200
+      // warnings sits beside content: the email succeeded but a non-blocking
+      // issue occurred (e.g. communication-log writing failed). Included only
+      // when present so the response carries no empty/undefined warnings key.
+      ctx.body = {
+        content: result.data.content,
+        ...(result.data.warnings?.length && {
+          warnings: result.data.warnings,
+        }),
+        ...metadata,
+      }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /webhooks/infobip:
+   *   post:
+   *     summary: Infobip email delivery-report webhook
+   *     description: >
+   *       Receives Infobip email delivery reports and forwards them to the
+   *       communication service for processing. Authenticated via a Keycloak
+   *       service account holding the `infobip-webhook` realm role (enforced in
+   *       app.ts). SMS delivery reports do NOT use this route — they hit the
+   *       communication service directly (Tele2 per-message webhook + token).
+   *     tags:
+   *       - Communication service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       '200':
+   *         description: Delivery report accepted
+   *       '401':
+   *         description: Missing or invalid Keycloak credentials / role
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/webhooks/infobip', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.forwardDeliveryReport(
+      ctx.request.body
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /communication-log/customers/{contactCode}/messages:
+   *   get:
+   *     summary: Get the communication timeline for a customer
+   *     description: Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Customer id (contactCode)
+   *     responses:
+   *       '200':
+   *         description: Array of (dispatch + recipient) pairs, newest first
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/CustomerMessage'
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/communication-log/customers/:contactCode/messages',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await communicationAdapter.getCustomerMessages(
+        ctx.params.contactCode
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /communication-log/dispatches/{id}:
+   *   get:
+   *     summary: Get a dispatch and its recipients by dispatch id
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Dispatch id (UUID)
+   *     responses:
+   *       '200':
+   *         description: Dispatch + recipients
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DispatchWithRecipients'
+   *       '404':
+   *         description: Dispatch not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/communication-log/dispatches/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.getDispatchById(ctx.params.id)
 
     if (result.ok) {
       ctx.status = 200

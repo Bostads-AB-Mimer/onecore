@@ -6,7 +6,17 @@ import {
   ApartmentTemperaturePointSchema,
   ApartmentTemperatureSeriesSchema,
   ApartmentTemperaturesResponseSchema,
+  UpdateMalarEnergiFacilityIdRequestSchema,
+  UpdateMalarEnergiFacilityIdResponseSchema,
 } from './schema'
+
+export type UpdateMalarEnergiFacilityIdRequest = z.infer<
+  typeof UpdateMalarEnergiFacilityIdRequestSchema
+>
+
+export type UpdateMalarEnergiFacilityIdResponse = z.infer<
+  typeof UpdateMalarEnergiFacilityIdResponseSchema
+>
 
 export type ApartmentTemperaturesInterval = z.infer<
   typeof ApartmentTemperaturesIntervalSchema

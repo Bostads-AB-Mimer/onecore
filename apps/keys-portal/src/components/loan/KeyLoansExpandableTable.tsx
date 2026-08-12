@@ -116,7 +116,6 @@ export function KeyLoansExpandableTable({
                     <TableCell className="w-[50px]">
                       <LoanActionMenu
                         loan={loan}
-                        lease={lease}
                         onRefresh={() => onLoanUpdated?.(loan.id)}
                         onReturn={() => handleReturn(loan.id)}
                       />

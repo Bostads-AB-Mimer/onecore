@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import {
   INSPECTION_STATUS_FILTER,
+  ChecklistSchema,
   XpandInspectionSchema,
+  DetailComponentSchema,
   DetailedXpandInspectionRemarkSchema,
   DetailedXpandInspectionRoomSchema,
   DetailedXpandInspectionSchema,
@@ -35,6 +37,8 @@ export type GetInspectionsByResidenceIdQuery = z.infer<
 >
 
 export type InspectionComponent = z.infer<typeof InspectionComponentSchema>
+export type DetailComponent = z.infer<typeof DetailComponentSchema>
+export type Checklist = z.infer<typeof ChecklistSchema>
 export type InspectionRoom = z.infer<typeof InspectionRoomSchema>
 export type InternalInspection = z.infer<typeof InternalInspectionSchema>
 export type SaveInspectionDraftRequest = z.infer<

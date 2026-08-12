@@ -15,7 +15,7 @@ import {
 
 import { Lease } from '@/services/api/core/leaseService'
 
-import { paths } from '@/shared/routes'
+import { getRentalObjectPath, paths } from '@/shared/routes'
 import { Button } from '@/shared/ui/Button'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
@@ -101,16 +101,32 @@ export function TenantLeasesTabContent({
       key: 'property',
       label: 'Objekt',
       render: (lease: Lease) =>
-        renderPropertyField(lease, (property) => (
-          <>
-            <div className="whitespace-nowrap">
-              {formatAddress(property.property.address)}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {lease.rentalPropertyId}
-            </div>
-          </>
-        )),
+        renderPropertyField(lease, (property) => {
+          const address = formatAddress(property.property.address)
+          const href = getRentalObjectPath(
+            property.type,
+            lease.rentalPropertyId
+          )
+          return (
+            <>
+              <div className="whitespace-nowrap">
+                {href ? (
+                  <Link
+                    to={href}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {address}
+                  </Link>
+                ) : (
+                  address
+                )}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {lease.rentalPropertyId}
+              </div>
+            </>
+          )
+        }),
     },
     {
       key: 'identifier',
@@ -216,7 +232,23 @@ export function TenantLeasesTabContent({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Adress:</span>
-                <span>{formatAddress(property.property.address)}</span>
+                {(() => {
+                  const address = formatAddress(property.property.address)
+                  const href = getRentalObjectPath(
+                    property.type,
+                    lease.rentalPropertyId
+                  )
+                  return href ? (
+                    <Link
+                      to={href}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {address}
+                    </Link>
+                  ) : (
+                    <span>{address}</span>
+                  )
+                })()}
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Objektkod:</span>

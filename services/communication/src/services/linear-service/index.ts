@@ -15,6 +15,9 @@ const CreateLinearErrandSchema = z.object({
   categoryLabelId: z.string().uuid('Category label ID must be a valid UUID'),
 })
 
+// TODO: Migrate to OkapiRouter so these routes contribute to /swagger.
+// Each handler needs `{}` (or a real schema) added as the second arg.
+// See TODO in src/api.ts for the broader migration plan.
 export const routes = (router: KoaRouter) => {
   /**
    * GET /getLinearTickets

@@ -22,6 +22,9 @@ import { requireAuth } from '../../middlewares/keycloak-auth'
  *   schemas:
  *     KeycloakUser:
  *       type: object
+ *       required:
+ *         - id
+ *         - username
  *       properties:
  *         id:
  *           type: string
@@ -33,6 +36,32 @@ import { requireAuth } from '../../middlewares/keycloak-auth'
  *           type: string
  *         email:
  *           type: string
+ *         emailVerified:
+ *           type: boolean
+ *         attributes:
+ *           type: object
+ *           description: Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings.
+ *           additionalProperties:
+ *             type: array
+ *             items:
+ *               type: string
+ *         createdTimestamp:
+ *           type: integer
+ *           format: int64
+ *         enabled:
+ *           type: boolean
+ *         totp:
+ *           type: boolean
+ *         disableableCredentialTypes:
+ *           type: array
+ *           items:
+ *             type: string
+ *         requiredActions:
+ *           type: array
+ *           items:
+ *             type: string
+ *         notBefore:
+ *           type: integer
  */
 export const routes = (router: KoaRouter) => {
   /**

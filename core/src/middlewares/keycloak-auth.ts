@@ -27,6 +27,10 @@ async function verifyKeycloakToken(ctx: Context, next: Next) {
       email: verifiedToken.email,
       name: verifiedToken.name,
       preferred_username: verifiedToken.preferred_username,
+      // Xpand signature (e.g. "YY2333") from the employeeId user attribute.
+      // Requires the realm's employeeId token mapper — undefined until the
+      // claim is present in the token (MIM-1851).
+      employeeId: verifiedToken.employeeId,
       source: 'keycloak',
       realm_access: verifiedToken.realm_access,
     }

@@ -1,16 +1,15 @@
 import { ReactNode } from 'react'
 import { AlertCircle } from 'lucide-react'
-import type { KeyDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { BeforeAfterDialogBase } from '@/components/loan/dialogs/BeforeAfterDialogBase'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-
-export type LoanGroup = {
-  loanId: string
-  loanLabel: string // "Lån 1 • F12345" or "Company AB"
-  keys: KeyDetails[]
-}
+import type { ReturnLoanGroup } from '@/hooks/useReturnKeys'
 
 type SecondaryAction = {
   label: string
@@ -21,24 +20,49 @@ type SecondaryAction = {
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  loanGroups: LoanGroup[]
+  loanGroups: ReturnLoanGroup[]
   loading: boolean
   selectedKeyIds: Set<string>
+  selectedCardIds: Set<string>
   onToggleKey: (keyId: string, checked: boolean) => void
+  onToggleCard: (cardId: string, checked: boolean) => void
   rightContent: ReactNode
   onAccept: () => void
   isProcessing: boolean
   acceptButtonText: string
+  totalCount: number
   title?: string
   description?: string
   primaryLabel?: string
   secondaryAction?: SecondaryAction
 }
 
+const keyMeta = (key: ReturnLoanGroup['keys'][number]) =>
+  [
+    KeyTypeLabels[key.keyType],
+    key.keySystem?.systemCode,
+    key.flexNumber !== undefined ? `Flex: ${key.flexNumber}` : undefined,
+    key.keySequenceNumber !== undefined
+      ? `Löpnr: ${key.keySequenceNumber}`
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join(' • ')
+
+const OrphanIcon = ({ label }: { label: string }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+    </TooltipTrigger>
+    <TooltipContent>{label}</TooltipContent>
+  </Tooltip>
+)
+
 /**
- * Pure UI component for returning keys dialog.
- * Works with both tenant key loans and maintenance key loans.
- * Business logic is handled by wrapper components.
+ * Pure UI for returning keys + cards, grouped by loan. Renders checkboxes for
+ * non-disposed items, a read-only disposed section, and orphan badges. Both the tenant
+ * and maintenance return dialogs render through this; business logic lives in
+ * `useReturnKeys`.
  */
 export function ReturnKeysDialogBase({
   open,
@@ -46,88 +70,73 @@ export function ReturnKeysDialogBase({
   loanGroups,
   loading,
   selectedKeyIds,
+  selectedCardIds,
   onToggleKey,
+  onToggleCard,
   rightContent,
   onAccept,
   isProcessing,
   acceptButtonText,
+  totalCount,
   title = 'Återlämna nycklar',
-  description = 'Välj vilka nycklar som ska visas på kvittensen',
+  description = 'Välj vilka som ska visas på kvittensen',
   primaryLabel,
   secondaryAction,
 }: Props) {
-  const totalKeys = loanGroups.reduce(
-    (sum, loanInfo) => sum + loanInfo.keys.length,
-    0
-  )
-  // When a secondaryAction is set the primary button is the "Partiell retur"
-  // path; its count should reflect the items going through that path (the
-  // checked keys), not every key in the dialog.
-  const primaryCount = secondaryAction ? selectedKeyIds.size : totalKeys
+  const showGrouping = loanGroups.length > 1
 
-  // Left side content - keys being returned grouped by loan
   const leftContent = loading ? (
     <div className="text-sm text-muted-foreground">Laddar...</div>
   ) : (
     <div className="space-y-3 max-h-[400px] overflow-y-auto">
-      {loanGroups.map((loanInfo) => {
-        const showLoanGrouping = loanGroups.length > 1 && loanInfo.loanLabel
-        const nonDisposedKeys = loanInfo.keys.filter((k) => !k.disposed)
-        const disposedKeys = loanInfo.keys.filter((k) => k.disposed)
+      {loanGroups.map((group) => {
+        const nonDisposed = group.keys.filter((k) => !k.disposed)
+        const disposed = group.keys.filter((k) => k.disposed)
 
         return (
           <div
-            key={loanInfo.loanId}
+            key={group.loanId}
             className={cn(
-              showLoanGrouping && 'p-3 border rounded-lg bg-muted/30 space-y-2'
+              showGrouping && 'p-3 border rounded-lg bg-muted/30 space-y-2'
             )}
           >
-            {showLoanGrouping && (
+            {showGrouping && (
               <div className="text-xs font-semibold text-muted-foreground">
-                {loanInfo.loanLabel}
+                {group.loanLabel}
               </div>
             )}
 
             {/* Non-disposed keys with checkboxes */}
-            {nonDisposedKeys.length > 0 && (
-              <div className="space-y-1">
-                {nonDisposedKeys.map((key) => (
-                  <div
-                    key={key.id}
-                    className="p-2 border rounded bg-card text-xs flex items-start gap-2"
-                  >
-                    <Checkbox
-                      checked={selectedKeyIds.has(key.id)}
-                      onCheckedChange={(checked) => {
-                        onToggleKey(key.id, checked as boolean)
-                      }}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium">{key.keyName}</div>
-                      <div className="text-muted-foreground">
-                        {KeyTypeLabels[key.keyType]}
-                        {key.keySystem?.systemCode &&
-                          ` • ${key.keySystem.systemCode}`}
-                        {key.flexNumber !== undefined &&
-                          ` • Flex: ${key.flexNumber}`}
-                        {key.keySequenceNumber !== undefined &&
-                          ` • Löpnr: ${key.keySequenceNumber}`}
-                      </div>
-                    </div>
+            {nonDisposed.map((key) => (
+              <div
+                key={key.id}
+                className="p-2 border rounded bg-card text-xs flex items-start gap-2"
+              >
+                <Checkbox
+                  checked={selectedKeyIds.has(key.id)}
+                  onCheckedChange={(c) => onToggleKey(key.id, c as boolean)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="font-medium flex items-center gap-1">
+                    {key.keyName}
+                    {key.isOrphan && (
+                      <OrphanIcon label="Nyckeln är inte kopplad till hyresobjektet" />
+                    )}
                   </div>
-                ))}
+                  <div className="text-muted-foreground">{keyMeta(key)}</div>
+                </div>
               </div>
-            )}
+            ))}
 
-            {/* Disposed keys (no checkboxes) */}
-            {disposedKeys.length > 0 && (
+            {/* Disposed keys (no checkbox) */}
+            {disposed.length > 0 && (
               <div className="space-y-1">
                 <div className="text-xs text-destructive flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   Kasserade:
                 </div>
-                {disposedKeys.map((key) => (
+                {disposed.map((key) => (
                   <div
                     key={key.id}
                     className="p-2 border rounded bg-destructive/5 border-destructive/20 text-xs"
@@ -135,19 +144,35 @@ export function ReturnKeysDialogBase({
                     <div className="font-medium text-destructive">
                       {key.keyName}
                     </div>
-                    <div className="text-muted-foreground">
-                      {KeyTypeLabels[key.keyType]}
-                      {key.keySystem?.systemCode &&
-                        ` • ${key.keySystem.systemCode}`}
-                      {key.flexNumber !== undefined &&
-                        ` • Flex: ${key.flexNumber}`}
-                      {key.keySequenceNumber !== undefined &&
-                        ` • Löpnr: ${key.keySequenceNumber}`}
-                    </div>
+                    <div className="text-muted-foreground">{keyMeta(key)}</div>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Cards with checkboxes */}
+            {group.cards.map((card) => (
+              <div
+                key={card.cardId}
+                className="p-2 border rounded bg-card text-xs flex items-start gap-2"
+              >
+                <Checkbox
+                  checked={selectedCardIds.has(card.cardId)}
+                  onCheckedChange={(c) =>
+                    onToggleCard(card.cardId, c as boolean)
+                  }
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="font-medium flex items-center gap-1">
+                    {card.name || card.cardId}
+                    {card.isOrphan && (
+                      <OrphanIcon label="Droppen är inte kopplad till hyresobjektet" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )
       })}
@@ -160,14 +185,14 @@ export function ReturnKeysDialogBase({
       onOpenChange={onOpenChange}
       title={title}
       description={description}
-      leftTitle="Nycklar som återlämnas"
+      leftTitle="Nycklar och droppar som återlämnas"
       rightTitle="Detaljer"
       leftContent={leftContent}
       rightContent={rightContent}
       isProcessing={isProcessing}
       onAccept={onAccept}
       acceptButtonText={acceptButtonText}
-      totalCount={primaryCount}
+      totalCount={totalCount}
       primaryLabel={primaryLabel}
       secondaryAction={secondaryAction}
     />

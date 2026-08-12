@@ -28,6 +28,27 @@ async function getInvoicesByContactCode(
   return response.content.data as Invoice[]
 }
 
+async function getInvoiceByNumber(
+  invoiceNumber: string
+): Promise<Invoice | null> {
+  const { data, error, response } = await GET(
+    // @ts-expect-error
+    `/invoices/${invoiceNumber}`,
+    {
+      params: { path: { invoiceId: invoiceNumber } },
+    }
+  )
+
+  if (response.status === 404) return null
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const responseData = data as any
+  if (!responseData?.content) throw new Error('Response ok but missing content')
+
+  return responseData.content as Invoice
+}
+
 async function getInvoicePaymentEvents(
   invoiceId: string
 ): Promise<InvoicePaymentEvent[]> {
@@ -187,6 +208,7 @@ async function updateInvoiceDeferralDate(params: {
 
 export const economyService = {
   getInvoicesByContactCode,
+  getInvoiceByNumber,
   getInvoicePaymentEvents,
   getMiscellaneousInvoiceDataForLease,
   getInvoiceChannels,

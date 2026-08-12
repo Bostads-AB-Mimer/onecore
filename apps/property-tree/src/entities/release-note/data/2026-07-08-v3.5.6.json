@@ -1,0 +1,16 @@
+[
+  {
+    "id": "rn-2026-07-08-v357-1",
+    "date": "2026-07-08",
+    "title": "Skapa ströfaktura direkt från kundkortet",
+    "description": "Nu kan du starta en ny ströfaktura direkt från en hyresgäst. På fakturafliken på kundkortet finns knappen \"Skapa ströfaktura\" som tar dig till ströfakturaformuläret med kunden redan ifylld.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-07-08-v357-3",
+    "date": "2026-07-08",
+    "title": "Avtalsmallar visas inte längre i kontraktssökningen",
+    "description": "Avtalsmallar från Xpand kunde tidigare felaktigt dyka upp som gällande kontrakt i sökresultaten på hyreskontrakts-sidan, vilket gav 'tomma' kontrakt i resultaten.",
+    "category": "fix"
+  }
+]

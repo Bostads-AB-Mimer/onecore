@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   MiscellaneousInvoicePayload,
   MiscellaneousInvoiceRow,
@@ -12,6 +13,7 @@ import { CalendarIcon } from 'lucide-react'
 
 import { useLeasesByContactCode } from '@/entities/lease'
 import { useRentalProperties } from '@/entities/rental-property'
+import { useTenant } from '@/entities/tenant'
 import { TenantSearchResult } from '@/entities/tenant/hooks/useTenantSearch'
 import { useUser } from '@/entities/user'
 
@@ -25,13 +27,7 @@ import { Calendar } from '@/shared/ui/Calendar'
 import { Card } from '@/shared/ui/Card'
 import { Label } from '@/shared/ui/Label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/Select'
+import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 import { Separator } from '@/shared/ui/Separator'
 
 import { getArticleById } from '@/data/articles/miscellaneousInvoiceArticles'
@@ -39,6 +35,7 @@ import { getArticleById } from '@/data/articles/miscellaneousInvoiceArticles'
 import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
 import { useXledgerContacts } from '../hooks/useXledgerContacts'
 import { useXledgerProjects } from '../hooks/useXledgerProjects'
+import { MergeFileError, mergeFilesToPdf } from '../lib/mergeFilesToPdf'
 import { AdditionalInfoSection } from './AdditionalInfoSection'
 import { ArticleSection } from './ArticleSection'
 import { LeaseContractSection } from './LeaseContractSection'
@@ -55,6 +52,7 @@ export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const submitInvoiceMutation = useMutation({
     mutationFn: async (invoice: MiscellaneousInvoicePayload) => {
@@ -125,22 +123,80 @@ export function MiscellaneousInvoiceForm() {
   )
   const [comment, setComment] = useState('')
   const [administrativeCosts, setAdministrativeCosts] = useState(false)
-  const [attachedFile, setAttachedFile] = useState<File | null>(null)
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([])
 
-  const handleSelectContact = (dbId: string) => {
-    const selectedContact = contacts?.find((c) => c.dbId === dbId)
-    if (selectedContact) {
-      setReference(selectedContact)
+  const setContactCodeParam = useCallback(
+    (code: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (code) {
+            next.set('contactCode', code)
+          } else {
+            next.delete('contactCode')
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
+
+  const handleSelectTenant = useCallback(
+    (tenant: TenantSearchResult | null) => {
+      setSelectedTenant(tenant)
+      setLeaseId(null)
+      setCostCentre(undefined)
+      setPropertyCode(undefined)
+      setErrors((prev) => ({ ...prev, contactCode: undefined }))
+      setContactCodeParam(tenant?.contactCode ?? null)
+    },
+    [setContactCodeParam]
+  )
+
+  const contactCodeFromUrl = searchParams.get('contactCode')
+  const { data: tenantFromUrl, isLoading: isLoadingTenant } = useTenant(
+    contactCodeFromUrl ?? undefined
+  )
+
+  useEffect(() => {
+    if (
+      contactCodeFromUrl &&
+      tenantFromUrl &&
+      selectedTenant?.contactCode !== contactCodeFromUrl
+    ) {
+      handleSelectTenant(tenantFromUrl)
     }
-  }
+  }, [
+    contactCodeFromUrl,
+    handleSelectTenant,
+    selectedTenant?.contactCode,
+    tenantFromUrl,
+  ])
 
-  const handleSelectTenant = (tenant: TenantSearchResult | null) => {
-    setSelectedTenant(tenant)
-    setLeaseId(null)
-    setCostCentre(undefined)
-    setPropertyCode(undefined)
-    setErrors((prev) => ({ ...prev, contactCode: undefined }))
-  }
+  useEffect(() => {
+    if (
+      contactCodeFromUrl &&
+      !isLoadingTenant &&
+      !tenantFromUrl &&
+      !selectedTenant
+    ) {
+      toast({
+        title: 'Kund kunde inte hittas',
+        description: `Ingen kund med kundnummer ${contactCodeFromUrl} kunde hittas.`,
+        variant: 'destructive',
+      })
+      setContactCodeParam(null)
+    }
+  }, [
+    contactCodeFromUrl,
+    isLoadingTenant,
+    selectedTenant,
+    setContactCodeParam,
+    tenantFromUrl,
+    toast,
+  ])
 
   const handleLeaseSelect = (leaseId: string) => {
     setLeaseId(leaseId)
@@ -179,8 +235,9 @@ export function MiscellaneousInvoiceForm() {
       newErrors.leaseId = 'Hyreskontrakt måste väljas'
     }
 
-    const hasValidInvoiceRows = invoiceRows.some(
-      (row) => row.article?.id !== '' && !isNaN(parseFloat(row.price))
+    const hasValidInvoiceRows = invoiceRows.every(
+      (row) =>
+        row.article && row.article.id !== '' && !isNaN(parseFloat(row.price))
     )
     if (!hasValidInvoiceRows) {
       newErrors.articles = 'Minst en artikel eller tjänst måste läggas till'
@@ -190,7 +247,7 @@ export function MiscellaneousInvoiceForm() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateForm()) {
@@ -228,6 +285,28 @@ export function MiscellaneousInvoiceForm() {
 
     setIsSubmitting(true)
 
+    // Xledger only accepts one attachment, so multiple files are merged into
+    // a single PDF. A single file is sent as-is, whatever its type.
+    let attachment: File | undefined
+    if (attachedFiles.length === 1) {
+      attachment = attachedFiles[0]
+    } else if (attachedFiles.length > 1) {
+      try {
+        attachment = await mergeFilesToPdf(attachedFiles)
+      } catch (error) {
+        toast({
+          title: 'Fel',
+          description:
+            error instanceof MergeFileError
+              ? `${error.message}. Underlaget skickades inte.`
+              : 'Filerna kunde inte slås ihop. Underlaget skickades inte.',
+          variant: 'destructive',
+        })
+        setIsSubmitting(false)
+        return
+      }
+    }
+
     const invoicePayload: MiscellaneousInvoicePayload = {
       reference: reference?.dbId || '',
       invoiceDate: invoiceDate,
@@ -240,7 +319,7 @@ export function MiscellaneousInvoiceForm() {
       comment: comment,
       invoiceRows: rows,
       administrativeCosts: administrativeCosts,
-      attachment: attachedFile ?? undefined,
+      attachment,
     }
 
     submitInvoiceMutation.mutate(invoicePayload)
@@ -255,8 +334,9 @@ export function MiscellaneousInvoiceForm() {
     setSelectedProject(null)
     setComment('')
     setAdministrativeCosts(false)
-    setAttachedFile(null)
+    setAttachedFiles([])
     setErrors({})
+    setContactCodeParam(null)
 
     // Wait a tick before scrolling up since other page updates can interfere with the scroll
     setTimeout(() => {
@@ -306,27 +386,31 @@ export function MiscellaneousInvoiceForm() {
               {isLoadingContacts ? (
                 <div>Laddar kontakter...</div>
               ) : (
-                <Select
-                  value={reference?.dbId}
-                  onValueChange={(dbId) => handleSelectContact(dbId)}
-                >
-                  <SelectTrigger id="contact">
-                    <SelectValue placeholder="Välj referens" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contacts?.map((contact) => (
-                      <SelectItem key={contact.dbId} value={contact.dbId}>
-                        {contact.fullName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  id="contact"
+                  items={[...(contacts ?? [])].sort((a, b) =>
+                    a.fullName.localeCompare(b.fullName)
+                  )}
+                  value={reference}
+                  onChange={setReference}
+                  getKey={(contact) => contact.dbId}
+                  getLabel={(contact) => contact.fullName}
+                  placeholder="Välj referens"
+                  searchPlaceholder="Sök referens..."
+                />
               )}
               {errors.reference && (
                 <span className={cn('text-destructive')}>
                   {errors.reference}
                 </span>
               )}
+              <p className="text-sm text-muted-foreground">
+                Saknas du som referens? Kontakta{' '}
+                <a href="mailto:ekonomi@mimer.nu" className="underline">
+                  ekonomi@mimer.nu
+                </a>{' '}
+                så lägger de till dig i ekonomisystemet.
+              </p>
             </div>
           </div>
 
@@ -335,7 +419,11 @@ export function MiscellaneousInvoiceForm() {
           <div className="space-y-4">
             <h3 className="font-medium">Kundinformation</h3>
             <TenantSearchSection
-              tenantName={selectedTenant?.fullName}
+              tenantName={
+                isLoadingTenant && !selectedTenant
+                  ? 'Laddar kund...'
+                  : selectedTenant?.fullName
+              }
               onSelectTenant={handleSelectTenant}
               error={errors.contactCode}
             />
@@ -385,8 +473,8 @@ export function MiscellaneousInvoiceForm() {
               comment={comment}
               onProjectChange={setSelectedProject}
               onCommentChange={setComment}
-              onFileAttached={setAttachedFile}
-              attachedFile={attachedFile}
+              onFilesChanged={setAttachedFiles}
+              attachedFiles={attachedFiles}
             />
           </div>
 

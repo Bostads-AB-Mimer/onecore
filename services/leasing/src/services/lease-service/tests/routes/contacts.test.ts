@@ -386,7 +386,7 @@ describe('GET /contacts/:contactCode/tenant', () => {
     expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(tenant))
   })
 
-  it("responds with 500 and an error with the correct info when tenant doesn't have a valid housing contract", async () => {
+  it("responds with 404 and an error with the correct info when tenant doesn't have a valid housing contract", async () => {
     jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
       ok: false,
       err: 'no-valid-housing-contract',
@@ -394,11 +394,48 @@ describe('GET /contacts/:contactCode/tenant', () => {
 
     const res = await request(app.callback()).get('/contacts/1231234/tenant')
 
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(404)
     expect(res.body.type).toEqual('no-valid-housing-contract')
     expect(res.body.title).toEqual('No valid housing contract found')
-    expect(res.body.status).toEqual(500)
+    expect(res.body.status).toEqual(404)
     expect(res.body.detail).toEqual('No active or upcoming contract found.')
+  })
+
+  it('responds with 404 and an error with the correct info when contact is not a tenant', async () => {
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'contact-not-tenant',
+    })
+
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
+
+    expect(res.status).toBe(404)
+    expect(res.body.type).toEqual('contact-not-tenant')
+    expect(res.body.title).toEqual('Contact is not a tenant')
+    expect(res.body.status).toEqual(404)
+  })
+
+  it('responds with 404 when contact has no leases', async () => {
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'contact-leases-not-found',
+    })
+
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
+
+    expect(res.status).toBe(404)
+    expect(res.body.type).toEqual('contact-leases-not-found')
+  })
+
+  it('responds with 500 on unexpected errors', async () => {
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'get-contact',
+    })
+
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
+
+    expect(res.status).toBe(500)
   })
 })
 

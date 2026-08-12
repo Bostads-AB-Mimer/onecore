@@ -40,3 +40,22 @@ export const formatISODate = (isoDateString: string | null | undefined) => {
   if (Number.isNaN(date.getTime())) return '-'
   return date.toLocaleDateString('sv-SE')
 }
+
+type NameableUser = {
+  username: string
+  firstName?: string
+  lastName?: string
+  email?: string
+}
+
+export function formatUserName(user: NameableUser | null | undefined): {
+  name: string
+  subtitle?: string
+} {
+  if (!user) return { name: '—' }
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
+  return {
+    name: fullName || user.username,
+    subtitle: user.email,
+  }
+}

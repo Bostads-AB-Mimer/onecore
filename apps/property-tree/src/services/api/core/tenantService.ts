@@ -68,32 +68,36 @@ async function searchContacts(query: string): Promise<ContactSearchResult[]> {
 }
 
 async function sendBulkSms(
-  phoneNumbers: string[],
+  recipients: { contactCode: string; phoneNumber: string }[],
   text: string
-): Promise<BulkSmsResult> {
+): Promise<{ content: BulkSmsResult; warnings?: string[] }> {
   const { data, error } = await POST('/sendBulkSms', {
-    body: { phoneNumbers, text },
+    body: { recipients, text },
   })
 
   if (error) throw error
   if (!data?.content) throw new Error('Response ok but missing content')
 
-  return data.content
+  // warnings is a sibling of content: the SMS sent, but a non-blocking issue
+  // occurred (e.g. communication-log write failed).
+  return { content: data.content, warnings: data.warnings }
 }
 
 async function sendBulkEmail(
-  emails: string[],
+  recipients: { contactCode: string; emailAddress: string }[],
   subject: string,
   text: string
-): Promise<BulkEmailResult> {
+): Promise<{ content: BulkEmailResult; warnings?: string[] }> {
   const { data, error } = await POST('/sendBulkEmail', {
-    body: { emails, subject, text },
+    body: { recipients, subject, text },
   })
 
   if (error) throw error
   if (!data?.content) throw new Error('Response ok but missing content')
 
-  return data.content
+  // warnings is a sibling of content: the email sent, but a non-blocking issue
+  // occurred (e.g. communication-log write failed).
+  return { content: data.content, warnings: data.warnings }
 }
 
 export const tenantService = {

@@ -112,6 +112,26 @@ describe(transformFromXPandDb.toLease, () => {
 
     expect(lease.status).toBe(LeaseStatus.AboutToEnd)
   })
+  it('should set status to Ended for a row with no start date and no lastDebitDate (e.g. an Avtalsmall template)', () => {
+    const dbRow = {
+      leaseId: '209-028-02-0301',
+      leaseType: 'Bostadskontrakt               ',
+      noticeGivenBy: null,
+      contractDate: null,
+      lastDebitDate: null,
+      approvalDate: null,
+      noticeDate: null,
+      fromDate: null,
+      toDate: null,
+      noticeTimeTenant: null,
+      preferredMoveOutDate: null,
+      terminationDate: null,
+    }
+
+    const lease = transformFromXPandDb.toLease(dbRow, undefined, undefined)
+
+    expect(lease.status).toBe(LeaseStatus.Ended)
+  })
   it('should set status to Ended for a lease with a lastDebit date in the past', () => {
     const pastDate = new Date()
     pastDate.setMonth(new Date().getMonth() - 1)

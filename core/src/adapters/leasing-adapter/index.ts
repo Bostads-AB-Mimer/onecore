@@ -340,7 +340,31 @@ const getTenantByContactCode = async (
       `${tenantsLeasesServiceUrl}/contacts/${contactCode}/tenant`
     )
 
-    if (res.status === 404) return { ok: false, err: 'contact-not-tenant' }
+    if (res.status === 404) {
+      // Expected outcome when the contact is not a tenant — not an error.
+      // Leasing distinguishes the cause via the `type` field in the body.
+      if (res.data?.type === 'contact-not-found') {
+        return { ok: false, err: 'contact-not-found' }
+      }
+      if (res.data?.type === 'no-valid-housing-contract') {
+        return { ok: false, err: 'no-valid-housing-contract' }
+      }
+      // 'contact-not-tenant' and 'contact-leases-not-found' both mean the
+      // contact has no tenancy.
+      if (
+        res.data?.type === 'contact-not-tenant' ||
+        res.data?.type === 'contact-leases-not-found'
+      ) {
+        return { ok: false, err: 'contact-not-tenant' }
+      }
+      // A 404 without a recognized leasing error type is not a business
+      // outcome — e.g. a proxy/gateway 404 or a misrouted service URL.
+      logger.error(
+        { status: res.status, body: res.data },
+        'leasing-adapter.getTenantByContactCode: unrecognized 404 response'
+      )
+      return { ok: false, err: 'unknown' }
+    }
 
     if (!res.data.content) {
       return { ok: false, err: 'unknown' }
@@ -351,9 +375,6 @@ const getTenantByContactCode = async (
     logger.error({ err }, 'leasing-adapter.getTenantByContactCode')
 
     if (err instanceof AxiosError) {
-      if (err.response?.data?.type === 'contact-leases-not-found') {
-        return { ok: false, err: 'contact-not-tenant' }
-      }
       return { ok: false, err: err.response?.data?.type }
     }
     return { ok: false, err: 'unknown' }
@@ -927,7 +948,12 @@ export {
   updateOfferSentAt,
 } from './offers'
 
-export { getCommentThread, addComment, removeComment } from './comments'
+export {
+  getCommentThread,
+  addComment,
+  removeComment,
+  updateComment,
+} from './comments'
 
 export {
   getAllVacantParkingSpaces,

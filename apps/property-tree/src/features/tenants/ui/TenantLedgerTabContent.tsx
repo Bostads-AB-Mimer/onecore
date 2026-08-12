@@ -1,13 +1,17 @@
+import { Link } from 'react-router-dom'
 import {
   ChannelLookupChannel,
   ChannelLookupResponse,
 } from '@onecore/types/src/economy'
+import { Receipt } from 'lucide-react'
 import { parseAsString, useQueryState } from 'nuqs'
 
 import { useTenantAutogiroConsent } from '@/entities/tenant/hooks/useTenantAutogiroConsent'
 import { useTenantInvoiceChannels } from '@/entities/tenant/hooks/useTenantInvoiceChannels'
 import { useTenantInvoices } from '@/entities/tenant/hooks/useTenantInvoices'
 
+import { paths } from '@/shared/routes'
+import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
@@ -112,6 +116,12 @@ const InvoicesCard = ({ contactCode }: { contactCode: string }) => {
     <Card>
       <CardHeader>
         <CardTitle>Fakturor</CardTitle>
+        <Button asChild variant="outline" size="sm">
+          <Link to={paths.economy({ contactCode })}>
+            <Receipt className="h-4 w-4 mr-2" />
+            Skapa ströfaktura
+          </Link>
+        </Button>
       </CardHeader>
       <CardContent>
         {invoices.isLoading ? (

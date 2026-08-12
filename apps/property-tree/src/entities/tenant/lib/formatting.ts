@@ -7,9 +7,11 @@ export function formatTenantAddress(address: NonNullable<Tenant['address']>) {
   return `${street}, ${address.postalCode} ${address.city}`
 }
 
-export function formatTenantName(
-  tenant: Pick<Tenant, 'firstName' | 'lastName' | 'fullName'>
-) {
+export function formatTenantName(tenant: {
+  firstName?: string | null
+  lastName?: string | null
+  fullName?: string | null
+}) {
   return tenant.firstName && tenant.lastName
     ? `${tenant.firstName} ${tenant.lastName}`
     : tenant.fullName || '-'

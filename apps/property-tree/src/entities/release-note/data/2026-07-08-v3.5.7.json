@@ -1,0 +1,23 @@
+[
+  {
+    "id": "rn-2026-07-08-v357-1",
+    "date": "2026-07-08",
+    "title": "Sök på fastighetsnummer",
+    "description": "Du kan nu söka på fastighetsnummer i fastighetssökningen. Numret visas även i sökträffarna i toppsöket.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-07-08-v357-2",
+    "date": "2026-07-08",
+    "title": "Fler meddelanden hamnar i kommunikationsloggen",
+    "description": "Nu loggas även automatiska utskick på kundens kommunikationslogg – bilplatserbjudanden samt SMS och e-post om ärenden som skickas via Odoo. Tidigare syntes bara meddelanden som skickades manuellt från ONECore.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-07-08-v357-3",
+    "date": "2026-07-08",
+    "title": "Leveransstatus i kommunikationsloggen",
+    "description": "Varje meddelande i kommunikationsloggen visar nu sin leveransstatus – till exempel levererat, skickat, misslyckades eller studsade – så att du snabbt ser om ett SMS eller mejl kom fram till mottagaren. Meddelanden från innan denna funktion infördes visas för tillfället med status väntar",
+    "category": "feature"
+  }
+]

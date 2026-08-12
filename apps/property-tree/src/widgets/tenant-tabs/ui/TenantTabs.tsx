@@ -3,6 +3,7 @@ import {
   FileText,
   Home,
   Key,
+  Mail,
   MessageSquare,
   Receipt,
   StickyNote,
@@ -11,6 +12,7 @@ import {
 import { parseAsString, useQueryState } from 'nuqs'
 
 import {
+  TenantCommunicationTabContent,
   TenantKeyLoans,
   TenantLeasesTabContent,
   TenantLedgerTabContent,
@@ -90,6 +92,13 @@ export const TenantTabs = ({
           <StickyNote className="h-4 w-4" />
           <span className="hidden sm:inline">Noteringar</span>
         </TabsTrigger>
+        <TabsTrigger
+          value="communication"
+          className="flex items-center gap-1.5"
+        >
+          <Mail className="h-4 w-4" />
+          <span className="hidden sm:inline">Kommunikationslogg</span>
+        </TabsTrigger>
         <TabsTrigger value="keys" className="flex items-center gap-1.5">
           <Key className="h-4 w-4" />
           <span className="hidden sm:inline">Nyckellån</span>
@@ -132,6 +141,10 @@ export const TenantTabs = ({
 
       <TabsContent value="notes">
         <TenantNotesTabContent contactCode={contactCode} />
+      </TabsContent>
+
+      <TabsContent value="communication">
+        <TenantCommunicationTabContent contactCode={contactCode} />
       </TabsContent>
 
       <TabsContent value="keys">

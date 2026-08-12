@@ -20,9 +20,11 @@ interface UnifiedSearchProps {
 const isValidPnr = (value: string) =>
   /^(?:\d{6}|\d{8})-?\d{4}$/.test(value.trim())
 
+// Prefix set mirrors leasing's searchTermAnalyzer: P = person, F = company,
+// K = municipal/public sector (e.g. K010000 Västerås Stad), plus I, L, S, Ö.
 const isContactCode = (value: string) => {
   const trimmed = value.trim().toUpperCase()
-  return /^[PF][A-Z0-9]+$/.test(trimmed) && trimmed.length >= 4
+  return /^[FIKLÖPS][A-Z0-9]+$/.test(trimmed) && trimmed.length >= 4
 }
 
 const isObjectId = (value: string) => {
@@ -129,7 +131,7 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
       toast({
         title: 'Ogiltigt format',
         description:
-          'Ange personnummer (YYYYMMDD-XXXX), kundnummer (PXXXXXX/FXXXXXX) eller hyresobjekt (XXX-XXX-XX-XXX).',
+          'Ange personnummer (YYYYMMDD-XXXX), kundnummer (t.ex. P053602, F123456, K010000) eller hyresobjekt (XXX-XXX-XX-XXX).',
         variant: 'destructive',
       })
     }

@@ -7,7 +7,6 @@ import {
   ParkingSpaceNotificationEmail,
   WorkOrderEmail,
   ParkingSpaceAcceptOfferEmail,
-  BulkEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
   InvoiceNotificationEmail,
@@ -16,21 +15,34 @@ import { logger } from '@onecore/utilities'
 
 import { EmailAttachment } from '@onecore/types'
 import { EmailV4Message, EmailV4Response } from './types'
+import {
+  AcceptParkingSpaceOfferTemplateId,
+  AdditionalParkingSpaceOfferTemplateId,
+  InvoiceNotificationEmailTemplateId,
+  NonScoredParkingSpaceApprovedTemplateId,
+  NonScoredParkingSpaceDeniedTemplateId,
+  ParkingSpaceAssignedToOtherTemplateId,
+  ReplaceParkingSpaceOfferTemplateId,
+  WorkOrderEmailTemplateId,
+  WorkOrderExternalContractorEmailTemplateId,
+} from './infobip-template-ids'
+import {
+  dateFormatter,
+  formatToSwedishCurrency,
+  getParkingSpaceImageUrl,
+} from './parking-space-formatting'
 
-const InvoiceNotificationEmailTemplateId = 205000000057686
-const AcceptParkingSpaceOfferTemplateId = 205000000030455
-const AdditionalParkingSpaceOfferTemplateId = 200000000092027
-const ReplaceParkingSpaceOfferTemplateId = 200000000094058
-const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
-const WorkOrderEmailTemplateId = 200000000146435
-const WorkOrderExternalContractorEmailTemplateId = 200000000173744
-const NonScoredParkingSpaceApprovedTemplateId = 205000000040764
-const NonScoredParkingSpaceDeniedTemplateId = 205000000040765
+// Response from POSTing to Infobip's /email/4/messages (outbound email send).
+// Order of `messages` matches the destinations array passed in.
+export type InfobipSendEmailResponse = EmailV4Response
 
 // Email sender identity
 const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
 
-// Infobip v4 Email API helper
+// TODO: set applicationId on each message (env public hostname, e.g.
+// epic-mim-1838.dev.mimer.nu / api.mimer.nu) and filter each Infobip
+// delivery-report subscription to its own application, so environments
+// only receive reports for their own sends (stops cross-env PII fan-out).
 const sendEmailV4 = async (
   messages: EmailV4Message[]
 ): Promise<EmailV4Response> => {
@@ -160,11 +172,6 @@ export const sendEmail = async (message: Email) => {
     logger.error(error)
     throw error
   }
-}
-
-const getParkingSpaceImageUrl = (rentalObjectCode: string) => {
-  const identifier = rentalObjectCode.slice(0, 7)
-  return `https://pub.mimer.nu/bofaktablad/mediabank/Bilplatser/${identifier}.jpg`
 }
 
 export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
@@ -322,24 +329,6 @@ export const sendNonScoredParkingSpaceDenied = async (
   }
 }
 
-const formatToSwedishCurrency = (numberStr: string) => {
-  const number = parseFloat(numberStr)
-
-  if (isNaN(number)) {
-    return '0 kr'
-  }
-
-  const formattedNumber = new Intl.NumberFormat('sv-SE', {
-    //render max 2 decimals if there are decimals, otherwise render 0 decimals
-    minimumFractionDigits: number % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: number % 1 === 0 ? 0 : 2,
-  }).format(number)
-
-  return formattedNumber + ' kr'
-}
-
-const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
-
 export const sendParkingSpaceAssignedToOther = async (
   emails: ParkingSpaceNotificationEmail[]
 ) => {
@@ -398,19 +387,23 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
   }
 }
 
-export const sendBulkEmail = async (email: BulkEmail) => {
+export const sendBulkEmail = async (email: {
+  emails: string[]
+  subject: string
+  text: string
+}) => {
   logger.info(
     { recipientCount: email.emails.length, baseUrl: config.infobip.baseUrl },
     'Sending bulk email'
   )
 
   try {
-    const recipients = email.emails.map((addr) => ({ destination: addr }))
-
     const response = await sendEmailV4([
       {
         sender: EMAIL_SENDER,
-        destinations: [{ to: recipients }],
+        destinations: email.emails.map((addr) => ({
+          to: [{ destination: addr }],
+        })),
         content: { subject: email.subject, text: email.text },
       },
     ])

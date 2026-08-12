@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-06-16-v352-1",
+    "date": "2026-06-16",
+    "title": "Skateboard för kommunikationslogg är ute!",
+    "description": "Nu sparar vi alla meddelanden som skickas från kontraktslistan och kundkortet i en kommunikationslogg på varje kund. Logging av SMS från Odoo, mejl med bilplatserbjudande samt leveransstatus innefattas inte ännu, men är på gång härnäst!",
+    "category": "feature"
+  }
+]

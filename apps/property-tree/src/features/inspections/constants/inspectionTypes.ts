@@ -20,10 +20,29 @@ export type InspectionType =
 
 /**
  * Inspection type labels (Swedish)
+ *
+ * Three label sets coexist because the design wants the same `INSPECTION_TYPE`
+ * id to render differently depending on context:
+ *  - INSPECTION_TYPE_LABELS: short, used in the create-inspection picker and
+ *    in the inspection table ("Avflytt", "Underhåll").
+ *  - INSPECTION_TYPE_RADIO_LABELS: long, used by the conduct-dialog
+ *    "Typ av besiktning" radio ("Avflytt + underhåll", "Underhåll").
+ *  - INSPECTION_TYPE_DIALOG_TITLE: full, used as the conduct-dialog heading
+ *    ("Avflyttsbesiktning", "Underhållsbesiktning").
  */
 export const INSPECTION_TYPE_LABELS = {
   [INSPECTION_TYPE.MOVE_OUT]: 'Avflytt',
   [INSPECTION_TYPE.MAINTENANCE]: 'Underhåll',
+} as const
+
+export const INSPECTION_TYPE_RADIO_LABELS = {
+  [INSPECTION_TYPE.MOVE_OUT]: 'Avflytt + underhåll',
+  [INSPECTION_TYPE.MAINTENANCE]: 'Underhåll',
+} as const
+
+export const INSPECTION_TYPE_DIALOG_TITLE = {
+  [INSPECTION_TYPE.MOVE_OUT]: 'Avflyttsbesiktning',
+  [INSPECTION_TYPE.MAINTENANCE]: 'Underhållsbesiktning',
 } as const
 
 /**

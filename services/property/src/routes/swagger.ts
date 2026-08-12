@@ -217,6 +217,36 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
+  ...zodToJsonSchema(types.CostCenterTreeSchema, {
+    name: 'CostCenterTree',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CostCenterSummarySchema, {
+    name: 'CostCenterSummary',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.KvvAreaSummarySchema, {
+    name: 'KvvAreaSummary',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.PutPropertyKvvAreaBodySchema, {
+    name: 'PutPropertyKvvAreaBody',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.PropertyKvvAreaLinkSchema, {
+    name: 'PropertyKvvAreaLink',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.KvvAreaSchema, {
+    name: 'KvvArea',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
 }
 
 swaggerSpec.definition.components = {

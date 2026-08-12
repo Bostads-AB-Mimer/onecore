@@ -2,12 +2,17 @@ import type { TenantInfoCardData } from '@/features/inspections/types/index'
 
 import { cn } from '@/shared/lib/utils'
 
+import type { InspectionType } from '../constants/inspectionTypes'
 import { InspectionDetailsCard } from './InspectionDetailsCard'
 import { TenantInfoCard } from './TenantInfoCard'
 
 interface InspectionInfoSectionProps {
   inspectorName: string
   setInspectorName: (name: string) => void
+  inspectionTime: string
+  setInspectionTime: (time: string) => void
+  inspectionType: InspectionType
+  setInspectionType: (type: InspectionType) => void
   tenant?: TenantInfoCardData
   address?: string
   apartmentCode?: string | null
@@ -16,7 +21,7 @@ interface InspectionInfoSectionProps {
 
 /**
  * Composes the two info cards that sit at the top of the inspection form:
- * a tenant summary and the inspection details (inspector select, etc).
+ * a tenant summary and the inspection details (inspector, Klockslag, type).
  *
  * Layout defaults to vertical (stacked); pass `layout="horizontal"` to
  * render them side-by-side on large screens.
@@ -24,6 +29,10 @@ interface InspectionInfoSectionProps {
 export function InspectionInfoSection({
   inspectorName,
   setInspectorName,
+  inspectionTime,
+  setInspectionTime,
+  inspectionType,
+  setInspectionType,
   tenant,
   address,
   apartmentCode,
@@ -47,6 +56,10 @@ export function InspectionInfoSection({
       <InspectionDetailsCard
         inspectorName={inspectorName}
         setInspectorName={setInspectorName}
+        inspectionTime={inspectionTime}
+        setInspectionTime={setInspectionTime}
+        inspectionType={inspectionType}
+        setInspectionType={setInspectionType}
       />
     </div>
   )

@@ -6,3 +6,8 @@ export const AddCommentRequestParamsSchema = CommentSchema.pick({
   authorName: true,
   authorId: true,
 })
+
+export const UpdateCommentRequestParamsSchema = CommentSchema.pick({
+  type: true,
+  comment: true,
+})

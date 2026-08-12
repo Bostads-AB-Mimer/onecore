@@ -4,7 +4,7 @@ import { formatDate, LeaseStatusBadge } from '@/entities/lease'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
-import { paths } from '@/shared/routes'
+import { getRentalObjectPath, paths } from '@/shared/routes'
 import { ObjectTypeBadge } from '@/shared/ui/StatusBadges'
 
 export const leaseColumns = [
@@ -22,9 +22,22 @@ export const leaseColumns = [
     label: 'Objektnummer',
     className: 'px-2',
     sortKey: 'rentalObjectCode',
-    render: (lease: LeaseSearchResult) => (
-      <span className="font-medium">{lease.rentalObjectCode || '-'}</span>
-    ),
+    render: (lease: LeaseSearchResult) => {
+      if (!lease.rentalObjectCode) {
+        return <span className="font-medium">-</span>
+      }
+      const href = getRentalObjectPath(
+        lease.objectTypeCode,
+        lease.rentalObjectCode
+      )
+      return href ? (
+        <Link to={href} className="font-medium text-primary hover:underline">
+          {lease.rentalObjectCode}
+        </Link>
+      ) : (
+        <span className="font-medium">{lease.rentalObjectCode}</span>
+      )
+    },
     hideOnMobile: true,
   },
   {

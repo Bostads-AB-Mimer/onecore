@@ -9,7 +9,7 @@ import {
 
 export interface MobileAccordionItem {
   id: string
-  title: string
+  title: React.ReactNode
   content: React.ReactNode
   icon?: React.ComponentType<{ className?: string }>
   disabled?: boolean

@@ -1,6 +1,6 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
-import { LeaseType } from '@onecore/types'
+import { LeaseType, property } from '@onecore/types'
 import { z } from 'zod'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
@@ -10,6 +10,9 @@ import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
 
 import { routes as componentRoutes } from './components'
+import { routes as costCenterRoutes } from './cost-centers'
+import { routes as kvvAreaRoutes } from './kvv-areas'
+import { routes as propertyKvvAreaRoutes } from './property-kvv-area'
 
 /**
  * @swagger
@@ -131,8 +134,26 @@ export const routes = (router: KoaRouter) => {
     schemas.ApartmentTemperaturesResponseSchema
   )
 
+  registerSchema('KeycloakUserSummary', schemas.KeycloakUserSummarySchema)
+  registerSchema('CostCenterTreeAddress', schemas.CostCenterTreeAddressSchema)
+  registerSchema(
+    'CostCenterTreeAggregates',
+    schemas.CostCenterTreeAggregatesSchema
+  )
+  registerSchema('CostCenterTreeProperty', schemas.CostCenterTreePropertySchema)
+  registerSchema('CostCenterTreeKvvArea', schemas.CostCenterTreeKvvAreaSchema)
+  registerSchema('CostCenterTree', schemas.CostCenterTreeSchema)
+  registerSchema('CostCenterSummary', schemas.CostCenterSummarySchema)
+  registerSchema('KvvAreaSummary', schemas.KvvAreaSummarySchema)
+  registerSchema('PutPropertyKvvAreaBody', schemas.PutPropertyKvvAreaBodySchema)
+  registerSchema('PropertyKvvAreaLink', schemas.PropertyKvvAreaLinkSchema)
+  registerSchema('PatchedKvvArea', schemas.PatchedKvvAreaSchema)
+
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)
+  costCenterRoutes(router)
+  kvvAreaRoutes(router)
+  propertyKvvAreaRoutes(router)
 
   /**
    * @swagger
@@ -1026,6 +1047,109 @@ export const routes = (router: KoaRouter) => {
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /residences/by-rental-id/{rentalId}/malar-energi-facility-id:
+   *   put:
+   *     summary: Update or add a residence's Mälarenergi facility id.
+   *     description: |
+   *       Forwards to property-base-service which upserts the "Anläggnings ID
+   *       Mälarenergi" comment row (cmtex) in Xpand for the residence.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - malarEnergiFacilityId
+   *             properties:
+   *               malarEnergiFacilityId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: The updated Mälarenergi facility id.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     malarEnergiFacilityId:
+   *                       type: string
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: Residence not found.
+   *       500:
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put(
+    '(.*)/residences/by-rental-id/:rentalId/malar-energi-facility-id',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalId } = ctx.params
+
+      const parsed =
+        property.UpdateMalarEnergiFacilityIdRequestSchema.safeParse(
+          ctx.request.body
+        )
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = { errors: parsed.error.errors, ...metadata }
+        return
+      }
+
+      try {
+        const result = await propertyBaseAdapter.updateMalarEnergiFacilityId(
+          rentalId,
+          parsed.data
+        )
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Residence not found', ...metadata }
+            return
+          }
+          logger.error(
+            { err: result.err, metadata },
+            'PUT /residences/by-rental-id/:rentalId/malar-energi-facility-id failed'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content:
+            result.data satisfies property.UpdateMalarEnergiFacilityIdResponse,
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(
+          { err, metadata },
+          'PUT /residences/by-rental-id/:rentalId/malar-energi-facility-id failed'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger

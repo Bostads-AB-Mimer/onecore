@@ -20,5 +20,6 @@ export {
 export { useRelatedContacts } from './hooks/useRelatedContacts'
 export { useTenant } from './hooks/useTenant'
 export { useTenantComments } from './hooks/useTenantComments'
+export { useTenantCommunication } from './hooks/useTenantCommunication'
 export { useTenantInvoices } from './hooks/useTenantInvoices'
 export { useTenantSearch } from './hooks/useTenantSearch'
