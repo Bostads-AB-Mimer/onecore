@@ -3,7 +3,7 @@ import { generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import {
-  getCostCenterTreeById,
+  getCostCenterTreeByIdCached,
   listCostCenters,
 } from '../adapters/cost-center-adapter'
 import {
@@ -69,6 +69,9 @@ export const routes = (router: KoaRouter) => {
    *       aggregate counts) and the Keycloak user IDs for lead, deputy and
    *       responsible. Keycloak user details are NOT expanded here — that
    *       composition happens in core.
+   *
+   *       Responses are cached in-memory for up to one hour, so structural
+   *       changes may take that long to appear.
    *     tags:
    *       - Cost Centers
    *     parameters:
@@ -103,7 +106,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
     try {
-      const tree = await getCostCenterTreeById(parsed.data.id)
+      const tree = await getCostCenterTreeByIdCached(parsed.data.id)
       if (!tree) {
         ctx.status = 404
         ctx.body = { reason: 'Cost center not found', ...metadata }

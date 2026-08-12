@@ -50,14 +50,36 @@ const baseTree = {
           code: '04101',
           designation: 'JOSEF 7',
           tract: 'Josef',
-          addresses: [
+          buildings: [
             {
               buildingCode: '04101-B1',
               buildingName: 'Hus 1',
               buildingType: { code: 'STD', name: 'Standard' },
+              staircases: [
+                {
+                  code: '01',
+                  name: 'Hus 1 A',
+                  residenceCount: 12,
+                  facilityCount: 1,
+                  otherCount: 0,
+                },
+              ],
+              residenceCount: 26,
+              parkingCount: 0,
+              facilityCount: 1,
+              otherCount: 0,
             },
           ],
-          aggregates: { residenceCount: 26, parkingCount: 0, entranceCount: 5 },
+          parkingAreas: [
+            { code: '041-717-00', name: 'JOSEFS PARKERING', parkingCount: 4 },
+          ],
+          aggregates: {
+            residenceCount: 26,
+            parkingCount: 4,
+            entranceCount: 5,
+            facilityCount: 1,
+            otherCount: 0,
+          },
         },
       ],
     },
@@ -69,6 +91,9 @@ describe('GET /cost-centers/:id/tree', () => {
     jest
       .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockResolvedValue({ ok: true, data: [] })
 
     const res = await request(app.callback()).get(
       `/cost-centers/${TREE_ID}/tree`
@@ -80,6 +105,9 @@ describe('GET /cost-centers/:id/tree', () => {
     jest
       .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockResolvedValue({ ok: true, data: [] })
 
     const res = await request(app.callback()).get(
       `/cost-centers/${TREE_ID}/tree`

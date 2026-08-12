@@ -1,4 +1,13 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
+
+import type { AudienceObjectType } from '@/features/audience-picker'
+import {
+  ALL_AUDIENCE_OBJECT_TYPES,
+  AudienceCriteriaChips,
+  AudienceFilterButton,
+  AudiencePickerPanel,
+  useAudienceSelectionState,
+} from '@/features/audience-picker'
 
 import type { DispatchListItem } from '@/entities/dispatch'
 import {
@@ -8,7 +17,7 @@ import {
 } from '@/entities/dispatch'
 
 import { formatTimestamp } from '@/shared/lib/formatters'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import { Card, CardContent } from '@/shared/ui/Card'
 import {
   DateRangeFilterDropdown,
   FilterBar,
@@ -76,6 +85,7 @@ const dispatchColumns = [
     label: 'Skapat',
     sortKey: 'createdAt',
     hideOnMobile: true,
+    className: 'hidden @7xl:table-cell',
     render: (d: DispatchListItem) => (
       <span className="whitespace-nowrap text-sm text-muted-foreground">
         {formatTimestamp(d.createdAt)}
@@ -103,6 +113,7 @@ const dispatchColumns = [
     key: 'category',
     label: 'Kategori',
     hideOnMobile: true,
+    className: 'hidden @6xl:table-cell',
     render: (d: DispatchListItem) => (
       <span className="text-sm">{categoryLabel(d.messageType)}</span>
     ),
@@ -152,11 +163,47 @@ const dispatchColumns = [
 
 const DispatchCentrePage = () => {
   const cardRef = useRef<HTMLDivElement>(null)
+  const [audiencePickerOpen, setAudiencePickerOpen] = useState(false)
+  const audienceSelection = useAudienceSelectionState()
   const filters = useDispatchFilters()
+
+  // Object-type filter for the picker; all four = no restriction. Seeded from
+  // the URL once (same one-directional model as the node selection).
+  const [activeObjectTypes, setActiveObjectTypes] = useState<
+    ReadonlySet<AudienceObjectType>
+  >(() => {
+    const fromUrl = filters.audienceChips
+      .filter((c) => c.level === 'objectType')
+      .map((c) => c.value as AudienceObjectType)
+    return new Set(fromUrl.length ? fromUrl : ALL_AUDIENCE_OBJECT_TYPES)
+  })
+
+  const handleToggleObjectType = (type: AudienceObjectType) => {
+    setActiveObjectTypes((prev) => {
+      const next = new Set(prev)
+      if (next.has(type)) {
+        // The last active type can't be deselected (empty audience).
+        if (next.size === 1) return prev
+        next.delete(type)
+      } else {
+        next.add(type)
+      }
+      return next
+    })
+  }
 
   const handlePageChange = (newPage: number) => {
     filters.setPage(newPage)
     cardRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // The picker's state lives outside the URL, so clearing the filters has to
+  // reset it too — otherwise the cleared nodes stay checked and one apply
+  // silently restores what was just cleared.
+  const handleClearFilters = () => {
+    filters.clearFilters()
+    audienceSelection.clear()
+    setActiveObjectTypes(new Set(ALL_AUDIENCE_OBJECT_TYPES))
   }
 
   return (
@@ -166,22 +213,15 @@ const DispatchCentrePage = () => {
         Sök och filtrera utskick i kommunikationsloggen
       </p>
 
-      <Card ref={cardRef}>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Utskick</CardTitle>
-          <span className="text-sm text-muted-foreground">
-            {filters.dispatches.length} av {filters.meta?.totalRecords ?? 0}{' '}
-            resultat
-          </span>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6">
+      <div className="mt-6 space-y-4">
+        <Card>
+          <CardContent className="pt-6">
             <FilterBar
               searchValue={filters.searchInput}
               onSearchChange={filters.setSearchInput}
               searchPlaceholder="Sök i ämne och meddelande..."
               hasActiveFilters={filters.hasActiveFilters}
-              onClearFilters={filters.clearFilters}
+              onClearFilters={handleClearFilters}
             >
               <MultiSelectFilterDropdown
                 options={channelOptions}
@@ -223,9 +263,60 @@ const DispatchCentrePage = () => {
                 }
                 placeholder="Datum"
               />
+              <AudienceFilterButton
+                open={audiencePickerOpen}
+                onToggle={() => setAudiencePickerOpen((o) => !o)}
+                activeCount={filters.audienceChips.length}
+              />
             </FilterBar>
-          </div>
+            {filters.audienceChips.length > 0 && (
+              <div className="mt-3">
+                <AudienceCriteriaChips
+                  items={filters.audienceChips}
+                  onRemove={(level, value) => {
+                    filters.removeAudienceCriterion(level, value)
+                    if (level === 'objectType') {
+                      // Keep the picker's buttons in sync; removing the last
+                      // type chip means "no restriction" = all types active.
+                      setActiveObjectTypes((prev) => {
+                        const next = new Set(prev)
+                        next.delete(value as AudienceObjectType)
+                        return next.size
+                          ? next
+                          : new Set(ALL_AUDIENCE_OBJECT_TYPES)
+                      })
+                    } else {
+                      audienceSelection.prune(level, value)
+                    }
+                  }}
+                  onRemoveLevel={(level, values) => {
+                    filters.removeAudienceLevel(level)
+                    if (level === 'objectType') {
+                      setActiveObjectTypes(new Set(ALL_AUDIENCE_OBJECT_TYPES))
+                    } else {
+                      for (const value of values) {
+                        audienceSelection.prune(level, value)
+                      }
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
+        <AudiencePickerPanel
+          open={audiencePickerOpen}
+          onClose={() => setAudiencePickerOpen(false)}
+          onApply={filters.applyAudienceCriteria}
+          selection={audienceSelection.selection}
+          onToggleNode={audienceSelection.toggle}
+          onSelectNodes={audienceSelection.selectMany}
+          activeObjectTypes={activeObjectTypes}
+          onToggleObjectType={handleToggleObjectType}
+        />
+
+        <div ref={cardRef} className="space-y-3">
           {filters.isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
               Laddar utskick...
@@ -254,8 +345,8 @@ const DispatchCentrePage = () => {
             onPageChange={handlePageChange}
             isFetching={filters.isFetching}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </ViewLayout>
   )
 }

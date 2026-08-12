@@ -1082,6 +1082,30 @@ export async function getCostCenterTreeById(
   }
 }
 
+type GetRentalObjectsQuery = NonNullable<
+  paths['/rental-objects']['get']['parameters']['query']
+>
+type GetRentalObjectsResponse = components['schemas']['RentalObjectSummary'][]
+
+export async function getRentalObjects(
+  query: GetRentalObjectsQuery
+): Promise<AdapterResult<GetRentalObjectsResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/rental-objects', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalObjects')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
 
 export { getApartmentTemperatures } from './apartment-temperatures'

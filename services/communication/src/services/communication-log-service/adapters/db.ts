@@ -452,23 +452,57 @@ export async function searchDispatches(
       })
     }
 
-    // Audience code filters (exact membership on the criterion table).
+    // Audience scope filters (exact membership on the criterion table).
+    // Scopes OR with each other — a dispatch matches if it targeted ANY of
+    // the selected scopes, regardless of level. Only objectTypes ANDs.
     const audienceFilters: { type: string; values: string[] | undefined }[] = [
       { type: 'districtNames', values: params.audienceDistrictNames },
       { type: 'buildingCodes', values: params.audienceBuildingCodes },
       { type: 'areaCodes', values: params.audienceAreaCodes },
+      { type: 'kvvAreaCodes', values: params.audienceKvvAreaCodes },
+      { type: 'property', values: params.audienceProperty },
+      { type: 'parkingAreaCodes', values: params.audienceParkingAreaCodes },
+      { type: 'staircaseCodes', values: params.audienceStaircaseCodes },
     ]
-    for (const { type, values } of audienceFilters) {
-      if (values?.length) {
-        query.whereExists((b) =>
-          b
-            .select(db.raw('1'))
-            .from('dispatch_audience_criterion as dac')
-            .whereRaw('dac.dispatchId = dispatch.id')
-            .where('dac.type', type)
-            .whereIn('dac.value', values)
-        )
-      }
+    const scopeFilters = audienceFilters.filter((f) => f.values?.length)
+    if (scopeFilters.length) {
+      query.whereExists((b) => {
+        b.select(db.raw('1'))
+          .from('dispatch_audience_criterion as dac')
+          .whereRaw('dac.dispatchId = dispatch.id')
+          .where((w) => {
+            for (const { type, values } of scopeFilters) {
+              w.orWhere((g) =>
+                g.where('dac.type', type).whereIn('dac.value', values as string[])
+              )
+            }
+          })
+      })
+    }
+
+    // Object-type filter — ANDs with the scope predicate above (it restricts,
+    // not widens): a dispatch with no objectType criterion was unrestricted
+    // (went to every type) and must match any requested type.
+    if (params.audienceObjectTypes?.length) {
+      const values = params.audienceObjectTypes
+      query.where((b) =>
+        b
+          .whereNotExists((s) =>
+            s
+              .select(db.raw('1'))
+              .from('dispatch_audience_criterion as dac')
+              .whereRaw('dac.dispatchId = dispatch.id')
+              .where('dac.type', 'objectType')
+          )
+          .orWhereExists((s) =>
+            s
+              .select(db.raw('1'))
+              .from('dispatch_audience_criterion as dac')
+              .whereRaw('dac.dispatchId = dispatch.id')
+              .where('dac.type', 'objectType')
+              .whereIn('dac.value', values)
+          )
+      )
     }
 
     const SORT_COLUMNS: Record<string, string> = {

@@ -92,6 +92,11 @@ export const logReadRoutes = (router: KoaRouter) => {
    *       - { in: query, name: audienceDistrictNames, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: audienceBuildingCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: audienceAreaCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: audienceKvvAreaCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: audienceProperty, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: audienceParkingAreaCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: audienceStaircaseCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: audienceObjectTypes, schema: { type: array, items: { type: string, enum: [residence, parkingSpace, facility, other] } } }
    *       - { in: query, name: sortBy, schema: { type: string, enum: [sendAt, recipientCount, createdAt] } }
    *       - { in: query, name: sortOrder, schema: { type: string, enum: [asc, desc] } }
    *       - { in: query, name: page, schema: { type: integer } }

@@ -1,3 +1,7 @@
+jest.mock('@onecore/utilities', () => ({
+  logger: { info() {}, error() {}, warn() {} },
+}))
+
 import { audienceCriteriaToRows } from '../audience-criteria'
 
 describe('audienceCriteriaToRows', () => {
@@ -26,5 +30,33 @@ describe('audienceCriteriaToRows', () => {
       buildingCodes: [''],
     })
     expect(rows).toEqual([{ type: 'districtNames', value: 'Väster' }])
+  })
+
+  // The picker names this dimension in the plural (audienceObjectTypes); both
+  // spellings must land as the 'objectType' criterion the search side queries.
+  it('accepts objectTypes (plural) as the objectType criterion', () => {
+    expect(audienceCriteriaToRows({ objectTypes: ['parkingSpace'] })).toEqual([
+      { type: 'objectType', value: 'parkingSpace' },
+    ])
+    expect(audienceCriteriaToRows({ objectType: 'residence' })).toEqual([
+      { type: 'objectType', value: 'residence' },
+    ])
+  })
+
+  it('drops objectType values outside the shared vocabulary', () => {
+    // 'bostad' is lease-search's dialect — storing it would make the dispatch
+    // unmatchable by every object-type filter.
+    const rows = audienceCriteriaToRows({
+      objectType: ['bostad', 'facility', 'balgh'],
+    })
+    expect(rows).toEqual([{ type: 'objectType', value: 'facility' }])
+  })
+
+  it('dedupes values repeated across singular and plural keys', () => {
+    const rows = audienceCriteriaToRows({
+      objectType: 'other',
+      objectTypes: ['other'],
+    })
+    expect(rows).toEqual([{ type: 'objectType', value: 'other' }])
   })
 })

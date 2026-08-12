@@ -551,6 +551,16 @@ export interface paths {
           audienceDistrictNames?: string[]
           audienceBuildingCodes?: string[]
           audienceAreaCodes?: string[]
+          audienceKvvAreaCodes?: string[]
+          audienceProperty?: string[]
+          audienceParkingAreaCodes?: string[]
+          audienceStaircaseCodes?: string[]
+          audienceObjectTypes?: (
+            | 'residence'
+            | 'parkingSpace'
+            | 'facility'
+            | 'other'
+          )[]
           sortBy?: 'sendAt' | 'recipientCount' | 'createdAt'
           sortOrder?: 'asc' | 'desc'
           page?: number
@@ -6257,6 +6267,43 @@ export interface paths {
       }
     }
   }
+  '/rental-objects': {
+    /**
+     * List rental objects of a property or building
+     * @description Returns every rental object (residence, parking space, facility,
+     * other) under one property or one building as flat structure rows
+     * with type, subtype caption, postal address and building/staircase
+     * placement. Provide exactly one of propertyCode or buildingCode.
+     */
+    get: {
+      parameters: {
+        query?: {
+          propertyCode?: string
+          buildingCode?: string
+          /** @description Object types to exclude (repeatable) */
+          exclude?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+        }
+      }
+      responses: {
+        /** @description List of rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/search': {
     /**
      * Omni-search for different entities
@@ -11733,35 +11780,78 @@ export interface components {
       mobilePhone?: string
       employeeId?: string
     }
-    CostCenterTreeAddress: {
+    CostCenterTreeStaircase: {
+      code: string
+      name: string | null
+      residenceCount: number
+      facilityCount: number
+      otherCount: number
+    }
+    CostCenterTreeBuilding: {
       buildingCode: string
       buildingName: string | null
       buildingType: {
         code: string | null
         name: string | null
       } | null
+      staircases: {
+        code: string
+        name: string | null
+        residenceCount: number
+        facilityCount: number
+        otherCount: number
+      }[]
+      residenceCount: number
+      parkingCount: number
+      facilityCount: number
+      otherCount: number
+    }
+    CostCenterTreeParkingArea: {
+      code: string
+      name: string | null
+      parkingCount: number
     }
     CostCenterTreeAggregates: {
       residenceCount: number
       parkingCount: number
       entranceCount: number
+      facilityCount: number
+      otherCount: number
     }
     CostCenterTreeProperty: {
       code: string
       designation: string | null
       tract: string | null
-      addresses: {
+      buildings: {
         buildingCode: string
         buildingName: string | null
         buildingType: {
           code: string | null
           name: string | null
         } | null
+        staircases: {
+          code: string
+          name: string | null
+          residenceCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        residenceCount: number
+        parkingCount: number
+        facilityCount: number
+        otherCount: number
+      }[]
+      parkingAreas: {
+        code: string
+        name: string | null
+        parkingCount: number
       }[]
       aggregates: {
         residenceCount: number
         parkingCount: number
         entranceCount: number
+        facilityCount: number
+        otherCount: number
       }
     }
     CostCenterTreeKvvArea: {
@@ -11782,18 +11872,36 @@ export interface components {
         code: string
         designation: string | null
         tract: string | null
-        addresses: {
+        buildings: {
           buildingCode: string
           buildingName: string | null
           buildingType: {
             code: string | null
             name: string | null
           } | null
+          staircases: {
+            code: string
+            name: string | null
+            residenceCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          residenceCount: number
+          parkingCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        parkingAreas: {
+          code: string
+          name: string | null
+          parkingCount: number
         }[]
         aggregates: {
           residenceCount: number
           parkingCount: number
           entranceCount: number
+          facilityCount: number
+          otherCount: number
         }
       }[]
     }
@@ -11825,18 +11933,36 @@ export interface components {
           code: string
           designation: string | null
           tract: string | null
-          addresses: {
+          buildings: {
             buildingCode: string
             buildingName: string | null
             buildingType: {
               code: string | null
               name: string | null
             } | null
+            staircases: {
+              code: string
+              name: string | null
+              residenceCount: number
+              facilityCount: number
+              otherCount: number
+            }[]
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          parkingAreas: {
+            code: string
+            name: string | null
+            parkingCount: number
           }[]
           aggregates: {
             residenceCount: number
             parkingCount: number
             entranceCount: number
+            facilityCount: number
+            otherCount: number
           }
         }[]
       }[]
@@ -11875,6 +12001,19 @@ export interface components {
         mobilePhone?: string
         employeeId?: string
       } | null
+    }
+    RentalObjectSummary: {
+      rentalId: string
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string | null
+      name: string | null
+      subtypeName: string | null
+      address: string | null
+      buildingCode: string | null
+      staircaseCode: string | null
+      staircaseName: string | null
+      parkingAreaCode: string | null
     }
     Key: {
       /** Format: uuid */

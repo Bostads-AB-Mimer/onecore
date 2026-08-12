@@ -59,6 +59,43 @@ describe('GET /communication-log/dispatches', () => {
     expect(passed.audienceBuildingCodes).toEqual(['B12'])
   })
 
+  it('parses the picker-level audience params (kvv-area, property)', async () => {
+    const res = await request(app.callback())
+      .get('/communication-log/dispatches')
+      .query({
+        audienceKvvAreaCodes: '61116',
+        audienceProperty: ['ÄLGEN 3', 'MINKEN 2'],
+        audienceParkingAreaCodes: '504-717-00',
+        audienceStaircaseCodes: '504-017-01',
+      })
+
+    expect(res.status).toBe(200)
+    const passed = searchMock.mock.calls[0][0]
+    expect(passed.audienceKvvAreaCodes).toEqual(['61116'])
+    expect(passed.audienceProperty).toEqual(['ÄLGEN 3', 'MINKEN 2'])
+    expect(passed.audienceParkingAreaCodes).toEqual(['504-717-00'])
+    expect(passed.audienceStaircaseCodes).toEqual(['504-017-01'])
+  })
+
+  it('parses audienceObjectTypes', async () => {
+    const res = await request(app.callback())
+      .get('/communication-log/dispatches')
+      .query({ audienceObjectTypes: ['parkingSpace', 'facility'] })
+
+    expect(res.status).toBe(200)
+    const passed = searchMock.mock.calls[0][0]
+    expect(passed.audienceObjectTypes).toEqual(['parkingSpace', 'facility'])
+  })
+
+  it('returns 400 on an unknown object type', async () => {
+    const res = await request(app.callback())
+      .get('/communication-log/dispatches')
+      .query({ audienceObjectTypes: 'garage' })
+
+    expect(res.status).toBe(400)
+    expect(searchMock).not.toHaveBeenCalled()
+  })
+
   it('returns 400 on an invalid filter value', async () => {
     const res = await request(app.callback())
       .get('/communication-log/dispatches')

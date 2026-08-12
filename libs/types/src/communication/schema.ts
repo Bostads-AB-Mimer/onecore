@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { RENTAL_OBJECT_TYPES } from '../property/schema'
+
 export const DIRECTION = ['outbound', 'inbound'] as const
 export const CHANNEL = ['sms', 'email'] as const
 export const RECIPIENT_STATUS = [
@@ -145,6 +147,11 @@ export const AudienceCriterionSchema = z.object({
   value: z.string(),
 })
 
+// The 'objectType' criterion stores rental object types — same vocabulary the
+// property service returns, so both write and read use the shared enum.
+// Producers must use these values; other dialects (e.g. lease-search's
+// bostad/parkering/...) are rejected on write rather than stored unmatchable.
+
 // Repeatable query param (single value or repeated) normalized to an array and
 // validated against `schema`. Query strings arrive as string | string[] and
 // koa-okapi-router does not coerce, so we do it here. Passing an enum schema
@@ -190,7 +197,19 @@ export const DispatchSearchQueryParamsSchema = z.object({
   minRecipients: z.coerce.number().int().nonnegative().optional(),
   audienceDistrictNames: repeatableStringParam,
   audienceBuildingCodes: repeatableStringParam,
+  // Xpand "Område" (babya.code) — distinct from kvv-areas. No current producer
+  // (the audience picker stores district/kvvArea/property/building); kept for
+  // criteria written by other callers.
   audienceAreaCodes: repeatableStringParam,
+  audienceKvvAreaCodes: repeatableStringParam,
+  audienceProperty: repeatableStringParam,
+  audienceParkingAreaCodes: repeatableStringParam,
+  // Composite buildingCode-staircaseCode (e.g. '504-017-01') — globally unique.
+  audienceStaircaseCodes: repeatableStringParam,
+  // Object-type dimension (stored criterion type 'objectType'). Special
+  // matching: a dispatch with NO objectType criterion was unrestricted
+  // (all types) and matches ANY value here.
+  audienceObjectTypes: repeatableParam(z.enum(RENTAL_OBJECT_TYPES)),
   sortBy: z
     .enum(['sendAt', 'recipientCount', 'createdAt'])
     .optional()

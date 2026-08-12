@@ -76,6 +76,21 @@ export function useUrlFilters({
     [searchParams, setSearchParams]
   )
 
+  // Set several multi-value keys in one URL update (sequential setFilterValues
+  // calls would clobber each other via the stale searchParams closure).
+  const setFilterValuesBatch = useCallback(
+    (updates: Record<string, string[]>) => {
+      const newParams = new URLSearchParams(searchParams)
+      for (const [key, values] of Object.entries(updates)) {
+        newParams.delete(key)
+        values.forEach((v) => newParams.append(key, v))
+      }
+      newParams.delete('page')
+      setSearchParams(newParams)
+    },
+    [searchParams, setSearchParams]
+  )
+
   // --- Date range filters ---
   const setDateRange = useCallback(
     (
@@ -133,6 +148,7 @@ export function useUrlFilters({
     // Multi-value filters
     getFilterValues,
     setFilterValues,
+    setFilterValuesBatch,
 
     // Date ranges
     setDateRange,

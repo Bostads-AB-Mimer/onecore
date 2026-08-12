@@ -1163,7 +1163,18 @@ export const KeycloakUserSummarySchema = z.object({
   employeeId: z.string().optional(),
 })
 
-export const CostCenterTreeAddressSchema = z.object({
+// A trapphus of a building; name is typically the street address + entrance.
+export const CostCenterTreeStaircaseSchema = z.object({
+  code: z.string(),
+  name: z.string().nullable(),
+  residenceCount: z.number().int().nonnegative(),
+  facilityCount: z.number().int().nonnegative(),
+  otherCount: z.number().int().nonnegative(),
+})
+
+// A building of a property; buildingName is typically the street address.
+// Counts cover ALL the building's objects (incl. staircase-less ones).
+export const CostCenterTreeBuildingSchema = z.object({
   buildingCode: z.string(),
   buildingName: z.string().nullable(),
   buildingType: z
@@ -1172,19 +1183,35 @@ export const CostCenterTreeAddressSchema = z.object({
       name: z.string().nullable(),
     })
     .nullable(),
+  staircases: z.array(CostCenterTreeStaircaseSchema),
+  residenceCount: z.number().int().nonnegative(),
+  parkingCount: z.number().int().nonnegative(),
+  facilityCount: z.number().int().nonnegative(),
+  otherCount: z.number().int().nonnegative(),
+})
+
+// Markområde (bayta) containing parking spaces; code = the shared prefix of
+// its spaces' rental object codes (e.g. '607-705-00').
+export const CostCenterTreeParkingAreaSchema = z.object({
+  code: z.string(),
+  name: z.string().nullable(),
+  parkingCount: z.number().int().nonnegative(),
 })
 
 export const CostCenterTreeAggregatesSchema = z.object({
   residenceCount: z.number().int().nonnegative(),
   parkingCount: z.number().int().nonnegative(),
   entranceCount: z.number().int().nonnegative(),
+  facilityCount: z.number().int().nonnegative(),
+  otherCount: z.number().int().nonnegative(),
 })
 
 export const CostCenterTreePropertySchema = z.object({
   code: z.string(),
   designation: z.string().nullable(),
   tract: z.string().nullable(),
-  addresses: z.array(CostCenterTreeAddressSchema),
+  buildings: z.array(CostCenterTreeBuildingSchema),
+  parkingAreas: z.array(CostCenterTreeParkingAreaSchema),
   aggregates: CostCenterTreeAggregatesSchema,
 })
 
@@ -1242,6 +1269,26 @@ export const PropertyKvvAreaLinkSchema = z.object({
 })
 
 export type PropertyKvvAreaLink = z.infer<typeof PropertyKvvAreaLinkSchema>
+
+// Shared vocabulary (libs/types) — same enum the property service uses.
+export const RentalObjectTypeSchema = property.RentalObjectTypeSchema
+
+// Flat rental-object structure row (babuf): what it is, where it sits and its
+// postal address. Mirrors the property service's RentalObjectSummary.
+export const RentalObjectSummarySchema = z.object({
+  rentalId: z.string(),
+  type: RentalObjectTypeSchema,
+  code: z.string().nullable(),
+  name: z.string().nullable(),
+  subtypeName: z.string().nullable(),
+  address: z.string().nullable(),
+  buildingCode: z.string().nullable(),
+  staircaseCode: z.string().nullable(),
+  staircaseName: z.string().nullable(),
+  parkingAreaCode: z.string().nullable(),
+})
+
+export type RentalObjectSummary = z.infer<typeof RentalObjectSummarySchema>
 
 export const PatchKvvAreaResponsibleBodySchema = z.object({
   keycloakUserId: z.string().uuid(),

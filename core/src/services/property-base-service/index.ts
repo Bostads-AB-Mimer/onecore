@@ -14,6 +14,7 @@ import { routes as componentRoutes } from './components'
 import { routes as costCenterRoutes } from './cost-centers'
 import { routes as kvvAreaRoutes } from './kvv-areas'
 import { routes as propertyKvvAreaRoutes } from './property-kvv-area'
+import { routes as rentalObjectRoutes } from './rental-objects'
 
 /**
  * @swagger
@@ -136,7 +137,15 @@ export const routes = (router: KoaRouter) => {
   )
 
   registerSchema('KeycloakUserSummary', schemas.KeycloakUserSummarySchema)
-  registerSchema('CostCenterTreeAddress', schemas.CostCenterTreeAddressSchema)
+  registerSchema(
+    'CostCenterTreeStaircase',
+    schemas.CostCenterTreeStaircaseSchema
+  )
+  registerSchema('CostCenterTreeBuilding', schemas.CostCenterTreeBuildingSchema)
+  registerSchema(
+    'CostCenterTreeParkingArea',
+    schemas.CostCenterTreeParkingAreaSchema
+  )
   registerSchema(
     'CostCenterTreeAggregates',
     schemas.CostCenterTreeAggregatesSchema
@@ -149,12 +158,14 @@ export const routes = (router: KoaRouter) => {
   registerSchema('PutPropertyKvvAreaBody', schemas.PutPropertyKvvAreaBodySchema)
   registerSchema('PropertyKvvAreaLink', schemas.PropertyKvvAreaLinkSchema)
   registerSchema('PatchedKvvArea', schemas.PatchedKvvAreaSchema)
+  registerSchema('RentalObjectSummary', schemas.RentalObjectSummarySchema)
 
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)
   costCenterRoutes(router)
   kvvAreaRoutes(router)
   propertyKvvAreaRoutes(router)
+  rentalObjectRoutes(router)
 
   /**
    * @swagger
