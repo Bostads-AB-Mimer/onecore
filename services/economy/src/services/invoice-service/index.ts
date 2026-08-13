@@ -17,6 +17,7 @@ import {
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
+  getInvoicesByInvoiceNumbers as getXledgerInvoicesByInvoiceNumbers,
   submitMiscellaneousInvoice,
 } from '../common/adapters/xledger-adapter'
 import {
@@ -75,6 +76,63 @@ export const routes = (router: KoaRouter) => {
         }
       })
 
+      // Invoices found only in Xpand — e.g. invoices for a shared lease
+      // billed to the other lease holder (MIM-1160) — are missed by the
+      // contact-scoped Xledger lookup above, so their Xledger data (payment
+      // status, debt collection, remaining amount, invoice PDF) is fetched
+      // by invoice number instead.
+      let xpandOnlyInvoices = xpandInvoices.filter(
+        (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
+      )
+
+      if (xpandOnlyInvoices.length > 0) {
+        try {
+          const xledgerByNumber = await getXledgerInvoicesByInvoiceNumbers(
+            xpandOnlyInvoices.map((invoice) => invoice.invoiceId)
+          )
+          const byNumberLosses = xledgerByNumber.filter(
+            (i) => i.accountCode === '1529'
+          )
+          const byNumberRegular = xledgerByNumber.filter(
+            (i) => i.accountCode !== '1529'
+          )
+
+          xpandOnlyInvoices = xpandOnlyInvoices.map((xpandInvoice) => {
+            const xledgerInvoice = byNumberRegular.find(
+              (i) => i.invoiceId === xpandInvoice.invoiceId
+            )
+
+            if (!xledgerInvoice) {
+              return xpandInvoice
+            }
+
+            const enriched: Invoice =
+              xpandInvoice.fromDate && xpandInvoice.toDate
+                ? {
+                    ...xledgerInvoice,
+                    fromDate: xpandInvoice.fromDate,
+                    toDate: xpandInvoice.toDate,
+                  }
+                : { ...xledgerInvoice }
+
+            if (
+              byNumberLosses.some((l) => l.invoiceId === enriched.invoiceId)
+            ) {
+              enriched.expectedLoss = true
+            }
+
+            return enriched
+          })
+        } catch (error) {
+          // Enrichment is best-effort: fall back to the plain Xpand invoices
+          // rather than failing the whole invoice list.
+          logger.error(
+            { err: error, contactCode },
+            'Failed to enrich Xpand invoices from Xledger by invoice number'
+          )
+        }
+      }
+
       // If invoice exists in xpand, use period (fromDate, toDate) from xpand invoice
       // Otherwise use period from xledger invoice
       const invoices = regularInvoices
@@ -93,11 +151,7 @@ export const routes = (router: KoaRouter) => {
             return invoice
           }
         })
-        .concat(
-          xpandInvoices.filter(
-            (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
-          )
-        )
+        .concat(xpandOnlyInvoices)
 
       const invoiceRows = await getInvoiceRows(
         '001', // Mimer company id.

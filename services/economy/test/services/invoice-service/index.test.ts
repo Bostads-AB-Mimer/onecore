@@ -20,6 +20,14 @@ app.use(router.routes())
 
 describe('Invoice Service', () => {
   describe('GET /invoices/bycontactcode/:contactCode', () => {
+    beforeEach(() => {
+      // Default: no Xledger records found for the by-number enrichment.
+      // Overridden in the enrichment tests below.
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByInvoiceNumbers')
+        .mockResolvedValue([])
+    })
+
     it('responds with 400 if invalid query params', async () => {
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456?from=invalid`
@@ -140,6 +148,76 @@ describe('Invoice Service', () => {
           }),
         ])
       )
+    })
+
+    // MIM-1160: invoices found via a shared lease belong to another paying
+    // contact, so the contact-scoped Xledger lookup misses them. They must be
+    // enriched with Xledger data (debt collection, payment status) by number.
+    it('enriches xpand-only invoices with xledger data fetched by invoice number', async () => {
+      const sentToDebtCollection = new Date('2026-05-01T00:00:00.000Z')
+      const xpandInvoice = factory.invoice.build({
+        invoiceId: '552012345678',
+        fromDate: new Date('2026-01-01T00:00:00.000Z'),
+        toDate: new Date('2026-01-31T00:00:00.000Z'),
+      })
+      const xledgerInvoice = factory.invoice.build({
+        invoiceId: '552012345678',
+        source: 'next',
+        sentToDebtCollection,
+        fromDate: new Date('2026-02-01T00:00:00.000Z'),
+        toDate: new Date('2026-02-28T00:00:00.000Z'),
+      })
+
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([])
+      jest
+        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([xpandInvoice])
+      const byNumberSpy = jest
+        .spyOn(xledgerAdapter, 'getInvoicesByInvoiceNumbers')
+        .mockResolvedValueOnce([xledgerInvoice])
+      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(200)
+      expect(byNumberSpy).toHaveBeenCalledWith(['552012345678'])
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0]).toEqual(
+        expect.objectContaining({
+          invoiceId: '552012345678',
+          sentToDebtCollection: sentToDebtCollection.toISOString(),
+          // period must still come from Xpand
+          fromDate: xpandInvoice.fromDate.toISOString(),
+          toDate: xpandInvoice.toDate.toISOString(),
+        })
+      )
+    })
+
+    it('returns unenriched xpand invoices when the by-number lookup fails', async () => {
+      const xpandInvoice = factory.invoice.build({ invoiceId: '552012345678' })
+
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([])
+      jest
+        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([xpandInvoice])
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByInvoiceNumbers')
+        .mockRejectedValueOnce(new Error('xledger unavailable'))
+      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].invoiceId).toBe('552012345678')
     })
 
     it('uses fromDate and toDate from Xledger if xpand not available', async () => {

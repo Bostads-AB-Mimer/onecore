@@ -343,6 +343,7 @@ describe(adapter.getInvoicesByContactCode, () => {
     paymentStatus: 2,
     transactionType: '_S2Y14GIUN',
     transactionTypeName: 'HYRA    ',
+    recipientContactCode: 'P083974    ',
   }
 
   // MIM-1160/MIM-1221: a co-holder (INNEHAVARE in hyavk) has no invoices bound
@@ -350,15 +351,21 @@ describe(adapter.getInvoicesByContactCode, () => {
   // invoices must also be fetched for the leases the contact holds.
   it('queries invoices for leases where the contact is a lease holder', async () => {
     mockTableQueries['hyavk'] = [
-      { leaseId: `${sharedLeaseId}    `, leaseContactType: 'INNEHAVARE  ' },
-      { leaseId: '111-111-11-1111/01', leaseContactType: 'BORGENSMAN  ' },
+      { leaseId: `${sharedLeaseId}    `, lastDebitDate: null },
     ]
     mockTableQueries['krfkh'] = [invoiceRow]
 
     const result = await adapter.getInvoicesByContactCode('P083975')
 
-    // Only the INNEHAVARE lease may be used to widen the invoice lookup —
-    // other relation types must not expose invoices.
+    // Only INNEHAVARE relations may widen the invoice lookup — other relation
+    // types (e.g. guarantors) must not expose invoices. Filtered in SQL.
+    const hyavkQuery = (mockTableChains['hyavk'] ?? [])[0]
+    expect(hyavkQuery).toBeDefined()
+    expect(hyavkQuery?.where).toHaveBeenCalledWith(
+      'hyavk.keyhyakt',
+      'INNEHAVARE'
+    )
+
     const leaseQuery = (mockTableChains['krfkh'] ?? []).find((chain) =>
       chain.whereIn.mock.calls.some(
         (call: unknown[]) => call[0] === 'krfkh.reference'
@@ -371,11 +378,34 @@ describe(adapter.getInvoicesByContactCode, () => {
 
     expect(result).toBeDefined()
     expect(result?.map((i) => i.invoiceId)).toEqual(['552012345678'])
+    // reference must be the actual payer, not the contact the lookup was for
+    expect(result?.[0].reference).toBe('P083974')
+  })
+
+  it('excludes leases that are no longer billed (terminated)', async () => {
+    mockTableQueries['hyavk'] = [
+      { leaseId: sharedLeaseId, lastDebitDate: null },
+      { leaseId: '111-111-11-1111/01', lastDebitDate: new Date('2023-01-31') },
+    ]
+    mockTableQueries['krfkh'] = [invoiceRow]
+
+    await adapter.getInvoicesByContactCode('P083975')
+
+    // A former co-holder must not keep seeing invoices for a lease that has
+    // stopped being billed.
+    const leaseQuery = (mockTableChains['krfkh'] ?? []).find((chain) =>
+      chain.whereIn.mock.calls.some(
+        (call: unknown[]) => call[0] === 'krfkh.reference'
+      )
+    )
+    expect(leaseQuery?.whereIn).toHaveBeenCalledWith('krfkh.reference', [
+      sharedLeaseId,
+    ])
   })
 
   it('deduplicates invoices found both via recipient and via lease', async () => {
     mockTableQueries['hyavk'] = [
-      { leaseId: sharedLeaseId, leaseContactType: 'INNEHAVARE' },
+      { leaseId: sharedLeaseId, lastDebitDate: null },
     ]
     // Both the recipient query and the lease query resolve the same row.
     mockTableQueries['krfkh'] = [invoiceRow]
