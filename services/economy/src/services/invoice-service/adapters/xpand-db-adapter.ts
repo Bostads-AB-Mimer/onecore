@@ -502,15 +502,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   }
 }
 
-export const getInvoicesByContactCode = async (
-  contactKey: string,
-  filters?: { from?: Date }
-): Promise<Invoice[] | undefined> => {
-  logger.info(
-    { contactCode: contactKey },
-    'Getting invoices by contact code from Xpand DB'
-  )
-
+const buildInvoicesByContactCodeQuery = (filters?: { from?: Date }) => {
   let query = db
     .select(
       'krfkh.invoice as invoiceId',
@@ -531,15 +523,81 @@ export const getInvoicesByContactCode = async (
     .from('krfkh')
     .innerJoin('cmctc', 'cmctc.keycmctc', 'krfkh.keycmctc')
     .innerJoin('revrt', 'revrt.keyrevrt', 'krfkh.keyrevrt')
-    .where({ 'cmctc.cmctckod': contactKey })
-    .andWhere('krfkh.type', 'in', [1, 2])
+    .whereIn('krfkh.type', [1, 2])
     .orderBy('krfkh.fromdate', 'desc')
 
   if (filters?.from) {
     query = query.andWhere('krfkh.fromdate', '>=', filters.from)
   }
 
-  const rows = await query
+  return query
+}
+
+/*
+ * Leases where the contact is a (co-)holder. Invoices in krfkh are bound to
+ * a single paying contact (keycmctc), so a co-holder on a shared lease has no
+ * invoices of their own — their household's invoices must be looked up via
+ * the leases they hold (MIM-1160). Only INNEHAVARE relations count, mirroring
+ * isLeaseHolderRelation in the leasing service — other relation types (e.g.
+ * guarantors) must not expose invoices.
+ */
+const getHolderLeaseIds = async (contactKey: string): Promise<string[]> => {
+  const rows = await db
+    .from('hyavk')
+    .select('hyobj.hyobjben as leaseId', 'hyavk.keyhyakt as leaseContactType')
+    .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
+    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+    .where('cmctc.cmctckod', contactKey)
+
+  return rows
+    .filter((row) => row.leaseContactType?.trim() === 'INNEHAVARE')
+    .map((row) => row.leaseId?.trimEnd())
+    .filter((leaseId: string | undefined): leaseId is string =>
+      Boolean(leaseId)
+    )
+}
+
+export const getInvoicesByContactCode = async (
+  contactKey: string,
+  filters?: { from?: Date }
+): Promise<Invoice[] | undefined> => {
+  logger.info(
+    { contactCode: contactKey },
+    'Getting invoices by contact code from Xpand DB'
+  )
+
+  const recipientRows = await buildInvoicesByContactCodeQuery(filters).where({
+    'cmctc.cmctckod': contactKey,
+  })
+
+  const holderLeaseIds = await getHolderLeaseIds(contactKey)
+
+  const leaseRows =
+    holderLeaseIds.length > 0
+      ? await buildInvoicesByContactCodeQuery(filters).whereIn(
+          'krfkh.reference',
+          holderLeaseIds
+        )
+      : []
+
+  // Merge both lookups, dropping duplicates (an invoice where the contact is
+  // both recipient and lease holder is returned by both queries).
+  const seenInvoiceIds = new Set<string>()
+  const rows: typeof recipientRows = []
+  for (const row of [...recipientRows, ...leaseRows]) {
+    const invoiceId = row.invoiceId?.trim()
+    if (invoiceId) {
+      if (seenInvoiceIds.has(invoiceId)) {
+        continue
+      }
+      seenInvoiceIds.add(invoiceId)
+    }
+    rows.push(row)
+  }
+
+  rows.sort(
+    (a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime()
+  )
 
   if (rows && rows.length > 0) {
     const invoices: Invoice[] = rows
