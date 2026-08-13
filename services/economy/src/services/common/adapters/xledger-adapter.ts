@@ -10,6 +10,7 @@ import {
   InvoiceTransactionType,
   MiscellaneousInvoiceArticle,
   PaymentStatus,
+  SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
 } from '@onecore/types'
@@ -1252,9 +1253,43 @@ export const healthCheck = async () => {
   return {}
 }
 
+// Xledger reports a missing customer (subledger) only via the human-readable
+// GraphQL error message; there is no structured error code for it.
+const XLEDGER_SUBLEDGER_NOT_FOUND_PATTERN = 'subledger.code: No value matching'
+
+const isXledgerCustomerNotFoundError = (err: unknown): boolean => {
+  if (
+    err instanceof Error &&
+    err.message.includes(XLEDGER_SUBLEDGER_NOT_FOUND_PATTERN)
+  ) {
+    return true
+  }
+
+  // Non-2xx responses from Xledger reject before makeXledgerRequest can join
+  // the GraphQL error messages, so inspect the raw response payload too.
+  if (axios.isAxiosError(err)) {
+    const errors = err.response?.data?.errors
+    return (
+      Array.isArray(errors) &&
+      errors.some(
+        (e) =>
+          typeof e?.message === 'string' &&
+          e.message.includes(XLEDGER_SUBLEDGER_NOT_FOUND_PATTERN)
+      )
+    )
+  }
+
+  return false
+}
+
 export const submitMiscellaneousInvoice = async (
   invoice: MiscellaneousInvoicePayload
-) => {
+): Promise<
+  AdapterResult<
+    Array<{ node: { dbId: number } }>,
+    SubmitMiscellaneousInvoiceErrorCodes
+  >
+> => {
   const headerInfo = `${invoice.leaseId}: ${invoice.invoiceRows.map((ir) => ir.article.name).join(', ')}`
 
   const nodes = invoice.invoiceRows.map(
@@ -1325,10 +1360,25 @@ export const submitMiscellaneousInvoice = async (
       invoice.attachment
     )
 
-    return result.data.addInvoiceBaseItems.edges
-  } catch (err: unknown) {
-    logger.error(err, 'Error creating miscellaneous invoice')
-    throw err
+    return { ok: true, data: result.data.addInvoiceBaseItems.edges }
+  } catch (err) {
+    // Expected when the contact has never been registered as a customer in
+    // Xledger — e.g. tenants whose only contract is upcoming. Handled with a
+    // 404 upstream, so warn instead of error (makeXledgerRequest has already
+    // logged the full failure once).
+    if (isXledgerCustomerNotFoundError(err)) {
+      logger.warn(
+        { contactCode: invoice.contactCode },
+        'xledgerAdapter.submitMiscellaneousInvoice: customer not found in Xledger'
+      )
+      return {
+        ok: false,
+        err: SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound,
+      }
+    }
+
+    logger.error({ err }, 'xledgerAdapter.submitMiscellaneousInvoice')
+    return { ok: false, err: SubmitMiscellaneousInvoiceErrorCodes.Unknown }
   }
 }
 

@@ -4,6 +4,7 @@ import {
   Invoice,
   InvoicePaymentEvent,
   RentInvoiceRow,
+  SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
 } from '@onecore/types'
@@ -102,7 +103,12 @@ export async function getMiscellaneousInvoiceDataForLease(
 export async function submitMiscellaneousInvoice(
   invoice: any,
   attachment: any
-): Promise<AdapterResult<boolean, 'unknown'>> {
+): Promise<
+  AdapterResult<
+    Array<{ node: { dbId: number } }>,
+    SubmitMiscellaneousInvoiceErrorCodes
+  >
+> {
   // eslint-disable-next-line n/no-unsupported-features/node-builtins
   const formData = new FormData()
 
@@ -121,15 +127,37 @@ export async function submitMiscellaneousInvoice(
 
   try {
     const url = `${config.economyService.url}/invoices/miscellaneous`
-    const response = await axios.postForm(url, formData)
+    const response = await axios.postForm(url, formData, {
+      // Resolve on 4xx so error bodies from economy can be inspected. Matches
+      // the repo-wide axios default (see leasing-adapter) without depending on
+      // that module having been imported.
+      validateStatus: (status) => status >= 200 && status < 500,
+    })
 
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
-    return { ok: false, err: 'unknown' }
+
+    if (
+      response.status === 404 &&
+      response.data?.type ===
+        SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+    ) {
+      return {
+        ok: false,
+        err: SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound,
+        statusCode: 404,
+      }
+    }
+
+    logger.error(
+      { status: response.status, body: response.data },
+      'economy-adapter.submitMiscellaneousInvoice'
+    )
+    return { ok: false, err: SubmitMiscellaneousInvoiceErrorCodes.Unknown }
   } catch (err: unknown) {
-    logger.error(err, 'Error submitting miscellaneous invoice')
-    return { ok: false, err: 'unknown' }
+    logger.error({ err }, 'economy-adapter.submitMiscellaneousInvoice')
+    return { ok: false, err: SubmitMiscellaneousInvoiceErrorCodes.Unknown }
   }
 }
 

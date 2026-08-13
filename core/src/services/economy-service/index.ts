@@ -3,7 +3,11 @@ import {
   generateRouteMetadata,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy } from '@onecore/types'
+import {
+  economy,
+  RouteErrorResponse,
+  SubmitMiscellaneousInvoiceErrorCodes,
+} from '@onecore/types'
 
 import * as economyAdapter from '../../adapters/economy-adapter'
 
@@ -107,10 +111,29 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!result.ok) {
+      if (
+        result.err ===
+        SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+      ) {
+        ctx.status = 404
+        ctx.body = {
+          type: result.err,
+          title: 'Customer not found in Xledger',
+          status: 404,
+          detail:
+            'The contact does not exist as a customer (subledger) in Xledger.',
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
       ctx.status = 500
       ctx.body = {
-        error: 'Unknown error',
-      }
+        type: result.err,
+        title: 'Error creating miscellaneous invoice',
+        status: 500,
+        ...metadata,
+      } satisfies RouteErrorResponse
     } else {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody({ data: result.data }, metadata)
