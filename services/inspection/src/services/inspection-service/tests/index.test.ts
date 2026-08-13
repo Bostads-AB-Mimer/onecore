@@ -210,9 +210,7 @@ describe('inspection-service', () => {
       const inspectionId = 'INS001'
       const getInspectionByIdSpy = jest
         .spyOn(xpandAdapter, 'getInspectionById')
-        .mockImplementation(() => {
-          throw new Error('Database connection failed')
-        })
+        .mockRejectedValueOnce(new Error('Database connection failed'))
 
       const res = await request(app.callback()).get(
         `/inspections/xpand/${inspectionId}`

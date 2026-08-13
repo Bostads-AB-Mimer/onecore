@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 import SftpClient from 'ssh2-sftp-client'
 import { logger } from '@onecore/utilities'
@@ -122,7 +123,8 @@ export async function transferStralforsFiles(): Promise<void> {
       username: config.stralforsExport.sftp.username,
       password: config.stralforsExport.sftp.password,
       port: config.stralforsExport.sftp.port ?? 22,
-      hostVerifier: (fingerprint: string) => {
+      hostVerifier: (keyData: Buffer) => {
+        const fingerprint = `SHA256:${createHash('sha256').update(keyData).digest('base64')}`
         const expected = config.stralforsExport.sftp.hostFingerprint
         logger.info(
           {
@@ -130,7 +132,7 @@ export async function transferStralforsFiles(): Promise<void> {
             fingerprintExpected: expected ?? '(not set)',
             match: fingerprint === expected,
           },
-          'DEBUG: hostVerifier called'
+          'hostVerifier called'
         )
         if (!expected) {
           logger.warn(

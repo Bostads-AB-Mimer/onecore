@@ -208,7 +208,11 @@ describe('Invoice Service', () => {
     it('accepts invoice numbers with a K suffix', async () => {
       const getInvoiceSpy = jest
         .spyOn(xledgerAdapter, 'getInvoiceByInvoiceNumber')
-        .mockResolvedValueOnce(factory.invoice.build())
+        .mockResolvedValueOnce(parsedXledger(factory.invoice.build()))
+      jest.spyOn(tenfastAdapter, 'getInvoiceByOcr').mockResolvedValueOnce({
+        ok: true,
+        data: parsedTenfast(factory.invoice.build()),
+      })
 
       const res = await request(app.callback()).get(`/invoices/12345K`)
 

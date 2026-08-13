@@ -13,7 +13,9 @@ import { useTenantInvoices } from '@/entities/tenant/hooks/useTenantInvoices'
 import { paths } from '@/shared/routes'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
+import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Skeleton } from '@/shared/ui/Skeleton'
+import TableSkeleton from '@/shared/ui/TableSkeleton'
 
 import { InvoicesTable } from './InvoicesTable'
 
@@ -113,31 +115,26 @@ const InvoicesCard = ({ contactCode }: { contactCode: string }) => {
   )
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Fakturor</CardTitle>
-        <Button asChild variant="outline" size="sm">
-          <Link to={paths.economy({ contactCode })}>
-            <Receipt className="h-4 w-4 mr-2" />
-            Skapa ströfaktura
-          </Link>
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {invoices.isLoading ? (
-          <Skeleton className="h-8 w-full" />
-        ) : (
-          invoices.data && (
-            <InvoicesTable
-              onInvoiceRowClick={setExpandedInvoiceId}
-              expandedInvoiceId={expandedInvoiceId}
-              invoices={invoices.data}
-              contactCode={contactCode}
-            />
-          )
-        )}
-      </CardContent>
-    </Card>
+    <TabLayout title="Fakturor" showCard={true}>
+      <Button asChild variant="outline" size="sm">
+        <Link to={paths.economy({ contactCode })}>
+          <Receipt className="h-4 w-4 mr-2" />
+          Skapa ströfaktura
+        </Link>
+      </Button>
+      {invoices.isLoading ? (
+        <TableSkeleton />
+      ) : (
+        invoices.data && (
+          <InvoicesTable
+            onInvoiceRowClick={setExpandedInvoiceId}
+            expandedInvoiceId={expandedInvoiceId}
+            invoices={invoices.data}
+            contactCode={contactCode}
+          />
+        )
+      )}
+    </TabLayout>
   )
 }
 

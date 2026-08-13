@@ -470,6 +470,7 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy
         .mockReset()
         .mockResolvedValue({ ok: true, data: [] })

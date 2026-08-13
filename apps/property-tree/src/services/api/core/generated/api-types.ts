@@ -491,6 +491,57 @@ export interface paths {
       }
     }
   }
+  '/comments/{targetType}/thread/{targetId}/{commentId}': {
+    /**
+     * Update a comment in a comment thread
+     * @description Update the text and/or type of an existing comment in the comment
+     * thread identified by targetType/targetId and the comment id.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The object type that the comment thread belongs to. */
+          targetType: string
+          /** @description The object id that the comment thread belongs to. */
+          targetId: number
+          /** @description The unique ID of the comment to update. */
+          commentId: number
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            type: 'COMMENT' | 'WARNING' | 'STOP'
+            comment: string
+          }
+        }
+      }
+      responses: {
+        /** @description The updated comment */
+        200: {
+          content: {
+            'application/json': {
+              /** @description The updated comment */
+              content?: Record<string, never>
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description The comment was not found in the given thread */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/leases/parking-space-types': {
     /**
      * Get all parking space types
@@ -563,7 +614,7 @@ export interface paths {
           areaCodes?: string[]
           /** @description District names */
           districtNames?: string[]
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[]
           /** @description Sort field */
           sortBy?:
@@ -1041,7 +1092,7 @@ export interface paths {
             }
           }
         }
-        /** @description Not found. */
+        /** @description No tenant found for this contact code. The response body `type` distinguishes the cause: `contact-not-found`, `contact-not-tenant` or `no-valid-housing-contract`. */
         404: {
           content: never
         }
@@ -1550,6 +1601,86 @@ export interface paths {
         /** @description Internal server error. Failed to retrieve application profile information. */
         500: {
           content: never
+        }
+      }
+    }
+  }
+  '/parking-spaces/{parkingSpaceId}/leases': {
+    /**
+     * Create lease for an external parking space
+     * @description Creates a new lease for the specified external parking space.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description ID of the parking space for which the lease is being created. */
+          parkingSpaceId: string
+        }
+      }
+      responses: {
+        /** @description Lease successfully created */
+        201: {
+          content: {
+            'application/json': Record<string, never>
+          }
+        }
+        /** @description Bad request */
+        400: {
+          content: {
+            'application/json': {
+              /** @example Parking space id is missing. It needs to be passed in the url. */
+              message?: string
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example A technical error has occured. */
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/parking-spaces/{parkingSpaceId}/note-of-interests': {
+    /**
+     * Create a note of interest for an internal parking space
+     * @description Creates a new note of interest for the specified internal parking space.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description ID of the parking space for which the note of interest is being created. */
+          parkingSpaceId: string
+        }
+      }
+      responses: {
+        /** @description Note of interest successfully created */
+        201: {
+          content: {
+            'application/json': Record<string, never>
+          }
+        }
+        /** @description Bad request */
+        400: {
+          content: {
+            'application/json': {
+              /** @example Contact code is missing. It needs to be passed in the body (contactCode) */
+              message?: string
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example A technical error has occured. */
+              message?: string
+            }
+          }
         }
       }
     }
@@ -2794,86 +2925,6 @@ export interface paths {
           content: {
             'application/json': {
               data?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/parking-spaces/{parkingSpaceId}/leases': {
-    /**
-     * Create lease for an external parking space
-     * @description Creates a new lease for the specified external parking space.
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description ID of the parking space for which the lease is being created. */
-          parkingSpaceId: string
-        }
-      }
-      responses: {
-        /** @description Lease successfully created */
-        201: {
-          content: {
-            'application/json': Record<string, never>
-          }
-        }
-        /** @description Bad request */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Parking space id is missing. It needs to be passed in the url. */
-              message?: string
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example A technical error has occured. */
-              message?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/parking-spaces/{parkingSpaceId}/note-of-interests': {
-    /**
-     * Create a note of interest for an internal parking space
-     * @description Creates a new note of interest for the specified internal parking space.
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description ID of the parking space for which the note of interest is being created. */
-          parkingSpaceId: string
-        }
-      }
-      responses: {
-        /** @description Note of interest successfully created */
-        201: {
-          content: {
-            'application/json': Record<string, never>
-          }
-        }
-        /** @description Bad request */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Contact code is missing. It needs to be passed in the body (contactCode) */
-              message?: string
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example A technical error has occured. */
-              message?: string
             }
           }
         }
