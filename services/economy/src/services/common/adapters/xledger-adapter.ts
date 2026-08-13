@@ -799,6 +799,62 @@ export const getInvoicesByContactCode = async (
   return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
 }
 
+/*
+ * Fetches invoices by invoice number, regardless of which customer they are
+ * billed to. Used to enrich invoices that were found via a shared lease in
+ * Xpand (MIM-1160) — those belong to another paying contact, so the
+ * contact-scoped lookup above cannot reach them. The headerTransactionSourceDbId
+ * filter is required: without it the same invoice number also matches payment
+ * and credit transaction rows.
+ */
+export const getInvoicesByInvoiceNumbers = async (
+  invoiceNumbers: string[]
+): Promise<Invoice[]> => {
+  // Invoice numbers are interpolated into the GraphQL document — only accept
+  // the known Xledger format (digits with an optional K suffix for credits).
+  const validInvoiceNumbers = invoiceNumbers.filter((invoiceNumber) =>
+    /^\d{1,20}K?$/i.test(invoiceNumber)
+  )
+
+  if (validInvoiceNumbers.length === 0) {
+    return []
+  }
+
+  const CHUNK_SIZE = 50
+  const invoices: Invoice[] = []
+
+  for (let i = 0; i < validInvoiceNumbers.length; i += CHUNK_SIZE) {
+    const chunk = validInvoiceNumbers.slice(i, i + CHUNK_SIZE)
+
+    const query = {
+      query: `{
+        arTransactions(
+          first: 100,
+          filter: {
+            invoiceNumber_in: [${chunk.map((n) => `"${n}"`).join(', ')}],
+            headerTransactionSourceDbId_in: [600, 797, 3536]
+          }
+        )
+        {
+          edges {
+            node {
+              ${invoiceNodeFragment}
+            }
+          }
+        }
+      }`,
+    }
+
+    const result = await makeXledgerRequest(query)
+
+    invoices.push(
+      ...(result.data?.arTransactions?.edges?.map(transformToInvoice) ?? [])
+    )
+  }
+
+  return invoices
+}
+
 export const getInvoices = async (from?: Date, to?: Date) => {
   const query = {
     query: `

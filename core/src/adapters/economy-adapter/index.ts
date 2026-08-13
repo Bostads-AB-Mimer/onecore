@@ -79,7 +79,15 @@ export async function getInvoicesSentToDebtCollection(
   }
 
   const hasDebtCollection = invoicesResult.data.filter((invoice: Invoice) => {
-    return invoice.sentToDebtCollection !== undefined
+    // Only invoices the contact is the paying party for may count towards
+    // their credit check. The endpoint also returns invoices for shared
+    // leases billed to a co-holder (MIM-1160, reference = the payer), and
+    // another person's debt must not fail this contact's check. If household
+    // debt should count, this is the deliberate rule to change.
+    return (
+      invoice.sentToDebtCollection !== undefined &&
+      invoice.reference === contactCode
+    )
   })
 
   return { ok: true, data: hasDebtCollection }

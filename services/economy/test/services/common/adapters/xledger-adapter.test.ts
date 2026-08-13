@@ -446,3 +446,46 @@ describe(adapter.submitMiscellaneousInvoice, () => {
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })
+
+describe(adapter.getInvoicesByInvoiceNumbers, () => {
+  it('returns [] without calling Xledger when no valid invoice numbers', async () => {
+    // No nock interceptor registered — an HTTP call would throw.
+    const result = await adapter.getInvoicesByInvoiceNumbers([
+      'abc',
+      '1" ) { x }',
+      '',
+    ])
+
+    expect(result).toEqual([])
+  })
+
+  it('fetches invoices for valid invoice numbers only', async () => {
+    let capturedQuery = ''
+    nock(origin)
+      .post(pathname, (body) => {
+        capturedQuery = body.query
+        return true
+      })
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByInvoiceNumbers([
+      '552012345678',
+      'not-a-number',
+      '12345K',
+    ])
+
+    expect(result).toEqual([])
+    expect(capturedQuery).toContain('"552012345678"')
+    expect(capturedQuery).toContain('"12345K"')
+    expect(capturedQuery).not.toContain('not-a-number')
+    // Without the source filter the same invoice number also matches payment
+    // and credit transaction rows.
+    expect(capturedQuery).toContain('headerTransactionSourceDbId_in')
+  })
+})
