@@ -157,6 +157,8 @@ describe('Invoice Service', () => {
       const sentToDebtCollection = new Date('2026-05-01T00:00:00.000Z')
       const xpandInvoice = factory.invoice.build({
         invoiceId: '552012345678',
+        leaseId: '924-033-01-0201/10',
+        transactionTypeName: 'HYRA',
         fromDate: new Date('2026-01-01T00:00:00.000Z'),
         toDate: new Date('2026-01-31T00:00:00.000Z'),
       })
@@ -164,6 +166,11 @@ describe('Invoice Service', () => {
         invoiceId: '552012345678',
         source: 'next',
         sentToDebtCollection,
+        remainingAmount: 1234,
+        // The Xledger transform has no lease context and generates a
+        // placeholder transaction type name.
+        leaseId: 'missing',
+        transactionTypeName: 'a-generated-uuid',
         fromDate: new Date('2026-02-01T00:00:00.000Z'),
         toDate: new Date('2026-02-28T00:00:00.000Z'),
       })
@@ -189,12 +196,45 @@ describe('Invoice Service', () => {
       expect(res.body.content[0]).toEqual(
         expect.objectContaining({
           invoiceId: '552012345678',
+          // Xledger owns payment/debt-collection data
           sentToDebtCollection: sentToDebtCollection.toISOString(),
-          // period must still come from Xpand
+          remainingAmount: 1234,
+          // ...but the lease context and period must survive from Xpand
+          leaseId: '924-033-01-0201/10',
+          transactionTypeName: 'HYRA',
           fromDate: xpandInvoice.fromDate.toISOString(),
           toDate: xpandInvoice.toDate.toISOString(),
         })
       )
+    })
+
+    it('marks an invoice as expected loss when only a loss row exists in xledger', async () => {
+      const xpandInvoice = factory.invoice.build({ invoiceId: '552012345678' })
+      // A loss is recorded as a transaction on account 1529. Here there is no
+      // regular row to enrich from — only the loss.
+      const lossInvoice = factory.invoice.build({
+        invoiceId: '552012345678',
+        accountCode: '1529',
+      })
+
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([])
+      jest
+        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([xpandInvoice])
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByInvoiceNumbers')
+        .mockResolvedValueOnce([lossInvoice])
+      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].expectedLoss).toBe(true)
     })
 
     it('returns unenriched xpand invoices when the by-number lookup fails', async () => {

@@ -821,6 +821,10 @@ export const getInvoicesByInvoiceNumbers = async (
   }
 
   const CHUNK_SIZE = 50
+  // One invoice number can match several transaction rows (e.g. a regular row
+  // plus a loss row on account 1529), so the page size must be well above the
+  // chunk size — Xledger truncates at `first` without reporting it.
+  const PAGE_SIZE = 10000
   const invoices: Invoice[] = []
 
   for (let i = 0; i < validInvoiceNumbers.length; i += CHUNK_SIZE) {
@@ -829,7 +833,7 @@ export const getInvoicesByInvoiceNumbers = async (
     const query = {
       query: `{
         arTransactions(
-          first: 100,
+          first: ${PAGE_SIZE},
           filter: {
             invoiceNumber_in: [${chunk.map((n) => `"${n}"`).join(', ')}],
             headerTransactionSourceDbId_in: [600, 797, 3536]
@@ -846,10 +850,16 @@ export const getInvoicesByInvoiceNumbers = async (
     }
 
     const result = await makeXledgerRequest(query)
+    const edges = result.data?.arTransactions?.edges ?? []
 
-    invoices.push(
-      ...(result.data?.arTransactions?.edges?.map(transformToInvoice) ?? [])
-    )
+    if (edges.length >= PAGE_SIZE) {
+      logger.warn(
+        { invoiceNumbers: chunk.length, returnedRows: edges.length },
+        'Xledger invoice-number lookup hit the page size, results may be truncated'
+      )
+    }
+
+    invoices.push(...edges.map(transformToInvoice))
   }
 
   return invoices

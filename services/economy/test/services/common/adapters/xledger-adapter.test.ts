@@ -459,6 +459,23 @@ describe(adapter.getInvoicesByInvoiceNumbers, () => {
     expect(result).toEqual([])
   })
 
+  it('requests a page size well above the invoice-number chunk size', async () => {
+    // One invoice number can match several transaction rows, so `first` must
+    // exceed the chunk size or Xledger silently truncates the result.
+    let capturedQuery = ''
+    nock(origin)
+      .post(pathname, (body) => {
+        capturedQuery = body.query
+        return true
+      })
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+
+    await adapter.getInvoicesByInvoiceNumbers(['552012345678'])
+
+    const first = Number(/first:\s*(\d+)/.exec(capturedQuery)?.[1])
+    expect(first).toBeGreaterThanOrEqual(1000)
+  })
+
   it('fetches invoices for valid invoice numbers only', async () => {
     let capturedQuery = ''
     nock(origin)
