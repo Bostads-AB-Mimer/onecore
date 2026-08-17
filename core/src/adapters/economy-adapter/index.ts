@@ -78,11 +78,14 @@ export async function getInvoicesSentToDebtCollection(
     return { ok: false, err: invoicesResult.err }
   }
 
+  // reference is the paying contact's code: cmctc.cmctckod from Xpand,
+  // subledger.code from Xledger. The endpoint also returns invoices for
+  // shared leases paid by a co-holder, which must not count here.
+  const isPaidBy = (invoice: Invoice) =>
+    invoice.reference?.trim() === contactCode.trim()
+
   const hasDebtCollection = invoicesResult.data.filter((invoice: Invoice) => {
-    return (
-      invoice.sentToDebtCollection !== undefined &&
-      invoice.reference === contactCode
-    )
+    return invoice.sentToDebtCollection !== undefined && isPaidBy(invoice)
   })
 
   return { ok: true, data: hasDebtCollection }
