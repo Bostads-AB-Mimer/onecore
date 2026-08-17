@@ -28,15 +28,6 @@ app.use(
   })
 )
 
-app.use(
-  koaSwagger({
-    routePrefix: '/swagger',
-    swaggerOptions: {
-      url: '/swagger.json',
-    },
-  })
-)
-
 app.on('error', (err) => {
   logger.error(err)
 })
@@ -96,6 +87,18 @@ app.use(async (ctx, next) => {
   return next()
 })
 
+// Swagger UI and spec run after the auth/role chain above, so viewing them
+// requires the same 'api-access' role as the rest of the API rather than
+// being public.
+app.use(
+  koaSwagger({
+    routePrefix: '/swagger',
+    swaggerOptions: {
+      url: '/swagger.json',
+    },
+  })
+)
+
 app.use(api.routes())
 
 const apiRouter = makeOkapiRouter(new KoaRouter(), {
@@ -108,6 +111,8 @@ apiRoutes(apiRouter, config)
 
 app.use(apiRouter.routes())
 
-swaggerRoutes(publicRouter, apiRouter)
+const swaggerRouter = new KoaRouter()
+swaggerRoutes(swaggerRouter, apiRouter)
+app.use(swaggerRouter.routes())
 
 export default app
