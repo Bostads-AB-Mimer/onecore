@@ -101,23 +101,31 @@ export const routes = (router: KoaRouter) => {
             const xledgerInvoice = byNumberRegular.find(
               (i) => i.invoiceId === xpandInvoice.invoiceId
             )
+            const isExpectedLoss = byNumberLosses.some(
+              (l) => l.invoiceId === xpandInvoice.invoiceId
+            )
 
             if (!xledgerInvoice) {
-              return xpandInvoice
+              // An invoice can be recorded in Xledger as a loss only, with no
+              // regular transaction row to enrich from.
+              return isExpectedLoss
+                ? { ...xpandInvoice, expectedLoss: true }
+                : xpandInvoice
             }
 
-            const enriched: Invoice =
-              xpandInvoice.fromDate && xpandInvoice.toDate
-                ? {
-                    ...xledgerInvoice,
-                    fromDate: xpandInvoice.fromDate,
-                    toDate: xpandInvoice.toDate,
-                  }
-                : { ...xledgerInvoice }
+            const enriched: Invoice = {
+              ...xledgerInvoice,
+              // The Xledger transform carries no lease context — leaseId is
+              // hardcoded to 'missing' and transactionTypeName generated — so
+              // those values are taken from the Xpand invoice.
+              leaseId: xpandInvoice.leaseId,
+              transactionType: xpandInvoice.transactionType,
+              transactionTypeName: xpandInvoice.transactionTypeName,
+              fromDate: xpandInvoice.fromDate ?? xledgerInvoice.fromDate,
+              toDate: xpandInvoice.toDate ?? xledgerInvoice.toDate,
+            }
 
-            if (
-              byNumberLosses.some((l) => l.invoiceId === enriched.invoiceId)
-            ) {
+            if (isExpectedLoss) {
               enriched.expectedLoss = true
             }
 
