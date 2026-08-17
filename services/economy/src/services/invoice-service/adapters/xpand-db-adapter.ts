@@ -525,7 +525,8 @@ const buildInvoicesByContactCodeQuery = (filters?: { from?: Date }) => {
       'krfkh.paystatus as paymentStatus',
       'krfkh.keyrevrt as transactionType',
       'revrt.name as transactionTypeName',
-      'cmctc.cmctckod as recipientContactCode'
+      'cmctc.cmctckod as recipientContactCode',
+      'krfkh.keykrfkh as invoiceRowKey'
     )
     .from('krfkh')
     .innerJoin('cmctc', 'cmctc.keycmctc', 'krfkh.keycmctc')
@@ -554,25 +555,32 @@ const buildInvoicesByContactCodeQuery = (filters?: { from?: Date }) => {
  * kept — their advance invoices are relevant to both holders.
  */
 const getHolderLeaseIds = async (contactKey: string): Promise<string[]> => {
-  const rows = await db
-    .from('hyavk')
-    .select('hyobj.hyobjben as leaseId', 'hyobj.sistadeb as lastDebitDate')
-    .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
-    .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
-    .where('cmctc.cmctckod', contactKey)
-    .where('hyavk.keyhyakt', 'INNEHAVARE')
+  try {
+    const rows = await db
+      .from('hyavk')
+      .select('hyobj.hyobjben as leaseId', 'hyobj.sistadeb as lastDebitDate')
+      .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
+      .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+      .where('cmctc.cmctckod', contactKey)
+      .where('hyavk.keyhyakt', 'INNEHAVARE')
 
-  const startOfToday = new Date()
-  startOfToday.setHours(0, 0, 0, 0)
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
 
-  return rows
-    .filter(
-      (row) => row.lastDebitDate == null || row.lastDebitDate >= startOfToday
-    )
-    .map((row) => row.leaseId?.trimEnd())
-    .filter((leaseId: string | undefined): leaseId is string =>
-      Boolean(leaseId)
-    )
+    return rows
+      .filter(
+        (row) => row.lastDebitDate == null || row.lastDebitDate >= startOfToday
+      )
+      .map((row) => row.leaseId?.trimEnd())
+      .filter((leaseId: string | undefined): leaseId is string =>
+        Boolean(leaseId)
+      )
+  } catch (err) {
+    // Degrade to recipient-only invoices rather than failing the whole
+    // invoice lookup for every contact.
+    logger.error({ err }, 'adapter.getHolderLeaseIds')
+    return []
+  }
 }
 
 export const getInvoicesByContactCode = async (
@@ -584,31 +592,38 @@ export const getInvoicesByContactCode = async (
     'Getting invoices by contact code from Xpand DB'
   )
 
-  const recipientRows = await buildInvoicesByContactCodeQuery(filters).where({
-    'cmctc.cmctckod': contactKey,
-  })
+  const [recipientRows, holderLeaseIds] = await Promise.all([
+    buildInvoicesByContactCodeQuery(filters).where({
+      'cmctc.cmctckod': contactKey,
+    }),
+    getHolderLeaseIds(contactKey),
+  ])
 
-  const holderLeaseIds = await getHolderLeaseIds(contactKey)
+  // Chunked to stay below MSSQL's 2100-bind-parameter limit — an organisation
+  // contact can hold a very large number of lease objects.
+  const LEASE_CHUNK_SIZE = 500
+  const leaseRows: typeof recipientRows = []
+  for (let i = 0; i < holderLeaseIds.length; i += LEASE_CHUNK_SIZE) {
+    const chunkRows = await buildInvoicesByContactCodeQuery(filters).whereIn(
+      'krfkh.reference',
+      holderLeaseIds.slice(i, i + LEASE_CHUNK_SIZE)
+    )
+    leaseRows.push(...chunkRows)
+  }
 
-  const leaseRows =
-    holderLeaseIds.length > 0
-      ? await buildInvoicesByContactCodeQuery(filters).whereIn(
-          'krfkh.reference',
-          holderLeaseIds
-        )
-      : []
-
-  // Merge both lookups, dropping duplicates (an invoice where the contact is
-  // both recipient and lease holder is returned by both queries).
-  const seenInvoiceIds = new Set<string>()
+  // Merge both lookups, dropping duplicate rows (an invoice where the contact
+  // is both recipient and lease holder is returned by both queries). Keyed on
+  // krfkh's primary key — invoice numbers are not guaranteed unique, so two
+  // distinct rows sharing a number must both survive.
+  const seenRowKeys = new Set<string>()
   const rows: typeof recipientRows = []
   for (const row of [...recipientRows, ...leaseRows]) {
-    const invoiceId = row.invoiceId?.trim()
-    if (invoiceId) {
-      if (seenInvoiceIds.has(invoiceId)) {
+    const rowKey = row.invoiceRowKey?.trimEnd()
+    if (rowKey) {
+      if (seenRowKeys.has(rowKey)) {
         continue
       }
-      seenInvoiceIds.add(invoiceId)
+      seenRowKeys.add(rowKey)
     }
     rows.push(row)
   }
