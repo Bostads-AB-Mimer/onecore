@@ -37,8 +37,6 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
  */
 
 export const routes = (router: KoaRouter) => {
-
-
   /**
    * @swagger
    * /leases/search:
