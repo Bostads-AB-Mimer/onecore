@@ -2873,7 +2873,6 @@ export interface components {
       ownershipType: string
       /** Format: date-time */
       registrationDate: string | null
-      /** Format: date-time */
       acquisitionDate: string | null
       isLeasehold: number
       leaseholdTerminationDate: string | null
