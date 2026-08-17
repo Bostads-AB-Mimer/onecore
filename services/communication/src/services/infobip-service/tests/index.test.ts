@@ -2,11 +2,7 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import {
-  Email,
-  WorkOrderSms,
-  InvoiceNotificationEmail,
-} from '@onecore/types'
+import { Email, WorkOrderSms, InvoiceNotificationEmail } from '@onecore/types'
 
 import { isMessageEmail, isValidWorkOrderSms, isValidBulkSms } from '../index'
 import * as emailAdapter from '../adapters/email-adapter'

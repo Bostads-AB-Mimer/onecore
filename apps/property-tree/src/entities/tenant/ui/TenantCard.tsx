@@ -26,7 +26,6 @@ export function TenantCard({
           {getContactRoleTitle(tenant, relatedContacts)}
         </h3>
 
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-6">
           <TenantPersonalInfo
             tenant={tenant}

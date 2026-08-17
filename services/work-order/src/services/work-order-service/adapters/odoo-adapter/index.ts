@@ -3,7 +3,6 @@ import striptags from 'striptags'
 import { logger } from '@onecore/utilities'
 import { groupBy } from 'lodash'
 import z from 'zod'
-import { logger } from '@onecore/utilities'
 import Config from '../../../../common/config'
 import {
   transformWorkOrder,
