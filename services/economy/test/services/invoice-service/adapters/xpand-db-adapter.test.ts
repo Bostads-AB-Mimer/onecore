@@ -2,42 +2,65 @@ const mockRaw = jest.fn()
 
 // Per-table query results for the chainable query-builder mock (db('table')...).
 // Tests set entries here to control what `await db('repsk').innerJoin(...).where(...)` resolves to.
+// Two modes:
+// - static: an array of row objects — every query for the table resolves to it
+// - queue: an array of arrays — each query for the table consumes the next
+//   result set, so two queries against the same table can get different rows
 const mockTableQueries: Record<string, unknown[]> = {}
+
+const resolveTableResult = (table: string | undefined): unknown[] => {
+  const entry = mockTableQueries[table ?? '']
+  if (!entry) {
+    return []
+  }
+  if (entry.length > 0 && Array.isArray(entry[0])) {
+    return (entry.shift() as unknown[]) ?? []
+  }
+  return entry
+}
+
+const chainMethods = [
+  'innerJoin',
+  'leftJoin',
+  'where',
+  'andWhere',
+  'andWhereLike',
+  'whereIn',
+  'orWhere',
+  'orWhereLike',
+  'whereLike',
+  'distinct',
+  'select',
+  'orderBy',
+  'limit',
+  'offset',
+] as const
+
+type MockChain = {
+  [M in (typeof chainMethods)[number]]: jest.Mock
+} & {
+  then: (resolve: (value: unknown[]) => unknown) => unknown
+  catch: () => MockChain
+  from: jest.Mock
+}
 
 // Chainables recorded per table, in creation order, so tests can assert on the
 // jest.fn query methods of a specific query (e.g. which args `whereIn` got).
-const mockTableChains: Record<string, Record<string, jest.Mock>[]> = {}
+const mockTableChains: Record<string, MockChain[]> = {}
 
 // Resolves lazily via the table name so both `db('krfkh')` and
 // `db.select(...).from('krfkh')` pick their result set from mockTableQueries.
-const createChainable = (table?: string) => {
+const createChainable = (table?: string): MockChain => {
   let resolveTable = table
-  const chain: any = {
-    then: (resolve: (value: unknown[]) => unknown) =>
-      resolve(mockTableQueries[resolveTable ?? ''] ?? []),
-    catch: () => chain,
-  }
+  const chain = {} as MockChain
+  chain.then = (resolve) => resolve(resolveTableResult(resolveTable))
+  chain.catch = () => chain
   const register = (t: string) => {
     resolveTable = t
     mockTableChains[t] = mockTableChains[t] ?? []
     mockTableChains[t].push(chain)
   }
-  for (const method of [
-    'innerJoin',
-    'leftJoin',
-    'where',
-    'andWhere',
-    'andWhereLike',
-    'whereIn',
-    'orWhere',
-    'orWhereLike',
-    'whereLike',
-    'distinct',
-    'select',
-    'orderBy',
-    'limit',
-    'offset',
-  ]) {
+  for (const method of chainMethods) {
     chain[method] = jest.fn().mockReturnValue(chain)
   }
   chain.from = jest.fn((t: string) => {
@@ -344,6 +367,7 @@ describe(adapter.getInvoicesByContactCode, () => {
     transactionType: '_S2Y14GIUN',
     transactionTypeName: 'HYRA    ',
     recipientContactCode: 'P083974    ',
+    invoiceRowKey: '_KRFKH0001    ',
   }
 
   // MIM-1160/MIM-1221: a co-holder (INNEHAVARE in hyavk) has no invoices bound
@@ -401,6 +425,40 @@ describe(adapter.getInvoicesByContactCode, () => {
     expect(leaseQuery?.whereIn).toHaveBeenCalledWith('krfkh.reference', [
       sharedLeaseId,
     ])
+  })
+
+  // The headline MIM-1160 scenario: the co-holder has ZERO invoices bound to
+  // their own contact — everything must come from the lease lookup. Uses
+  // queue mode so the recipient query returns [] and the lease query returns
+  // the household invoice. This test fails if the lease merge is removed.
+  it('returns household invoices for a co-holder with no own invoices', async () => {
+    mockTableQueries['hyavk'] = [
+      { leaseId: sharedLeaseId, lastDebitDate: null },
+    ]
+    mockTableQueries['krfkh'] = [
+      [], // recipient query: no invoices bound to the co-holder
+      [invoiceRow], // lease query: the household's invoice
+    ]
+
+    const result = await adapter.getInvoicesByContactCode('P083975')
+
+    expect(result).toHaveLength(1)
+    expect(result?.[0].invoiceId).toBe('552012345678')
+    expect(result?.[0].reference).toBe('P083974')
+  })
+
+  it('keeps two distinct rows that share an invoice number', async () => {
+    // krfkh invoice numbers are not guaranteed unique — dedupe must key on
+    // the primary key, not the number.
+    mockTableQueries['hyavk'] = []
+    mockTableQueries['krfkh'] = [
+      { ...invoiceRow, invoiceRowKey: '_KRFKH0001' },
+      { ...invoiceRow, invoiceRowKey: '_KRFKH0002' },
+    ]
+
+    const result = await adapter.getInvoicesByContactCode('P083975')
+
+    expect(result).toHaveLength(2)
   })
 
   it('deduplicates invoices found both via recipient and via lease', async () => {
