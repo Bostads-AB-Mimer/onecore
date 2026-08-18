@@ -20,7 +20,7 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
   TenfastLeaseTemplateResponseSchema,
-  TenfastLeasesByArticleResponseSchema,
+  TenfastPaginatedLeaseResponseSchema,
   TenfastTagSchema,
   TenfastTag,
 } from './schemas'
@@ -1062,32 +1062,25 @@ const defaultFilters: GetLeasesFilters = {
 export async function getLeasesByTenantId(
   tenantId: string,
   filters: GetLeasesFilters = defaultFilters
-): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> {
+): Promise<AdapterResult<TenfastLease[], 'unknown'>> {
   try {
-    const res = await tenfastApi.request({
-      method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster/${tenantId}/avtal?populate=hyresobjekt,hyresgaster`,
+    const params = new URLSearchParams({
+      hyresgast: tenantId,
+      populate: 'hyresobjekt,hyresgaster',
     })
 
-    // Not sure we want to fail completely here if parsing fails
-    const leases = TenfastLeaseSchema.array().safeParse(res.data)
-
-    if (!leases.success) {
-      logger.error(
-        { error: JSON.stringify(leases.error, null, 2) },
-        'getLeasesByTenantId: Failed to parse Tenfast response'
-      )
-
-      return { ok: false, err: { tag: 'schema-error', error: leases.error } }
-    }
+    const leases = await fetchAllPages(
+      (paginate) =>
+        `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${paginate}`,
+      TenfastPaginatedLeaseResponseSchema
+    )
 
     return {
       ok: true,
-      data: filterByStatus(leases.data, filters.status),
+      data: filterByStatus(leases, filters.status),
     }
-  } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.getLeasesByTenantId')
-    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    return handleTenfastError(err, 'unknown')
   }
 }
 
@@ -1254,7 +1247,7 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     const records = await fetchAllPages(
       (paginate) =>
         `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}&paginate=${paginate}`,
-      TenfastLeasesByArticleResponseSchema
+      TenfastPaginatedLeaseResponseSchema
     )
 
     return { ok: true, data: records }
