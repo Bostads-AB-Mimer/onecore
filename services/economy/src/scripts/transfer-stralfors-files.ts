@@ -116,7 +116,7 @@ export async function transferStralforsFiles(): Promise<void> {
       config.stralforsExport.sftp.hostFingerprint
     ),
   }
-  logger.info(sftpConfig, 'DEBUG: SFTP connection config (no secrets)')
+  logger.info(sftpConfig, 'SFTP connection config')
   try {
     await sftpClient.connect({
       host: config.stralforsExport.sftp.host,
@@ -124,7 +124,7 @@ export async function transferStralforsFiles(): Promise<void> {
       password: config.stralforsExport.sftp.password,
       port: config.stralforsExport.sftp.port ?? 22,
       hostVerifier: (keyData: Buffer) => {
-        const fingerprint = `SHA256:${createHash('sha256').update(keyData).digest('base64')}`
+        const fingerprint = `SHA256:${createHash('sha256').update(keyData).digest('base64').replace(/=+$/, '')}`
         const expected = config.stralforsExport.sftp.hostFingerprint
         logger.info(
           {
@@ -198,7 +198,7 @@ export async function transferStralforsFiles(): Promise<void> {
         errMessage: err instanceof Error ? err.message : String(err),
         errCode: (err as { code?: string }).code,
       },
-      'DEBUG: SFTP connection/transfer error details'
+      'SFTP connection/transfer error'
     )
     await notifyFailure(err, 'SFTP-anslutning')
     throw err
