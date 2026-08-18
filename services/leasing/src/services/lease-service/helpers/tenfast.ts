@@ -139,6 +139,7 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
       ? { code: stadsdel, caption: stadsdel }
       : undefined,
     tenantContactIds: lease.hyresgaster.map((tenant) => tenant.externalId),
+    subletContactId: lease.andraHandHG?.externalId ?? undefined,
     tenants: undefined,
     rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
     rentalObject: rentalObject

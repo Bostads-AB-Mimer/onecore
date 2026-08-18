@@ -14,7 +14,7 @@ const buildTenantInfo = (
 
   return {
     contactCode: tenant.contactCode,
-    fullName: tenant.fullName,
+    fullName: tenant.fullName ?? '',
     moveInDate: lease.leaseStartDate,
     moveOutDate:
       lease.terminationDate ?? lease.preferredMoveOutDate ?? lease.leaseEndDate,

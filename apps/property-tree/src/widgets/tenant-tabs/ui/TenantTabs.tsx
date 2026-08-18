@@ -3,18 +3,22 @@ import {
   FileText,
   Home,
   Key,
+  Mail,
   MessageSquare,
   Receipt,
   StickyNote,
+  Users,
 } from 'lucide-react'
 import { parseAsString, useQueryState } from 'nuqs'
 
 import {
+  TenantCommunicationTabContent,
   TenantKeyLoans,
   TenantLeasesTabContent,
   TenantLedgerTabContent,
   TenantNotesTabContent,
   TenantQueueSystemTabContent,
+  TenantRelatedContactsTabContent,
 } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
@@ -88,9 +92,20 @@ export const TenantTabs = ({
           <StickyNote className="h-4 w-4" />
           <span className="hidden sm:inline">Noteringar</span>
         </TabsTrigger>
+        <TabsTrigger
+          value="communication"
+          className="flex items-center gap-1.5"
+        >
+          <Mail className="h-4 w-4" />
+          <span className="hidden sm:inline">Kommunikationslogg</span>
+        </TabsTrigger>
         <TabsTrigger value="keys" className="flex items-center gap-1.5">
           <Key className="h-4 w-4" />
           <span className="hidden sm:inline">Nyckellån</span>
+        </TabsTrigger>
+        <TabsTrigger value="related" className="flex items-center gap-1.5">
+          <Users className="h-4 w-4" />
+          <span className="hidden sm:inline">Relaterade kontakter</span>
         </TabsTrigger>
       </TabsList>
 
@@ -128,8 +143,16 @@ export const TenantTabs = ({
         <TenantNotesTabContent contactCode={contactCode} />
       </TabsContent>
 
+      <TabsContent value="communication">
+        <TenantCommunicationTabContent contactCode={contactCode} />
+      </TabsContent>
+
       <TabsContent value="keys">
         <TenantKeyLoans contactCode={contactCode} leases={leases} />
+      </TabsContent>
+
+      <TabsContent value="related">
+        <TenantRelatedContactsTabContent contactCode={contactCode} />
       </TabsContent>
     </Tabs>
   )

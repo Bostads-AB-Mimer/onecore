@@ -1,0 +1,16 @@
+model OnecoreKvvArea {
+  id                        String   @id @default(uuid()) @db.UniqueIdentifier
+  code                      String   @unique @db.NVarChar(30)
+  name                      String?  @db.NVarChar(255)
+  costCenterId              String   @map("cost_center_id") @db.UniqueIdentifier
+  responsibleKeycloakUserId String?  @map("responsible_keycloak_user_id") @db.NVarChar(255)
+  createdAt                 DateTime @default(now()) @map("created_at") @db.DateTime
+  updatedAt                 DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+  updatedBy                 String?  @map("updated_by") @db.NVarChar(255)
+
+  costCenter    OnecoreCostCenter        @relation(fields: [costCenterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  propertyLinks OnecorePropertyKvvArea[]
+
+  @@index([costCenterId])
+  @@map("onecore_kvv_area")
+}

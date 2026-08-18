@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { KeyBundle, KeyDetails, ContactV1 } from '@/services/types'
-import { KeyBundleKeysTable } from '@/components/maintenance/KeyBundleKeysTable'
+import { KeyBundleKeys } from '@/components/maintenance/KeyBundleKeys'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { ActionMenu } from '@/components/shared/tables/ActionMenu'
 import { ExpandedRowFreeContent } from '@/components/shared/tables/ExpandedRowFreeContent'
@@ -101,7 +101,7 @@ export function KeyBundlesTable({
                       hasData={keysForExpandedBundle.length > 0}
                       emptyMessage="Inga nycklar i denna samling"
                     >
-                      <KeyBundleKeysTable
+                      <KeyBundleKeys
                         keys={keysForExpandedBundle}
                         contactsByCode={contactsForExpandedBundle}
                         bundleId={bundle.id}

@@ -782,19 +782,26 @@ export const routes = (router: KoaRouter) => {
     leases: Lease[]
   ): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {
     for (const lease of leases) {
-      if (!lease.tenantContactIds) {
-        continue
-      }
+      let contacts: (Contact & { leaseContactType?: string })[] = []
 
-      let contacts: Contact[] = []
-      for (const contactCode of lease.tenantContactIds) {
+      for (const contactCode of lease.tenantContactIds ?? []) {
         const contact =
           await leasingAdapter.getContactByContactCode(contactCode)
         if (!contact.ok || !contact.data) {
           return { ok: false, err: 'no-contact' }
         }
-
         contacts.push(contact.data)
+      }
+
+      if (lease.subletContactId) {
+        const contact = await leasingAdapter.getContactByContactCode(
+          lease.subletContactId
+        )
+        if (!contact.ok || !contact.data) {
+          return { ok: false, err: 'no-contact' }
+        }
+        const leaseContactType: leasing.v1.LeaseContactType = 'subletTenant'
+        contacts.push({ ...contact.data, leaseContactType })
       }
 
       lease.tenants = contacts

@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import config from '../../common/config'
 import { healthCheck as infobipHealthCheck } from '../infobip-service/adapters/email-adapter'
+import { tele2SmsHealthCheck } from '../infobip-service/adapters/sms-adapter'
 import { linearHealthCheck } from '../linear-service/adapters/linear-adapter'
 import {
   HealthCheckTarget,
@@ -25,6 +26,16 @@ const subsystems: HealthCheckTarget[] = [
   {
     probe: async (): Promise<SystemHealth> => {
       return await probe(
+        config.health.tele2.systemName,
+        healthChecks,
+        config.health.tele2.minimumMinutesBetweenRequests,
+        tele2SmsHealthCheck
+      )
+    },
+  },
+  {
+    probe: async (): Promise<SystemHealth> => {
+      return await probe(
         config.health.linear.systemName,
         healthChecks,
         config.health.linear.minimumMinutesBetweenRequests,
@@ -41,6 +52,9 @@ const subsystems: HealthCheckTarget[] = [
  *   - name: Health
  *     description: Operations related to service health
  */
+// TODO: Migrate to OkapiRouter so /health is included in /swagger and the
+// orphaned @swagger JSDoc below can be replaced with a real okapi schema.
+// See TODO in src/api.ts for the broader migration plan.
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger

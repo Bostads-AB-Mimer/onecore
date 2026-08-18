@@ -114,6 +114,20 @@ export const routes = (router: KoaRouter) => {
       const getTenant = await coreAdapter.getTenantByContactCode(
         ctx.params.contactCode
       )
+      // 403 rather than 404: the frontend query only skips retries for
+      // 401/403, and a missing contact should not be retried.
+      if (!getTenant.ok && getTenant.err === 'contact-not-found') {
+        ctx.status = 403
+        ctx.body = {
+          type: getTenant.err,
+          title: 'Contact not found',
+          status: 403,
+          detail: 'No contact found with the given contact code.',
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
       if (!getTenant.ok && getTenant.err === 'no-valid-housing-contract') {
         ctx.status = 403
         ctx.body = {

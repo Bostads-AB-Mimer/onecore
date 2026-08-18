@@ -11,25 +11,28 @@ export interface ValidationResult {
 export function useInspectionValidation(
   inspectorInfo: InspectorInfo,
   completedRooms: number,
-  totalRooms: number
+  totalRooms: number,
+  isChecklistComplete: boolean
 ): ValidationResult {
   return useMemo(() => {
     const errors: string[] = []
 
-    // Validate inspector name
     if (!inspectorInfo.inspectorName.trim()) {
       errors.push('Inspector name is required')
     }
 
-    // Can save draft if basic info is present
     const canSaveDraft = inspectorInfo.inspectorName.trim().length > 0
 
-    // Can complete only if all rooms are handled
-    const canComplete = canSaveDraft && completedRooms === totalRooms
+    // Can complete only if all rooms are handled AND every checklist item in
+    // the "Kontrollfrågor" step is checked.
+    const allRoomsHandled = completedRooms === totalRooms
+    const canComplete = canSaveDraft && allRoomsHandled && isChecklistComplete
 
-    // Add completion error if applicable
-    if (!canComplete && completedRooms < totalRooms) {
+    if (!allRoomsHandled) {
       errors.push(`${totalRooms - completedRooms} rooms remaining`)
+    }
+    if (!isChecklistComplete) {
+      errors.push('Checklist incomplete')
     }
 
     return {
@@ -37,5 +40,10 @@ export function useInspectionValidation(
       canComplete,
       errors,
     }
-  }, [inspectorInfo.inspectorName, completedRooms, totalRooms])
+  }, [
+    inspectorInfo.inspectorName,
+    completedRooms,
+    totalRooms,
+    isChecklistComplete,
+  ])
 }

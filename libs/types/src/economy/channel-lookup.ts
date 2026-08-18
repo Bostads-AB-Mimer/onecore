@@ -1,19 +1,33 @@
 import z from 'zod'
 
+export const LookupRecipientTypeSchema = z.enum(['individual', 'organization'])
+
+export const LookupRecipientSchema = z.object({
+  recipientId: z.string(),
+  recipientType: LookupRecipientTypeSchema,
+})
+
 export const ChannelLookupRequestBodySchema = z.object({
-  nationalRegistrationNumbers: z.string().array(),
+  recipients: LookupRecipientSchema.array(),
 })
 
-const ChannelLookupChannelSchema = z.enum(['Kivra', 'eInvoiceB2C']) // Other possible values are 'Billo' and 'eInvoiceB2B' but they are not used currently
-
-export const ChannelLookupSchema = z.object({
-  channel: ChannelLookupChannelSchema,
-  matchedCandidates: z.string().array().nullable(),
-  error: z.string().nullable(),
+export const ChannelLookupResponseSchema = z.object({
+  candidates: z
+    .object({
+      referenceId: z.string(),
+      availableInChannels: z.string().array(),
+      notAvailableInChannels: z.string().array(),
+    })
+    .array(),
+  channelErrors: z
+    .object({
+      channel: z.string(),
+      error: z.string(),
+    })
+    .array()
+    .optional(),
 })
 
-export const ChannelLookupResponseSchema = z.array(ChannelLookupSchema)
-
-export type ChannelLookup = z.infer<typeof ChannelLookupSchema>
+export type LookupRecipientType = z.infer<typeof LookupRecipientTypeSchema>
+export type LookupRecipient = z.infer<typeof LookupRecipientSchema>
 export type ChannelLookupResponse = z.infer<typeof ChannelLookupResponseSchema>
-export type ChannelLookupChannel = z.infer<typeof ChannelLookupChannelSchema>

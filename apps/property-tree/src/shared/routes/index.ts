@@ -13,6 +13,7 @@ export const routes = {
   dashboard: '/',
   properties: '/fastigheter',
   property: '/fastigheter/:propertyCode', // -- byts ut mot :propertyCode
+  propertyAreas: '/forvaltningsomraden',
   building: '/byggnader/:buildingCode', // klar
   staircase: '/uppgangar/:buildingCode/:staircaseCode', // klar
   residence: '/bostader/:rentalId',
@@ -27,6 +28,7 @@ export const routes = {
   leases: '/hyreskontrakt',
   inspections: '/besiktningar',
   imd: '/imd',
+  economy: '/economy',
   components: '/komponenter',
   callback: '/callback',
 } as const
@@ -59,6 +61,39 @@ export const paths = {
   company: (organizationNumber: string) =>
     generatePath(routes.company, { organizationNumber }),
   tenant: (contactCode: string) => generatePath(routes.tenant, { contactCode }),
+  economy: (params?: { contactCode?: string }) => {
+    if (!params?.contactCode) {
+      return routes.economy
+    }
+
+    const searchParams = new URLSearchParams({
+      contactCode: params.contactCode,
+    })
+    return `${routes.economy}?${searchParams.toString()}`
+  },
+}
+
+// Build a rental-object detail path from its type label + code. Folds the
+// varied labels (Bostad/Lägenhet, Lokal/Förråd, Bilplats/parkering); returns
+// null when unlinkable (e.g. Övrigt) or the code is missing.
+export function getRentalObjectPath(
+  type: string | null | undefined,
+  code: string | null | undefined
+): string | null {
+  if (!code) return null
+  switch (type?.toLowerCase()) {
+    case 'bostad':
+    case 'lägenhet':
+      return paths.residence(code)
+    case 'bilplats':
+    case 'parkering':
+      return paths.parkingSpace(code)
+    case 'lokal':
+    case 'förråd':
+      return paths.facility(code)
+    default:
+      return null
+  }
 }
 
 /**

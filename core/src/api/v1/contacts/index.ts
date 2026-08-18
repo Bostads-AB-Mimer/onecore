@@ -211,7 +211,8 @@ export const routes = (router: OkapiRouter, config: Config) => {
         },
         includeRelations: {
           description:
-            'Include related contacts (guardians/wards) in the response.',
+            'Include related contacts (god man/förvaltare and annan ' +
+            'fakturamottagare, both directions) in the response.',
           schema: z.optional(z.boolean()),
         },
       },

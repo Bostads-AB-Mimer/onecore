@@ -2,7 +2,7 @@ import { AxiosError } from 'axios'
 
 import { RequestError } from '../../../types'
 
-export declare enum RemoveCommentRequestErrorCodes {
+export enum RemoveCommentRequestErrorCodes {
   AccessDenied = 'access-denied',
   Unknown = 'unknown',
 }

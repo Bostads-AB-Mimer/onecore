@@ -88,16 +88,18 @@ export interface ContactsRepository {
    * @returns null when the subject contact does not exist; empty array when
    *          it exists but has no förvaltare.
    */
-  getGuardians: (contactCode: ContactCode) => Promise<RelatedContact[] | null>
+  getAdministrators: (
+    contactCode: ContactCode
+  ) => Promise<RelatedContact[] | null>
 
   /**
    * Retrieves the contacts the given contact is förvaltare for (the inverse
-   * direction) as RelatedContact objects with role 'ward'.
+   * direction) as RelatedContact objects with role 'administratorFor'.
    *
    * @returns null when the subject contact does not exist; empty array when
    *          it exists but is not a förvaltare for anyone.
    */
-  getGuardianWards: (
+  getAdministratorsFor: (
     contactCode: ContactCode
   ) => Promise<RelatedContact[] | null>
 
@@ -112,12 +114,28 @@ export interface ContactsRepository {
 
   /**
    * Retrieves the contacts the given contact is god man for (the inverse
-   * direction) as RelatedContact objects with role 'ward'.
+   * direction) as RelatedContact objects with role 'trusteeFor'.
    *
    * @returns null when the subject contact does not exist; empty array when
    *          it exists but is not a god man for anyone.
    */
-  getTrusteeWards: (
+  getTrusteesFor: (contactCode: ContactCode) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the annan fakturamottagare on the contact's current leases as
+   * RelatedContact objects with role 'otherInvoiceRecipient'. Null when the
+   * contact does not exist.
+   */
+  getOtherInvoiceRecipients: (
+    contactCode: ContactCode
+  ) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the current lease holders this contact is the annan
+   * fakturamottagare for, as RelatedContact objects with role
+   * 'otherInvoiceRecipientFor'. Null when the contact does not exist.
+   */
+  getOtherInvoiceRecipientsFor: (
     contactCode: ContactCode
   ) => Promise<RelatedContact[] | null>
 
@@ -171,7 +189,9 @@ export interface ContactsRepository {
    *
    * @param codes - The contact codes to fetch.
    * @param options - When `includeRelations` is set, each contact is populated
-   *                  with its god man/förvaltare/ward relations.
+   *                  with its related contacts: god man/förvaltare
+   *                  relations plus other-invoice-recipient relations (both
+   *                  directions).
    *
    * @returns A promise that resolves to an array of Contact objects.
    */

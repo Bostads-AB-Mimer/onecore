@@ -6,6 +6,7 @@ import bodyParser from 'koa-bodyparser'
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
 import * as invoiceService from '@src/services/invoice-service/service'
+import * as commonXpandAdapter from '@src/services/common/adapters/xpand-db-adapter'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
@@ -203,6 +204,39 @@ describe('Invoice Service', () => {
         schemas.v1.InvoiceSchema.parse(res.body.content)
       ).not.toThrow()
     })
+
+    it('accepts invoice numbers with a K suffix', async () => {
+      const getInvoiceSpy = jest
+        .spyOn(xledgerAdapter, 'getInvoiceByInvoiceNumber')
+        .mockResolvedValueOnce(parsedXledger(factory.invoice.build()))
+      jest.spyOn(tenfastAdapter, 'getInvoiceByOcr').mockResolvedValueOnce({
+        ok: true,
+        data: parsedTenfast(factory.invoice.build()),
+      })
+
+      const res = await request(app.callback()).get(`/invoices/12345K`)
+
+      expect(res.status).toBe(200)
+      expect(getInvoiceSpy).toHaveBeenCalledWith('12345K')
+    })
+
+    it.each(['abc', '1" ) { x }', '12345Kx', '123456789012345678901'])(
+      'responds with 404 for invalid invoice number %p without calling xledger',
+      async (invoiceNumber) => {
+        const getInvoiceSpy = jest.spyOn(
+          xledgerAdapter,
+          'getInvoiceByInvoiceNumber'
+        )
+        getInvoiceSpy.mockClear()
+
+        const res = await request(app.callback()).get(
+          `/invoices/${encodeURIComponent(invoiceNumber)}`
+        )
+
+        expect(res.status).toBe(404)
+        expect(getInvoiceSpy).not.toHaveBeenCalled()
+      }
+    )
   })
 
   describe('GET /invoices/:invoiceNumber/payment-events', () => {
@@ -235,6 +269,39 @@ describe('Invoice Service', () => {
       expect(() =>
         schemas.v1.InvoicePaymentEventSchema.array().parse(res.body.content)
       ).not.toThrow()
+    })
+
+    it.each(['abc', '1" ) { x }'])(
+      'responds with 404 for invalid invoice number %p without calling xledger',
+      async (invoiceNumber) => {
+        const getMatchIdSpy = jest.spyOn(xledgerAdapter, 'getInvoiceMatchId')
+        getMatchIdSpy.mockClear()
+
+        const res = await request(app.callback()).get(
+          `/invoices/${encodeURIComponent(invoiceNumber)}/payment-events`
+        )
+
+        expect(res.status).toBe(404)
+        expect(getMatchIdSpy).not.toHaveBeenCalled()
+      }
+    )
+  })
+
+  describe('GET /invoices/miscellaneous/:rentalId', () => {
+    it('is not swallowed by the invoice number guard', async () => {
+      jest
+        .spyOn(commonXpandAdapter, 'getPropertyCodeAndCostCentreForLease')
+        .mockResolvedValueOnce({ costCentre: '123', propertyCode: '456' })
+
+      const res = await request(app.callback()).get(
+        `/invoices/miscellaneous/705-022-04-0201`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        costCentre: '123',
+        propertyCode: '456',
+      })
     })
   })
 

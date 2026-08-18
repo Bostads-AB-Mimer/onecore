@@ -32,6 +32,8 @@ FROM node:23-slim AS runner
 
 WORKDIR /app
 COPY --from=builder /out ./
+COPY --from=builder /app/services/communication/knexfile.js .
+COPY --from=builder /app/services/communication/migrations ./migrations
 
 # Install pnpm using version from package.json
 RUN corepack enable && corepack prepare --activate
@@ -39,4 +41,4 @@ RUN corepack enable && corepack prepare --activate
 ENV PORT=80
 EXPOSE 80
 
-CMD ["node", "build/index.js"]
+CMD ["pnpm", "run", "start"]

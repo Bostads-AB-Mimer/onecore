@@ -61,8 +61,9 @@ export function MultiSelectSearchFilterDropdown({
   const debouncedSearch = useDebounce(searchInput, debounceMs)
   const hasActiveFilter = selectedValues.length > 0
 
-  // Search when debounced value changes
+  // Search when dropdown opens or debounced value changes
   useEffect(() => {
+    if (!open) return
     if (debouncedSearch.length < minSearchLength) {
       setResults([])
       return
@@ -82,7 +83,7 @@ export function MultiSelectSearchFilterDropdown({
     }
 
     search()
-  }, [debouncedSearch, minSearchLength, searchFn])
+  }, [open, debouncedSearch, minSearchLength, searchFn])
 
   // Focus input when dropdown opens
   useEffect(() => {

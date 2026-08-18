@@ -154,17 +154,28 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
                                       "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -347,17 +358,28 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
                                       "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -685,17 +707,28 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
                                       "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -878,17 +911,28 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
                                       "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -1115,17 +1159,28 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
                                       "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -1308,17 +1363,28 @@
                                       "enum": [
                                         "trustee",
                                         "administrator",
-                                        "ward"
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
                                       ]
                                     },
                                     "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
                                       "type": "string"
                                     }
                                   },
                                   "required": [
                                     "contactCode",
                                     "role",
-                                    "fullName"
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -1427,7 +1493,7 @@
           },
           {
             "name": "includeRelations",
-            "description": "Include related contacts (guardians/wards) in the response.",
+            "description": "Include related contacts (god man/förvaltare and annan fakturamottagare, both directions) in the response.",
             "in": "query",
             "required": false,
             "schema": {
@@ -1584,17 +1650,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -1777,17 +1854,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2010,17 +2098,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2203,17 +2302,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2436,17 +2546,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2629,17 +2750,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2862,17 +2994,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -3055,17 +3198,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -3288,17 +3442,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -3481,17 +3646,28 @@
                                     "enum": [
                                       "trustee",
                                       "administrator",
-                                      "ward"
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
                                     ]
                                   },
                                   "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
                                     "type": "string"
                                   }
                                 },
                                 "required": [
                                   "contactCode",
                                   "role",
-                                  "fullName"
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -3702,17 +3878,28 @@
                       "enum": [
                         "trustee",
                         "administrator",
-                        "ward"
+                        "trusteeFor",
+                        "administratorFor",
+                        "otherInvoiceRecipient",
+                        "otherInvoiceRecipientFor"
                       ]
                     },
                     "fullName": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
                       "type": "string"
                     }
                   },
                   "required": [
                     "contactCode",
                     "role",
-                    "fullName"
+                    "fullName",
+                    "firstName",
+                    "lastName"
                   ],
                   "additionalProperties": false
                 }
@@ -3895,17 +4082,28 @@
                       "enum": [
                         "trustee",
                         "administrator",
-                        "ward"
+                        "trusteeFor",
+                        "administratorFor",
+                        "otherInvoiceRecipient",
+                        "otherInvoiceRecipientFor"
                       ]
                     },
                     "fullName": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
                       "type": "string"
                     }
                   },
                   "required": [
                     "contactCode",
                     "role",
-                    "fullName"
+                    "fullName",
+                    "firstName",
+                    "lastName"
                   ],
                   "additionalProperties": false
                 }

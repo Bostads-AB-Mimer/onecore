@@ -4,7 +4,7 @@ import { formatDate, LeaseStatusBadge } from '@/entities/lease'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
-import { paths } from '@/shared/routes'
+import { getRentalObjectPath, paths } from '@/shared/routes'
 import { ObjectTypeBadge } from '@/shared/ui/StatusBadges'
 
 export const leaseColumns = [
@@ -22,9 +22,22 @@ export const leaseColumns = [
     label: 'Objektnummer',
     className: 'px-2',
     sortKey: 'rentalObjectCode',
-    render: (lease: LeaseSearchResult) => (
-      <span className="font-medium">{lease.rentalObjectCode || '-'}</span>
-    ),
+    render: (lease: LeaseSearchResult) => {
+      if (!lease.rentalObjectCode) {
+        return <span className="font-medium">-</span>
+      }
+      const href = getRentalObjectPath(
+        lease.objectTypeCode,
+        lease.rentalObjectCode
+      )
+      return href ? (
+        <Link to={href} className="font-medium text-primary hover:underline">
+          {lease.rentalObjectCode}
+        </Link>
+      ) : (
+        <span className="font-medium">{lease.rentalObjectCode}</span>
+      )
+    },
     hideOnMobile: true,
   },
   {
@@ -39,12 +52,19 @@ export const leaseColumns = [
         <div className="space-y-1">
           {lease.contacts.map((contact) => (
             <div key={contact.contactCode}>
-              <Link
-                to={paths.tenant(contact.contactCode)}
-                className="font-medium text-primary hover:underline"
-              >
-                {contact.name}
-              </Link>
+              <div className="flex items-center gap-1.5">
+                <Link
+                  to={paths.tenant(contact.contactCode)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {contact.name}
+                </Link>
+                {contact.contactType === 'subletTenant' && (
+                  <span className="rounded bg-muted px-1 py-0.5 text-xs text-muted-foreground">
+                    Andrahand
+                  </span>
+                )}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {contact.contactCode}
               </div>

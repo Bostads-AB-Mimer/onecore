@@ -113,6 +113,8 @@ describe('/contacts/batch', () => {
         contactCode: 'P000444',
         role: 'administrator',
         fullName: 'McTestface Testy',
+        firstName: 'Testy',
+        lastName: 'McTestface',
       })
     })
 
@@ -138,6 +140,8 @@ describe('/contacts/batch', () => {
         contactCode: 'P000444',
         role: 'administrator',
         fullName: 'McTestface Testy',
+        firstName: 'Testy',
+        lastName: 'McTestface',
       })
       expect(byCode['P000333']).toEqual([])
     })

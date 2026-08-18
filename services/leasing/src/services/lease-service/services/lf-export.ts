@@ -22,6 +22,7 @@ export const mapLeasesToLfExportRows = (
       const insuranceRow = lease.hyror.find((row) => row.article === articleId)
       if (!insuranceRow) return []
       if (!insuranceRow.from) return []
+      if (insuranceRow.amount < 0) return []
 
       const leaseStatus =
         insuranceRow.to != null ? '*' : lease.stage === 'upcoming' ? 'K' : 'G'

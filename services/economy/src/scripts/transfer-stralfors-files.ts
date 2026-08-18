@@ -132,7 +132,7 @@ export async function transferStralforsFiles(): Promise<void> {
             fingerprintExpected: expected ?? '(not set)',
             match: fingerprint === expected,
           },
-          'DEBUG: hostVerifier called'
+          'hostVerifier called'
         )
         if (!expected) {
           logger.warn(

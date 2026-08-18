@@ -93,6 +93,8 @@ describe('/contacts/:contactCode', () => {
         contactCode: 'P000444',
         role: 'administrator',
         fullName: 'McTestface Testy',
+        firstName: 'Testy',
+        lastName: 'McTestface',
       })
     })
 

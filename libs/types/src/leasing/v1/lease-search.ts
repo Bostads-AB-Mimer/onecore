@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import { LeaseStatus, LeaseType } from '../../enums'
 
+export const LeaseContactTypeSchema = z.enum(['tenant', 'subletTenant'])
+
+export type LeaseContactType = z.infer<typeof LeaseContactTypeSchema>
+
 /**
  * Contact info schema - reusable for lease contacts
  */
@@ -9,6 +13,7 @@ export const ContactInfoSchema = z.object({
   contactCode: z.string(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
+  contactType: LeaseContactTypeSchema.optional(),
 })
 
 export type ContactInfo = z.infer<typeof ContactInfoSchema>
@@ -68,6 +73,11 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .optional(),
 
   districtNames: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .optional(),
+
+  kvvAreaCodes: z
     .union([z.string(), z.array(z.string())])
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),

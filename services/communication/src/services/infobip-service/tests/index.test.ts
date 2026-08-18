@@ -2,17 +2,14 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import {
-  Email,
-  WorkOrderSms,
-  BulkSms,
-  InvoiceNotificationEmail,
-} from '@onecore/types'
+import { Email, WorkOrderSms, InvoiceNotificationEmail } from '@onecore/types'
 
 import { isMessageEmail, isValidWorkOrderSms, isValidBulkSms } from '../index'
 import * as emailAdapter from '../adapters/email-adapter'
+import * as templateRender from '../adapters/email-template-render'
 import * as smsAdapter from '../adapters/sms-adapter'
 import { routes } from '../'
+import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
 
 jest.mock('@onecore/utilities', () => {
   return {
@@ -23,9 +20,37 @@ jest.mock('@onecore/utilities', () => {
       error: () => {
         return
       },
+      warn: () => {
+        return
+      },
     },
     generateRouteMetadata: jest.fn(() => ({})),
   }
+})
+
+// Skip the real DB-backed logging adapter — these route tests assert HTTP
+// behavior, not persistence. The dedicated db-adapter tests cover that path.
+jest.mock('../../communication-log-service/adapters/db', () => ({
+  logOutboundDispatch: jest.fn().mockResolvedValue({ dispatchId: 'test-id' }),
+}))
+
+// Builds a full Infobip v4 send response so spy return types match the adapter.
+const emailSendResult = (messageId: string) => ({
+  data: {
+    messages: [
+      {
+        messageId,
+        to: 'tenant@example.com',
+        status: {
+          groupId: 1,
+          groupName: 'PENDING',
+          id: 26,
+          name: 'PENDING_ACCEPTED',
+          description: 'Message accepted',
+        },
+      },
+    ],
+  },
 })
 
 const app = new Koa()
@@ -151,6 +176,156 @@ describe('/sendWorkOrderEmail', () => {
   })
 })
 
+describe('work order tenant message logging', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+
+  // The SMS adapter returns the Infobip v3 response directly (no `.data`
+  // wrapper, unlike the email adapter), so the route reads messages[0] off it.
+  const smsSendResult = (messageId: string) => ({
+    messages: [
+      {
+        to: '46701234567',
+        messageId,
+        status: {
+          groupId: 1,
+          groupName: 'PENDING',
+          id: 26,
+          name: 'PENDING_ACCEPTED',
+          description: 'Message accepted',
+        },
+      },
+    ],
+  })
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+  })
+
+  it('logs the SMS with contactCode, messageId and the triggering user', async () => {
+    jest
+      .spyOn(smsAdapter, 'sendWorkOrderSms')
+      .mockResolvedValue(smsSendResult('mid-wo-sms'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
+      phoneNumber: '0701234567',
+      text: 'Ditt ärende är uppdaterat',
+      contactCode: 'P123456',
+      triggeredByUser: 'Anna Handläggare',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledTimes(1)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'sms',
+        messageType: 'work_order_tenant_sms',
+        triggeredByUser: 'Anna Handläggare',
+        recipients: [
+          expect.objectContaining({
+            contactCode: 'P123456',
+            toAddress: '46701234567',
+            externalMessageId: 'mid-wo-sms',
+            status: 'pending',
+          }),
+        ],
+      })
+    )
+  })
+
+  it('does not log the SMS when contactCode is absent (back-compat)', async () => {
+    jest
+      .spyOn(smsAdapter, 'sendWorkOrderSms')
+      .mockResolvedValue(smsSendResult('mid-wo-sms'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
+      phoneNumber: '0701234567',
+      text: 'hello',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a non-blocking warning when SMS logging throws', async () => {
+    jest
+      .spyOn(smsAdapter, 'sendWorkOrderSms')
+      .mockResolvedValue(smsSendResult('mid-wo-sms'))
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
+      phoneNumber: '0701234567',
+      text: 'hello',
+      contactCode: 'P123456',
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toEqual(['Communication log failed'])
+  })
+
+  it('logs the email with contactCode and messageId', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendWorkOrderEmail')
+      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
+      to: 'tenant@example.com',
+      subject: 'Ditt ärende',
+      text: 'Ditt ärende är uppdaterat',
+      contactCode: 'P123456',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledTimes(1)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'email',
+        messageType: 'work_order_tenant_mail',
+        recipients: [
+          expect.objectContaining({
+            contactCode: 'P123456',
+            toAddress: 'tenant@example.com',
+            externalMessageId: 'mid-wo-mail',
+            status: 'pending',
+          }),
+        ],
+      })
+    )
+  })
+
+  it('does not log the email when contactCode is absent (back-compat)', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendWorkOrderEmail')
+      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
+      to: 'tenant@example.com',
+      subject: 'subject',
+      text: 'hello',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a non-blocking warning when email logging throws', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendWorkOrderEmail')
+      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
+      to: 'tenant@example.com',
+      subject: 'subject',
+      text: 'hello',
+      contactCode: 'P123456',
+    })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toEqual(['Communication log failed'])
+  })
+})
+
 describe('isMessageEmail', () => {
   it('should return true for valid email objects', () => {
     const validEmail = {
@@ -228,7 +403,11 @@ describe('isValidWorkOrderSms', () => {
 })
 
 describe('/sendBulkSms', () => {
-  let sendBulkSmsSpy: jest.SpyInstance<Promise<any>, [sms: BulkSms], any>
+  let sendBulkSmsSpy: jest.SpyInstance<
+    Promise<any>,
+    [sms: { phoneNumbers: string[]; text: string }],
+    any
+  >
 
   beforeEach(() => {
     sendBulkSmsSpy = jest.spyOn(smsAdapter, 'sendBulkSms')
@@ -393,6 +572,328 @@ describe('/send-invoice-notification-email', () => {
       .send(validBody)
 
     expect(res.status).toBe(500)
+  })
+})
+
+describe('/sendBulkSms logging', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+
+  // The SMS adapter returns the Infobip v3 response directly (no `.data`
+  // wrapper), so the route reads messageId off messages[i].
+  const smsSendResult = (messageId: string) => ({
+    messages: [
+      {
+        to: '46701234567',
+        messageId,
+        status: {
+          groupId: 1,
+          groupName: 'PENDING',
+          id: 26,
+          name: 'PENDING_ACCEPTED',
+          description: 'Message accepted',
+        },
+      },
+    ],
+  })
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    jest
+      .spyOn(smsAdapter, 'sendBulkSms')
+      .mockResolvedValue(smsSendResult('mid-bulk'))
+  })
+
+  it('returns 200 with no warnings when logging succeeds', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toBeUndefined()
+  })
+
+  it('returns 200 with a warning (non-blocking) when logging fails', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toEqual([
+      expect.stringContaining('Communication log failed'),
+    ])
+  })
+})
+
+describe('parking space offer email logging', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+
+  // The route builds the templateId + placeholders from the request body (via
+  // parking-space-requests) and renders the log by fetching the Infobip
+  // template. Default to a generic template with the tokens the routes use;
+  // individual tests override it as needed.
+  let getTemplateMock: jest.SpyInstance
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    getTemplateMock = jest
+      .spyOn(templateRender, 'getEmailTemplate')
+      .mockResolvedValue({
+        subject: 'Standardämne',
+        html:
+          '<p>Hej {{firstName}}!</p><p>Adress: {{address}}</p>' +
+          '<p>Hyra: {{rent}}</p><p>Kontraktsnummer: {{leaseId}}</p>',
+      })
+  })
+
+  const offerBody = {
+    to: 'tenant@example.com',
+    contactCode: 'P123456',
+    subject: 'Erbjudande om bilplats',
+    text: 'Erbjudande om bilplats',
+    address: 'Testgatan 1',
+    firstName: 'Test',
+    availableFrom: '2026-01-01',
+    deadlineDate: '2026-01-05',
+    rent: '500',
+    type: 'Bilplats',
+    parkingSpaceId: '123-456-789',
+    objectId: '42',
+    applicationType: 'Additional',
+    offerURL: 'https://example.com/offer/42',
+  }
+
+  it('logs the offer email with content rendered from the fetched template', async () => {
+    getTemplateMock.mockResolvedValue({
+      subject: 'Du har fått ett erbjudande om en bilplats',
+      html:
+        '<p>Hej {{firstName}}!</p><p>Adress: {{address}}</p>' +
+        '<p>Hyra: {{rent}}</p>',
+    })
+    jest
+      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
+      .mockResolvedValue(emailSendResult('mid-offer'))
+
+    const res = await request(app.callback())
+      .post('/sendParkingSpaceOffer')
+      .send(offerBody)
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledTimes(1)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'email',
+        messageType: 'parking_space_offer',
+        triggeredByUser: 'Automatiskt utskick',
+        // Rendered from the fetched Infobip template, not the static label.
+        subject: 'Du har fått ett erbjudande om en bilplats',
+        body: expect.stringContaining('Hej Test!'),
+        recipients: [
+          expect.objectContaining({
+            contactCode: 'P123456',
+            toAddress: 'tenant@example.com',
+            externalMessageId: 'mid-offer',
+            status: 'pending',
+          }),
+        ],
+      })
+    )
+    // The logged body carries the real details, not a repeated title.
+    const loggedBody = logOutboundDispatchMock.mock.calls[0][0].body as string
+    expect(loggedBody).toContain('Adress: Testgatan 1')
+    expect(loggedBody).toContain('Hyra: 500 kr')
+  })
+
+  it('falls back to the label when the template cannot be fetched', async () => {
+    getTemplateMock.mockResolvedValue(null)
+    jest
+      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
+      .mockResolvedValue(emailSendResult('mid-offer'))
+
+    const res = await request(app.callback())
+      .post('/sendParkingSpaceOffer')
+      .send(offerBody)
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: offerBody.subject,
+        body: offerBody.text,
+      })
+    )
+  })
+
+  it('falls back to the label subject when the fetched template has no subject', async () => {
+    getTemplateMock.mockResolvedValue({
+      subject: '',
+      html: '<p>Hej {{firstName}}!</p>',
+    })
+    jest
+      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
+      .mockResolvedValue(emailSendResult('mid-offer'))
+
+    const res = await request(app.callback())
+      .post('/sendParkingSpaceOffer')
+      .send(offerBody)
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        // Empty rendered subject must not overwrite the meaningful label; the
+        // body still renders from the (non-empty) template html.
+        subject: offerBody.subject,
+        body: expect.stringContaining('Hej Test!'),
+      })
+    )
+  })
+
+  it('does not fail the send when communication logging throws (strict but non-blocking)', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
+      .mockResolvedValue(emailSendResult('mid-offer'))
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendParkingSpaceOffer')
+      .send(offerBody)
+
+    expect(res.status).toBe(200)
+  })
+
+  it('logs the accept-offer email with the right messageType', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendParkingSpaceAcceptOffer')
+      .mockResolvedValue(emailSendResult('mid-accept'))
+
+    const res = await request(app.callback())
+      .post('/sendParkingSpaceAcceptOffer')
+      .send({
+        to: 'tenant@example.com',
+        contactCode: 'P123456',
+        subject: 'Du har tackat ja till en bilplats',
+        text: 'Du har tackat ja till en bilplats hos Bostads Mimer.',
+        firstName: 'Test',
+        parkingSpaceId: '123-456-789',
+        address: 'Testgatan 1',
+        availableFrom: '2026-01-01',
+        rent: '500',
+        type: 'Bilplats',
+        objectId: '42',
+      })
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageType: 'parking_space_accept_offer',
+        recipients: [
+          expect.objectContaining({ externalMessageId: 'mid-accept' }),
+        ],
+      })
+    )
+  })
+
+  it('logs the non-scored approved email with the right messageType', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendNonScoredParkingSpaceApproved')
+      .mockResolvedValue(emailSendResult('mid-appr'))
+
+    const res = await request(app.callback())
+      .post('/sendNonScoredParkingSpaceApproved')
+      .send({
+        to: 'tenant@example.com',
+        contactCode: 'P123456',
+        subject: 'Godkänd ansökan om bilplats',
+        text: 'Din ansökan om bilplats har godkänts.',
+        leaseId: 'L-1',
+        address: 'Testgatan 1',
+        availableFrom: '2026-01-01',
+        parkingSpaceId: '123-456-789',
+        objectId: '42',
+        type: 'Bilplats',
+        rent: '500',
+      })
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageType: 'non_scored_parking_space_approved',
+        subject: 'Standardämne',
+        body: expect.stringContaining('Kontraktsnummer: L-1'),
+      })
+    )
+  })
+
+  it('logs the non-scored denied email with the right messageType', async () => {
+    jest
+      .spyOn(emailAdapter, 'sendNonScoredParkingSpaceDenied')
+      .mockResolvedValue(emailSendResult('mid-deny'))
+
+    const res = await request(app.callback())
+      .post('/sendNonScoredParkingSpaceDenied')
+      .send({
+        to: 'tenant@example.com',
+        contactCode: 'P123456',
+        subject: 'Nekad ansökan om bilplats',
+        text: 'Din ansökan om bilplats kunde inte godkännas.',
+        address: 'Testgatan 1',
+        availableFrom: '2026-01-01',
+        parkingSpaceId: '123-456-789',
+        objectId: '42',
+        type: 'Bilplats',
+        rent: '500',
+      })
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageType: 'non_scored_parking_space_denied',
+      })
+    )
+  })
+})
+
+describe('/sendBulkEmail logging', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    jest
+      .spyOn(emailAdapter, 'sendBulkEmail')
+      .mockResolvedValue(emailSendResult('mid-bulk'))
+  })
+
+  it('returns 200 with no warnings when logging succeeds', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Hej',
+        text: 'Test',
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toBeUndefined()
+  })
+
+  it('returns 200 with a warning (non-blocking) when logging fails', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Hej',
+        text: 'Test',
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.body.warnings).toEqual([
+      expect.stringContaining('Communication log failed'),
+    ])
   })
 })
 

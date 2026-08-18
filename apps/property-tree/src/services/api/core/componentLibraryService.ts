@@ -18,12 +18,26 @@ import type {
 
 import { DELETE, GET, POST, PUT } from './baseApi'
 
+// The backend caps `limit` at 100 per request. Categories and types have no
+// server-side search, so "fetch all" must walk every page — a single capped
+// request would make row 101+ unreachable in the client-paginated tables.
+const PAGE_LIMIT = 100
+
 export const componentLibraryService = {
   // ===== Category Operations =====
   async getCategories(): Promise<ComponentCategory[]> {
-    const { data, error } = await GET('/component-categories')
-    if (error) throw error
-    return (data?.content || []) as ComponentCategory[]
+    const all: ComponentCategory[] = []
+    for (let page = 1; ; page++) {
+      const { data, error } = await GET('/component-categories', {
+        params: { query: { limit: PAGE_LIMIT, page } },
+      })
+      if (error) throw error
+      const items = (data?.content || []) as ComponentCategory[]
+      all.push(...items)
+      // A short page means we've reached the end (the response carries no
+      // pagination meta to read a total from).
+      if (items.length < PAGE_LIMIT) return all
+    }
   },
 
   async getCategoryById(id: string): Promise<ComponentCategory> {
@@ -71,15 +85,16 @@ export const componentLibraryService = {
 
   // ===== Type Operations =====
   async getTypes(categoryId?: string): Promise<ComponentType[]> {
-    const { data, error } = await GET('/component-types', {
-      params: categoryId
-        ? {
-            query: { categoryId },
-          }
-        : undefined,
-    })
-    if (error) throw error
-    return (data?.content || []) as ComponentType[]
+    const all: ComponentType[] = []
+    for (let page = 1; ; page++) {
+      const { data, error } = await GET('/component-types', {
+        params: { query: { limit: PAGE_LIMIT, page, categoryId } },
+      })
+      if (error) throw error
+      const items = (data?.content || []) as ComponentType[]
+      all.push(...items)
+      if (items.length < PAGE_LIMIT) return all
+    }
   },
 
   async getTypesByCategoryId(categoryId: string): Promise<ComponentType[]> {
@@ -201,16 +216,19 @@ export const componentLibraryService = {
     subtypeId?: string,
     options?: { page?: number; limit?: number; search?: string }
   ): Promise<ComponentModel[]> {
-    const query: Record<string, string | number | undefined> = {}
+    // Fetch all models in one request (backend caps limit at 100) — pagination
+    // is handled client-side in ModelsTable since there are few models.
+    const query: Record<string, string | number | undefined> = {
+      limit: options?.limit || 100,
+    }
     if (subtypeId) query.subtypeId = subtypeId
     if (options?.page) query.page = options.page
-    if (options?.limit) query.limit = options.limit
     if (options?.search && options.search.trim().length >= 2) {
       query.modelName = options.search.trim()
     }
 
     const { data, error } = await GET('/component-models', {
-      params: Object.keys(query).length > 0 ? { query } : undefined,
+      params: { query },
     })
     if (error) throw error
     return (data?.content || []) as ComponentModel[]

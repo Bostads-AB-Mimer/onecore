@@ -10,15 +10,17 @@ export const StralforsPostChannelLookupResponseSchema = z.object({
 })
 
 export const StralforsGetChannelLookupResponseSchema = z.object({
-  customerId: z.string().nullable().optional(),
-  subCustomerId: z.string().nullable().optional(),
-  results: z
+  candidates: z
     .object({
-      channel: z.enum(['Kivra', 'Billo', 'eInvoiceB2C', 'eInvoiceB2B']),
-      matchedCandidates: z.string().array().nullable(),
-      error: z.string().nullable(),
+      referenceId: z.string(),
+      availableInChannels: z.string().array(),
+      notAvailableInChannels: z.string().array(),
     })
-    .array()
-    .nullable()
-    .optional(),
+    .array(),
+  channelErrors: z
+    .object({
+      channel: z.string(),
+      error: z.string(),
+    })
+    .array(),
 })

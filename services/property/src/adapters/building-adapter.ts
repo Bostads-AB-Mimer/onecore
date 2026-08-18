@@ -189,6 +189,7 @@ const searchBuildings = async (
             },
           },
         },
+        orderBy: { buildingCode: 'asc' },
         take: 10,
       })
       .then(trimStrings)

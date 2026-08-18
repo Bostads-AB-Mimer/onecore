@@ -3,6 +3,7 @@ import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
+import { useCostCenters } from '@/features/property-areas'
 
 import { useContactEnrichment, useLeaseFilters } from '@/entities/lease'
 
@@ -58,14 +59,6 @@ const statusOptions = [
   { label: 'Ej skickat', value: 'notsent' },
 ] as const
 
-const districtOptions = [
-  'Distrikt Norr',
-  'Distrikt Väst',
-  'Distrikt Öst',
-  'Distrikt Mitt',
-  'Mimer Student',
-] as const
-
 const LeasesPage = () => {
   const cardRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
@@ -73,6 +66,7 @@ const LeasesPage = () => {
   const searchProperties = usePropertySearch()
   const { leases: enrichedLeases, isLoadingContacts: isEnrichingContacts } =
     useContactEnrichment(filters.leases.length > 0 ? filters.leases : undefined)
+  const { data: costCenters } = useCostCenters()
 
   // TODO: Enable when leaseType filtering is supported by the search API
   // const searchLeaseTypes = useCallback(
@@ -280,7 +274,10 @@ const LeasesPage = () => {
               />
 
               <MultiSelectFilterDropdown
-                options={districtOptions.map((o) => ({ label: o, value: o }))}
+                options={(costCenters ?? []).map((cc) => ({
+                  label: cc.name ?? cc.code,
+                  value: cc.name ?? cc.code,
+                }))}
                 selectedValues={filters.selectedDistricts}
                 onSelectionChange={(vals) =>
                   filters.setFilterValues('district', vals)

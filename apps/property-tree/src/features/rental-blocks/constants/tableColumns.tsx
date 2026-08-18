@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { RentalBlockWithRentalObject } from '@/services/types'
 
 import { formatISODate } from '@/shared/lib/formatters'
-import { paths } from '@/shared/routes'
+import { getRentalObjectPath } from '@/shared/routes'
 
 export const rentalBlockColumns = [
   {
@@ -13,23 +13,14 @@ export const rentalBlockColumns = [
     render: (block: RentalBlockWithRentalObject) => {
       const displayText =
         block.rentalObject?.rentalId || block.rentalObject?.code || '-'
-      const category = block.rentalObject?.category
-      const rentalId = block.rentalObject?.rentalId
-      let href: string | null = null
-      if (category === 'Bostad' && rentalId) {
-        href = paths.residence(rentalId)
-      } else if (category === 'Bilplats' && rentalId) {
-        href = paths.parkingSpace(rentalId)
-      } else if ((category === 'Lokal' || category === 'Förråd') && rentalId) {
-        href = paths.facility(rentalId)
-      }
+      const href = getRentalObjectPath(
+        block.rentalObject?.category,
+        block.rentalObject?.rentalId
+      )
 
       if (href) {
         return (
-          <Link
-            to={href}
-            className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
-          >
+          <Link to={href} className="font-medium text-primary hover:underline">
             {displayText}
           </Link>
         )

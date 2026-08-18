@@ -20,6 +20,7 @@ import {
   getAllRentalBlocks,
   searchRentalBlocks,
   getDistinctBlockReasons,
+  upsertMalarEnergiFacilityId,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
@@ -34,6 +35,7 @@ import {
   exportRentalBlocksQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
+import { property } from '@onecore/types'
 
 /**
  * @swagger
@@ -281,26 +283,38 @@ export const routes = (router: KoaRouter) => {
         // Search for residences by rental id and name
         const residences = await searchResidences(q, ['rentalId', 'name'])
 
+        const content = residences.map(
+          (r): ResidenceSearchResult => ({
+            id: r.id,
+            code: r.code,
+            name: r.name || '',
+            deleted: Boolean(r.deleted),
+            validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
+            rentalId: r.propertyObject.propertyStructures[0].rentalId,
+            property: {
+              code: r.propertyObject.propertyStructures[0].propertyCode,
+              name: r.propertyObject.propertyStructures[0].propertyName,
+            },
+            building: {
+              code: r.propertyObject.propertyStructures[0].buildingCode,
+              name: r.propertyObject.propertyStructures[0].buildingName,
+            },
+          })
+        )
+
+        // rentalId comes from a nested to-many relation, so it can't be ordered
+        // in the Prisma query like the other search endpoints — sort the mapped
+        // results here instead. Object numbers are zero-padded fixed-width
+        // (e.g. "807-033-03-0302"), so a plain lexicographic sort yields numeric
+        // order and stays consistent with the DB-side `orderBy` used by the
+        // other search endpoints (and with keys-portal's sortByRentalId).
+        content.sort((a, b) =>
+          (a.rentalId ?? '').localeCompare(b.rentalId ?? '', 'sv')
+        )
+
         ctx.status = 200
         ctx.body = {
-          content: residences.map(
-            (r): ResidenceSearchResult => ({
-              id: r.id,
-              code: r.code,
-              name: r.name || '',
-              deleted: Boolean(r.deleted),
-              validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
-              rentalId: r.propertyObject.propertyStructures[0].rentalId,
-              property: {
-                code: r.propertyObject.propertyStructures[0].propertyCode,
-                name: r.propertyObject.propertyStructures[0].propertyName,
-              },
-              building: {
-                code: r.propertyObject.propertyStructures[0].buildingCode,
-                name: r.propertyObject.propertyStructures[0].buildingName,
-              },
-            })
-          ),
+          content,
           ...metadata,
         }
       } catch (err) {
@@ -500,6 +514,98 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /residences/rental-id/{rentalId}/malar-energi-facility-id:
+   *   put:
+   *     summary: Update or add a residence's Mälarenergi facility id.
+   *     description: |
+   *       Upserts the "Anläggnings ID Mälarenergi" for the residence identified
+   *       by the rental id. The value is stored as a free-text comment row in
+   *       Xpand (cmtex) under the shared "Anläggningsid" template — the existing
+   *       row is updated when present, otherwise a new one is inserted.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental id of the residence.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - malarEnergiFacilityId
+   *             properties:
+   *               malarEnergiFacilityId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: The updated Mälarenergi facility id.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     malarEnergiFacilityId:
+   *                       type: string
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: Residence not found for the supplied rentalId.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.put(
+    '(.*)/residences/rental-id/:rentalId/malar-energi-facility-id',
+    parseRequest({ body: property.UpdateMalarEnergiFacilityIdRequestSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { malarEnergiFacilityId } = ctx.request
+        .parsedBody as property.UpdateMalarEnergiFacilityIdRequest
+
+      const result = await upsertMalarEnergiFacilityId(
+        ctx.params.rentalId,
+        malarEnergiFacilityId
+      )
+
+      if (!result.ok) {
+        if (result.err === 'residence-not-found') {
+          ctx.status = 404
+          ctx.body = { reason: 'Residence not found', ...metadata }
+          return
+        }
+        if (result.err === 'template-not-found') {
+          ctx.status = 500
+          ctx.body = {
+            reason: 'Anläggningsid template not found',
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 500
+        ctx.body = { reason: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          malarEnergiFacilityId: result.data,
+        } satisfies property.UpdateMalarEnergiFacilityIdResponse,
+        ...metadata,
+      }
+    }
+  )
 
   /**
    * @swagger

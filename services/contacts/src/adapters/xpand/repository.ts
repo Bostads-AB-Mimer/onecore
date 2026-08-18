@@ -21,12 +21,14 @@ import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
 import {
   guardianRelations,
-  wardRelations,
+  guardianForRelations,
   relatedContactsFor,
   relatedContactsForMany,
+  otherInvoiceRecipientRelations,
+  otherInvoiceRecipientForRelations,
   ADMINISTRATOR_FORVTYP,
   TRUSTEE_FORVTYP,
-} from './guardian-query'
+} from './related-contacts-query'
 
 /**
  * Populates `relatedContacts` on a batch of contacts using a single grouped
@@ -132,7 +134,7 @@ export const xpandContactsRepository = (
         : contacts
     },
 
-    getGuardians: async (contactCode: ContactCode) => {
+    getAdministrators: async (contactCode: ContactCode) => {
       const { subjectExists, related } = await guardianRelations(
         db.get(),
         contactCode,
@@ -141,8 +143,8 @@ export const xpandContactsRepository = (
       return subjectExists ? related : null
     },
 
-    getGuardianWards: async (contactCode: ContactCode) => {
-      const { subjectExists, related } = await wardRelations(
+    getAdministratorsFor: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianForRelations(
         db.get(),
         contactCode,
         ADMINISTRATOR_FORVTYP
@@ -159,12 +161,31 @@ export const xpandContactsRepository = (
       return subjectExists ? related : null
     },
 
-    getTrusteeWards: async (contactCode: ContactCode) => {
-      const { subjectExists, related } = await wardRelations(
+    getTrusteesFor: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianForRelations(
         db.get(),
         contactCode,
         TRUSTEE_FORVTYP
       )
+      return subjectExists ? related : null
+    },
+
+    getOtherInvoiceRecipients: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await otherInvoiceRecipientRelations(
+        db.get(),
+        contactCode,
+        new Date()
+      )
+      return subjectExists ? related : null
+    },
+
+    getOtherInvoiceRecipientsFor: async (contactCode: ContactCode) => {
+      const { subjectExists, related } =
+        await otherInvoiceRecipientForRelations(
+          db.get(),
+          contactCode,
+          new Date()
+        )
       return subjectExists ? related : null
     },
 

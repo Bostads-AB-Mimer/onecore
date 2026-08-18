@@ -77,24 +77,6 @@ async function search(
   }
 }
 
-export type BuildingManager = {
-  code: string
-  name: string
-  district: string
-}
-
-async function getBuildingManagers(): Promise<BuildingManager[]> {
-  const { data, error } = await GET('/leases/building-managers', {})
-
-  if (error) throw error
-
-  return (data.content ?? []).map((bm) => ({
-    code: bm.code ?? '',
-    name: bm.name ?? '',
-    district: bm.district ?? '',
-  }))
-}
-
 export type ParkingSpaceType = {
   code: string
   caption: string
@@ -161,7 +143,6 @@ async function getContactsByCodes(codes: string[]): Promise<ContactInfo[]> {
 
 export const leaseSearchService = {
   search,
-  getBuildingManagers,
   getParkingSpaceTypes,
   getContactsByCodes,
   getContactsByFilters,

@@ -12,7 +12,7 @@ export const PropertySearch = ({
   return (
     <div className="relative flex-1">
       <Input
-        placeholder="Sök på beteckning, kod, byggnad, lägenhet..."
+        placeholder="Sök på fastighetsbeteckning eller fastighetsnummer..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />

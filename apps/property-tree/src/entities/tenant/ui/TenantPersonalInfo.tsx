@@ -1,25 +1,29 @@
 import { MapPin } from 'lucide-react'
 
 import type { Lease } from '@/services/api/core/leaseService'
-import type { Tenant } from '@/services/types'
+import type { RelatedContact, Tenant } from '@/services/types'
 import { CopyableField } from '@/shared/ui/CopyableField'
 import { TooltipProvider } from '@/shared/ui/Tooltip'
 
 import { getTenantRoles, isOrganization } from '../lib/classification'
+import { getIncomingRelationSummary } from '../lib/relations'
 import { formatTenantAddress, formatTenantName } from '../lib/formatting'
 
 type LeaseTenant = NonNullable<Lease['tenants']>[number]
 
 interface TenantPersonalInfoProps {
   tenant: Tenant | LeaseTenant
+  relatedContacts?: RelatedContact[]
   variant?: 'compact' | 'full'
 }
 
 export function TenantPersonalInfo({
   tenant,
+  relatedContacts = [],
   variant = 'full',
 }: TenantPersonalInfoProps) {
   const displayName = formatTenantName(tenant)
+  const relationSummary = getIncomingRelationSummary(relatedContacts)
 
   const handleOpenInMaps = (address: NonNullable<Tenant['address']>) => {
     const formattedAddress = formatTenantAddress(address)
@@ -54,11 +58,12 @@ export function TenantPersonalInfo({
             ]}
           />
         )}
-        {variant === 'full' && (
-          <CopyableField label="Kundnummer" value={tenant.contactCode} />
-        )}
+        <CopyableField label="Kundnummer" value={tenant.contactCode} />
         {variant === 'full' && (
           <CopyableField label="Typ/roll" value={getTenantRoles(tenant)} />
+        )}
+        {variant === 'full' && relationSummary && (
+          <CopyableField label="Relaterade kontakter" value={relationSummary} />
         )}
       </div>
     </TooltipProvider>

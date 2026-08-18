@@ -651,8 +651,8 @@ export const routes = (router: KoaRouter) => {
    *   post:
    *     tags:
    *       - Economy service
-   *     summary: Look up invoice channels for national registration numbers
-   *     description: Returns the invoice delivery channel for each provided national registration number.
+   *     summary: Look up invoice channels for recipients
+   *     description: Returns the invoice delivery channel for each provided recipient.
    *     requestBody:
    *       required: true
    *       content:
@@ -660,13 +660,24 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - nationalRegistrationNumbers
+   *               - recipients
    *             properties:
-   *               nationalRegistrationNumbers:
+   *               recipients:
    *                 type: array
    *                 items:
-   *                   type: string
-   *                 description: List of national registration numbers to look up
+   *                   type: object
+   *                   required:
+   *                     - recipientId
+   *                     - recipientType
+   *                   properties:
+   *                     recipientId:
+   *                       type: string
+   *                     recipientType:
+   *                       type: string
+   *                       enum:
+   *                         - individual
+   *                         - organization
+   *                 description: List of recipients to look up
    *     responses:
    *       '200':
    *         description: Successfully retrieved invoice channels.
@@ -678,27 +689,41 @@ export const routes = (router: KoaRouter) => {
    *                 - content
    *               properties:
    *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     required:
-   *                       - channel
-   *                       - matchedCandidates
-   *                       - error
-   *                     properties:
-   *                       channel:
-   *                         type: string
-   *                         enum:
-   *                           - Kivra
-   *                           - eInvoiceB2C
-   *                       matchedCandidates:
-   *                         type: array
-   *                         items:
-   *                           type: string
-   *                         nullable: true
-   *                       error:
-   *                         type: string
-   *                         nullable: true
+   *                   type: object
+   *                   required:
+   *                     - candidates
+   *                   properties:
+   *                     candidates:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         required:
+   *                           - referenceId
+   *                           - availableInChannels
+   *                           - notAvailableInChannels
+   *                         properties:
+   *                           referenceId:
+   *                             type: string
+   *                           availableInChannels:
+   *                             type: array
+   *                             items:
+   *                               type: string
+   *                           notAvailableInChannels:
+   *                             type: array
+   *                             items:
+   *                               type: string
+   *                     channelErrors:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         required:
+   *                           - channel
+   *                           - error
+   *                         properties:
+   *                           channel:
+   *                             type: string
+   *                           error:
+   *                             type: string
    *       '400':
    *         description: Invalid request body.
    *       '500':
@@ -716,11 +741,9 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(economy.ChannelLookupRequestBodySchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { nationalRegistrationNumbers } = ctx.request.body
+      const { recipients } = ctx.request.body
 
-      const response = await economyAdapter.getInvoiceChannels(
-        nationalRegistrationNumbers
-      )
+      const response = await economyAdapter.getInvoiceChannels(recipients)
 
       if (response.ok) {
         ctx.status = 200

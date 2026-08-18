@@ -47,15 +47,20 @@ export const ContactAddressSchema = z.object({
 })
 
 export const RelatedContactRoleSchema = z.enum([
-  'trustee',
-  'administrator',
-  'ward',
+  'trustee', // god man
+  'administrator', // förvaltare
+  'trusteeFor', // subject is god man for this contact
+  'administratorFor', // subject is förvaltare for this contact
+  'otherInvoiceRecipient', // annan fakturamottagare
+  'otherInvoiceRecipientFor',
 ])
 
 export const RelatedContactSchema = z.object({
   contactCode: z.string(),
   role: RelatedContactRoleSchema,
   fullName: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
 })
 
 export const ContactBaseSchema = z.object({

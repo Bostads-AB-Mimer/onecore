@@ -22,17 +22,23 @@ export interface UseBulkMessagingOptions<TItem> {
   getContacts: (item: TItem) => Contact[]
   /** Fetch all contacts matching current filters (for "select all results") */
   fetchAllContacts?: () => Promise<Contact[]>
-  /** Send bulk SMS - returns result with totalSent/totalInvalid */
+  /** Send bulk SMS - returns the result plus any non-blocking warnings */
   sendBulkSms: (
-    phoneNumbers: string[],
+    recipients: { contactCode: string; phoneNumber: string }[],
     message: string
-  ) => Promise<{ totalSent: number; totalInvalid: number }>
-  /** Send bulk email - returns result with totalSent/totalInvalid */
+  ) => Promise<{
+    content: { totalSent: number; totalInvalid: number }
+    warnings?: string[]
+  }>
+  /** Send bulk email - returns the result plus any non-blocking warnings */
   sendBulkEmail: (
-    emails: string[],
+    recipients: { contactCode: string; emailAddress: string }[],
     subject: string,
     body: string
-  ) => Promise<{ totalSent: number; totalInvalid: number }>
+  ) => Promise<{
+    content: { totalSent: number; totalInvalid: number }
+    warnings?: string[]
+  }>
 }
 
 export interface UseBulkMessagingReturn {
@@ -254,20 +260,32 @@ export function useBulkMessaging<TItem>({
   const handleSendSms = useCallback(
     async (message: string, validRecipients: SmsRecipient[]) => {
       try {
-        const phoneNumbers = validRecipients
-          .map((r) => r.phone)
-          .filter((p): p is string => p !== null)
+        const recipients = validRecipients
+          .filter(
+            (r): r is SmsRecipient & { phone: string } => r.phone !== null
+          )
+          .map((r) => ({ contactCode: r.id, phoneNumber: r.phone }))
 
-        const result = await sendBulkSms(phoneNumbers, message)
+        const result = await sendBulkSms(recipients, message)
 
         toast({
           title: 'SMS skickat',
-          description: `Skickades till ${result.totalSent} mottagare${
-            result.totalInvalid > 0
-              ? `. ${result.totalInvalid} ogiltiga nummer.`
+          description: `Skickades till ${result.content.totalSent} mottagare${
+            result.content.totalInvalid > 0
+              ? `. ${result.content.totalInvalid} ogiltiga nummer.`
               : ''
           }`,
         })
+
+        // Non-blocking: the SMS was sent, but something like communication-log
+        // writing failed. Surface it without blocking the success flow.
+        if (result.warnings?.length) {
+          toast({
+            title: 'SMS:et skickades, men en åtgärd misslyckades',
+            description: result.warnings.join(' '),
+            variant: 'destructive',
+          })
+        }
 
         clearSelection()
         setShowSmsModal(false)
@@ -291,20 +309,32 @@ export function useBulkMessaging<TItem>({
       validRecipients: EmailRecipient[]
     ) => {
       try {
-        const emails = validRecipients
-          .map((r) => r.email)
-          .filter((e): e is string => e !== null)
+        const recipients = validRecipients
+          .filter(
+            (r): r is EmailRecipient & { email: string } => r.email !== null
+          )
+          .map((r) => ({ contactCode: r.id, emailAddress: r.email }))
 
-        const result = await sendBulkEmail(emails, subject, body)
+        const result = await sendBulkEmail(recipients, subject, body)
 
         toast({
           title: 'E-post skickat',
-          description: `Skickade till ${result.totalSent} mottagare${
-            result.totalInvalid > 0
-              ? `. ${result.totalInvalid} ogiltiga e-postadresser.`
+          description: `Skickade till ${result.content.totalSent} mottagare${
+            result.content.totalInvalid > 0
+              ? `. ${result.content.totalInvalid} ogiltiga e-postadresser.`
               : ''
           }`,
         })
+
+        // Non-blocking: the email was sent, but something like communication-log
+        // writing failed. Surface it without blocking the success flow.
+        if (result.warnings?.length) {
+          toast({
+            title: 'E-posten skickades, men en åtgärd misslyckades',
+            description: result.warnings.join(' '),
+            variant: 'destructive',
+          })
+        }
 
         clearSelection()
         setShowEmailModal(false)

@@ -201,16 +201,24 @@ export interface paths {
   '/sendBulkSms': {
     /**
      * Send SMS to multiple contacts
-     * @description Send SMS messages to multiple phone numbers
+     * @description Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
      */
     post: {
       requestBody: {
         content: {
           'application/json': {
-            /** @description Array of phone numbers */
-            phoneNumbers: string[]
-            /** @description SMS message content */
+            phoneNumbers?: string[]
+            recipients?: {
+              contactCode?: string
+              phoneNumber: string
+            }[]
             text: string
+            logMeta?: {
+              audienceCriteria?: {
+                [key: string]: unknown
+              }
+              templateId?: string
+            }
           }
         }
       }
@@ -220,6 +228,8 @@ export interface paths {
           content: {
             'application/json': {
               content?: components['schemas']['BulkSmsResult']
+              /** @description Non-blocking issues (e.g. communication-log write failed); the SMS was still sent. */
+              warnings?: string[]
             }
           }
         }
@@ -237,18 +247,25 @@ export interface paths {
   '/sendBulkEmail': {
     /**
      * Send email to multiple contacts
-     * @description Send email messages to multiple email addresses
+     * @description Either `emails` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
      */
     post: {
       requestBody: {
         content: {
           'application/json': {
-            /** @description Array of email addresses */
-            emails: string[]
-            /** @description Email subject */
+            emails?: string[]
+            recipients?: {
+              contactCode?: string
+              emailAddress: string
+            }[]
             subject: string
-            /** @description Email message content */
             text: string
+            logMeta?: {
+              audienceCriteria?: {
+                [key: string]: unknown
+              }
+              templateId?: string
+            }
           }
         }
       }
@@ -258,11 +275,97 @@ export interface paths {
           content: {
             'application/json': {
               content?: components['schemas']['BulkEmailResult']
+              /** @description Non-blocking issues (e.g. communication-log write failed); the email was still sent. */
+              warnings?: string[]
             }
           }
         }
         /** @description Invalid request */
         400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/webhooks/infobip': {
+    /**
+     * Infobip email delivery-report webhook
+     * @description Receives Infobip email delivery reports and forwards them to the communication service for processing. Authenticated via a Keycloak service account holding the `infobip-webhook` realm role (enforced in app.ts). SMS delivery reports do NOT use this route — they hit the communication service directly (Tele2 per-message webhook + token).
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+      responses: {
+        /** @description Delivery report accepted */
+        200: {
+          content: never
+        }
+        /** @description Missing or invalid Keycloak credentials / role */
+        401: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/customers/{contactCode}/messages': {
+    /**
+     * Get the communication timeline for a customer
+     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Customer id (contactCode) */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Array of (dispatch + recipient) pairs, newest first */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CustomerMessage'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}': {
+    /** Get a dispatch and its recipients by dispatch id */
+    get: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Dispatch + recipients */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DispatchWithRecipients']
+            }
+          }
+        }
+        /** @description Dispatch not found */
+        404: {
           content: never
         }
         /** @description Internal server error */
@@ -388,6 +491,129 @@ export interface paths {
       }
     }
   }
+  '/comments/{targetType}/thread/{targetId}/{commentId}': {
+    /**
+     * Update a comment in a comment thread
+     * @description Update the text and/or type of an existing comment in the comment
+     * thread identified by targetType/targetId and the comment id.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The object type that the comment thread belongs to. */
+          targetType: string
+          /** @description The object id that the comment thread belongs to. */
+          targetId: number
+          /** @description The unique ID of the comment to update. */
+          commentId: number
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            type: 'COMMENT' | 'WARNING' | 'STOP'
+            comment: string
+          }
+        }
+      }
+      responses: {
+        /** @description The updated comment */
+        200: {
+          content: {
+            'application/json': {
+              /** @description The updated comment */
+              content?: Record<string, never>
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description The comment was not found in the given thread */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/search': {
+    /**
+     * Search and filter leases
+     * @description Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string
+          /** @description Object types (e.g., residence, parking)) */
+          objectType?: string[]
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: ('0' | '1' | '2' | '3')[]
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string
+          /** @description Property/estate names */
+          property?: string[]
+          /** @description Building codes */
+          buildingCodes?: string[]
+          /** @description Area codes (Område) */
+          areaCodes?: string[]
+          /** @description District names */
+          districtNames?: string[]
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
+          buildingManager?: string[]
+          /** @description Page number */
+          page?: number
+          /** @description Items per page */
+          limit?: number
+          /** @description Include Upphört (ended) contracts. Excluded by default for performance. */
+          includeEnded?: boolean
+          /** @description Sort field */
+          sortBy?:
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
+          /** @description Sort direction */
+          sortOrder?: 'asc' | 'desc'
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved lease search results with pagination */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['LeaseSearchResult'][]
+              _meta?: components['schemas']['PaginationMeta']
+              _links?: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/leases/parking-space-types': {
     /**
      * Get all parking space types
@@ -405,6 +631,52 @@ export interface paths {
               }[]
             }
           }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/export': {
+    /**
+     * Export leases to Excel
+     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string
+          /** @description Object types (e.g., residence, parking) */
+          objectType?: string[]
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: ('0' | '1' | '2' | '3')[]
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string
+          /** @description Property/estate names */
+          property?: string[]
+          /** @description Building codes */
+          buildingCodes?: string[]
+          /** @description Area codes (Område) */
+          areaCodes?: string[]
+          /** @description District names */
+          districtNames?: string[]
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
+          buildingManager?: string[]
+        }
+      }
+      responses: {
+        /** @description Excel file download */
+        200: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -443,7 +715,7 @@ export interface paths {
           areaCodes?: string[]
           /** @description District names */
           districtNames?: string[]
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[]
         }
       }
@@ -463,54 +735,102 @@ export interface paths {
       }
     }
   }
-  '/leases/by-lease-id/{leaseId}/preliminary-termination': {
+  '/leases/by-rental-property-id/{rentalPropertyId}': {
     /**
      * Preliminary termination of a lease
      * @description Initiates a preliminary termination for the specified lease.
      */
     post: {
       parameters: {
-        path: {
-          /** @description The unique identifier of the lease to terminate. */
-          leaseId: string
+        query?: {
+          /** @description Whether to include upcoming leases in the response */
+          includeUpcomingLeases?: boolean
+          /** @description Whether to include terminated leases in the response */
+          includeTerminatedLeases?: boolean
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+          /** @description Whether to include rent information in the response */
+          includeRentInfo?: boolean
         }
-      }
-      requestBody: {
-        content: {
-          'application/json': {
-            /** @description The contact code of the tenant */
-            contactCode: string
-            /**
-             * Format: date-time
-             * @description The last debit date for the lease
-             */
-            lastDebitDate: string
-            /**
-             * Format: date-time
-             * @description The desired move-out date
-             */
-            desiredMoveDate: string
-          }
+        path: {
+          /** @description Rental roperty id of the building/residence to fetch leases for. */
+          rentalPropertyId: string
         }
       }
       responses: {
         /** @description Preliminary termination initiated successfully */
         200: {
           content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: {
             'application/json': Record<string, never>
           }
         }
-        /** @description Invalid request body or tenant missing valid email address */
-        400: {
-          content: never
+      }
+    }
+  }
+  '/leases/by-pnr/{pnr}': {
+    /**
+     * Get leases with related entities for a specific Personal Number (PNR)
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include upcoming leases in the response */
+          includeUpcomingLeases?: boolean
+          /** @description Whether to include terminated leases in the response */
+          includeTerminatedLeases?: boolean
         }
-        /** @description Lease not found */
-        404: {
-          content: never
+        path: {
+          /** @description Personal Number (PNR) of the individual to fetch leases for. */
+          pnr: string
         }
-        /** @description Internal server error. Failed to terminate lease. */
-        500: {
-          content: never
+      }
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/leases/by-contact-code/{contactCode}': {
+    /**
+     * Get leases with related entities for a specific contact code
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include upcoming leases in the response */
+          includeUpcomingLeases?: boolean
+          /** @description Whether to include terminated leases in the response */
+          includeTerminatedLeases?: boolean
+        }
+        path: {
+          /** @description Contact code of the individual to fetch leases for. */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
         }
       }
     }
@@ -939,6 +1259,30 @@ export interface paths {
         200: {
           content: {
             'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/leases/{id}': {
+    /**
+     * Get lease by ID
+     * @description Retrieves lease details along with related entities based on the provided ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease to retrieve. */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successful response with the requested lease and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease']
+            }
           }
         }
       }
@@ -1424,422 +1768,31 @@ export interface paths {
       }
     }
   }
-  '/leases/search': {
+  '/leases/keys-export': {
     /**
      * Search and filter leases
      * @description Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
      */
     get: {
       parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string
-          /** @description Object types (e.g., residence, parking)) */
-          objectType?: string[]
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ('0' | '1' | '2' | '3')[]
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string
-          /** @description Property/estate names */
-          property?: string[]
-          /** @description Building codes */
-          buildingCodes?: string[]
-          /** @description Area codes (Område) */
-          areaCodes?: string[]
-          /** @description District names */
-          districtNames?: string[]
-          /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[]
-          /** @description Page number */
-          page?: number
-          /** @description Items per page */
-          limit?: number
-          /** @description Sort field */
-          sortBy?: 'leaseStartDate' | 'lastDebitDate' | 'leaseId'
-          /** @description Sort direction */
-          sortOrder?: 'asc' | 'desc'
+        query: {
+          /** @description Property designation (fastighetsbeteckning), e.g. "ALLMOGEKULTUREN 1" */
+          property: string
+          buildingCode?: string
         }
       }
       responses: {
         /** @description Successfully retrieved lease search results with pagination */
         200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['LeaseSearchResult'][]
-              _meta?: components['schemas']['PaginationMeta']
-              _links?: components['schemas']['PaginationLinks'][]
-            }
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
           }
         }
         /** @description Invalid query parameters */
         400: {
           content: never
         }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/building-managers': {
-    /**
-     * Get all building managers
-     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
-     */
-    get: {
-      responses: {
-        /** @description List of building managers */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                code?: string
-                name?: string
-                district?: string
-              }[]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/search': {
-    /**
-     * Search and filter leases
-     * @description Search leases with comprehensive filtering options.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, PNR, contact code) */
-          q?: string
-          /** @description Search by tenant name */
-          name?: string
-          /** @description Search by rental object address */
-          address?: string
-          /** @description Object types (bostad, parkering, lokal, ovrigt) */
-          objectType?: string[]
-          /** @description Contract status filter */
-          status?: (
-            | 'current'
-            | 'active'
-            | 'upcoming'
-            | 'abouttoend'
-            | 'ended'
-            | 'pendingsignature'
-            | 'preliminaryterminated'
-            | 'notsent'
-          )[]
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string
-          /** @description Page number */
-          page?: number
-          /** @description Items per page */
-          limit?: number
-          /** @description Sort field */
-          sortBy?: 'leaseStartDate' | 'lastDebitDate' | 'leaseId'
-          /** @description Sort direction */
-          sortOrder?: 'asc' | 'desc'
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved lease search results with pagination */
-        200: {
-          content: never
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/by-rental-object-code/{rentalObjectCode}': {
-    /**
-     * Get leases with related entities for a specific rental object code.
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
-          status?: string
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-        }
-        path: {
-          /** @description Rental object code of the building/residence to fetch leases for. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: {
-            'application/json': Record<string, never>
-          }
-        }
-      }
-    }
-  }
-  '/leases/by-pnr/{pnr}': {
-    /**
-     * Get leases with related entities for a specific Personal Number (PNR)
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
-          status?: string
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-        }
-        path: {
-          /** @description Personal Number (PNR) of the individual to fetch leases for. */
-          pnr: string
-        }
-      }
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
-        }
-      }
-    }
-  }
-  '/leases/by-contact-code/{contactCode}': {
-    /**
-     * Get leases with related entities for a specific contact code
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
-          status?: string
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-        }
-        path: {
-          /** @description Contact code of the individual to fetch leases for. */
-          contactCode: string
-        }
-      }
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
-        }
-      }
-    }
-  }
-  '/leases/{id}': {
-    /**
-     * Get lease by ID
-     * @description Retrieves lease details along with related entities based on the provided ID.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-        }
-        path: {
-          /** @description The ID of the lease to retrieve. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Successful response with the requested lease and related entities */
-        200: {
-          content: {
-            'application/json': {
-              data?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/leases/{leaseId}/home-insurance': {
-    /** Get home insurance for a lease */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string
-        }
-      }
-      responses: {
-        /** @description Home insurance retrieved. */
-        200: {
-          content: never
-        }
-        /** @description Lease or home insurance not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-    /** Add home insurance to a lease */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string
-        }
-      }
-      responses: {
-        /** @description Successfully added home insurance. */
-        201: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/{leaseId}/home-insurance/offer': {
-    /** Get home insurance offer for a lease */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string
-        }
-      }
-      responses: {
-        /** @description Home insurance offer retrieved. */
-        200: {
-          content: never
-        }
-        /** @description Lease or rental object not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/{leaseId}/home-insurance/cancel': {
-    /** Cancel home insurance for a lease */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': {
-            /**
-             * Format: date-time
-             * @description Desired end date for home insurance.
-             */
-            endDate: string
-          }
-        }
-      }
-      responses: {
-        /** @description Home insurance cancelled. */
-        200: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/export': {
-    /**
-     * Export leases to Excel
-     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string
-          /** @description Object types (e.g., residence, parking) */
-          objectType?: string[]
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ('0' | '1' | '2' | '3')[]
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string
-          /** @description Property/estate names */
-          property?: string[]
-          /** @description Building codes */
-          buildingCodes?: string[]
-          /** @description Area codes (Område) */
-          areaCodes?: string[]
-          /** @description District names */
-          districtNames?: string[]
-          /** @description Building manager names (Kvartersvärd) */
-          buildingManager?: string[]
-        }
-      }
-      responses: {
-        /** @description Excel file download */
-        200: {
-          content: never
-        }
-        /** @description Internal server error */
+        /** @description Server error */
         500: {
           content: never
         }
@@ -2110,9 +2063,7 @@ export interface paths {
               content?: {
                 rentalObjectCode?: string
                 address?: string
-                rent?: {
-                  amount?: number
-                }
+                monthlyRent?: number
                 propertyCaption?: string
                 propertyCode?: string
                 residentialAreaCode?: string
@@ -2160,9 +2111,7 @@ export interface paths {
               content?: {
                 rentalObjectCode?: string
                 address?: string
-                rent?: {
-                  amount?: number
-                }
+                monthlyRent?: number
                 propertyCaption?: string
                 propertyCode?: string
                 residentialAreaCode?: string
@@ -2179,117 +2128,6 @@ export interface paths {
           }
         }
         /** @description Internal server error. Failed to fetch rental object. */
-        500: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/rental-objects/by-code/{rentalObjectCode}/availability': {
-    /**
-     * Get availability for a rental object
-     * @description Fetches availability for a rental object by Rental Object Code.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object code of the availability to fetch. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the rental object availability. */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                rentalObjectCode?: string
-                /** Format: date-time */
-                vacantFrom?: string | null
-                rent?: {
-                  amount?: number
-                  vat?: number
-                  rows?: Record<string, never>[]
-                }
-              }
-            }
-          }
-        }
-        /** @description Not found. The availability of the specified rental object was not found. */
-        404: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error. Failed to fetch rental object availability. */
-        500: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/rental-objects/availabilities': {
-    /**
-     * Get availabilities for rental objects
-     * @description Fetches availabilities for rental objects by Rental Object Codes.
-     */
-    post: {
-      requestBody?: {
-        content: {
-          'application/json': {
-            /**
-             * @description Array of rental object codes to include.
-             * @example [
-             *   "ABC123",
-             *   "DEF456",
-             *   "GHI789"
-             * ]
-             */
-            rentalObjectCodes?: string[]
-          }
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the rental object availabilities. */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                rentalObjectCode?: string
-                /** Format: date-time */
-                vacantFrom?: string | null
-                rent?: {
-                  amount?: number
-                  vat?: number
-                  rows?: Record<string, never>[]
-                }
-              }[]
-            }
-          }
-        }
-        /** @description Not found. The availability of the specified rental object was not found. */
-        404: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error. Failed to fetch rental object availabilities. */
         500: {
           content: {
             'application/json': {
@@ -3234,6 +3072,48 @@ export interface paths {
       }
     }
   }
+  '/work-orders/by-code/{code}': {
+    /**
+     * Get a single work order by its errand code
+     * @description Retrieves a single Odoo work order (errand) by its code. The code may be provided with or without the `od-` prefix (e.g. `od-12345` or `12345`).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The errand code, with or without the `od-` prefix. */
+          code: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the work order. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['WorkOrder']
+            }
+          }
+        }
+        /** @description Work order not found. */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Work order not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve the work order. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/work-orders/xpand/{code}': {
     /**
      * Get work order details by rental property id from xpand
@@ -3337,6 +3217,63 @@ export interface paths {
               error?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/work-orders/maintenance-teams': {
+    /**
+     * List maintenance teams (resursgrupper)
+     * @description Returns the selectable Odoo maintenance teams (resursgrupper) for the inspection work-order picker.
+     */
+    get: {
+      responses: {
+        /** @description Maintenance teams retrieved successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceTeam'][]
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/work-orders/from-inspection': {
+    /**
+     * Create work orders from an inspection (one per resursgrupp)
+     * @description Resolves the apartment from rentalObjectCode, then creates one work order per resursgrupp group. Each group is an independent Odoo commit, so the response reports per-group success/failure.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateInspectionWorkOrdersRequest']
+        }
+      }
+      responses: {
+        /** @description Work orders processed (see per-group results) */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CreateInspectionWorkOrdersResponse']
+            }
+          }
+        }
+        /** @description Bad request (invalid body or not an apartment). */
+        400: {
+          content: never
+        }
+        /** @description Rental property not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
         }
       }
     }
@@ -4696,6 +4633,61 @@ export interface paths {
       }
     }
   }
+  '/cost-centers': {
+    /**
+     * List all cost centers
+     * @description Returns all OneCore cost centers in a minimal shape suitable for select lists.
+     */
+    get: {
+      responses: {
+        /** @description List of cost centers */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CostCenterSummary'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/cost-centers/{id}/tree': {
+    /**
+     * Get a cost center management tree
+     * @description Returns the cost center with KVV areas, properties (addresses + aggregates)
+     * and Keycloak-expanded lead, deputy and responsible users. If Keycloak is
+     * unreachable, the tree is returned with user fields set to null.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Cost center tree */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CostCenterTree']
+            }
+          }
+        }
+        /** @description Cost center not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/buildings': {
     /**
      * Get all buildings for a specific property
@@ -5116,6 +5108,51 @@ export interface paths {
               error?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/residences/by-rental-id/{rentalId}/malar-energi-facility-id': {
+    /**
+     * Update or add a residence's Mälarenergi facility id.
+     * @description Forwards to property-base-service which upserts the "Anläggnings ID
+     * Mälarenergi" comment row (cmtex) in Xpand for the residence.
+     */
+    put: {
+      parameters: {
+        path: {
+          rentalId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            malarEnergiFacilityId: string
+          }
+        }
+      }
+      responses: {
+        /** @description The updated Mälarenergi facility id. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                malarEnergiFacilityId?: string
+              }
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
+        }
+        /** @description Residence not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
         }
       }
     }
@@ -5953,6 +5990,137 @@ export interface paths {
       }
     }
   }
+  '/kvv-areas': {
+    /**
+     * List kvv-area codes filtered by responsible Keycloak users
+     * @description Returns the codes of kvv-areas (förvaltningsområden) whose
+     * responsibleKeycloakUserId is one of the provided user ids. Repeat the
+     * responsibleUserId query param for each user id. Returns an empty list
+     * if the param is omitted.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Keycloak user ids (repeatable) */
+          responsibleUserId?: string[]
+        }
+      }
+      responses: {
+        /** @description List of kvv-area codes */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KvvAreaSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/kvv-areas/{id}/responsible': {
+    /**
+     * Update the responsible kvartersvärd for a KVV area
+     * @description Requires the `property-areas:write` realm role. The target user (by
+     * `keycloakUserId`) must hold the `property-manager` role in Keycloak;
+     * a 400 is returned otherwise. On success the updated area is returned
+     * with the new responsible user hydrated.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: uuid */
+            keycloakUserId: string
+          }
+        }
+      }
+      responses: {
+        /** @description Updated KVV area with hydrated responsible user */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PatchedKvvArea']
+            }
+          }
+        }
+        /** @description Invalid body or target user is not a property manager */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `property-areas:write` role */
+        403: {
+          content: never
+        }
+        /** @description KVV area not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/properties/{propertyCode}/kvv-area': {
+    /**
+     * Set the KVV-area (förvaltningsområde) of a property
+     * @description Sets the KVV-area a property belongs to. Cross-cost-center moves are
+     * allowed without validation. Requires the `property-areas:write` realm
+     * role (see MIM-1788).
+     */
+    put: {
+      parameters: {
+        path: {
+          propertyCode: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['PutPropertyKvvAreaBody']
+        }
+      }
+      responses: {
+        /** @description Property → KVV-area link upserted */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLink']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Missing `property-areas:write` role */
+        403: {
+          content: never
+        }
+        /** @description Property or KVV-area not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/search': {
     /**
      * Omni-search for different entities
@@ -6748,18 +6916,20 @@ export interface paths {
       }
     }
   }
-  '/imd/process': {
+  '/inspections/internal/{inspectionId}/rooms': {
     /**
      * Process IMD CSV data
      * @description Accepts raw IMD CSV data, enriches it with lease information from Xpand, and returns Tenfast-ready CSV output along with a CSV of unprocessed rows.
      */
     post: {
+      parameters: {
+        path: {
+          inspectionId: string
+        }
+      }
       requestBody: {
         content: {
-          'application/json': {
-            /** @description Raw semicolon-delimited IMD CSV content */
-            csv: string
-          }
+          'application/json': components['schemas']['AddInspectionRoomRequest']
         }
       }
       responses: {
@@ -6767,26 +6937,25 @@ export interface paths {
         200: {
           content: {
             'application/json': {
-              content: {
-                totalRows: number
-                numEnriched: number
-                numUnprocessed: number
-                enrichedCsv: string
-                unprocessedCsv: string
+              content?: {
+                room?: components['schemas']['Room']
               }
             }
           }
         }
-        /** @description Invalid request body or invalid CSV content. */
+        /** @description Invalid request body or no residence linked to the inspection. */
         400: {
           content: {
             'application/json': {
               error?: string
-              /**
-               * @description Present when the request body is valid but the CSV content is invalid.
-               * @enum {string}
-               */
-              reason?: 'invalid-csv'
+            }
+          }
+        }
+        /** @description Inspection or residence not found. */
+        404: {
+          content: {
+            'application/json': {
+              error?: string
             }
           }
         }
@@ -6797,6 +6966,49 @@ export interface paths {
               error?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/inspections/internal/{inspectionId}/rooms/{roomId}': {
+    /**
+     * Remove a room that was added during the current inspection.
+     * @description Symmetric to POST /inspections/internal/{inspectionId}/rooms.
+     * Verifies the room was added during this inspection (via the
+     * inspection_added_room tracking table) before deleting it from Xpand
+     * and dropping the tracking row.
+     *
+     * The isAddedInThisInspection check is authoritative — the frontend
+     * gate is just UX. Rooms that originated from the property system
+     * (isAddedInThisInspection: false) cannot be removed through this
+     * endpoint.
+     */
+    delete: {
+      parameters: {
+        path: {
+          inspectionId: string
+          roomId: string
+        }
+      }
+      responses: {
+        /** @description Room removed. */
+        204: {
+          content: never
+        }
+        /**
+         * @description Inspection not found, room not found in Xpand, or the room was
+         * not added during this inspection.
+         */
+        404: {
+          content: never
+        }
+        /** @description Room has installed components and cannot be removed. */
+        409: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
         }
       }
     }
@@ -9884,41 +10096,9 @@ export interface components {
       /** Format: date-time */
       leaseEndDate?: string
       /** @enum {string} */
-      status:
-        | 'Current'
-        | 'Upcoming'
-        | 'AboutToEnd'
-        | 'Ended'
-        | 'PreliminaryTerminated'
-        | 'PendingSignature'
-        | 'NotSent'
+      status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
       tenantContactIds?: string[]
       rentalPropertyId: string
-      rentalObject?: {
-        rentalObjectCode: string
-        address: string
-        rent?: {
-          rentalObjectCode: string
-          amount: number
-          vat: number
-          rows: {
-            code: string
-            description: string
-            amount: number
-            vatPercentage: number
-            /** Format: date-time */
-            fromDate?: string
-            /** Format: date-time */
-            toDate?: string
-          }[]
-        }
-        residentialAreaCaption: string
-        residentialAreaCode: string
-        objectTypeCaption: string
-        objectTypeCode: string
-        boaArea?: number
-        braArea?: number
-      }
       rentalProperty?: {
         rentalPropertyId: string
         apartmentNumber: number
@@ -9979,45 +10159,36 @@ export interface components {
         code: string
         caption: string
       }
-      rentRows?: {
-        id: string
-        amount: number
-        articleId: string
-        label: string
-        vat: number
-        from?: string
-        to?: string
-      }[]
       tenants?: {
         contactCode: string
         contactKey: string
         leaseIds?: string[]
-        firstName: string
-        lastName: string
-        fullName: string
+        firstName: string | null
+        lastName: string | null
+        fullName: string | null
         nationalRegistrationNumber: string
         /** Format: date-time */
-        birthDate: string
+        birthDate: string | null
         address?: {
           street?: string
           number: string
           postalCode: string
           city: string
-        }
+        } | null
         phoneNumbers?: {
           phoneNumber: string
           type: string
           isMainNumber: boolean
         }[]
-        emailAddress?: string
+        emailAddress?: string | null
         isTenant: boolean
+        specialAttention?: boolean
         parkingSpaceWaitingList?: {
           /** Format: date-time */
           queueTime: string
           queuePoints: number
           type: number
         }
-        specialAttention?: boolean
         leaseContactType?: string
       }[]
     }
@@ -10028,18 +10199,7 @@ export interface components {
     LeaseSearchResult: {
       leaseId: string
       objectTypeCode: string
-      /** @enum {string} */
-      leaseType:
-        | 'Bostadskontrakt'
-        | 'Campuskontrakt'
-        | 'Garagekontrakt'
-        | 'Kooperativ hyresrätt'
-        | 'Lokalkontrakt'
-        | 'Omförhandlingskontrakt'
-        | 'Förrådskontrakt'
-        | 'Övrigt'
-        | 'P-Platskontrakt'
-        | 'Korttidsuthyrning'
+      leaseType: string
       contacts: {
         name: string
         contactCode: string
@@ -10052,7 +10212,7 @@ export interface components {
       /** Format: date-time */
       lastDebitDate: string | null
       /** @enum {number} */
-      status: 0 | 1 | 2 | 3 | 4 | 5 | 6
+      status: 0 | 1 | 2 | 3
       rentalObjectCode: string | null
       property?: string | null
       buildingCode?: string | null
@@ -10089,18 +10249,18 @@ export interface components {
       nationalRegistrationNumber: string
       /** Format: date-time */
       birthDate: string | null
-      address: {
-        street: string
+      address?: {
+        street?: string
         number: string
         postalCode: string
         city: string
       } | null
-      phoneNumbers: {
+      phoneNumbers?: {
         phoneNumber: string
         type: string
         isMainNumber: boolean
       }[]
-      emailAddress: string | null
+      emailAddress?: string | null
       isTenant: boolean
       specialAttention?: boolean
     }
@@ -10282,6 +10442,27 @@ export interface components {
       dueDate: ('null' | null) | string
       rentalObjectCode: string
       status: string
+    }
+    MaintenanceTeam: {
+      id: number
+      name: string
+    }
+    CreateInspectionWorkOrdersRequest: {
+      rentalObjectCode: string
+      inspectionId?: string
+      groups: {
+        maintenanceTeamId: number
+        maintenanceTeamName: string
+        descriptionHtml: string
+      }[]
+    }
+    CreateInspectionWorkOrdersResponse: {
+      results: {
+        maintenanceTeamId: number
+        ok: boolean
+        workOrderId?: number
+        err?: string
+      }[]
     }
     Building: {
       id: string
@@ -11420,6 +11601,158 @@ export interface components {
         }[]
       }[]
     }
+    KeycloakUserSummary: {
+      id: string
+      username: string
+      firstName?: string
+      lastName?: string
+      email?: string
+      mobilePhone?: string
+      employeeId?: string
+    }
+    CostCenterTreeAddress: {
+      buildingCode: string
+      buildingName: string | null
+      buildingType: {
+        code: string | null
+        name: string | null
+      } | null
+    }
+    CostCenterTreeAggregates: {
+      residenceCount: number
+      parkingCount: number
+      entranceCount: number
+    }
+    CostCenterTreeProperty: {
+      code: string
+      designation: string | null
+      tract: string | null
+      addresses: {
+        buildingCode: string
+        buildingName: string | null
+        buildingType: {
+          code: string | null
+          name: string | null
+        } | null
+      }[]
+      aggregates: {
+        residenceCount: number
+        parkingCount: number
+        entranceCount: number
+      }
+    }
+    CostCenterTreeKvvArea: {
+      /** Format: uuid */
+      id: string
+      code: string
+      name: string | null
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+      properties: {
+        code: string
+        designation: string | null
+        tract: string | null
+        addresses: {
+          buildingCode: string
+          buildingName: string | null
+          buildingType: {
+            code: string | null
+            name: string | null
+          } | null
+        }[]
+        aggregates: {
+          residenceCount: number
+          parkingCount: number
+          entranceCount: number
+        }
+      }[]
+    }
+    CostCenterTree: {
+      /** Format: uuid */
+      id: string
+      code: string
+      name: string
+      lead: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+      deputy: components['schemas']['CostCenterTree']['lead'] | null
+      capabilities: {
+        canEdit: boolean
+      }
+      kvvAreas: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string | null
+        responsible: components['schemas']['CostCenterTree']['lead'] | null
+        properties: {
+          code: string
+          designation: string | null
+          tract: string | null
+          addresses: {
+            buildingCode: string
+            buildingName: string | null
+            buildingType: {
+              code: string | null
+              name: string | null
+            } | null
+          }[]
+          aggregates: {
+            residenceCount: number
+            parkingCount: number
+            entranceCount: number
+          }
+        }[]
+      }[]
+    }
+    CostCenterSummary: {
+      /** Format: uuid */
+      id: string
+      code: string
+      name: string
+    }
+    KvvAreaSummary: {
+      code: string
+    }
+    PutPropertyKvvAreaBody: {
+      /** Format: uuid */
+      kvvAreaId: string
+    }
+    PropertyKvvAreaLink: {
+      propertyCode: string
+      /** Format: uuid */
+      kvvAreaId: string
+      updatedAt: string
+      updatedBy: string | null
+    }
+    PatchedKvvArea: {
+      /** Format: uuid */
+      id: string
+      code: string
+      name: string | null
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+    }
     Key: {
       /** Format: uuid */
       id: string
@@ -12471,41 +12804,9 @@ export interface components {
         /** Format: date-time */
         leaseEndDate?: string
         /** @enum {string} */
-        status:
-          | 'Current'
-          | 'Upcoming'
-          | 'AboutToEnd'
-          | 'Ended'
-          | 'PreliminaryTerminated'
-          | 'PendingSignature'
-          | 'NotSent'
+        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
         tenantContactIds?: string[]
         rentalPropertyId: string
-        rentalObject?: {
-          rentalObjectCode: string
-          address: string
-          rent?: {
-            rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
-              amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
-            }[]
-          }
-          residentialAreaCaption: string
-          residentialAreaCode: string
-          objectTypeCaption: string
-          objectTypeCode: string
-          boaArea?: number
-          braArea?: number
-        }
         rentalProperty?: {
           rentalPropertyId: string
           apartmentNumber: number
@@ -12566,45 +12867,36 @@ export interface components {
           code: string
           caption: string
         }
-        rentRows?: {
-          id: string
-          amount: number
-          articleId: string
-          label: string
-          vat: number
-          from?: string
-          to?: string
-        }[]
         tenants?: {
           contactCode: string
           contactKey: string
           leaseIds?: string[]
-          firstName: string
-          lastName: string
-          fullName: string
+          firstName: string | null
+          lastName: string | null
+          fullName: string | null
           nationalRegistrationNumber: string
           /** Format: date-time */
-          birthDate: string
+          birthDate: string | null
           address?: {
             street?: string
             number: string
             postalCode: string
             city: string
-          }
+          } | null
           phoneNumbers?: {
             phoneNumber: string
             type: string
             isMainNumber: boolean
           }[]
-          emailAddress?: string
+          emailAddress?: string | null
           isTenant: boolean
+          specialAttention?: boolean
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
             queuePoints: number
             type: number
           }
-          specialAttention?: boolean
           leaseContactType?: string
         }[]
       } | null
@@ -12644,6 +12936,14 @@ export interface components {
               type: string
               label: string
               note: string
+              /** @default */
+              condition?: string
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
             }[]
             /** @default [] */
             components?: {
@@ -12714,6 +13014,14 @@ export interface components {
         type: string
         label: string
         note: string
+        /** @default */
+        condition?: string
+        cost?: number
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        costResponsibility?: 'tenant' | 'landlord' | null
       }[]
       /** @default [] */
       components?: {
@@ -12756,6 +13064,24 @@ export interface components {
       notes: string | null
       totalCost: number | null
       remarkCount: number
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
       rooms: {
         room: string
         remarks: {
@@ -12788,41 +13114,9 @@ export interface components {
         /** Format: date-time */
         leaseEndDate?: string
         /** @enum {string} */
-        status:
-          | 'Current'
-          | 'Upcoming'
-          | 'AboutToEnd'
-          | 'Ended'
-          | 'PreliminaryTerminated'
-          | 'PendingSignature'
-          | 'NotSent'
+        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
         tenantContactIds?: string[]
         rentalPropertyId: string
-        rentalObject?: {
-          rentalObjectCode: string
-          address: string
-          rent?: {
-            rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
-              amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
-            }[]
-          }
-          residentialAreaCaption: string
-          residentialAreaCode: string
-          objectTypeCaption: string
-          objectTypeCode: string
-          boaArea?: number
-          braArea?: number
-        }
         rentalProperty?: {
           rentalPropertyId: string
           apartmentNumber: number
@@ -12883,45 +13177,36 @@ export interface components {
           code: string
           caption: string
         }
-        rentRows?: {
-          id: string
-          amount: number
-          articleId: string
-          label: string
-          vat: number
-          from?: string
-          to?: string
-        }[]
         tenants?: {
           contactCode: string
           contactKey: string
           leaseIds?: string[]
-          firstName: string
-          lastName: string
-          fullName: string
+          firstName: string | null
+          lastName: string | null
+          fullName: string | null
           nationalRegistrationNumber: string
           /** Format: date-time */
-          birthDate: string
+          birthDate: string | null
           address?: {
             street?: string
             number: string
             postalCode: string
             city: string
-          }
+          } | null
           phoneNumbers?: {
             phoneNumber: string
             type: string
             isMainNumber: boolean
           }[]
-          emailAddress?: string
+          emailAddress?: string | null
           isTenant: boolean
+          specialAttention?: boolean
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
             queuePoints: number
             type: number
           }
-          specialAttention?: boolean
           leaseContactType?: string
         }[]
       } | null
@@ -13088,601 +13373,27 @@ export interface components {
         workOrderCreated: boolean
         workOrderStatus: number | null
       }[]
-      lease: {
-        leaseId: string
-        leaseNumber: string
-        /** Format: date-time */
-        leaseStartDate: string
-        /** Format: date-time */
-        leaseEndDate?: string
-        /** @enum {string} */
-        status:
-          | 'Current'
-          | 'Upcoming'
-          | 'AboutToEnd'
-          | 'Ended'
-          | 'PreliminaryTerminated'
-          | 'PendingSignature'
-          | 'NotSent'
-        tenantContactIds?: string[]
-        rentalPropertyId: string
-        rentalObject?: {
-          rentalObjectCode: string
-          address: string
-          rent?: {
-            rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
-              amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
-            }[]
-          }
-          residentialAreaCaption: string
-          residentialAreaCode: string
-          objectTypeCaption: string
-          objectTypeCode: string
-          boaArea?: number
-          braArea?: number
-        }
-        rentalProperty?: {
-          rentalPropertyId: string
-          apartmentNumber: number
-          size: number
-          type: string
-          address?: {
-            street?: string
-            number: string
-            postalCode: string
-            city: string
-          }
-          rentalPropertyType: string
-          additionsIncludedInRent: string
-          otherInfo?: string
-          roomTypes?: {
-            roomTypeId: string
-            name: string
-          }[]
-          /** Format: date-time */
-          lastUpdated?: string
-        }
-        type: string
-        rentInfo?: {
-          currentRent: {
-            rentId?: string
-            leaseId?: string
-            currentRent: number
-            vat: number
-            additionalChargeDescription?: string
-            additionalChargeAmount?: number
-            /** Format: date-time */
-            rentStartDate?: string
-            /** Format: date-time */
-            rentEndDate?: string
-          }
-        }
-        address?: {
-          street?: string
-          number: string
-          postalCode: string
-          city: string
-        }
-        noticeGivenBy?: string
-        /** Format: date-time */
-        noticeDate?: string
-        noticeTimeTenant?: string | number
-        /** Format: date-time */
-        preferredMoveOutDate?: string
-        /** Format: date-time */
-        terminationDate?: string
-        /** Format: date-time */
-        contractDate?: string
-        /** Format: date-time */
-        lastDebitDate?: string
-        /** Format: date-time */
-        approvalDate?: string
-        residentialArea?: {
-          code: string
-          caption: string
-        }
-        rentRows?: {
-          id: string
-          amount: number
-          articleId: string
-          label: string
-          vat: number
-          from?: string
-          to?: string
-        }[]
-        tenants?: {
-          contactCode: string
-          contactKey: string
-          leaseIds?: string[]
-          firstName: string
-          lastName: string
-          fullName: string
-          nationalRegistrationNumber: string
-          /** Format: date-time */
-          birthDate: string
-          address?: {
-            street?: string
-            number: string
-            postalCode: string
-            city: string
-          }
-          phoneNumbers?: {
-            phoneNumber: string
-            type: string
-            isMainNumber: boolean
-          }[]
-          emailAddress?: string
-          isTenant: boolean
-          parkingSpaceWaitingList?: {
-            /** Format: date-time */
-            queueTime: string
-            queuePoints: number
-            type: number
-          }
-          specialAttention?: boolean
-          leaseContactType?: string
-        }[]
-      } | null
-      residence: {
-        id: string
-        code: string
-        name: string | null
-        /** @enum {string|null} */
-        status: 'VACANT' | 'LEASED' | null
-        entrance: string | null
-        location: string | null
-        floor: string | null
-        partNo: number | null
-        part: string | null
-        deleted: boolean
-        validityPeriod: {
-          /** Format: date-time */
-          fromDate: string
-          /** Format: date-time */
-          toDate: string
-        }
-        accessibility: {
-          wheelchairAccessible: boolean
-          elevator: boolean
-          residenceAdapted: boolean
-        }
-        features: {
-          hygieneFacility: string | null
-          balcony1?: {
-            location: string
-            type: string
-          }
-          balcony2?: {
-            location: string
-            type: string
-          }
-          patioLocation: string | null
-          sauna: boolean
-          extraToilet: boolean
-          sharedKitchen: boolean
-          petAllergyFree: boolean
-          /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean
-          smokeFree: boolean
-          asbestos: boolean
-        }
-        type: {
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-        }
-        residenceType: {
-          residenceTypeId: string
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-          systemStandard: number
-          checklistId: string | null
-          componentTypeActionId: string | null
-          statisticsGroupSCBId: string | null
-          statisticsGroup2Id: string | null
-          statisticsGroup3Id: string | null
-          statisticsGroup4Id: string | null
-          timestamp: string
-        }
-        rentalInformation: {
-          apartmentNumber: string | null
-          rentalId: string | null
-          type: {
-            code: string
-            name: string | null
-          }
-        } | null
-        propertyObject: {
-          energy: {
-            energyClass: number
-            /** Format: date-time */
-            energyRegistered?: string
-            /** Format: date-time */
-            energyReceived?: string
-            energyIndex?: number
-          }
-          rentalId: string | null
-          rentalInformation: {
-            type: {
-              code: string
-              name: string | null
-            }
-          } | null
-          rentalBlocks: {
-            id: string
-            blockReasonId: string | null
-            blockReason: string | null
-            /** Format: date-time */
-            fromDate: string
-            /** Format: date-time */
-            toDate: string | null
-            amount: number | null
-          }[]
-        }
-        property: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        building: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        staircase: {
-          id: string
-          code: string
-          name: string | null
-          features: {
-            floorPlan: string | null
-            accessibleByElevator: boolean
-          }
-          dates: {
-            /** Format: date-time */
-            from: string
-            /** Format: date-time */
-            to: string
-          }
-          property?: {
-            propertyId: string | null
-            propertyName: string | null
-            propertyCode: string | null
-          }
-          building?: {
-            buildingId: string | null
-            buildingName: string | null
-            buildingCode: string | null
-          }
-          deleted: boolean
-          timestamp: string
-        } | null
-        areaSize: number | null
-        malarEnergiFacilityId: string | null
-      } | null
     }
     DetailedInspectionRemark: {
       remarkId: string
       location: string | null
       buildingComponent: string | null
       notes: string | null
-      totalCost: number | null
-      remarkCount: number
-      rooms: {
-        room: string
-        remarks: {
-          remarkId: string
-          location: string | null
-          buildingComponent: string | null
-          notes: string | null
-          remarkGrade: number
-          remarkStatus: string | null
-          cost: number
-          invoice: boolean
-          quantity: number
-          isMissing: boolean
-          /** Format: date-time */
-          fixedDate: string | null
-          workOrderCreated: boolean
-          workOrderStatus: number | null
-        }[]
-      }[]
-      lease: {
-        leaseId: string
-        leaseNumber: string
-        /** Format: date-time */
-        leaseStartDate: string
-        /** Format: date-time */
-        leaseEndDate?: string
-        /** @enum {string} */
-        status:
-          | 'Current'
-          | 'Upcoming'
-          | 'AboutToEnd'
-          | 'Ended'
-          | 'PreliminaryTerminated'
-          | 'PendingSignature'
-          | 'NotSent'
-        tenantContactIds?: string[]
-        rentalPropertyId: string
-        rentalObject?: {
-          rentalObjectCode: string
-          address: string
-          rent?: {
-            rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
-              amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
-            }[]
-          }
-          residentialAreaCaption: string
-          residentialAreaCode: string
-          objectTypeCaption: string
-          objectTypeCode: string
-          boaArea?: number
-          braArea?: number
-        }
-        rentalProperty?: {
-          rentalPropertyId: string
-          apartmentNumber: number
-          size: number
-          type: string
-          address?: {
-            street?: string
-            number: string
-            postalCode: string
-            city: string
-          }
-          rentalPropertyType: string
-          additionsIncludedInRent: string
-          otherInfo?: string
-          roomTypes?: {
-            roomTypeId: string
-            name: string
-          }[]
-          /** Format: date-time */
-          lastUpdated?: string
-        }
-        type: string
-        rentInfo?: {
-          currentRent: {
-            rentId?: string
-            leaseId?: string
-            currentRent: number
-            vat: number
-            additionalChargeDescription?: string
-            additionalChargeAmount?: number
-            /** Format: date-time */
-            rentStartDate?: string
-            /** Format: date-time */
-            rentEndDate?: string
-          }
-        }
-        address?: {
-          street?: string
-          number: string
-          postalCode: string
-          city: string
-        }
-        noticeGivenBy?: string
-        /** Format: date-time */
-        noticeDate?: string
-        noticeTimeTenant?: string | number
-        /** Format: date-time */
-        preferredMoveOutDate?: string
-        /** Format: date-time */
-        terminationDate?: string
-        /** Format: date-time */
-        contractDate?: string
-        /** Format: date-time */
-        lastDebitDate?: string
-        /** Format: date-time */
-        approvalDate?: string
-        residentialArea?: {
-          code: string
-          caption: string
-        }
-        rentRows?: {
-          id: string
-          amount: number
-          articleId: string
-          label: string
-          vat: number
-          from?: string
-          to?: string
-        }[]
-        tenants?: {
-          contactCode: string
-          contactKey: string
-          leaseIds?: string[]
-          firstName: string
-          lastName: string
-          fullName: string
-          nationalRegistrationNumber: string
-          /** Format: date-time */
-          birthDate: string
-          address?: {
-            street?: string
-            number: string
-            postalCode: string
-            city: string
-          }
-          phoneNumbers?: {
-            phoneNumber: string
-            type: string
-            isMainNumber: boolean
-          }[]
-          emailAddress?: string
-          isTenant: boolean
-          parkingSpaceWaitingList?: {
-            /** Format: date-time */
-            queueTime: string
-            queuePoints: number
-            type: number
-          }
-          specialAttention?: boolean
-          leaseContactType?: string
-        }[]
-      } | null
-      residence: {
-        id: string
-        code: string
-        name: string | null
-        /** @enum {string|null} */
-        status: 'VACANT' | 'LEASED' | null
-        entrance: string | null
-        location: string | null
-        floor: string | null
-        partNo: number | null
-        part: string | null
-        deleted: boolean
-        validityPeriod: {
-          /** Format: date-time */
-          fromDate: string
-          /** Format: date-time */
-          toDate: string
-        }
-        accessibility: {
-          wheelchairAccessible: boolean
-          elevator: boolean
-          residenceAdapted: boolean
-        }
-        features: {
-          hygieneFacility: string | null
-          balcony1?: {
-            location: string
-            type: string
-          }
-          balcony2?: {
-            location: string
-            type: string
-          }
-          patioLocation: string | null
-          sauna: boolean
-          extraToilet: boolean
-          sharedKitchen: boolean
-          petAllergyFree: boolean
-          /** @description Is the apartment checked for electric allergy intolerance? */
-          electricAllergyIntolerance: boolean
-          smokeFree: boolean
-          asbestos: boolean
-        }
-        type: {
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-        }
-        residenceType: {
-          residenceTypeId: string
-          code: string
-          name: string | null
-          roomCount: number | null
-          kitchen: number
-          systemStandard: number
-          checklistId: string | null
-          componentTypeActionId: string | null
-          statisticsGroupSCBId: string | null
-          statisticsGroup2Id: string | null
-          statisticsGroup3Id: string | null
-          statisticsGroup4Id: string | null
-          timestamp: string
-        }
-        rentalInformation: {
-          apartmentNumber: string | null
-          rentalId: string | null
-          type: {
-            code: string
-            name: string | null
-          }
-        } | null
-        propertyObject: {
-          energy: {
-            energyClass: number
-            /** Format: date-time */
-            energyRegistered?: string
-            /** Format: date-time */
-            energyReceived?: string
-            energyIndex?: number
-          }
-          rentalId: string | null
-          rentalInformation: {
-            type: {
-              code: string
-              name: string | null
-            }
-          } | null
-          rentalBlocks: {
-            id: string
-            blockReasonId: string | null
-            blockReason: string | null
-            /** Format: date-time */
-            fromDate: string
-            /** Format: date-time */
-            toDate: string | null
-            amount: number | null
-          }[]
-        }
-        property: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        building: {
-          id: string | null
-          name: string | null
-          code: string | null
-        }
-        staircase: {
-          id: string
-          code: string
-          name: string | null
-          features: {
-            floorPlan: string | null
-            accessibleByElevator: boolean
-          }
-          dates: {
-            /** Format: date-time */
-            from: string
-            /** Format: date-time */
-            to: string
-          }
-          property?: {
-            propertyId: string | null
-            propertyName: string | null
-            propertyCode: string | null
-          }
-          building?: {
-            buildingId: string | null
-            buildingName: string | null
-            buildingCode: string | null
-          }
-          deleted: boolean
-          timestamp: string
-        } | null
-        areaSize: number | null
-        malarEnergiFacilityId: string | null
-      } | null
+      remarkGrade: number
+      remarkStatus: string | null
+      cost: number
+      /**
+       * @default null
+       * @enum {string|null}
+       */
+      costResponsibility?: 'tenant' | 'landlord' | null
+      invoice: boolean
+      quantity: number
+      isMissing: boolean
+      /** Format: date-time */
+      fixedDate: string | null
+      workOrderCreated: boolean
+      workOrderStatus: number | null
     }
     TenantContactsResponse: {
       inspection: {
@@ -13736,6 +13447,24 @@ export interface components {
       hasRemarks: boolean
       notes: string | null
       totalCost: number | null
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
       rooms: {
         room: string
         remarks: {
@@ -13787,41 +13516,9 @@ export interface components {
         /** Format: date-time */
         leaseEndDate?: string
         /** @enum {string} */
-        status:
-          | 'Current'
-          | 'Upcoming'
-          | 'AboutToEnd'
-          | 'Ended'
-          | 'PreliminaryTerminated'
-          | 'PendingSignature'
-          | 'NotSent'
+        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
         tenantContactIds?: string[]
         rentalPropertyId: string
-        rentalObject?: {
-          rentalObjectCode: string
-          address: string
-          rent?: {
-            rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
-              amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
-            }[]
-          }
-          residentialAreaCaption: string
-          residentialAreaCode: string
-          objectTypeCaption: string
-          objectTypeCode: string
-          boaArea?: number
-          braArea?: number
-        }
         rentalProperty?: {
           rentalPropertyId: string
           apartmentNumber: number
@@ -13882,45 +13579,36 @@ export interface components {
           code: string
           caption: string
         }
-        rentRows?: {
-          id: string
-          amount: number
-          articleId: string
-          label: string
-          vat: number
-          from?: string
-          to?: string
-        }[]
         tenants?: {
           contactCode: string
           contactKey: string
           leaseIds?: string[]
-          firstName: string
-          lastName: string
-          fullName: string
+          firstName: string | null
+          lastName: string | null
+          fullName: string | null
           nationalRegistrationNumber: string
           /** Format: date-time */
-          birthDate: string
+          birthDate: string | null
           address?: {
             street?: string
             number: string
             postalCode: string
             city: string
-          }
+          } | null
           phoneNumbers?: {
             phoneNumber: string
             type: string
             isMainNumber: boolean
           }[]
-          emailAddress?: string
+          emailAddress?: string | null
           isTenant: boolean
+          specialAttention?: boolean
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
             queuePoints: number
             type: number
           }
-          specialAttention?: boolean
           leaseContactType?: string
         }[]
       } | null
@@ -13948,6 +13636,24 @@ export interface components {
       notes: string | null
       totalCost: number | null
       remarkCount: number
+      /**
+       * @default {
+       *   "groundFaultBreaker": false,
+       *   "smokeDetector": false,
+       *   "electricalSchema": false,
+       *   "electricalSystem": false
+       * }
+       */
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
       rooms:
         | {
             roomId: string
@@ -13984,6 +13690,14 @@ export interface components {
               type: string
               label: string
               note: string
+              /** @default */
+              condition?: string
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
             }[]
             /** @default [] */
             components?: {
@@ -14042,6 +13756,14 @@ export interface components {
           type: string
           label: string
           note: string
+          /** @default */
+          condition?: string
+          cost?: number
+          /**
+           * @default null
+           * @enum {string|null}
+           */
+          costResponsibility?: 'tenant' | 'landlord' | null
         }[]
         /** @default [] */
         components?: {
@@ -14062,6 +13784,21 @@ export interface components {
         isAddedInThisInspection?: boolean
       }[]
       isFurnished: boolean
+      isTenantPresent?: boolean
+      isNewTenantPresent?: boolean
+      checklist?: {
+        /** @default false */
+        groundFaultBreaker?: boolean
+        /** @default false */
+        smokeDetector?: boolean
+        /** @default false */
+        electricalSchema?: boolean
+        /** @default false */
+        electricalSystem?: boolean
+      }
+      /** Format: date-time */
+      date?: string
+      type?: string
     }
     ComponentWriteBackError: {
       componentId: string
@@ -14192,12 +13929,120 @@ export interface components {
       totalSent: number
       totalInvalid: number
     }
+    CustomerMessage: {
+      dispatch: {
+        /** Format: uuid */
+        id: string
+        /** @enum {string} */
+        direction: 'outbound' | 'inbound'
+        /** @enum {string} */
+        channel: 'sms' | 'email'
+        fromAddress: string
+        subject: string | null
+        body: string
+        messageType: string
+        provider: string
+        triggeredByUser: string | null
+        /** Format: date-time */
+        triggeredAt: string
+        recipientCount: number
+        audienceCriteria: string | null
+        /** Format: uuid */
+        inReplyToDispatchId: string | null
+        /** Format: uuid */
+        templateId: string | null
+        /** Format: date-time */
+        createdAt: string
+      }
+      recipient: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        dispatchId: string
+        contactCode: string | null
+        toAddress: string
+        /** @enum {string} */
+        status:
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
+        /** Format: date-time */
+        statusUpdatedAt: string
+        externalMessageId: string | null
+        error: string | null
+        /** Format: date-time */
+        createdAt: string
+      }
+    }
+    DispatchWithRecipients: {
+      dispatch: {
+        /** Format: uuid */
+        id: string
+        /** @enum {string} */
+        direction: 'outbound' | 'inbound'
+        /** @enum {string} */
+        channel: 'sms' | 'email'
+        fromAddress: string
+        subject: string | null
+        body: string
+        messageType: string
+        provider: string
+        triggeredByUser: string | null
+        /** Format: date-time */
+        triggeredAt: string
+        recipientCount: number
+        audienceCriteria: string | null
+        /** Format: uuid */
+        inReplyToDispatchId: string | null
+        /** Format: uuid */
+        templateId: string | null
+        /** Format: date-time */
+        createdAt: string
+      }
+      recipients: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        dispatchId: string
+        contactCode: string | null
+        toAddress: string
+        /** @enum {string} */
+        status:
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
+        /** Format: date-time */
+        statusUpdatedAt: string
+        externalMessageId: string | null
+        error: string | null
+        /** Format: date-time */
+        createdAt: string
+      }[]
+    }
     KeycloakUser: {
-      id?: string
-      username?: string
+      id: string
+      username: string
       firstName?: string
       lastName?: string
       email?: string
+      emailVerified?: boolean
+      /** @description Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings. */
+      attributes?: {
+        [key: string]: string[]
+      }
+      /** Format: int64 */
+      createdTimestamp?: number
+      enabled?: boolean
+      totp?: boolean
+      disableableCredentialTypes?: string[]
+      requiredActions?: string[]
+      notBefore?: number
     }
     RentalPropertyResponse: {
       content?: {

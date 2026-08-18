@@ -245,41 +245,44 @@ export interface LogFilterParams {
 // ----- Receipts (UI/domain) -----
 // Note: Receipt API types are already defined above (lines 39-75) from generated OpenAPI types
 
-// UI-only helper type for PDF generation
-// Uses KeyDetails to include keySystem directly (no separate keySystemMap needed)
-export interface ReceiptData {
-  lease: Lease
-  tenants: Tenant[]
-  keys: KeyDetails[] // Keys with keySystem included for display
-  receiptType: 'LOAN' | 'RETURN'
-  operationDate?: Date
-  loanId?: string // Key loan UUID, used for QR code on printed receipt
-  missingKeys?: KeyDetails[] // For RETURN: keys not returned (unchecked, non-disposed)
-  disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
-  cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
-  missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
-  // For PARTIAL RETURN: unchecked items aren't missing — they continue on the
-  // new continuation loan. Rendered as its own "NYCKLAR KVAR PÅ LÅN" section.
-  remainingLoanKeys?: KeyDetails[]
-  remainingLoanCards?: Card[]
-  comment?: string // Optional comment for the receipt (max 280 chars)
+/**
+ * The borrower fields a receipt renders. A lease Tenant and a Contact both satisfy
+ * this, so tenant and maintenance receipts name their party the same way.
+ */
+export interface ReceiptContact {
+  firstName?: string | null
+  lastName?: string | null
+  fullName?: string | null
+  contactCode: string
+  nationalRegistrationNumber?: string | null
 }
 
-export interface MaintenanceReceiptData {
-  contact: string // Contact code (e.g., F088710)
-  contactName: string // Company name (from Contact.fullName)
-  contactPerson: string | null
-  description?: string | null
-  keys: KeyDetails[] // Keys with keySystem included for display
-  scopeByKeyId?: Record<string, string> // Per-key scope for the maintenance receipt's Tillhörighet column (rentalObjectCode → resolved address, or keySystem.name as fallback for HN master keys where rentalObjectCode is null).
+/**
+ * The single PDF-layer input for every receipt. `loanType` drives the header fork
+ * (Hyresgäst+Avtal vs Företag+Tillhörighet); the missing/disposed/remaining buckets
+ * are RETURN-only. All values are pre-resolved strings — the PDF layer lays out text,
+ * it resolves nothing.
+ */
+export interface ReceiptData {
   receiptType: 'LOAN' | 'RETURN'
+  loanType: 'TENANT' | 'MAINTENANCE'
+  contacts: ReceiptContact[] // borrower(s): tenant(s) or the maintenance company
+  contactPerson?: string | null // maintenance only
+  keys: KeyDetails[] // keySystem included for display
+  cards?: Card[]
   operationDate?: Date
-  loanId?: string // Key loan UUID, used for QR code on printed receipt
-  missingKeys?: KeyDetails[] // For RETURN: keys not returned (unchecked, non-disposed)
-  disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
-  cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
-  missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
-  // For PARTIAL RETURN (maintenance): unchecked items continue on a new loan.
+  loanId?: string // used for the QR code on printed loan receipts
+  comment?: string // KOMMENTAR box (maintenance loans: loan notes + print comment)
+  // Tenant Avtal block (resolved from the loan's keys / picked in the dialog):
+  rentalPropertyId?: string
+  leaseDisplayId?: string
+  address?: string | null
+  // Maintenance Tillhörighet column (rentalObjectCode→address, else keySystem.name):
+  scopeByKeyId?: Record<string, string>
+  // RETURN-only: keys/cards not returned, disposed, or continuing on a new loan.
+  missingKeys?: KeyDetails[]
+  missingCards?: Card[]
+  disposedKeys?: KeyDetails[]
   remainingLoanKeys?: KeyDetails[]
   remainingLoanCards?: Card[]
 }

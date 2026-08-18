@@ -1204,9 +1204,9 @@ const enrichInvoiceRowsWithText = async (
 }
 
 export const stralforsPostChannelLookup = async (
-  nationalRegistrationNumbers: string[]
+  recipients: economy.LookupRecipient[]
 ) => {
-  return await postChannelLookup(nationalRegistrationNumbers)
+  return await postChannelLookup(recipients)
 }
 
 export const getAutogiroConsent = async (

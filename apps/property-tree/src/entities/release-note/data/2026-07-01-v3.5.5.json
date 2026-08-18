@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-07-01-v355-1",
+    "date": "2026-07-01",
+    "title": "Redigera Anläggnings ID Mälarenergi",
+    "description": "Nu går det att uppdatera eller lägga till \"Anläggnings ID Mälarenergi\" direkt på lägenheten i ONECore. Klicka på pennan bredvid fältet för att redigera värdet – ändringen sparas direkt mot Xpand.",
+    "category": "feature"
+  }
+]

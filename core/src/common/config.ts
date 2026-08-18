@@ -65,6 +65,11 @@ export interface Config {
       clientSecret: string
     }
   }
+  microsoftGraph: {
+    tenantId: string
+    clientId: string
+    clientSecret: string
+  }
   emailAddresses: {
     leasing: string
     tenantDefault: string
@@ -85,6 +90,11 @@ export interface Config {
   scanner: {
     allowedIps: string[]
     errorNotificationEmail: string
+  }
+  infobip: {
+    // Shared secret core validates on the public SMS delivery-report webhook
+    // (/webhooks/infobip-sms). Same value communication embeds in the SMS send.
+    webhookToken: string
   }
   health: {
     contacts: HealthCheck
@@ -150,6 +160,11 @@ const config = configPackage({
         clientSecret: 'your-client-secret',
       },
     },
+    microsoftGraph: {
+      tenantId: '',
+      clientId: '',
+      clientSecret: '',
+    },
     emailAddresses: {
       leasing: '',
       tenantDefault: '',
@@ -169,6 +184,9 @@ const config = configPackage({
     scanner: {
       allowedIps: [],
       errorNotificationEmail: '',
+    },
+    infobip: {
+      webhookToken: '',
     },
     health: {
       contacts: {
@@ -228,10 +246,12 @@ export default {
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
+  microsoftGraph: config.get('microsoftGraph'),
   health: config.get('health'),
   propertyBaseService: config.get('propertyBaseService'),
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
   scanner: config.get('scanner'),
   homeInsurance: config.get('homeInsurance'),
+  infobip: config.get('infobip'),
 } as Config

@@ -6,6 +6,9 @@ const calculateLeaseStatus = (
   lastDebitDateString: string,
   startDateString: string
 ): LeaseStatus => {
+  // Rows with neither start date nor lastDebitDate are template-like entries (e.g. Avtalsmall)
+  if (!lastDebitDateString && !startDateString) return LeaseStatus.Ended
+
   const leaseStartDate = new Date(startDateString)
   const leaseLastDebitDate = new Date(lastDebitDateString)
   const today = new Date()

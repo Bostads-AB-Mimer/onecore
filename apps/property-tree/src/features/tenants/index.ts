@@ -5,11 +5,13 @@ export { InvoicesTable } from './ui/InvoicesTable'
 export { TenantsHeader } from './ui/TenantsHeader'
 
 // Tab Components
+export { TenantCommunicationTabContent } from './ui/TenantCommunicationTabContent'
 export { TenantKeyLoans } from './ui/TenantKeyLoans'
 export { TenantLeasesTabContent } from './ui/TenantLeasesTabContent'
 export { TenantLedgerTabContent } from './ui/TenantLedgerTabContent'
 export { TenantNotesTabContent } from './ui/TenantNotesTabContent'
 export { TenantQueueSystemTabContent } from './ui/TenantQueueSystemTabContent'
+export { TenantRelatedContactsTabContent } from './ui/TenantRelatedContactsTabContent'
 export { TenantsTabContent } from './ui/TenantsTabContent'
 
 // Hooks

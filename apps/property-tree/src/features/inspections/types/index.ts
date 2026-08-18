@@ -55,13 +55,27 @@ export interface ResidenceInfo {
   size: number | null
 }
 
+import type { Checklist } from '@/features/inspections/constants/checklist'
+
 /**
  * Inspection submission data
  * Additional data needed when submitting an inspection
+ *
+ * `date` carries the calendar day combined with the Klockslag (HH:MM) chosen
+ * in the conduct dialog's "Info om besiktning" card. `type` is the value
+ * behind the "Typ av besiktning" radio. Both are only set when the inspector
+ * actually edited them — the save-draft endpoint keeps the stored values when
+ * they are absent, so an untouched draft save never re-schedules the
+ * inspection to the picker's display fallback.
  */
 export interface InspectionSubmitData {
   needsMasterKey: boolean
   isFurnished: boolean
+  isTenantPresent: boolean
+  isNewTenantPresent: boolean
+  checklist: Checklist
+  date?: string
+  type?: string
   tenant?: TenantSnapshot
 }
 

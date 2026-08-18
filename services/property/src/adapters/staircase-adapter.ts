@@ -166,6 +166,7 @@ async function searchStaircases(q: string): Promise<Staircase[]> {
             },
           },
         },
+        orderBy: { code: 'asc' },
         take: 10,
       })
       .then(trimStrings)

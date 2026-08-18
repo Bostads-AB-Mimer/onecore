@@ -49,6 +49,14 @@ const OBJECT_TYPE_MAP: Record<string, string> = {
 const normalizeObjectType = (type: string): string =>
   OBJECT_TYPE_MAP[type.toLowerCase()] ?? type
 
+/**
+ * Xpand hyobj.keyhyobt code for "Avtalsmall" (agreement template).
+ * Template rows are not real contracts — they have all dates NULL, so
+ * calculateStatus would classify them as "Gällande" and they'd leak into
+ * search results. Xpand's own UI hides them; excluded here from all searches.
+ */
+const XPAND_HYOBT_AVTALSMALL = '1'
+
 export interface LeaseSearchOptions {
   forExport?: boolean
   /**
@@ -98,6 +106,7 @@ export class LeaseSearchQueryBuilder {
       .innerJoin('cmobj', 'cmobj.keycmobj', 'hykop.keycmobj')
       .where('hyobj.deletemark', 0)
       .whereNot('hyobj.hyobjben', 'like', '%M%')
+      .whereNot('hyobj.keyhyobt', XPAND_HYOBT_AVTALSMALL)
 
     this.joinedTables.add('hyobj')
     this.joinedTables.add('hyhav')
@@ -419,12 +428,13 @@ export class LeaseSearchQueryBuilder {
   }
 
   /**
-   * Apply building manager filter (Kvartersvärd)
+   * Apply KVV-area filter (förvaltningsområde). Matches bafen.code against
+   * the area codes resolved by core from the responsible Keycloak users.
    */
-  applyBuildingManagerFilter(): this {
-    if (this.params.buildingManager && this.params.buildingManager.length > 0) {
+  applyKvvAreaFilter(): this {
+    if (this.params.kvvAreaCodes && this.params.kvvAreaCodes.length > 0) {
       this.ensureDistrictJoin()
-      this.query.whereIn('bafen.omrade', this.params.buildingManager)
+      this.query.whereIn('bafen.code', this.params.kvvAreaCodes)
     }
 
     return this
@@ -667,29 +677,6 @@ export const parseContactsJson = (
   }
 }
 
-export const getBuildingManagers = async (): Promise<
-  { code: string; name: string; district: string }[]
-> => {
-  const rows = await xpandDb
-    .from('bafen')
-    .select(
-      'bafen.code as code',
-      'bafen.omrade as name',
-      'bafen.distrikt as district'
-    )
-    .distinct()
-    .whereNotNull('bafen.omrade')
-    .where('bafen.omrade', '!=', '')
-    .orderBy('bafen.distrikt')
-    .orderBy('bafen.omrade')
-
-  return rows.map((row: { code: string; name: string; district: string }) => ({
-    code: row.code.trim(),
-    name: row.name.trim(),
-    district: row.district?.trim() ?? '',
-  }))
-}
-
 export const getParkingSpaceTypes = async (): Promise<
   { code: string; caption: string }[]
 > => {
@@ -812,7 +799,7 @@ export const searchLeases = async (
     .applyBuildingFilter()
     .applyAreaFilter()
     .applyDistrictFilter()
-    .applyBuildingManagerFilter()
+    .applyKvvAreaFilter()
     .buildSelectFields()
     .applySorting()
 

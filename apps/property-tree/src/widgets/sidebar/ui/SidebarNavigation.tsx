@@ -13,6 +13,7 @@ import {
   Gauge,
   Home,
   LayoutGrid,
+  Receipt,
   Settings,
   ShieldX,
 } from 'lucide-react'
@@ -162,10 +163,22 @@ function SidebarNavigationContent() {
         />
         <SidebarNavLink to={routes.imd} icon={Gauge} label="IMD" />
         <SidebarNavLink
+          to={routes.economy}
+          icon={Receipt}
+          label="Skapa ströfaktura"
+        />
+        <SidebarNavLink
           to={routes.components}
           icon={Settings}
           label="Administrera Komponenter"
         />
+        {/* Temporarily hidden from the nav while the feature is finalized.
+            The route still works, so the page is reachable via /forvaltningsomraden. */}
+        {/* <SidebarNavLink
+          to={routes.propertyAreas}
+          icon={LayoutGrid}
+          label="Förvaltningsområden"
+        /> */}
       </SidebarContent>
     </Sidebar>
   )

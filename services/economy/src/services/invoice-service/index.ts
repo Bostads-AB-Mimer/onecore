@@ -46,7 +46,7 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody(invoices, metadata)
     } catch (error: any) {
       logger.error(
-        { error, contactCode: contactCode },
+        { err: error, contactCode: contactCode },
         'Error getting invoices for contact code'
       )
       ctx.status = 500
@@ -90,6 +90,14 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    // Xledger invoice numbers are digits with an optional K suffix; reject
+    // anything else before it reaches the GraphQL string interpolation.
+    if (!/^\d{1,20}K?$/i.test(ctx.params.invoiceNumber)) {
+      ctx.status = 404
+      return
+    }
+
     try {
       const result = await invoiceService.getInvoiceDetails(
         ctx.params.invoiceNumber
@@ -111,6 +119,14 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/invoices/:invoiceNumber/payment-events', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    // Xledger invoice numbers are digits with an optional K suffix; reject
+    // anything else before it reaches the GraphQL string interpolation.
+    if (!/^\d{1,20}K?$/i.test(ctx.params.invoiceNumber)) {
+      ctx.status = 404
+      return
+    }
+
     try {
       const matchId = await getInvoiceMatchId(ctx.params.invoiceNumber)
       if (!matchId) {
@@ -306,12 +322,10 @@ export const routes = (router: KoaRouter) => {
 
   router.post('(.*)/invoice-channels', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { nationalRegistrationNumbers } = ctx.request.body
+    const { recipients } = ctx.request.body
 
     try {
-      const results = await stralforsPostChannelLookup(
-        nationalRegistrationNumbers
-      )
+      const results = await stralforsPostChannelLookup(recipients)
 
       ctx.status = 200
       ctx.body = {

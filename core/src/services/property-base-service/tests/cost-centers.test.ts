@@ -1,0 +1,270 @@
+import request from 'supertest'
+import Koa from 'koa'
+import KoaRouter from '@koa/router'
+import bodyParser from 'koa-bodyparser'
+
+import { routes as costCenterRoutes } from '../cost-centers'
+import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
+import * as keycloakAdapter from '../../auth-service/keycloak-admin-adapter'
+
+const app = new Koa()
+const router = new KoaRouter()
+costCenterRoutes(router)
+app.use(bodyParser())
+app.use(router.routes())
+
+function appWithUserRoles(roles: string[]) {
+  const a = new Koa()
+  const r = new KoaRouter()
+  a.use(async (ctx, next) => {
+    ctx.state.user = { realm_access: { roles } }
+    await next()
+  })
+  costCenterRoutes(r)
+  a.use(bodyParser())
+  a.use(r.routes())
+  return a
+}
+
+beforeEach(jest.resetAllMocks)
+
+const TREE_ID = '11111111-1111-1111-1111-111111111111'
+const LEAD_ID = 'lead-user-id'
+const DEPUTY_ID = 'deputy-user-id'
+const RESP_ID = 'responsible-user-id'
+
+const baseTree = {
+  id: TREE_ID,
+  code: '61110',
+  name: 'Mimer Mitt',
+  leadKeycloakUserId: LEAD_ID,
+  deputyKeycloakUserId: DEPUTY_ID,
+  kvvAreas: [
+    {
+      id: '22222222-2222-2222-2222-222222222222',
+      code: 'KVV-1',
+      name: 'Område 1',
+      responsibleKeycloakUserId: RESP_ID,
+      properties: [
+        {
+          code: '04101',
+          designation: 'JOSEF 7',
+          tract: 'Josef',
+          addresses: [
+            {
+              buildingCode: '04101-B1',
+              buildingName: 'Hus 1',
+              buildingType: { code: 'STD', name: 'Standard' },
+            },
+          ],
+          aggregates: { residenceCount: 26, parkingCount: 0, entranceCount: 5 },
+        },
+      ],
+    },
+  ],
+}
+
+describe('GET /cost-centers/:id/tree', () => {
+  it('returns 404 when cost center is missing', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const res = await request(app.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 500 when the adapter fails with unknown', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+    expect(res.status).toBe(500)
+  })
+
+  it('returns a hydrated tree when keycloak resolves', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockImplementation(async (role) => {
+        if (role === 'property-manager')
+          return { ok: true, data: [{ id: RESP_ID, username: 'resp' }] }
+        if (role === 'district-manager')
+          return {
+            ok: true,
+            data: [
+              {
+                id: LEAD_ID,
+                username: 'lead',
+                firstName: 'L',
+                lastName: 'Ead',
+              },
+            ],
+          }
+        if (role === 'deputy-district-manager')
+          return { ok: true, data: [{ id: DEPUTY_ID, username: 'deputy' }] }
+        return { ok: true, data: [] }
+      })
+
+    const res = await request(app.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.content.lead).toMatchObject({
+      id: LEAD_ID,
+      username: 'lead',
+    })
+    expect(res.body.content.deputy).toMatchObject({ id: DEPUTY_ID })
+    expect(res.body.content.kvvAreas[0].responsible).toMatchObject({
+      id: RESP_ID,
+    })
+  })
+
+  it('returns the tree with null users when keycloak fails', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+
+    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValue({
+      ok: false,
+      err: 'keycloak_unreachable',
+      statusCode: 502,
+    })
+
+    const res = await request(app.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.content.lead).toBeNull()
+    expect(res.body.content.deputy).toBeNull()
+    expect(res.body.content.kvvAreas[0].responsible).toBeNull()
+  })
+
+  it('returns null users for ids not found in the role lists', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockImplementation(async (role) => {
+        if (role === 'district-manager')
+          return { ok: true, data: [{ id: LEAD_ID, username: 'lead' }] }
+        return { ok: true, data: [] }
+      })
+
+    const res = await request(app.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.content.lead).not.toBeNull()
+    expect(res.body.content.deputy).toBeNull()
+    expect(res.body.content.kvvAreas[0].responsible).toBeNull()
+  })
+
+  it('returns capabilities.canEdit: true when the user has the property-areas:write role', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockResolvedValue({ ok: true, data: [] })
+
+    const authedApp = appWithUserRoles(['property-areas:write'])
+    const res = await request(authedApp.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.capabilities).toEqual({ canEdit: true })
+  })
+
+  it('returns capabilities.canEdit: false when the user lacks the property-areas:write role', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockResolvedValue({ ok: true, data: [] })
+
+    const unauthedApp = appWithUserRoles(['some-other-role'])
+    const res = await request(unauthedApp.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.capabilities).toEqual({ canEdit: false })
+  })
+
+  it('hydrates lead/deputy/responsible from their respective roles only', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: baseTree })
+
+    // LEAD_ID only appears in property-manager — should NOT resolve as lead
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockImplementation(async (role) => {
+        if (role === 'property-manager')
+          return {
+            ok: true,
+            data: [
+              { id: RESP_ID, username: 'resp' },
+              { id: LEAD_ID, username: 'lead-in-wrong-role' },
+            ],
+          }
+        return { ok: true, data: [] }
+      })
+
+    const res = await request(app.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+    expect(res.status).toBe(200)
+    expect(res.body.content.lead).toBeNull()
+    expect(res.body.content.deputy).toBeNull()
+    expect(res.body.content.kvvAreas[0].responsible).toMatchObject({
+      id: RESP_ID,
+    })
+  })
+})
+
+describe('GET /cost-centers', () => {
+  it('returns 200 with the list of cost centers', async () => {
+    const data = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        code: '61110',
+        name: 'Mimer Mitt',
+      },
+      {
+        id: '22222222-2222-2222-2222-222222222222',
+        code: '61120',
+        name: 'Mimer Väst',
+      },
+    ]
+    jest
+      .spyOn(propertyBaseAdapter, 'listCostCenters')
+      .mockResolvedValueOnce({ ok: true, data })
+
+    const res = await request(app.callback()).get('/cost-centers')
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(data)
+  })
+
+  it('returns 500 when the adapter fails', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'listCostCenters')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback()).get('/cost-centers')
+    expect(res.status).toBe(500)
+  })
+})

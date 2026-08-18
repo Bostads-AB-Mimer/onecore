@@ -105,6 +105,11 @@ export function InspectionConductDialog({
               inspectorName,
               rooms: Object.values(inspectionRooms),
               isFurnished: additionalData.isFurnished,
+              isTenantPresent: additionalData.isTenantPresent,
+              isNewTenantPresent: additionalData.isNewTenantPresent,
+              checklist: additionalData.checklist,
+              date: additionalData.date,
+              type: additionalData.type,
             })
 
             // Component write-back happens inside the inspection-service when

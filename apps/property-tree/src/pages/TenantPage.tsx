@@ -7,7 +7,7 @@ import { TenantTabs } from '@/widgets/tenant-tabs'
 
 import { useLeasesByContactCode } from '@/entities/lease'
 import { useRentalProperties } from '@/entities/rental-property'
-import { TenantCard, useTenant } from '@/entities/tenant'
+import { TenantCard, useRelatedContacts, useTenant } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 import type { Tenant } from '@/services/types'
@@ -112,6 +112,7 @@ export function TenantPage() {
     isLoading: tenantLoading,
     error: tenantError,
   } = useTenant(contactCode)
+  const { data: relatedContacts } = useRelatedContacts(contactCode)
   // Fetch leases data
   const {
     data: leases,
@@ -144,17 +145,20 @@ export function TenantPage() {
             <div className="grid grid-cols-1 gap-6 mb-6">
               <TenantCard
                 tenant={tenant}
+                relatedContacts={relatedContacts ?? []}
                 onSendSms={(phone) =>
-                  sms.openSmsModal(
-                    `${tenant.firstName} ${tenant.lastName}`,
-                    phone
-                  )
+                  sms.openSmsModal({
+                    name: `${tenant.firstName} ${tenant.lastName}`,
+                    phoneNumber: phone,
+                    contactCode: tenant.contactCode,
+                  })
                 }
                 onSendEmail={(addr) =>
-                  email.openEmailModal(
-                    `${tenant.firstName} ${tenant.lastName}`,
-                    addr
-                  )
+                  email.openEmailModal({
+                    name: `${tenant.firstName} ${tenant.lastName}`,
+                    emailAddress: addr,
+                    contactCode: tenant.contactCode,
+                  })
                 }
               />
             </div>
@@ -166,20 +170,28 @@ export function TenantPage() {
               leasesError={leasesError}
               rentalPropertiesLoading={rentalPropertiesLoading}
             />
-            <SmsModal
-              open={sms.smsModalOpen}
-              onOpenChange={sms.onOpenChange}
-              recipientName={sms.smsRecipientName}
-              phoneNumber={sms.smsPhoneNumber}
-              onSend={sms.handleSendSms}
-            />
-            <EmailModal
-              open={email.emailModalOpen}
-              onOpenChange={email.onOpenChange}
-              recipientName={email.emailRecipientName}
-              emailAddress={email.emailAddress}
-              onSend={email.handleSendEmail}
-            />
+            {sms.recipient && (
+              <SmsModal
+                open
+                onOpenChange={(open) => {
+                  if (!open) sms.closeSms()
+                }}
+                recipientName={sms.recipient.name}
+                phoneNumber={sms.recipient.phoneNumber}
+                onSend={sms.handleSendSms}
+              />
+            )}
+            {email.recipient && (
+              <EmailModal
+                open
+                onOpenChange={(open) => {
+                  if (!open) email.closeEmail()
+                }}
+                recipientName={email.recipient.name}
+                emailAddress={email.recipient.emailAddress}
+                onSend={email.handleSendEmail}
+              />
+            )}
           </>
         )}
       </ObjectPageLayout>

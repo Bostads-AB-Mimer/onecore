@@ -418,18 +418,32 @@ export async function processIMD(
 }
 
 export async function getInvoiceChannels(
-  nationalRegistrationNumbers: string[]
+  recipients: economy.LookupRecipient[]
 ): Promise<AdapterResult<economy.ChannelLookupResponse, string>> {
   try {
     const response = await axios.post(
       `${config.economyService.url}/invoice-channels`,
       {
-        nationalRegistrationNumbers,
+        recipients,
       }
     )
 
     if (response.status === 200) {
-      return { ok: true, data: response.data.content }
+      const parsed = economy.ChannelLookupResponseSchema.safeParse(
+        response.data.content
+      )
+      if (!parsed.success) {
+        logger.error(
+          parsed.error,
+          'Failed to parse invoice channel lookup response'
+        )
+        return { ok: false, err: 'schema-error' }
+      }
+
+      return {
+        ok: true,
+        data: parsed.data,
+      }
     }
     logger.error(response.data, 'economy-adapter.getInvoiceChannels')
     return { ok: false, err: 'unknown', statusCode: response.status }

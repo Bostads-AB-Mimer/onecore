@@ -1,12 +1,13 @@
+import { economy } from '@onecore/types'
 import { useQuery } from '@tanstack/react-query'
 
 import { economyService } from '@/services/api/core'
 
-export function useTenantInvoiceChannels(nationalRegistrationNumber: string) {
+export function useTenantInvoiceChannels(recipient: economy.LookupRecipient) {
   const invoiceChannelsQuery = useQuery({
-    queryKey: ['invoice-channels', nationalRegistrationNumber],
+    queryKey: ['invoice-channels', recipient.recipientId],
     queryFn: async () => {
-      return await economyService.getInvoiceChannels(nationalRegistrationNumber)
+      return await economyService.getInvoiceChannels(recipient)
     },
   })
 

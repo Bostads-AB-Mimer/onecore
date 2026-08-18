@@ -17,10 +17,12 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
+import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
 import { makeAdminApplicationProfileRequestParams } from './helpers/application-profile'
 import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
@@ -35,6 +37,73 @@ import { routes as keysExportRoutes } from './keys-export'
 
 import { registerSchema } from '../../utils/openapi'
 import { Contact, Lease } from './schemas/lease'
+
+type LeaseQuery = Record<string, string | string[] | undefined>
+
+type LeaseQueryResolution =
+  | { ok: true; query: LeaseQuery; emptyResult: boolean }
+  | { ok: false; reason: string }
+
+// Sentinel kvv-area code injected when the buildingManager filter resolves to
+// zero areas. Lets downstream code (notably Excel export) hit the leasing
+// adapter and produce a properly-formatted empty result rather than having to
+// build a synthetic response path.
+const NO_MATCH_KVV_AREA_CODE = '__no_match__'
+
+/**
+ * Resolves the `buildingManager` query param (Keycloak user IDs) to
+ * `kvvAreaCodes` (area codes) using the property-base service. The
+ * `buildingManager` key is always removed from the forwarded query because the
+ * leasing service no longer accepts it.
+ *
+ * Note: the param is called `buildingManager` for historical reasons but now
+ * carries Keycloak user IDs of property managers (kvartersvärdar). This helper
+ * is the seam that translates that into the area codes the leasing service
+ * actually filters on.
+ *
+ * - When no user IDs are present, the query is forwarded unchanged (minus the
+ *   `buildingManager` key).
+ * - When the property-base lookup fails, returns a 500.
+ * - When the lookup returns no kvv-areas, returns `emptyResult: true` and
+ *   injects a sentinel kvv-area code so callers may either short-circuit or
+ *   forward the query and get an empty result back from the leasing service.
+ */
+async function resolveBuildingManagerToKvvAreaCodes(
+  query: LeaseQuery
+): Promise<LeaseQueryResolution> {
+  const raw = query.buildingManager
+  const userIds: string[] = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string' && raw.length > 0
+      ? [raw]
+      : []
+
+  // Strip buildingManager from forwarded query regardless of resolution path.
+  const { buildingManager: _omit, ...rest } = query
+
+  if (userIds.length === 0) {
+    return { ok: true, query: rest, emptyResult: false }
+  }
+
+  const lookup =
+    await propertyBaseAdapter.findKvvAreaCodesByResponsibles(userIds)
+  if (!lookup.ok) {
+    return { ok: false, reason: 'Failed to resolve building managers' }
+  }
+  if (lookup.data.length === 0) {
+    return {
+      ok: true,
+      query: { ...rest, kvvAreaCodes: [NO_MATCH_KVV_AREA_CODE] },
+      emptyResult: true,
+    }
+  }
+
+  return {
+    ok: true,
+    query: { ...rest, kvvAreaCodes: lookup.data },
+    emptyResult: false,
+  }
+}
 
 /**
  * @swagger
@@ -232,7 +301,7 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names (Kvartersvärd)
+   *         description: Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering
    *       - in: query
    *         name: sortBy
    *         schema:
@@ -265,7 +334,19 @@ export const routes = (router: KoaRouter) => {
   router.get('/contacts/from-lease-search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const result = await leasingAdapter.getContactsByFilters(ctx.query)
+    const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
+    if (!resolved.ok) {
+      ctx.status = 500
+      ctx.body = { error: resolved.reason, ...metadata }
+      return
+    }
+    if (resolved.emptyResult) {
+      ctx.status = 200
+      ctx.body = { content: [], ...metadata }
+      return
+    }
+
+    const result = await leasingAdapter.getContactsByFilters(resolved.query)
 
     if (!result.ok) {
       ctx.status = 500
@@ -1108,7 +1189,10 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   description: The tenant data.
    *       404:
-   *         description: Not found.
+   *         description: >
+   *           No tenant found for this contact code. The response body `type`
+   *           distinguishes the cause: `contact-not-found`, `contact-not-tenant`
+   *           or `no-valid-housing-contract`.
    *       500:
    *         description: Internal server error. Failed to retrieve Tenant information.
    *     security:
@@ -1133,11 +1217,11 @@ export const routes = (router: KoaRouter) => {
       }
 
       if (res.err === 'no-valid-housing-contract') {
-        ctx.status = 500
+        ctx.status = 404
         ctx.body = {
           type: res.err,
           title: 'No valid housing contract found',
-          status: 500,
+          status: 404,
           detail: 'No active or upcoming contract found.',
           ...metadata,
         } satisfies RouteErrorResponse
@@ -1146,11 +1230,11 @@ export const routes = (router: KoaRouter) => {
       }
 
       if (res.err === 'contact-not-tenant') {
-        ctx.status = 500
+        ctx.status = 404
         ctx.body = {
           type: res.err,
           title: 'Contact is not a tenant',
-          status: 500,
+          status: 404,
           detail: 'No active or upcoming contract found.',
           ...metadata,
         } satisfies RouteErrorResponse
@@ -2215,6 +2299,221 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = { ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
+   * /parking-spaces/{parkingSpaceId}/leases:
+   *   post:
+   *     summary: Create lease for an external parking space
+   *     tags:
+   *       - Lease service
+   *     description: Creates a new lease for the specified external parking space.
+   *     parameters:
+   *       - in: path
+   *         name: parkingSpaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID of the parking space for which the lease is being created.
+   *       - in: body
+   *         name: Lease details
+   *         required: true
+   *         description: Lease information including contact ID and start date.
+   *         schema:
+   *           type: object
+   *           required:
+   *             - contactId
+   *             - startDate
+   *           properties:
+   *             contactId:
+   *               type: string
+   *               description: ID of the contact associated with the lease.
+   *             startDate:
+   *               type: string
+   *               format: date-time
+   *               description: Start date of the lease.
+   *     responses:
+   *       '201':
+   *         description: Lease successfully created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       '400':
+   *         description: Bad request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Parking space id is missing. It needs to be passed in the url.
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: A technical error has occured.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/parking-spaces/:parkingSpaceId/leases', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parkingSpaceId = ctx.params.parkingSpaceId
+
+    if (!parkingSpaceId) {
+      ctx.status = 400
+      ctx.body = {
+        message:
+          'Parking space id is missing. It needs to be passed in the url.',
+        ...metadata,
+      }
+      return
+    }
+
+    // Accept both contactId and contactCode for backward compatibility
+    const contactId = ctx.request.body.contactId || ctx.request.body.contactCode
+
+    if (!contactId) {
+      ctx.status = 400
+      ctx.body = {
+        reason:
+          'Contact id/code is missing. It needs to be passed in the body (contactId or contactCode)',
+        ...metadata,
+      }
+      return
+    }
+
+    const startDate = ctx.request.body.startDate
+    const triggeredBy =
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
+
+    try {
+      const result = await createLeaseForExternalParkingSpace(
+        parkingSpaceId,
+        contactId,
+        startDate,
+        triggeredBy
+      )
+      ctx.status = result.httpStatus
+      ctx.body = { content: result.response, ...metadata }
+    } catch (error) {
+      logger.error(error, 'Error')
+      ctx.status = 500
+      ctx.body = { error: 'A technical error has occured', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /parking-spaces/{parkingSpaceId}/note-of-interests:
+   *   post:
+   *     summary: Create a note of interest for an internal parking space
+   *     tags:
+   *       - Lease service
+   *     description: Creates a new note of interest for the specified internal parking space.
+   *     parameters:
+   *       - in: path
+   *         name: parkingSpaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID of the parking space for which the note of interest is being created.
+   *       - in: body
+   *         name: Note of interest details
+   *         required: true
+   *         description: Note of interest information including contact code and application type.
+   *         schema:
+   *           type: object
+   *           required:
+   *             - contactCode
+   *           properties:
+   *             contactCode:
+   *               type: string
+   *               description: Code of the contact associated with the note of interest.
+   *             applicationType:
+   *               type: string
+   *               description: Optional. Type of application for the note of interest.
+   *     responses:
+   *       '201':
+   *         description: Note of interest successfully created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *       '400':
+   *         description: Bad request
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Contact code is missing. It needs to be passed in the body (contactCode)
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: A technical error has occured.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/parking-spaces/:parkingSpaceId/note-of-interests',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const parkingSpaceId = ctx.params.parkingSpaceId
+
+      const contactCode = ctx.request.body.contactCode
+
+      if (!contactCode) {
+        ctx.status = 400
+        ctx.body = {
+          reason:
+            'Contact code is missing. It needs to be passed in the body (contactCode)',
+          ...metadata,
+        }
+        return
+      }
+
+      const applicationType = ctx.request.body.applicationType
+      if (applicationType && applicationType == '') {
+        ctx.status = 400
+        ctx.body = {
+          reason:
+            'Application type is missing. It needs to be passed in the body (applicationType)',
+          ...metadata,
+        }
+        return
+      }
+
+      try {
+        const result =
+          await internalParkingSpaceProcesses.createNoteOfInterestForInternalParkingSpace(
+            parkingSpaceId,
+            contactCode,
+            applicationType
+          )
+        ctx.status = result.httpStatus
+        ctx.body = { content: result.response, ...metadata }
+      } catch (err) {
+        logger.error({ err }, 'Error when creating note of interest')
+        ctx.status = 500
+        ctx.body = { error: 'A technical error has occured', ...metadata }
+      }
     }
   )
 }

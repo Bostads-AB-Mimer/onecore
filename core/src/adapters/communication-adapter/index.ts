@@ -1,0 +1,604 @@
+import { loggedAxios as axios } from '@onecore/utilities'
+import config from '../../common/config'
+import {
+  Contact,
+  ParkingSpaceOfferEmail,
+  ParkingSpaceAcceptOfferEmail,
+  WorkOrderEmail,
+  WorkOrderSms,
+  EmailAttachment,
+  InspectionProtocolEmail,
+  BulkSms,
+  BulkEmail,
+  BulkSmsResult,
+  BulkEmailResult,
+  NonScoredParkingSpaceApprovedEmail,
+  NonScoredParkingSpaceDeniedEmail,
+  LinearPaginationParams,
+  GetLinearTicketsResult,
+  CreateLinearErrandRequest,
+  LinearIssue,
+  LinearLabel,
+  InvoiceNotificationEmail,
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
+import { AdapterResult } from '../types'
+
+export * from './log-reads'
+export * from './delivery-reports'
+
+export const sendNotificationToContact = async (
+  recipientContact: Contact,
+  subject: string,
+  message: string
+) => {
+  try {
+    if (!recipientContact.emailAddress)
+      throw new Error('Recipient has no email address')
+
+    const axiosOptions = {
+      method: 'POST',
+      data: {
+        to:
+          process.env.NODE_ENV === 'production'
+            ? recipientContact.emailAddress
+            : config.emailAddresses.tenantDefault,
+        subject,
+        text: message,
+      },
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendMessage`,
+      axiosOptions
+    )
+
+    return result.data.content
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending notification to contact ${recipientContact.contactCode}`
+    )
+  }
+}
+
+export const sendNotificationToRole = async (
+  recipientRole: string,
+  subject: string,
+  message: string
+) => {
+  try {
+    const recipientEmailAddress = (
+      config.emailAddresses as Record<string, string>
+    )[recipientRole]
+
+    if (!recipientEmailAddress) {
+      throw new Error(
+        `Error sending notification to ${recipientRole}. No email address specified for role.`
+      )
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      subject = `${process.env.NODE_ENV?.toUpperCase()} - ${subject}`
+    }
+
+    const axiosOptions = {
+      method: 'POST',
+      data: {
+        to: recipientEmailAddress,
+        subject,
+        text: message,
+      },
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendMessage`,
+      axiosOptions
+    )
+
+    return result.data.content
+  } catch (error) {
+    logger.error(error, `Error sending notification to role ${recipientRole}`)
+  }
+}
+
+export const sendParkingSpaceOfferEmail = async (
+  parkingSpaceDetails: ParkingSpaceOfferEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: parkingSpaceDetails,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    if (process.env.NODE_ENV !== 'production')
+      parkingSpaceDetails.to = config.emailAddresses.tenantDefault
+
+    const result = await axios(
+      `${config.communicationService.url}/sendParkingSpaceOffer`,
+      axiosOptions
+    )
+
+    // FIXME: the /sendParkingSpaceOffer route returns 200, not 204, so this
+    // check currently always treats a successful send as a failure. The error
+    // is swallowed at the call site (create-offer.ts logs + continues), so the
+    // email still goes out, but every offer logs a false "email failed". Align
+    // the route status and this check (the other offer routes use 204).
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending parking space offer to ${parkingSpaceDetails.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendParkingSpaceAcceptOfferEmail = async (
+  parkingSpaceDetails: ParkingSpaceAcceptOfferEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: parkingSpaceDetails,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    if (process.env.NODE_ENV !== 'production')
+      parkingSpaceDetails.to = config.emailAddresses.tenantDefault
+
+    const result = await axios(
+      `${config.communicationService.url}/sendParkingSpaceAcceptOffer`,
+      axiosOptions
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending parking space accept offer to ${parkingSpaceDetails.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendNonScoredParkingSpaceApprovedEmail = async (
+  details: NonScoredParkingSpaceApprovedEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: details,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    if (process.env.NODE_ENV !== 'production')
+      details.to = config.emailAddresses.tenantDefault
+
+    const result = await axios(
+      `${config.communicationService.url}/sendNonScoredParkingSpaceApproved`,
+      axiosOptions
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending non-scored parking space approved email to ${details.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendNonScoredParkingSpaceDeniedEmail = async (
+  details: NonScoredParkingSpaceDeniedEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      data: details,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    if (process.env.NODE_ENV !== 'production')
+      details.to = config.emailAddresses.tenantDefault
+
+    const result = await axios(
+      `${config.communicationService.url}/sendNonScoredParkingSpaceDenied`,
+      axiosOptions
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending non-scored parking space denied email to ${details.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendWorkOrderSms = async ({
+  phoneNumber,
+  text,
+  externalContractorName,
+  contactCode,
+  triggeredByUser,
+}: WorkOrderSms): Promise<AdapterResult<any, 'error'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendWorkOrderSms`,
+      {
+        ...axiosOptions,
+        data: {
+          phoneNumber,
+          text,
+          externalContractorName,
+          contactCode,
+          triggeredByUser,
+        },
+      }
+    )
+
+    if (result.status !== 200) {
+      return { ok: false, err: 'error', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch {
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendWorkOrderEmail = async ({
+  to,
+  subject,
+  text,
+  externalContractorName,
+  contactCode,
+  triggeredByUser,
+}: WorkOrderEmail): Promise<AdapterResult<any, 'error'>> => {
+  try {
+    const axiosOptions = {
+      method: 'POST',
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendWorkOrderEmail`,
+      {
+        ...axiosOptions,
+        data: {
+          to,
+          subject,
+          text,
+          externalContractorName,
+          contactCode,
+          triggeredByUser,
+        },
+      }
+    )
+
+    if (result.status !== 200) {
+      return { ok: false, err: 'error', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch {
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendNotificationToContactWithAttachment = async (
+  recipientContact: Contact,
+  subject: string,
+  message: string,
+  attachments: EmailAttachment[]
+): Promise<AdapterResult<unknown, 'no-email' | 'unknown'>> => {
+  try {
+    if (!recipientContact.emailAddress) {
+      return { ok: false, err: 'no-email', statusCode: 400 }
+    }
+
+    const axiosOptions = {
+      method: 'POST',
+      data: {
+        to:
+          process.env.NODE_ENV === 'production'
+            ? recipientContact.emailAddress
+            : config.emailAddresses.tenantDefault,
+        subject,
+        text: message,
+        attachments,
+      },
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendMessageWithAttachment`,
+      axiosOptions
+    )
+
+    return { ok: true, data: result.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending notification with attachment to contact ${recipientContact.contactCode}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendInspectionProtocolEmail = async (
+  email: InspectionProtocolEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    if (process.env.NODE_ENV !== 'production')
+      email.to = config.emailAddresses.tenantDefault
+
+    const axiosOptions = {
+      method: 'POST',
+      data: email,
+      headers: {
+        'Content-type': 'application/json',
+      },
+    }
+
+    const result = await axios(
+      `${config.communicationService.url}/sendInspectionProtocolEmail`,
+      axiosOptions
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending inspection protocol email to ${email.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendBulkSms = async (
+  body: BulkSms
+): Promise<
+  AdapterResult<{ content: BulkSmsResult; warnings?: string[] }, 'error'>
+> => {
+  try {
+    const result = await axios.post(
+      `${config.communicationService.url}/sendBulkSms`,
+      body
+    )
+
+    // warnings is a sibling of content (non-blocking issues, e.g. the SMS
+    // sent but communication-log writing failed). Preserve it for the caller.
+    return {
+      ok: true,
+      data: { content: result.data.content, warnings: result.data.warnings },
+    }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendBulkEmail = async (
+  body: BulkEmail
+): Promise<
+  AdapterResult<{ content: BulkEmailResult; warnings?: string[] }, 'error'>
+> => {
+  try {
+    const result = await axios.post(
+      `${config.communicationService.url}/sendBulkEmail`,
+      body
+    )
+
+    // warnings is a sibling of content (non-blocking issues, e.g. the email
+    // sent but communication-log writing failed). Preserve it for the caller.
+    return {
+      ok: true,
+      data: { content: result.data.content, warnings: result.data.warnings },
+    }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendEmail = async ({
+  to,
+  subject,
+  body,
+  attachments,
+}: {
+  to: string
+  subject: string
+  body: string
+  attachments?: { data: Buffer; name: string }[]
+}) => {
+  try {
+    // TODO update node version to get rid of this warning
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const form = new FormData()
+
+    form.append('to', to)
+    form.append('subject', subject)
+    form.append('body', body)
+
+    if (attachments) {
+      attachments.forEach((a) => {
+        // TODO update node version to get rid of this warning
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins
+        form.append('attachments', new Blob([a.data]), a.name)
+      })
+    }
+
+    const result = await axios.postForm(
+      `${config.communicationService.url}/send-email`,
+      form
+    )
+
+    if (result.status !== 200) {
+      return { ok: false, err: 'error', statusCode: result.status }
+    }
+
+    return { ok: true, data: result.data.content }
+  } catch (e) {
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const getLinearTickets = async (
+  pagination?: LinearPaginationParams
+): Promise<AdapterResult<GetLinearTicketsResult, 'error'>> => {
+  try {
+    const params = new URLSearchParams()
+    if (pagination?.first) params.set('first', String(pagination.first))
+    if (pagination?.after) params.set('after', pagination.after)
+
+    const url = `${config.communicationService.url}/getLinearTickets${params.toString() ? `?${params.toString()}` : ''}`
+    const result = await axios.get(url)
+
+    return {
+      ok: true,
+      data: { tickets: result.data.content, pageInfo: result.data.pageInfo },
+    }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const createLinearErrand = async (
+  data: CreateLinearErrandRequest
+): Promise<AdapterResult<LinearIssue, 'error'>> => {
+  try {
+    const result = await axios.post(
+      `${config.communicationService.url}/createLinearErrand`,
+      data
+    )
+
+    return { ok: true, data: result.data.content }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const getLinearLabels = async (): Promise<
+  AdapterResult<LinearLabel[], 'error'>
+> => {
+  try {
+    const result = await axios.get(
+      `${config.communicationService.url}/getLinearLabels`
+    )
+
+    return { ok: true, data: result.data.content }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const sendInvoiceNotificationEmail = async (
+  email: InvoiceNotificationEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const result = await axios.post(
+      `${config.communicationService.url}/send-invoice-notification-email`,
+      email
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service when sending invoice notification'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending invoice notification email to ${email.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}

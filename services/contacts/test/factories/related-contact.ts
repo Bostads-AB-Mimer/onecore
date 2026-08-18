@@ -6,5 +6,7 @@ export const RelatedContactFactory = Factory.define<RelatedContact>(
     contactCode: `P${String(sequence).padStart(6, '0')}`,
     role: 'trustee',
     fullName: 'Testsson Test',
+    firstName: 'Test',
+    lastName: 'Testsson',
   })
 )
