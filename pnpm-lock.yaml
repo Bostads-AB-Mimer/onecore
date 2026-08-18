@@ -677,6 +677,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.1.6
         version: 1.2.8(@types/react-dom@18.3.7(@types/react@18.3.24))(@types/react@18.3.24)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@tailwindcss/container-queries':
+        specifier: ^0.1.1
+        version: 0.1.1(tailwindcss@3.4.17(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2)))
       '@tanstack/react-query':
         specifier: ^5.62.7
         version: 5.85.9(react@18.3.1)
@@ -876,6 +879,9 @@ importers:
       koa-bodyparser:
         specifier: ^4.4.1
         version: 4.4.1
+      koa-compress:
+        specifier: ^5.2.2
+        version: 5.2.2
       koa-jwt:
         specifier: ^4.0.4
         version: 4.0.4
@@ -940,6 +946,9 @@ importers:
       '@types/koa-bodyparser':
         specifier: ^4.3.12
         version: 4.3.12
+      '@types/koa-compress':
+        specifier: ^4.0.7
+        version: 4.0.7
       '@types/koa-pino-logger':
         specifier: 3.0.4
         version: 3.0.4
@@ -2260,6 +2269,9 @@ importers:
       koa-body:
         specifier: ^6.0.1
         version: 6.0.1
+      koa-compress:
+        specifier: ^5.2.2
+        version: 5.2.2
       koa2-swagger-ui:
         specifier: ^5.11.0
         version: 5.11.0(@types/koa@2.15.0)
@@ -2300,6 +2312,9 @@ importers:
       '@types/koa':
         specifier: ^2.15.0
         version: 2.15.0
+      '@types/koa-compress':
+        specifier: ^4.0.7
+        version: 4.0.7
       '@types/koa__cors':
         specifier: ^5.0.0
         version: 5.0.0
@@ -5341,6 +5356,11 @@ packages:
   '@swc/helpers@0.5.17':
     resolution: {integrity: sha512-5IKx/Y13RsYd+sauPb2x+U/xZikHjolzfuDgTAl/Tdf3Q8rslRvC19NKDLgAJQ6wsqADk10ntlv08nPFw/gO/A==}
 
+  '@tailwindcss/container-queries@0.1.1':
+    resolution: {integrity: sha512-p18dswChx6WnTSaJCSGx6lTmrGzNNvm2FtXmiO6AuA1V4U5REyoqwmT6kgAsIMdjo07QdAfYXHJ4hnMtfHzWgA==}
+    peerDependencies:
+      tailwindcss: '>=3.2.0'
+
   '@tailwindcss/typography@0.5.19':
     resolution: {integrity: sha512-w31dd8HOx3k9vPtcQh5QHP9GwKcgbMp87j58qi6xgiBnFFtKEAgCWnDw4qUT8aHwkCp8bKvb/KGKWWHedP0AAg==}
     peerDependencies:
@@ -5670,6 +5690,9 @@ packages:
 
   '@types/koa-compose@3.2.8':
     resolution: {integrity: sha512-4Olc63RY+MKvxMwVknCUDhRQX1pFQoBZ/lXcRLP69PQkEpze/0cr8LNqJQe5NFb/b19DWi2a5bTi2VAlQzhJuA==}
+
+  '@types/koa-compress@4.0.7':
+    resolution: {integrity: sha512-NqP9qCBfXCu2+RYkGzEENBkqXWExOPeBEsvj3F0xtVxKDwwdfRRtVdpxJeTRAq2Ml3qlUnDbK8bKHWwe6V1kkg==}
 
   '@types/koa-pino-logger@3.0.4':
     resolution: {integrity: sha512-rjXihDguqIbisctje6soD6KSUgdRM97uLfcyL0hQyv2aewTa55ZReRrP481hZUZ7C2BIgscN5xS9QLG/SdWZ3Q==}
@@ -7064,6 +7087,10 @@ packages:
 
   compress@0.99.0:
     resolution: {integrity: sha512-+qy9iMBFGTLUqKwYkAqRtZ5Xdl1PGKrSMYCuiirsxSQ5OgDoyP9QO6YoZ4feHzhpufGOwJ+y4qRXz2ytzZ1l0g==}
+
+  compressible@2.0.18:
+    resolution: {integrity: sha512-AF3r7P5dWxL8MxyITRMlORQNaOA2IkAFaTr4k7BUumjPtRpGDTZpl0Pb1XCO6JeDCBdp126Cgs9sMxqSjgYyRg==}
+    engines: {node: '>= 0.6'}
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
@@ -8613,6 +8640,10 @@ packages:
     resolution: {integrity: sha512-FtwrG/euBzaEjYeRqOgly7G0qviiXoJWnvEH2Z1plBdXgbyjv34pHTSb9zoeHMyDy33+DWy5Wt9Wo+TURtOYSQ==}
     engines: {node: '>= 0.8'}
 
+  http-errors@2.0.1:
+    resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
+    engines: {node: '>= 0.8'}
+
   http-proxy-agent@5.0.0:
     resolution: {integrity: sha512-n2hY8YdoRE1i7r6M0w9DIw5GgZN0G25P8zLCRQ8rjXtTU3vsNFBI/vWK/UIeE6g5MUUz6avwAPXmL6Fy9D/90w==}
     engines: {node: '>= 6'}
@@ -9344,9 +9375,16 @@ packages:
   koa-compose@4.1.0:
     resolution: {integrity: sha512-8ODW8TrDuMYvXRwra/Kh7/rJo9BtOfPc6qO8eAfC80CnCvSjSl0bkRM24X6/XBBEyj0v1nRUQ1LyOy3dbqOWXw==}
 
+  koa-compress@5.2.2:
+    resolution: {integrity: sha512-jpKxmIveX6qdrKaolhvgo2YKl+/uETTHzeVsLWTvJk551HWViWt1hDMO7c+D/P/GEjOVzVK5F7lsrcyOgfhUqg==}
+    engines: {node: '>= 12'}
+
   koa-convert@2.0.0:
     resolution: {integrity: sha512-asOvN6bFlSnxewce2e/DK3p4tltyfC4VM7ZwuTuepI7dEQVcvpyFuBcEARu1+Hxg8DIwytce2n7jrZtRlPrARA==}
     engines: {node: '>= 10'}
+
+  koa-is-json@1.0.0:
+    resolution: {integrity: sha512-+97CtHAlWDx0ndt0J8y3P12EWLwTLMXIfMnYDev3wOTwH/RpBGMlfn4bDXlMEg1u73K6XRE9BbUp+5ZAYoRYWw==}
 
   koa-jwt@4.0.4:
     resolution: {integrity: sha512-Tid9BQfpVtUG/8YZV38a+hDKll0pfVhfl7A/2cNaYThS1cxMFXylZzfARqHQqvNhHy9qM+qkxd4/z6EaIV4SAQ==}
@@ -9824,6 +9862,10 @@ packages:
 
   negotiator@0.6.3:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
+    engines: {node: '>= 0.6'}
+
+  negotiator@1.0.0:
+    resolution: {integrity: sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg==}
     engines: {node: '>= 0.6'}
 
   neo-async@2.6.2:
@@ -15663,6 +15705,10 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@tailwindcss/container-queries@0.1.1(tailwindcss@3.4.17(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2)))':
+    dependencies:
+      tailwindcss: 3.4.17(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2))
+
   '@tailwindcss/typography@0.5.19(tailwindcss@3.4.17(ts-node@10.9.2(@types/node@20.19.11)(typescript@5.9.2)))':
     dependencies:
       postcss-selector-parser: 6.0.10
@@ -16102,6 +16148,11 @@ snapshots:
   '@types/koa-compose@3.2.8':
     dependencies:
       '@types/koa': 2.15.0
+
+  '@types/koa-compress@4.0.7':
+    dependencies:
+      '@types/koa': 2.15.0
+      '@types/node': 20.19.11
 
   '@types/koa-pino-logger@3.0.4':
     dependencies:
@@ -17673,6 +17724,10 @@ snapshots:
       readable-stream: 3.6.2
 
   compress@0.99.0: {}
+
+  compressible@2.0.18:
+    dependencies:
+      mime-db: 1.52.0
 
   concat-map@0.0.1: {}
 
@@ -19401,6 +19456,14 @@ snapshots:
       statuses: 2.0.1
       toidentifier: 1.0.1
 
+  http-errors@2.0.1:
+    dependencies:
+      depd: 2.0.0
+      inherits: 2.0.4
+      setprototypeof: 1.2.0
+      statuses: 2.0.2
+      toidentifier: 1.0.1
+
   http-proxy-agent@5.0.0:
     dependencies:
       '@tootallnate/once': 2.0.0
@@ -20483,10 +20546,20 @@ snapshots:
 
   koa-compose@4.1.0: {}
 
+  koa-compress@5.2.2:
+    dependencies:
+      bytes: 3.1.2
+      compressible: 2.0.18
+      http-errors: 2.0.1
+      koa-is-json: 1.0.0
+      negotiator: 1.0.0
+
   koa-convert@2.0.0:
     dependencies:
       co: 4.6.0
       koa-compose: 4.1.0
+
+  koa-is-json@1.0.0: {}
 
   koa-jwt@4.0.4:
     dependencies:
@@ -21005,6 +21078,8 @@ snapshots:
   natural-compare@1.4.0: {}
 
   negotiator@0.6.3: {}
+
+  negotiator@1.0.0: {}
 
   neo-async@2.6.2: {}
 
