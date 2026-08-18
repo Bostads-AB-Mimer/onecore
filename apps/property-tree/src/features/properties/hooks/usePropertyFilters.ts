@@ -6,12 +6,15 @@ import type { Property, ResidenceSearchResult } from '@/services/types'
 
 import type { SearchResult } from '../types'
 
-type SearchTypeFilter =
+// 'rental-object' hands the page over to the hyresobjekt list, which does its
+// own scoping through the property-tree picker rather than the omni-search.
+export type SearchTypeFilter =
   | 'property'
   | 'residence'
   | 'parking-space'
   | 'facility'
   | 'maintenance-unit'
+  | 'rental-object'
 
 export const usePropertyFilters = () => {
   const [searchQuery, setSearchQuery] = useState('')

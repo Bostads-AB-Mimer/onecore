@@ -40,12 +40,12 @@ export function mapProperties(area: CostCenterTreeKvvArea): PropertyForAdmin[] {
     propertyCode: property.code,
     propertyName: property.designation || property.tract || property.code,
     addresses: sortStreetAddresses(
-      property.addresses
-        .map((a) => a.buildingName)
+      property.buildings
+        .map((b) => b.buildingName)
         .filter((v): v is string => !!v)
     ),
     buildingType:
-      property.addresses.find((a) => a.buildingType)?.buildingType ?? null,
+      property.buildings.find((b) => b.buildingType)?.buildingType ?? null,
     kvvAreaId: area.id,
     kvvArea: area.code,
     stewardId: area.responsible?.id ?? '',
