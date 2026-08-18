@@ -3,23 +3,17 @@ import { logger } from '@onecore/utilities'
 import { trimStrings } from '@src/utils/data-conversion'
 import type { CostCenterSummary, CostCenterTree } from '@src/types/cost-center'
 
+import { filterToOperatingCompanies } from './company-scope'
 import { prisma } from './db'
+import { buildPropertySubtrees } from './property-subtree-adapter'
 
-type AddressRow = {
-  propertyCode: string
-  buildingCode: string
-  buildingName: string | null
-  buildingTypeCode: string | null
-  buildingTypeName: string | null
-}
-
-type CountRow = {
-  propertyCode: string
-  residenceCount: number | bigint
-  parkingCount: number | bigint
-  entranceCount: number | bigint
-}
-
+/**
+ * Cost-center membership: which properties belong to this cost center's KVV
+ * areas. Deliberately NOT cached — it is a single cheap query against our own
+ * tables, and reading it fresh keeps admin edits correct immediately without
+ * any invalidation logic. The expensive half (everything below the property
+ * level) is cached by the property-subtree adapter.
+ */
 export const getCostCenterTreeById = async (
   id: string
 ): Promise<CostCenterTree | null> => {
@@ -40,89 +34,11 @@ export const getCostCenterTreeById = async (
     const propertyCodes = costCenter.kvvAreas.flatMap((area) =>
       area.propertyLinks.map((link) => link.propertyCode)
     )
-    const uniqueCodes = Array.from(new Set(propertyCodes))
-    const codesJson = JSON.stringify(uniqueCodes)
-
-    const [properties, addressRows, countRows] = await Promise.all([
-      uniqueCodes.length === 0
-        ? Promise.resolve(
-            [] as Array<{
-              code: string
-              designation: string | null
-              tract: string | null
-            }>
-          )
-        : prisma.property
-            .findMany({
-              where: { code: { in: uniqueCodes } },
-              select: { code: true, designation: true, tract: true },
-            })
-            .then(trimStrings),
-      // Raw SQL + OPENJSON IN-list: Prisma's per-element parameter binding on
-      // a 65-code IN(?,?,...) dominated wall-clock (3s → 388ms after this).
-      // Do NOT "tidy" back into prisma.propertyStructure.findMany.
-      uniqueCodes.length === 0
-        ? Promise.resolve([] as AddressRow[])
-        : prisma.$queryRaw<AddressRow[]>`
-            SELECT DISTINCT
-              s.fstcode     AS propertyCode,
-              s.bygcode     AS buildingCode,
-              s.bygcaption  AS buildingName,
-              t.code        AS buildingTypeCode,
-              t.caption     AS buildingTypeName
-            FROM dbo.babuf s
-            LEFT JOIN dbo.babyg b ON b.keycmobj = s.keyobjbyg
-            LEFT JOIN dbo.babyt t ON t.keybabyt = b.keybabyt
-            WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
-              AND s.deletemark = 0
-              AND s.bygcode IS NOT NULL
-          `.then(trimStrings),
-      uniqueCodes.length === 0
-        ? Promise.resolve([] as CountRow[])
-        : prisma.$queryRaw<CountRow[]>`
-            SELECT
-              fstcode AS propertyCode,
-              COUNT(DISTINCT keyobjlgh) AS residenceCount,
-              COUNT(DISTINCT keyobjbps) AS parkingCount,
-              COUNT(DISTINCT keyobjvan) AS entranceCount
-            FROM dbo.babuf
-            WHERE fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
-              AND deletemark = 0
-            GROUP BY fstcode
-          `.then(trimStrings),
-    ])
-
-    const propertyByCode = new Map(properties.map((p) => [p.code, p]))
-
-    type AddressOut = {
-      buildingCode: string
-      buildingName: string | null
-      buildingType: { code: string | null; name: string | null } | null
-    }
-    const addressesByProperty = new Map<string, Map<string, AddressOut>>()
-    for (const a of addressRows) {
-      if (!a.propertyCode || !a.buildingCode) continue
-      let perProp = addressesByProperty.get(a.propertyCode)
-      if (!perProp) {
-        perProp = new Map()
-        addressesByProperty.set(a.propertyCode, perProp)
-      }
-      if (!perProp.has(a.buildingCode)) {
-        perProp.set(a.buildingCode, {
-          buildingCode: a.buildingCode,
-          buildingName: a.buildingName ?? null,
-          buildingType:
-            a.buildingTypeCode !== null || a.buildingTypeName !== null
-              ? {
-                  code: a.buildingTypeCode ?? null,
-                  name: a.buildingTypeName ?? null,
-                }
-              : null,
-        })
-      }
-    }
-
-    const countsByProperty = new Map(countRows.map((c) => [c.propertyCode, c]))
+    // A property assigned to a KVV-area and sold afterwards stays linked in
+    // our own table — nothing moves it out — so it would otherwise appear
+    // here as a ghost with its tenants still attached.
+    const operating = new Set(await filterToOperatingCompanies(propertyCodes))
+    const subtrees = await buildPropertySubtrees([...operating])
 
     return {
       id: costCenter.id,
@@ -135,21 +51,9 @@ export const getCostCenterTreeById = async (
         code: area.code,
         name: area.name ?? null,
         responsibleKeycloakUserId: area.responsibleKeycloakUserId ?? null,
-        properties: area.propertyLinks.map((link) => {
-          const prop = propertyByCode.get(link.propertyCode)
-          const addr = addressesByProperty.get(link.propertyCode)
-          const cnt = countsByProperty.get(link.propertyCode)
-          return {
-            code: link.propertyCode,
-            designation: prop?.designation ?? null,
-            tract: prop?.tract ?? null,
-            addresses: addr ? Array.from(addr.values()) : [],
-            aggregates: {
-              residenceCount: cnt ? Number(cnt.residenceCount) : 0,
-              parkingCount: cnt ? Number(cnt.parkingCount) : 0,
-              entranceCount: cnt ? Number(cnt.entranceCount) : 0,
-            },
-          }
+        properties: area.propertyLinks.flatMap((link) => {
+          const subtree = subtrees.get(link.propertyCode)
+          return subtree ? [subtree] : []
         }),
       })),
     }
