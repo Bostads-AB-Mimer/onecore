@@ -9,8 +9,18 @@ export const etagMiddleware = () => {
       return
     }
 
+    // Plain JSON only — buffers and streams must pass through untouched.
+    const body: unknown = ctx.body
+    if (
+      typeof body !== 'object' ||
+      Buffer.isBuffer(body) ||
+      typeof (body as { pipe?: unknown }).pipe === 'function'
+    ) {
+      return
+    }
+
     // Generate ETag from response body
-    const content = JSON.stringify(ctx.body)
+    const content = JSON.stringify(body)
     const etag = crypto.createHash('md5').update(content).digest('hex')
 
     // Set ETag header
@@ -21,6 +31,11 @@ export const etagMiddleware = () => {
     if (ifNoneMatch && ifNoneMatch === `"${etag}"`) {
       ctx.status = 304
       ctx.body = null
+      return
     }
+
+    // Hand Koa the string we just produced; otherwise it serializes the same
+    // object a second time — twice the work on the largest payloads we serve.
+    ctx.body = content
   }
 }

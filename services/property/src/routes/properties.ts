@@ -38,6 +38,9 @@ import { parseRequest } from '../middleware/parse-request'
  *     description: Operations related to properties
  */
 export const routes = (router: KoaRouter) => {
+  // TODO: move to app.ts. The router is shared, so this covers every route
+  // module registered AFTER this one in api.ts — including the tree and
+  // rental-object payloads — and none of those before it.
   router.use(etagMiddleware())
   /**
    * @swagger

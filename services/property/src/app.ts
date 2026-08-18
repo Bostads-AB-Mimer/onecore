@@ -1,6 +1,7 @@
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
+import compress from 'koa-compress'
 import cors from '@koa/cors'
 
 import api from './api'
@@ -22,6 +23,11 @@ app.use(
     credentials: true, // Allow credentials (cookies, authorization headers, etc)
   })
 )
+
+// Tree and rental-object payloads are hundreds of KB of highly repetitive JSON;
+// gzip takes them to a few percent of that. Brotli is off on purpose — node's
+// default quality 11 blocks the event loop for 100+ ms on payloads this size.
+app.use(compress({ threshold: 1024, br: false }))
 
 app.use(
   koaSwagger({
