@@ -12,8 +12,7 @@ export const COST_RESPONSIBILITY = {
 } as const
 
 export type CostResponsibility =
-  | (typeof COST_RESPONSIBILITY)[keyof typeof COST_RESPONSIBILITY]
-  | null
+  (typeof COST_RESPONSIBILITY)[keyof typeof COST_RESPONSIBILITY] | null
 
 export const COST_RESPONSIBILITY_LABEL: Record<
   Exclude<CostResponsibility, null>,
