@@ -1,10 +1,5 @@
 export type SearchResultType =
-  | 'customer'
-  | 'residence'
-  | 'case'
-  | 'invoice'
-  | 'key'
-  | 'document'
+  'customer' | 'residence' | 'case' | 'invoice' | 'key' | 'document'
 
 export interface SearchResult {
   id: string

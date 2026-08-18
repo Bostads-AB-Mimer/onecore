@@ -22,11 +22,7 @@ interface PropertyFilteredResultsProps {
   filteredSearchResults: SearchResult[]
   filteredProperties: Property[]
   searchTypeFilter:
-    | 'property'
-    | 'residence'
-    | 'parking-space'
-    | 'facility'
-    | 'maintenance-unit'
+    'property' | 'residence' | 'parking-space' | 'facility' | 'maintenance-unit'
   activeFilterCount?: number
   isFiltering?: boolean
   filterChips?: FilterChip[]

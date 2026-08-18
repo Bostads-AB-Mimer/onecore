@@ -7,11 +7,7 @@ import type { Property, ResidenceSearchResult } from '@/services/types'
 import type { SearchResult } from '../types'
 
 type SearchTypeFilter =
-  | 'property'
-  | 'residence'
-  | 'parking-space'
-  | 'facility'
-  | 'maintenance-unit'
+  'property' | 'residence' | 'parking-space' | 'facility' | 'maintenance-unit'
 
 export const usePropertyFilters = () => {
   const [searchQuery, setSearchQuery] = useState('')

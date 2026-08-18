@@ -138,54 +138,46 @@ export const getRentalProperties = async (
   ])
 
   return [
-    ...residences.map(
-      (r): RentalProperty => ({
-        rentalPropertyType: 'Residence',
-        rentalId: r.rentalId,
-        address: r.address,
-        code: r.code,
-        postalCode: r.postalCode,
-        city: r.city,
-        type: r.type,
-        areaSize: r.areaSize,
-      })
-    ),
-    ...parkingSpaces.map(
-      (p): RentalProperty => ({
-        rentalPropertyType: 'ParkingSpace',
-        rentalId: p.rentalId,
-        address: p.address,
-        code: p.code,
-        postalCode: p.postalCode,
-        city: p.city,
-        type: p.type,
-        areaSize: p.areaSize,
-      })
-    ),
-    ...facilities.map(
-      (f): RentalProperty => ({
-        rentalPropertyType: 'Facility',
-        rentalId: f.rentalId,
-        address: f.address,
-        code: f.code,
-        postalCode: f.postalCode,
-        city: f.city,
-        type: f.type,
-        areaSize: f.areaSize,
-      })
-    ),
-    ...other.map(
-      (o): RentalProperty => ({
-        rentalPropertyType: 'Other',
-        rentalId: o.rentalId,
-        address: o.address,
-        code: o.code,
-        postalCode: o.postalCode,
-        city: o.city,
-        type: o.type,
-        areaSize: null,
-      })
-    ),
+    ...residences.map((r): RentalProperty => ({
+      rentalPropertyType: 'Residence',
+      rentalId: r.rentalId,
+      address: r.address,
+      code: r.code,
+      postalCode: r.postalCode,
+      city: r.city,
+      type: r.type,
+      areaSize: r.areaSize,
+    })),
+    ...parkingSpaces.map((p): RentalProperty => ({
+      rentalPropertyType: 'ParkingSpace',
+      rentalId: p.rentalId,
+      address: p.address,
+      code: p.code,
+      postalCode: p.postalCode,
+      city: p.city,
+      type: p.type,
+      areaSize: p.areaSize,
+    })),
+    ...facilities.map((f): RentalProperty => ({
+      rentalPropertyType: 'Facility',
+      rentalId: f.rentalId,
+      address: f.address,
+      code: f.code,
+      postalCode: f.postalCode,
+      city: f.city,
+      type: f.type,
+      areaSize: f.areaSize,
+    })),
+    ...other.map((o): RentalProperty => ({
+      rentalPropertyType: 'Other',
+      rentalId: o.rentalId,
+      address: o.address,
+      code: o.code,
+      postalCode: o.postalCode,
+      city: o.city,
+      type: o.type,
+      areaSize: null,
+    })),
   ]
 }
 

@@ -71,16 +71,14 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = {
-        content: parkingSpaces.map(
-          (p): ParkingSpaceSearchResult => ({
-            id: p.id,
-            rentalId: p.rentalId,
-            code: p.code,
-            name: p.name,
-            property: p.property,
-            building: p.building,
-          })
-        ),
+        content: parkingSpaces.map((p): ParkingSpaceSearchResult => ({
+          id: p.id,
+          rentalId: p.rentalId,
+          code: p.code,
+          name: p.name,
+          property: p.property,
+          building: p.building,
+        })),
         ...metadata,
       }
     } catch (err) {

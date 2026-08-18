@@ -23,10 +23,7 @@ type WorkOrderResult = InternalWorkOrder & { type: 'work-order'; id: string }
 // wraps the invoice instead of spreading it like the other sources.
 type InvoiceResult = { type: 'invoice'; id: string; invoice: Invoice }
 export type CombinedSearchResult =
-  | SearchResult
-  | ContactResult
-  | WorkOrderResult
-  | InvoiceResult
+  SearchResult | ContactResult | WorkOrderResult | InvoiceResult
 
 export function useSearch(query: string) {
   const trimmedQuery = query.trim()

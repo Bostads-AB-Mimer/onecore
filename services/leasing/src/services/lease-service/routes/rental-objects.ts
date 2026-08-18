@@ -62,8 +62,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     const requestBody = ctx.request.body as
-      | { includeRentalObjectCodes?: string[] }
-      | undefined
+      { includeRentalObjectCodes?: string[] } | undefined
     const includeRentalObjectCodes =
       requestBody?.includeRentalObjectCodes?.filter(Boolean)
 
