@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 import SftpClient from 'ssh2-sftp-client'
 import { logger } from '@onecore/utilities'
@@ -115,14 +116,15 @@ export async function transferStralforsFiles(): Promise<void> {
       config.stralforsExport.sftp.hostFingerprint
     ),
   }
-  logger.info(sftpConfig, 'DEBUG: SFTP connection config (no secrets)')
+  logger.info(sftpConfig, 'SFTP connection config')
   try {
     await sftpClient.connect({
       host: config.stralforsExport.sftp.host,
       username: config.stralforsExport.sftp.username,
       password: config.stralforsExport.sftp.password,
       port: config.stralforsExport.sftp.port ?? 22,
-      hostVerifier: (fingerprint: string) => {
+      hostVerifier: (keyData: Buffer) => {
+        const fingerprint = `SHA256:${createHash('sha256').update(keyData).digest('base64').replace(/=+$/, '')}`
         const expected = config.stralforsExport.sftp.hostFingerprint
         logger.info(
           {
@@ -196,7 +198,7 @@ export async function transferStralforsFiles(): Promise<void> {
         errMessage: err instanceof Error ? err.message : String(err),
         errCode: (err as { code?: string }).code,
       },
-      'DEBUG: SFTP connection/transfer error details'
+      'SFTP connection/transfer error'
     )
     await notifyFailure(err, 'SFTP-anslutning')
     throw err
