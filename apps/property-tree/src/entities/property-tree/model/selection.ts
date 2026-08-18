@@ -50,9 +50,6 @@ export interface PropertyTreeNode {
   id?: string
   /** false = display-only (inherits checked state but cannot be toggled). */
   selectable?: boolean
-  /** Object counts per type, for the object-type filter's greying/exclusion.
-   * Undefined (tree not loaded yet) = never excluded. */
-  typeCounts?: Record<RentalObjectType, number>
 }
 
 export type PropertyTreeSelection = ReadonlyMap<string, PropertyTreeNode>
@@ -66,96 +63,6 @@ export function isTypeFilterActive(
   activeTypes: ReadonlySet<RentalObjectType>
 ): boolean {
   return activeTypes.size < ALL_RENTAL_OBJECT_TYPES.length
-}
-
-/** An excluded object type: greyed rows, never selectable. */
-export function objectTypeExcluded(
-  activeTypes: ReadonlySet<RentalObjectType>,
-  type: RentalObjectType
-): boolean {
-  return isTypeFilterActive(activeTypes) && !activeTypes.has(type)
-}
-
-/**
- * Whether one object row is filtered out, by type or by subtype.
- *
- * Subtypes are matched on the caption, because that is what an object row
- * carries; `activeSubtypeNames` is derived from the selected `type:code`
- * keys. An empty set means no subtype restriction — the type filter alone
- * decides. Unlike types, subtypes cannot grey tree nodes: there are far too
- * many to precompute per node, so that waits on a facet-count endpoint.
- */
-export function objectExcluded(
-  activeTypes: ReadonlySet<RentalObjectType>,
-  activeSubtypeNames: ReadonlySet<string>,
-  object: { type: RentalObjectType; subtypeName: string | null }
-): boolean {
-  if (objectTypeExcluded(activeTypes, object.type)) return true
-  if (activeSubtypeNames.size === 0) return false
-  return !object.subtypeName || !activeSubtypeNames.has(object.subtypeName)
-}
-
-/** True when ALL of the node's objects are of excluded types — the node is
- * rendered greyed/unchecked and dropped from the applied criteria. */
-export function nodeExcludedByTypes(
-  node: Pick<PropertyTreeNode, 'typeCounts'>,
-  activeTypes: ReadonlySet<RentalObjectType>
-): boolean {
-  if (!isTypeFilterActive(activeTypes) || !node.typeCounts) return false
-  for (const type of activeTypes) {
-    if ((node.typeCounts[type] ?? 0) > 0) return false
-  }
-  return true
-}
-
-/**
- * How many objects a node holds of the currently active types — the "Antal"
- * column. Reflects the type filter, so a building shows 12 with only parking
- * active and 86 with everything. Undefined before the tree has loaded.
- */
-export function countForTypes(
-  node: Pick<PropertyTreeNode, 'typeCounts'>,
-  activeTypes: ReadonlySet<RentalObjectType>
-): number | undefined {
-  if (!node.typeCounts) return undefined
-  let total = 0
-  for (const type of ALL_RENTAL_OBJECT_TYPES) {
-    if (activeTypes.has(type)) total += node.typeCounts[type] ?? 0
-  }
-  return total
-}
-
-/** True when the node holds objects BOTH inside and outside the active types.
- * A selected node then renders indeterminate — "checked" would claim its
- * greyed (excluded) members too. Display-only; the selection is untouched. */
-export function nodePartiallyExcludedByTypes(
-  node: Pick<PropertyTreeNode, 'typeCounts'>,
-  activeTypes: ReadonlySet<RentalObjectType>
-): boolean {
-  if (!isTypeFilterActive(activeTypes) || !node.typeCounts) return false
-  let activeCount = 0
-  let excludedCount = 0
-  for (const type of ALL_RENTAL_OBJECT_TYPES) {
-    const count = node.typeCounts[type] ?? 0
-    if (activeTypes.has(type)) activeCount += count
-    else excludedCount += count
-  }
-  return activeCount > 0 && excludedCount > 0
-}
-
-/** The selection minus nodes fully excluded by the type filter. Excluded
- * nodes stay latent in the underlying selection so re-enabling a type
- * restores them; this derives what apply/count actually use. */
-export function filterSelectionForTypes(
-  selection: PropertyTreeSelection,
-  activeTypes: ReadonlySet<RentalObjectType>
-): PropertyTreeSelection {
-  if (!isTypeFilterActive(activeTypes)) return selection
-  const next = new Map<string, PropertyTreeNode>()
-  for (const [key, node] of selection) {
-    if (!nodeExcludedByTypes(node, activeTypes)) next.set(key, node)
-  }
-  return next
 }
 
 export function nodeKey(level: PropertyTreeLevel, id: string): string {
@@ -187,11 +94,14 @@ function coveredAncestorKeys(
 
 export function nodeCheckState(
   selection: PropertyTreeSelection,
-  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>
+  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
+  // Defaults to stored ancestors; the picker passes walk-derived coverage
+  // instead (addCoveredAncestorKeys) so it holds in either grouping.
+  covered: ReadonlySet<string> = coveredAncestorKeys(selection)
 ): CheckState {
   if (selection.has(node.key)) return 'checked'
   if (node.ancestors.some((key) => selection.has(key))) return 'checked'
-  if (coveredAncestorKeys(selection).has(node.key)) return 'indeterminate'
+  if (covered.has(node.key)) return 'indeterminate'
   return 'unchecked'
 }
 
@@ -285,7 +195,10 @@ export function rollDownSelection(
   next.delete(path[0])
   parents.forEach((parent, i) => {
     for (const child of parent.children) {
-      if (child.key !== path[i + 1]) next.set(child.key, child)
+      // Display-only children can't join the selection; they just lose
+      // coverage, which their rows show by unchecking.
+      if (child.key === path[i + 1] || child.selectable === false) continue
+      next.set(child.key, child)
     }
   })
   return next
@@ -356,17 +269,4 @@ export function deselectNodes(
     else if (selected.ancestors.some((a) => keys.has(a))) out.delete(key)
   }
   return out
-}
-
-/** Remove any selected node matching level+value (chip removal sync). */
-export function pruneSelection(
-  selection: PropertyTreeSelection,
-  level: PropertyTreeLevel,
-  value: string
-): PropertyTreeSelection {
-  const next = new Map(selection)
-  for (const [key, node] of next) {
-    if (node.level === level && node.value === value) next.delete(key)
-  }
-  return next
 }

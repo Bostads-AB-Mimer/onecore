@@ -2,14 +2,12 @@ import { useCallback, useState } from 'react'
 
 import type {
   ParentInfo,
-  PropertyTreeLevel,
   PropertyTreeNode,
   PropertyTreeSelection,
 } from '../model/selection'
 import {
   deselectNodes,
   emptySelection,
-  pruneSelection,
   rollDownSelection,
   rollUpSelection,
   selectNodes,
@@ -45,13 +43,9 @@ export function useTreeSelectionState() {
     []
   )
 
-  const prune = useCallback((level: PropertyTreeLevel, value: string) => {
-    setSelection((prev) => pruneSelection(prev, level, value))
-  }, [])
-
-  /** Remove exactly one node. Prefer this over prune where the caller holds
-   * the node: a parkeringsområde split across two fastigheter shares its
-   * value with its twin, so pruning by value removes both. */
+  /** Remove exactly one node (chip removal sync). Keyed rather than by
+   * level+value: a parkeringsområde split across two fastigheter shares its
+   * value with its twin, and pruning by value would remove both. */
   const pruneKey = useCallback((key: string) => {
     setSelection((prev) => {
       if (!prev.has(key)) return prev
@@ -93,7 +87,6 @@ export function useTreeSelectionState() {
   return {
     selection,
     toggle,
-    prune,
     pruneKey,
     clear,
     selectMany,

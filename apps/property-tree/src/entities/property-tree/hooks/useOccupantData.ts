@@ -85,7 +85,7 @@ async function fetchPropertyTenants(
  * each miss is one sequential lease page per 100 leases. */
 export function usePropertyTenants(designation: string | undefined) {
   return useQuery({
-    queryKey: ['audiencePropertyTenants', designation],
+    queryKey: ['propertyTenants', designation],
     queryFn: designation ? () => fetchPropertyTenants(designation) : skipToken,
     staleTime: TREE_STALE_TIME,
     gcTime: TREE_GC_TIME,

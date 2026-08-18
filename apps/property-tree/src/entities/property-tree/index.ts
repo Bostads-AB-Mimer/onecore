@@ -17,7 +17,6 @@ export type {
   TreeGrouping,
 } from './hooks/usePropertyTreeData'
 export {
-  usePropertyTree,
   usePropertyTreeRoots,
   usePropertyTrees,
 } from './hooks/usePropertyTreeData'
@@ -27,17 +26,10 @@ export {
   useRentalObjectSubtypes,
 } from './hooks/useRentalObjectSubtypes'
 export type { RentalObject } from './hooks/useRootRentalObjects'
-export { useRootRentalObjects } from './hooks/useRootRentalObjects'
 export type { GetParentInfo } from './hooks/useTreeSelectionState'
 export { useTreeSelectionState } from './hooks/useTreeSelectionState'
 export type { FacetIndex, ObjectFilter, ObjectFilterView } from './model/facets'
-export { buildFacetIndex, objectMatches, PENDING_FACETS } from './model/facets'
-export {
-  LEVEL_LABELS,
-  LEVEL_PLURAL_LABELS,
-  nodeValueLabel,
-  rememberNodeLabel,
-} from './model/labels'
+export { LEVEL_LABELS, nodeValueLabel, rememberNodeLabel } from './model/labels'
 export type {
   CheckState,
   ParentInfo,

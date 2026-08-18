@@ -1,6 +1,7 @@
 // Presentational row atoms for the picker table. No state, no data fetching.
 
 import type { ReactNode } from 'react'
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
@@ -14,11 +15,15 @@ import type {
 } from '../hooks/useOccupantData'
 import { RENTAL_OBJECT_TYPE_LABELS } from '../hooks/useOccupantData'
 import { LEVEL_LABELS } from '../model/labels'
-import type { CheckState } from '../model/selection'
+import type { CheckState, PropertyTreeNode } from '../model/selection'
 import type { NodeRowSpec } from '../model/treeRows'
 import { LEVEL_ICONS, OBJECT_TYPE_ICONS } from './icons'
 
 export const COLUMN_COUNT = 4
+
+/** Radix Checkbox value for a tri-state CheckState. */
+const checkboxChecked = (state: CheckState): boolean | 'indeterminate' =>
+  state === 'indeterminate' ? 'indeterminate' : state === 'checked'
 
 function Indent({ depth, children }: { depth: number; children?: ReactNode }) {
   // Tighter per-level indent when the panel is narrow.
@@ -48,6 +53,7 @@ function ExpandChevron({
       }}
       className="p-0.5 text-muted-foreground hover:text-foreground"
       aria-label={expanded ? 'Fäll ihop' : 'Expandera'}
+      aria-expanded={expanded}
     >
       {expanded ? (
         <ChevronDown className="h-4 w-4" />
@@ -60,8 +66,9 @@ function ExpandChevron({
 
 /** Selectable tree node (district / kvv-area / property / building).
  * `excluded` (object-type filter): greyed, forced unchecked, unselectable —
- * but still expandable so its objects remain browsable. */
-export function NodeRow({
+ * but still expandable so its objects remain browsable. Memoised (callbacks
+ * take the node) so a click re-renders only rows whose state changed. */
+export const NodeRow = memo(function NodeRow({
   row,
   checkState,
   onCheck,
@@ -71,18 +78,19 @@ export function NodeRow({
 }: {
   row: NodeRowSpec
   checkState: CheckState
-  onCheck: () => void
-  onToggleExpand: () => void
+  onCheck: (node: PropertyTreeNode) => void
+  onToggleExpand: (key: string, expanded: boolean) => void
   excluded?: boolean
   /** Object count for the currently active object types. */
   count?: number
 }) {
   const LevelIcon = LEVEL_ICONS[row.node.level]
   const displayState: CheckState = excluded ? 'unchecked' : checkState
+  const toggleExpand = () => onToggleExpand(row.node.key, row.expanded)
   // Row click expands; checkbox and name select (and stop propagation).
   return (
     <TableRow
-      onClick={row.expandable ? onToggleExpand : undefined}
+      onClick={row.expandable ? toggleExpand : undefined}
       className={
         row.expandable
           ? 'cursor-pointer transition-colors hover:bg-muted'
@@ -92,18 +100,14 @@ export function NodeRow({
       <TableCell className="py-2">
         <Indent depth={row.depth}>
           {row.expandable ? (
-            <ExpandChevron expanded={row.expanded} onToggle={onToggleExpand} />
+            <ExpandChevron expanded={row.expanded} onToggle={toggleExpand} />
           ) : (
             <span className="w-5 shrink-0" />
           )}
           <Checkbox
-            checked={
-              displayState === 'indeterminate'
-                ? 'indeterminate'
-                : displayState === 'checked'
-            }
+            checked={checkboxChecked(displayState)}
             disabled={excluded}
-            onCheckedChange={excluded ? undefined : onCheck}
+            onCheckedChange={excluded ? undefined : () => onCheck(row.node)}
             onClick={(e) => e.stopPropagation()}
             aria-label={`Välj ${row.node.label}`}
           />
@@ -119,7 +123,7 @@ export function NodeRow({
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
-                if (!excluded) onCheck()
+                if (!excluded) onCheck(row.node)
               }}
               className={
                 excluded
@@ -148,67 +152,7 @@ export function NodeRow({
       </TableCell>
     </TableRow>
   )
-}
-
-/** Expandable view-only group header (trapphus / bilplatser / lokaler).
- * `muted` greys the header when its object type is filtered out. */
-export function GroupRow({
-  depth,
-  label,
-  typeLabel,
-  code,
-  count,
-  expanded,
-  onToggle,
-  muted = false,
-}: {
-  depth: number
-  label: string
-  typeLabel?: string
-  code?: string
-  count?: number
-  expanded: boolean
-  onToggle: () => void
-  muted?: boolean
-}) {
-  return (
-    <TableRow
-      className="cursor-pointer transition-colors hover:bg-muted"
-      onClick={onToggle}
-    >
-      <TableCell className="py-1.5">
-        <Indent depth={depth}>
-          <ExpandChevron expanded={expanded} onToggle={onToggle} />
-          <div className="min-w-0">
-            <span
-              className={
-                muted
-                  ? 'block truncate font-medium text-muted-foreground opacity-60'
-                  : 'block truncate font-medium text-muted-foreground'
-              }
-            >
-              {label}
-            </span>
-            {code && (
-              <div className="truncate text-xs text-muted-foreground @xl:hidden">
-                {code}
-              </div>
-            )}
-          </div>
-        </Indent>
-      </TableCell>
-      <TableCell className="hidden py-1.5 text-muted-foreground @3xl:table-cell">
-        {typeLabel ?? ''}
-      </TableCell>
-      <TableCell className="hidden py-1.5 text-muted-foreground @xl:table-cell">
-        {code ?? ''}
-      </TableCell>
-      <TableCell className="hidden py-1.5 text-right tabular-nums text-muted-foreground @4xl:table-cell">
-        {count ?? ''}
-      </TableCell>
-    </TableRow>
-  )
-}
+})
 
 /** Leaf: one rental object shown as its current tenants (like the
  * Hyreskontrakt page) — contact-code link + name per tenant, or Vakant.
@@ -248,11 +192,7 @@ export function ObjectRow({
         <Indent depth={depth}>
           <span className="w-5 shrink-0" />
           <Checkbox
-            checked={
-              displayState === 'indeterminate'
-                ? 'indeterminate'
-                : displayState === 'checked'
-            }
+            checked={checkboxChecked(displayState)}
             disabled={!selectable || excluded}
             onCheckedChange={selectable && !excluded ? onCheck : undefined}
             onClick={(e) => e.stopPropagation()}

@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
+import type { SearchTypeFilter } from '../hooks/usePropertyFilters'
 import type { SearchResult } from '../types'
 import { PropertiesTable } from './PropertiesTable'
 import { SearchResultsTable } from './SearchResultsTable'
@@ -21,12 +22,8 @@ interface PropertyFilteredResultsProps {
   showSearchResults: boolean
   filteredSearchResults: SearchResult[]
   filteredProperties: Property[]
-  searchTypeFilter:
-    | 'property'
-    | 'residence'
-    | 'parking-space'
-    | 'facility'
-    | 'maintenance-unit'
+  /** 'rental-object' renders its own results view, not this one. */
+  searchTypeFilter: Exclude<SearchTypeFilter, 'rental-object'>
   activeFilterCount?: number
   isFiltering?: boolean
   filterChips?: FilterChip[]
@@ -43,9 +40,6 @@ export const PropertyFilteredResults = ({
 }: PropertyFilteredResultsProps) => {
   const contentTypeMap = {
     property: 'Fastigheter',
-    residence: 'Lägenheter',
-    'parking-space': 'Parkeringar',
-    facility: 'Lokaler',
     'maintenance-unit': 'Underhållsenheter',
   } as const
   const contentType = contentTypeMap[searchTypeFilter]

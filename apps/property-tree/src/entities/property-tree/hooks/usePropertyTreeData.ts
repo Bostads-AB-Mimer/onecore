@@ -98,11 +98,6 @@ export const propertyTreeQuery = (
     gcTime: TREE_GC_TIME,
   })
 
-export const usePropertyTree = (
-  grouping: TreeGrouping,
-  rootId: string | undefined
-) => useQuery(propertyTreeQuery(grouping, rootId))
-
 /** One root's tree and whether it is still arriving. */
 export interface RootTreeState {
   tree: PropertyTree | undefined

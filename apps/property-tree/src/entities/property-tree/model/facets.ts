@@ -1,10 +1,8 @@
-// Client-side counting over the rental objects of the loaded roots.
-//
-// The tree ships per-type counts per node, which is why only the object-type
-// filter can currently grey a branch or move its "Antal". Counting the objects
-// here instead makes every dimension on the object row behave the same way,
-// with no request per filter change — one pass over ~22k rows is a few
-// milliseconds where the equivalent server query is 1.2 s.
+// Client-side counting over the rental objects of the loaded roots — the one
+// source for every count, greying and exclusion question. One pass over ~22k
+// rows is a few milliseconds where the equivalent server query is 1.2 s, so
+// filter toggles cost no request. Roots whose objects haven't arrived answer
+// "unknown": no count, never excluded.
 
 import type { RentalObjectSummary as RentalObject } from '@/services/api/core/rentalObjectService'
 
@@ -14,22 +12,14 @@ import type {
   PropertyTreeSelection,
   RentalObjectType,
 } from './selection'
-import {
-  countForTypes,
-  isTypeFilterActive,
-  nodeCheckState,
-  nodeExcludedByTypes,
-  nodeKey,
-  nodePartiallyExcludedByTypes,
-  objectTypeExcluded,
-} from './selection'
+import { isTypeFilterActive, nodeCheckState, nodeKey } from './selection'
 
 export type { RentalObject }
 
 /**
  * Every object-level restriction the picker applies. Sets are restrictions, so
  * an empty subtype set means "no subtype restriction". A new dimension is added
- * here, in objectMatches and in filterSignature — nowhere else.
+ * here, in matches and in filterSignature — nowhere else.
  */
 export interface ObjectFilter {
   types: ReadonlySet<RentalObjectType>
@@ -67,13 +57,6 @@ const matches = (
   const codes = subtypesByType.get(object.type)
   if (!codes) return true
   return !!object.subtypeCode && codes.has(object.subtypeCode)
-}
-
-export function objectMatches(
-  object: RentalObject,
-  filter: ObjectFilter
-): boolean {
-  return matches(object, filter.types, compileSubtypes(filter))
 }
 
 /** Memoisation key for one filter. Order-independent, never persisted. */
@@ -131,10 +114,12 @@ export function objectParentKey(object: RentalObject): string | undefined {
   return undefined
 }
 
-/** An object as a selectable node under its parent. */
+/** An object as a node under its parent. `selectable: false` keeps it out of
+ * the selection where a consumer doesn't let objects be picked individually. */
 export function objectNode(
   object: RentalObject,
-  parent: Pick<PropertyTreeNode, 'key' | 'ancestors'>
+  parent: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
+  selectable = true
 ): PropertyTreeNode {
   return {
     key: nodeKey('object', object.rentalId),
@@ -142,14 +127,7 @@ export function objectNode(
     value: object.rentalId,
     label: object.code ?? object.rentalId,
     ancestors: [...parent.ancestors, parent.key],
-    // Its own type, so a type filter greys and drops it like any other node.
-    typeCounts: {
-      residence: 0,
-      parkingSpace: 0,
-      facility: 0,
-      other: 0,
-      [object.type]: 1,
-    },
+    ...(selectable ? {} : { selectable: false }),
   }
 }
 
@@ -161,21 +139,16 @@ export interface FacetIndex {
   totalByKey: ReadonlyMap<string, number>
   /** Rental ids matching the filter — leaf rows read this. */
   matchedRentalIds: ReadonlySet<string>
-  /** false until at least one root's objects have arrived. */
+  /** false until at least one root's objects query has resolved (an empty
+   * result counts as resolved). */
   ready: boolean
-}
-
-export const PENDING_FACETS: FacetIndex = {
-  countByKey: new Map(),
-  totalByKey: new Map(),
-  matchedRentalIds: new Set(),
-  ready: false,
 }
 
 /** One pass over the objects: filtered and unfiltered counts per node key. */
 export function buildFacetIndex(
   objects: readonly RentalObject[],
-  filter: ObjectFilter
+  filter: ObjectFilter,
+  ready: boolean
 ): FacetIndex {
   const countByKey = new Map<string, number>()
   const totalByKey = new Map<string, number>()
@@ -191,25 +164,14 @@ export function buildFacetIndex(
     }
   }
 
-  return {
-    countByKey,
-    totalByKey,
-    matchedRentalIds,
-    ready: objects.length > 0,
-  }
+  return { countByKey, totalByKey, matchedRentalIds, ready }
 }
 
-/**
- * The active filter plus whatever objects have arrived for it. Everything the
- * picker asks about a node goes through this: while the objects are still
- * loading each question falls back to the tree's own per-type counts, so the
- * UI behaves exactly as it did before and never blanks mid-load.
- */
+/** The active filter plus whatever objects have arrived for it. Everything
+ * the picker asks about a node goes through this. */
 export interface ObjectFilterView {
   filter: ObjectFilter
   facets: FacetIndex
-  /** Subtype captions, for the fallback — object rows carry captions. */
-  subtypeNames: ReadonlySet<string>
 }
 
 /** True when the filter restricts anything at all. */
@@ -222,49 +184,55 @@ export function isObjectFilterActive(view: ObjectFilterView): boolean {
 const facetKnown = (view: ObjectFilterView, key: string): boolean =>
   view.facets.ready && view.facets.totalByKey.has(key)
 
-/** Objects under a node matching the active filter — the "Antal" column. */
+/** Objects under a node matching the active filter — the "Antal" column.
+ * Undefined until the node's root's objects have arrived. */
 export function nodeCount(
-  node: Pick<PropertyTreeNode, 'key' | 'typeCounts'>,
+  node: Pick<PropertyTreeNode, 'key'>,
   view: ObjectFilterView
 ): number | undefined {
-  if (facetKnown(view, node.key)) return view.facets.countByKey.get(node.key)
-  return countForTypes(node, view.filter.types)
+  if (!facetKnown(view, node.key)) return undefined
+  return view.facets.countByKey.get(node.key)
 }
 
-/** Nothing under the node matches: greyed, unselectable, dropped on apply. */
+/** Nothing under the node matches: greyed, unselectable, dropped on apply.
+ * Unknown nodes (objects not loaded) are never excluded. */
 export function nodeExcluded(
-  node: Pick<PropertyTreeNode, 'key' | 'typeCounts'>,
+  node: Pick<PropertyTreeNode, 'key' | 'level' | 'value' | 'ancestors'>,
   view: ObjectFilterView
 ): boolean {
-  if (facetKnown(view, node.key)) {
-    if (!isObjectFilterActive(view)) return false
-    return (view.facets.countByKey.get(node.key) ?? 0) === 0
+  if (!isObjectFilterActive(view)) return false
+  // Object nodes aren't counted per key; they match by rental id, gated on
+  // their property being counted so unloaded selections stay untouched.
+  if (node.level === 'object') {
+    const propertyKey = node.ancestors.find((k) => k.startsWith('property:'))
+    if (!propertyKey || !facetKnown(view, propertyKey)) return false
+    return !view.facets.matchedRentalIds.has(node.value)
   }
-  return nodeExcludedByTypes(node, view.filter.types)
+  if (!facetKnown(view, node.key)) return false
+  return (view.facets.countByKey.get(node.key) ?? 0) === 0
 }
 
 /** Some but not all of the node's objects match — a selected node then renders
  * indeterminate, since "checked" would claim its greyed members too. */
 export function nodePartiallyExcluded(
-  node: Pick<PropertyTreeNode, 'key' | 'typeCounts'>,
+  node: Pick<PropertyTreeNode, 'key'>,
   view: ObjectFilterView
 ): boolean {
-  if (facetKnown(view, node.key)) {
-    const count = view.facets.countByKey.get(node.key) ?? 0
-    const total = view.facets.totalByKey.get(node.key) ?? 0
-    return count > 0 && count < total
-  }
-  return nodePartiallyExcludedByTypes(node, view.filter.types)
+  if (!facetKnown(view, node.key)) return false
+  const count = view.facets.countByKey.get(node.key) ?? 0
+  const total = view.facets.totalByKey.get(node.key) ?? 0
+  return count > 0 && count < total
 }
 
 /** The checkbox state of one tree row: what the selection says, except that a
  * selected node holding filtered-out objects reads indeterminate. */
 export function rowCheckState(
   selection: PropertyTreeSelection,
-  node: Pick<PropertyTreeNode, 'key' | 'ancestors' | 'typeCounts'>,
-  view: ObjectFilterView
+  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
+  view: ObjectFilterView,
+  covered?: ReadonlySet<string>
 ): CheckState {
-  const state = nodeCheckState(selection, node)
+  const state = nodeCheckState(selection, node, covered)
   return state === 'checked' && nodePartiallyExcluded(node, view)
     ? 'indeterminate'
     : state
@@ -284,32 +252,18 @@ export function filterSelection(
   return next
 }
 
-/**
- * Whether one object row is filtered out. Gated per property rather than on
- * the global ready flag: rows under a root whose objects haven't arrived must
- * keep using the caption fallback instead of greying wholesale.
- */
+/** Whether one object row is filtered out. Rows only render once their root's
+ * objects arrived, so the id set is authoritative for every drawn row. */
 export function objectRowExcluded(
-  object: {
-    rentalId: string
-    type: RentalObjectType
-    subtypeName: string | null
-    propertyCode: string | null
-  },
+  object: { rentalId: string; propertyCode: string | null },
   view: ObjectFilterView
 ): boolean {
+  if (!isObjectFilterActive(view)) return false
   const propertyKey = object.propertyCode
     ? nodeKey('property', object.propertyCode)
     : undefined
-  if (propertyKey && facetKnown(view, propertyKey)) {
-    return !view.facets.matchedRentalIds.has(object.rentalId)
-  }
-  // Fallback: rows carry captions, not codes, so the pre-load check matches on
-  // names — and only for types that actually have a subtype picked.
-  if (objectTypeExcluded(view.filter.types, object.type)) return true
-  const restricted = compileSubtypes(view.filter).has(object.type)
-  if (!restricted) return false
-  return !object.subtypeName || !view.subtypeNames.has(object.subtypeName)
+  if (!propertyKey || !facetKnown(view, propertyKey)) return false
+  return !view.facets.matchedRentalIds.has(object.rentalId)
 }
 
 /** A node whose count is the sum of its properties' — the levels above the

@@ -2,31 +2,26 @@
 // every other level; the only thing added here is the tenant join, which is
 // per property and cannot ride on the cached object payload.
 
+import { memo } from 'react'
+
 import { usePropertyTenants } from '../hooks/useOccupantData'
-import type { ObjectFilterView } from '../model/facets'
-import { objectRowExcluded } from '../model/facets'
-import type {
-  PropertyTreeNode,
-  PropertyTreeSelection,
-} from '../model/selection'
-import { nodeCheckState } from '../model/selection'
+import type { CheckState, PropertyTreeNode } from '../model/selection'
 import type { ObjectRowSpec } from '../model/treeRows'
 import { ObjectRow } from './rows'
 
-/**
- * One object row, decorated with its current tenants. react-query dedupes the
- * lookup, so a property's rows share a single request however many are drawn.
- */
-export function ObjectTenantRow({
+/** One object row, decorated with its current tenants (react-query dedupes
+ * the per-property lookup). Memoised on scalar check/excluded state so a
+ * checkbox click doesn't re-render every drawn row's query subscription. */
+export const ObjectTenantRow = memo(function ObjectTenantRow({
   row,
-  selection,
-  view,
+  checkState,
+  excluded,
   selectableObjects,
   onToggleObject,
 }: {
   row: ObjectRowSpec
-  selection: PropertyTreeSelection
-  view: ObjectFilterView
+  checkState: CheckState
+  excluded: boolean
   selectableObjects: boolean
   onToggleObject: (node: PropertyTreeNode) => void
 }) {
@@ -41,13 +36,13 @@ export function ObjectTenantRow({
           ? (tenants.data.tenantsByCode[row.object.rentalId] ?? [])
           : undefined
       }
-      checkState={nodeCheckState(selection, row.node)}
+      checkState={checkState}
       selectable={selectableObjects}
       // Recipient semantics only where objects are not picked individually: a
       // vakant object reaches nobody, so it shows no inherited tick there.
       requiresTenants={!selectableObjects}
       onCheck={() => onToggleObject(row.node)}
-      excluded={objectRowExcluded(row.object, view)}
+      excluded={excluded}
     />
   )
-}
+})

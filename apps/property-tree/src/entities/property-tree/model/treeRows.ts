@@ -15,7 +15,6 @@ import type {
   ParentInfo,
   PropertyTreeLevel,
   PropertyTreeNode,
-  RentalObjectType,
 } from './selection'
 import { nodeKey } from './selection'
 
@@ -60,47 +59,6 @@ export const rootKeyOf = (root: PropertyTreeRoot) => {
 // that happen on the second keystroke of any word.
 export const MIN_SEARCH_LENGTH = 4
 
-type TypeCounts = Record<RentalObjectType, number>
-
-const aggregateTypeCounts = (a: {
-  residenceCount: number
-  parkingCount: number
-  facilityCount: number
-  otherCount: number
-}): TypeCounts => ({
-  residence: a.residenceCount,
-  parkingSpace: a.parkingCount,
-  facility: a.facilityCount,
-  other: a.otherCount,
-})
-
-const sumTypeCounts = (
-  properties: { aggregates: PropertyTreeProperty['aggregates'] }[]
-): TypeCounts => {
-  const sum: TypeCounts = {
-    residence: 0,
-    parkingSpace: 0,
-    facility: 0,
-    other: 0,
-  }
-  for (const p of properties) {
-    sum.residence += p.aggregates.residenceCount
-    sum.parkingSpace += p.aggregates.parkingCount
-    sum.facility += p.aggregates.facilityCount
-    sum.other += p.aggregates.otherCount
-  }
-  return sum
-}
-
-// Parkeringsområden hold nothing but parking, so they have no count row of
-// their own to read.
-const parkingAreaTypeCounts = (parkingCount: number): TypeCounts => ({
-  residence: 0,
-  parkingSpace: parkingCount,
-  facility: 0,
-  other: 0,
-})
-
 export interface NodeRowSpec {
   kind: 'node'
   node: PropertyTreeNode
@@ -114,12 +72,9 @@ export interface NodeRowSpec {
   typeLabel?: string
   /** True when this node itself matched the active search query. */
   matched?: boolean
-  /** Property context (drives object/tenant lookups below tree level). */
-  propertyCode?: string
+  /** The fastighetsbeteckning rows below property level carry, so object
+   * leaves can key their tenant lookup. */
   propertyDesignation?: string
-  /** Set on staircase rows: the raw codes needed to filter their objects. */
-  buildingCode?: string
-  staircaseCode?: string
 }
 
 /**
@@ -134,7 +89,6 @@ export interface ObjectRowSpec {
   depth: number
   /** Key for the per-property tenant lookup. */
   propertyDesignation?: string
-  matched?: boolean
 }
 
 export type RowSpec = NodeRowSpec | ObjectRowSpec
@@ -237,6 +191,49 @@ export function collectDescendantNodes(
   }
   collect(hit)
   return out
+}
+
+// key → current-walk ancestors, one build per walk; covered-ancestor lookups
+// then cost O(selection) per selection change instead of a full traversal.
+const ancestorIndexCache = new WeakMap<
+  WalkNode,
+  ReadonlyMap<string, readonly string[]>
+>()
+
+function ancestorIndexFor(
+  walk: WalkNode
+): ReadonlyMap<string, readonly string[]> {
+  const cached = ancestorIndexCache.get(walk)
+  if (cached) return cached
+  const index = new Map<string, readonly string[]>()
+  const visit = (n: WalkNode) => {
+    index.set(n.node.key, n.node.ancestors)
+    for (const child of n.children) visit(child)
+  }
+  visit(walk)
+  ancestorIndexCache.set(walk, index)
+  return index
+}
+
+/** Add this walk's ancestors of every selected key found under the root to
+ * `out` (found keys go to `resolved`). Walk-derived rather than stored
+ * ancestors: sub-root keys are shared across groupings, so a property picked
+ * under Distrikt must still mark its marknadsområde. */
+export function addCoveredAncestorKeys(
+  root: PropertyTreeRoot,
+  tree: PropertyTree,
+  objectsByParent: ReadonlyMap<string, RentalObject[]>,
+  selection: ReadonlyMap<string, unknown>,
+  out: Set<string>,
+  resolved: Set<string>
+): void {
+  const index = ancestorIndexFor(walkTreeFor(root, tree, objectsByParent))
+  for (const key of selection.keys()) {
+    const ancestors = index.get(key)
+    if (!ancestors) continue
+    resolved.add(key)
+    for (const ancestor of ancestors) out.add(ancestor)
+  }
 }
 
 /**
@@ -342,14 +339,10 @@ function buildWalkTree(
       label: designation,
       ancestors,
       id: p.code,
-      typeCounts: aggregateTypeCounts(p.aggregates),
     }
-    // Everything below a property needs to know which property it belongs to,
-    // so the object lookups under trapphus and parkeringsområden can run.
-    const propertyContext = {
-      propertyCode: p.code,
-      propertyDesignation: designation,
-    }
+    // Object leaves under trapphus and parkeringsområden key their tenant
+    // lookup on the property's designation.
+    const propertyContext = { propertyDesignation: designation }
 
     const buildings = p.buildings.map((b): WalkNode => {
       const buildingKey = nodeKey('building', b.buildingCode)
@@ -360,7 +353,6 @@ function buildWalkTree(
         value: b.buildingCode,
         label: b.buildingName ?? b.buildingCode,
         ancestors: propAncestors,
-        typeCounts: aggregateTypeCounts(b),
       }
       return {
         node: buildingNode,
@@ -382,17 +374,12 @@ function buildWalkTree(
               value: composite,
               label: s.name ?? composite,
               ancestors: buildingAncestors,
-              typeCounts: aggregateTypeCounts(s),
             }
             return {
               node: staircaseNode,
               code: composite,
               searchText: [s.name, composite],
-              row: {
-                ...propertyContext,
-                buildingCode: b.buildingCode,
-                staircaseCode: s.code,
-              },
+              row: propertyContext,
               expandOnAll: false,
               children: leavesOf(staircaseNode, designation),
             }
@@ -411,7 +398,6 @@ function buildWalkTree(
           value: pa.code,
           label: pa.name ?? pa.code,
           ancestors: propAncestors,
-          typeCounts: parkingAreaTypeCounts(pa.parkingCount),
         },
         code: pa.code,
         searchText: [pa.name, pa.code],
@@ -438,9 +424,6 @@ function buildWalkTree(
       label: root.name,
       ancestors: [],
       id: root.id,
-      typeCounts: tree
-        ? sumTypeCounts(groups.flatMap((g) => g.properties))
-        : undefined,
     },
     code: root.code,
     searchText: [root.name, root.code],
@@ -456,7 +439,6 @@ function buildWalkTree(
               label: groupLabel(g),
               ancestors: [rootKey],
               id: g.id,
-              typeCounts: sumTypeCounts(g.properties),
             },
             code: g.code,
             // The label is included so searching the responsible person's
@@ -499,18 +481,16 @@ function analyse(walk: WalkNode, q: string, searchActive: boolean): Analysis {
   }
 }
 
-const NO_KEYS: ReadonlySet<string> = new Set()
+const NO_OVERRIDES: ReadonlyMap<string, boolean> = new Map()
 
 /** What the walk needs beyond the tree itself. An options object rather than
- * eight positional arguments: the flags are all booleans and sets, and at the
- * call site `false, query, expanded, collapsed, true` said nothing. */
+ * positional arguments: the flags say nothing at the call site otherwise. */
 export interface TreeRowOptions {
   query: string
-  expanded: ReadonlySet<string>
+  /** Manual open/close per key; absent = follow auto-expansion. */
+  overrides?: ReadonlyMap<string, boolean>
   /** Draws the "Laddar..." row under a root whose tree is still arriving. */
   loading?: boolean
-  /** Manual collapses that override auto-expansion (search / expand-all). */
-  collapsed?: ReadonlySet<string>
   /** Header expand-all: opens the structural levels (tree data only). */
   expandAllStructure?: boolean
   /** The rental objects of this root, grouped by the node they hang under.
@@ -524,16 +504,15 @@ export function buildTreeRows(
   tree: PropertyTree | undefined,
   {
     query,
-    expanded,
+    overrides = NO_OVERRIDES,
     loading = false,
-    collapsed = NO_KEYS,
     expandAllStructure = false,
     objectsByParent = NO_OBJECTS,
   }: TreeRowOptions
 ): RowSpec[] {
   const searchActive = query.length >= MIN_SEARCH_LENGTH
   const isOpen = (key: string, autoExpand: boolean) =>
-    !collapsed.has(key) && (expanded.has(key) || autoExpand)
+    overrides.get(key) ?? autoExpand
 
   // Through the cache: this runs per root per render, and the walk carries an
   // object leaf per rental object.
@@ -554,7 +533,6 @@ export function buildTreeRows(
         object: walk.object,
         depth,
         propertyDesignation: walk.row?.propertyDesignation,
-        matched: a.selfMatch,
       })
       return
     }

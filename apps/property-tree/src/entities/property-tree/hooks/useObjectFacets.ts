@@ -24,7 +24,12 @@ const combineObjects = (
   results: {
     data?: Awaited<ReturnType<typeof propertyTreeService.getRootRentalObjects>>
   }[]
-) => results.flatMap((r) => r.data ?? [])
+) => ({
+  objects: results.flatMap((r) => r.data ?? []),
+  // Resolved-at-least-once rather than objects.length: a first root that
+  // legitimately holds zero objects still counts as loaded.
+  loaded: results.some((r) => r.data !== undefined),
+})
 
 const combineAncestry = (results: { data?: PropertyTree | undefined }[]) =>
   results.flatMap((r) => {
@@ -56,7 +61,7 @@ export function useObjectFacets(
   enabled: boolean,
   filter: ObjectFilter
 ): { facets: FacetIndex; objects: RentalObject[] } {
-  const objects = useQueries({
+  const { objects, loaded } = useQueries({
     queries: (enabled ? loadedRoots : []).map((root) =>
       rootRentalObjectsQuery(grouping, root.id)
     ),
@@ -74,10 +79,10 @@ export function useObjectFacets(
 
   const signature = filterSignature(filter)
   const facets = useMemo(
-    () => addAncestorCounts(buildFacetIndex(objects, filter), ancestry),
+    () => addAncestorCounts(buildFacetIndex(objects, filter, loaded), ancestry),
     // filter is covered by its signature; the arrays are combine-memoised.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [objects, ancestry, signature]
+    [objects, loaded, ancestry, signature]
   )
 
   // The objects ride along: roll-up over leaf selections needs them as the

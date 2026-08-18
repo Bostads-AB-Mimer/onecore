@@ -21,6 +21,11 @@ import { Card } from '@/shared/ui/Card'
 import { Checkbox } from '@/shared/ui/Checkbox'
 import { Input } from '@/shared/ui/Input'
 import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from '@/shared/ui/Popover'
+import {
   Table,
   TableBody,
   TableCell,
@@ -45,6 +50,7 @@ import {
   subtypeKey,
   useRentalObjectSubtypes,
 } from '../hooks/useRentalObjectSubtypes'
+import { rootRentalObjectsQuery } from '../hooks/useRootRentalObjects'
 import type { GetParentInfo } from '../hooks/useTreeSelectionState'
 import type {
   ObjectFilter,
@@ -57,6 +63,7 @@ import {
   nodeExcluded,
   objectNode,
   objectParentKey,
+  objectRowExcluded,
   rowCheckState,
 } from '../model/facets'
 import { rememberNodeLabel } from '../model/labels'
@@ -72,6 +79,7 @@ import {
 } from '../model/selection'
 import type { NodeRowSpec } from '../model/treeRows'
 import {
+  addCoveredAncestorKeys,
   buildTreeRows,
   collectDescendantNodes,
   findParentInfo,
@@ -166,9 +174,14 @@ export function PropertyTreePicker({
 }: PropertyTreePickerProps) {
   const [grouping, setGrouping] = useState<TreeGrouping>(groupings[0])
   const [subtypeMenu, setSubtypeMenu] = useState<RentalObjectType | null>(null)
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
-  // Manual collapses that override auto-expansion (search / expand-all).
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
+  // Clicks inside the strip must not count as outside-clicks: the chevrons'
+  // own onClick decides whether the menu toggles or switches type.
+  const typeStripRef = useRef<HTMLDivElement>(null)
+  // Manual open (true) / close (false) per key; absent = auto-expansion
+  // (search hits, expand-all) decides.
+  const [expandOverrides, setExpandOverrides] = useState<
+    ReadonlyMap<string, boolean>
+  >(new Map())
   const [expandAll, setExpandAll] = useState(false)
   const [includeDescendants, setIncludeDescendants] = useState(false)
   const [searchInput, setSearchInput] = useState('')
@@ -176,22 +189,35 @@ export function PropertyTreePicker({
   const query = debouncedSearch.trim().toLowerCase()
   const searchActive = query.length >= MIN_SEARCH_LENGTH
 
-  // A new search always starts fully auto-opened.
-  useEffect(() => setCollapsed(new Set()), [query])
+  // A new search always starts fully auto-opened: manual closes reset.
+  useEffect(() => {
+    setExpandOverrides((prev) => {
+      if (![...prev.values()].some((open) => !open)) return prev
+      return new Map([...prev].filter(([, open]) => open))
+    })
+  }, [query])
 
-  // Object rows carry a subtype caption, not a code, so the selected
-  // `type:code` keys are resolved to names for filtering.
-  const { byType: subtypesByType, nameByKey } = useRentalObjectSubtypes()
-  const activeSubtypeNames = useMemo(() => {
-    const out = new Set<string>()
-    for (const key of activeSubtypes) {
-      const name = nameByKey.get(key)
-      if (name) out.add(name)
-    }
-    return out
-  }, [activeSubtypes, nameByKey])
+  const { byType: subtypesByType } = useRentalObjectSubtypes()
 
   const { roots, isLoading: rootsLoading } = usePropertyTreeRoots(grouping)
+
+  // With "inkludera underliggande" on, roots carrying selected nodes must load
+  // too. Signature-keyed so more picks under one root don't re-walk the rows.
+  const selectedRootKeySignature = useMemo(() => {
+    if (!includeDescendants) return ''
+    const keys = new Set<string>()
+    for (const node of selection.values()) {
+      keys.add(node.ancestors[0] ?? node.key)
+    }
+    return [...keys].sort().join('|')
+  }, [includeDescendants, selection])
+  const selectedRootKeys = useMemo(
+    () =>
+      new Set(
+        selectedRootKeySignature ? selectedRootKeySignature.split('|') : []
+      ),
+    [selectedRootKeySignature]
+  )
 
   // Roots whose data is loaded: all of them while searching or expanded, the
   // opened ones otherwise. Counting and bulk selection cover these; the rest
@@ -200,8 +226,11 @@ export function PropertyTreePicker({
     () =>
       searchActive || expandAll
         ? roots
-        : roots.filter((root) => expanded.has(rootKeyOf(root))),
-    [roots, searchActive, expandAll, expanded]
+        : roots.filter((root) => {
+            const key = rootKeyOf(root)
+            return expandOverrides.get(key) === true || selectedRootKeys.has(key)
+          }),
+    [roots, searchActive, expandAll, expandOverrides, selectedRootKeys]
   )
   const treeState = usePropertyTrees(grouping, loadedRoots, open)
 
@@ -218,8 +247,8 @@ export function PropertyTreePicker({
     filter
   )
   const view = useMemo<ObjectFilterView>(
-    () => ({ filter, facets, subtypeNames: activeSubtypeNames }),
-    [filter, facets, activeSubtypeNames]
+    () => ({ filter, facets }),
+    [filter, facets]
   )
 
   // Lazy parent resolver for selection roll-up: looks the parent up in
@@ -233,6 +262,13 @@ export function PropertyTreePicker({
         // silently miss if the fetchers ever changed it.
         propertyTreeQuery(grouping, root.id).queryKey
       ),
+    [queryClient, grouping]
+  )
+  const cachedObjectsSettled = useCallback(
+    (root: PropertyTreeRoot) =>
+      queryClient.getQueryData(
+        rootRentalObjectsQuery(grouping, root.id).queryKey
+      ) !== undefined,
     [queryClient, grouping]
   )
   // Objects grouped by the node they hang under, so a trapphus or
@@ -257,22 +293,32 @@ export function PropertyTreePicker({
         if (!tree) continue
         const info = findParentInfo(root, tree, parentKey)
         if (!info) continue
-        // Structure children plus any objects drawn directly under this node:
-        // a building rolls up only when its trapphus AND its loose objects
-        // are all checked.
+        // Child lists are complete only once this root's objects have landed;
+        // resolving mid-flight would let roll-up claim unseen loose objects.
+        if (!cachedObjectsSettled(root)) return undefined
+        // Structure children plus the objects drawn under this node; where
+        // objects aren't selectable they only block roll-up, never join it.
         const own = objectsByParent.get(parentKey)
         if (!own?.length) return info
         return {
           node: info.node,
           children: [
             ...info.children,
-            ...own.map((object) => objectNode(object, info.node)),
+            ...own.map((object) =>
+              objectNode(object, info.node, selectableObjects)
+            ),
           ],
         }
       }
       return undefined
     },
-    [roots, cachedTree, objectsByParent]
+    [
+      roots,
+      cachedTree,
+      cachedObjectsSettled,
+      objectsByParent,
+      selectableObjects,
+    ]
   )
   const handleToggleNode = useCallback(
     (node: PropertyTreeNode) => onToggleNode(node, getParentInfo),
@@ -289,6 +335,30 @@ export function PropertyTreePicker({
     [onDeselectNodes, getParentInfo]
   )
 
+  // Indeterminate keys, from the walks on screen (see addCoveredAncestorKeys);
+  // keys found in no loaded walk fall back to their stored ancestors.
+  const coveredKeys = useMemo(() => {
+    const out = new Set<string>()
+    const resolved = new Set<string>()
+    for (const root of roots) {
+      const { tree } = treeState.stateOf(root.id)
+      if (!tree) continue
+      addCoveredAncestorKeys(
+        root,
+        tree,
+        objectsByParent,
+        selection,
+        out,
+        resolved
+      )
+    }
+    for (const node of selection.values()) {
+      if (resolved.has(node.key)) continue
+      for (const ancestor of node.ancestors) out.add(ancestor)
+    }
+    return out
+  }, [roots, treeState, objectsByParent, selection])
+
   /**
    * Every row on screen, in order — the table and the header checkbox read
    * this one walk. Built over every root, not just the loaded ones: a
@@ -303,14 +373,13 @@ export function PropertyTreePicker({
         const { tree, isLoading } = treeState.stateOf(root.id)
         return buildTreeRows(root, tree, {
           query,
-          expanded,
-          collapsed,
+          overrides: expandOverrides,
           loading: isLoading,
           expandAllStructure: expandAll,
           objectsByParent,
         })
       }),
-    [roots, treeState, query, expanded, collapsed, expandAll, objectsByParent]
+    [roots, treeState, query, expandOverrides, expandAll, objectsByParent]
   )
 
   /** Keys of every branch currently open. Read off the rows rather than walked
@@ -350,14 +419,18 @@ export function PropertyTreePicker({
   const { allVisibleSelected, someVisibleSelected } = useMemo(() => {
     const all =
       visibleNodes.length > 0 &&
-      visibleNodes.every((n) => nodeCheckState(selection, n) === 'checked')
+      visibleNodes.every(
+        (n) => nodeCheckState(selection, n, coveredKeys) === 'checked'
+      )
     return {
       allVisibleSelected: all,
       someVisibleSelected:
         !all &&
-        visibleNodes.some((n) => nodeCheckState(selection, n) !== 'unchecked'),
+        visibleNodes.some(
+          (n) => nodeCheckState(selection, n, coveredKeys) !== 'unchecked'
+        ),
     }
-  }, [visibleNodes, selection])
+  }, [visibleNodes, selection, coveredKeys])
 
   // Latently-selected nodes excluded by the type filter are not applied (nor
   // counted) but stay in the selection so re-enabling the type restores them.
@@ -367,21 +440,41 @@ export function PropertyTreePicker({
   )
 
   // "Inkludera underliggande nivåer": every descendant tree node under each
-  // selected node, type-filter-pruned, resolved from cached district trees.
-  const expandedDescendants = useMemo(() => {
-    if (!includeDescendants) return []
+  // selected node, type-filter-pruned. `unresolved` while a needed tree is
+  // missing — loadedRoots fetches it, so applying waits instead of no-oping.
+  const { expandedDescendants, unresolvedDescendants } = useMemo(() => {
+    if (!includeDescendants)
+      return {
+        expandedDescendants: [] as PropertyTreeNode[],
+        unresolvedDescendants: false,
+      }
     const seen = new Set<string>()
     const out: PropertyTreeNode[] = []
+    let unresolved = false
     for (const node of effectiveSelection.values()) {
-      // Trapphus/parkeringsområden are leaves — nothing beneath them.
-      if (node.level === 'staircase' || node.level === 'parkingArea') continue
+      // Leaves have nothing beneath them; roots of the other grouping can
+      // never resolve in this one.
+      if (
+        node.level === 'staircase' ||
+        node.level === 'parkingArea' ||
+        node.level === 'object'
+      )
+        continue
+      if (node.level === 'marketArea' && grouping !== 'marketArea') continue
+      if (
+        (node.level === 'district' || node.level === 'kvvArea') &&
+        grouping !== 'costCenter'
+      )
+        continue
+      let found = false
       for (const root of roots) {
-        const tree = cachedTree(root)
+        const { tree } = treeState.stateOf(root.id)
         if (!tree) continue
         const descendants = collectDescendantNodes(root, tree, node.key, (n) =>
           nodeExcluded(n, view)
         )
         if (!descendants) continue
+        found = true
         for (const d of descendants) {
           if (!seen.has(d.key) && !effectiveSelection.has(d.key)) {
             seen.add(d.key)
@@ -390,9 +483,14 @@ export function PropertyTreePicker({
         }
         break
       }
+      if (!found) unresolved = true
     }
-    return out
-  }, [includeDescendants, roots, effectiveSelection, view, cachedTree])
+    return { expandedDescendants: out, unresolvedDescendants: unresolved }
+  }, [includeDescendants, grouping, roots, treeState, effectiveSelection, view])
+
+  // Only while something is in flight: a node no loaded tree can resolve
+  // (e.g. picked under the other grouping) shouldn't block applying forever.
+  const descendantsPending = unresolvedDescendants && treeState.isLoading
 
   const totalCriteria = effectiveSelection.size + expandedDescendants.length
   const overCap = includeDescendants && totalCriteria > MAX_EXPANDED_CRITERIA
@@ -474,62 +572,53 @@ export function PropertyTreePicker({
     ]
   )
   useEffect(() => {
-    if (applyMode !== 'live' || overCap) return
+    if (applyMode !== 'live' || overCap || descendantsPending) return
     emitApply()
     // emitApply reads both refs; applySignature is the real dependency.
-  }, [applyMode, overCap, applySignature, emitApply])
+  }, [applyMode, overCap, descendantsPending, applySignature, emitApply])
+
+  // An explicit override either way, so folding a search hit sticks even
+  // though auto-expansion would reopen it.
+  const handleToggleExpand = useCallback(
+    (key: string, currentlyExpanded: boolean) => {
+      setExpandOverrides((prev) => new Map(prev).set(key, !currentlyExpanded))
+    },
+    []
+  )
 
   if (!open) return null
 
-  const handleToggleExpand = (key: string, currentlyExpanded: boolean) => {
-    if (currentlyExpanded) {
-      setExpanded((prev) => {
-        const next = new Set(prev)
-        next.delete(key)
-        return next
-      })
-      // Also beats auto-expansion, so search hits can be folded away.
-      setCollapsed((prev) => new Set(prev).add(key))
-    } else {
-      setCollapsed((prev) => {
-        const next = new Set(prev)
-        next.delete(key)
-        return next
-      })
-      setExpanded((prev) => new Set(prev).add(key))
-    }
-  }
+  const dropCloses = (prev: ReadonlyMap<string, boolean>) =>
+    new Map([...prev].filter(([, open]) => open))
 
   const anyExpanded = searchActive
     ? openKeys.length > 0
-    : expandAll || expanded.size > 0
+    : expandAll || [...expandOverrides.values()].some(Boolean)
   const handleExpandCollapseAll = () => {
-    // Search mode: fold/restore the auto-opened matches via the override set.
+    // Search mode: fold/restore the auto-opened matches via overrides.
     if (searchActive) {
       if (anyExpanded) {
         setExpandAll(false)
-        setCollapsed((prev) => {
-          const next = new Set(prev)
-          for (const key of openKeys) next.add(key)
+        setExpandOverrides((prev) => {
+          const next = new Map(prev)
+          for (const key of openKeys) next.set(key, false)
           return next
         })
       } else {
-        setCollapsed(new Set())
+        setExpandOverrides(dropCloses)
       }
       return
     }
     if (anyExpanded) {
       setExpandAll(false)
-      setExpanded(new Set())
+      setExpandOverrides(new Map())
     } else {
       setExpandAll(true)
+      setExpandOverrides(dropCloses)
     }
-    setCollapsed(new Set())
   }
 
-  /** Subtype checkboxes for one object type, anchored under the type strip.
-   * Hand-rolled rather than shared/ui/Popover: Radix anchors to the trigger,
-   * and the trigger here is a 14px chevron, so the panel lands off-centre. */
+  /** Subtype checkboxes for one object type. */
   const renderSubtypeMenu = (type: RentalObjectType) => {
     const options = subtypesByType.get(type) ?? []
     const chosenKeys = options
@@ -537,45 +626,38 @@ export function PropertyTreePicker({
       .filter((key) => activeSubtypes.has(key))
     return (
       <>
-        {/* Click-away layer; the popover sits above it. */}
-        <div
-          className="fixed inset-0 z-10"
-          onClick={() => setSubtypeMenu(null)}
-        />
-        <div className="absolute left-0 top-full z-20 mt-1 max-h-72 w-64 overflow-y-auto rounded-md border bg-background p-1 shadow-md">
-          <div className="flex items-center justify-between px-2 py-1.5">
-            <span className="text-xs text-muted-foreground">
-              {RENTAL_OBJECT_GROUP_LABELS[type]}:{' '}
-              {chosenKeys.length === 0
-                ? 'alla typer'
-                : `${chosenKeys.length} av ${options.length}`}
-            </span>
-            {chosenKeys.length > 0 && (
-              <button
-                type="button"
-                className="text-xs text-primary hover:underline"
-                onClick={() => chosenKeys.forEach(onToggleSubtype)}
-              >
-                Rensa
-              </button>
-            )}
-          </div>
-          {options.map((s) => {
-            const key = subtypeKey(type, s.code)
-            return (
-              <label
-                key={key}
-                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
-              >
-                <Checkbox
-                  checked={activeSubtypes.has(key)}
-                  onCheckedChange={() => onToggleSubtype(key)}
-                />
-                <span className="truncate">{s.name}</span>
-              </label>
-            )
-          })}
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <span className="text-xs text-muted-foreground">
+            {RENTAL_OBJECT_GROUP_LABELS[type]}:{' '}
+            {chosenKeys.length === 0
+              ? 'alla typer'
+              : `${chosenKeys.length} av ${options.length}`}
+          </span>
+          {chosenKeys.length > 0 && (
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => chosenKeys.forEach(onToggleSubtype)}
+            >
+              Rensa
+            </button>
+          )}
         </div>
+        {options.map((s) => {
+          const key = subtypeKey(type, s.code)
+          return (
+            <label
+              key={key}
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <Checkbox
+                checked={activeSubtypes.has(key)}
+                onCheckedChange={() => onToggleSubtype(key)}
+              />
+              <span className="truncate">{s.name}</span>
+            </label>
+          )
+        })}
       </>
     )
   }
@@ -640,10 +722,19 @@ export function PropertyTreePicker({
             className="pl-10"
           />
         </div>
-        {/* The subtype popover is a sibling of the button strip, not a child:
-            the strip clips its overflow to keep the rounded corners. */}
-        <div className="relative">
-          <div className="inline-flex divide-x overflow-hidden rounded-md border">
+        {/* Anchored to the whole strip, not the chevron that opened it, so the
+            panel stays in the same place whichever type is picked. */}
+        <Popover
+          open={subtypeMenu !== null}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setSubtypeMenu(null)
+          }}
+        >
+          <PopoverAnchor asChild>
+            <div
+              ref={typeStripRef}
+              className="inline-flex divide-x overflow-hidden rounded-md border"
+            >
             {ALL_RENTAL_OBJECT_TYPES.map((type) => {
               const TypeIcon = OBJECT_TYPE_ICONS[type]
               const active = activeObjectTypes.has(type)
@@ -655,7 +746,11 @@ export function PropertyTreePicker({
                 <div key={type} className="inline-flex">
                   <button
                     type="button"
-                    onClick={() => onToggleObjectType(type)}
+                    onClick={() => {
+                      // Deactivating a type closes its own open subtype menu.
+                      if (active && subtypeMenu === type) setSubtypeMenu(null)
+                      onToggleObjectType(type)
+                    }}
                     aria-pressed={active}
                     title={RENTAL_OBJECT_GROUP_LABELS[type]}
                     className={
@@ -697,9 +792,23 @@ export function PropertyTreePicker({
                 </div>
               )
             })}
-          </div>
-          {subtypeMenu && renderSubtypeMenu(subtypeMenu)}
-        </div>
+            </div>
+          </PopoverAnchor>
+          {subtypeMenu && (
+            <PopoverContent
+              align="start"
+              className="max-h-72 w-64 overflow-y-auto p-1"
+              onOpenAutoFocus={(e) => e.preventDefault()}
+              onInteractOutside={(e) => {
+                if (typeStripRef.current?.contains(e.target as Node)) {
+                  e.preventDefault()
+                }
+              }}
+            >
+              {renderSubtypeMenu(subtypeMenu)}
+            </PopoverContent>
+          )}
+        </Popover>
       </div>
 
       <div className="@container rounded-md border">
@@ -732,6 +841,7 @@ export function PropertyTreePicker({
                     aria-label={
                       anyExpanded ? 'Fäll ihop alla' : 'Expandera alla'
                     }
+                    aria-expanded={anyExpanded}
                   >
                     {anyExpanded ? (
                       <ChevronsDownUp className="h-4 w-4" />
@@ -770,8 +880,12 @@ export function PropertyTreePicker({
                     <ObjectTenantRow
                       key={row.node.key}
                       row={row}
-                      selection={selection}
-                      view={view}
+                      checkState={nodeCheckState(
+                        selection,
+                        row.node,
+                        coveredKeys
+                      )}
+                      excluded={objectRowExcluded(row.object, view)}
                       selectableObjects={selectableObjects}
                       onToggleObject={handleToggleNode}
                     />
@@ -779,11 +893,14 @@ export function PropertyTreePicker({
                     <Fragment key={row.node.key}>
                       <NodeRow
                         row={row}
-                        checkState={rowCheckState(selection, row.node, view)}
-                        onCheck={() => handleToggleNode(row.node)}
-                        onToggleExpand={() =>
-                          handleToggleExpand(row.node.key, row.expanded)
-                        }
+                        checkState={rowCheckState(
+                          selection,
+                          row.node,
+                          view,
+                          coveredKeys
+                        )}
+                        onCheck={handleToggleNode}
+                        onToggleExpand={handleToggleExpand}
                         excluded={nodeExcluded(row.node, view)}
                         count={nodeCount(row.node, view)}
                       />
@@ -844,7 +961,9 @@ export function PropertyTreePicker({
           )}
           {includeDescendants && !overCap && (
             <span className="text-sm text-muted-foreground">
-              +{expandedDescendants.length} underliggande
+              {descendantsPending
+                ? 'Laddar underliggande...'
+                : `+${expandedDescendants.length} underliggande`}
             </span>
           )}
         </div>
@@ -857,7 +976,9 @@ export function PropertyTreePicker({
           {applyMode === 'button' && (
             <Button
               onClick={emitApply}
-              disabled={effectiveSelection.size === 0 || overCap}
+              disabled={
+                effectiveSelection.size === 0 || overCap || descendantsPending
+              }
               title={
                 overCap
                   ? `Max ${MAX_EXPANDED_CRITERIA} kriterier — minska urvalet`
