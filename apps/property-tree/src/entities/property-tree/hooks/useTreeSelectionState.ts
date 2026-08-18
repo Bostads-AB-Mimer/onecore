@@ -83,9 +83,12 @@ export function useTreeSelectionState() {
 
   /** Bulk uncheck ("avmarkera allt som visas"). One pass, not N toggles —
    * see deselectNodes for why the loop is wrong. */
-  const deselectMany = useCallback((nodes: PropertyTreeNode[]) => {
-    setSelection((prev) => deselectNodes(prev, nodes))
-  }, [])
+  const deselectMany = useCallback(
+    (nodes: PropertyTreeNode[], getParent?: GetParentInfo) => {
+      setSelection((prev) => deselectNodes(prev, nodes, getParent))
+    },
+    []
+  )
 
   return {
     selection,

@@ -70,7 +70,11 @@ describe('GET /property-tree', () => {
       .query({ groupBy: 'costCenter' })
 
     expect(res.status).toBe(400)
-    expect(res.body.reason).toBe('Invalid query parameters')
+    // parseRequest's shape, not the route's: { status, data: [{ message, path }] }.
+    expect(res.body.status).toBe('error with request query')
+    expect(res.body.data).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: ['rootId'] })])
+    )
   })
 
   it('returns 400 when groupBy is not a known grouping', async () => {
@@ -147,7 +151,10 @@ describe('GET /property-tree', () => {
       .query({ groupBy: 'costCenter', rootId: UUID })
 
     expect(res.status).toBe(500)
-    expect(res.body.reason).toBe('boom')
+    // The adapter's message must not reach the client — it can carry SQL and
+    // table names. Asserted both ways so the leak can't come back unnoticed.
+    expect(res.body.reason).toBe('Internal server error')
+    expect(JSON.stringify(res.body)).not.toContain('boom')
   })
 })
 
@@ -171,5 +178,7 @@ describe('GET /market-areas', () => {
 
     const res = await request(app.callback()).get('/market-areas')
     expect(res.status).toBe(500)
+    expect(res.body.reason).toBe('Internal server error')
+    expect(JSON.stringify(res.body)).not.toContain('boom')
   })
 })

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { skipToken, useQuery } from '@tanstack/react-query'
 
 import { leaseSearchService } from '@/services/api/core/leaseSearchService'
 import type {
@@ -86,8 +86,7 @@ async function fetchPropertyTenants(
 export function usePropertyTenants(designation: string | undefined) {
   return useQuery({
     queryKey: ['audiencePropertyTenants', designation],
-    queryFn: () => fetchPropertyTenants(designation as string),
-    enabled: !!designation,
+    queryFn: designation ? () => fetchPropertyTenants(designation) : skipToken,
     staleTime: TREE_STALE_TIME,
     gcTime: TREE_GC_TIME,
   })

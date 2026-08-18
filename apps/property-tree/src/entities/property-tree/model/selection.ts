@@ -162,15 +162,36 @@ export function nodeKey(level: PropertyTreeLevel, id: string): string {
   return `${level}:${id}`
 }
 
+/**
+ * Every key that is an ancestor of something selected — i.e. the nodes that
+ * render indeterminate. Derived once per selection rather than per row: this
+ * is called for every visible row, and the tree can be thousands of rows with
+ * object leaves expanded. Keyed on the selection object, which is replaced
+ * whenever the selection changes, so the entry can never go stale.
+ */
+const ancestorsOfSelected = new WeakMap<PropertyTreeSelection, Set<string>>()
+
+function coveredAncestorKeys(
+  selection: PropertyTreeSelection
+): ReadonlySet<string> {
+  const cached = ancestorsOfSelected.get(selection)
+  if (cached) return cached
+
+  const keys = new Set<string>()
+  for (const selected of selection.values()) {
+    for (const ancestor of selected.ancestors) keys.add(ancestor)
+  }
+  ancestorsOfSelected.set(selection, keys)
+  return keys
+}
+
 export function nodeCheckState(
   selection: PropertyTreeSelection,
   node: Pick<PropertyTreeNode, 'key' | 'ancestors'>
 ): CheckState {
   if (selection.has(node.key)) return 'checked'
   if (node.ancestors.some((key) => selection.has(key))) return 'checked'
-  for (const selected of selection.values()) {
-    if (selected.ancestors.includes(node.key)) return 'indeterminate'
-  }
+  if (coveredAncestorKeys(selection).has(node.key)) return 'indeterminate'
   return 'unchecked'
 }
 
@@ -304,20 +325,37 @@ export function selectNodes(
  */
 export function deselectNodes(
   selection: PropertyTreeSelection,
-  nodes: PropertyTreeNode[]
+  nodes: PropertyTreeNode[],
+  getParent?: (parentKey: string) => ParentInfo | undefined
 ): PropertyTreeSelection {
+  let next = selection
+
+  // A node covered by a selected ancestor is uncovered the way a single
+  // uncheck does it — by expanding that ancestor into its other children — so
+  // branches the caller never named keep their selection. Without this,
+  // clearing the rows a search narrowed to would drop the whole district.
+  if (getParent) {
+    for (const node of nodes) {
+      const rolled = rollDownSelection(next, node, getParent)
+      if (rolled) next = rolled
+    }
+  }
+
   const keys = new Set(nodes.map((node) => node.key))
   const covering = new Set<string>()
   for (const node of nodes) {
     for (const ancestor of node.ancestors) covering.add(ancestor)
   }
 
-  const next = new Map(selection)
-  for (const [key, selected] of next) {
-    if (keys.has(key) || covering.has(key)) next.delete(key)
-    else if (selected.ancestors.some((a) => keys.has(a))) next.delete(key)
+  const out = new Map(next)
+  for (const [key, selected] of out) {
+    // The nodes themselves, anything they cover, and — only where roll-down
+    // could not resolve the branch — the ancestor still covering them, which
+    // would otherwise keep them checked.
+    if (keys.has(key) || covering.has(key)) out.delete(key)
+    else if (selected.ancestors.some((a) => keys.has(a))) out.delete(key)
   }
-  return next
+  return out
 }
 
 /** Remove any selected node matching level+value (chip removal sync). */

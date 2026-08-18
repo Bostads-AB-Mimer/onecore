@@ -501,31 +501,46 @@ function analyse(walk: WalkNode, q: string, searchActive: boolean): Analysis {
 
 const NO_KEYS: ReadonlySet<string> = new Set()
 
-export function buildTreeRows(
-  root: PropertyTreeRoot,
-  tree: PropertyTree | undefined,
-  loading: boolean,
-  q: string,
-  expanded: ReadonlySet<string>,
+/** What the walk needs beyond the tree itself. An options object rather than
+ * eight positional arguments: the flags are all booleans and sets, and at the
+ * call site `false, query, expanded, collapsed, true` said nothing. */
+export interface TreeRowOptions {
+  query: string
+  expanded: ReadonlySet<string>
+  /** Draws the "Laddar..." row under a root whose tree is still arriving. */
+  loading?: boolean
   /** Manual collapses that override auto-expansion (search / expand-all). */
-  collapsed: ReadonlySet<string> = NO_KEYS,
+  collapsed?: ReadonlySet<string>
   /** Header expand-all: opens the structural levels (tree data only). */
-  expandAllStructure = false,
+  expandAllStructure?: boolean
   /** The rental objects of this root, grouped by the node they hang under.
    * They join the walk tree, so searching an objektnummer works the same way
    * searching a byggnad does. */
-  objectsByParent: ReadonlyMap<string, RentalObject[]> = NO_OBJECTS
+  objectsByParent?: ReadonlyMap<string, RentalObject[]>
+}
+
+export function buildTreeRows(
+  root: PropertyTreeRoot,
+  tree: PropertyTree | undefined,
+  {
+    query,
+    expanded,
+    loading = false,
+    collapsed = NO_KEYS,
+    expandAllStructure = false,
+    objectsByParent = NO_OBJECTS,
+  }: TreeRowOptions
 ): RowSpec[] {
-  const searchActive = q.length >= MIN_SEARCH_LENGTH
+  const searchActive = query.length >= MIN_SEARCH_LENGTH
   const isOpen = (key: string, autoExpand: boolean) =>
     !collapsed.has(key) && (expanded.has(key) || autoExpand)
 
-  // Through the cache: this runs per root per render from three call sites,
-  // and the walk now carries an object leaf per rental object.
+  // Through the cache: this runs per root per render, and the walk carries an
+  // object leaf per rental object.
   const walk = tree
     ? walkTreeFor(root, tree, objectsByParent)
     : buildWalkTree(root, tree, objectsByParent)
-  const analysis = analyse(walk, q, searchActive)
+  const analysis = analyse(walk, query, searchActive)
   if (searchActive && !analysis.visible) return []
 
   const rows: RowSpec[] = []

@@ -36,6 +36,11 @@ export const etagMiddleware = () => {
 
     // Hand Koa the string we just produced; otherwise it serializes the same
     // object a second time — twice the work on the largest payloads we serve.
+    //
+    // This stays application/json because assigning the object above already
+    // set the type, and Koa only infers text/plain for a string when none is
+    // set. Anything upstream that resets ctx.body to null before this would
+    // silently turn the response into text/plain.
     ctx.body = content
   }
 }

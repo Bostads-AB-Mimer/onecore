@@ -38,7 +38,6 @@ import type {
 } from '../hooks/usePropertyTreeData'
 import {
   propertyTreeQuery,
-  usePropertyTree,
   usePropertyTreeRoots,
   usePropertyTrees,
 } from '../hooks/usePropertyTreeData'
@@ -56,9 +55,9 @@ import {
   filterSelection,
   nodeCount,
   nodeExcluded,
-  nodePartiallyExcluded,
   objectNode,
   objectParentKey,
+  rowCheckState,
 } from '../model/facets'
 import { rememberNodeLabel } from '../model/labels'
 import type {
@@ -83,105 +82,6 @@ import {
 import { OBJECT_TYPE_ICONS } from './icons'
 import { ObjectTenantRow } from './OccupantRows'
 import { COLUMN_COUNT, InfoRow, NodeRow } from './rows'
-
-function DistrictRows({
-  root,
-  query,
-  selection,
-  view,
-  expanded,
-  collapsed,
-  expandAll,
-  onToggleExpand,
-  onToggleNode,
-  selectableObjects,
-  objectsByParent,
-}: {
-  root: PropertyTreeRoot
-  query: string
-  selection: PropertyTreeSelection
-  view: ObjectFilterView
-  expanded: ReadonlySet<string>
-  collapsed: ReadonlySet<string>
-  expandAll: boolean
-  onToggleExpand: (key: string, currentlyExpanded: boolean) => void
-  onToggleNode: (node: PropertyTreeNode) => void
-  selectableObjects: boolean
-  objectsByParent: ReadonlyMap<string, RentalObject[]>
-}) {
-  const searchActive = query.length >= MIN_SEARCH_LENGTH
-  const shouldLoad = searchActive || expandAll || expanded.has(rootKeyOf(root))
-  const { data: tree, isLoading } = usePropertyTree(
-    root.grouping,
-    shouldLoad ? root.id : undefined
-  )
-
-  // Memoised because the selection is NOT an input here: without this, every
-  // checkbox click re-walks the whole loaded tree, object leaves included.
-  const rows = useMemo(
-    () =>
-      buildTreeRows(
-        root,
-        tree,
-        isLoading,
-        query,
-        expanded,
-        collapsed,
-        expandAll,
-        objectsByParent
-      ),
-    [
-      root,
-      tree,
-      isLoading,
-      query,
-      expanded,
-      collapsed,
-      expandAll,
-      objectsByParent,
-    ]
-  )
-  if (rows.length === 0) return null
-
-  return (
-    <>
-      {rows.map((row) => {
-        if (row.kind === 'object') {
-          return (
-            <ObjectTenantRow
-              key={row.node.key}
-              row={row}
-              selection={selection}
-              view={view}
-              selectableObjects={selectableObjects}
-              onToggleObject={onToggleNode}
-            />
-          )
-        }
-        // A selected node with a mix of active and excluded objects shows
-        // indeterminate — "checked" would claim its greyed members too.
-        const rawState = nodeCheckState(selection, row.node)
-        const checkState =
-          rawState === 'checked' && nodePartiallyExcluded(row.node, view)
-            ? 'indeterminate'
-            : rawState
-        return (
-          <Fragment key={row.node.key}>
-            <NodeRow
-              row={row}
-              checkState={checkState}
-              onCheck={() => onToggleNode(row.node)}
-              onToggleExpand={() => onToggleExpand(row.node.key, row.expanded)}
-              excluded={nodeExcluded(row.node, view)}
-              count={nodeCount(row.node, view)}
-            />
-            {row.loading && <InfoRow depth={row.depth + 1} label="Laddar..." />}
-          </Fragment>
-        )
-      })}
-    </>
-  )
-}
 
 /** The picker's object filters at apply time. Both restrictions default to []
  * (no restriction); subtypes are `type:code` keys. The grouping rides along so
@@ -223,7 +123,10 @@ interface PropertyTreePickerProps {
   onSelectNodes: (nodes: PropertyTreeNode[], getParent?: GetParentInfo) => void
   /** Bulk-uncheck. Its own callback rather than N onToggleNode calls, which
    * would re-select descendants as their ancestors are cleared. */
-  onDeselectNodes: (nodes: PropertyTreeNode[]) => void
+  onDeselectNodes: (
+    nodes: PropertyTreeNode[],
+    getParent?: GetParentInfo
+  ) => void
   /** Page-owned object-type filter (all four = no restriction). */
   activeObjectTypes: ReadonlySet<RentalObjectType>
   onToggleObjectType: (type: RentalObjectType) => void
@@ -300,8 +203,7 @@ export function PropertyTreePicker({
         : roots.filter((root) => expanded.has(rootKeyOf(root))),
     [roots, searchActive, expandAll, expanded]
   )
-  const trees = usePropertyTrees(grouping, loadedRoots, open)
-  const searchLoading = trees.some((t) => t.isLoading)
+  const treeState = usePropertyTrees(grouping, loadedRoots, open)
 
   // One value object carries the whole object-level filter and the counts
   // derived from it, so no part of the tree has to know which is which.
@@ -380,53 +282,82 @@ export function PropertyTreePicker({
     (nodes: PropertyTreeNode[]) => onSelectNodes(nodes, getParentInfo),
     [onSelectNodes, getParentInfo]
   )
+  // Same resolver as the single-node path: clearing the rows a search has
+  // narrowed to must not take their unshown siblings with them.
+  const handleDeselectNodes = useCallback(
+    (nodes: PropertyTreeNode[]) => onDeselectNodes(nodes, getParentInfo),
+    [onDeselectNodes, getParentInfo]
+  )
 
   /**
-   * The selectable nodes on screen right now — what the header checkbox acts
-   * on. While searching that means the matches themselves, not the ancestor
-   * rows carrying them: checking a district because one of its buildings
-   * matched would select the whole district. Nodes the filter empties are
-   * shown but never bulk-selected.
+   * Every row on screen, in order — the table and the header checkbox read
+   * this one walk. Built over every root, not just the loaded ones: a
+   * collapsed root is still a visible, selectable row.
+   *
+   * The selection is deliberately not an input: were it one, every checkbox
+   * click would re-walk the whole loaded forest, object leaves included.
    */
-  const treeByRootId = useMemo(() => {
-    const byId = new Map<string, PropertyTree | undefined>()
-    loadedRoots.forEach((root, i) => byId.set(root.id, trees[i]?.data))
-    return byId
-  }, [loadedRoots, trees])
+  const rows = useMemo(
+    () =>
+      roots.flatMap((root) => {
+        const { tree, isLoading } = treeState.stateOf(root.id)
+        return buildTreeRows(root, tree, {
+          query,
+          expanded,
+          collapsed,
+          loading: isLoading,
+          expandAllStructure: expandAll,
+          objectsByParent,
+        })
+      }),
+    [roots, treeState, query, expanded, collapsed, expandAll, objectsByParent]
+  )
 
-  const visibleNodes = useMemo(() => {
-    const noExpansion = new Set<string>()
-    // Every root, not just the loaded ones: a collapsed root is still a
-    // visible, selectable row, and selecting it covers its whole subtree.
-    return roots.flatMap((root) =>
-      buildTreeRows(
-        root,
-        treeByRootId.get(root.id),
-        false,
-        query,
-        searchActive ? noExpansion : expanded,
-        collapsed,
-        !searchActive && expandAll,
-        objectsByParent
-      )
+  /** Keys of every branch currently open. Read off the rows rather than walked
+   * for: collapse-all folds exactly what is on screen, including branches
+   * search auto-opened and ones the user opened by hand. Only collapse-all
+   * during a search reads it, so it isn't built otherwise. */
+  const openKeys = useMemo(
+    () =>
+      searchActive
+        ? rows
+            .filter((r): r is NodeRowSpec => r.kind === 'node' && r.expanded)
+            .map((r) => r.node.key)
+        : [],
+    [rows, searchActive]
+  )
+
+  /**
+   * The selectable nodes the header checkbox acts on. While searching that
+   * means the matches themselves, not the ancestor rows carrying them:
+   * checking a district because one of its buildings matched would select the
+   * whole district. Nodes the filter empties are shown but never bulk-selected.
+   */
+  const visibleNodes = useMemo(
+    () =>
+      rows
         .filter(
           (r): r is NodeRowSpec =>
             r.kind === 'node' && (!searchActive || !!r.matched)
         )
         .map((r) => r.node)
-        .filter((n) => n.selectable !== false && !nodeExcluded(n, view))
-    )
-  }, [
-    roots,
-    treeByRootId,
-    query,
-    searchActive,
-    expanded,
-    collapsed,
-    expandAll,
-    view,
-    objectsByParent,
-  ])
+        .filter((n) => n.selectable !== false && !nodeExcluded(n, view)),
+    [rows, searchActive, view]
+  )
+
+  // Header checkbox state. Memoised together: both scan every visible node,
+  // and neither changes except when the selection or the rows do.
+  const { allVisibleSelected, someVisibleSelected } = useMemo(() => {
+    const all =
+      visibleNodes.length > 0 &&
+      visibleNodes.every((n) => nodeCheckState(selection, n) === 'checked')
+    return {
+      allVisibleSelected: all,
+      someVisibleSelected:
+        !all &&
+        visibleNodes.some((n) => nodeCheckState(selection, n) !== 'unchecked'),
+    }
+  }, [visibleNodes, selection])
 
   // Latently-selected nodes excluded by the type filter are not applied (nor
   // counted) but stay in the selection so re-enabling the type restores them.
@@ -466,25 +397,8 @@ export function PropertyTreePicker({
   const totalCriteria = effectiveSelection.size + expandedDescendants.length
   const overCap = includeDescendants && totalCriteria > MAX_EXPANDED_CRITERIA
 
-  // Keys of every branch currently open in search mode (auto-opened matches
-  // minus manual overrides) — collapse-all folds exactly these.
-  const searchOpenKeys = useMemo(() => {
-    if (!searchActive) return []
-    return roots.flatMap((root) =>
-      buildTreeRows(
-        root,
-        treeByRootId.get(root.id),
-        false,
-        query,
-        expanded,
-        collapsed,
-        false
-      )
-        .filter((r): r is NodeRowSpec => r.kind === 'node' && r.expanded)
-        .map((r) => r.node.key)
-    )
-  }, [searchActive, roots, treeByRootId, query, expanded, collapsed])
-
+  // A callback, not a memo: in 'button' mode nothing reads this until the user
+  // clicks, so there is no reason to rebuild it on every filter change.
   const applyPayload = useCallback((): [
     PropertyTreeNode[],
     PropertyTreeFilters,
@@ -492,9 +406,6 @@ export function PropertyTreePicker({
     const nodes = new Map<string, PropertyTreeNode>()
     for (const node of effectiveSelection.values()) nodes.set(node.key, node)
     for (const node of expandedDescendants) nodes.set(node.key, node)
-    for (const node of nodes.values()) {
-      rememberNodeLabel(node.level, node.value, node.label)
-    }
     return [
       [...nodes.values()],
       {
@@ -502,7 +413,9 @@ export function PropertyTreePicker({
         objectTypes: isTypeFilterActive(activeObjectTypes)
           ? ALL_RENTAL_OBJECT_TYPES.filter((t) => activeObjectTypes.has(t))
           : [],
-        subtypes: [...activeSubtypes],
+        // Sorted for the same reason selectionToScopes sorts: this array lands
+        // in a react-query key, and tick order must not split the cache.
+        subtypes: [...activeSubtypes].sort(),
         grouping,
       },
     ]
@@ -514,13 +427,31 @@ export function PropertyTreePicker({
     grouping,
   ])
 
-  const handleApply = () => onApply(...applyPayload())
+  // Both refs are declared before emitApply reads them: it is only ever called
+  // from a click or an effect today, but a future caller during render would
+  // hit the temporal dead zone, and neither TS nor eslint would catch it.
+  const onApplyRef = useRef(onApply)
+  onApplyRef.current = onApply
+  const applyPayloadRef = useRef(applyPayload)
+  applyPayloadRef.current = applyPayload
+
+  /** Applying is also when the picker teaches the label cache what a stored
+   * criterion value is called. Kept out of applyPayload, which several things
+   * call: the labels should be recorded when an apply happens, not whenever
+   * the payload is built. */
+  const emitApply = useCallback(() => {
+    const [nodes, filters] = applyPayloadRef.current()
+    for (const node of nodes) {
+      rememberNodeLabel(node.level, node.value, node.label)
+    }
+    onApplyRef.current(nodes, filters)
+  }, [])
 
   /**
    * Live mode has no apply button: every check and every filter click is the
-   * apply. Keyed on what the payload *contains* rather than on the callback's
-   * identity — counts arriving re-derive the selection object, and firing on
-   * that would re-apply on renders instead of on changes.
+   * apply. Keyed on what the payload *contains* rather than on its identity —
+   * counts arriving re-derive the selection, and firing on that would re-apply
+   * on renders instead of on changes.
    */
   const applySignature = useMemo(
     () =>
@@ -542,15 +473,11 @@ export function PropertyTreePicker({
       expandedDescendants,
     ]
   )
-  const onApplyRef = useRef(onApply)
-  onApplyRef.current = onApply
-  const applyPayloadRef = useRef(applyPayload)
-  applyPayloadRef.current = applyPayload
   useEffect(() => {
     if (applyMode !== 'live' || overCap) return
-    onApplyRef.current(...applyPayloadRef.current())
-    // Both refs are stable; applySignature is the real dependency.
-  }, [applyMode, overCap, applySignature])
+    emitApply()
+    // emitApply reads both refs; applySignature is the real dependency.
+  }, [applyMode, overCap, applySignature, emitApply])
 
   if (!open) return null
 
@@ -574,15 +501,16 @@ export function PropertyTreePicker({
   }
 
   const anyExpanded = searchActive
-    ? searchOpenKeys.length > 0
+    ? openKeys.length > 0
     : expandAll || expanded.size > 0
   const handleExpandCollapseAll = () => {
     // Search mode: fold/restore the auto-opened matches via the override set.
     if (searchActive) {
       if (anyExpanded) {
+        setExpandAll(false)
         setCollapsed((prev) => {
           const next = new Set(prev)
-          for (const key of searchOpenKeys) next.add(key)
+          for (const key of openKeys) next.add(key)
           return next
         })
       } else {
@@ -653,16 +581,10 @@ export function PropertyTreePicker({
   }
 
   // Header checkbox: covers every visible node, or clears them again.
-  const allVisibleSelected =
-    visibleNodes.length > 0 &&
-    visibleNodes.every((n) => nodeCheckState(selection, n) === 'checked')
-  const someVisibleSelected =
-    !allVisibleSelected &&
-    visibleNodes.some((n) => nodeCheckState(selection, n) !== 'unchecked')
 
   const handleToggleAllVisible = () => {
     if (allVisibleSelected) {
-      onDeselectNodes(visibleNodes)
+      handleDeselectNodes(visibleNodes)
       return
     }
     handleSelectNodes(visibleNodes)
@@ -843,23 +765,35 @@ export function PropertyTreePicker({
               </TableRow>
             ) : (
               <>
-                {roots.map((root) => (
-                  <DistrictRows
-                    key={root.id}
-                    root={root}
-                    query={query}
-                    selection={selection}
-                    view={view}
-                    expanded={expanded}
-                    collapsed={collapsed}
-                    expandAll={expandAll}
-                    onToggleExpand={handleToggleExpand}
-                    onToggleNode={handleToggleNode}
-                    selectableObjects={selectableObjects}
-                    objectsByParent={objectsByParent}
-                  />
-                ))}
-                {searchActive && searchLoading && (
+                {rows.map((row) =>
+                  row.kind === 'object' ? (
+                    <ObjectTenantRow
+                      key={row.node.key}
+                      row={row}
+                      selection={selection}
+                      view={view}
+                      selectableObjects={selectableObjects}
+                      onToggleObject={handleToggleNode}
+                    />
+                  ) : (
+                    <Fragment key={row.node.key}>
+                      <NodeRow
+                        row={row}
+                        checkState={rowCheckState(selection, row.node, view)}
+                        onCheck={() => handleToggleNode(row.node)}
+                        onToggleExpand={() =>
+                          handleToggleExpand(row.node.key, row.expanded)
+                        }
+                        excluded={nodeExcluded(row.node, view)}
+                        count={nodeCount(row.node, view)}
+                      />
+                      {row.loading && (
+                        <InfoRow depth={row.depth + 1} label="Laddar..." />
+                      )}
+                    </Fragment>
+                  )
+                )}
+                {searchActive && treeState.isLoading && (
                   <TableRow>
                     <TableCell
                       colSpan={COLUMN_COUNT}
@@ -870,7 +804,7 @@ export function PropertyTreePicker({
                   </TableRow>
                 )}
                 {searchActive &&
-                  !searchLoading &&
+                  !treeState.isLoading &&
                   visibleNodes.length === 0 && (
                     <TableRow>
                       <TableCell
@@ -922,7 +856,7 @@ export function PropertyTreePicker({
           )}
           {applyMode === 'button' && (
             <Button
-              onClick={handleApply}
+              onClick={emitApply}
               disabled={effectiveSelection.size === 0 || overCap}
               title={
                 overCap

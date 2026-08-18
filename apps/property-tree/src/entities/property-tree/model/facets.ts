@@ -9,6 +9,7 @@
 import type { RentalObjectSummary as RentalObject } from '@/services/api/core/rentalObjectService'
 
 import type {
+  CheckState,
   PropertyTreeNode,
   PropertyTreeSelection,
   RentalObjectType,
@@ -16,6 +17,7 @@ import type {
 import {
   countForTypes,
   isTypeFilterActive,
+  nodeCheckState,
   nodeExcludedByTypes,
   nodeKey,
   nodePartiallyExcludedByTypes,
@@ -253,6 +255,19 @@ export function nodePartiallyExcluded(
     return count > 0 && count < total
   }
   return nodePartiallyExcludedByTypes(node, view.filter.types)
+}
+
+/** The checkbox state of one tree row: what the selection says, except that a
+ * selected node holding filtered-out objects reads indeterminate. */
+export function rowCheckState(
+  selection: PropertyTreeSelection,
+  node: Pick<PropertyTreeNode, 'key' | 'ancestors' | 'typeCounts'>,
+  view: ObjectFilterView
+): CheckState {
+  const state = nodeCheckState(selection, node)
+  return state === 'checked' && nodePartiallyExcluded(node, view)
+    ? 'indeterminate'
+    : state
 }
 
 /** The selection minus nodes the filter empties. Excluded nodes stay latent in

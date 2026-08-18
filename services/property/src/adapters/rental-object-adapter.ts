@@ -441,12 +441,15 @@ export const buildRentalObjectDetails = async (
       const promise = batch.then(
         (byProperty) => byProperty.get(code) ?? [],
         (err) => {
-          detailsCache.delete(code)
+          // Only this entry: a slow failure settling after a refresh must not
+          // evict the newer, successful one that replaced it.
+          if (detailsCache.get(code) === entry) detailsCache.delete(code)
           throw err
         }
       )
       promise.catch(() => undefined)
-      detailsCache.set(code, { promise, expiresAt })
+      const entry = { promise, expiresAt }
+      detailsCache.set(code, entry)
     }
   }
 

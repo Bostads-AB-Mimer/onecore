@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { z } from 'zod'
 
 import {
@@ -12,7 +12,9 @@ import {
   PropertyTreeSchema,
 } from '../types/property-tree'
 
-const QueryParamsSchema = z.object({
+import { parseRequest } from '../middleware/parse-request'
+
+const GetPropertyTreeQueryParamsSchema = z.object({
   groupBy: PropertyGroupingSchema,
   // Cost center: uuid. Marknadsområde: babya.code. Företag: company code.
   rootId: z.string().min(1),
@@ -61,9 +63,9 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (err) {
+      logger.error({ err }, 'Error fetching market areas')
       ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
+      ctx.body = { reason: 'Internal server error', ...metadata }
     }
   })
 
@@ -117,32 +119,29 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    */
-  router.get('(.*)/property-tree', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const parsed = QueryParamsSchema.safeParse(ctx.query)
-    if (!parsed.success) {
-      ctx.status = 400
-      ctx.body = { reason: 'Invalid query parameters', ...metadata }
-      return
-    }
-    try {
-      const tree = await getPropertyTree(
-        parsed.data.groupBy,
-        parsed.data.rootId
-      )
-      if (!tree) {
-        ctx.status = 404
-        ctx.body = { reason: 'Root not found', ...metadata }
-        return
+  router.get(
+    '(.*)/property-tree',
+    parseRequest({ query: GetPropertyTreeQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { groupBy, rootId } = ctx.request.parsedQuery
+
+      try {
+        const tree = await getPropertyTree(groupBy, rootId)
+        if (!tree) {
+          ctx.status = 404
+          ctx.body = { reason: 'Root not found', ...metadata }
+          return
+        }
+        ctx.body = {
+          content: PropertyTreeSchema.parse(tree),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error({ err }, 'Error fetching property tree')
+        ctx.status = 500
+        ctx.body = { reason: 'Internal server error', ...metadata }
       }
-      ctx.body = {
-        content: PropertyTreeSchema.parse(tree),
-        ...metadata,
-      }
-    } catch (err) {
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
     }
-  })
+  )
 }

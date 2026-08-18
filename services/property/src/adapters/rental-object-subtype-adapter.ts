@@ -14,9 +14,7 @@ import { prisma } from './db'
  * caption tables hold plenty of historical entries that would otherwise show
  * up as filter options matching nothing.
  */
-export const listRentalObjectSubtypes = async (): Promise<
-  RentalObjectSubtype[]
-> => {
+const fetchRentalObjectSubtypes = async (): Promise<RentalObjectSubtype[]> => {
   const companiesJson = JSON.stringify(OPERATING_COMPANY_CODES)
 
   try {
@@ -26,7 +24,7 @@ export const listRentalObjectSubtypes = async (): Promise<
       FROM dbo.babuf s
       INNER JOIN dbo.balgh o ON o.keycmobj = s.keycmobj
       INNER JOIN dbo.balgt t ON t.keybalgt = o.keybalgt
-      WHERE s.deletemark = 0 AND t.caption IS NOT NULL
+      WHERE s.deletemark = 0 AND t.caption IS NOT NULL AND t.code IS NOT NULL
         AND LTRIM(RTRIM(s.cmpcode)) IN
             (SELECT value FROM OPENJSON(${companiesJson}))
 
@@ -36,7 +34,7 @@ export const listRentalObjectSubtypes = async (): Promise<
       FROM dbo.babuf s
       INNER JOIN dbo.babps o ON o.keycmobj = s.keycmobj
       INNER JOIN dbo.babpt t ON t.keybabpt = o.keybabpt
-      WHERE s.deletemark = 0 AND t.caption IS NOT NULL
+      WHERE s.deletemark = 0 AND t.caption IS NOT NULL AND t.code IS NOT NULL
         AND LTRIM(RTRIM(s.cmpcode)) IN
             (SELECT value FROM OPENJSON(${companiesJson}))
 
@@ -46,7 +44,7 @@ export const listRentalObjectSubtypes = async (): Promise<
       FROM dbo.babuf s
       INNER JOIN dbo.balok o ON o.keycmobj = s.keycmobj
       INNER JOIN dbo.balot t ON t.keybalot = o.keybalot
-      WHERE s.deletemark = 0 AND t.caption IS NOT NULL
+      WHERE s.deletemark = 0 AND t.caption IS NOT NULL AND t.code IS NOT NULL
         AND LTRIM(RTRIM(s.cmpcode)) IN
             (SELECT value FROM OPENJSON(${companiesJson}))
 
@@ -56,7 +54,7 @@ export const listRentalObjectSubtypes = async (): Promise<
       FROM dbo.babuf s
       INNER JOIN dbo.bahyr o ON o.keycmobj = s.keycmobj
       INNER JOIN dbo.bahyt t ON t.keybahyt = o.keybahyt
-      WHERE s.deletemark = 0 AND t.caption IS NOT NULL
+      WHERE s.deletemark = 0 AND t.caption IS NOT NULL AND t.code IS NOT NULL
         AND LTRIM(RTRIM(s.cmpcode)) IN
             (SELECT value FROM OPENJSON(${companiesJson}))
 
@@ -68,4 +66,33 @@ export const listRentalObjectSubtypes = async (): Promise<
     logger.error({ err }, 'rental-object-subtype-adapter.list')
     throw err
   }
+}
+
+// Captions change about as rarely as the hierarchy does, but the query is four
+// scans of babuf and the filter panel asks for them on every mount. Cached the
+// same way the market areas are — the promise, so concurrent callers share one
+// query instead of each starting their own.
+const SUBTYPE_CACHE_TTL_MS = 60 * 60 * 1000
+
+let subtypeCache:
+  | { promise: Promise<RentalObjectSubtype[]>; expiresAt: number }
+  | undefined
+
+export const clearRentalObjectSubtypeCache = (): void => {
+  subtypeCache = undefined
+}
+
+export const listRentalObjectSubtypes = (): Promise<RentalObjectSubtype[]> => {
+  const now = Date.now()
+  if (!subtypeCache || subtypeCache.expiresAt <= now) {
+    const promise = fetchRentalObjectSubtypes()
+    const entry = { promise, expiresAt: now + SUBTYPE_CACHE_TTL_MS }
+    // Don't cache failures — the next request should retry. Only clear this
+    // entry, or a slow failure would evict the newer one that replaced it.
+    promise.catch(() => {
+      if (subtypeCache === entry) subtypeCache = undefined
+    })
+    subtypeCache = entry
+  }
+  return subtypeCache.promise
 }

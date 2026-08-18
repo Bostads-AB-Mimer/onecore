@@ -341,9 +341,11 @@ const ensureCached = (uniqueCodes: string[], now: number): void => {
 
   const expiresAt = now + SUBTREE_CACHE_TTL_MS
   for (const code of uniqueCodes) {
-    // Don't cache failures — the next request should retry.
+    // Don't cache failures — the next request should retry. Only this entry
+    // though: a slow failure settling after a refresh must not evict the
+    // newer, successful entry that replaced it.
     const onError = (err: unknown) => {
-      subtreeCache.delete(code)
+      if (subtreeCache.get(code) === entry) subtreeCache.delete(code)
       throw err
     }
     const subtree = subtreeBatch.then(
@@ -353,7 +355,8 @@ const ensureCached = (uniqueCodes: string[], now: number): void => {
     const objects = objectBatch.then((m) => m.get(code) ?? [], onError)
     subtree.catch(() => undefined)
     objects.catch(() => undefined)
-    subtreeCache.set(code, { subtree, objects, expiresAt })
+    const entry = { subtree, objects, expiresAt }
+    subtreeCache.set(code, entry)
   }
 }
 

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { queryOptions, skipToken, useQuery } from '@tanstack/react-query'
 
 import { propertyTreeService } from '@/services/api/core/propertyTreeService'
 import type { RentalObjectSummary as RentalObject } from '@/services/api/core/rentalObjectService'
@@ -12,13 +12,16 @@ export type { RentalObject }
  * both read the same cache entry. */
 export const rootRentalObjectsQuery = (
   grouping: TreeGrouping,
-  rootId: string
-) => ({
-  queryKey: ['rootRentalObjects', grouping, rootId],
-  queryFn: () => propertyTreeService.getRootRentalObjects(grouping, rootId),
-  staleTime: TREE_STALE_TIME,
-  gcTime: TREE_GC_TIME,
-})
+  rootId: string | undefined
+) =>
+  queryOptions({
+    queryKey: ['rootRentalObjects', grouping, rootId],
+    queryFn: rootId
+      ? () => propertyTreeService.getRootRentalObjects(grouping, rootId)
+      : skipToken,
+    staleTime: TREE_STALE_TIME,
+    gcTime: TREE_GC_TIME,
+  })
 
 /**
  * Every rental object under one grouping root, fetched alongside the tree and
@@ -29,8 +32,4 @@ export const rootRentalObjectsQuery = (
 export const useRootRentalObjects = (
   grouping: TreeGrouping,
   rootId: string | undefined
-) =>
-  useQuery({
-    ...rootRentalObjectsQuery(grouping, rootId as string),
-    enabled: !!rootId,
-  })
+) => useQuery(rootRentalObjectsQuery(grouping, rootId))

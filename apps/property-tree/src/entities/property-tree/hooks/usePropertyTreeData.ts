@@ -1,5 +1,11 @@
-import { useMemo } from 'react'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useCallback, useMemo } from 'react'
+import type { UseQueryResult } from '@tanstack/react-query'
+import {
+  queryOptions,
+  skipToken,
+  useQueries,
+  useQuery,
+} from '@tanstack/react-query'
 
 import { costCenterService } from '@/services/api/core/costCenterService'
 import type {
@@ -75,32 +81,80 @@ export const usePropertyTreeRoots = (grouping: TreeGrouping) => {
 
 /** One definition of a tree query — key, fetcher and both TTLs. Every hook
  * that wants a tree builds from this, so they share the cache entry and the
- * key can't drift between them. */
-export const propertyTreeQuery = (grouping: TreeGrouping, rootId: string) => ({
-  queryKey: ['propertyTree', grouping, rootId],
-  queryFn: () => propertyTreeService.getTree(grouping, rootId),
-  staleTime: TREE_STALE_TIME,
-  gcTime: TREE_GC_TIME,
-})
+ * key can't drift between them.
+ *
+ * Without a root there is nothing to fetch, which skipToken says in the type
+ * rather than through an `enabled` flag the fetcher can't see. */
+export const propertyTreeQuery = (
+  grouping: TreeGrouping,
+  rootId: string | undefined
+) =>
+  queryOptions({
+    queryKey: ['propertyTree', grouping, rootId],
+    queryFn: rootId
+      ? () => propertyTreeService.getTree(grouping, rootId)
+      : skipToken,
+    staleTime: TREE_STALE_TIME,
+    gcTime: TREE_GC_TIME,
+  })
 
 export const usePropertyTree = (
   grouping: TreeGrouping,
   rootId: string | undefined
-) =>
-  useQuery({
-    ...propertyTreeQuery(grouping, rootId as string),
-    enabled: !!rootId,
-  })
+) => useQuery(propertyTreeQuery(grouping, rootId))
 
-/** Every root's tree at once (same cache entries as the per-root hook).
- * Used by search, which spans all roots of the current grouping. */
+/** One root's tree and whether it is still arriving. */
+export interface RootTreeState {
+  tree: PropertyTree | undefined
+  isLoading: boolean
+}
+
+const NOT_LOADED: RootTreeState = { tree: undefined, isLoading: false }
+
+/**
+ * Every root's tree at once, keyed by root id (same cache entries as the
+ * per-root hook). Keyed rather than positional: callers used to zip the result
+ * array against their own root list, and one of them zipped it against a
+ * different list than the one it was fetched with.
+ *
+ * Roots that aren't being loaded answer `NOT_LOADED` rather than going missing,
+ * so callers can ask about any root without checking membership first.
+ */
 export const usePropertyTrees = (
   grouping: TreeGrouping,
   roots: PropertyTreeRoot[],
   enabled: boolean
-) =>
-  useQueries({
-    queries: (enabled ? roots : []).map((root) =>
-      propertyTreeQuery(grouping, root.id)
-    ),
+) => {
+  const queried = useMemo(() => (enabled ? roots : []), [enabled, roots])
+
+  /**
+   * Combined here rather than in a useMemo over the results array, so the
+   * memoisation is react-query's rather than a bet on that array staying
+   * referentially stable — callers memoise whole tree walks on this value.
+   *
+   * A closure, unlike useObjectFacets' module-level combines: results carry no
+   * query key, and a root still in flight has no `data.id` to key it by, so
+   * the roots have to come from outside. Stable as long as `queried` is.
+   */
+  const combine = useCallback(
+    (results: UseQueryResult<PropertyTree | undefined>[]) => {
+      const states = new Map<string, RootTreeState>()
+      queried.forEach((root, i) => {
+        states.set(root.id, {
+          tree: results[i]?.data,
+          isLoading: !!results[i]?.isLoading,
+        })
+      })
+      return {
+        stateOf: (rootId: string) => states.get(rootId) ?? NOT_LOADED,
+        isLoading: results.some((r) => r.isLoading),
+      }
+    },
+    [queried]
+  )
+
+  return useQueries({
+    queries: queried.map((root) => propertyTreeQuery(grouping, root.id)),
+    combine,
   })
+}

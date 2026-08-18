@@ -76,11 +76,14 @@ export const listMarketAreas = (): Promise<MarketArea[]> => {
   const now = Date.now()
   if (!marketAreaCache || marketAreaCache.expiresAt <= now) {
     const promise = fetchMarketAreas()
-    // Don't cache failures — the next request should retry.
+    const entry = { promise, expiresAt: now + MARKET_AREA_CACHE_TTL_MS }
+    // Don't cache failures — the next request should retry. Only clear this
+    // entry: a slow failure settling after a refresh must not evict the newer
+    // successful one that replaced it.
     promise.catch(() => {
-      marketAreaCache = undefined
+      if (marketAreaCache === entry) marketAreaCache = undefined
     })
-    marketAreaCache = { promise, expiresAt: now + MARKET_AREA_CACHE_TTL_MS }
+    marketAreaCache = entry
   }
   return marketAreaCache.promise
 }
@@ -171,11 +174,19 @@ const resolveRootPropertyCodes = async (
 ): Promise<string[] | null> => {
   if (grouping === 'costCenter') return resolveCostCenterPropertyCodes(rootId)
   if (grouping === 'marketArea') {
-    const codes = await resolveMarketAreaPropertyCodes(rootId)
-    return codes.length > 0 ? codes : null
+    const areas = await listMarketAreas()
+    const area = areas.find((a) => a.code === rootId.trim())
+    // null means "no such root", not "root holds nothing" — an existing but
+    // empty root answers 200 with an empty list, as the cost-centre path
+    // already did. Otherwise the same situation 404s or not by grouping.
+    if (!area) return null
+    return resolveMarketAreaPropertyCodes(area.code)
   }
-  const codes = await resolveCompanyPropertyCodes(rootId)
-  return codes.length > 0 ? codes : null
+  const code = rootId.trim()
+  if (!(OPERATING_COMPANY_CODES as readonly string[]).includes(code)) {
+    return null
+  }
+  return resolveCompanyPropertyCodes(code)
 }
 
 /**
