@@ -90,20 +90,12 @@ export const NodeRow = memo(function NodeRow({
   // Row click expands; checkbox and name select (and stop propagation).
   return (
     <TableRow
-      onClick={row.expandable ? toggleExpand : undefined}
-      className={
-        row.expandable
-          ? 'cursor-pointer transition-colors hover:bg-muted'
-          : 'hover:bg-muted'
-      }
+      onClick={toggleExpand}
+      className="cursor-pointer transition-colors hover:bg-muted"
     >
       <TableCell className="py-2">
         <Indent depth={row.depth}>
-          {row.expandable ? (
-            <ExpandChevron expanded={row.expanded} onToggle={toggleExpand} />
-          ) : (
-            <span className="w-5 shrink-0" />
-          )}
+          <ExpandChevron expanded={row.expanded} onToggle={toggleExpand} />
           <Checkbox
             checked={checkboxChecked(displayState)}
             disabled={excluded}

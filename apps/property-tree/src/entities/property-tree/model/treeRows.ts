@@ -16,7 +16,7 @@ import type {
   PropertyTreeLevel,
   PropertyTreeNode,
 } from './selection'
-import { nodeKey } from './selection'
+import { nodeKey, parkingAreaKey, staircaseComposite } from './selection'
 
 /**
  * How each grouping maps onto picker levels — the one place to edit when a
@@ -63,7 +63,6 @@ export interface NodeRowSpec {
   kind: 'node'
   node: PropertyTreeNode
   depth: number
-  expandable: boolean
   expanded: boolean
   loading?: boolean
   code: string
@@ -95,9 +94,6 @@ export type RowSpec = NodeRowSpec | ObjectRowSpec
 
 const matches = (q: string, ...parts: (string | null | undefined)[]) =>
   parts.some((p) => p?.toLowerCase().includes(q))
-
-const staircaseComposite = (buildingCode: string, staircaseCode: string) =>
-  `${buildingCode}-${staircaseCode}`
 
 /** KVV-areas are known by their responsible person; the code is already shown
  * in the Kod column. Display only — the stored criterion is always the code. */
@@ -393,7 +389,7 @@ function buildWalkTree(
         node: {
           // Property-scoped: one physical parkeringsområde can be split
           // between two fastigheter, and then its code alone isn't unique.
-          key: nodeKey('parkingArea', `${p.code}:${pa.code}`),
+          key: parkingAreaKey(p.code, pa.code),
           level: 'parkingArea',
           value: pa.code,
           label: pa.name ?? pa.code,
@@ -545,7 +541,6 @@ export function buildTreeRows(
       kind: 'node',
       node: walk.node,
       depth,
-      expandable: true,
       expanded: isExpanded,
       ...(depth === 0 ? { loading: isExpanded && loading } : {}),
       code: walk.code,

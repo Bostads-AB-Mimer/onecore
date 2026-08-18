@@ -7,20 +7,13 @@ import {
   useState,
 } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  ChevronDown,
-  ChevronsDownUp,
-  ChevronsUpDown,
-  Search,
-  X,
-} from 'lucide-react'
+import { ChevronsDownUp, ChevronsUpDown, Search, X } from 'lucide-react'
 
 import { useDebounce } from '@/shared/hooks/useDebounce'
 import { Button } from '@/shared/ui/Button'
 import { Card } from '@/shared/ui/Card'
 import { Checkbox } from '@/shared/ui/Checkbox'
 import { Input } from '@/shared/ui/Input'
-import { Popover, PopoverAnchor, PopoverContent } from '@/shared/ui/Popover'
 import {
   Table,
   TableBody,
@@ -31,7 +24,6 @@ import {
 } from '@/shared/ui/Table'
 
 import { useObjectFacets } from '../hooks/useObjectFacets'
-import { RENTAL_OBJECT_GROUP_LABELS } from '../hooks/useOccupantData'
 import type {
   PropertyTree,
   PropertyTreeRoot,
@@ -42,10 +34,6 @@ import {
   usePropertyTreeRoots,
   usePropertyTrees,
 } from '../hooks/usePropertyTreeData'
-import {
-  subtypeKey,
-  useRentalObjectSubtypes,
-} from '../hooks/useRentalObjectSubtypes'
 import { rootRentalObjectsQuery } from '../hooks/useRootRentalObjects'
 import type { GetParentInfo } from '../hooks/useTreeSelectionState'
 import type {
@@ -59,7 +47,6 @@ import {
   nodeExcluded,
   objectNode,
   objectParentKey,
-  objectRowExcluded,
   rowCheckState,
 } from '../model/facets'
 import { rememberNodeLabel } from '../model/labels'
@@ -83,7 +70,7 @@ import {
   MIN_SEARCH_LENGTH,
   rootKeyOf,
 } from '../model/treeRows'
-import { OBJECT_TYPE_ICONS } from './icons'
+import { ObjectTypeFilterButtonGroup } from './ObjectTypeFilterButtonGroup'
 import { ObjectTenantRow } from './OccupantRows'
 import { COLUMN_COUNT, InfoRow, NodeRow } from './rows'
 
@@ -169,10 +156,6 @@ export function PropertyTreePicker({
   onToggleSubtype,
 }: PropertyTreePickerProps) {
   const [grouping, setGrouping] = useState<TreeGrouping>(groupings[0])
-  const [subtypeMenu, setSubtypeMenu] = useState<RentalObjectType | null>(null)
-  // Clicks inside the strip must not count as outside-clicks: the chevrons'
-  // own onClick decides whether the menu toggles or switches type.
-  const typeStripRef = useRef<HTMLDivElement>(null)
   // Manual open (true) / close (false) per key; absent = auto-expansion
   // (search hits, expand-all) decides.
   const [expandOverrides, setExpandOverrides] = useState<
@@ -192,8 +175,6 @@ export function PropertyTreePicker({
       return new Map([...prev].filter(([, open]) => open))
     })
   }, [query])
-
-  const { byType: subtypesByType } = useRentalObjectSubtypes()
 
   const { roots, isLoading: rootsLoading } = usePropertyTreeRoots(grouping)
 
@@ -616,50 +597,6 @@ export function PropertyTreePicker({
     }
   }
 
-  /** Subtype checkboxes for one object type. */
-  const renderSubtypeMenu = (type: RentalObjectType) => {
-    const options = subtypesByType.get(type) ?? []
-    const chosenKeys = options
-      .map((s) => subtypeKey(type, s.code))
-      .filter((key) => activeSubtypes.has(key))
-    return (
-      <>
-        <div className="flex items-center justify-between px-2 py-1.5">
-          <span className="text-xs text-muted-foreground">
-            {RENTAL_OBJECT_GROUP_LABELS[type]}:{' '}
-            {chosenKeys.length === 0
-              ? 'alla typer'
-              : `${chosenKeys.length} av ${options.length}`}
-          </span>
-          {chosenKeys.length > 0 && (
-            <button
-              type="button"
-              className="text-xs text-primary hover:underline"
-              onClick={() => chosenKeys.forEach(onToggleSubtype)}
-            >
-              Rensa
-            </button>
-          )}
-        </div>
-        {options.map((s) => {
-          const key = subtypeKey(type, s.code)
-          return (
-            <label
-              key={key}
-              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
-            >
-              <Checkbox
-                checked={activeSubtypes.has(key)}
-                onCheckedChange={() => onToggleSubtype(key)}
-              />
-              <span className="truncate">{s.name}</span>
-            </label>
-          )
-        })}
-      </>
-    )
-  }
-
   // Header checkbox: covers every visible node, or clears them again.
 
   const handleToggleAllVisible = () => {
@@ -720,93 +657,12 @@ export function PropertyTreePicker({
             className="pl-10"
           />
         </div>
-        {/* Anchored to the whole strip, not the chevron that opened it, so the
-            panel stays in the same place whichever type is picked. */}
-        <Popover
-          open={subtypeMenu !== null}
-          onOpenChange={(isOpen) => {
-            if (!isOpen) setSubtypeMenu(null)
-          }}
-        >
-          <PopoverAnchor asChild>
-            <div
-              ref={typeStripRef}
-              className="inline-flex divide-x overflow-hidden rounded-md border"
-            >
-              {ALL_RENTAL_OBJECT_TYPES.map((type) => {
-                const TypeIcon = OBJECT_TYPE_ICONS[type]
-                const active = activeObjectTypes.has(type)
-                const options = subtypesByType.get(type) ?? []
-                const chosen = options.filter((s) =>
-                  activeSubtypes.has(subtypeKey(type, s.code))
-                ).length
-                return (
-                  <div key={type} className="inline-flex">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Deactivating a type closes its own open subtype menu.
-                        if (active && subtypeMenu === type) setSubtypeMenu(null)
-                        onToggleObjectType(type)
-                      }}
-                      aria-pressed={active}
-                      title={RENTAL_OBJECT_GROUP_LABELS[type]}
-                      className={
-                        active
-                          ? 'inline-flex items-center gap-1.5 bg-primary py-1.5 pl-3 pr-2 text-sm font-medium text-primary-foreground transition-colors'
-                          : 'inline-flex items-center gap-1.5 bg-background py-1.5 pl-3 pr-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted'
-                      }
-                    >
-                      <TypeIcon className="h-4 w-4" />
-                      <span className="hidden @2xl:inline">
-                        {RENTAL_OBJECT_GROUP_LABELS[type]}
-                      </span>
-                      {chosen > 0 && (
-                        <span className="rounded-full bg-background/25 px-1.5 text-xs">
-                          {chosen}
-                        </span>
-                      )}
-                    </button>
-                    {active && options.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSubtypeMenu((current) =>
-                            current === type ? null : type
-                          )
-                        }
-                        aria-label={`Välj ${RENTAL_OBJECT_GROUP_LABELS[
-                          type
-                        ].toLowerCase()}typ`}
-                        className={
-                          active
-                            ? 'bg-primary pr-2 text-primary-foreground'
-                            : 'bg-background pr-2 text-muted-foreground'
-                        }
-                      >
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </PopoverAnchor>
-          {subtypeMenu && (
-            <PopoverContent
-              align="start"
-              className="max-h-72 w-64 overflow-y-auto p-1"
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onInteractOutside={(e) => {
-                if (typeStripRef.current?.contains(e.target as Node)) {
-                  e.preventDefault()
-                }
-              }}
-            >
-              {renderSubtypeMenu(subtypeMenu)}
-            </PopoverContent>
-          )}
-        </Popover>
+        <ObjectTypeFilterButtonGroup
+          activeObjectTypes={activeObjectTypes}
+          onToggleObjectType={onToggleObjectType}
+          activeSubtypes={activeSubtypes}
+          onToggleSubtype={onToggleSubtype}
+        />
       </div>
 
       <div className="@container rounded-md border">
@@ -883,7 +739,7 @@ export function PropertyTreePicker({
                         row.node,
                         coveredKeys
                       )}
-                      excluded={objectRowExcluded(row.object, view)}
+                      excluded={nodeExcluded(row.node, view)}
                       selectableObjects={selectableObjects}
                       onToggleObject={handleToggleNode}
                     />

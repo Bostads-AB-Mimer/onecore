@@ -1,28 +1,22 @@
-// Selection model for the hierarchical audience picker (MIM-1938).
-// A selection stores exactly the nodes the user checked — no ancestor or
-// descendant expansion. Checked state cascades visually: a selected node
-// covers its whole subtree, and every ancestor of a selected node renders
-// as indeterminate.
+// Selection model for the hierarchical audience picker (MIM-1938). A selection
+// stores exactly the checked nodes — no ancestor/descendant expansion. Checked
+// state cascades visually: a node covers its subtree, ancestors render
+// indeterminate.
 
 import type { RentalObjectType } from '@/services/api/core/rentalObjectService'
 
 export type PropertyTreeLevel =
   | 'district'
   | 'kvvArea'
-  // Marknadsområde (babya) — an alternative top level to district/KVV-area,
-  // grouping the same properties a different way.
-  | 'marketArea'
+  | 'marketArea' // babya — alternative top level grouping the same properties
   | 'property'
   | 'building'
   | 'parkingArea'
   | 'staircase'
-  // A single rental object. Only selectable where a consumer opts in;
-  // elsewhere the leaf rows just mirror their parent.
-  | 'object'
+  | 'object' // single rental object; selectable only where a consumer opts in
 
-// Object-type vocabulary, used end-to-end (rows, filter buttons, URL params,
-// audienceObjectTypes wire enum). Swedish only at the label layer. Comes from
-// the objects endpoint so the picker can't drift from what it returns.
+// Object-type vocabulary, used end-to-end (rows, filters, URL params, wire
+// enum). Comes from the objects endpoint so the picker can't drift from it.
 export type { RentalObjectType }
 
 export const ALL_RENTAL_OBJECT_TYPES: readonly RentalObjectType[] = [
@@ -33,23 +27,15 @@ export const ALL_RENTAL_OBJECT_TYPES: readonly RentalObjectType[] = [
 ]
 
 export interface PropertyTreeNode {
-  /** Unique node key, e.g. 'district:61110' or 'building:504-017'. */
-  key: string
+  key: string // unique, e.g. 'district:61110' or 'building:504-017'
   level: PropertyTreeLevel
-  /** The audienceCriteria value stored for this node (name/code per level). */
-  value: string
-  /** Display label for chips and rows. */
-  label: string
-  /** Keys of the node's ancestors, outermost first. */
-  ancestors: string[]
-  /** Backing entity id, where `value` doesn't identify the node on its own.
-   * Required on district, KVV-area and property: their criteria store a name
-   * or a fastighetsbeteckning, while the rental-object search scopes on
-   * cost-centre ids and fstcode. Unset for the other levels, whose `value` is
-   * already the code. */
+  value: string // the audienceCriteria value stored for this node
+  label: string // display label for chips and rows
+  ancestors: string[] // ancestor keys, outermost first
+  // district/kvvArea/property store names as `value` but the search scopes on
+  // ids, so they carry the backing id; elsewhere `value` is already the code.
   id?: string
-  /** false = display-only (inherits checked state but cannot be toggled). */
-  selectable?: boolean
+  selectable?: boolean // false = display-only (inherits state, not togglable)
 }
 
 export type PropertyTreeSelection = ReadonlyMap<string, PropertyTreeNode>
@@ -69,35 +55,25 @@ export function nodeKey(level: PropertyTreeLevel, id: string): string {
   return `${level}:${id}`
 }
 
-/**
- * Every key that is an ancestor of something selected — i.e. the nodes that
- * render indeterminate. Derived once per selection rather than per row: this
- * is called for every visible row, and the tree can be thousands of rows with
- * object leaves expanded. Keyed on the selection object, which is replaced
- * whenever the selection changes, so the entry can never go stale.
- */
-const ancestorsOfSelected = new WeakMap<PropertyTreeSelection, Set<string>>()
+// Defined once so tree building (treeRows) and object counting (facets) can't
+// drift: staircase/parking-area codes are only unique within their parent.
+export const staircaseComposite = (
+  buildingCode: string,
+  staircaseCode: string
+) => `${buildingCode}-${staircaseCode}`
 
-function coveredAncestorKeys(
-  selection: PropertyTreeSelection
-): ReadonlySet<string> {
-  const cached = ancestorsOfSelected.get(selection)
-  if (cached) return cached
+export const staircaseKey = (buildingCode: string, staircaseCode: string) =>
+  nodeKey('staircase', staircaseComposite(buildingCode, staircaseCode))
 
-  const keys = new Set<string>()
-  for (const selected of selection.values()) {
-    for (const ancestor of selected.ancestors) keys.add(ancestor)
-  }
-  ancestorsOfSelected.set(selection, keys)
-  return keys
-}
+export const parkingAreaKey = (propertyCode: string, parkingAreaCode: string) =>
+  nodeKey('parkingArea', `${propertyCode}:${parkingAreaCode}`)
 
 export function nodeCheckState(
   selection: PropertyTreeSelection,
   node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
-  // Defaults to stored ancestors; the picker passes walk-derived coverage
-  // instead (addCoveredAncestorKeys) so it holds in either grouping.
-  covered: ReadonlySet<string> = coveredAncestorKeys(selection)
+  // Walk-derived coverage (addCoveredAncestorKeys) — required, because
+  // deriving it from stored ancestors goes stale across grouping switches.
+  covered: ReadonlySet<string>
 ): CheckState {
   if (selection.has(node.key)) return 'checked'
   if (node.ancestors.some((key) => selection.has(key))) return 'checked'
@@ -105,11 +81,8 @@ export function nodeCheckState(
   return 'unchecked'
 }
 
-/**
- * Toggle a node. Checking selects the node itself (subsuming any selected
- * descendants). Unchecking removes the node, or — when the node is covered
- * by a selected ancestor — removes that ancestor, unchecking the branch.
- */
+/** Toggle a node: checking selects it (subsuming selected descendants);
+ * unchecking removes it — or its covering ancestor, unchecking the branch. */
 export function toggleNode(
   selection: PropertyTreeSelection,
   node: PropertyTreeNode
@@ -135,18 +108,14 @@ export function toggleNode(
   return next
 }
 
-/** A parent node and ALL its child nodes (the toggled node's siblings),
- * resolved lazily from loaded tree data. */
+/** A parent node and ALL its children, resolved lazily from loaded tree data. */
 export interface ParentInfo {
   node: PropertyTreeNode
   children: PropertyTreeNode[]
 }
 
-/**
- * After a node was selected, collapse each ancestor whose children are now
- * ALL selected into the ancestor itself, cascading upward. Sibling lists are
- * looked up on demand — only the toggled node's ancestor chain is examined.
- */
+/** After selecting a node, collapse each ancestor whose children are now ALL
+ * selected into the ancestor itself, cascading upward. */
 export function rollUpSelection(
   selection: PropertyTreeSelection,
   node: PropertyTreeNode,
@@ -164,13 +133,9 @@ export function rollUpSelection(
   return next
 }
 
-/**
- * Mirror of rollUpSelection for unchecking: when the node is covered by a
- * selected ancestor, replace that ancestor with everything beneath it EXCEPT
- * the unchecked branch, expanding level by level down to the node. Returns
- * undefined when it doesn't apply (node not ancestor-covered, or a level on
- * the path can't be resolved) — callers then fall back to plain toggleNode.
- */
+/** Uncheck mirror of rollUpSelection: replace the covering ancestor with
+ * everything beneath it EXCEPT the unchecked branch, level by level down to
+ * the node. Undefined when it doesn't apply — callers fall back to toggleNode. */
 export function rollDownSelection(
   selection: PropertyTreeSelection,
   node: PropertyTreeNode,
@@ -204,11 +169,8 @@ export function rollDownSelection(
   return next
 }
 
-/**
- * Additively select nodes (bulk "select all matches"). Nodes already covered
- * by a selected ancestor are skipped; selecting a node subsumes any selected
- * descendants — so the result is order-independent and duplicate-free.
- */
+/** Additively select nodes (bulk "select all matches"): covered nodes are
+ * skipped, selected descendants subsumed — order-independent. */
 export function selectNodes(
   selection: PropertyTreeSelection,
   nodes: PropertyTreeNode[]
@@ -226,16 +188,9 @@ export function selectNodes(
   return next
 }
 
-/**
- * Clear every one of `nodes` in a single pass — the bulk mirror of
- * selectNodes, and the reason "avmarkera allt som visas" can't just loop
- * toggleNode: each toggle re-derives coverage from a selection the previous
- * one already changed, so unchecking a parent leaves its children uncovered
- * and the next toggle SELECTS them.
- *
- * Three things go: the nodes themselves, anything they cover, and any
- * ancestor covering them — an ancestor left behind would keep them checked.
- */
+/** Clear every one of `nodes` in one pass — looping toggleNode won't do: each
+ * toggle re-derives coverage from the previous result, so unchecking a parent
+ * uncovers its children and the next toggle SELECTS them. */
 export function deselectNodes(
   selection: PropertyTreeSelection,
   nodes: PropertyTreeNode[],
@@ -243,10 +198,8 @@ export function deselectNodes(
 ): PropertyTreeSelection {
   let next = selection
 
-  // A node covered by a selected ancestor is uncovered the way a single
-  // uncheck does it — by expanding that ancestor into its other children — so
-  // branches the caller never named keep their selection. Without this,
-  // clearing the rows a search narrowed to would drop the whole district.
+  // Expand covering ancestors first (as a single uncheck would), so branches
+  // the caller never named keep their selection.
   if (getParent) {
     for (const node of nodes) {
       const rolled = rollDownSelection(next, node, getParent)
@@ -262,9 +215,8 @@ export function deselectNodes(
 
   const out = new Map(next)
   for (const [key, selected] of out) {
-    // The nodes themselves, anything they cover, and — only where roll-down
-    // could not resolve the branch — the ancestor still covering them, which
-    // would otherwise keep them checked.
+    // The nodes themselves, anything they cover, and — where roll-down could
+    // not resolve — the ancestor still covering them.
     if (keys.has(key) || covering.has(key)) out.delete(key)
     else if (selected.ancestors.some((a) => keys.has(a))) out.delete(key)
   }

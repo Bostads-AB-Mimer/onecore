@@ -1,8 +1,7 @@
-// Client-side counting over the rental objects of the loaded roots — the one
-// source for every count, greying and exclusion question. One pass over ~22k
-// rows is a few milliseconds where the equivalent server query is 1.2 s, so
-// filter toggles cost no request. Roots whose objects haven't arrived answer
-// "unknown": no count, never excluded.
+// Client-side counting over the loaded roots' rental objects — the one source
+// for every count, greying and exclusion question. One pass over ~22k rows is
+// milliseconds vs a 1.2 s server query, so filter toggles cost no request.
+// Unloaded roots answer "unknown": no count, never excluded.
 
 import type { RentalObjectSummary as RentalObject } from '@/services/api/core/rentalObjectService'
 
@@ -12,27 +11,25 @@ import type {
   PropertyTreeSelection,
   RentalObjectType,
 } from './selection'
-import { isTypeFilterActive, nodeCheckState, nodeKey } from './selection'
+import {
+  isTypeFilterActive,
+  nodeCheckState,
+  nodeKey,
+  parkingAreaKey,
+  staircaseKey,
+} from './selection'
 
 export type { RentalObject }
 
-/**
- * Every object-level restriction the picker applies. Sets are restrictions, so
- * an empty subtype set means "no subtype restriction". A new dimension is added
- * here, in matches and in filterSignature — nowhere else.
- */
+/** Every object-level restriction the picker applies. A new dimension is
+ * added here, in matches and in filterSignature — nowhere else. */
 export interface ObjectFilter {
   types: ReadonlySet<RentalObjectType>
-  /** `type:code` keys, matching useRentalObjectSubtypes' subtypeKey. */
-  subtypeKeys: ReadonlySet<string>
+  subtypeKeys: ReadonlySet<string> // 'type:code' keys; empty = unrestricted
 }
 
-/**
- * Subtype restrictions are per type, not global: picking "Carport" under
- * Bilplatser narrows bilplatser and leaves bostäder alone, because each type
- * button carries its own subtype menu. A type with no subtype picked is
- * unrestricted.
- */
+/** Subtype restrictions are per type: picking "Carport" narrows bilplatser
+ * and leaves bostäder alone. A type with no subtype picked is unrestricted. */
 type CompiledFilter = ReadonlyMap<RentalObjectType, ReadonlySet<string>>
 
 const compileSubtypes = (filter: ObjectFilter): CompiledFilter => {
@@ -66,56 +63,31 @@ export function filterSignature(filter: ObjectFilter): string {
   return `${types}|${subtypes}`
 }
 
-/**
- * The tree nodes one object counts towards. Each level counts independently —
- * a building's count includes its trapphus' objects — mirroring how the server
- * aggregates. Parking areas are property-scoped because one physical area can
- * be split between two fastigheter (see treeRows).
- */
-export function nodeKeysForObject(object: RentalObject): string[] {
+/** The object's ancestor chain, shallowest first: property → building →
+ * staircase, or property → parkingArea (property-scoped — a markyta can span
+ * two fastigheter). Counts roll up the chain; the object hangs under its end. */
+export function objectAncestorKeys(object: RentalObject): string[] {
   const keys: string[] = []
   if (object.propertyCode) keys.push(nodeKey('property', object.propertyCode))
   if (object.buildingCode) {
     keys.push(nodeKey('building', object.buildingCode))
     if (object.staircaseCode) {
-      keys.push(
-        nodeKey('staircase', `${object.buildingCode}-${object.staircaseCode}`)
-      )
+      keys.push(staircaseKey(object.buildingCode, object.staircaseCode))
     }
   }
   if (object.parkingAreaCode && object.propertyCode) {
-    keys.push(
-      nodeKey('parkingArea', `${object.propertyCode}:${object.parkingAreaCode}`)
-    )
+    keys.push(parkingAreaKey(object.propertyCode, object.parkingAreaCode))
   }
   return keys
 }
 
-/**
- * The one node an object hangs directly under — where its row is drawn, and
- * therefore whose children it is for roll-up. Distinct from nodeKeysForObject,
- * which returns every level the object counts towards.
- */
+/** The node the object hangs under — the deepest link of its ancestor chain. */
 export function objectParentKey(object: RentalObject): string | undefined {
-  if (object.parkingAreaCode && object.propertyCode) {
-    return nodeKey(
-      'parkingArea',
-      `${object.propertyCode}:${object.parkingAreaCode}`
-    )
-  }
-  if (object.buildingCode && object.staircaseCode) {
-    return nodeKey(
-      'staircase',
-      `${object.buildingCode}-${object.staircaseCode}`
-    )
-  }
-  if (object.buildingCode) return nodeKey('building', object.buildingCode)
-  if (object.propertyCode) return nodeKey('property', object.propertyCode)
-  return undefined
+  const keys = objectAncestorKeys(object)
+  return keys.length > 0 ? keys[keys.length - 1] : undefined
 }
 
-/** An object as a node under its parent. `selectable: false` keeps it out of
- * the selection where a consumer doesn't let objects be picked individually. */
+/** An object as a node under its parent; selectable=false keeps it display-only. */
 export function objectNode(
   object: RentalObject,
   parent: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
@@ -132,16 +104,12 @@ export function objectNode(
 }
 
 export interface FacetIndex {
-  /** node key → objects matching the filter. Zero entries are present, so a
-   * missing key means "not loaded" and never "no matches". */
-  countByKey: ReadonlyMap<string, number>
-  /** node key → objects regardless of the filter. */
-  totalByKey: ReadonlyMap<string, number>
-  /** Rental ids matching the filter — leaf rows read this. */
-  matchedRentalIds: ReadonlySet<string>
-  /** false until at least one root's objects query has resolved (an empty
-   * result counts as resolved). */
-  ready: boolean
+  // Zero entries are present: a missing key means "not loaded", never "no
+  // matches".
+  countByKey: ReadonlyMap<string, number> // node key → objects matching filter
+  totalByKey: ReadonlyMap<string, number> // node key → objects, filter ignored
+  matchedRentalIds: ReadonlySet<string> // matching rental ids — leaf rows read
+  ready: boolean // false until one root's objects resolved (empty counts too)
 }
 
 /** One pass over the objects: filtered and unfiltered counts per node key. */
@@ -158,7 +126,7 @@ export function buildFacetIndex(
   for (const object of objects) {
     const matched = matches(object, filter.types, subtypesByType)
     if (matched) matchedRentalIds.add(object.rentalId)
-    for (const key of nodeKeysForObject(object)) {
+    for (const key of objectAncestorKeys(object)) {
       totalByKey.set(key, (totalByKey.get(key) ?? 0) + 1)
       countByKey.set(key, (countByKey.get(key) ?? 0) + (matched ? 1 : 0))
     }
@@ -230,7 +198,7 @@ export function rowCheckState(
   selection: PropertyTreeSelection,
   node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
   view: ObjectFilterView,
-  covered?: ReadonlySet<string>
+  covered: ReadonlySet<string>
 ): CheckState {
   const state = nodeCheckState(selection, node, covered)
   return state === 'checked' && nodePartiallyExcluded(node, view)
@@ -252,22 +220,7 @@ export function filterSelection(
   return next
 }
 
-/** Whether one object row is filtered out. Rows only render once their root's
- * objects arrived, so the id set is authoritative for every drawn row. */
-export function objectRowExcluded(
-  object: { rentalId: string; propertyCode: string | null },
-  view: ObjectFilterView
-): boolean {
-  if (!isObjectFilterActive(view)) return false
-  const propertyKey = object.propertyCode
-    ? nodeKey('property', object.propertyCode)
-    : undefined
-  if (!propertyKey || !facetKnown(view, propertyKey)) return false
-  return !view.facets.matchedRentalIds.has(object.rentalId)
-}
-
-/** A node whose count is the sum of its properties' — the levels above the
- * property, which objects don't name. */
+/** A node whose count is the sum of its properties' — levels above property. */
 export interface AncestorCounts {
   key: string
   propertyKeys: readonly string[]
