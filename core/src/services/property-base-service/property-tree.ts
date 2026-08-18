@@ -1,0 +1,181 @@
+import KoaRouter from '@koa/router'
+import { z } from 'zod'
+import { generateRouteMetadata } from '@onecore/utilities'
+
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import { getUsersByRole } from '../auth-service/keycloak-admin-adapter'
+import { PROPERTY_MANAGER_ROLE } from './constants'
+import { toUserSummary } from './keycloak-users'
+import {
+  MarketAreaSummarySchema,
+  PropertyGroupingSchema,
+  PropertyTreeSchema,
+} from './schemas'
+
+const GetPropertyTreeQuerySchema = z.object({
+  groupBy: PropertyGroupingSchema,
+  rootId: z.string().min(1),
+})
+
+/**
+ * @swagger
+ * openapi: 3.0.0
+ * tags:
+ *   - name: Property tree
+ *     description: Property hierarchy organised by cost center, marknadsområde or företag
+ */
+export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /market-areas:
+   *   get:
+   *     summary: List marknadsområden
+   *     description: |
+   *       All market areas (babya) holding at least one property in an
+   *       operating company. Sold stock (Xpand company 999) is excluded.
+   *     tags:
+   *       - Property tree
+   *     responses:
+   *       200:
+   *         description: List of market areas
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [content]
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MarketAreaSummary'
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/market-areas', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await propertyBaseAdapter.listMarketAreas()
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { reason: 'Internal server error', ...metadata }
+      return
+    }
+    ctx.body = {
+      content: result.data.map((r) => MarketAreaSummarySchema.parse(r)),
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /property-tree:
+   *   get:
+   *     summary: Get the property tree for one grouping root
+   *     description: |
+   *       Properties with their buildings, trapphus, parkeringsområden and
+   *       per-type counts, beneath one grouping root. `groups` carries the
+   *       intermediate level when the grouping has one (KVV-areas for
+   *       costCenter); otherwise properties hang directly off the root.
+   *
+   *       Only operating-company stock is returned — Xpand moves sold
+   *       properties to a pseudo-company rather than delete-marking them.
+   *     tags:
+   *       - Property tree
+   *     parameters:
+   *       - in: query
+   *         name: groupBy
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [costCenter, marketArea, company]
+   *       - in: query
+   *         name: rootId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Cost center id (uuid), market area code, or company code
+   *     responses:
+   *       200:
+   *         description: Property tree
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [content]
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/PropertyTree'
+   *       400:
+   *         description: Invalid query parameters
+   *       404:
+   *         description: Root not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/property-tree', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsed = GetPropertyTreeQuerySchema.safeParse(ctx.query)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        errors: parsed.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
+    // Only the cost-center grouping has responsible users; fetch them in
+    // parallel with the tree so Keycloak never sits on the critical path.
+    const [result, responsibleUsers] = await Promise.all([
+      propertyBaseAdapter.getPropertyTree(parsed.data),
+      parsed.data.groupBy === 'costCenter'
+        ? getUsersByRole(PROPERTY_MANAGER_ROLE)
+        : Promise.resolve(null),
+    ])
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Root not found', ...metadata }
+        return
+      }
+      if (result.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { reason: 'Invalid query parameters', ...metadata }
+        return
+      }
+      ctx.status = 500
+      ctx.body = { reason: 'Internal server error', ...metadata }
+      return
+    }
+
+    const byId = new Map(
+      responsibleUsers?.ok
+        ? responsibleUsers.data.map((u) => [u.id, u] as const)
+        : []
+    )
+    const composed = {
+      ...result.data,
+      groups: result.data.groups.map((group) => {
+        const user = group.responsibleKeycloakUserId
+          ? byId.get(group.responsibleKeycloakUserId)
+          : undefined
+        return {
+          id: group.id,
+          code: group.code,
+          name: group.name,
+          responsible: user ? toUserSummary(user) : null,
+          properties: group.properties,
+        }
+      }),
+    }
+
+    ctx.body = {
+      content: PropertyTreeSchema.parse(composed),
+      ...metadata,
+    }
+  })
+}

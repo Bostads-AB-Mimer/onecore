@@ -1082,6 +1082,215 @@ export async function getCostCenterTreeById(
   }
 }
 
+type GetRentalObjectsQuery = NonNullable<
+  paths['/rental-objects']['get']['parameters']['query']
+>
+type GetRentalObjectsResponse = components['schemas']['RentalObjectSummary'][]
+
+export async function getRentalObjects(
+  query: GetRentalObjectsQuery
+): Promise<AdapterResult<GetRentalObjectsResponse, 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/rental-objects', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalObjects')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type SearchRentalObjectsQuery = NonNullable<
+  paths['/rental-objects/search']['get']['parameters']['query']
+>
+
+export async function searchRentalObjects(
+  query: SearchRentalObjectsQuery
+): Promise<
+  AdapterResult<
+    { content: GetRentalObjectsResponse; totalCount: number },
+    'bad-request' | 'unknown'
+  >
+> {
+  try {
+    const fetchResponse = await client().GET('/rental-objects/search', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: {
+          content: fetchResponse.data.content,
+          totalCount: fetchResponse.data.totalCount ?? 0,
+        },
+      }
+    }
+    if (fetchResponse.response.status === 400) {
+      // The zod issues die with the response otherwise, and core can't tell
+      // the caller which parameter upstream objected to.
+      logger.warn(
+        { rejected: fetchResponse.error },
+        'property-base-adapter.searchRentalObjects rejected upstream'
+      )
+      return { ok: false, err: 'bad-request' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.searchRentalObjects')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type ListSubtypesResponse = components['schemas']['RentalObjectSubtype'][]
+
+export async function listRentalObjectSubtypes(): Promise<
+  AdapterResult<ListSubtypesResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/rental-object-subtypes', {})
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.listRentalObjectSubtypes')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetPropertyTreeQuery = NonNullable<
+  paths['/property-tree']['get']['parameters']['query']
+>
+type GetPropertyTreeResponse = components['schemas']['PropertyTree']
+type ListMarketAreasResponse = components['schemas']['MarketAreaSummary'][]
+
+export async function getPropertyTree(
+  query: GetPropertyTreeQuery
+): Promise<
+  AdapterResult<
+    GetPropertyTreeResponse,
+    'not-found' | 'bad-request' | 'unknown'
+  >
+> {
+  try {
+    const fetchResponse = await client().GET('/property-tree', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (fetchResponse.response.status === 400) {
+      return { ok: false, err: 'bad-request' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getPropertyTree')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetRootRentalObjectsQuery = NonNullable<
+  paths['/rental-objects/by-root']['get']['parameters']['query']
+>
+
+export async function getRootRentalObjects(
+  query: GetRootRentalObjectsQuery
+): Promise<
+  AdapterResult<
+    GetRentalObjectsResponse,
+    'not-found' | 'bad-request' | 'unknown'
+  >
+> {
+  try {
+    const fetchResponse = await client().GET('/rental-objects/by-root', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (fetchResponse.response.status === 400) {
+      return { ok: false, err: 'bad-request' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRootRentalObjects')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetRentalObjectDetailsResponse =
+  components['schemas']['RentalObjectDetails'][]
+type GetRentalObjectDetailsQuery = NonNullable<
+  paths['/rental-objects/details']['get']['parameters']['query']
+>
+
+// No 'not-found': details are scoped, not addressed by id — an unknown scope
+// is an empty result, and a missing one is a 400.
+export async function getRentalObjectDetails(
+  query: GetRentalObjectDetailsQuery
+): Promise<
+  AdapterResult<GetRentalObjectDetailsResponse, 'bad-request' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/rental-objects/details', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+    if (fetchResponse.response.status === 400) {
+      logger.warn(
+        { rejected: fetchResponse.error },
+        'property-base-adapter.getRentalObjectDetails rejected upstream'
+      )
+      return { ok: false, err: 'bad-request' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalObjectDetails')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function listMarketAreas(): Promise<
+  AdapterResult<ListMarketAreasResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/market-areas', {})
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.listMarketAreas')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
 
 export { getApartmentTemperatures } from './apartment-temperatures'

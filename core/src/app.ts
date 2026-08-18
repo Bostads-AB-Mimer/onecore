@@ -1,6 +1,7 @@
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
+import compress from 'koa-compress'
 import cors from '@koa/cors'
 import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
@@ -27,6 +28,10 @@ app.use(
     credentials: true,
   })
 )
+
+// Proxied property payloads are hundreds of KB of repetitive JSON. Brotli off:
+// node's default quality 11 blocks the event loop for 100+ ms at this size.
+app.use(compress({ threshold: 1024, br: false }))
 
 app.use(
   koaSwagger({

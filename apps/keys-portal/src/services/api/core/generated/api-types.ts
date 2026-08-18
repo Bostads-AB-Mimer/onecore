@@ -6336,6 +6336,263 @@ export interface paths {
       }
     }
   }
+  '/market-areas': {
+    /**
+     * List marknadsområden
+     * @description All market areas (babya) holding at least one property in an
+     * operating company. Sold stock (Xpand company 999) is excluded.
+     */
+    get: {
+      responses: {
+        /** @description List of market areas */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MarketAreaSummary'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/property-tree': {
+    /**
+     * Get the property tree for one grouping root
+     * @description Properties with their buildings, trapphus, parkeringsområden and
+     * per-type counts, beneath one grouping root. `groups` carries the
+     * intermediate level when the grouping has one (KVV-areas for
+     * costCenter); otherwise properties hang directly off the root.
+     *
+     * Only operating-company stock is returned — Xpand moves sold
+     * properties to a pseudo-company rather than delete-marking them.
+     */
+    get: {
+      parameters: {
+        query: {
+          groupBy: 'costCenter' | 'marketArea' | 'company'
+          /** @description Cost center id (uuid), market area code, or company code */
+          rootId: string
+        }
+      }
+      responses: {
+        /** @description Property tree */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['PropertyTree']
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Root not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects': {
+    /**
+     * List rental objects of a property or building
+     * @description Returns every rental object (residence, parking space, facility,
+     * other) under one property or one building as flat structure rows
+     * with type, subtype caption, postal address and building/staircase
+     * placement. Provide exactly one of propertyCode or buildingCode.
+     */
+    get: {
+      parameters: {
+        query?: {
+          propertyCode?: string
+          buildingCode?: string
+          /** @description Object types to exclude (repeatable) */
+          exclude?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+        }
+      }
+      responses: {
+        /** @description List of rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/search': {
+    /**
+     * Search rental objects across several scopes
+     * @description Rental objects under ANY of the given scopes — cost centres,
+     * marknadsområden, properties, buildings, trapphus, parkeringsområden —
+     * narrowed by type, subtype and a free-text match on rental id, address
+     * or property name. At least one scope is required, and results are
+     * paginated since a district is thousands of objects.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+          subtypes?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Matching rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+              totalCount: number
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/by-root': {
+    /**
+     * Every rental object under one grouping root
+     * @description All rental objects of a district, marknadsområde or company, taking
+     * the same (groupBy, rootId) pair as the property tree and served from
+     * the same cache. Meant for clients that filter, count and list these
+     * locally instead of asking the server per filter change.
+     */
+    get: {
+      parameters: {
+        query: {
+          groupBy: 'costCenter' | 'marketArea' | 'company'
+          rootId: string
+        }
+      }
+      responses: {
+        /** @description The root's rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Root not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/details': {
+    /**
+     * Listing-only values for the objects a selection covers
+     * @description Grundhyra, BRA, "annan information av vikt" and anläggnings-ID per
+     * rental id. Separate from the objects themselves so pages that don't
+     * show these never fetch them. Takes the same scopes as the search,
+     * minus the type and subtype filters: the values are looked up by
+     * rental id, so narrowing them would only cost cache hits.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+        }
+      }
+      responses: {
+        /** @description Details per rental id */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectDetails'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-object-subtypes': {
+    /**
+     * List rental object subtype captions
+     * @description Subtype captions grouped by object type, limited to those in use by
+     * operating-company stock. Codes are unique within a type only.
+     */
+    get: {
+      responses: {
+        /** @description List of subtypes */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSubtype'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/search': {
     /**
      * Omni-search for different entities
@@ -12000,35 +12257,81 @@ export interface components {
       mobilePhone?: string
       employeeId?: string
     }
-    CostCenterTreeAddress: {
+    CostCenterTreeStaircase: {
+      code: string
+      name: string | null
+      residenceCount: number
+      parkingCount: number
+      facilityCount: number
+      otherCount: number
+    }
+    CostCenterTreeBuilding: {
       buildingCode: string
       buildingName: string | null
       buildingType: {
         code: string | null
         name: string | null
       } | null
+      staircases: {
+        code: string
+        name: string | null
+        residenceCount: number
+        parkingCount: number
+        facilityCount: number
+        otherCount: number
+      }[]
+      residenceCount: number
+      parkingCount: number
+      facilityCount: number
+      otherCount: number
+    }
+    CostCenterTreeParkingArea: {
+      code: string
+      name: string | null
+      parkingCount: number
     }
     CostCenterTreeAggregates: {
       residenceCount: number
       parkingCount: number
       entranceCount: number
+      facilityCount: number
+      otherCount: number
     }
     CostCenterTreeProperty: {
       code: string
       designation: string | null
       tract: string | null
-      addresses: {
+      buildings: {
         buildingCode: string
         buildingName: string | null
         buildingType: {
           code: string | null
           name: string | null
         } | null
+        staircases: {
+          code: string
+          name: string | null
+          residenceCount: number
+          parkingCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        residenceCount: number
+        parkingCount: number
+        facilityCount: number
+        otherCount: number
+      }[]
+      parkingAreas: {
+        code: string
+        name: string | null
+        parkingCount: number
       }[]
       aggregates: {
         residenceCount: number
         parkingCount: number
         entranceCount: number
+        facilityCount: number
+        otherCount: number
       }
     }
     CostCenterTreeKvvArea: {
@@ -12049,18 +12352,37 @@ export interface components {
         code: string
         designation: string | null
         tract: string | null
-        addresses: {
+        buildings: {
           buildingCode: string
           buildingName: string | null
           buildingType: {
             code: string | null
             name: string | null
           } | null
+          staircases: {
+            code: string
+            name: string | null
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          residenceCount: number
+          parkingCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        parkingAreas: {
+          code: string
+          name: string | null
+          parkingCount: number
         }[]
         aggregates: {
           residenceCount: number
           parkingCount: number
           entranceCount: number
+          facilityCount: number
+          otherCount: number
         }
       }[]
     }
@@ -12092,18 +12414,37 @@ export interface components {
           code: string
           designation: string | null
           tract: string | null
-          addresses: {
+          buildings: {
             buildingCode: string
             buildingName: string | null
             buildingType: {
               code: string | null
               name: string | null
             } | null
+            staircases: {
+              code: string
+              name: string | null
+              residenceCount: number
+              parkingCount: number
+              facilityCount: number
+              otherCount: number
+            }[]
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          parkingAreas: {
+            code: string
+            name: string | null
+            parkingCount: number
           }[]
           aggregates: {
             residenceCount: number
             parkingCount: number
             entranceCount: number
+            facilityCount: number
+            otherCount: number
           }
         }[]
       }[]
@@ -12188,6 +12529,149 @@ export interface components {
         mobilePhone?: string
         employeeId?: string
       } | null
+    }
+    RentalObjectSummary: {
+      rentalId: string
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string | null
+      name: string | null
+      subtypeCode: string | null
+      subtypeName: string | null
+      address: string | null
+      buildingCode: string | null
+      staircaseCode: string | null
+      staircaseName: string | null
+      parkingAreaCode: string | null
+      propertyCode: string | null
+      propertyName: string | null
+    }
+    RentalObjectDetails: {
+      rentalId: string
+      baseRent: number | null
+      area: number | null
+      additionalInfo: string | null
+      malarEnergiFacilityId: string | null
+    }
+    MarketAreaSummary: {
+      id: string
+      code: string
+      name: string | null
+    }
+    RentalObjectSubtype: {
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string
+      name: string
+    }
+    PropertyTreeGroup: {
+      id: string
+      code: string
+      name: string | null
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+      properties: {
+        code: string
+        designation: string | null
+        tract: string | null
+        buildings: {
+          buildingCode: string
+          buildingName: string | null
+          buildingType: {
+            code: string | null
+            name: string | null
+          } | null
+          staircases: {
+            code: string
+            name: string | null
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          residenceCount: number
+          parkingCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        parkingAreas: {
+          code: string
+          name: string | null
+          parkingCount: number
+        }[]
+        aggregates: {
+          residenceCount: number
+          parkingCount: number
+          entranceCount: number
+          facilityCount: number
+          otherCount: number
+        }
+      }[]
+    }
+    PropertyTree: {
+      /** @enum {string} */
+      grouping: 'costCenter' | 'marketArea' | 'company'
+      id: string
+      code: string
+      name: string | null
+      groups: {
+        id: string
+        code: string
+        name: string | null
+        responsible: {
+          id: string
+          username: string
+          firstName?: string
+          lastName?: string
+          email?: string
+          mobilePhone?: string
+          employeeId?: string
+        } | null
+        properties: {
+          code: string
+          designation: string | null
+          tract: string | null
+          buildings: {
+            buildingCode: string
+            buildingName: string | null
+            buildingType: {
+              code: string | null
+              name: string | null
+            } | null
+            staircases: {
+              code: string
+              name: string | null
+              residenceCount: number
+              parkingCount: number
+              facilityCount: number
+              otherCount: number
+            }[]
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          parkingAreas: {
+            code: string
+            name: string | null
+            parkingCount: number
+          }[]
+          aggregates: {
+            residenceCount: number
+            parkingCount: number
+            entranceCount: number
+            facilityCount: number
+            otherCount: number
+          }
+        }[]
+      }[]
     }
     Key: {
       /** Format: uuid */
