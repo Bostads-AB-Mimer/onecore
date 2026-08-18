@@ -300,13 +300,13 @@ export const TenfastLeaseTemplateResponseSchema = z.object({
   records: z.array(TenfastLeaseSchema),
 })
 
-export const TenfastLeasesByArticleResponseSchema = z.object({
+export const TenfastPaginatedLeaseResponseSchema = z.object({
   records: z.array(TenfastLeaseSchema),
   prev: z.string().nullable(),
   next: z.string().nullable(),
   totalCount: z.number(),
 })
 
-export type TenfastLeasesByArticleResponse = z.infer<
-  typeof TenfastLeasesByArticleResponseSchema
+export type TenfastPaginatedLeaseResponse = z.infer<
+  typeof TenfastPaginatedLeaseResponseSchema
 >

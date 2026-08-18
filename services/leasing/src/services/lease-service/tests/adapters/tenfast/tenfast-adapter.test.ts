@@ -2052,6 +2052,189 @@ describe(tenfastAdapter.getLeaseByExternalId, () => {
   })
 })
 
+describe(tenfastAdapter.getLeasesByTenantId, () => {
+  it('should return leases when response is valid', async () => {
+    const mockLease = factory.tenfastLease.build()
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: { records: [mockLease], next: null, prev: null, totalCount: 1 },
+    })
+
+    const result = await tenfastAdapter.getLeasesByTenantId('tenant-1')
+
+    expect(result).toEqual({
+      ok: true,
+      data: [expect.objectContaining({ externalId: mockLease.externalId })],
+    })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'get',
+        url: expect.stringContaining(
+          '/v1/hyresvard/avtal?hyresgast=tenant-1&populate=hyresobjekt%2Chyresgaster&paginate='
+        ),
+      })
+    )
+  })
+
+  it('should fetch subsequent pages until all records are retrieved', async () => {
+    const lease1 = factory.tenfastLease.build()
+    const lease2 = factory.tenfastLease.build()
+    ;(request as jest.Mock)
+      .mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: [lease1],
+          next: 'cursor-123',
+          prev: null,
+          totalCount: 2,
+        },
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [lease2], next: null, prev: null, totalCount: 2 },
+      })
+
+    const result = await tenfastAdapter.getLeasesByTenantId('tenant-1')
+
+    expect(result).toEqual({
+      ok: true,
+      data: [
+        expect.objectContaining({ externalId: lease1.externalId }),
+        expect.objectContaining({ externalId: lease2.externalId }),
+      ],
+    })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining('paginate=cursor-123'),
+      })
+    )
+  })
+
+  it('should filter leases by status', async () => {
+    const activeLease = factory.tenfastLease.build({ stage: 'active' })
+    const archivedLease = factory.tenfastLease.build({ stage: 'archived' })
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: {
+        records: [activeLease, archivedLease],
+        next: null,
+        prev: null,
+        totalCount: 2,
+      },
+    })
+
+    const result = await tenfastAdapter.getLeasesByTenantId('tenant-1', {
+      status: ['current'],
+    })
+
+    expect(result).toEqual({
+      ok: true,
+      data: [expect.objectContaining({ externalId: activeLease.externalId })],
+    })
+  })
+
+  it('should return unknown when response fails schema validation', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: {
+        records: [{ invalid: 'data' }],
+        next: null,
+        prev: null,
+        totalCount: 1,
+      },
+    })
+
+    const result = await tenfastAdapter.getLeasesByTenantId('tenant-1')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('should return unknown when response status is not 200 or 201', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 500,
+      data: { error: 'Internal server error' },
+    })
+
+    const result = await tenfastAdapter.getLeasesByTenantId('tenant-1')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('should return unknown when request throws an exception', async () => {
+    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+    const result = await tenfastAdapter.getLeasesByTenantId('tenant-1')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(tenfastAdapter.getLeasesByRentalPropertyId, () => {
+  it('should return leases when response is valid', async () => {
+    const mockLease = factory.tenfastLease.build()
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: [mockLease],
+    })
+
+    const result = await tenfastAdapter.getLeasesByRentalPropertyId('rental-1')
+
+    expect(result).toEqual({
+      ok: true,
+      data: [expect.objectContaining({ externalId: mockLease.externalId })],
+    })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'get',
+        url: expect.stringContaining(
+          '/hyresobjekt/rental-1/avtal?populate=hyresobjekt,hyresgaster'
+        ),
+      })
+    )
+  })
+
+  it('should filter leases by status', async () => {
+    const activeLease = factory.tenfastLease.build({ stage: 'active' })
+    const archivedLease = factory.tenfastLease.build({ stage: 'archived' })
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: [activeLease, archivedLease],
+    })
+
+    const result = await tenfastAdapter.getLeasesByRentalPropertyId(
+      'rental-1',
+      { status: ['current'] }
+    )
+
+    expect(result).toEqual({
+      ok: true,
+      data: [expect.objectContaining({ externalId: activeLease.externalId })],
+    })
+  })
+
+  it('should return schema-error when parsing fails', async () => {
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: [{ invalid: 'data' }],
+    })
+
+    const result = await tenfastAdapter.getLeasesByRentalPropertyId('rental-1')
+
+    expect(result).toEqual({
+      ok: false,
+      err: expect.objectContaining({ tag: 'schema-error' }),
+    })
+  })
+
+  it('should return unknown when request throws an exception', async () => {
+    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+    const result = await tenfastAdapter.getLeasesByRentalPropertyId('rental-1')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
 describe(tenfastAdapter.syncTenant, () => {
   beforeEach(() => {
     jest.restoreAllMocks()
