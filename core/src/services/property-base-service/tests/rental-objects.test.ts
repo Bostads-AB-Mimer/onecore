@@ -185,16 +185,38 @@ describe('GET /rental-objects/search', () => {
     expect(res.status).toBe(400)
   })
 
-  // Core does not require a scope itself — the property service rejects a
-  // scopeless search and core maps that to the same 400.
-  it('returns 400 when the property service rejects a scopeless search', async () => {
+  // Core rejects a scopeless search itself rather than spending a round trip
+  // on it, and says which rule failed.
+  it('returns 400 without calling the adapter when no scope is given', async () => {
+    const adapter = jest.spyOn(propertyBaseAdapter, 'searchRentalObjects')
+
+    const res = await request(app.callback()).get('/rental-objects/search')
+
+    expect(res.status).toBe(400)
+    expect(adapter).not.toHaveBeenCalled()
+    expect(res.body.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: 'Provide at least one scope to search within.',
+        }),
+      ])
+    )
+  })
+
+  // An upstream 400 therefore means something core does NOT validate — a
+  // malformed uuid, or more rentalIds than the property service accepts — so
+  // it must not be reported as a scope error.
+  it('returns 400 when the property service rejects the parameters', async () => {
     jest
       .spyOn(propertyBaseAdapter, 'searchRentalObjects')
       .mockResolvedValueOnce({ ok: false, err: 'bad-request' })
 
-    const res = await request(app.callback()).get('/rental-objects/search')
+    const res = await request(app.callback()).get(
+      '/rental-objects/search?costCenterIds=not-a-uuid'
+    )
+
     expect(res.status).toBe(400)
-    expect(res.body.reason).toBe('Provide at least one scope to search within.')
+    expect(res.body.reason).toBe('Invalid query parameters')
   })
 
   it('returns 500 when the adapter fails', async () => {

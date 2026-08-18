@@ -207,7 +207,11 @@ export const routes = (router: KoaRouter) => {
     const parsed = SearchRentalObjectsQuerySchema.safeParse(ctx.query)
     if (!parsed.success) {
       ctx.status = 400
-      ctx.body = { reason: 'Invalid query parameters', ...metadata }
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        errors: parsed.error.errors,
+        ...metadata,
+      }
       return
     }
 
