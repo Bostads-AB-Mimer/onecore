@@ -20,11 +20,7 @@ import { Button } from '@/shared/ui/Button'
 import { Card } from '@/shared/ui/Card'
 import { Checkbox } from '@/shared/ui/Checkbox'
 import { Input } from '@/shared/ui/Input'
-import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-} from '@/shared/ui/Popover'
+import { Popover, PopoverAnchor, PopoverContent } from '@/shared/ui/Popover'
 import {
   Table,
   TableBody,
@@ -228,7 +224,9 @@ export function PropertyTreePicker({
         ? roots
         : roots.filter((root) => {
             const key = rootKeyOf(root)
-            return expandOverrides.get(key) === true || selectedRootKeys.has(key)
+            return (
+              expandOverrides.get(key) === true || selectedRootKeys.has(key)
+            )
           }),
     [roots, searchActive, expandAll, expandOverrides, selectedRootKeys]
   )
@@ -735,63 +733,63 @@ export function PropertyTreePicker({
               ref={typeStripRef}
               className="inline-flex divide-x overflow-hidden rounded-md border"
             >
-            {ALL_RENTAL_OBJECT_TYPES.map((type) => {
-              const TypeIcon = OBJECT_TYPE_ICONS[type]
-              const active = activeObjectTypes.has(type)
-              const options = subtypesByType.get(type) ?? []
-              const chosen = options.filter((s) =>
-                activeSubtypes.has(subtypeKey(type, s.code))
-              ).length
-              return (
-                <div key={type} className="inline-flex">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Deactivating a type closes its own open subtype menu.
-                      if (active && subtypeMenu === type) setSubtypeMenu(null)
-                      onToggleObjectType(type)
-                    }}
-                    aria-pressed={active}
-                    title={RENTAL_OBJECT_GROUP_LABELS[type]}
-                    className={
-                      active
-                        ? 'inline-flex items-center gap-1.5 bg-primary py-1.5 pl-3 pr-2 text-sm font-medium text-primary-foreground transition-colors'
-                        : 'inline-flex items-center gap-1.5 bg-background py-1.5 pl-3 pr-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted'
-                    }
-                  >
-                    <TypeIcon className="h-4 w-4" />
-                    <span className="hidden @2xl:inline">
-                      {RENTAL_OBJECT_GROUP_LABELS[type]}
-                    </span>
-                    {chosen > 0 && (
-                      <span className="rounded-full bg-background/25 px-1.5 text-xs">
-                        {chosen}
-                      </span>
-                    )}
-                  </button>
-                  {active && options.length > 0 && (
+              {ALL_RENTAL_OBJECT_TYPES.map((type) => {
+                const TypeIcon = OBJECT_TYPE_ICONS[type]
+                const active = activeObjectTypes.has(type)
+                const options = subtypesByType.get(type) ?? []
+                const chosen = options.filter((s) =>
+                  activeSubtypes.has(subtypeKey(type, s.code))
+                ).length
+                return (
+                  <div key={type} className="inline-flex">
                     <button
                       type="button"
-                      onClick={() =>
-                        setSubtypeMenu((current) =>
-                          current === type ? null : type
-                        )
-                      }
-                      aria-label={`Välj ${RENTAL_OBJECT_GROUP_LABELS[
-                        type
-                      ].toLowerCase()}typ`}
+                      onClick={() => {
+                        // Deactivating a type closes its own open subtype menu.
+                        if (active && subtypeMenu === type) setSubtypeMenu(null)
+                        onToggleObjectType(type)
+                      }}
+                      aria-pressed={active}
+                      title={RENTAL_OBJECT_GROUP_LABELS[type]}
                       className={
                         active
-                          ? 'bg-primary pr-2 text-primary-foreground'
-                          : 'bg-background pr-2 text-muted-foreground'
+                          ? 'inline-flex items-center gap-1.5 bg-primary py-1.5 pl-3 pr-2 text-sm font-medium text-primary-foreground transition-colors'
+                          : 'inline-flex items-center gap-1.5 bg-background py-1.5 pl-3 pr-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted'
                       }
                     >
-                      <ChevronDown className="h-3.5 w-3.5" />
+                      <TypeIcon className="h-4 w-4" />
+                      <span className="hidden @2xl:inline">
+                        {RENTAL_OBJECT_GROUP_LABELS[type]}
+                      </span>
+                      {chosen > 0 && (
+                        <span className="rounded-full bg-background/25 px-1.5 text-xs">
+                          {chosen}
+                        </span>
+                      )}
                     </button>
-                  )}
-                </div>
-              )
-            })}
+                    {active && options.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSubtypeMenu((current) =>
+                            current === type ? null : type
+                          )
+                        }
+                        aria-label={`Välj ${RENTAL_OBJECT_GROUP_LABELS[
+                          type
+                        ].toLowerCase()}typ`}
+                        className={
+                          active
+                            ? 'bg-primary pr-2 text-primary-foreground'
+                            : 'bg-background pr-2 text-muted-foreground'
+                        }
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </PopoverAnchor>
           {subtypeMenu && (
