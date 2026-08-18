@@ -1,5 +1,21 @@
 import { z } from 'zod'
 
+// ---- Rental object types ----
+// The four kinds of rental object (Xpand balgh/babps/balok/bahyr). Imported
+// rather than re-declared by the property service's rental-object schemas and
+// core's mirror of them; the frontend reads it from the generated types those
+// produce. Do not re-declare in consumers.
+export const RENTAL_OBJECT_TYPES = [
+  'residence',
+  'parkingSpace',
+  'facility',
+  'other',
+] as const
+
+export const RentalObjectTypeSchema = z.enum(RENTAL_OBJECT_TYPES)
+
+export type RentalObjectType = z.infer<typeof RentalObjectTypeSchema>
+
 export const UpdateComponentInspectionStateSchema = z.object({
   condition: z.enum(['GOOD', 'FAIR', 'DAMAGED']),
   lastInspectionDate: z.string().datetime(),
