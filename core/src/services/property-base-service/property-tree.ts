@@ -6,6 +6,7 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { getUsersByRole } from '../auth-service/keycloak-admin-adapter'
 import { PROPERTY_MANAGER_ROLE } from './constants'
 import { toUserSummary } from './keycloak-users'
+import { parseQuery, parseUpstream, replyError } from './route-helpers'
 import {
   MarketAreaSummarySchema,
   PropertyGroupingSchema,
@@ -56,15 +57,16 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/market-areas', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await propertyBaseAdapter.listMarketAreas()
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = { reason: 'Internal server error', ...metadata }
-      return
-    }
-    ctx.body = {
-      content: result.data.map((r) => MarketAreaSummarySchema.parse(r)),
-      ...metadata,
-    }
+    if (!result.ok) return replyError(ctx, result.err, metadata)
+
+    const content = parseUpstream(
+      ctx,
+      MarketAreaSummarySchema.array(),
+      result.data,
+      metadata
+    )
+    if (!content) return
+    ctx.body = { content, ...metadata }
   })
 
   /**
@@ -117,39 +119,21 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/property-tree', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsed = GetPropertyTreeQuerySchema.safeParse(ctx.query)
-    if (!parsed.success) {
-      ctx.status = 400
-      ctx.body = {
-        reason: 'Invalid query parameters',
-        errors: parsed.error.errors,
-        ...metadata,
-      }
-      return
-    }
+    const query = parseQuery(ctx, GetPropertyTreeQuerySchema, metadata)
+    if (!query) return
 
     // Only the cost-center grouping has responsible users; fetch them in
     // parallel with the tree so Keycloak never sits on the critical path.
     const [result, responsibleUsers] = await Promise.all([
-      propertyBaseAdapter.getPropertyTree(parsed.data),
-      parsed.data.groupBy === 'costCenter'
+      propertyBaseAdapter.getPropertyTree(query),
+      query.groupBy === 'costCenter'
         ? getUsersByRole(PROPERTY_MANAGER_ROLE)
         : Promise.resolve(null),
     ])
     if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { reason: 'Root not found', ...metadata }
-        return
-      }
-      if (result.err === 'bad-request') {
-        ctx.status = 400
-        ctx.body = { reason: 'Invalid query parameters', ...metadata }
-        return
-      }
-      ctx.status = 500
-      ctx.body = { reason: 'Internal server error', ...metadata }
-      return
+      return replyError(ctx, result.err, metadata, {
+        notFound: 'Root not found',
+      })
     }
 
     const byId = new Map(
@@ -173,9 +157,8 @@ export const routes = (router: KoaRouter) => {
       }),
     }
 
-    ctx.body = {
-      content: PropertyTreeSchema.parse(composed),
-      ...metadata,
-    }
+    const content = parseUpstream(ctx, PropertyTreeSchema, composed, metadata)
+    if (!content) return
+    ctx.body = { content, ...metadata }
   })
 }

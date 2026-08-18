@@ -1089,7 +1089,7 @@ type GetRentalObjectsResponse = components['schemas']['RentalObjectSummary'][]
 
 export async function getRentalObjects(
   query: GetRentalObjectsQuery
-): Promise<AdapterResult<GetRentalObjectsResponse, 'unknown'>> {
+): Promise<AdapterResult<GetRentalObjectsResponse, 'bad-request' | 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/rental-objects', {
       params: { query },
@@ -1097,6 +1097,13 @@ export async function getRentalObjects(
 
     if (fetchResponse.data?.content) {
       return { ok: true, data: fetchResponse.data.content }
+    }
+    if (fetchResponse.response.status === 400) {
+      logger.warn(
+        { rejected: fetchResponse.error },
+        'property-base-adapter.getRentalObjects rejected upstream'
+      )
+      return { ok: false, err: 'bad-request' }
     }
 
     return { ok: false, err: 'unknown' }

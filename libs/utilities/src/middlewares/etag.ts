@@ -1,6 +1,11 @@
 import { Context, Next } from 'koa'
 import crypto from 'crypto'
 
+/**
+ * Strong MD5 ETags + If-None-Match revalidation for plain-JSON responses.
+ * Register AFTER compression middleware: the hash must cover the uncompressed
+ * body, while compression still applies on the way out.
+ */
 export const etagMiddleware = () => {
   return async (ctx: Context, next: Next) => {
     await next()
@@ -19,16 +24,18 @@ export const etagMiddleware = () => {
       return
     }
 
-    // Generate ETag from response body
     const content = JSON.stringify(body)
-    const etag = crypto.createHash('md5').update(content).digest('hex')
+    const etag = `"${crypto.createHash('md5').update(content).digest('hex')}"`
 
-    // Set ETag header
-    ctx.set('ETag', `"${etag}"`)
+    ctx.set('ETag', etag)
 
-    // Check If-None-Match
-    const ifNoneMatch = ctx.get('If-None-Match')
-    if (ifNoneMatch && ifNoneMatch === `"${etag}"`) {
+    // Proxies that recompress a response weaken its validator to W/"..." —
+    // still ours, so it must match or those clients never get a 304.
+    const revalidators = ctx
+      .get('If-None-Match')
+      .split(',')
+      .map((value) => value.trim().replace(/^W\//, ''))
+    if (revalidators.includes(etag)) {
       ctx.status = 304
       ctx.body = null
       return

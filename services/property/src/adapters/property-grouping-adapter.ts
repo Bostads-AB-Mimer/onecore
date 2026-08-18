@@ -7,10 +7,13 @@ import type {
   RentalObjectSummary,
 } from '@src/types/rental-object'
 
+import { cachedPromise } from '@src/utils/promise-cache'
+
 import {
   filterToOperatingCompanies,
   OPERATING_COMPANY_CODES,
 } from './company-scope'
+import { fetchCostCenterMembership } from './cost-center-adapter'
 import { prisma } from './db'
 import {
   buildPropertyObjects,
@@ -63,30 +66,16 @@ const fetchMarketAreas = async (): Promise<MarketArea[]> => {
 // not each miss an empty cache and start their own.
 const MARKET_AREA_CACHE_TTL_MS = 60 * 60 * 1000
 
-let marketAreaCache:
-  | { promise: Promise<MarketArea[]>; expiresAt: number }
-  | undefined
+const marketAreaCache = cachedPromise(
+  MARKET_AREA_CACHE_TTL_MS,
+  fetchMarketAreas
+)
 
-export const clearMarketAreaCache = (): void => {
-  marketAreaCache = undefined
-}
+export const clearMarketAreaCache = (): void => marketAreaCache.clear()
 
 /** Marknadsområde (babya) — a flat attribute on the property, not a hierarchy. */
-export const listMarketAreas = (): Promise<MarketArea[]> => {
-  const now = Date.now()
-  if (!marketAreaCache || marketAreaCache.expiresAt <= now) {
-    const promise = fetchMarketAreas()
-    const entry = { promise, expiresAt: now + MARKET_AREA_CACHE_TTL_MS }
-    // Don't cache failures — the next request should retry. Only clear this
-    // entry: a slow failure settling after a refresh must not evict the newer
-    // successful one that replaced it.
-    promise.catch(() => {
-      if (marketAreaCache === entry) marketAreaCache = undefined
-    })
-    marketAreaCache = entry
-  }
-  return marketAreaCache.promise
-}
+export const listMarketAreas = (): Promise<MarketArea[]> =>
+  marketAreaCache.get()
 
 /**
  * Property codes of one marknadsområde, keyed on babya.code (the value we
@@ -274,20 +263,11 @@ export const getPropertyTree = async (
   rootId: string
 ): Promise<PropertyTree | null> => {
   if (grouping === 'costCenter') {
-    const costCenter = await prisma.onecoreCostCenter
-      .findUnique({
-        where: { id: rootId },
-        include: { kvvAreas: { include: { propertyLinks: true } } },
-      })
-      .then(trimStrings)
-    if (!costCenter) return null
+    const membership = await fetchCostCenterMembership(rootId)
+    if (!membership) return null
 
-    const codes = await filterToOperatingCompanies(
-      costCenter.kvvAreas.flatMap((a) =>
-        a.propertyLinks.map((l) => l.propertyCode)
-      )
-    )
-    const subtrees = await buildPropertySubtrees(codes)
+    const { costCenter, propertyCodes } = membership
+    const subtrees = await buildPropertySubtrees(propertyCodes)
 
     return {
       grouping,
@@ -333,8 +313,12 @@ export const getPropertyTree = async (
   }
 
   const code = rootId.trim()
+  // Same null rule as resolveRootPropertyCodes: null is "no such root" — an
+  // existing but empty company answers an empty tree, not a 404.
+  if (!(OPERATING_COMPANY_CODES as readonly string[]).includes(code)) {
+    return null
+  }
   const codes = await resolveCompanyPropertyCodes(code)
-  if (codes.length === 0) return null
   const subtrees = await buildPropertySubtrees(codes)
   return {
     grouping,
@@ -358,16 +342,8 @@ export const resolveCostCenterPropertyCodes = async (
   costCenterId: string
 ): Promise<string[] | null> => {
   try {
-    const costCenter = await prisma.onecoreCostCenter.findUnique({
-      where: { id: costCenterId },
-      include: { kvvAreas: { include: { propertyLinks: true } } },
-    })
-    if (!costCenter) return null
-
-    const codes = costCenter.kvvAreas.flatMap((area) =>
-      area.propertyLinks.map((link) => link.propertyCode.trim())
-    )
-    return filterToOperatingCompanies(codes)
+    const membership = await fetchCostCenterMembership(costCenterId)
+    return membership ? membership.propertyCodes : null
   } catch (err) {
     logger.error(
       { err, costCenterId },

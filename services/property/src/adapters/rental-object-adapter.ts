@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
+import { cachedBatch } from '@src/utils/promise-cache'
 import type {
   RentalObjectDetails,
   RentalObjectScopeParams,
@@ -10,6 +11,7 @@ import type {
   SearchRentalObjectsQueryParams,
 } from '@src/types/rental-object'
 
+import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
 
 type RentalObjectRow = {
@@ -71,9 +73,21 @@ const codeAndName = (
 // three call sites read the same columns out of the same joins. Every column
 // must stay 1:1 with hyresid — see the pagination note in searchRentalObjects.
 //
-// These columns must all sit in IX_babuf_onecore_fstcode_deletemark's INCLUDE
-// list, or every query here falls back to key lookups. The index is applied by
-// hand per environment; adding a column below means extending it too.
+// The covering index below is applied BY HAND per environment (babuf is
+// Xpand's table — no migration manages it). Its INCLUDE list must carry every
+// babuf column the adapters read, or the queries fall back to key lookups;
+// reading a new column in any adapter query means extending it. Canonical
+// definition, kept in sync with the queries:
+//
+//   CREATE NONCLUSTERED INDEX IX_babuf_onecore_fstcode_deletemark
+//   ON dbo.babuf (fstcode, deletemark)
+//   INCLUDE (
+//     cmpcode, hyresid, keycmobj, fstcaption,
+//     lghcode, lghcaption, bpscode, bpscaption,
+//     lokcode, lokcaption, hyrcode, hyrcaption,
+//     bygcode, bygcaption, vancode, vancaption, ytacode, ytacaption,
+//     keyobjbyg, keyobjlgh, keyobjbps, keyobjvan, keyobjlok, keyobjhyr,
+//     keyobjfst)
 const OBJECT_SELECT = Prisma.sql`
   SELECT DISTINCT
     b.hyresid    AS rentalId,
@@ -112,12 +126,18 @@ const BASE_FROM = Prisma.sql`
  * element and rooms/components inherit their parent's hyresid, so keycmobt is
  * the authoritative filter — filtering on hyresid alone silently returns room
  * rows whose joins are all null. Defined once so no query can forget it.
+ *
+ * Also cuts sold stock here (company 999): clients can name buildings and
+ * rental ids directly, so the allowlist must bind on every row — not only
+ * where property codes are resolved. cmpcode must sit in the index INCLUDE.
  */
 const rentalObjectWhere = (typeCodes = Object.values(KEYCMOBT_BY_TYPE)) =>
   Prisma.sql`
     b.deletemark = 0
     AND b.hyresid IS NOT NULL
     AND b.hyresid NOT LIKE '%X'
+    AND LTRIM(RTRIM(b.cmpcode)) IN
+        (SELECT value FROM OPENJSON(${JSON.stringify(OPERATING_COMPANY_CODES)}))
     AND o.keycmobt IN (SELECT value FROM OPENJSON(${JSON.stringify(typeCodes)}))
   `
 
@@ -195,10 +215,8 @@ const structureScopes = (params: StructureScope): Prisma.Sql[] => {
  * The properties holding the objects a structure-level scope covers — the
  * step that lets the details lookup take a selection and still key its cache
  * per property. Empty when the scope names no building, trapphus,
- * parkeringsområde or object.
- *
- * Returns codes straight out of babuf, which keeps sold stock under company
- * 999: callers must pass the result through filterToOperatingCompanies.
+ * parkeringsområde or object. Only operating-company stock matches —
+ * rentalObjectWhere cuts company 999.
  */
 export const resolveStructurePropertyCodes = async (
   params: StructureScope
@@ -404,21 +422,18 @@ export const getRentalObjectDetailsByPropertyCodes = async (
 // change far more often than the hierarchy does, and only one page reads them.
 const DETAILS_CACHE_TTL_MS = 10 * 60 * 1000
 
-const detailsCache = new Map<
-  string,
-  { promise: Promise<RentalObjectDetails[]>; expiresAt: number }
->()
+const detailsCache = cachedBatch<RentalObjectDetails[]>(
+  DETAILS_CACHE_TTL_MS,
+  getRentalObjectDetailsByPropertyCodes,
+  () => []
+)
 
-export const clearRentalObjectDetailsCache = (): void => {
-  detailsCache.clear()
-}
+export const clearRentalObjectDetailsCache = (): void => detailsCache.clear()
 
 /**
  * Cached details for the given properties, refreshed as one batch when any
  * entry is missing or stale (see buildPropertySubtrees for the rationale).
- *
- * Takes the codes as given: pass them through filterToOperatingCompanies
- * first, or sold stock's rents come back with the live ones.
+ * Takes the codes as given — an unknown or sold code is an empty entry.
  */
 export const buildRentalObjectDetails = async (
   propertyCodes: string[]
@@ -426,39 +441,7 @@ export const buildRentalObjectDetails = async (
   const uniqueCodes = Array.from(new Set(propertyCodes))
   if (uniqueCodes.length === 0) return []
 
-  const now = Date.now()
-  const needsRefresh = uniqueCodes.some((code) => {
-    const hit = detailsCache.get(code)
-    return !hit || hit.expiresAt <= now
-  })
-
-  if (needsRefresh) {
-    const batch = getRentalObjectDetailsByPropertyCodes(uniqueCodes)
-    batch.catch(() => undefined)
-
-    const expiresAt = now + DETAILS_CACHE_TTL_MS
-    for (const code of uniqueCodes) {
-      const promise = batch.then(
-        (byProperty) => byProperty.get(code) ?? [],
-        (err) => {
-          // Only this entry: a slow failure settling after a refresh must not
-          // evict the newer, successful one that replaced it.
-          if (detailsCache.get(code) === entry) detailsCache.delete(code)
-          throw err
-        }
-      )
-      promise.catch(() => undefined)
-      const entry = { promise, expiresAt }
-      detailsCache.set(code, entry)
-    }
-  }
-
-  const perProperty = await Promise.all(
-    uniqueCodes.map(async (code) => {
-      const hit = detailsCache.get(code)
-      return hit ? await hit.promise : []
-    })
-  )
+  const perProperty = await detailsCache.get(uniqueCodes)
   return perProperty.flat()
 }
 

@@ -3,7 +3,7 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
 import compress from 'koa-compress'
 import cors from '@koa/cors'
-import { logger, loggerMiddlewares } from '@onecore/utilities'
+import { etagMiddleware, logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
 import { makeOkapiRouter } from 'koa-okapi-router'
 import config from './common/config'
@@ -32,6 +32,11 @@ app.use(
 // Proxied property payloads are hundreds of KB of repetitive JSON. Brotli off:
 // node's default quality 11 blocks the event loop for 100+ ms at this size.
 app.use(compress({ threshold: 1024, br: false }))
+
+// After compress in the chain, so the hash covers the uncompressed body while
+// compression still applies on the way out. Core hashes what IT serves —
+// composed bodies included — so upstream ETags need no forwarding.
+app.use(etagMiddleware())
 
 app.use(
   koaSwagger({

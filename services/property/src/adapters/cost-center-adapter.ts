@@ -8,37 +8,47 @@ import { prisma } from './db'
 import { buildPropertySubtrees } from './property-subtree-adapter'
 
 /**
- * Cost-center membership: which properties belong to this cost center's KVV
- * areas. Deliberately NOT cached — it is a single cheap query against our own
+ * Cost-center membership: the entity with its KVV areas, plus the property
+ * codes that survive the operating-company filter — a property sold after
+ * being linked stays in our own table, so unfiltered links would show ghosts
+ * with their tenants still attached.
+ *
+ * Deliberately NOT cached — it is a single cheap query against our own
  * tables, and reading it fresh keeps admin edits correct immediately without
  * any invalidation logic. The expensive half (everything below the property
  * level) is cached by the property-subtree adapter.
  */
+export const fetchCostCenterMembership = async (id: string) => {
+  const costCenter = await prisma.onecoreCostCenter
+    .findUnique({
+      where: { id },
+      include: {
+        kvvAreas: {
+          include: { propertyLinks: true },
+        },
+      },
+    })
+    .then(trimStrings)
+
+  if (!costCenter) return null
+
+  const propertyCodes = await filterToOperatingCompanies(
+    costCenter.kvvAreas.flatMap((area) =>
+      area.propertyLinks.map((link) => link.propertyCode)
+    )
+  )
+  return { costCenter, propertyCodes }
+}
+
 export const getCostCenterTreeById = async (
   id: string
 ): Promise<CostCenterTree | null> => {
   try {
-    const costCenter = await prisma.onecoreCostCenter
-      .findUnique({
-        where: { id },
-        include: {
-          kvvAreas: {
-            include: { propertyLinks: true },
-          },
-        },
-      })
-      .then(trimStrings)
+    const membership = await fetchCostCenterMembership(id)
+    if (!membership) return null
 
-    if (!costCenter) return null
-
-    const propertyCodes = costCenter.kvvAreas.flatMap((area) =>
-      area.propertyLinks.map((link) => link.propertyCode)
-    )
-    // A property assigned to a KVV-area and sold afterwards stays linked in
-    // our own table — nothing moves it out — so it would otherwise appear
-    // here as a ghost with its tenants still attached.
-    const operating = new Set(await filterToOperatingCompanies(propertyCodes))
-    const subtrees = await buildPropertySubtrees([...operating])
+    const { costCenter, propertyCodes } = membership
+    const subtrees = await buildPropertySubtrees(propertyCodes)
 
     return {
       id: costCenter.id,

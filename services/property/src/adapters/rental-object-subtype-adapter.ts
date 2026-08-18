@@ -1,6 +1,7 @@
 import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
+import { cachedPromise } from '@src/utils/promise-cache'
 import type { RentalObjectSubtype } from '@src/types/rental-object'
 
 import { OPERATING_COMPANY_CODES } from './company-scope'
@@ -74,25 +75,12 @@ const fetchRentalObjectSubtypes = async (): Promise<RentalObjectSubtype[]> => {
 // query instead of each starting their own.
 const SUBTYPE_CACHE_TTL_MS = 60 * 60 * 1000
 
-let subtypeCache:
-  | { promise: Promise<RentalObjectSubtype[]>; expiresAt: number }
-  | undefined
+const subtypeCache = cachedPromise(
+  SUBTYPE_CACHE_TTL_MS,
+  fetchRentalObjectSubtypes
+)
 
-export const clearRentalObjectSubtypeCache = (): void => {
-  subtypeCache = undefined
-}
+export const clearRentalObjectSubtypeCache = (): void => subtypeCache.clear()
 
-export const listRentalObjectSubtypes = (): Promise<RentalObjectSubtype[]> => {
-  const now = Date.now()
-  if (!subtypeCache || subtypeCache.expiresAt <= now) {
-    const promise = fetchRentalObjectSubtypes()
-    const entry = { promise, expiresAt: now + SUBTYPE_CACHE_TTL_MS }
-    // Don't cache failures — the next request should retry. Only clear this
-    // entry, or a slow failure would evict the newer one that replaced it.
-    promise.catch(() => {
-      if (subtypeCache === entry) subtypeCache = undefined
-    })
-    subtypeCache = entry
-  }
-  return subtypeCache.promise
-}
+export const listRentalObjectSubtypes = (): Promise<RentalObjectSubtype[]> =>
+  subtypeCache.get()

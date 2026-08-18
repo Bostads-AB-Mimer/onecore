@@ -1,6 +1,7 @@
 import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
+import { cachedBatch } from '@src/utils/promise-cache'
 import type { CostCenterTreeProperty } from '@src/types/cost-center'
 import type { RentalObjectSummary } from '@src/types/rental-object'
 
@@ -292,72 +293,36 @@ const fetchPropertySubtrees = async (
 // perhaps yearly, so an hour stale is acceptable.
 const SUBTREE_CACHE_TTL_MS = 60 * 60 * 1000
 
-// Both halves of a property share one entry: the structure the tree renders,
-// and every rental object under it (clients filter and count those locally).
-// One refresh fills both, but each is awaited on its own — the tree must not
-// wait for the object query.
-interface PropertyCacheEntry {
-  subtree: Promise<CostCenterTreeProperty>
-  objects: Promise<RentalObjectSummary[]>
-  expiresAt: number
+const groupByPropertyCode = (rows: RentalObjectSummary[]) => {
+  const byProperty = new Map<string, RentalObjectSummary[]>()
+  for (const row of rows) {
+    if (!row.propertyCode) continue
+    const list = byProperty.get(row.propertyCode) ?? []
+    list.push(row)
+    byProperty.set(row.propertyCode, list)
+  }
+  return byProperty
 }
 
-const subtreeCache = new Map<string, PropertyCacheEntry>()
+// Two halves of the same stock on one TTL: the structure the tree renders and
+// every rental object under it (clients filter and count those locally).
+// Each is awaited on its own — the tree must not wait for the object query —
+// and each request primes the other half, so one page load fills both.
+const subtreeCache = cachedBatch(
+  SUBTREE_CACHE_TTL_MS,
+  fetchPropertySubtrees,
+  emptyProperty
+)
+const objectCache = cachedBatch(
+  SUBTREE_CACHE_TTL_MS,
+  (codes: string[]) =>
+    getRentalObjectsByPropertyCodes(codes).then(groupByPropertyCode),
+  (): RentalObjectSummary[] => []
+)
 
 export const clearPropertySubtreeCache = (): void => {
   subtreeCache.clear()
-}
-
-/**
- * Make sure every code has a live entry, refreshing the whole requested set in
- * one round when any of them is missing or stale (see buildPropertySubtrees).
- */
-const ensureCached = (uniqueCodes: string[], now: number): void => {
-  const needsRefresh = uniqueCodes.some((code) => {
-    const hit = subtreeCache.get(code)
-    return !hit || hit.expiresAt <= now
-  })
-  if (!needsRefresh) return
-
-  // One shared batch per half; each code reads its own entry out of them, so
-  // concurrent callers with overlapping sets share the round trips.
-  const subtreeBatch = fetchPropertySubtrees(uniqueCodes)
-  const objectBatch = getRentalObjectsByPropertyCodes(uniqueCodes).then(
-    (rows) => {
-      const byProperty = new Map<string, RentalObjectSummary[]>()
-      for (const row of rows) {
-        if (!row.propertyCode) continue
-        const list = byProperty.get(row.propertyCode) ?? []
-        list.push(row)
-        byProperty.set(row.propertyCode, list)
-      }
-      return byProperty
-    }
-  )
-  // A tree-only request awaits neither object promise, so an object query that
-  // rejects would surface as an unhandled rejection and take the process down.
-  subtreeBatch.catch(() => undefined)
-  objectBatch.catch(() => undefined)
-
-  const expiresAt = now + SUBTREE_CACHE_TTL_MS
-  for (const code of uniqueCodes) {
-    // Don't cache failures — the next request should retry. Only this entry
-    // though: a slow failure settling after a refresh must not evict the
-    // newer, successful entry that replaced it.
-    const onError = (err: unknown) => {
-      if (subtreeCache.get(code) === entry) subtreeCache.delete(code)
-      throw err
-    }
-    const subtree = subtreeBatch.then(
-      (m) => m.get(code) ?? emptyProperty(code),
-      onError
-    )
-    const objects = objectBatch.then((m) => m.get(code) ?? [], onError)
-    subtree.catch(() => undefined)
-    objects.catch(() => undefined)
-    const entry = { subtree, objects, expiresAt }
-    subtreeCache.set(code, entry)
-  }
+  objectCache.clear()
 }
 
 /**
@@ -375,18 +340,11 @@ export const buildPropertySubtrees = async (
   propertyCodes: string[]
 ): Promise<Map<string, CostCenterTreeProperty>> => {
   const uniqueCodes = Array.from(new Set(propertyCodes))
-  const out = new Map<string, CostCenterTreeProperty>()
-  if (uniqueCodes.length === 0) return out
+  if (uniqueCodes.length === 0) return new Map()
 
-  ensureCached(uniqueCodes, Date.now())
-
-  await Promise.all(
-    uniqueCodes.map(async (code) => {
-      const hit = subtreeCache.get(code)
-      out.set(code, hit ? await hit.subtree : emptyProperty(code))
-    })
-  )
-  return out
+  objectCache.prime(uniqueCodes)
+  const subtrees = await subtreeCache.get(uniqueCodes)
+  return new Map(uniqueCodes.map((code, i) => [code, subtrees[i]]))
 }
 
 /**
@@ -400,13 +358,7 @@ export const buildPropertyObjects = async (
   const uniqueCodes = Array.from(new Set(propertyCodes))
   if (uniqueCodes.length === 0) return []
 
-  ensureCached(uniqueCodes, Date.now())
-
-  const perProperty = await Promise.all(
-    uniqueCodes.map(async (code) => {
-      const hit = subtreeCache.get(code)
-      return hit ? await hit.objects : []
-    })
-  )
+  subtreeCache.prime(uniqueCodes)
+  const perProperty = await objectCache.get(uniqueCodes)
   return perProperty.flat()
 }

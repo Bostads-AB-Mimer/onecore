@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { generateRouteMetadata } from '@onecore/utilities'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import { parseQuery, parseUpstream, replyError } from './route-helpers'
 import {
   RentalObjectSubtypeSchema,
   RentalObjectDetailsSchema,
@@ -56,7 +57,12 @@ const SearchRentalObjectsQuerySchema = z
       .transform((v) => (Array.isArray(v) ? v : [v]))
       .optional(),
     subtypes: repeatable,
-    q: z.string().optional(),
+    // Trim-or-drop, mirroring the property service: a cleared search box
+    // sends q= and must not turn into an upstream 400.
+    q: z
+      .string()
+      .optional()
+      .transform((v) => v?.trim() || undefined),
     page: z.coerce.number().int().positive().optional(),
     limit: z.coerce.number().int().positive().max(500).optional(),
   })
@@ -130,28 +136,20 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/rental-objects', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsed = GetRentalObjectsQuerySchema.safeParse(ctx.query)
-    if (!parsed.success) {
-      ctx.status = 400
-      ctx.body = {
-        reason: 'Invalid query parameters',
-        errors: parsed.error.errors,
-        ...metadata,
-      }
-      return
-    }
+    const query = parseQuery(ctx, GetRentalObjectsQuerySchema, metadata)
+    if (!query) return
 
-    const result = await propertyBaseAdapter.getRentalObjects(parsed.data)
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = { reason: 'Internal server error', ...metadata }
-      return
-    }
+    const result = await propertyBaseAdapter.getRentalObjects(query)
+    if (!result.ok) return replyError(ctx, result.err, metadata)
 
-    ctx.body = {
-      content: RentalObjectSummarySchema.array().parse(result.data),
-      ...metadata,
-    }
+    const content = parseUpstream(
+      ctx,
+      RentalObjectSummarySchema.array(),
+      result.data,
+      metadata
+    )
+    if (!content) return
+    ctx.body = { content, ...metadata }
   })
   /**
    * @swagger
@@ -204,38 +202,25 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/rental-objects/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsed = SearchRentalObjectsQuerySchema.safeParse(ctx.query)
-    if (!parsed.success) {
-      ctx.status = 400
-      ctx.body = {
-        reason: 'Invalid query parameters',
-        errors: parsed.error.errors,
-        ...metadata,
-      }
-      return
-    }
+    const query = parseQuery(ctx, SearchRentalObjectsQuerySchema, metadata)
+    if (!query) return
 
-    const result = await propertyBaseAdapter.searchRentalObjects(parsed.data)
+    const result = await propertyBaseAdapter.searchRentalObjects(query)
     if (!result.ok) {
       // The missing-scope case is caught by the schema above, so an upstream
       // 400 is something this schema doesn't check — a malformed uuid, or
       // more rentalIds than the property service accepts.
-      ctx.status = result.err === 'bad-request' ? 400 : 500
-      ctx.body = {
-        reason:
-          result.err === 'bad-request'
-            ? 'Invalid query parameters'
-            : 'Internal server error',
-        ...metadata,
-      }
-      return
+      return replyError(ctx, result.err, metadata)
     }
 
-    ctx.body = {
-      content: RentalObjectSummarySchema.array().parse(result.data.content),
-      totalCount: result.data.totalCount,
-      ...metadata,
-    }
+    const content = parseUpstream(
+      ctx,
+      RentalObjectSummarySchema.array(),
+      result.data.content,
+      metadata
+    )
+    if (!content) return
+    ctx.body = { content, totalCount: result.data.totalCount, ...metadata }
   })
 
   /**
@@ -277,34 +262,24 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/rental-objects/by-root', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsed = GetRootRentalObjectsQuerySchema.safeParse(ctx.query)
-    if (!parsed.success) {
-      ctx.status = 400
-      ctx.body = {
-        reason: 'Invalid query parameters',
-        errors: parsed.error.errors,
-        ...metadata,
-      }
-      return
-    }
+    const query = parseQuery(ctx, GetRootRentalObjectsQuerySchema, metadata)
+    if (!query) return
 
-    const result = await propertyBaseAdapter.getRootRentalObjects(parsed.data)
+    const result = await propertyBaseAdapter.getRootRentalObjects(query)
     if (!result.ok) {
-      ctx.status = result.err === 'not-found' ? 404 : 500
-      ctx.body = {
-        reason:
-          result.err === 'not-found'
-            ? 'Root not found'
-            : 'Internal server error',
-        ...metadata,
-      }
-      return
+      return replyError(ctx, result.err, metadata, {
+        notFound: 'Root not found',
+      })
     }
 
-    ctx.body = {
-      content: RentalObjectSummarySchema.array().parse(result.data),
-      ...metadata,
-    }
+    const content = parseUpstream(
+      ctx,
+      RentalObjectSummarySchema.array(),
+      result.data,
+      metadata
+    )
+    if (!content) return
+    ctx.body = { content, ...metadata }
   })
 
   /**
@@ -351,34 +326,20 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/rental-objects/details', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const parsed = GetRentalObjectDetailsQuerySchema.safeParse(ctx.query)
-    if (!parsed.success) {
-      ctx.status = 400
-      ctx.body = {
-        reason: 'Invalid query parameters',
-        errors: parsed.error.errors,
-        ...metadata,
-      }
-      return
-    }
+    const query = parseQuery(ctx, GetRentalObjectDetailsQuerySchema, metadata)
+    if (!query) return
 
-    const result = await propertyBaseAdapter.getRentalObjectDetails(parsed.data)
-    if (!result.ok) {
-      ctx.status = result.err === 'bad-request' ? 400 : 500
-      ctx.body = {
-        reason:
-          result.err === 'bad-request'
-            ? 'Invalid query parameters'
-            : 'Internal server error',
-        ...metadata,
-      }
-      return
-    }
+    const result = await propertyBaseAdapter.getRentalObjectDetails(query)
+    if (!result.ok) return replyError(ctx, result.err, metadata)
 
-    ctx.body = {
-      content: RentalObjectDetailsSchema.array().parse(result.data),
-      ...metadata,
-    }
+    const content = parseUpstream(
+      ctx,
+      RentalObjectDetailsSchema.array(),
+      result.data,
+      metadata
+    )
+    if (!content) return
+    ctx.body = { content, ...metadata }
   })
 
   /**
@@ -412,14 +373,15 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/rental-object-subtypes', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await propertyBaseAdapter.listRentalObjectSubtypes()
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = { reason: 'Internal server error', ...metadata }
-      return
-    }
-    ctx.body = {
-      content: RentalObjectSubtypeSchema.array().parse(result.data),
-      ...metadata,
-    }
+    if (!result.ok) return replyError(ctx, result.err, metadata)
+
+    const content = parseUpstream(
+      ctx,
+      RentalObjectSubtypeSchema.array(),
+      result.data,
+      metadata
+    )
+    if (!content) return
+    ctx.body = { content, ...metadata }
   })
 }

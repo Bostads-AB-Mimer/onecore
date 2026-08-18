@@ -98,6 +98,18 @@ describe('GET /rental-objects', () => {
     )
     expect(res.status).toBe(500)
   })
+
+  it('returns 400 when the property service rejects the query', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getRentalObjects')
+      .mockResolvedValueOnce({ ok: false, err: 'bad-request' })
+
+    const res = await request(app.callback()).get(
+      '/rental-objects?propertyCode=04101'
+    )
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('Invalid query parameters')
+  })
 })
 
 describe('GET /rental-objects/search', () => {
@@ -162,6 +174,17 @@ describe('GET /rental-objects/search', () => {
         limit: 25,
       })
     )
+  })
+
+  it('drops an empty q instead of forwarding it', async () => {
+    const spy = okOnce()
+
+    const res = await request(app.callback()).get(
+      '/rental-objects/search?buildingCodes=04101-B1&q=%20%20'
+    )
+
+    expect(res.status).toBe(200)
+    expect(spy.mock.calls[0][0].q).toBeUndefined()
   })
 
   it('returns 400 when a type is not a known object type', async () => {
