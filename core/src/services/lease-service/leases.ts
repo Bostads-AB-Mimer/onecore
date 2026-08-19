@@ -653,6 +653,13 @@ export const routes = (router: KoaRouter) => {
     try {
       const contact = await leasingAdapter.getContactForPnr(ctx.params.pnr)
 
+      // Leasing answers 200 with a null contact for an unknown pnr.
+      if (!contact) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody([], metadata)
+        return
+      }
+
       // TODO(BREAKING): includeContacts no longer defaults to true
       const leases = await leasingAdapter.getLeasesByContactCode(
         contact.contactCode,

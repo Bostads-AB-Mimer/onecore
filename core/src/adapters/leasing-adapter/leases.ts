@@ -59,6 +59,13 @@ export const getLeasesByRentalObjectCode = async (
   const leasesResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${rentalObjectCode}?${queryParams.toString()}`
   )
+
+  // Leasing answers 404 for a rental object it cannot find, and validateStatus
+  // stops axios from throwing on it, so `content` would be undefined.
+  if (leasesResponse.status === 404) {
+    return []
+  }
+
   return leasesResponse.data.content
 }
 
