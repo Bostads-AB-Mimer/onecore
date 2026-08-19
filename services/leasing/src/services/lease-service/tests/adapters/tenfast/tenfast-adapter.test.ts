@@ -7,7 +7,6 @@ import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
 import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
-import { Lease, LeaseStatus, LeaseType } from '@onecore/types'
 
 // Shared clock offset used to bust the module-level tag cache (TTL: 5 min) between tests.
 // Each test that needs a fresh tag fetch increments this by 1 hour before mocking Date.now.
