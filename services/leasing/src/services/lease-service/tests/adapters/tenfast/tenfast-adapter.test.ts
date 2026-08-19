@@ -7,7 +7,6 @@ import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
 import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
-import { Lease, LeaseStatus, LeaseType } from '@onecore/types'
 
 // Shared clock offset used to bust the module-level tag cache (TTL: 5 min) between tests.
 // Each test that needs a fresh tag fetch increments this by 1 hour before mocking Date.now.
@@ -391,107 +390,6 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
       expect(result.data![0].rentalTags).toEqual([
         { id: 'UNGDOM', name: 'Ungdomslägenhet' },
       ])
-    })
-  })
-})
-
-describe(tenfastAdapter.createTenant, () => {
-  it('should return tenant when response is valid and status is 200', async () => {
-    // Arrange
-    const mockTenant = factory.tenfastTenant.build()
-    const mockResponse = {
-      status: 200,
-      data: mockTenant,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const contact = factory.contact.build()
-    const result = await tenfastAdapter.createTenant(contact)
-
-    // Assert
-    expect(result).toEqual({
-      ok: true,
-      data: mockTenant,
-    })
-  })
-
-  it('should return tenant when response is valid and status is 201', async () => {
-    // Arrange
-    const mockTenant = factory.tenfastTenant.build()
-    const mockResponse = {
-      status: 201,
-      data: mockTenant,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const contact = factory.contact.build()
-    const result = await tenfastAdapter.createTenant(contact)
-
-    // Assert
-    expect(result).toEqual({
-      ok: true,
-      data: mockTenant,
-    })
-  })
-
-  it('should return error "create-tenant-bad-request" when status is 400', async () => {
-    // Arrange
-    const mockResponse = {
-      status: 400,
-      data: { error: 'Bad request' },
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const contact = factory.contact.build()
-    const result = await tenfastAdapter.createTenant(contact)
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'create-tenant-bad-request',
-    })
-  })
-
-  it('should return error "tenant-could-not-be-created" when status is not 200, 201, or 400', async () => {
-    // Arrange
-    const mockResponse = {
-      status: 500,
-      data: { error: 'Internal server error' },
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const contact = factory.contact.build()
-    const result = await tenfastAdapter.createTenant(contact)
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'tenant-could-not-be-created',
-    })
-  })
-
-  it('should return error "tenant-could-not-be-parsed" when schema parsing fails', async () => {
-    // Arrange
-    // Return a response with status 200 and invalid data for the schema
-    const invalidData = { notATenant: true }
-    const mockResponse = {
-      status: 200,
-      data: invalidData,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const contact = factory.contact.build()
-    const result = await tenfastAdapter.createTenant(contact)
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'tenant-could-not-be-parsed',
     })
   })
 })

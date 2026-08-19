@@ -98,13 +98,8 @@ export const createLease = async (
     | 'unknown'
   >
 > => {
-  const tenantResult = await getOrCreateTenant(
-    contact.contactCode,
-    buildTenantRequestData(contact)
-  )
+  const tenantResult = await getOrImportContact(contact.contactCode)
   if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
-  else if (!tenantResult.data)
-    return { ok: false, err: 'could-not-retrieve-tenant' }
 
   const rentalObjectResponse = await getRentalObject(rentalObjectCode)
   if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
@@ -188,18 +183,9 @@ export const importLease = async (
       { leaseId, contactCode, rentalObjectCode },
       'tenfast-adapter.importLease: starting import'
     )
-    const existingTenant = await getTenantByContactCode(contactCode)
-    if (!existingTenant.ok)
-      return { ok: false, err: 'could-not-retrieve-tenant' }
-
-    let tenant: TenfastTenant
-    if (existingTenant.data) {
-      tenant = existingTenant.data
-    } else {
-      const importResult = await importContact(contactCode)
-      if (!importResult.ok) return { ok: false, err: 'could-not-create-tenant' }
-      tenant = importResult.data
-    }
+    const tenantResult = await getOrImportContact(contactCode)
+    if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
+    const tenant = tenantResult.data
 
     const rentalObjectResponse = await getRentalObject(rentalObjectCode)
     if (!rentalObjectResponse.ok || !rentalObjectResponse.data)
@@ -738,54 +724,8 @@ export const importContact = async (
   }
 }
 
-const createTenantRequest = async (
-  requestData: object
-): Promise<
-  AdapterResult<
-    TenfastTenant | undefined,
-    | 'tenant-could-not-be-created'
-    | 'tenant-could-not-be-parsed'
-    | 'create-tenant-bad-request'
-  >
-> => {
-  const tenantResponse = await tenfastApi.request({
-    method: 'post',
-    url: `${tenfastBaseUrl}/v1/hyresvard/hyresgaster?hyresvard=${tenfastCompanyId}`,
-    data: requestData,
-  })
-
-  if (tenantResponse.status === 400)
-    return handleTenfastError(
-      tenantResponse.data.error,
-      'create-tenant-bad-request'
-    )
-  else if (tenantResponse.status !== 200 && tenantResponse.status !== 201)
-    return handleTenfastError(
-      {
-        error: tenantResponse.data.error,
-        status: tenantResponse.status,
-      },
-      'tenant-could-not-be-created'
-    )
-
-  const parsedTenantResponse = TenfastTenantSchema.safeParse(
-    tenantResponse.data
-  )
-  if (!parsedTenantResponse.success)
-    return handleTenfastError(
-      parsedTenantResponse.error,
-      'tenant-could-not-be-parsed'
-    )
-
-  return { ok: true, data: parsedTenantResponse.data ?? undefined }
-}
-
-export const createTenant = (contact: Contact) =>
-  createTenantRequest(buildTenantRequestData(contact))
-
-async function getOrCreateTenant(
-  contactCode: string,
-  requestData: object
+async function getOrImportContact(
+  contactCode: string
 ): Promise<
   AdapterResult<
     TenfastTenant,
@@ -796,14 +736,15 @@ async function getOrCreateTenant(
   if (!tenantResponse.ok) {
     return { ok: false, err: 'could-not-retrieve-tenant' }
   }
-  if (!tenantResponse.data) {
-    const createTenantResult = await createTenantRequest(requestData)
-    if (!createTenantResult.ok || !createTenantResult.data) {
-      return { ok: false, err: 'could-not-create-tenant' }
-    }
-    return { ok: true, data: createTenantResult.data }
+  if (tenantResponse.data) {
+    return { ok: true, data: tenantResponse.data }
   }
-  return { ok: true, data: tenantResponse.data }
+
+  const importResult = await importContact(contactCode)
+  if (!importResult.ok) {
+    return { ok: false, err: 'could-not-create-tenant' }
+  }
+  return { ok: true, data: importResult.data }
 }
 
 function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
@@ -842,27 +783,6 @@ function buildLeaseRequestData(
     originalTemplate: template._id,
     template: template,
     method: 'simplesign',
-  }
-}
-
-function buildTenantRequestData(contact: Contact) {
-  return {
-    externalId: contact.contactCode,
-    idbeteckning: contact.nationalRegistrationNumber, // orgNr for companies when that is implemented
-    // company: contact.company, //doesn't exist on contact yet
-    // firmatecknare: contact.firmatecknare, //doesn't exist on contact yet
-    isCompany: false,
-    name: {
-      first: contact.firstName ?? '',
-      last: contact.lastName ?? '',
-    },
-    email: contact.emailAddress,
-    phone: contact.phoneNumbers?.find(
-      (p: { isMainNumber: any }) => p.isMainNumber
-    )?.phoneNumber,
-    postadress: `${contact.address?.street} ${contact.address?.number}`,
-    postnummer: contact.address?.postalCode,
-    stad: contact.address?.city,
   }
 }
 
