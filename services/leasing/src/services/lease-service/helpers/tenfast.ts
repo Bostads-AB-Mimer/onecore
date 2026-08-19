@@ -76,8 +76,8 @@ const mapToOnecoreRentalObject = (
     availabilityInfo: {
       rentalObjectCode: rentalObject.externalId,
       rentalTenureType: {
-        id: rentalObject.category.code,
-        name: rentalObject.category.label,
+        id: rentalObject.category?.code ?? '',
+        name: rentalObject.category?.label ?? rentalObject.category?.code ?? '',
       },
       rent: {
         amount: rentalObject.hyraExcludingVat ?? 0,
