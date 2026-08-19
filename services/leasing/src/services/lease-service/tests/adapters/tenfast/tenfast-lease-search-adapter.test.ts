@@ -1102,6 +1102,84 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result.content[0].leaseId).toBe('lease-dist-1')
     })
 
+    it('should exclude leases without end date when end date range filter is set', async () => {
+      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+        'ROC-600',
+        'ROC-601',
+      ])
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-600',
+            avtal: [
+              {
+                externalId: 'lease-ending',
+                startDate: '2024-01-01',
+                endDate: '2026-09-15',
+                stage: 'terminationScheduled',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-600',
+                      displayName: 'Ending Tenant',
+                      idbeteckning: '199001011234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-600', postadress: 'Slutgatan 1' },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            externalId: 'ROC-601',
+            avtal: [
+              {
+                externalId: 'lease-ongoing',
+                startDate: '2024-01-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-601',
+                      displayName: 'Ongoing Tenant',
+                      idbeteckning: '199001011234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-601', postadress: 'Pågåendegatan 1' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          districtNames: ['Distrikt Norr'],
+          endDateFrom: '2026-07-27',
+          endDateTo: '2026-11-30',
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-ending')
+    })
+
     it('should filter by buildingManager via batch-get', async () => {
       mockedGetRentalObjectCodesByBuildingManager.mockResolvedValueOnce([
         'ROC-001',
