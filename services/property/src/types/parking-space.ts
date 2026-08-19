@@ -14,7 +14,7 @@ export const ParkingSpaceSchema = z.object({
     propertyObjectId: z.string(),
     code: z.string(),
     name: z.string(),
-    parkingNumber: z.string(),
+    parkingNumber: z.string().nullable(),
     parkingSpaceType: z.object({
       code: z.string(),
       name: z.string(),
