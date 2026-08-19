@@ -10,7 +10,7 @@
   "scripts": {
     "test": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test jest",
     "test:watch": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test TZ=UTC jest --watch",
-    "build": "tsc -p tsconfig.build.json && tsc-alias",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "pnpm migrate:up && node -r dotenv/config build/index",
     "dev": "pnpm migrate:up && nodemon -e ts,js --exec ts-node -r tsconfig-paths/register src/index",
     "dev:init": "pnpm prepare:dotenv",
