@@ -59,7 +59,8 @@ export const TenfastRentalObjectSchema = z.object({
   subType: z.string().optional(),
   category: z.object({
     code: z.string(),
-    label: z.string(),
+    // Tenfast omits the label on rental objects, so callers fall back to code.
+    label: z.string().optional(),
   }),
   tags: z.array(z.string()).optional(),
   kvm: z.number().nullish(),

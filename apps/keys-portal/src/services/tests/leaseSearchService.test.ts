@@ -1,25 +1,18 @@
-import { describe, it, expect, vi } from 'vitest'
-
-import type { Lease } from '@/services/types'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../api/core/base-api', () => ({
   GET: vi.fn(),
 }))
 
-import { dedupeLeases, equalPnr } from '../api/leaseSearchService'
-
-function makeLease(overrides: Partial<Lease> = {}): Lease {
-  return {
-    leaseId: 'prop-1/01',
-    leaseNumber: '01',
-    leaseStartDate: '2025-01-01',
-    status: 'Current',
-    rentalPropertyId: 'prop-1',
-    type: 'Bostadskontrakt',
-    tenants: [],
-    ...overrides,
-  } as Lease
-}
+import { GET } from '../api/core/base-api'
+import {
+  dedupeLeases,
+  equalPnr,
+  fetchLeasesByRentalPropertyId,
+  fetchTenantAndLeasesByPnr,
+  fetchTenantAndLeasesByContactCode,
+} from '../api/leaseSearchService'
+import { makeLease, makeTenant } from './fixtures'
 
 describe('dedupeLeases', () => {
   it('removes duplicate leases by leaseId', () => {
@@ -68,5 +61,97 @@ describe('equalPnr', () => {
     expect(equalPnr('200001011234', '0001011234')).toBe(true)
     expect(equalPnr('19900101-1234', '9001011234')).toBe(true)
     expect(equalPnr('0001011234', '0001019999')).toBe(false)
+  })
+})
+
+const mockedGet = vi.mocked(GET)
+
+const MERIEM = makeTenant({
+  contactCode: 'P146763',
+  nationalRegistrationNumber: '198809101325',
+})
+
+function respondWith(leases: ReturnType<typeof makeLease>[]) {
+  mockedGet.mockResolvedValue({
+    data: { content: leases },
+    error: undefined,
+  } as never)
+}
+
+describe('lease search queries', () => {
+  beforeEach(() => {
+    mockedGet.mockReset()
+  })
+
+  it('requests contacts when searching by rental object code', async () => {
+    respondWith([makeLease()])
+
+    await fetchLeasesByRentalPropertyId('406-061-04-0201')
+
+    expect(mockedGet).toHaveBeenCalledWith(
+      '/leases/by-rental-object-code/{rentalObjectCode}',
+      {
+        params: {
+          path: { rentalObjectCode: '406-061-04-0201' },
+          query: { includeContacts: true },
+        },
+      }
+    )
+  })
+
+  it('requests contacts when searching by pnr', async () => {
+    respondWith([makeLease({ tenants: [MERIEM] })])
+
+    await fetchTenantAndLeasesByPnr('198809101325')
+
+    expect(mockedGet).toHaveBeenCalledWith('/leases/by-pnr/{pnr}', {
+      params: {
+        path: { pnr: '198809101325' },
+        query: { includeContacts: true },
+      },
+    })
+  })
+
+  it('requests contacts when searching by contact code', async () => {
+    respondWith([makeLease({ tenants: [MERIEM] })])
+
+    await fetchTenantAndLeasesByContactCode('P146763')
+
+    expect(mockedGet).toHaveBeenCalledWith(
+      '/leases/by-contact-code/{contactCode}',
+      {
+        params: {
+          path: { contactCode: 'P146763' },
+          query: { includeContacts: true },
+        },
+      }
+    )
+  })
+
+  it('picks the tenant matching the searched pnr', async () => {
+    respondWith([
+      makeLease({
+        tenants: [
+          makeTenant({
+            contactCode: 'P077658',
+            nationalRegistrationNumber: '197706256919',
+          }),
+          MERIEM,
+        ],
+      }),
+    ])
+
+    const result = await fetchTenantAndLeasesByPnr('198809101325')
+
+    expect(result?.tenant.contactCode).toBe('P146763')
+    expect(result?.contracts).toHaveLength(1)
+  })
+
+  it('resolves to null when the response carries no tenants', async () => {
+    respondWith([makeLease({ tenants: undefined })])
+
+    await expect(
+      fetchTenantAndLeasesByContactCode('P146763')
+    ).resolves.toBeNull()
   })
 })
