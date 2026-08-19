@@ -2,7 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { Lease, schemas } from '@onecore/types'
+import { Contact, Lease, schemas } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
@@ -159,6 +159,24 @@ describe('leases routes', () => {
       expect(res.status).toBe(200)
       expect(getLeasesSpy).toHaveBeenCalled()
       expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
+    })
+
+    it('responds with an empty list when the pnr matches no contact', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactForPnr')
+        .mockResolvedValue(null as unknown as Contact)
+      const getLeasesSpy = jest.spyOn(
+        tenantLeaseAdapter,
+        'getLeasesByContactCode'
+      )
+
+      const res = await request(app.callback()).get(
+        '/leases/by-pnr/101010-1010'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([])
+      expect(getLeasesSpy).not.toHaveBeenCalled()
     })
   })
 
