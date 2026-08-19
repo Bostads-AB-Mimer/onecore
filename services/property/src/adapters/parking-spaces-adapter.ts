@@ -150,8 +150,6 @@ export async function getParkingSpaceByRentalPropertyId(
 
   return {
     ...propertyStructureResponse,
-    address: {
-      ...addressResponse,
-    },
+    address: addressResponse,
   }
 }
