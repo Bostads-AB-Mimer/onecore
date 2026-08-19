@@ -1002,6 +1002,17 @@ export const searchLeases = async (
     // Lazy batch-get: fetch batches one at a time until we have enough
     // results for the requested page. This avoids downloading ALL data
     // when the code set is large (e.g., 10,000 codes for broad district filters).
+    //
+    // PERF (measured 2026-08-19 against tenfast-test): batch-get is the bottleneck
+    // for these bridged filters — a broad district takes ~7s regardless of client-side
+    // orchestration. Hard 500-code cap per request (400 above), ~2ms/code server time,
+    // ~2.5MB uncompressed JSON per batch, and concurrent requests are largely
+    // serialized server-side (parallel waves measured only ~15% faster). Asks for
+    // Tenfast: a) accept a LIST of hyresobjekt externalIds/phrases as a filter in
+    // /avtal/search so this whole bridge moves server-side, b) discuss raising the
+    // 500-code batch cap, c) gzip responses (2.57MB -> 0.14MB measured), d) slim
+    // mode/field selection — we use ~20% of the payload, and `hyror` (~70% of it)
+    // isn't needed for search results at all.
     const batchSize = 500
     const page = params.page ?? 1
     const limit = params.limit ?? 20
@@ -1009,6 +1020,7 @@ export const searchLeases = async (
 
     const seenLeaseIds = new Set<string>()
     const batchLeases: BatchGetLease[] = []
+    const filteredLeases: Lease[] = []
     let batchesFetched = 0
     const totalBatches = Math.ceil(codes.length / batchSize)
 
@@ -1036,18 +1048,17 @@ export const searchLeases = async (
       const parsed = parseBatchGetResponse(rentalObjects, seenLeaseIds)
       batchLeases.push(...parsed)
 
-      // Apply local filters to check if we have enough results
-      const currentLeases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
-      const filtered = applyLocalFilters(currentLeases, batchLeases, params)
+      // Map + filter only the newly parsed leases; earlier batches are already done
+      const newLeases = parsed.map(mapBatchGetLeaseToOnecoreLease)
+      filteredLeases.push(...applyLocalFilters(newLeases, parsed, params))
 
       // Stop fetching if we have enough to fill the requested page
-      if (filtered.length >= needed) {
+      if (filteredLeases.length >= needed) {
         break
       }
     }
 
-    let leases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
-    leases = applyLocalFilters(leases, batchLeases, params)
+    const leases = filteredLeases
 
     // Estimate total count based on hit rate from fetched batches
     const hitRate =
