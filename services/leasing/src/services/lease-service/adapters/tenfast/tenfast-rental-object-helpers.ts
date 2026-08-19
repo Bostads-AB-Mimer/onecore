@@ -48,8 +48,7 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
     vacantFrom: vacantFrom,
     rentalTenureType: {
       id: tenfastRentalObject.category.code,
-      name:
-        tenfastRentalObject.category.label ?? tenfastRentalObject.category.code,
+      name: tenfastRentalObject.category.label,
     },
     rentalTags: tenfastRentalObject.tags?.flatMap((id): RentalTag[] => {
       const tag = tagsById.get(id)

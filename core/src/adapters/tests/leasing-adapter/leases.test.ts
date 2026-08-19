@@ -47,3 +47,31 @@ describe(leasingAdapter.getHomeInsuranceExport, () => {
     expect(!result.ok && result.err).toBe('unknown')
   })
 })
+
+describe(leasingAdapter.getLeasesByRentalObjectCode, () => {
+  it('returns the leases on 200', async () => {
+    nock(serviceUrl)
+      .get('/leases/by-rental-object-code/705-011-03-0102')
+      .query(true)
+      .reply(200, { content: [factory.lease.build()] })
+
+    const result =
+      await leasingAdapter.getLeasesByRentalObjectCode('705-011-03-0102')
+
+    expect(result).toHaveLength(1)
+  })
+
+  // validateStatus keeps axios from throwing on 4xx, so an unguarded 404 body
+  // would hand `undefined` to callers that iterate the result.
+  it('returns an empty list when the rental object is not found', async () => {
+    nock(serviceUrl)
+      .get('/leases/by-rental-object-code/does-not-exist')
+      .query(true)
+      .reply(404, { error: 'Not found' })
+
+    const result =
+      await leasingAdapter.getLeasesByRentalObjectCode('does-not-exist')
+
+    expect(result).toEqual([])
+  })
+})
