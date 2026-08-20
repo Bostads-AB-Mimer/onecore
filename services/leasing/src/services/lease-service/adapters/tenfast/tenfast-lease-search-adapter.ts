@@ -513,7 +513,10 @@ function applyLocalFilters(
       // Ongoing leases (no end date) must not match an end-date range,
       // mirroring Tenfast's server-side filter[endDate] behavior
       if (!lease.leaseEndDate) return false
-      if (params.endDateFrom && lease.leaseEndDate < new Date(params.endDateFrom))
+      if (
+        params.endDateFrom &&
+        lease.leaseEndDate < new Date(params.endDateFrom)
+      )
         return false
       if (params.endDateTo && lease.leaseEndDate > new Date(params.endDateTo))
         return false
