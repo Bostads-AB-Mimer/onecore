@@ -335,7 +335,11 @@ INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, c
   -- relation. Both must yield an empty recipient-for list, exercising the
   -- tenantRows sistadeb and currentRelation filters independently.
   ('_OIRC900011    ', '_OIRO900011    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900011', 'Recipient TerminatedOnly', 1053, 'OIR9000011'),
-  ('_OIRC900012    ', '_OIRO900012    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900012', 'Recipient ExpiredOnly', 1053, 'OIR9000012');
+  ('_OIRC900012    ', '_OIRO900012    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900012', 'Recipient ExpiredOnly', 1053, 'OIR9000012'),
+  -- Legacy ANNANFM rows in Xpand commonly have NULL fdate/tdate (unbounded
+  -- validity); P900005/P900013 exercise that case on an active lease.
+  ('_OIRC900005    ', '_OIRO900005    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900005', 'Holder NullFdate', 1053, 'OIR9000005'),
+  ('_OIRC900013    ', '_OIRO900013    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900013', 'Recipient NullFdate', 1053, 'OIR9000013');
 
 -- Structured first/last names for the invoice-recipient fixtures asserted in
 -- the bake-in tests (cmctcben stays the "Lastname Firstname" form).
@@ -348,7 +352,8 @@ INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
   ('_OBJ000002     ', '100-001-01-0002/01', '2022-01-01'),
   ('_OBJ000003     ', '100-001-01-0003/01', NULL),
   ('_OBJ000004     ', '100-001-01-0004/01', NULL),
-  ('_OBJ000005     ', '100-001-01-0005/01', NULL);
+  ('_OBJ000005     ', '100-001-01-0005/01', NULL),
+  ('_OBJ000006     ', '100-001-01-0006/01', NULL);
 
 -- INNEHAVARE rows (holders), all currently valid.
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
@@ -380,3 +385,10 @@ SELECT '_AVKFM00006    ', '_OBJ000002     ', keycmctc, 'ANNANFM', '2020-01-01', 
 -- P900012: active lease (OBJ3), but the ANNANFM relation itself is expired.
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKFM00007    ', '_OBJ000003     ', keycmctc, 'ANNANFM', '2020-01-01', '2021-01-01' FROM cmctc WHERE cmctckod = 'P900012';
+
+-- P900005 holds active lease OBJ6 whose ANNANFM row (P900013) has NULL
+-- fdate/tdate — the legacy Xpand shape for unbounded validity.
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0006    ', '_OBJ000006     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900005';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00008    ', '_OBJ000006     ', keycmctc, 'ANNANFM', NULL, NULL FROM cmctc WHERE cmctckod = 'P900013';

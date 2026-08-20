@@ -98,11 +98,13 @@ const collect = (rows: RelatedRow[], spec: RoleSpec): RelatedContact[] =>
   )
 
 // Active lease + currently-valid relation row, expressed as raw ON predicates.
+// NULL fdate/tdate means unbounded validity (legacy ANNANFM rows often have
+// NULL fdate).
 // knex `raw` predicates are single-use bindings: a fresh pair must be built for
 // every query because the same `Raw` instance cannot be reused across `.andOn`
 // chains without corrupting its bindings — don't "simplify" by hoisting these.
 const currentRelation = (db: knex.Knex, alias: string, now: Date) => [
-  db.raw(`${alias}.fdate <= ?`, [now]),
+  db.raw(`(${alias}.fdate IS NULL OR ${alias}.fdate <= ?)`, [now]),
   db.raw(`(${alias}.tdate IS NULL OR ${alias}.tdate >= ?)`, [now]),
 ]
 

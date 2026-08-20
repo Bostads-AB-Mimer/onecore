@@ -15,9 +15,11 @@ describe('relatedContacts endpoints', () => {
         'P900002',
         'P900003',
         'P900004',
+        'P900005',
         'P900010',
         'P900011',
         'P900012',
+        'P900013',
       ],
     })
     await testApp.start()
@@ -214,6 +216,19 @@ describe('relatedContacts endpoints', () => {
       expect(response.data.content.relations).toEqual([])
     })
 
+    it('includes a recipient whose ANNANFM row has no start date (NULL fdate)', async () => {
+      const response = await httpClient.get(
+        '/contacts/P900005/other-invoice-recipients'
+      )
+
+      expect(response.status).toBe(200)
+      expect(response.data.content.relations).toHaveLength(1)
+      expect(response.data.content.relations[0]).toMatchObject({
+        contactCode: 'P900013',
+        role: 'otherInvoiceRecipient',
+      })
+    })
+
     it('returns 404 for an unknown contact', async () => {
       const response = await httpClient.get(
         '/contacts/P999999/other-invoice-recipients',
@@ -253,6 +268,19 @@ describe('relatedContacts endpoints', () => {
 
       expect(response.status).toBe(200)
       expect(response.data.content.relations).toEqual([])
+    })
+
+    it('includes the holder when the ANNANFM row has no start date (NULL fdate)', async () => {
+      const response = await httpClient.get(
+        '/contacts/P900013/other-invoice-recipient-for'
+      )
+
+      expect(response.status).toBe(200)
+      expect(response.data.content.relations).toHaveLength(1)
+      expect(response.data.content.relations[0]).toMatchObject({
+        contactCode: 'P900005',
+        role: 'otherInvoiceRecipientFor',
+      })
     })
 
     it('returns an empty list for a contact that is recipient for no one', async () => {
