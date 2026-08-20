@@ -363,6 +363,8 @@ function mapBatchGetLeaseToSearchResult(
  * Pagination: cursor-based via `limit` + `paginate` (cursor token from prev response).
  */
 
+// TODO: add object subtypes (e.g. garage) here once the subtype
+// filter branch is merged into main
 const OBJECT_TYPE_TO_TENFAST_TYP: Record<string, string> = {
   bostad: 'bostad',
   parkering: 'parkering',
@@ -1012,7 +1014,10 @@ export const searchLeases = async (
     // /avtal/search so this whole bridge moves server-side, b) discuss raising the
     // 500-code batch cap, c) gzip responses (2.57MB -> 0.14MB measured), d) slim
     // mode/field selection — we use ~20% of the payload, and `hyror` (~70% of it)
-    // isn't needed for search results at all.
+    // isn't needed for search results at all, e) a sort parameter on /avtal/search —
+    // without it cross-page sorting is impossible (cursor pagination, natural order;
+    // common sort param conventions are silently ignored), so sortBy/sortOrder
+    // currently only order rows within the fetched page.
     const batchSize = 500
     const page = params.page ?? 1
     const limit = params.limit ?? 20
