@@ -2544,6 +2544,38 @@ export interface paths {
       }
     }
   }
+  '/rental-objects/by-code/{rentalObjectCode}/rent': {
+    /**
+     * Get rent for a rental object
+     * @description Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch rent for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rental object rent. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectRentInfo']
+            }
+          }
+        }
+        /** @description Not found. The specified rental object was not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. Failed to fetch rental object rent. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/rental-objects/availabilities': {
     /**
      * Get availabilities for rental objects
@@ -7571,12 +7603,13 @@ export interface paths {
   '/invoice-channels': {
     /**
      * Look up invoice channels for recipients
-     * @description Returns the invoice delivery channels for each provided recipient.
+     * @description Returns the invoice delivery channel for each provided recipient.
      */
     post: {
       requestBody: {
         content: {
           'application/json': {
+            /** @description List of recipients to look up */
             recipients: {
               recipientId: string
               /** @enum {string} */
@@ -10837,19 +10870,31 @@ export interface components {
       rentalObject?: {
         rentalObjectCode: string
         address: string
-        rent?: {
+        availabilityInfo?: {
           rentalObjectCode: string
-          amount: number
-          vat: number
-          rows: {
-            code: string
-            description: string
+          /** Format: date-time */
+          vacantFrom?: string
+          rent: {
             amount: number
-            vatPercentage: number
-            /** Format: date-time */
-            fromDate?: string
-            /** Format: date-time */
-            toDate?: string
+            vat: number
+            rows: {
+              code?: string
+              description: string
+              amount: number
+              vatPercentage: number
+              /** Format: date-time */
+              fromDate?: string
+              /** Format: date-time */
+              toDate?: string
+            }[]
+          }
+          rentalTenureType: {
+            id: string
+            name: string
+          }
+          rentalTags?: {
+            id: string
+            name: string
           }[]
         }
         residentialAreaCaption: string
@@ -11049,6 +11094,23 @@ export interface components {
       emailAddress?: string | null
       isTenant: boolean
       specialAttention?: boolean
+    }
+    RentalObjectRentInfo: {
+      rentalObjectCode: string
+      rent: {
+        amount: number
+        vat: number
+        rows: {
+          code?: string
+          description: string
+          amount: number
+          vatPercentage: number
+          /** Format: date-time */
+          fromDate?: string
+          /** Format: date-time */
+          toDate?: string
+        }[]
+      }
     }
     ListingTextContent: {
       /** Format: uuid */
@@ -13604,19 +13666,31 @@ export interface components {
         rentalObject?: {
           rentalObjectCode: string
           address: string
-          rent?: {
+          availabilityInfo?: {
             rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
               amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
             }[]
           }
           residentialAreaCaption: string
@@ -13956,19 +14030,31 @@ export interface components {
         rentalObject?: {
           rentalObjectCode: string
           address: string
-          rent?: {
+          availabilityInfo?: {
             rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
               amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
             }[]
           }
           residentialAreaCaption: string
@@ -14400,19 +14486,31 @@ export interface components {
         rentalObject?: {
           rentalObjectCode: string
           address: string
-          rent?: {
+          availabilityInfo?: {
             rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
               amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
             }[]
           }
           residentialAreaCaption: string
