@@ -66,6 +66,12 @@ export const RentalObjectRentSchema = z.object({
   ),
 })
 
+/** GET /rental-objects/by-code/{code}/rent response content */
+export const RentalObjectRentInfo = z.object({
+  rentalObjectCode: z.string(),
+  rent: RentalObjectRentSchema,
+})
+
 export const Lease = z.object({
   leaseId: z.string(),
   leaseNumber: z.string(),

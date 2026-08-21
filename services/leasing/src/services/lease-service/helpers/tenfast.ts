@@ -4,6 +4,7 @@ import {
   LeaseRentRow,
   LeaseType,
   RentalObject,
+  RentalObjectRent,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
@@ -62,6 +63,21 @@ export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   }
 }
 
+export const mapToOnecoreRentalObjectRent = (
+  rentalObject: TenfastRentalObject
+): RentalObjectRent => ({
+  amount: rentalObject.hyraExcludingVat ?? 0,
+  vat: rentalObject.hyraVat ?? 0,
+  rows: (rentalObject.hyror ?? []).map((row) => ({
+    code: row.article ?? '',
+    description: row.label ?? '',
+    amount: row.amount,
+    vatPercentage: row.vat,
+    fromDate: row.from ? new Date(row.from) : undefined,
+    toDate: row.to ? new Date(row.to) : undefined,
+  })),
+})
+
 const mapToOnecoreRentalObject = (
   rentalObject: TenfastRentalObject
 ): RentalObject | undefined => {
@@ -79,18 +95,7 @@ const mapToOnecoreRentalObject = (
         id: rentalObject.category.code,
         name: rentalObject.category.label,
       },
-      rent: {
-        amount: rentalObject.hyraExcludingVat ?? 0,
-        vat: rentalObject.hyraVat ?? 0,
-        rows: (rentalObject.hyror ?? []).map((row) => ({
-          code: row.article ?? '',
-          description: row.label ?? '',
-          amount: row.amount,
-          vatPercentage: row.vat,
-          fromDate: row.from ? new Date(row.from) : undefined,
-          toDate: row.to ? new Date(row.to) : undefined,
-        })),
-      },
+      rent: mapToOnecoreRentalObjectRent(rentalObject),
     },
     residentialAreaCaption: rentalObject.stadsdel ?? '',
     residentialAreaCode: rentalObject.stadsdel ?? '',
