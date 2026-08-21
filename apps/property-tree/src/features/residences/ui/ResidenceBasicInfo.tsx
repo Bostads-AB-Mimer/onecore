@@ -19,15 +19,7 @@ interface ResidenceBasicInfoProps {
   residence: components['schemas']['ResidenceDetails']
   building?: components['schemas']['Building']
   lease: components['schemas']['Lease']
-}
-
-const getCurrentRent = (lease: components['schemas']['Lease'] | undefined) => {
-  // Extract rent from current lease
-  const currentRent = lease?.rentInfo?.currentRent?.currentRent
-    ? lease.rentInfo.currentRent.currentRent
-    : null
-
-  return currentRent
+  objectRent?: number
 }
 
 const requiresSpecialHandling = (
@@ -73,11 +65,12 @@ export const ResidenceBasicInfo = ({
   residence,
   building,
   lease,
+  objectRent,
 }: ResidenceBasicInfoProps) => {
   // Check if this is a secondary rental based on tenant data
   const needsSpecialHandling = requiresSpecialHandling(lease)
   const hasPestIssues = requiresPestControl(residence)
-  const rent = getCurrentRent(lease)
+  const rent = objectRent ?? null
 
   const currentRentalBlock = getCurrentRentalBlock(residence)
 
@@ -182,7 +175,7 @@ export const ResidenceBasicInfo = ({
             objectNumber={residence.propertyObject.rentalId ?? undefined}
           />
           <CopyableField
-            label="Hyra"
+            label="Hyra för objekt"
             value={
               rent
                 ? `${Math.round(rent).toLocaleString('sv-SE')} kr/mån`
