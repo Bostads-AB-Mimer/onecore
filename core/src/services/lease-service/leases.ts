@@ -18,6 +18,7 @@ import {
   GetLeaseOptionsSchema,
   GetLeasesOptionsSchema,
   mapLease,
+  Lease as LeaseSchema,
 } from './schemas/lease'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
@@ -576,8 +577,19 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!queryParams.data.includeContacts) {
+        const parsedLeases = LeaseSchema.array().safeParse(leases.map(mapLease))
+        if (!parsedLeases.success) {
+          logger.error(
+            { issues: parsedLeases.error.issues, metadata },
+            'Leases do not match documented schema'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Invalid lease data', ...metadata }
+          return
+        }
+
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(leases.map(mapLease), metadata)
+        ctx.body = makeSuccessResponseBody(parsedLeases.data, metadata)
         return
       }
 
@@ -593,11 +605,21 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(
-        patchedLeases.data.map(mapLease),
-        metadata
+      const parsedPatchedLeases = LeaseSchema.array().safeParse(
+        patchedLeases.data.map(mapLease)
       )
+      if (!parsedPatchedLeases.success) {
+        logger.error(
+          { issues: parsedPatchedLeases.error.issues, metadata },
+          'Leases do not match documented schema'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Invalid lease data', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(parsedPatchedLeases.data, metadata)
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching leases from leasing')
       ctx.status = 500
@@ -675,8 +697,19 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!queryParams.data.includeContacts) {
+        const parsedLeases = LeaseSchema.array().safeParse(leases.map(mapLease))
+        if (!parsedLeases.success) {
+          logger.error(
+            { issues: parsedLeases.error.issues, metadata },
+            'Leases do not match documented schema'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Invalid lease data', ...metadata }
+          return
+        }
+
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(leases.map(mapLease), metadata)
+        ctx.body = makeSuccessResponseBody(parsedLeases.data, metadata)
         return
       }
 
@@ -690,11 +723,21 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(
-        patchedLeases.data.map(mapLease),
-        metadata
+      const parsedPatchedLeases = LeaseSchema.array().safeParse(
+        patchedLeases.data.map(mapLease)
       )
+      if (!parsedPatchedLeases.success) {
+        logger.error(
+          { issues: parsedPatchedLeases.error.issues, metadata },
+          'Leases do not match documented schema'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Invalid lease data', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(parsedPatchedLeases.data, metadata)
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching leases from leasing')
       ctx.status = 500
@@ -763,8 +806,19 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!queryParams.data.includeContacts) {
+        const parsedLeases = LeaseSchema.array().safeParse(leases.map(mapLease))
+        if (!parsedLeases.success) {
+          logger.error(
+            { issues: parsedLeases.error.issues, metadata },
+            'Leases do not match documented schema'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Invalid lease data', ...metadata }
+          return
+        }
+
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(leases.map(mapLease), metadata)
+        ctx.body = makeSuccessResponseBody(parsedLeases.data, metadata)
         return
       }
 
@@ -778,11 +832,21 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody(
-        patchedLeases.data.map(mapLease),
-        metadata
+      const parsedPatchedLeases = LeaseSchema.array().safeParse(
+        patchedLeases.data.map(mapLease)
       )
+      if (!parsedPatchedLeases.success) {
+        logger.error(
+          { issues: parsedPatchedLeases.error.issues, metadata },
+          'Leases do not match documented schema'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Invalid lease data', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(parsedPatchedLeases.data, metadata)
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching leases from leasing')
       ctx.status = 500
@@ -1051,8 +1115,19 @@ export const routes = (router: KoaRouter) => {
       }
 
       if (!queryParams.data.includeContacts) {
+        const parsedLease = LeaseSchema.safeParse(mapLease(lease))
+        if (!parsedLease.success) {
+          logger.error(
+            { issues: parsedLease.error.issues, metadata },
+            'Lease does not match documented schema'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Invalid lease data', ...metadata }
+          return
+        }
+
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(mapLease(lease), metadata)
+        ctx.body = makeSuccessResponseBody(parsedLease.data, metadata)
         return
       }
 
@@ -1061,8 +1136,19 @@ export const routes = (router: KoaRouter) => {
           { metadata, leaseId: lease.leaseId },
           'Lease has no tenant contact IDs'
         )
+        const parsedLease = LeaseSchema.safeParse(mapLease(lease))
+        if (!parsedLease.success) {
+          logger.error(
+            { issues: parsedLease.error.issues, metadata },
+            'Lease does not match documented schema'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Invalid lease data', ...metadata }
+          return
+        }
+
         ctx.status = 200
-        ctx.body = makeSuccessResponseBody(mapLease(lease), metadata)
+        ctx.body = makeSuccessResponseBody(parsedLease.data, metadata)
         return
       }
 
@@ -1078,8 +1164,21 @@ export const routes = (router: KoaRouter) => {
       }
 
       const [leaseWithContacts] = patchedLease.data
+      const parsedLeaseWithContacts = LeaseSchema.safeParse(
+        mapLease(leaseWithContacts)
+      )
+      if (!parsedLeaseWithContacts.success) {
+        logger.error(
+          { issues: parsedLeaseWithContacts.error.issues, metadata },
+          'Lease does not match documented schema'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Invalid lease data', ...metadata }
+        return
+      }
+
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(mapLease(leaseWithContacts), metadata)
+      ctx.body = makeSuccessResponseBody(parsedLeaseWithContacts.data, metadata)
     } catch (err) {
       logger.error({ err, metadata }, 'Error fetching lease')
       ctx.status = 500

@@ -1733,10 +1733,19 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      // Work-order API expects Xpand's 0/1 for isMainNumber (external consumers
+      // depend on it) — convert from the boolean our contact endpoints now return
+      const tenantForWorkOrder = {
+        ...tenant.data,
+        phoneNumbers: tenant.data.phoneNumbers?.map((p) => ({
+          ...p,
+          isMainNumber: Number(p.isMainNumber),
+        })),
+      }
+
       const result = await workOrderAdapter.createWorkOrder({
         rentalProperty: rentalPropertyInfo,
-        // @ts-expect-error phoneNumbers.isMainNumber is typed as boolean, but it is actually a number
-        tenant: tenant.data,
+        tenant: tenantForWorkOrder,
         // @ts-expect-error leaseStartDate and other dates are typed as Date, but they are actually strings
         lease,
         details: {
