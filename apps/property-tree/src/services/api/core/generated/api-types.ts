@@ -2576,6 +2576,38 @@ export interface paths {
       }
     }
   }
+  '/rental-objects/by-code/{rentalObjectCode}/rent-legacy': {
+    /**
+     * Get legacy (Xpand) rent for a rental object
+     * @description Fetches the rental object's rent rows from Xpand, converted to monthly amounts. Used to compare against Tenfast during the transition.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch legacy rent for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the legacy rental object rent. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectRentInfo']
+            }
+          }
+        }
+        /** @description Not found. No rent rows exist in Xpand for the specified rental object. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. Failed to fetch legacy rental object rent. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/rental-objects/availabilities': {
     /**
      * Get availabilities for rental objects
