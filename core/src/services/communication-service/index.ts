@@ -46,6 +46,7 @@ export const routes = (router: KoaRouter) => {
     'DispatchWithRecipients',
     communication.DispatchWithRecipientsSchema
   )
+  registerSchema('LogCallParams', communication.LogCallParamsSchema)
 
   /**
    * @swagger
@@ -329,6 +330,72 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /communication-log/calls:
+   *   post:
+   *     summary: Log a phone call triggered from an Odoo errand
+   *     description: Called by Odoo when an employee triggers a phone call from an errand. The call has already happened; this only records it in the tenant's communication log. triggeredByUser is taken from the request body since Odoo authenticates with a service account (same as /work-orders/send-sms).
+   *     tags:
+   *       - Communication service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/LogCallParams'
+   *     responses:
+   *       '200':
+   *         description: Call logged successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     dispatchId:
+   *                       type: string
+   *                       format: uuid
+   *       '400':
+   *         description: Invalid request body
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/communication-log/calls', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    let params: communication.LogCallParams
+    try {
+      params = communication.LogCallParamsSchema.parse(ctx.request.body)
+    } catch (error) {
+      ctx.status = 400
+      ctx.body = {
+        error:
+          error instanceof z.ZodError
+            ? `Invalid call log payload: ${error.issues
+                .map((issue) => issue.path.join('.'))
+                .join(', ')}`
+            : 'Invalid call log payload',
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await communicationAdapter.logCall(params)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
 
   /**
    * @swagger

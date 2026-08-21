@@ -346,6 +346,40 @@ export interface paths {
       }
     }
   }
+  '/communication-log/calls': {
+    /**
+     * Log a phone call triggered from an Odoo errand
+     * @description Called by Odoo when an employee triggers a phone call from an errand. The call has already happened; this only records it in the tenant's communication log. triggeredByUser is taken from the request body since Odoo authenticates with a service account (same as /work-orders/send-sms).
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['LogCallParams']
+        }
+      }
+      responses: {
+        /** @description Call logged successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                /** Format: uuid */
+                dispatchId?: string
+              }
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/communication-log/dispatches/{id}': {
     /** Get a dispatch and its recipients by dispatch id */
     get: {
@@ -13946,7 +13980,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'call'
         fromAddress: string
         subject: string | null
         body: string
@@ -13957,6 +13991,7 @@ export interface components {
         triggeredAt: string
         recipientCount: number
         audienceCriteria: string | null
+        workOrderCode: string | null
         /** Format: uuid */
         inReplyToDispatchId: string | null
         /** Format: uuid */
@@ -13994,7 +14029,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'call'
         fromAddress: string
         subject: string | null
         body: string
@@ -14005,6 +14040,7 @@ export interface components {
         triggeredAt: string
         recipientCount: number
         audienceCriteria: string | null
+        workOrderCode: string | null
         /** Format: uuid */
         inReplyToDispatchId: string | null
         /** Format: uuid */
@@ -14034,6 +14070,12 @@ export interface components {
         /** Format: date-time */
         createdAt: string
       }[]
+    }
+    LogCallParams: {
+      phoneNumber: string
+      contactCode: string
+      workOrderCode: string
+      triggeredByUser?: string
     }
     KeycloakUser: {
       id: string
