@@ -51,6 +51,21 @@ export const Contact = z.object({
   specialAttention: z.boolean().optional(),
 })
 
+export const RentalObjectRentSchema = z.object({
+  amount: z.number(),
+  vat: z.number(),
+  rows: z.array(
+    z.object({
+      code: z.string().optional(),
+      description: z.string(),
+      amount: z.number(),
+      vatPercentage: z.number(),
+      fromDate: z.coerce.date().optional(),
+      toDate: z.coerce.date().optional(),
+    })
+  ),
+})
+
 export const Lease = z.object({
   leaseId: z.string(),
   leaseNumber: z.string(),
@@ -72,21 +87,18 @@ export const Lease = z.object({
     .object({
       rentalObjectCode: z.string(),
       address: z.string(),
-      rent: z
+      availabilityInfo: z
         .object({
           rentalObjectCode: z.string(),
-          amount: z.number(),
-          vat: z.number(),
-          rows: z.array(
-            z.object({
-              code: z.string(),
-              description: z.string(),
-              amount: z.number(),
-              vatPercentage: z.number(),
-              fromDate: z.coerce.date().optional(),
-              toDate: z.coerce.date().optional(),
-            })
-          ),
+          vacantFrom: z.coerce.date().optional(),
+          rent: RentalObjectRentSchema,
+          rentalTenureType: z.object({
+            id: z.string(),
+            name: z.string(),
+          }),
+          rentalTags: z
+            .array(z.object({ id: z.string(), name: z.string() }))
+            .optional(),
         })
         .optional(),
       residentialAreaCaption: z.string(),
