@@ -35,7 +35,7 @@ import { routes as leasesRoutes } from './leases'
 import { routes as keysExportRoutes } from './keys-export'
 
 import { registerSchema } from '../../utils/openapi'
-import { Contact, Lease } from './schemas/lease'
+import { Contact, Lease, RentalObjectRentInfo } from './schemas/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
 
 /**
@@ -62,6 +62,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
   registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
   registerSchema('Contact', Contact)
+  registerSchema('RentalObjectRentInfo', RentalObjectRentInfo)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)

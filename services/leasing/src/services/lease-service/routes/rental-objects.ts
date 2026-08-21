@@ -10,6 +10,7 @@ import {
   determineVacantFrom,
   hasNoActiveBlock,
 } from '../helpers/rental-object-availability-helpers'
+import { mapToOnecoreRentalObjectRent } from '../helpers/tenfast'
 
 /**
  * @swagger
@@ -486,6 +487,81 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent:
+   *   get:
+   *     summary: Get rent for a rental object
+   *     description: Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *       '404':
+   *         description: Not found. The specified rental object was not found in Tenfast.
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object rent.
+   */
+  router.get('/rental-objects/by-code/:rentalObjectCode/rent', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+
+    const result = await tenfastAdapter.getRentalObject(rentalObjectCode)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    if (!result.data) {
+      ctx.status = 404
+      ctx.body = {
+        error: `Rental object not found: ${rentalObjectCode}`,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: {
+        rentalObjectCode: result.data.externalId,
+        rent: mapToOnecoreRentalObjectRent(result.data),
+      },
+      ...metadata,
+    }
+  })
 
   /**
    * @swagger
