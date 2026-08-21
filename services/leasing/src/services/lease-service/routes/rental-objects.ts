@@ -565,6 +565,82 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent-legacy:
+   *   get:
+   *     summary: Get legacy (Xpand) rent for a rental object
+   *     description: Fetches the rental object's rent rows from Xpand's debit row view, converted to monthly amounts. Used to compare against Tenfast during the transition.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch legacy rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the legacy rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *       '404':
+   *         description: Not found. No rent rows exist in Xpand for the specified rental object.
+   *       '500':
+   *         description: Internal server error. Failed to fetch legacy rental object rent.
+   */
+  router.get(
+    '/rental-objects/by-code/:rentalObjectCode/rent-legacy',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
+
+      const result =
+        await xpandAdapter.getRentalObjectRentRows(rentalObjectCode)
+
+      if (!result.ok && result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: `No rent rows found in Xpand for rental object: ${rentalObjectCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { rentalObjectCode, rent: result.data },
+        ...metadata,
+      }
+    }
+  )
+
+  /**
+   * @swagger
    * /rental-objects/availability:
    *   post:
    *     summary: Get availability for rental objects
