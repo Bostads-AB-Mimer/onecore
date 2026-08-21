@@ -127,6 +127,31 @@ const getRentalObjectRentByCode = async (
   }
 }
 
+const getRentalObjectLegacyRentByCode = async (
+  rentalObjectCode: string
+): Promise<
+  AdapterResult<
+    { rentalObjectCode: string; rent: RentalObjectRent },
+    'not-found' | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/rental-objects/by-code/${rentalObjectCode}/rent-legacy`
+    )
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error retrieving legacy rental object rent by code: ${rentalObjectCode}`
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getRentalObjectAvailabilities = async (
   rentalObjectCodes?: string[]
 ): Promise<
@@ -163,5 +188,6 @@ export {
   getParkingSpaces,
   getRentalObjectAvailabilityByCode,
   getRentalObjectAvailabilities,
+  getRentalObjectLegacyRentByCode,
   getRentalObjectRentByCode,
 }

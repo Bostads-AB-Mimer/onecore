@@ -342,6 +342,82 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent-legacy:
+   *   get:
+   *     summary: Get legacy (Xpand) rent for a rental object
+   *     description: Fetches the rental object's rent rows from Xpand, converted to monthly amounts. Used to compare against Tenfast during the transition.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch legacy rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the legacy rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/RentalObjectRentInfo'
+   *       '404':
+   *         description: Not found. No rent rows exist in Xpand for the specified rental object.
+   *       '500':
+   *         description: Internal server error. Failed to fetch legacy rental object rent.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/rental-objects/by-code/:rentalObjectCode/rent-legacy',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
+
+      const result =
+        await leasingAdapter.getRentalObjectLegacyRentByCode(rentalObjectCode)
+
+      if (!result.ok && result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'No legacy rent rows found', ...metadata }
+        return
+      }
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error:
+            'Unexpected error when getting legacy rent for ' + rentalObjectCode,
+          ...metadata,
+        }
+        return
+      }
+
+      const parsed = RentalObjectRentInfo.safeParse(result.data)
+      if (!parsed.success) {
+        logger.error(
+          { rentalObjectCode, issues: parsed.error.issues },
+          'Legacy rental object rent from leasing did not match schema'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: 'Invalid legacy rental object rent data',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: parsed.data, ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
    * /rental-objects/availabilities:
    *   post:
    *     summary: Get availabilities for rental objects
