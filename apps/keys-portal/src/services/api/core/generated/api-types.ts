@@ -13991,7 +13991,6 @@ export interface components {
         triggeredAt: string
         recipientCount: number
         audienceCriteria: string | null
-        workOrderCode: string | null
         /** Format: uuid */
         inReplyToDispatchId: string | null
         /** Format: uuid */
@@ -14040,7 +14039,6 @@ export interface components {
         triggeredAt: string
         recipientCount: number
         audienceCriteria: string | null
-        workOrderCode: string | null
         /** Format: uuid */
         inReplyToDispatchId: string | null
         /** Format: uuid */

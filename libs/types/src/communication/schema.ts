@@ -32,9 +32,6 @@ export const DispatchSchema = z.object({
   triggeredAt: z.coerce.date(),
   recipientCount: z.number().int().nonnegative(),
   audienceCriteria: z.string().nullable(),
-  // Odoo errand code ("od-<id>") — set on dispatches triggered from an Odoo
-  // errand, used by the frontend to link the log entry to the errand in Odoo.
-  workOrderCode: z.string().nullable(),
   inReplyToDispatchId: z.string().uuid().nullable(),
   templateId: z.string().uuid().nullable(),
   createdAt: z.coerce.date(),
@@ -96,14 +93,15 @@ export const LogOutboundParamsSchema = z.object({
   // passthrough() ensures the emitted JSON schema has a `properties: {}` object,
   // which koa-okapi-router's media-type linker requires (it Object.entries() it).
   audienceCriteria: z.object({}).passthrough().optional(),
-  workOrderCode: z.string().optional(),
   templateId: z.string().uuid().optional(),
   recipients: z.array(LogOutboundRecipientSchema),
 })
 
 // Request body Odoo POSTs (via core) when an employee triggers a phone call
 // from an errand. The service maps it onto a 'call' dispatch itself, so
-// channel/provider/status are not part of the payload.
+// channel/provider/status are not part of the payload. The errand code is
+// embedded in the dispatch body text (like for work-order sms), where the
+// frontend picks it up to link into Odoo — it is not stored separately.
 export const LogCallParamsSchema = z.object({
   phoneNumber: z.string().min(1),
   contactCode: z.string().min(1),

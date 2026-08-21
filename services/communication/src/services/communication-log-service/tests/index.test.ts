@@ -61,7 +61,6 @@ describe('POST /communication-log/calls', () => {
       messageType: 'work_order_tenant_call',
       provider: 'odoo',
       triggeredByUser: 'employee@mimer.nu',
-      workOrderCode: 'od-123',
       recipients: [
         {
           contactCode: 'P123456',

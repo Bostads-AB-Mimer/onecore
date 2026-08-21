@@ -56,7 +56,6 @@ export async function logOutboundDispatch(
         audienceCriteria: params.audienceCriteria
           ? JSON.stringify(params.audienceCriteria)
           : null,
-        workOrderCode: params.workOrderCode ?? null,
         templateId: params.templateId ?? null,
       })
       .returning<{ id: string }[]>('id')

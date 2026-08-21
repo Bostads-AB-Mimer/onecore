@@ -66,8 +66,8 @@ export const routes = (router: OkapiRouter) => {
         'already happened, so the entry is logged as a completed fact with ' +
         "recipient status 'sent'. triggeredByUser comes from the request " +
         'body since Odoo authenticates with a service account. The errand ' +
-        'code (workOrderCode) lets the frontend link the entry to the errand ' +
-        'in Odoo.',
+        'code (workOrderCode) is embedded in the dispatch body text, where ' +
+        'the frontend picks it up to link the entry to the errand in Odoo.',
       tags: ['Communication log'],
       body: communication.LogCallParamsSchema,
       response: {
@@ -88,7 +88,6 @@ export const routes = (router: OkapiRouter) => {
           messageType: 'work_order_tenant_call',
           provider: CALL_PROVIDER,
           triggeredByUser: params.triggeredByUser,
-          workOrderCode: params.workOrderCode,
           recipients: [
             {
               contactCode: params.contactCode,

@@ -16,7 +16,7 @@ import {
 import { useTenantCommunication } from '@/entities/tenant'
 
 import type { CustomerMessage } from '@/services/api/core/communicationService'
-import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
+import { findErrandCode, linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
 
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -143,6 +143,11 @@ function MessageRow({ message }: { message: CustomerMessage }) {
   const [isOpen, setIsOpen] = useState(false)
   const { dispatch, recipient } = message
   const title = dispatch.subject ?? CHANNEL_META[dispatch.channel].label
+  // The errand reference lives inside the message text (like for work-order
+  // sms), not as a dedicated field.
+  const errandCode = findErrandCode(
+    `${dispatch.subject ?? ''} ${dispatch.body}`
+  )
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -211,17 +216,15 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                   <DetailRow label="Fel" value={recipient.error} />
                 )}
               </div>
-              {dispatch.workOrderCode && (
+              {errandCode && (
                 <Button
                   variant="link"
                   size="sm"
                   className="mt-2 h-auto p-0 gap-1"
-                  onClick={() =>
-                    linkToWorkOrderInOdoo({ code: dispatch.workOrderCode! })
-                  }
+                  onClick={() => linkToWorkOrderInOdoo({ code: errandCode })}
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  Öppna ärende {dispatch.workOrderCode} i Odoo
+                  Öppna ärende {errandCode} i Odoo
                 </Button>
               )}
             </div>

@@ -1,7 +1,7 @@
 /**
- * Adds the 'call' channel (phone calls logged from Odoo errands) and a
- * workOrderCode column on dispatch holding the Odoo errand code ("od-<id>"),
- * which the frontend uses to link the log entry to the errand in Odoo.
+ * Adds the 'call' channel — phone calls to tenants logged after the fact
+ * (planned caller: Odoo errands). The errand reference travels inside the
+ * dispatch body text, same as for work-order sms, so no new columns.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
@@ -12,7 +12,6 @@ exports.up = function (knex) {
       ALTER TABLE dispatch DROP CONSTRAINT ck_dispatch_channel;
       ALTER TABLE dispatch ADD CONSTRAINT ck_dispatch_channel
         CHECK (channel IN ('sms','email','call'));
-      ALTER TABLE dispatch ADD workOrderCode NVARCHAR(50) NULL;
     `)
   })
 }
@@ -27,7 +26,6 @@ exports.up = function (knex) {
 exports.down = function (knex) {
   return knex.transaction(async (trx) => {
     await trx.raw(`
-      ALTER TABLE dispatch DROP COLUMN workOrderCode;
       ALTER TABLE dispatch DROP CONSTRAINT ck_dispatch_channel;
       ALTER TABLE dispatch ADD CONSTRAINT ck_dispatch_channel
         CHECK (channel IN ('sms','email'));
