@@ -18,7 +18,9 @@ export const BuildingSearchResultSchema = z.object({
         .string()
         .describe('Property associated with the building')
         .nullable(),
-      id: z.string(),
+      // Optional for the same reason as on Building: detail lookups resolve the
+      // property from the babuf row, which carries code/name but no bafst id.
+      id: z.string().optional(),
       code: z.string(),
     })
     .nullish(),

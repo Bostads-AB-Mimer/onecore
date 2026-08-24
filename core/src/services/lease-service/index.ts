@@ -95,12 +95,15 @@ async function resolveBuildingManagerToKvvAreaCodes(
     return { ok: true, query: rest, emptyResult: false }
   }
 
-  const lookup =
-    await propertyBaseAdapter.findKvvAreaCodesByResponsibles(userIds)
+  const lookup = await propertyBaseAdapter.listKvvAreas({
+    responsibleUserIds: userIds,
+  })
   if (!lookup.ok) {
     return { ok: false, reason: 'Failed to resolve building managers' }
   }
-  if (lookup.data.length === 0) {
+
+  const kvvAreaCodes = lookup.data.map((area) => area.code)
+  if (kvvAreaCodes.length === 0) {
     return {
       ok: true,
       query: { ...rest, kvvAreaCodes: [NO_MATCH_KVV_AREA_CODE] },
@@ -110,7 +113,7 @@ async function resolveBuildingManagerToKvvAreaCodes(
 
   return {
     ok: true,
-    query: { ...rest, kvvAreaCodes: lookup.data },
+    query: { ...rest, kvvAreaCodes },
     emptyResult: false,
   }
 }

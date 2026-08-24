@@ -227,8 +227,13 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
-  ...zodToJsonSchema(types.KvvAreaSummarySchema, {
-    name: 'KvvAreaSummary',
+  ...zodToJsonSchema(types.KvvAreaWithCostCenterSchema, {
+    name: 'KvvAreaWithCostCenter',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.PropertyKvvAreaLookupSchema, {
+    name: 'PropertyKvvAreaLookup',
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,

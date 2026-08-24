@@ -5994,25 +5994,26 @@ export interface paths {
   }
   '/kvv-areas': {
     /**
-     * List kvv-area codes filtered by responsible Keycloak users
-     * @description Returns the codes of kvv-areas (förvaltningsområden) whose
-     * responsibleKeycloakUserId is one of the provided user ids. Repeat the
-     * responsibleUserId query param for each user id. Returns an empty list
-     * if the param is omitted.
+     * List kvv-areas (förvaltningsområden) with cost center and responsible
+     * @description Returns every kvv-area with its cost center (distrikt) and the
+     * responsible kvartersvärd hydrated from Keycloak (`null` if unset or
+     * if Keycloak is unreachable). Repeat `responsibleUserId` to restrict
+     * the list to areas whose responsible is one of the given Keycloak user
+     * ids; omit it to list all areas.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Keycloak user ids (repeatable) */
+          /** @description Keycloak user ids (repeatable). Omit to list all areas. */
           responsibleUserId?: string[]
         }
       }
       responses: {
-        /** @description List of kvv-area codes */
+        /** @description List of kvv-areas */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KvvAreaSummary'][]
+              content?: components['schemas']['KvvAreaWithResponsible'][]
             }
           }
         }
@@ -6078,6 +6079,39 @@ export interface paths {
     }
   }
   '/properties/{propertyCode}/kvv-area': {
+    /**
+     * Get the KVV-area (förvaltningsområde) and district of a property
+     * @description Reverse lookup from a property code to the KVV-area it belongs to,
+     * the cost center (distrikt) of that area and the responsible
+     * kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
+     * is unreachable). Used by Odoo to stamp maintenance requests with
+     * their district. 404 when the property has no KVV-area link.
+     */
+    get: {
+      parameters: {
+        path: {
+          propertyCode: string
+        }
+      }
+      responses: {
+        /** @description KVV-area, cost center and responsible for the property */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /** @description Property has no KVV-area link */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
     /**
      * Set the KVV-area (förvaltningsområde) of a property
      * @description Sets the KVV-area a property belongs to. Cross-cost-center moves are
@@ -10506,7 +10540,7 @@ export interface components {
       property?: {
         name: string | null
         code: string
-        id: string
+        id?: string
       } | null
     }
     Company: {
@@ -11734,8 +11768,49 @@ export interface components {
       code: string
       name: string
     }
-    KvvAreaSummary: {
+    KvvAreaWithResponsible: {
+      /** Format: uuid */
+      id: string
       code: string
+      name: string | null
+      costCenter: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string
+      }
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+    }
+    PropertyKvvAreaLookup: {
+      kvvArea: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string | null
+      }
+      costCenter: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string
+      }
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
     }
     PutPropertyKvvAreaBody: {
       /** Format: uuid */
@@ -12600,7 +12675,7 @@ export interface components {
       property?: {
         /** @description Property associated with the building */
         name: string | null
-        id: string
+        id?: string
         code: string
       } | null
     }
@@ -12676,7 +12751,7 @@ export interface components {
           property?: {
             /** @description Property associated with the building */
             name: string | null
-            id: string
+            id?: string
             code: string
           } | null
         }

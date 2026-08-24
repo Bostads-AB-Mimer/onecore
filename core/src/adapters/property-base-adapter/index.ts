@@ -1086,25 +1086,57 @@ export async function getCostCenterTreeById(
 
 export { getApartmentTemperatures } from './apartment-temperatures'
 
-export async function findKvvAreaCodesByResponsibles(
-  userIds: string[]
-): Promise<AdapterResult<string[], 'unknown'>> {
-  if (userIds.length === 0) return { ok: true, data: [] }
+type KvvAreaWithCostCenter = components['schemas']['KvvAreaWithCostCenter']
+
+export async function listKvvAreas(
+  filter: { responsibleUserIds?: string[] } = {}
+): Promise<AdapterResult<KvvAreaWithCostCenter[], 'unknown'>> {
+  // An empty array serialises to no query param, which the service reads as
+  // "no filter at all" and answers with every area. Resolve that ambiguity
+  // here: restricting to nobody must yield nothing, never everything.
+  if (filter.responsibleUserIds?.length === 0) return { ok: true, data: [] }
+
   try {
     const fetchResponse = await client().GET('/kvv-areas', {
-      params: { query: { responsibleUserId: userIds } },
+      params: {
+        query: filter.responsibleUserIds
+          ? { responsibleUserId: filter.responsibleUserIds }
+          : {},
+      },
     })
 
     if (fetchResponse.data?.content) {
-      return { ok: true, data: fetchResponse.data.content.map((r) => r.code) }
+      return { ok: true, data: fetchResponse.data.content }
     }
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error(
-      { err },
-      'property-base-adapter.findKvvAreaCodesByResponsibles'
-    )
+    logger.error({ err }, 'property-base-adapter.listKvvAreas')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type PropertyKvvAreaLookup = components['schemas']['PropertyKvvAreaLookup']
+
+export async function getKvvAreaByPropertyCode(
+  propertyCode: string
+): Promise<AdapterResult<PropertyKvvAreaLookup, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/properties/{code}/kvv-area', {
+      params: { path: { code: propertyCode } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getKvvAreaByPropertyCode')
     return { ok: false, err: 'unknown' }
   }
 }

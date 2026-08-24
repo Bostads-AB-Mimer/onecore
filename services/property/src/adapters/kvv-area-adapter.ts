@@ -1,22 +1,97 @@
 import { logger } from '@onecore/utilities'
 import { Prisma, type OnecoreKvvArea } from '@prisma/client'
 
-import type { PropertyKvvAreaLink } from '../types/kvv-area'
+import { trimStrings } from '@src/utils/data-conversion'
+import type {
+  KvvAreaWithCostCenter,
+  PropertyKvvAreaLink,
+  PropertyKvvAreaLookup,
+} from '../types/kvv-area'
 
 import { prisma } from './db'
 
-export const findKvvAreaCodesByResponsibles = async (
-  userIds: string[]
-): Promise<string[]> => {
-  if (userIds.length === 0) return []
+// Reverse lookup property → kvv-area → cost center. Reads the OneCore-owned
+// link table (not Xpand babuf.fencode), so UI-made moves are reflected.
+//
+// Deliberately NOT filtered by OPERATING_COMPANY_CODES: a property sold into
+// company 999 drops out of GET /cost-centers/:id/tree, but an errand on it must
+// still resolve to a district rather than 404. Do not "align" this with the
+// tree's company filter without deciding what should happen to those errands.
+//
+// The code is trimmed: Xpand pads Char columns, and callers (Odoo) forward
+// codes straight from Xpand-sourced fields.
+export const getKvvAreaByPropertyCode = async (
+  propertyCode: string
+): Promise<PropertyKvvAreaLookup | null> => {
   try {
-    const rows = await prisma.onecoreKvvArea.findMany({
-      where: { responsibleKeycloakUserId: { in: userIds } },
-      select: { code: true },
-    })
-    return rows.map((r) => r.code)
+    const link = await prisma.onecorePropertyKvvArea
+      .findUnique({
+        where: { propertyCode: propertyCode.trim() },
+        include: { kvvArea: { include: { costCenter: true } } },
+      })
+      .then(trimStrings)
+
+    if (!link) return null
+
+    return {
+      kvvArea: {
+        id: link.kvvArea.id,
+        code: link.kvvArea.code,
+        name: link.kvvArea.name ?? null,
+      },
+      costCenter: {
+        id: link.kvvArea.costCenter.id,
+        code: link.kvvArea.costCenter.code,
+        name: link.kvvArea.costCenter.name,
+      },
+      responsibleKeycloakUserId: link.kvvArea.responsibleKeycloakUserId ?? null,
+    }
   } catch (err) {
-    logger.error({ err }, 'kvv-area-adapter.findKvvAreaCodesByResponsibles')
+    logger.error(
+      { err, propertyCode },
+      'kvv-area-adapter.getKvvAreaByPropertyCode'
+    )
+    throw err
+  }
+}
+
+export type ListKvvAreasFilter = {
+  // When given, only areas whose responsible kvartersvärd is one of these
+  // Keycloak user ids are returned. Omit to list every area.
+  responsibleUserIds?: string[]
+}
+
+export const listKvvAreas = async (
+  filter: ListKvvAreasFilter = {}
+): Promise<KvvAreaWithCostCenter[]> => {
+  try {
+    const rows = await prisma.onecoreKvvArea
+      .findMany({
+        ...(filter.responsibleUserIds
+          ? {
+              where: {
+                responsibleKeycloakUserId: { in: filter.responsibleUserIds },
+              },
+            }
+          : {}),
+        include: { costCenter: true },
+        orderBy: { code: 'asc' },
+      })
+      .then(trimStrings)
+
+    return rows.map((row) => ({
+      id: row.id,
+      code: row.code,
+      name: row.name ?? null,
+      costCenter: {
+        id: row.costCenter.id,
+        code: row.costCenter.code,
+        name: row.costCenter.name,
+      },
+      responsibleKeycloakUserId: row.responsibleKeycloakUserId ?? null,
+    }))
+  } catch (err) {
+    logger.error({ err, filter }, 'kvv-area-adapter.listKvvAreas')
     throw err
   }
 }

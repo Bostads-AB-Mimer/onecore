@@ -4,7 +4,7 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { z } from 'zod'
 
 import { etagMiddleware } from '../middleware/etag'
@@ -14,7 +14,10 @@ import {
   getPropertyValuesByPropertyObjectId,
   searchProperties,
 } from '../adapters/property-adapter'
-import { upsertPropertyKvvArea } from '../adapters/kvv-area-adapter'
+import {
+  getKvvAreaByPropertyCode,
+  upsertPropertyKvvArea,
+} from '../adapters/kvv-area-adapter'
 import {
   propertiesQueryParamsSchema,
   PropertyDetailsSchema,
@@ -23,6 +26,7 @@ import {
 import {
   PutPropertyKvvAreaBodySchema,
   PropertyKvvAreaLinkSchema,
+  PropertyKvvAreaLookupSchema,
 } from '../types/kvv-area'
 import { parseRequest } from '../middleware/parse-request'
 
@@ -261,6 +265,72 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /properties/{code}/kvv-area:
+   *   get:
+   *     summary: Get the KVV-area (förvaltningsområde) and cost center of a property
+   *     description: |
+   *       Reverse lookup from a property code to the KVV-area it is linked to in
+   *       `onecore_property_kvv_area`, the cost center (distrikt) that area
+   *       belongs to, and the responsible kvartersvärd (as a Keycloak user id).
+   *       Returns 404 when the property has no KVV-area link.
+   *     tags:
+   *       - Properties
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The property code (Xpand `Property.code`).
+   *     responses:
+   *       200:
+   *         description: The property's KVV-area, cost center and responsible.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/PropertyKvvAreaLookup'
+   *       404:
+   *         description: The property has no KVV-area link.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/properties/:code/kvv-area', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const propertyCode = ctx.params.code
+
+    try {
+      const lookup = await getKvvAreaByPropertyCode(propertyCode)
+
+      if (!lookup) {
+        ctx.status = 404
+        ctx.body = {
+          reason: 'Property has no KVV-area',
+          code: 'PROPERTY_KVV_AREA_NOT_FOUND',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: PropertyKvvAreaLookupSchema.parse(lookup),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error({ err, propertyCode }, 'properties.getKvvAreaByPropertyCode')
+      ctx.status = 500
+      ctx.body = {
+        reason: 'Internal server error',
+        code: 'KVV_AREA_LOOKUP_FAILED',
+        ...metadata,
+      }
     }
   })
 
