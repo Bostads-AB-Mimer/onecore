@@ -8,6 +8,8 @@ import {
   syncLease as syncLeaseToTenfast,
 } from '../../adapters/leasing-adapter'
 import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
+import { makeContactsAdapter } from '../../adapters/contacts-adapter'
+import { syncContactToEconomy } from '../../adapters/economy-adapter'
 import {
   addEntry,
   hasKey,
@@ -119,6 +121,38 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
       'rental object type not in scope, skipping'
     )
     return
+  }
+
+  if (lease.action === 'create') {
+    const contactsAdapter = makeContactsAdapter(config.contactsService.url)
+    const contactResult = await contactsAdapter.getByContactCode(
+      lease.contactCode
+    )
+    if (!contactResult.ok) {
+      throw new Error(
+        `Failed to get contact ${lease.contactCode} for lease ${lease.leaseId}: ${contactResult.err}`
+      )
+    }
+
+    const otherInvoiceRecipient = contactResult.data.relatedContacts?.find(
+      (r) => r.role === 'otherInvoiceRecipient'
+    )
+    if (otherInvoiceRecipient) {
+      logger.info(
+        { leaseId: lease.leaseId, action: lease.action },
+        'syncing other invoice recipient'
+      )
+
+      const syncResult = await syncContactToEconomy(
+        otherInvoiceRecipient.contactCode,
+        otherInvoiceRecipient
+      )
+      if (!syncResult.ok) {
+        throw new Error(
+          `Failed to sync other invoice recipient ${otherInvoiceRecipient.contactCode}: ${syncResult.err}`
+        )
+      }
+    }
   }
 
   const contactCode = lease.action === 'create' ? lease.contactCode : undefined
