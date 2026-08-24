@@ -9,7 +9,7 @@ import {
   buildFacetIndex,
   filterSignature,
 } from '../model/facets'
-import { ancestorPropertyKeys } from '../model/treeRows'
+import { ancestorPropertyKeys, rootKeyOf } from '../model/treeRows'
 import type {
   PropertyTree,
   PropertyTreeRoot,
@@ -26,9 +26,10 @@ const combineObjects = (
   }[]
 ) => ({
   objects: results.flatMap((r) => r.data ?? []),
-  // Resolved-at-least-once rather than objects.length: a first root that
-  // legitimately holds zero objects still counts as loaded.
-  loaded: results.some((r) => r.data !== undefined),
+  // Settled rather than objects.length: a root that legitimately holds zero
+  // objects still counts. Pairs by index with the loadedRoots the queries
+  // map over.
+  settled: results.map((r) => r.data !== undefined),
 })
 
 const combineAncestry = (results: { data?: PropertyTree | undefined }[]) =>
@@ -61,7 +62,7 @@ export function useObjectFacets(
   enabled: boolean,
   filter: ObjectFilter
 ): { facets: FacetIndex; objects: RentalObject[] } {
-  const { objects, loaded } = useQueries({
+  const { objects, settled } = useQueries({
     queries: (enabled ? loadedRoots : []).map((root) =>
       rootRentalObjectsQuery(grouping, root.id)
     ),
@@ -77,12 +78,27 @@ export function useObjectFacets(
     combine: combineAncestry,
   })
 
+  // Roots whose objects have resolved: below them a missing facet key is a
+  // true zero, so empty branches show 0 and grey out under a filter.
+  const settledRootKeys = useMemo(() => {
+    const keys = new Set<string>()
+    const roots = enabled ? loadedRoots : []
+    roots.forEach((root, i) => {
+      if (settled[i]) keys.add(rootKeyOf(root))
+    })
+    return keys
+  }, [enabled, loadedRoots, settled])
+
   const signature = filterSignature(filter)
   const facets = useMemo(
-    () => addAncestorCounts(buildFacetIndex(objects, filter, loaded), ancestry),
+    () =>
+      addAncestorCounts(
+        buildFacetIndex(objects, filter, settledRootKeys),
+        ancestry
+      ),
     // filter is covered by its signature; the arrays are combine-memoised.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [objects, loaded, ancestry, signature]
+    [objects, settledRootKeys, ancestry, signature]
   )
 
   // The objects ride along: roll-up over leaf selections needs them as the

@@ -12,7 +12,6 @@ import type {
   RentalObjectType,
 } from './selection'
 import {
-  isTypeFilterActive,
   nodeCheckState,
   nodeKey,
   parkingAreaKey,
@@ -104,19 +103,23 @@ export function objectNode(
 }
 
 export interface FacetIndex {
-  // Zero entries are present: a missing key means "not loaded", never "no
-  // matches".
+  // Sparse: only keys some object counted into are present. Whether a missing
+  // key means 0 or "not loaded" is settledRootKeys' call, not key presence.
   countByKey: ReadonlyMap<string, number> // node key → objects matching filter
   totalByKey: ReadonlyMap<string, number> // node key → objects, filter ignored
   matchedRentalIds: ReadonlySet<string> // matching rental ids — leaf rows read
-  ready: boolean // false until one root's objects resolved (empty counts too)
+  /** Root keys whose objects have resolved: below them a missing key is a
+   * true zero; everywhere else it's "not loaded" — no count, never excluded. */
+  settledRootKeys: ReadonlySet<string>
 }
+
+const NO_ROOTS: ReadonlySet<string> = new Set()
 
 /** One pass over the objects: filtered and unfiltered counts per node key. */
 export function buildFacetIndex(
   objects: readonly RentalObject[],
   filter: ObjectFilter,
-  ready: boolean
+  settledRootKeys: ReadonlySet<string> = NO_ROOTS
 ): FacetIndex {
   const countByKey = new Map<string, number>()
   const totalByKey = new Map<string, number>()
@@ -132,7 +135,7 @@ export function buildFacetIndex(
     }
   }
 
-  return { countByKey, totalByKey, matchedRentalIds, ready }
+  return { countByKey, totalByKey, matchedRentalIds, settledRootKeys }
 }
 
 /** The active filter plus whatever objects have arrived for it. Everything
@@ -142,51 +145,47 @@ export interface ObjectFilterView {
   facets: FacetIndex
 }
 
-/** True when the filter restricts anything at all. */
-export function isObjectFilterActive(view: ObjectFilterView): boolean {
-  return (
-    isTypeFilterActive(view.filter.types) || view.filter.subtypeKeys.size > 0
-  )
-}
-
-const facetKnown = (view: ObjectFilterView, key: string): boolean =>
-  view.facets.ready && view.facets.totalByKey.has(key)
+// A node's counts are known once its root's objects have resolved — the root
+// is the node's first ancestor, or the node itself at the top.
+const facetKnown = (
+  view: ObjectFilterView,
+  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>
+): boolean => view.facets.settledRootKeys.has(node.ancestors[0] ?? node.key)
 
 /** Objects under a node matching the active filter — the "Antal" column.
- * Undefined until the node's root's objects have arrived. */
+ * Undefined until the node's root's objects have arrived; a missing key under
+ * a settled root is a branch that truly holds nothing, so it reads 0. */
 export function nodeCount(
-  node: Pick<PropertyTreeNode, 'key'>,
+  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
   view: ObjectFilterView
 ): number | undefined {
-  if (!facetKnown(view, node.key)) return undefined
-  return view.facets.countByKey.get(node.key)
+  if (!facetKnown(view, node)) return undefined
+  return view.facets.countByKey.get(node.key) ?? 0
 }
 
-/** Nothing under the node matches: greyed, unselectable, dropped on apply.
- * Unknown nodes (objects not loaded) are never excluded. */
+/** Nothing under the node can match: greyed, unselectable, dropped on apply.
+ * With no filter active every object matches, so this then only catches
+ * branches holding no objects at all. Unknown nodes (objects not loaded) are
+ * never excluded. */
 export function nodeExcluded(
   node: Pick<PropertyTreeNode, 'key' | 'level' | 'value' | 'ancestors'>,
   view: ObjectFilterView
 ): boolean {
-  if (!isObjectFilterActive(view)) return false
-  // Object nodes aren't counted per key; they match by rental id, gated on
-  // their property being counted so unloaded selections stay untouched.
+  if (!facetKnown(view, node)) return false
+  // Object nodes aren't counted per key; they match by rental id.
   if (node.level === 'object') {
-    const propertyKey = node.ancestors.find((k) => k.startsWith('property:'))
-    if (!propertyKey || !facetKnown(view, propertyKey)) return false
     return !view.facets.matchedRentalIds.has(node.value)
   }
-  if (!facetKnown(view, node.key)) return false
   return (view.facets.countByKey.get(node.key) ?? 0) === 0
 }
 
 /** Some but not all of the node's objects match — a selected node then renders
  * indeterminate, since "checked" would claim its greyed members too. */
 export function nodePartiallyExcluded(
-  node: Pick<PropertyTreeNode, 'key'>,
+  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
   view: ObjectFilterView
 ): boolean {
-  if (!facetKnown(view, node.key)) return false
+  if (!facetKnown(view, node)) return false
   const count = view.facets.countByKey.get(node.key) ?? 0
   const total = view.facets.totalByKey.get(node.key) ?? 0
   return count > 0 && count < total
@@ -206,13 +205,13 @@ export function rowCheckState(
     : state
 }
 
-/** The selection minus nodes the filter empties. Excluded nodes stay latent in
- * the underlying selection, so relaxing the filter restores them. */
+/** The selection minus excluded nodes (filtered empty, or truly empty).
+ * Excluded nodes stay latent in the underlying selection, so relaxing the
+ * filter restores the filtered ones. */
 export function filterSelection(
   selection: PropertyTreeSelection,
   view: ObjectFilterView
 ): PropertyTreeSelection {
-  if (!isObjectFilterActive(view)) return selection
   const next = new Map<string, PropertyTreeNode>()
   for (const [key, node] of selection) {
     if (!nodeExcluded(node, view)) next.set(key, node)
