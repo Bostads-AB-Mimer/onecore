@@ -5,7 +5,7 @@ import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
-import { paths } from '@/shared/routes'
+import { getPropertyObjectPath, paths } from '@/shared/routes'
 import { Checkbox } from '@/shared/ui/Checkbox'
 import { TableCell, TableRow } from '@/shared/ui/Table'
 
@@ -34,6 +34,23 @@ function Indent({ depth, children }: { depth: number; children?: ReactNode }) {
     >
       {children}
     </div>
+  )
+}
+
+/** A row's code, linking to the entity's detail page where one exists. A new
+ * tab, so a picker selection in progress survives the visit. */
+function CodeLink({ code, path }: { code: string; path: string | null }) {
+  if (!path) return <>{code}</>
+  return (
+    <Link
+      to={path}
+      target="_blank"
+      rel="noopener"
+      onClick={(e) => e.stopPropagation()}
+      className="text-primary hover:underline"
+    >
+      {code}
+    </Link>
   )
 }
 
@@ -87,6 +104,12 @@ export const NodeRow = memo(function NodeRow({
   const LevelIcon = LEVEL_ICONS[row.node.level]
   const displayState: CheckState = excluded ? 'unchecked' : checkState
   const toggleExpand = () => onToggleExpand(row.node.key, row.expanded)
+  // Where an id exists it's the linking code (a property's is its fstcode;
+  // `value` holds the beteckning); levels without one link by `value`.
+  const codePath = getPropertyObjectPath(
+    row.node.level,
+    row.node.id ?? row.node.value
+  )
   // Row click expands; checkbox and name select (and stop propagation).
   return (
     <TableRow
@@ -128,7 +151,7 @@ export const NodeRow = memo(function NodeRow({
               {row.node.label}
             </button>
             <div className="truncate text-xs text-muted-foreground @xl:hidden">
-              {row.code}
+              <CodeLink code={row.code} path={codePath} />
             </div>
           </div>
         </Indent>
@@ -137,7 +160,7 @@ export const NodeRow = memo(function NodeRow({
         {row.typeLabel ?? LEVEL_LABELS[row.node.level]}
       </TableCell>
       <TableCell className="hidden py-2 text-muted-foreground @xl:table-cell">
-        {row.code}
+        <CodeLink code={row.code} path={codePath} />
       </TableCell>
       <TableCell className="hidden py-2 text-right tabular-nums text-muted-foreground @4xl:table-cell">
         {count ?? ''}
@@ -178,6 +201,7 @@ export function ObjectRow({
     !requiresTenants || (tenants !== undefined && tenants.length > 0)
   const displayState: CheckState =
     reachable && !excluded ? checkState : 'unchecked'
+  const codePath = getPropertyObjectPath(object.type, object.rentalId)
   return (
     <TableRow className={excluded ? 'opacity-60' : undefined}>
       <TableCell className="py-1.5">
@@ -219,7 +243,7 @@ export function ObjectRow({
               </div>
             )}
             <div className="truncate text-xs text-muted-foreground @xl:hidden">
-              {object.rentalId}
+              <CodeLink code={object.rentalId} path={codePath} />
             </div>
           </div>
         </Indent>
@@ -228,7 +252,7 @@ export function ObjectRow({
         {object.subtypeName ?? RENTAL_OBJECT_TYPE_LABELS[object.type]}
       </TableCell>
       <TableCell className="hidden py-1.5 text-muted-foreground @xl:table-cell">
-        {object.rentalId}
+        <CodeLink code={object.rentalId} path={codePath} />
       </TableCell>
       <TableCell className="hidden py-1.5 @4xl:table-cell" />
     </TableRow>

@@ -76,6 +76,8 @@ export const paths = {
 // Build a rental-object detail path from its type label + code. Folds the
 // varied labels (Bostad/Lägenhet, Lokal/Förråd, Bilplats/parkering); returns
 // null when unlinkable (e.g. Övrigt) or the code is missing.
+// TODO: key this on the RentalObjectType enum instead, and let lease rows
+// (whose data really is Swedish free text) map their labels at the edge.
 export function getRentalObjectPath(
   type: string | null | undefined,
   code: string | null | undefined
@@ -91,6 +93,56 @@ export function getRentalObjectPath(
     case 'lokal':
     case 'förråd':
       return paths.facility(code)
+    default:
+      return null
+  }
+}
+
+/** Everything a picker row can be: the tree's structural levels plus the
+ * rental-object types. Mirrors PropertyTreeLevel and RentalObjectType
+ * (entities/property-tree) structurally, so shared/ doesn't import upward —
+ * drift is caught at the call sites. */
+export type PropertyObjectType =
+  | 'district'
+  | 'kvvArea'
+  | 'marketArea'
+  | 'parkingArea'
+  | 'property'
+  | 'building'
+  | 'staircase'
+  | 'residence'
+  | 'parkingSpace'
+  | 'facility'
+  | 'other'
+  // The generic object level: unlinkable as such — objects route by their
+  // RentalObjectType above.
+  | 'object'
+
+/**
+ * Detail-page path for any property-tree entity, or null where no page
+ * exists (districts, KVV-/marknadsområden, parkeringsområden, Övrigt).
+ *
+ * The value is the entity's linking code: fstcode for a property (not the
+ * beteckning — tree nodes carry it as `id`), rentalId for objects, and the
+ * canonical `<bygcode>-<vancode>` id for a staircase.
+ */
+export function getPropertyObjectPath(
+  type: PropertyObjectType,
+  value: string
+): string | null {
+  switch (type) {
+    case 'property':
+      return paths.property(value)
+    case 'building':
+      return paths.building(value)
+    case 'staircase':
+      return paths.staircase(value)
+    case 'residence':
+      return paths.residence(value)
+    case 'parkingSpace':
+      return paths.parkingSpace(value)
+    case 'facility':
+      return paths.facility(value)
     default:
       return null
   }

@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import type { RentalObject } from '@/entities/property-tree'
 import { RENTAL_OBJECT_TYPE_LABELS } from '@/entities/property-tree'
 
-import { getRentalObjectPath } from '@/shared/routes'
+import { getPropertyObjectPath } from '@/shared/routes'
 
 import type { RentalObjectDetails } from '../hooks/useRentalObjectDetails'
 
@@ -45,13 +45,9 @@ const formatRentPerArea = (
     ? ''
     : `${numberFormat.format((rent * 12) / area)} kr/m²/år`
 
-/** Each type has its own detail page; 'Övrigt' has none, so those stay text.
- * The shared helper keys on the Swedish label, which the labels map gives. */
+/** Each type has its own detail page; 'Övrigt' has none, so those stay text. */
 function RentalObjectLink({ object }: { object: RentalObject }) {
-  const path = getRentalObjectPath(
-    RENTAL_OBJECT_TYPE_LABELS[object.type],
-    object.rentalId
-  )
+  const path = getPropertyObjectPath(object.type, object.rentalId)
   if (!path) return <>{object.rentalId}</>
   return (
     <Link to={path} className="font-medium text-primary hover:underline">
