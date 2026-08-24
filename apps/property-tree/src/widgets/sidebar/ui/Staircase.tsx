@@ -56,7 +56,7 @@ export function StaircaseNavigation({
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={paths.staircase(building.code, staircase.code)}
+          to={paths.staircase(`${building.code}-${staircase.code}`)}
           state={{
             propertyCode,
             buildingCode: building.code,

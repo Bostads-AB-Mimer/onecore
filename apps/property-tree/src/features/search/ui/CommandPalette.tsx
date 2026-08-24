@@ -116,7 +116,7 @@ function getResultProps(item: CombinedSearchResult) {
         label: item.name ?? item.code,
         prefix: '[UPP]',
         subtitle: item.building.name ?? item.property.name ?? undefined,
-        path: paths.staircase(item.building.code, item.code),
+        path: paths.staircase(`${item.building.code}-${item.code}`),
         state: {
           buildingCode: item.building.code,
           propertyCode: item.property.code,
