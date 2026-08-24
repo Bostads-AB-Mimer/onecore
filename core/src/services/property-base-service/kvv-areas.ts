@@ -7,8 +7,9 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { requireRole } from '../../middlewares/keycloak-auth'
 import { getUsersByRole } from '../auth-service/keycloak-admin-adapter'
 import { PROPERTY_AREA_WRITE_ROLE, PROPERTY_MANAGER_ROLE } from './constants'
-import { toUserSummary } from './keycloak-users'
+import { resolvePropertyManagers, toUserSummary } from './keycloak-users'
 import {
+  KvvAreaWithResponsibleSchema,
   PatchedKvvAreaSchema,
   PatchKvvAreaResponsibleBodySchema,
 } from './schemas'
@@ -32,12 +33,13 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /kvv-areas:
    *   get:
-   *     summary: List kvv-area codes filtered by responsible Keycloak users
+   *     summary: List kvv-areas (förvaltningsområden) with cost center and responsible
    *     description: |
-   *       Returns the codes of kvv-areas (förvaltningsområden) whose
-   *       responsibleKeycloakUserId is one of the provided user ids. Repeat the
-   *       responsibleUserId query param for each user id. Returns an empty list
-   *       if the param is omitted.
+   *       Returns every kvv-area with its cost center (distrikt) and the
+   *       responsible kvartersvärd hydrated from Keycloak (`null` if unset or
+   *       if Keycloak is unreachable). Repeat `responsibleUserId` to restrict
+   *       the list to areas whose responsible is one of the given Keycloak user
+   *       ids; omit it to list all areas.
    *     tags:
    *       - Kvv Areas
    *     parameters:
@@ -47,10 +49,10 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Keycloak user ids (repeatable)
+   *         description: Keycloak user ids (repeatable). Omit to list all areas.
    *     responses:
    *       200:
-   *         description: List of kvv-area codes
+   *         description: List of kvv-areas
    *         content:
    *           application/json:
    *             schema:
@@ -59,7 +61,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/KvvAreaSummary'
+   *                     $ref: '#/components/schemas/KvvAreaWithResponsible'
    *       400:
    *         description: Invalid query parameters
    *       500:
@@ -75,17 +77,35 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: 'Invalid query parameters', ...metadata }
       return
     }
-    const result = await propertyBaseAdapter.findKvvAreaCodesByResponsibles(
-      parsed.data.responsibleUserId ?? []
-    )
+    const result = await propertyBaseAdapter.listKvvAreas({
+      responsibleUserIds: parsed.data.responsibleUserId,
+    })
     if (!result.ok) {
       logger.error({ err: result.err }, 'kvv-areas.get')
       ctx.status = 500
       ctx.body = { reason: 'Internal server error', ...metadata }
       return
     }
+
+    // Bulk shape: one role fetch resolves all ~33 areas. Note this only matches
+    // users who *currently hold* the property-manager role, whereas
+    // GET /properties/:code/kvv-area resolves the assigned id directly (one
+    // cheap call on Odoo's per-errand path). They therefore disagree for a
+    // steward who lost the role: unassigned here, still named there. That is
+    // intentional — this endpoint answers "who are the current managers", and
+    // PATCH /kvv-areas/:id/responsible enforces the role on assignment, so the
+    // two only diverge if the role is removed afterwards.
+    const resolveUser = await resolvePropertyManagers(
+      result.data.some((a) => a.responsibleKeycloakUserId !== null)
+    )
+
     ctx.body = {
-      content: result.data.map((code) => ({ code })),
+      content: z.array(KvvAreaWithResponsibleSchema).parse(
+        result.data.map(({ responsibleKeycloakUserId, ...area }) => ({
+          ...area,
+          responsible: resolveUser(responsibleKeycloakUserId),
+        }))
+      ),
       ...metadata,
     }
   })

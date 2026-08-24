@@ -1,10 +1,16 @@
+import { property } from '@onecore/types'
 import { z } from 'zod'
 
-export const KvvAreaSummarySchema = z.object({
-  code: z.string(),
-})
-
-export type KvvAreaSummary = z.infer<typeof KvvAreaSummarySchema>
+// Shared vocabulary (libs/types) — re-exported so local consumers keep their
+// existing imports; do not re-declare it here.
+export const {
+  KvvAreaRefSchema,
+  CostCenterRefSchema,
+  KvvAreaWithCostCenterSchema,
+  PropertyKvvAreaLookupSchema,
+} = property
+export type KvvAreaWithCostCenter = property.KvvAreaWithCostCenter
+export type PropertyKvvAreaLookup = property.PropertyKvvAreaLookup
 
 export const PutPropertyKvvAreaBodySchema = z.object({
   kvvAreaId: z.string().uuid(),

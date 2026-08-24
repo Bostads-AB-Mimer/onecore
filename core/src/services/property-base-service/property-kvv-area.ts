@@ -5,8 +5,10 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { requireRole } from '../../middlewares/keycloak-auth'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
+import { resolveUserById } from './keycloak-users'
 import {
   PropertyKvvAreaLinkSchema,
+  PropertyKvvAreaLookupSchema,
   type PutPropertyKvvAreaBody,
   PutPropertyKvvAreaBodySchema,
 } from './schemas'
@@ -23,6 +25,78 @@ const PROPERTY_AREA_WRITE_ROLE = 'property-areas:write'
  *     description: Property → KVV-area (förvaltningsområde) membership
  */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /properties/{propertyCode}/kvv-area:
+   *   get:
+   *     summary: Get the KVV-area (förvaltningsområde) and district of a property
+   *     description: |
+   *       Reverse lookup from a property code to the KVV-area it belongs to,
+   *       the cost center (distrikt) of that area and the responsible
+   *       kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
+   *       is unreachable). Used by Odoo to stamp maintenance requests with
+   *       their district. 404 when the property has no KVV-area link.
+   *     tags:
+   *       - Property KVV Area
+   *     parameters:
+   *       - in: path
+   *         name: propertyCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: KVV-area, cost center and responsible for the property
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/PropertyKvvAreaLookup'
+   *       404:
+   *         description: Property has no KVV-area link
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/properties/:propertyCode/kvv-area', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { propertyCode } = ctx.params
+
+    const result =
+      await propertyBaseAdapter.getKvvAreaByPropertyCode(propertyCode)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Property has no KVV-area', ...metadata }
+        return
+      }
+      logger.error(
+        { err: result.err, metadata },
+        'GET /properties/:propertyCode/kvv-area failed'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    // Resolved by id, not via the property-manager role list — see the note in
+    // kvv-areas.ts: this is Odoo's per-errand path and must stay one cheap call.
+    const { kvvArea, costCenter, responsibleKeycloakUserId } = result.data
+
+    ctx.body = {
+      content: PropertyKvvAreaLookupSchema.parse({
+        kvvArea,
+        costCenter,
+        responsible: await resolveUserById(responsibleKeycloakUserId),
+      }),
+      ...metadata,
+    }
+  })
+
   /**
    * @swagger
    * /properties/{propertyCode}/kvv-area:

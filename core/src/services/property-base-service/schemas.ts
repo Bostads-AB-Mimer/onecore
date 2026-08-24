@@ -36,8 +36,14 @@ export const BuildingSchema = z.object({
     )
     .optional(),
   deleted: z.boolean(),
+  // `id` (the bafst uuid) is only present on search results; detail lookups
+  // resolve the property from the babuf row, which carries code/name but no id.
   property: z
-    .object({ name: z.string().nullable(), code: z.string(), id: z.string() })
+    .object({
+      name: z.string().nullable(),
+      code: z.string(),
+      id: z.string().optional(),
+    })
     .nullish(),
 })
 
@@ -1222,11 +1228,25 @@ export const CostCenterSummarySchema = z.object({
 
 export type CostCenterSummary = z.infer<typeof CostCenterSummarySchema>
 
-export const KvvAreaSummarySchema = z.object({
-  code: z.string(),
+// KVV-area (kvartersvärdsområde) as listed by GET /kvv-areas: the shared
+// service shape with the responsible Keycloak id hydrated to a user summary.
+export const KvvAreaWithResponsibleSchema = property.KvvAreaRefSchema.extend({
+  costCenter: property.CostCenterRefSchema,
+  responsible: KeycloakUserSummarySchema.nullable(),
 })
 
-export type KvvAreaSummary = z.infer<typeof KvvAreaSummarySchema>
+export type KvvAreaWithResponsible = z.infer<
+  typeof KvvAreaWithResponsibleSchema
+>
+
+// GET /properties/:code/kvv-area — reverse lookup with hydrated responsible.
+export const PropertyKvvAreaLookupSchema = z.object({
+  kvvArea: property.KvvAreaRefSchema,
+  costCenter: property.CostCenterRefSchema,
+  responsible: KeycloakUserSummarySchema.nullable(),
+})
+
+export type PropertyKvvAreaLookup = z.infer<typeof PropertyKvvAreaLookupSchema>
 
 export const PutPropertyKvvAreaBodySchema = z.object({
   kvvAreaId: z.string().uuid(),

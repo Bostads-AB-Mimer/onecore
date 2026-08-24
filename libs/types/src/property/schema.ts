@@ -62,3 +62,31 @@ export const ApartmentTemperaturesResponseSchema = z.object({
   unit: z.string(),
   series: z.array(ApartmentTemperatureSeriesSchema),
 })
+
+// Management areas (förvaltningsområden): a property belongs to one KVV-area
+// (kvartersvärdsområde), which belongs to one cost center (= distrikt).
+export const KvvAreaRefSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+})
+
+export const CostCenterRefSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+})
+
+// Reverse lookup: property code → its KVV-area → cost center. The responsible
+// kvartersvärd is a Keycloak user id here; core hydrates it to a user summary.
+export const PropertyKvvAreaLookupSchema = z.object({
+  kvvArea: KvvAreaRefSchema,
+  costCenter: CostCenterRefSchema,
+  responsibleKeycloakUserId: z.string().nullable(),
+})
+
+// One KVV-area as listed by GET /kvv-areas, with its cost center (distrikt).
+export const KvvAreaWithCostCenterSchema = KvvAreaRefSchema.extend({
+  costCenter: CostCenterRefSchema,
+  responsibleKeycloakUserId: z.string().nullable(),
+})
