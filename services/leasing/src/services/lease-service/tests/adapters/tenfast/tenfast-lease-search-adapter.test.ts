@@ -13,6 +13,7 @@ jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
   getRentalObjectCodesByBuildingCodes: jest.fn(),
   getRentalObjectCodesByAreaCodes: jest.fn(),
   getRentalObjectCodesByDistrictNames: jest.fn(),
+  getRentalObjectCodesByKvvAreaCodes: jest.fn(),
 }))
 jest.mock('../../../adapters/xpand/tenant-lease-adapter', () => ({
   getContacts: jest.fn().mockResolvedValue([]),
@@ -40,6 +41,11 @@ const mockedGetRentalObjectCodesByAreaCodes =
 const mockedGetRentalObjectCodesByDistrictNames =
   xpandLeaseSearchAdapter.getRentalObjectCodesByDistrictNames as jest.MockedFunction<
     typeof xpandLeaseSearchAdapter.getRentalObjectCodesByDistrictNames
+  >
+
+const mockedGetRentalObjectCodesByKvvAreaCodes =
+  xpandLeaseSearchAdapter.getRentalObjectCodesByKvvAreaCodes as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getRentalObjectCodesByKvvAreaCodes
   >
 
 const buildLeaseWithTenants = (
@@ -1259,6 +1265,67 @@ describe('tenfast-lease-search-adapter', () => {
 
       const result = await tenfastLeaseSearchAdapter.searchLeases(
         { buildingManager: ['Unknown Manager'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(0)
+      expect(result._meta.totalRecords).toBe(0)
+      expect(mockedRequest).not.toHaveBeenCalled()
+    })
+
+    it('should filter by kvvAreaCodes via batch-get', async () => {
+      mockedGetRentalObjectCodesByKvvAreaCodes.mockResolvedValueOnce([
+        'ROC-700',
+      ])
+
+      mockedRequest.mockResolvedValueOnce({
+        status: 200,
+        data: [
+          {
+            externalId: 'ROC-700',
+            avtal: [
+              {
+                externalId: 'lease-kvv-1',
+                startDate: '2024-01-01',
+                stage: 'active',
+                uppsagningstid: '',
+                cancellation: { cancelled: false },
+                hyror: [],
+                originalData: {
+                  hyresgaster: [
+                    {
+                      externalId: 'T-700',
+                      displayName: 'Kvv Tenant',
+                      idbeteckning: '199001011234',
+                    },
+                  ],
+                  hyresobjekt: [
+                    { externalId: 'ROC-700', postadress: 'Kvartersgatan 1' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      } as any)
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { kvvAreaCodes: ['KVV21'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetRentalObjectCodesByKvvAreaCodes).toHaveBeenCalledWith([
+        'KVV21',
+      ])
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('lease-kvv-1')
+    })
+
+    it('should return empty when kvvAreaCodes matches no rental objects', async () => {
+      mockedGetRentalObjectCodesByKvvAreaCodes.mockResolvedValueOnce([])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { kvvAreaCodes: ['__no_match__'], page: 1, limit: 20 },
         mockCtx
       )
 

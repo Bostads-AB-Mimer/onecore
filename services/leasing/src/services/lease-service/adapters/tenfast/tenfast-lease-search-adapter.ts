@@ -17,6 +17,7 @@ import {
 } from '../../helpers/tenfast'
 import {
   getRentalObjectCodesByBuildingManager,
+  getRentalObjectCodesByKvvAreaCodes,
   getRentalObjectCodesByBuildingCodes,
   getRentalObjectCodesByAreaCodes,
   getRentalObjectCodesByDistrictNames,
@@ -671,7 +672,8 @@ export async function fetchAllLeasesForExport(
     (params.buildingManager && params.buildingManager.length > 0) ||
     (params.buildingCodes && params.buildingCodes.length > 0) ||
     (params.areaCodes && params.areaCodes.length > 0) ||
-    (params.districtNames && params.districtNames.length > 0)
+    (params.districtNames && params.districtNames.length > 0) ||
+    (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
 
   if (needsBatchGet) {
     return fetchAllLeasesForExportViaBatchGet(params)
@@ -753,6 +755,12 @@ async function fetchAllLeasesForExportViaBatchGet(
       getRentalObjectCodesByDistrictNames(params.districtNames)
     )
     filterLabels.push('districtNames')
+  }
+  if (params.kvvAreaCodes && params.kvvAreaCodes.length > 0) {
+    codeSetPromises.push(
+      getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
+    )
+    filterLabels.push('kvvAreaCodes')
   }
 
   const codeSets = await Promise.all(codeSetPromises)
@@ -934,7 +942,7 @@ export const searchLeases = async (
   ctx: Context
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
   // Bridge Xpand-only filters via batch-get:
-  // buildingManager, buildingCodes, areaCodes, districtNames
+  // buildingManager, buildingCodes, areaCodes, districtNames, kvvAreaCodes
   // 1. Get rental object codes from Xpand for each active filter
   // 2. Intersect the code sets (all filters must match)
   // 3. Call Tenfast batch-get with those codes
@@ -943,7 +951,8 @@ export const searchLeases = async (
     (params.buildingManager && params.buildingManager.length > 0) ||
     (params.buildingCodes && params.buildingCodes.length > 0) ||
     (params.areaCodes && params.areaCodes.length > 0) ||
-    (params.districtNames && params.districtNames.length > 0)
+    (params.districtNames && params.districtNames.length > 0) ||
+    (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
 
   if (needsBatchGet) {
     // Fetch rental object code sets in parallel for each active filter
@@ -971,6 +980,12 @@ export const searchLeases = async (
         getRentalObjectCodesByDistrictNames(params.districtNames)
       )
       filterLabels.push('districtNames')
+    }
+    if (params.kvvAreaCodes && params.kvvAreaCodes.length > 0) {
+      codeSetPromises.push(
+        getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
+      )
+      filterLabels.push('kvvAreaCodes')
     }
 
     const codeSets = await Promise.all(codeSetPromises)
