@@ -109,12 +109,29 @@ describe('communication-service index', () => {
       expect(logCallSpy).toHaveBeenCalledWith(validCall)
     })
 
+    it('forwards the optional source field to the adapter', async () => {
+      const logCallSpy = jest.spyOn(logWrites, 'logCall').mockResolvedValue({
+        ok: true,
+        data: { dispatchId: '00000000-0000-0000-0000-000000000001' },
+      })
+
+      const res = await request(app.callback())
+        .post('/communication-log/calls')
+        .send({ ...validCall, source: 'keys-portal' })
+
+      expect(res.status).toBe(200)
+      expect(logCallSpy).toHaveBeenCalledWith({
+        ...validCall,
+        source: 'keys-portal',
+      })
+    })
+
     it('rejects an invalid body without calling the adapter', async () => {
       const logCallSpy = jest.spyOn(logWrites, 'logCall')
 
       const res = await request(app.callback())
         .post('/communication-log/calls')
-        .send({ ...validCall, workOrderCode: '12345' })
+        .send({ ...validCall, workOrderCode: '' })
 
       expect(res.status).toBe(400)
       expect(res.body.error).toContain('workOrderCode')

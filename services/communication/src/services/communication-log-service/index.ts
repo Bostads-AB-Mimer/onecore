@@ -20,9 +20,11 @@ const ErrorResponseSchema = z.object({
 // Display identity for logged phone calls; mirrors SMS_SENDER in the
 // infobip sms routes (dispatch.fromAddress is NOT NULL).
 const CALL_FROM_ADDRESS = 'Mimer'
-// Calls are made and reported by employees working in Odoo — there is no
-// telephony provider integration behind this log entry.
-const CALL_PROVIDER = 'odoo'
+// Calls are made and reported by employees in the source system — there is
+// no telephony provider integration behind this log entry. Used when the
+// caller does not identify itself via `source` (the field postdates the
+// endpoint, and Odoo was its first caller).
+const DEFAULT_CALL_SOURCE = 'odoo'
 
 export const routes = (router: OkapiRouter) => {
   router.post(
@@ -59,15 +61,18 @@ export const routes = (router: OkapiRouter) => {
   router.post(
     '/communication-log/calls',
     {
-      summary: 'Log a phone call triggered from an Odoo errand',
+      summary: 'Log a phone call regarding a work order',
       description:
-        'Persist a phone call in the communication log. Called by Odoo (via ' +
-        'core) when an employee triggers a call from an errand. The call has ' +
-        'already happened, so the entry is logged as a completed fact with ' +
-        "recipient status 'sent'. triggeredByUser comes from the request " +
-        'body since Odoo authenticates with a service account. The errand ' +
-        'code (workOrderCode) is embedded in the dispatch body text, where ' +
-        'the frontend picks it up to link the entry to the errand in Odoo.',
+        'Persist a phone call in the communication log. Called (via core) ' +
+        'when an employee triggers a call from a work order in a source ' +
+        'system such as Odoo. The call has already happened, so the entry ' +
+        "is logged as a completed fact with recipient status 'sent'. " +
+        'triggeredByUser comes from the request body since source systems ' +
+        'authenticate with service accounts. The work order code is ' +
+        'embedded in the dispatch body text, where the frontend picks it ' +
+        'up to link the entry to the work order in the source system. ' +
+        'source identifies the calling system (stored as the dispatch ' +
+        "provider) and defaults to 'odoo'.",
       tags: ['Communication log'],
       body: communication.LogCallParamsSchema,
       response: {
@@ -86,7 +91,7 @@ export const routes = (router: OkapiRouter) => {
           fromAddress: CALL_FROM_ADDRESS,
           body: `Telefonsamtal gällande ärende ${params.workOrderCode}`,
           messageType: 'work_order_tenant_call',
-          provider: CALL_PROVIDER,
+          provider: params.source ?? DEFAULT_CALL_SOURCE,
           triggeredByUser: params.triggeredByUser,
           recipients: [
             {

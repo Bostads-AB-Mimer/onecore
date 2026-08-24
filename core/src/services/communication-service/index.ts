@@ -335,8 +335,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /communication-log/calls:
    *   post:
-   *     summary: Log a phone call triggered from an Odoo errand
-   *     description: Called by Odoo when an employee triggers a phone call from an errand. The call has already happened; this only records it in the tenant's communication log. triggeredByUser is taken from the request body since Odoo authenticates with a service account (same as /work-orders/send-sms).
+   *     summary: Log a phone call regarding a work order
+   *     description: Called when an employee triggers a phone call from a work order in a source system such as Odoo. The call has already happened; this only records it in the tenant's communication log. triggeredByUser is taken from the request body since source systems authenticate with service accounts (same as /work-orders/send-sms). The optional source field identifies the calling system and defaults to 'odoo'.
    *     tags:
    *       - Communication service
    *     requestBody:

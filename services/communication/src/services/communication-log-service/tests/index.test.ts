@@ -81,6 +81,24 @@ describe('POST /communication-log/calls', () => {
     )
   })
 
+  it('stores source as the dispatch provider when given', async () => {
+    const res = await postCall().send({ ...validCall, source: 'keys-portal' })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundMock).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'keys-portal' })
+    )
+  })
+
+  it('accepts a workOrderCode from a non-Odoo source system', async () => {
+    const res = await postCall().send({ ...validCall, workOrderCode: 'WO-42' })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundMock).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Telefonsamtal gällande ärende WO-42' })
+    )
+  })
+
   it('rejects a payload missing contactCode', async () => {
     const { contactCode: _omitted, ...body } = validCall
     const res = await postCall().send(body)
@@ -90,8 +108,8 @@ describe('POST /communication-log/calls', () => {
     expect(logOutboundMock).not.toHaveBeenCalled()
   })
 
-  it('rejects a workOrderCode without the od- prefix', async () => {
-    const res = await postCall().send({ ...validCall, workOrderCode: '12345' })
+  it('rejects an empty workOrderCode', async () => {
+    const res = await postCall().send({ ...validCall, workOrderCode: '' })
 
     expect(res.status).toBe(400)
     expect(res.body.error).toContain('workOrderCode')

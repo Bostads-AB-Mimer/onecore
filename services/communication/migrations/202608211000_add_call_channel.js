@@ -1,7 +1,7 @@
 /**
  * Adds the 'call' channel — phone calls to tenants logged after the fact
- * (planned caller: Odoo errands). The errand reference travels inside the
- * dispatch body text, same as for work-order sms, so no new columns.
+ * by a source system (e.g. Odoo). The work order reference travels inside
+ * the dispatch body text, same as for work-order sms, so no new columns.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
