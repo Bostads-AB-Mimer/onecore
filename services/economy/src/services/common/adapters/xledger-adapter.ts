@@ -19,8 +19,6 @@ import { match, P } from 'ts-pattern'
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
 
-const TENANT_COMPANY_DB_ID = 44668660
-
 const XledgerAuthHeader = {
   Authorization: 'token ' + config.xledger.apiToken,
 }
@@ -375,24 +373,58 @@ const getCustomer = async (contactCode: string) => {
 const escapeGraphQLString = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
-const addContact = async (contact: any) => {
-  const customerQuery = {
-    query: `mutation AddCustomers {
-      addCustomers(inputs:[
-        {
-          node: {
-            company:{dbId: ${TENANT_COMPANY_DB_ID}},
-            code:"${escapeGraphQLString(contact.ContactCode)}",
-            description:"${escapeGraphQLString(contact.FullName)}",
-            streetAddress:"${escapeGraphQLString(contact.StreetAddress)}",
-            zipCode:"${escapeGraphQLString(contact.PostalCode)}",
-            place:"${escapeGraphQLString(contact.City)}"
+const addContact = async (contact: XledgerDbContact) => {
+  // Each customer in Xledger must be connected to a company, so we need to create that first
+  const companyQuery = {
+    query: gql`
+      mutation AddCompany {
+        addCompanies(
+          inputs: [
+            {
+              node: {
+                description: ${JSON.stringify(contact.FullName)}
+              }
+            }
+          ]
+        ) {
+          edges {
+            node {
+              dbId
+            }
           }
         }
-      ]) {
-        edges { node {dbId} }
       }
-    }`,
+    `,
+  }
+
+  const companyResult = await makeXledgerRequest(companyQuery)
+  const companyDbId = companyResult.data.addCompanies.edges[0].node.dbId
+
+  const customerQuery = {
+    query: gql`
+      mutation AddCustomer {
+        addCustomers(inputs:[
+          {
+            node: {
+              company: {
+                dbId: ${companyDbId}
+              },
+              code: "${escapeGraphQLString(contact.ContactCode)}",
+              description: "${escapeGraphQLString(contact.FullName)}",
+              streetAddress: "${escapeGraphQLString(contact.StreetAddress)}",
+              zipCode: "${escapeGraphQLString(contact.PostalCode)}",
+              place: "${escapeGraphQLString(contact.City)}"
+            }
+          }
+        ]) {
+          edges {
+            node {
+              dbId
+            }
+          }
+        }
+      }
+    `,
   }
 
   const customerResult = await makeXledgerRequest(customerQuery)
