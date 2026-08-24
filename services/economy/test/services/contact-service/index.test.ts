@@ -18,7 +18,7 @@ describe('POST /contacts/:contactCode/sync', () => {
   it('responds with 200 on successful sync', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
-    jest.spyOn(xledgerAdapter, 'syncContact').mockResolvedValueOnce({
+    jest.spyOn(xledgerAdapter, 'createOrUpdateContact').mockResolvedValueOnce({
       ok: true,
       data: { dbId: '12345' },
     })
@@ -33,9 +33,9 @@ describe('POST /contacts/:contactCode/sync', () => {
   it('responds with 500 when xledger sync fails', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
-    jest.spyOn(xledgerAdapter, 'syncContact').mockResolvedValueOnce({
+    jest.spyOn(xledgerAdapter, 'createOrUpdateContact').mockResolvedValueOnce({
       ok: false,
-      err: 'could-not-update-contact',
+      err: 'could-not-create-or-update-contact',
     })
 
     const res = await request(app.callback())
@@ -49,7 +49,7 @@ describe('POST /contacts/:contactCode/sync', () => {
   it('responds with 200 and skipped:true when contact does not exist in Xledger', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
-    jest.spyOn(xledgerAdapter, 'syncContact').mockResolvedValueOnce({
+    jest.spyOn(xledgerAdapter, 'createOrUpdateContact').mockResolvedValueOnce({
       ok: true,
       data: null,
     })
@@ -65,7 +65,7 @@ describe('POST /contacts/:contactCode/sync', () => {
   it('responds with 200 and skipped:false when contact is updated', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
-    jest.spyOn(xledgerAdapter, 'syncContact').mockResolvedValueOnce({
+    jest.spyOn(xledgerAdapter, 'createOrUpdateContact').mockResolvedValueOnce({
       ok: true,
       data: { dbId: '12345' },
     })
@@ -87,7 +87,7 @@ describe('POST /contacts/:contactCode/sync', () => {
     expect(res.body.error).toBe('Invalid request body')
   })
 
-  it('passes correct field mapping to syncContact', async () => {
+  it('passes correct field mapping to createOrUpdateContact', async () => {
     const payload = factory.syncContactToEconomyPayload.build({
       contactCode: 'P99999',
       fullName: 'Testsson, Test',
@@ -98,7 +98,7 @@ describe('POST /contacts/:contactCode/sync', () => {
     })
 
     const spy = jest
-      .spyOn(xledgerAdapter, 'syncContact')
+      .spyOn(xledgerAdapter, 'createOrUpdateContact')
       .mockResolvedValueOnce({
         ok: true,
         data: null,
