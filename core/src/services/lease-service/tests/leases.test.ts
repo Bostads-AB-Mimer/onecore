@@ -398,6 +398,96 @@ describe('leases routes', () => {
     })
   })
 
+  describe('GET /leases/search', () => {
+    it('resolves buildingManager to kvvAreaCodes before calling leasing', async () => {
+      const lookupSpy = jest
+        .spyOn(propertyBaseAdapter, 'findKvvAreaCodesByResponsibles')
+        .mockResolvedValue({ ok: true, data: ['KVV21', 'KVV22'] })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?buildingManager=user-1'
+      )
+
+      expect(res.status).toBe(200)
+      expect(lookupSpy).toHaveBeenCalledWith(['user-1'])
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ kvvAreaCodes: ['KVV21', 'KVV22'] })
+      )
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.not.objectContaining({ buildingManager: expect.anything() })
+      )
+    })
+
+    it('forwards sentinel kvvAreaCodes when buildingManager matches no areas', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'findKvvAreaCodesByResponsibles')
+        .mockResolvedValue({ ok: true, data: [] })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?buildingManager=user-1'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([])
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ kvvAreaCodes: ['__no_match__'] })
+      )
+    })
+
+    it('returns 500 when building manager resolution fails', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'findKvvAreaCodesByResponsibles')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?buildingManager=user-1'
+      )
+
+      expect(res.status).toBe(500)
+      expect(searchSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /leases/export', () => {
+    it('resolves buildingManager to kvvAreaCodes before calling leasing', async () => {
+      const lookupSpy = jest
+        .spyOn(propertyBaseAdapter, 'findKvvAreaCodesByResponsibles')
+        .mockResolvedValue({ ok: true, data: ['KVV21'] })
+      const exportSpy = jest
+        .spyOn(tenantLeaseAdapter, 'exportLeasesToExcel')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            data: Buffer.from('excel'),
+            contentType: 'application/octet-stream',
+            contentDisposition: 'attachment; filename="test.xlsx"',
+          },
+        })
+
+      const res = await request(app.callback()).get(
+        '/leases/export?buildingManager=user-1'
+      )
+
+      expect(res.status).toBe(200)
+      expect(lookupSpy).toHaveBeenCalledWith(['user-1'])
+      expect(exportSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ kvvAreaCodes: ['KVV21'] })
+      )
+      expect(exportSpy).toHaveBeenCalledWith(
+        expect.not.objectContaining({ buildingManager: expect.anything() })
+      )
+    })
+  })
+
   describe('GET /leases/for-csc', () => {
     const validContact = () => factory.contact.build({ contactCode: 'P158770' })
     const validRentalProperty = () =>

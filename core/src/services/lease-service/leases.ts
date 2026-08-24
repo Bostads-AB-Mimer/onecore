@@ -23,6 +23,7 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
+import { resolveBuildingManagerToKvvAreaCodes } from './helpers/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
@@ -415,7 +416,7 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names (Kvartersvärd)
+   *         description: Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering
    *       - in: query
    *         name: page
    *         schema:
@@ -481,8 +482,15 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
+    if (!resolved.ok) {
+      ctx.status = 500
+      ctx.body = { error: resolved.reason, ...metadata }
+      return
+    }
+
     try {
-      const result = await leasingAdapter.searchLeases(ctx.query)
+      const result = await leasingAdapter.searchLeases(resolved.query)
 
       ctx.status = 200
       ctx.body = result
@@ -927,7 +935,7 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Building manager names (Kvartersvärd)
+   *         description: Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering
    *       - in: query
    *         name: sortBy
    *         schema:
@@ -958,8 +966,15 @@ export const routes = (router: KoaRouter) => {
   router.get('/leases/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
+    if (!resolved.ok) {
+      ctx.status = 500
+      ctx.body = { error: resolved.reason, ...metadata }
+      return
+    }
+
     try {
-      const result = await leasingAdapter.exportLeasesToExcel(ctx.query)
+      const result = await leasingAdapter.exportLeasesToExcel(resolved.query)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Lease export failed')
