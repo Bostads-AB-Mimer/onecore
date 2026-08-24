@@ -6,7 +6,7 @@ import {
 } from '@onecore/utilities'
 import { getContacts } from './service'
 import {
-  syncContact,
+  createOrUpdateContact,
   XledgerDbContact,
 } from '../common/adapters/xledger-adapter'
 import { SyncContactToEconomySchema } from '@onecore/types'
@@ -111,7 +111,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await syncContact(dbContact)
+      const result = await createOrUpdateContact(dbContact)
 
       if (!result.ok) {
         ctx.status = 500

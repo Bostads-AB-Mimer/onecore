@@ -1195,7 +1195,7 @@ export const syncContact = async (
 
 export const createOrUpdateContact = async (
   dbContact: XledgerDbContact
-): Promise<AdapterResult<any, string>> => {
+): Promise<AdapterResult<any, 'could-not-create-or-update-contact'>> => {
   const xledgerContact = await getCustomer(dbContact.ContactCode)
 
   try {
@@ -1206,8 +1206,9 @@ export const createOrUpdateContact = async (
     }
 
     return { ok: true, data: xledgerContact }
-  } catch (error) {
-    return { ok: false, err: (error as any).message }
+  } catch (error: unknown) {
+    logger.error({ error }, 'xledger-adapter.createOrUpdateContact')
+    return { ok: false, err: 'could-not-create-or-update-contact' }
   }
 }
 
