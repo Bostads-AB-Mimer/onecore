@@ -1171,28 +1171,6 @@ export interface XledgerDbContact {
   Email: string
 }
 
-export const syncContact = async (
-  dbContact: XledgerDbContact
-): Promise<AdapterResult<any, 'could-not-update-contact' | 'unknown'>> => {
-  try {
-    const xledgerContact = await getCustomer(dbContact.ContactCode)
-
-    if (!xledgerContact) {
-      logger.warn(
-        { contactCode: dbContact.ContactCode },
-        'xledger-adapter.syncContact: contact not found in Xledger, skipping'
-      )
-      return { ok: true, data: null }
-    }
-
-    await updateContact(xledgerContact, dbContact)
-    return { ok: true, data: xledgerContact }
-  } catch (err: unknown) {
-    logger.error({ err }, 'xledger-adapter.syncContact')
-    return { ok: false, err: 'could-not-update-contact' }
-  }
-}
-
 export const createOrUpdateContact = async (
   dbContact: XledgerDbContact
 ): Promise<AdapterResult<any, 'could-not-create-or-update-contact'>> => {
