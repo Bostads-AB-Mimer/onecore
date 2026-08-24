@@ -1458,43 +1458,4 @@ describe('replyToOffer', () => {
       expect(createOffer).toHaveBeenCalledTimes(1)
     })
   })
-
-  describe('expireOffer', () => {
-    it('returns a process error if no offer found', async () => {
-      getOfferByIdSpy.mockResolvedValueOnce({ ok: false, err: 'not-found' })
-
-      const result = await replyProcesses.expireOffer(123)
-
-      expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: ReplyToOfferErrorCodes.NoOffer,
-        httpStatus: 404,
-        response: {
-          message: 'The offer 123 does not exist or could not be retrieved.',
-          errorCode: ReplyToOfferErrorCodes.NoOffer,
-        },
-      })
-    })
-
-    it('returns a process error if no listing found', async () => {
-      const offer = factory.detailedOffer.build()
-      getOfferByIdSpy.mockResolvedValueOnce({
-        ok: true,
-        data: offer,
-      })
-      getListingByListingIdSpy.mockResolvedValueOnce(undefined)
-
-      const result = await replyProcesses.expireOffer(123)
-
-      expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: ReplyToOfferErrorCodes.NoListing,
-        httpStatus: 404,
-        response: {
-          message: `The listing ${offer.listingId} does not exist or is no longer available.`,
-          errorCode: ReplyToOfferErrorCodes.NoListing,
-        },
-      })
-    })
-  })
 })
