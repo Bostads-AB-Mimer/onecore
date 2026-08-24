@@ -384,24 +384,25 @@ function buildWalkTree(
       }
     })
 
-    const parkingAreas = p.parkingAreas.map(
-      (pa): WalkNode => ({
-        node: {
-          // Property-scoped: one physical parkeringsområde can be split
-          // between two fastigheter, and then its code alone isn't unique.
-          key: parkingAreaKey(p.code, pa.code),
-          level: 'parkingArea',
-          value: pa.code,
-          label: pa.name ?? pa.code,
-          ancestors: propAncestors,
-        },
+    const parkingAreas = p.parkingAreas.map((pa): WalkNode => {
+      const parkingAreaNode: PropertyTreeNode = {
+        // Property-scoped: one physical parkeringsområde can be split
+        // between two fastigheter, and then its code alone isn't unique.
+        key: parkingAreaKey(p.code, pa.code),
+        level: 'parkingArea',
+        value: pa.code,
+        label: pa.name ?? pa.code,
+        ancestors: propAncestors,
+      }
+      return {
+        node: parkingAreaNode,
         code: pa.code,
         searchText: [pa.name, pa.code],
         row: propertyContext,
         expandOnAll: false,
-        children: [],
-      })
-    )
+        children: leavesOf(parkingAreaNode, designation),
+      }
+    })
 
     return {
       node: propNode,
