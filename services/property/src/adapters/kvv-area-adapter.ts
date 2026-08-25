@@ -13,10 +13,13 @@ import { prisma } from './db'
 // Reverse lookup property → kvv-area → cost center. Reads the OneCore-owned
 // link table (not Xpand babuf.fencode), so UI-made moves are reflected.
 //
-// Deliberately NOT filtered by OPERATING_COMPANY_CODES: a property sold into
-// company 999 drops out of GET /cost-centers/:id/tree, but an errand on it must
-// still resolve to a district rather than 404. Do not "align" this with the
-// tree's company filter without deciding what should happen to those errands.
+// Deliberately NOT filtered by OPERATING_COMPANY_CODES: an errand on a property
+// sold into company 999 must still resolve to a district rather than 404.
+// Today GET /cost-centers/:id/tree has no company filter either, so the two
+// agree. PR #698 adds one to the tree — when that lands, such a property drops
+// out of the tree (and out of Odoo's tree-driven backfill) while still
+// resolving here. That divergence is the intended outcome; do not "align" this
+// lookup with the tree's filter without deciding what happens to those errands.
 //
 // The code is trimmed: Xpand pads Char columns, and callers (Odoo) forward
 // codes straight from Xpand-sourced fields.

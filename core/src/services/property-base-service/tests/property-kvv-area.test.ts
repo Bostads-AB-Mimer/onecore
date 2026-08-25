@@ -316,6 +316,9 @@ describe('GET /properties/:propertyCode/kvv-area', () => {
 
     expect(res.status).toBe(404)
     expect(res.body.error).toBe('Property has no KVV-area')
+    // Discriminator so callers can tell "property has no link" apart from a
+    // routing 404 (Odoo treats the former as "no district", not as an error).
+    expect(res.body.code).toBe('PROPERTY_KVV_AREA_NOT_FOUND')
   })
 
   it('returns 500 on unknown adapter error', async () => {
