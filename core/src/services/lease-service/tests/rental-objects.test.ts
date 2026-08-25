@@ -57,7 +57,6 @@ describe('GET /vacant-parkingspaces', () => {
         expect.objectContaining({
           rentalObjectCode: expect.any(String),
           address: expect.any(String),
-          monthlyRent: expect.any(Number),
           districtCaption: expect.any(String),
           districtCode: expect.any(String),
           propertyCaption: expect.any(String),
@@ -66,9 +65,235 @@ describe('GET /vacant-parkingspaces', () => {
           objectTypeCode: expect.any(String),
           residentialAreaCaption: expect.any(String),
           residentialAreaCode: expect.any(String),
-          vacantFrom: expect.any(String),
+          availabilityInfo: expect.objectContaining({
+            vacantFrom: expect.any(String),
+            rent: expect.objectContaining({
+              amount: expect.any(Number),
+            }),
+          }),
         }),
       ])
     )
+  })
+})
+
+describe('GET /parking-spaces/by-code/:rentalObjectCode', () => {
+  it('should respond with 200 and the parking space when found', async () => {
+    //Arrange
+    const rentalObject = factory.parkingSpace.build()
+    jest
+      .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+      .mockResolvedValueOnce({ ok: true, data: rentalObject })
+
+    //Act
+    const res = await request(app.callback()).get(
+      `/parking-spaces/by-code/${rentalObject.rentalObjectCode}`
+    )
+
+    //Assert
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(
+      expect.objectContaining({
+        ...rentalObject,
+        availabilityInfo: expect.objectContaining({
+          vacantFrom: rentalObject.availabilityInfo?.vacantFrom?.toISOString(),
+        }),
+      })
+    )
+  })
+
+  it('should respond with 500 if adapter returns not ok', async () => {
+    // Arrange
+    jest
+      .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/parking-spaces/by-code/ANYCODE'
+    )
+
+    // Assert
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({ error: 'Unknown error' })
+  })
+})
+describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
+  describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
+    it('should respond with 200 and the availability when found', async () => {
+      // Arrange
+      const rentalObjectCode = 'R1003'
+      const availabilityInfo = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode,
+      })
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilityByCode')
+        .mockResolvedValueOnce({ ok: true, data: availabilityInfo })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toMatchObject({ rentalObjectCode })
+    })
+
+    it('should respond with 404 if adapter returns availability-not-found', async () => {
+      // Arrange
+      const rentalObjectCode = 'NOTFOUND'
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilityByCode')
+        .mockResolvedValueOnce({ ok: false, err: 'availability-not-found' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body).toMatchObject({ error: 'Availability not found' })
+    })
+
+    it('should respond with 500 if adapter returns unknown', async () => {
+      // Arrange
+      const rentalObjectCode = 'ERROR'
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilityByCode')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body).toMatchObject({
+        error: `Unexpected error when getting availability for ${rentalObjectCode}`,
+      })
+    })
+
+    it('should call leasingAdapter.getRentalObjectAvailabilityByCode with the correct rentalObjectCode', async () => {
+      // Arrange
+      const rentalObjectCode = 'R1003'
+      const spy = jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilityByCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.rentalObjectAvailabilityInfo.build({
+            rentalObjectCode,
+          }),
+        })
+
+      // Act
+      await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(spy).toHaveBeenCalledWith(rentalObjectCode)
+    })
+  })
+
+  describe('POST /rental-objects/availabilities', () => {
+    it('should respond with 200 and the availabilities when found', async () => {
+      // Arrange
+      const rentalObjectCodes = ['R1001', 'R1002']
+      const availabilities = rentalObjectCodes.map((code) =>
+        factory.rentalObjectAvailabilityInfo.build({ rentalObjectCode: code })
+      )
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
+        .mockResolvedValueOnce({ ok: true, data: availabilities })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+      expect(res.body.content[0]).toMatchObject({ rentalObjectCode: 'R1001' })
+      expect(res.body.content[1]).toMatchObject({ rentalObjectCode: 'R1002' })
+    })
+
+    it('should respond with 404 if adapter returns availabilities-not-found', async () => {
+      // Arrange
+      const rentalObjectCodes = ['NOTFOUND1', 'NOTFOUND2']
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
+        .mockResolvedValueOnce({ ok: false, err: 'availabilities-not-found' })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes })
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body).toMatchObject({ error: 'Availabilities not found' })
+    })
+
+    it('should respond with 500 if adapter returns unknown', async () => {
+      // Arrange
+      const rentalObjectCodes = ['ERROR1', 'ERROR2']
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes })
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body).toMatchObject({
+        error: `Unexpected error when getting availabilities for ${rentalObjectCodes.join(', ')}`,
+      })
+    })
+
+    it('should call leasingAdapter.getRentalObjectAvailabilities with the correct rentalObjectCodes', async () => {
+      // Arrange
+      const rentalObjectCodes = ['R1001', 'R1002']
+      const spy = jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: rentalObjectCodes.map((code) =>
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: code,
+            })
+          ),
+        })
+
+      // Act
+      await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes })
+
+      // Assert
+      expect(spy).toHaveBeenCalledWith(rentalObjectCodes)
+    })
+
+    it('should handle missing rentalObjectCodes as empty array', async () => {
+      // Arrange
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({})
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([])
+    })
   })
 })

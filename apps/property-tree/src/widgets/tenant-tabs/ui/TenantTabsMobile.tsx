@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Receipt,
   StickyNote,
+  Users,
 } from 'lucide-react'
 import { parseAsString, useQueryState } from 'nuqs'
 
@@ -17,6 +18,7 @@ import {
   TenantLedgerTabContent,
   TenantNotesTabContent,
   TenantQueueSystemTabContent,
+  TenantRelatedContactsTabContent,
 } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
@@ -33,6 +35,7 @@ interface TenantTabsMobileProps {
   rentalProperties: Record<string, RentalPropertyInfo | null>
   contactCode: string
   tenantName: string
+  nationalRegistrationNumber: string
   isLoadingLeases: boolean
   isLoadingProperties: boolean
 }
@@ -42,6 +45,7 @@ export const TenantTabsMobile = ({
   rentalProperties,
   contactCode,
   tenantName,
+  nationalRegistrationNumber,
   isLoadingLeases,
   isLoadingProperties,
 }: TenantTabsMobileProps) => {
@@ -89,7 +93,12 @@ export const TenantTabsMobile = ({
       id: 'ledger',
       icon: Receipt,
       title: 'Fakturor & betalningar',
-      content: <TenantLedgerTabContent contactCode={contactCode} />,
+      content: (
+        <TenantLedgerTabContent
+          contactCode={contactCode}
+          nationalRegistrationNumber={nationalRegistrationNumber}
+        />
+      ),
     },
     {
       id: 'notes',
@@ -108,6 +117,12 @@ export const TenantTabsMobile = ({
       icon: Key,
       title: 'Nyckellån',
       content: <TenantKeyLoans contactCode={contactCode} leases={leases} />,
+    },
+    {
+      id: 'related',
+      icon: Users,
+      title: 'Relaterade kontakter',
+      content: <TenantRelatedContactsTabContent contactCode={contactCode} />,
     },
   ]
 

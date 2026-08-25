@@ -46,10 +46,28 @@ export const ContactAddressSchema = z.object({
   country: z.string().nullable(),
 })
 
+export const RelatedContactRoleSchema = z.enum([
+  'trustee', // god man
+  'administrator', // förvaltare
+  'trusteeFor', // subject is god man for this contact
+  'administratorFor', // subject is förvaltare for this contact
+  'otherInvoiceRecipient', // annan fakturamottagare
+  'otherInvoiceRecipientFor',
+])
+
+export const RelatedContactSchema = z.object({
+  contactCode: z.string(),
+  role: RelatedContactRoleSchema,
+  fullName: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+})
+
 export const ContactBaseSchema = z.object({
   contactCode: z.string(),
   communication: ContactCommunicationSchema,
   addresses: z.array(ContactAddressSchema),
+  relatedContacts: z.optional(z.array(RelatedContactSchema)),
 })
 
 export const ContactPersonalDetailsSchema = z.object({
@@ -65,15 +83,9 @@ export const ContactOrganisationDetailsSchema = z.object({
   name: z.string(),
 })
 
-export const TrusteeSchema = z.object({
-  contactCode: z.string(),
-  fullName: z.optional(z.string()),
-})
-
 export const ContactIndividualSchema = ContactBaseSchema.extend({
   type: z.literal('individual'),
   personal: ContactPersonalDetailsSchema,
-  trustee: z.optional(TrusteeSchema),
 })
 
 export const ContactOrganisationSchema = ContactBaseSchema.extend({

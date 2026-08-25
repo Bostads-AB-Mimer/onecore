@@ -13,6 +13,7 @@ import {
   getContactByPhoneNumber,
 } from '../adapters/xpand/tenant-lease-adapter'
 
+import { syncTenant } from '../adapters/tenfast/tenfast-adapter'
 import {
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
@@ -1134,4 +1135,49 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/sync:
+   *   post:
+   *     summary: Sync a contact to tenFAST
+   *     description: Triggers tenFAST to pull the latest contact data from ONECore and update the matching hyresgast (and any relations referencing the externalId).
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to sync
+   *     responses:
+   *       200:
+   *         description: Contact synced successfully to tenFAST
+   *       500:
+   *         description: Failed to sync contact to tenFAST
+   */
+  router.post('(.*)/contacts/:contactCode/sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { contactCode } = ctx.params
+
+    const result = await syncTenant(contactCode)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        type: 'tenfast-error',
+        title: `Could not sync tenant to tenFAST: ${result.err}`,
+        status: 500,
+        ...metadata,
+      } satisfies RouteErrorResponse
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      skipped: result.data === null,
+      ...metadata,
+    }
+  })
 }

@@ -71,6 +71,16 @@ app.use(async (ctx, next) => {
     return requireRole('scanner-upload')(ctx, next)
   }
 
+  // All routes under /leases/for-csc require csc:get or api-access
+  if (ctx.path.startsWith('/leases/for-csc') && ctx.method === 'GET') {
+    return requireRole(['csc:get', 'api-access'])(ctx, next)
+  }
+
+  // All routes under invoices/notify-batch require invoice-notify:post or api-access
+  if (ctx.path.startsWith('/invoices/notify-batch') && ctx.method === 'POST') {
+    return requireRole(['invoice-notify:post', 'api-access'])(ctx, next)
+  }
+
   // Infobip email delivery-report webhook — authenticated via a Keycloak
   // service account (client_credentials) holding the infobip-webhook role.
   if (ctx.path.startsWith('/webhooks/infobip')) {
@@ -79,6 +89,10 @@ app.use(async (ctx, next) => {
 
   if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
     return requireRole(['api-access', 'contacts:read'])(ctx, next)
+  }
+
+  if (ctx.path.startsWith('/invoice-channels')) {
+    return requireRole(['invoice-channels:read', 'api-access'])(ctx, next)
   }
 
   return requireRole('api-access')(ctx, next)
@@ -93,6 +107,11 @@ app.use(async (ctx, next) => {
   ) {
     return requireRole('keys-admin')(ctx, next)
   }
+
+  if (ctx.method === 'PUT' && /^\/invoices\/[^/]+\/deferral$/.test(ctx.path)) {
+    return requireRole('invoice-deferral')(ctx, next)
+  }
+
   return next()
 })
 

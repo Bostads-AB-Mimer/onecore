@@ -4,6 +4,7 @@ import {
   ContactTypeFilter,
   NationalIdNumber,
   PhoneNumber,
+  RelatedContact,
 } from '@src/domain/contact'
 import { ContactIncludeOptions } from './xpand/batch-query'
 
@@ -81,6 +82,64 @@ export interface ContactsRepository {
   ) => Promise<Contact[]>
 
   /**
+   * Retrieves the förvaltare of a contact as RelatedContact objects with role
+   * 'administrator'.
+   *
+   * @returns null when the subject contact does not exist; empty array when
+   *          it exists but has no förvaltare.
+   */
+  getAdministrators: (
+    contactCode: ContactCode
+  ) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the contacts the given contact is förvaltare for (the inverse
+   * direction) as RelatedContact objects with role 'administratorFor'.
+   *
+   * @returns null when the subject contact does not exist; empty array when
+   *          it exists but is not a förvaltare for anyone.
+   */
+  getAdministratorsFor: (
+    contactCode: ContactCode
+  ) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the god man of a contact as RelatedContact objects with role
+   * 'trustee'.
+   *
+   * @returns null when the subject contact does not exist; empty array when
+   *          it exists but has no god man.
+   */
+  getTrustees: (contactCode: ContactCode) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the contacts the given contact is god man for (the inverse
+   * direction) as RelatedContact objects with role 'trusteeFor'.
+   *
+   * @returns null when the subject contact does not exist; empty array when
+   *          it exists but is not a god man for anyone.
+   */
+  getTrusteesFor: (contactCode: ContactCode) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the annan fakturamottagare on the contact's current leases as
+   * RelatedContact objects with role 'otherInvoiceRecipient'. Null when the
+   * contact does not exist.
+   */
+  getOtherInvoiceRecipients: (
+    contactCode: ContactCode
+  ) => Promise<RelatedContact[] | null>
+
+  /**
+   * Retrieves the current lease holders this contact is the annan
+   * fakturamottagare for, as RelatedContact objects with role
+   * 'otherInvoiceRecipientFor'. Null when the contact does not exist.
+   */
+  getOtherInvoiceRecipientsFor: (
+    contactCode: ContactCode
+  ) => Promise<RelatedContact[] | null>
+
+  /**
    * Retrieves contacts by their national ID number.
    *
    * @param nid - The national ID number to search for.
@@ -110,4 +169,34 @@ export interface ContactsRepository {
    * @returns A promise that resolves to an array of Contact objects
    */
   getByEmailAddress: (emailAddress: string) => Promise<Contact[]>
+
+  /**
+   * Retrieves contact codes for contacts changed since the given timestamp,
+   * each paired with the latest logtime for that code. Results are ordered
+   * by timestamp ascending. If no timestamp is provided, returns all
+   * matching rows.
+   *
+   * @param since - The timestamp to query changes from, or null for all rows.
+   *
+   * @returns A promise that resolves to contact codes with timestamps, ordered ascending.
+   */
+  getChangedContactCodes: (
+    since: Date | null
+  ) => Promise<{ contactCode: string; timestamp: Date }[]>
+
+  /**
+   * Retrieves full Contact objects for the given list of contact codes in a single batch.
+   *
+   * @param codes - The contact codes to fetch.
+   * @param options - When `includeRelations` is set, each contact is populated
+   *                  with its related contacts: god man/förvaltare
+   *                  relations plus other-invoice-recipient relations (both
+   *                  directions).
+   *
+   * @returns A promise that resolves to an array of Contact objects.
+   */
+  getByContactCodes: (
+    codes: ContactCode[],
+    options?: { includeRelations?: boolean }
+  ) => Promise<Contact[]>
 }

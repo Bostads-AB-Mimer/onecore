@@ -1,5 +1,22 @@
 import z from 'zod'
 
+export const RelatedContactRoleSchema = z.enum([
+  'trustee', // god man
+  'administrator', // förvaltare
+  'trusteeFor', // the subject is god man for this contact (its huvudman)
+  'administratorFor', // the subject is förvaltare for this contact (its huvudman)
+  'otherInvoiceRecipient', // annan fakturamottagare — receives invoices for the subject's leases
+  'otherInvoiceRecipientFor', // the subject is the annan fakturamottagare for this contact
+])
+
+export const RelatedContactSchema = z.object({
+  contactCode: z.string(),
+  role: RelatedContactRoleSchema,
+  fullName: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+})
+
 export const PhoneNumberTypeSchema = z.enum([
   'work',
   'home',
@@ -17,11 +34,6 @@ export const PhoneNumberSchema = z.object({
   type: PhoneNumberTypeSchema,
   comment: z.string().optional(),
   isPrimary: z.boolean(),
-})
-
-export const TrusteeSchema = z.object({
-  contactCode: z.string(),
-  fullName: z.optional(z.string()),
 })
 
 export const EmailAddressSchema = z.object({
@@ -64,12 +76,12 @@ export const ContactBaseSchema = z.object({
   contactKey: z.string(),
   communication: ContactCommunicationSchema,
   addresses: z.array(ContactAddressSchema),
+  relatedContacts: z.array(RelatedContactSchema).optional(),
 })
 
 export const ContactIndividualSchema = ContactBaseSchema.extend({
   type: z.literal('individual'),
   personal: ContactPersonalDetailsSchema,
-  trustee: z.optional(TrusteeSchema),
 })
 
 export const ContactOrganisationSchema = ContactBaseSchema.extend({
@@ -97,3 +109,26 @@ export const GetContactsResponseBodySchema =
       contacts: z.array(ContactSchema),
     }),
   })
+
+export const GetRelatedContactsResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({
+      relations: z.array(RelatedContactSchema),
+    }),
+  })
+
+export const SyncContactsResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({
+      contacts: z.array(
+        z.object({
+          contact: ContactSchema,
+          timestamp: z.string().datetime(),
+        })
+      ),
+    }),
+  })
+
+export const ErrorResponseBodySchema = z.object({
+  error: z.string(),
+})

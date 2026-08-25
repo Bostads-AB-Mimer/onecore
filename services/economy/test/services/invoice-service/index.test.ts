@@ -4,12 +4,20 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
-import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
+import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
+import * as invoiceService from '@src/services/invoice-service/service'
 import * as commonXpandAdapter from '@src/services/common/adapters/xpand-db-adapter'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
-import { schemas, SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
+import {
+  schemas,
+  Invoice,
+  SubmitMiscellaneousInvoiceErrorCodes,
+} from '@onecore/types'
+
+const parsedXledger = (invoice: Invoice) => ({ invoice })
+const parsedTenfast = (invoice: Invoice) => ({ invoice })
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -31,13 +39,19 @@ describe('Invoice Service', () => {
     it('responds with invoices', async () => {
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce(factory.invoice.buildList(3))
+        .mockResolvedValueOnce([
+          parsedXledger(factory.invoice.build({ invoiceId: '123' })),
+          parsedXledger(factory.invoice.build({ invoiceId: '456' })),
+          parsedXledger(factory.invoice.build({ invoiceId: '789' })),
+        ])
 
       jest
-        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce(factory.invoice.buildList(3))
-
-      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([
+          parsedTenfast(factory.invoice.build({ invoiceId: '123' })),
+          parsedTenfast(factory.invoice.build({ invoiceId: '456' })),
+          parsedTenfast(factory.invoice.build({ invoiceId: '789' })),
+        ])
 
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`
@@ -56,22 +70,13 @@ describe('Invoice Service', () => {
         factory.invoice.build({ invoiceId: 'bar' }),
       ]
 
-      const [invoiceRows_1, invoiceRows_2] = [
-        factory.invoiceRow.buildList(3, { invoiceNumber: invoice_1.invoiceId }),
-        factory.invoiceRow.buildList(3, { invoiceNumber: invoice_2.invoiceId }),
-      ]
-
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([invoice_1])
+        .mockResolvedValueOnce([parsedXledger(invoice_1)])
 
       jest
-        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([invoice_2])
-
-      jest
-        .spyOn(xpandAdapter, 'getInvoiceRows')
-        .mockResolvedValueOnce(invoiceRows_1.concat(invoiceRows_2))
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([parsedTenfast(invoice_2)])
 
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`
@@ -106,7 +111,7 @@ describe('Invoice Service', () => {
 
     it('uses fromDate and toDate from Xpand if available', async () => {
       const invoiceId = 'foo'
-      const xpandInvoice = factory.invoice.build({
+      const tenfastInvoice = factory.invoice.build({
         invoiceId,
         fromDate: new Date('2023-03-01T00:00:00.000Z'),
         toDate: new Date('2023-03-31T00:00:00.000Z'),
@@ -119,14 +124,12 @@ describe('Invoice Service', () => {
       })
 
       jest
-        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([xpandInvoice])
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([parsedXledger(xledgerInvoice)])
 
       jest
-        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([xledgerInvoice])
-
-      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([parsedTenfast(tenfastInvoice)])
 
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`
@@ -135,8 +138,8 @@ describe('Invoice Service', () => {
       expect(res.body.content).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            fromDate: xpandInvoice.fromDate.toISOString(),
-            toDate: xpandInvoice.toDate.toISOString(),
+            fromDate: tenfastInvoice.fromDate.toISOString(),
+            toDate: tenfastInvoice.toDate.toISOString(),
           }),
         ])
       )
@@ -151,14 +154,12 @@ describe('Invoice Service', () => {
       })
 
       jest
-        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
         .mockResolvedValueOnce([])
 
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
-        .mockResolvedValueOnce([xledgerInvoice])
-
-      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce([])
+        .mockResolvedValueOnce([parsedXledger(xledgerInvoice)])
 
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`
@@ -189,7 +190,15 @@ describe('Invoice Service', () => {
     it('responds with invoice', async () => {
       jest
         .spyOn(xledgerAdapter, 'getInvoiceByInvoiceNumber')
-        .mockResolvedValueOnce(factory.invoice.build())
+        .mockResolvedValueOnce(
+          parsedXledger(factory.invoice.build({ invoiceId: 'test-invoice-id' }))
+        )
+      jest.spyOn(tenfastAdapter, 'getInvoiceByOcr').mockResolvedValueOnce({
+        ok: true,
+        data: parsedTenfast(
+          factory.invoice.build({ invoiceId: 'test-invoice-id' })
+        ),
+      })
 
       const res = await request(app.callback()).get(`/invoices/12345`)
 
@@ -202,7 +211,11 @@ describe('Invoice Service', () => {
     it('accepts invoice numbers with a K suffix', async () => {
       const getInvoiceSpy = jest
         .spyOn(xledgerAdapter, 'getInvoiceByInvoiceNumber')
-        .mockResolvedValueOnce(factory.invoice.build())
+        .mockResolvedValueOnce(parsedXledger(factory.invoice.build()))
+      jest.spyOn(tenfastAdapter, 'getInvoiceByOcr').mockResolvedValueOnce({
+        ok: true,
+        data: parsedTenfast(factory.invoice.build()),
+      })
 
       const res = await request(app.callback()).get(`/invoices/12345K`)
 
@@ -292,6 +305,175 @@ describe('Invoice Service', () => {
         costCentre: '123',
         propertyCode: '456',
       })
+    })
+  })
+
+  describe('PUT /invoices/:invoiceNumber/deferral', () => {
+    const validBody = {
+      endDate: '2026-06-30',
+      madeByEmail: 'admin@mimer.nu',
+      reason: 'Betalningsplan överenskommen.',
+    }
+
+    it('returns 400 when endDate is missing', async () => {
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send({ madeByEmail: 'admin@mimer.nu', reason: 'test' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 200 and calls deferInvoice with correct args', async () => {
+      const spy = jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: true })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(200)
+      expect(spy).toHaveBeenCalledWith({
+        invoiceOcr: '55123456',
+        endDate: validBody.endDate,
+        madeByEmail: validBody.madeByEmail,
+        reason: validBody.reason,
+      })
+    })
+
+    it('returns 422 with invoice-not-eligible when deferral is rejected', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'invoice-not-eligible' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(422)
+      expect(res.body.code).toBe('invoice-not-eligible')
+    })
+
+    it('returns 404 with invoice-not-found when invoice is missing', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'invoice-not-found' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(404)
+      expect(res.body.code).toBe('invoice-not-found')
+    })
+
+    it('returns 500 with tenfast-failed when Tenfast update fails', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'tenfast-failed' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.code).toBe('tenfast-failed')
+    })
+
+    it('returns 500 with xledger-failed when Xledger update fails', async () => {
+      jest
+        .spyOn(invoiceService, 'deferInvoice')
+        .mockResolvedValueOnce({ ok: false, err: 'xledger-failed' })
+
+      const res = await request(app.callback())
+        .put('/invoices/55123456/deferral')
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.code).toBe('xledger-failed')
+    })
+  })
+
+  describe('GET /invoices/:invoiceId/pdf', () => {
+    const pdfBuffer = Buffer.from('%PDF-1.4 mock')
+    const contentDisposition = 'attachment; filename=Hyresavi.pdf'
+
+    it('returns 200 with pdf bytes and headers on success', async () => {
+      jest.spyOn(tenfastAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: true,
+        data: { data: pdfBuffer, contentDisposition },
+      })
+
+      const res = await request(app.callback()).get('/invoices/55123456/pdf')
+
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toMatch('application/pdf')
+      expect(res.headers['content-disposition']).toBe(contentDisposition)
+      expect(Buffer.from(res.body)).toEqual(pdfBuffer)
+    })
+
+    it('returns 404 when invoice is not found', async () => {
+      jest.spyOn(tenfastAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: false,
+        err: 'not-found',
+      })
+
+      const res = await request(app.callback()).get('/invoices/NONEXISTENT/pdf')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 500 on unknown error', async () => {
+      jest.spyOn(tenfastAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback()).get('/invoices/55123456/pdf')
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /autogiro-consent/:nationalRegistrationNumber', () => {
+    const mockConsent = factory.TenfastAutogiroConsentFactory.build()
+
+    it('responds with consent when found', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: true, data: mockConsent })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toMatchObject({ _id: mockConsent._id })
+    })
+
+    it('responds with 404 when no consent found', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
+
+      expect(res.status).toBe(404)
+      expect(res.body).toMatchObject({ message: 'No autogiro consent found' })
+    })
+
+    it('responds with 500 when tenfast returns error', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'getAutogiroConsentByNationalRegistrationNumber')
+        .mockResolvedValueOnce({ ok: false, err: 'API error' })
+
+      const res = await request(app.callback()).get(
+        `/autogiro-consent/198001011234`
+      )
+
+      expect(res.status).toBe(500)
     })
   })
 

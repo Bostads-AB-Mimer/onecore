@@ -141,6 +141,45 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "type": {
                                 "type": "string",
                                 "enum": [
@@ -176,21 +215,6 @@
                                   "firstName",
                                   "lastName",
                                   "fullName"
-                                ],
-                                "additionalProperties": false
-                              },
-                              "trustee": {
-                                "type": "object",
-                                "properties": {
-                                  "contactCode": {
-                                    "type": "string"
-                                  },
-                                  "fullName": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "contactCode"
                                 ],
                                 "additionalProperties": false
                               }
@@ -317,6 +341,45 @@
                                     "city",
                                     "region",
                                     "country"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
                                   ],
                                   "additionalProperties": false
                                 }
@@ -495,10 +558,461 @@
         ]
       }
     },
+    "/v1/contacts/by-codes": {
+      "get": {
+        "summary": "Get multiple contacts by their contact codes",
+        "description": "Fetch a batch of contacts by providing a comma-separated list of contact codes.",
+        "tags": [
+          "Contacts"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "contactCode": {
+                                "type": "string"
+                              },
+                              "communication": {
+                                "type": "object",
+                                "properties": {
+                                  "phoneNumbers": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "phoneNumber": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "work",
+                                            "home",
+                                            "mobile",
+                                            "direct-line",
+                                            "fax",
+                                            "pager",
+                                            "unspecified"
+                                          ]
+                                        },
+                                        "comment": {
+                                          "type": "string"
+                                        },
+                                        "isPrimary": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "phoneNumber",
+                                        "type",
+                                        "isPrimary"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "emailAddresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "emailAddress": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string"
+                                        },
+                                        "isPrimary": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "emailAddress",
+                                        "type",
+                                        "isPrimary"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "specialAttention": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "phoneNumbers",
+                                  "emailAddresses",
+                                  "specialAttention"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "addresses": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "careOf": {
+                                      "type": "string"
+                                    },
+                                    "street": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "zipCode": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "city": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "region": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "country": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "street",
+                                    "zipCode",
+                                    "city",
+                                    "region",
+                                    "country"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "individual"
+                                ]
+                              },
+                              "personal": {
+                                "type": "object",
+                                "properties": {
+                                  "nationalRegistrationNumber": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "birthDate": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "firstName": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "lastName": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "nationalRegistrationNumber",
+                                  "birthDate",
+                                  "firstName",
+                                  "lastName",
+                                  "fullName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "contactCode",
+                              "communication",
+                              "addresses",
+                              "type",
+                              "personal"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "contactCode": {
+                                "type": "string"
+                              },
+                              "communication": {
+                                "type": "object",
+                                "properties": {
+                                  "phoneNumbers": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "phoneNumber": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "enum": [
+                                            "work",
+                                            "home",
+                                            "mobile",
+                                            "direct-line",
+                                            "fax",
+                                            "pager",
+                                            "unspecified"
+                                          ]
+                                        },
+                                        "comment": {
+                                          "type": "string"
+                                        },
+                                        "isPrimary": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "phoneNumber",
+                                        "type",
+                                        "isPrimary"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "emailAddresses": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "emailAddress": {
+                                          "type": "string"
+                                        },
+                                        "type": {
+                                          "type": "string"
+                                        },
+                                        "isPrimary": {
+                                          "type": "boolean"
+                                        }
+                                      },
+                                      "required": [
+                                        "emailAddress",
+                                        "type",
+                                        "isPrimary"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "specialAttention": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "phoneNumbers",
+                                  "emailAddresses",
+                                  "specialAttention"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "addresses": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "careOf": {
+                                      "type": "string"
+                                    },
+                                    "street": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "zipCode": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "city": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "region": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "country": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "street",
+                                    "zipCode",
+                                    "city",
+                                    "region",
+                                    "country"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "organisation"
+                                ]
+                              },
+                              "organisation": {
+                                "type": "object",
+                                "properties": {
+                                  "organisationNumber": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "organisationNumber",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "contactCode",
+                              "communication",
+                              "addresses",
+                              "type",
+                              "organisation"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "content"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "_links": {}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "codes",
+            "description": "Comma-separated list of contact codes",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/v1/contacts/batch": {
       "get": {
         "summary": "Batch lookup of contacts by contact code",
-        "description": "Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, or `includeAddress` to include those joins. Missing contact codes are simply absent from the response.",
+        "description": "Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, `includeAddress`, or `includeRelations` to include those joins. Missing contact codes are simply absent from the response.",
         "tags": [
           "Contacts"
         ],
@@ -632,6 +1146,45 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "type": {
                                 "type": "string",
                                 "enum": [
@@ -667,21 +1220,6 @@
                                   "firstName",
                                   "lastName",
                                   "fullName"
-                                ],
-                                "additionalProperties": false
-                              },
-                              "trustee": {
-                                "type": "object",
-                                "properties": {
-                                  "contactCode": {
-                                    "type": "string"
-                                  },
-                                  "fullName": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [
-                                  "contactCode"
                                 ],
                                 "additionalProperties": false
                               }
@@ -812,6 +1350,45 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "relatedContacts": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "contactCode": {
+                                      "type": "string"
+                                    },
+                                    "role": {
+                                      "type": "string",
+                                      "enum": [
+                                        "trustee",
+                                        "administrator",
+                                        "trusteeFor",
+                                        "administratorFor",
+                                        "otherInvoiceRecipient",
+                                        "otherInvoiceRecipientFor"
+                                      ]
+                                    },
+                                    "fullName": {
+                                      "type": "string"
+                                    },
+                                    "firstName": {
+                                      "type": "string"
+                                    },
+                                    "lastName": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "contactCode",
+                                    "role",
+                                    "fullName",
+                                    "firstName",
+                                    "lastName"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "type": {
                                 "type": "string",
                                 "enum": [
@@ -908,6 +1485,15 @@
           {
             "name": "includeAddress",
             "description": "Include addresses in the response.",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "includeRelations",
+            "description": "Include related contacts (god man/förvaltare and annan fakturamottagare, both directions) in the response.",
             "in": "query",
             "required": false,
             "schema": {
@@ -1051,6 +1637,45 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -1086,21 +1711,6 @@
                                 "firstName",
                                 "lastName",
                                 "fullName"
-                              ],
-                              "additionalProperties": false
-                            },
-                            "trustee": {
-                              "type": "object",
-                              "properties": {
-                                "contactCode": {
-                                  "type": "string"
-                                },
-                                "fullName": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "contactCode"
                               ],
                               "additionalProperties": false
                             }
@@ -1227,6 +1837,45 @@
                                   "city",
                                   "region",
                                   "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -1436,6 +2085,45 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -1471,21 +2159,6 @@
                                 "firstName",
                                 "lastName",
                                 "fullName"
-                              ],
-                              "additionalProperties": false
-                            },
-                            "trustee": {
-                              "type": "object",
-                              "properties": {
-                                "contactCode": {
-                                  "type": "string"
-                                },
-                                "fullName": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "contactCode"
                               ],
                               "additionalProperties": false
                             }
@@ -1612,6 +2285,45 @@
                                   "city",
                                   "region",
                                   "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -1821,6 +2533,45 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -1856,21 +2607,6 @@
                                 "firstName",
                                 "lastName",
                                 "fullName"
-                              ],
-                              "additionalProperties": false
-                            },
-                            "trustee": {
-                              "type": "object",
-                              "properties": {
-                                "contactCode": {
-                                  "type": "string"
-                                },
-                                "fullName": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "contactCode"
                               ],
                               "additionalProperties": false
                             }
@@ -1997,6 +2733,45 @@
                                   "city",
                                   "region",
                                   "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2206,6 +2981,45 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -2241,21 +3055,6 @@
                                 "firstName",
                                 "lastName",
                                 "fullName"
-                              ],
-                              "additionalProperties": false
-                            },
-                            "trustee": {
-                              "type": "object",
-                              "properties": {
-                                "contactCode": {
-                                  "type": "string"
-                                },
-                                "fullName": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "contactCode"
                               ],
                               "additionalProperties": false
                             }
@@ -2382,6 +3181,45 @@
                                   "city",
                                   "region",
                                   "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2591,6 +3429,45 @@
                                 "additionalProperties": false
                               }
                             },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
                             "type": {
                               "type": "string",
                               "enum": [
@@ -2626,21 +3503,6 @@
                                 "firstName",
                                 "lastName",
                                 "fullName"
-                              ],
-                              "additionalProperties": false
-                            },
-                            "trustee": {
-                              "type": "object",
-                              "properties": {
-                                "contactCode": {
-                                  "type": "string"
-                                },
-                                "fullName": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "contactCode"
                               ],
                               "additionalProperties": false
                             }
@@ -2767,6 +3629,45 @@
                                   "city",
                                   "region",
                                   "country"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "relatedContacts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "contactCode": {
+                                    "type": "string"
+                                  },
+                                  "role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "trustee",
+                                      "administrator",
+                                      "trusteeFor",
+                                      "administratorFor",
+                                      "otherInvoiceRecipient",
+                                      "otherInvoiceRecipientFor"
+                                    ]
+                                  },
+                                  "fullName": {
+                                    "type": "string"
+                                  },
+                                  "firstName": {
+                                    "type": "string"
+                                  },
+                                  "lastName": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "contactCode",
+                                  "role",
+                                  "fullName",
+                                  "firstName",
+                                  "lastName"
                                 ],
                                 "additionalProperties": false
                               }
@@ -2964,6 +3865,45 @@
                   "additionalProperties": false
                 }
               },
+              "relatedContacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "contactCode": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "trustee",
+                        "administrator",
+                        "trusteeFor",
+                        "administratorFor",
+                        "otherInvoiceRecipient",
+                        "otherInvoiceRecipientFor"
+                      ]
+                    },
+                    "fullName": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "contactCode",
+                    "role",
+                    "fullName",
+                    "firstName",
+                    "lastName"
+                  ],
+                  "additionalProperties": false
+                }
+              },
               "type": {
                 "type": "string",
                 "enum": [
@@ -2999,21 +3939,6 @@
                   "firstName",
                   "lastName",
                   "fullName"
-                ],
-                "additionalProperties": false
-              },
-              "trustee": {
-                "type": "object",
-                "properties": {
-                  "contactCode": {
-                    "type": "string"
-                  },
-                  "fullName": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "contactCode"
                 ],
                 "additionalProperties": false
               }
@@ -3140,6 +4065,45 @@
                     "city",
                     "region",
                     "country"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "relatedContacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "contactCode": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "trustee",
+                        "administrator",
+                        "trusteeFor",
+                        "administratorFor",
+                        "otherInvoiceRecipient",
+                        "otherInvoiceRecipientFor"
+                      ]
+                    },
+                    "fullName": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "contactCode",
+                    "role",
+                    "fullName",
+                    "firstName",
+                    "lastName"
                   ],
                   "additionalProperties": false
                 }

@@ -27,7 +27,17 @@ export function useLeaseSearch(
   })
 
   // Prefetch next page for instant navigation
+  // Skip prefetch for batch-get filters (district, buildingManager) as they are too heavy
+  const hasBatchGetFilters = Boolean(
+    params.districtNames?.length ||
+      params.buildingManager?.length ||
+      params.buildingCodes?.length ||
+      params.areaCodes?.length
+  )
+
   useEffect(() => {
+    if (hasBatchGetFilters) return
+
     const totalRecords = leaseSearchQuery.data?._meta?.totalRecords ?? 0
     const totalPages = Math.ceil(totalRecords / limit)
 
@@ -42,6 +52,7 @@ export function useLeaseSearch(
     limit,
     params,
     queryClient,
+    hasBatchGetFilters,
     leaseSearchQuery.data?._meta?.totalRecords,
   ])
 

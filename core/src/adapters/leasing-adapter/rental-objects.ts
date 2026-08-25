@@ -1,6 +1,5 @@
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { RentalObject } from '@onecore/types'
-import { HttpStatusCode } from 'axios'
+import { RentalObject, RentalObjectAvailabilityInfo } from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from '../types'
@@ -70,34 +69,69 @@ const getAllVacantParkingSpaces = async (): Promise<
   }
 }
 
-const getParkingSpaceByRentalObjectCode = async (
+const getRentalObjectAvailabilityByCode = async (
   rentalObjectCode: string
 ): Promise<
   AdapterResult<
-    RentalObject,
-    'get-rental-object-failed' | 'rental-object-not-found'
+    RentalObjectAvailabilityInfo,
+    'availability-not-found' | 'unknown'
   >
 > => {
   try {
     const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/parking-spaces/by-code/${rentalObjectCode}`
+      `${tenantsLeasesServiceUrl}/rental-objects/by-code/${rentalObjectCode}/availability`
     )
-    if (response.status == HttpStatusCode.NotFound) {
-      return { ok: false, err: 'rental-object-not-found' }
+    if (response.status === 404) {
+      logger.error(
+        { rentalObjectCode },
+        'Rental object availability not found for code:'
+      )
+      return { ok: false, err: 'availability-not-found' }
     }
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
       error,
-      'getParkingSpaceByRentalObjectCode. Error fetching rentalobject:'
+      `Error retrieving rental object availability by code: ${rentalObjectCode}`
     )
-    return { ok: false, err: 'get-rental-object-failed' }
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getRentalObjectAvailabilities = async (
+  rentalObjectCodes?: string[]
+): Promise<
+  AdapterResult<
+    RentalObjectAvailabilityInfo[],
+    'availabilities-not-found' | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/rental-objects/availabilities`,
+      { rentalObjectCodes }
+    )
+    if (response.status === 404) {
+      logger.error(
+        { rentalObjectCodes },
+        'Rental object availabilities not found for codes:'
+      )
+      return { ok: false, err: 'availabilities-not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error retrieving rental object availabilities by codes: ${rentalObjectCodes?.join(', ')}`
+    )
+    return { ok: false, err: 'unknown' }
   }
 }
 
 export {
   getAllVacantParkingSpaces,
-  getParkingSpaceByRentalObjectCode,
   getParkingSpaceByCode,
   getParkingSpaces,
+  getRentalObjectAvailabilityByCode,
+  getRentalObjectAvailabilities,
 }

@@ -9,3 +9,4 @@ export const NonScoredParkingSpaceDeniedTemplateId = 205000000040765
 export const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 export const WorkOrderEmailTemplateId = 200000000146435
 export const WorkOrderExternalContractorEmailTemplateId = 200000000173744
+export const InvoiceNotificationEmailTemplateId = 205000000057686

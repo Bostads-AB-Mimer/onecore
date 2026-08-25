@@ -231,6 +231,7 @@ export async function createExcelFromPaginated<T>(
 
   // Set up promise to collect final buffer (must be created before writing)
   const bufferPromise = new Promise<Buffer>((resolve, reject) => {
+    // @ts-ignore
     passThrough.on('end', () => resolve(Buffer.concat(chunks)))
     passThrough.on('error', reject)
   })

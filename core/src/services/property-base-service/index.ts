@@ -1,11 +1,10 @@
 import KoaRouter from '@koa/router'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { LeaseType, property } from '@onecore/types'
 import { z } from 'zod'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-
-import { logger, generateRouteMetadata } from '@onecore/utilities'
-import { property } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
@@ -2414,19 +2413,16 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
-        const leases = await leasingAdapter.getLeasesForContactCode(
+        const leases = await leasingAdapter.getLeasesByContactCode(
           ctx.params.contactCode,
           {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
-            includeContacts: false,
+            status: ['current', 'upcoming'],
           }
         )
+
+        // TODO: This (Promise.all) doesn't work as intended because getMaintenanceUnitsForRentalProperty is not going to throw an error bc of AdapterResult
         const promises = leases
-          .filter(
-            (lease) =>
-              lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
-          )
+          .filter((lease) => lease.type === LeaseType.HousingContract)
           .map((lease) =>
             propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(
               lease.rentalPropertyId

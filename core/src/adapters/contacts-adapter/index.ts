@@ -3,6 +3,7 @@ import type {
   Contact,
   GetContactResponseBody,
   GetContactsResponseBody,
+  SyncContactsResponseBody,
 } from '@onecore/contacts/schema'
 
 import { AdapterResult } from '@/adapters/types'
@@ -12,6 +13,7 @@ import config from '../../common/config'
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
     baseURL: contactsServiceUrl,
+    validateStatus: () => true,
   })
 
   const listResponse = (
@@ -26,9 +28,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
 
   const singleResponse = (
     response: AxiosResponse<GetContactResponseBody, any>
-  ): AdapterResult<Contact, 'unknown'> => {
+  ): AdapterResult<Contact, 'not-found' | 'unknown'> => {
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
     return { ok: false, err: 'unknown', statusCode: response.status }
@@ -52,9 +58,19 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       return { ok: false, err: 'unknown', statusCode: response.status }
     },
 
+    async getByContactCodes(
+      codes: string[]
+    ): Promise<AdapterResult<Contact[], 'unknown'>> {
+      const response = await axios<GetContactsResponseBody>(
+        `/contacts/by-codes`,
+        { params: { codes: codes.join(',') } }
+      )
+      return listResponse(response)
+    },
+
     async getByContactCode(
       contactCode: string
-    ): Promise<AdapterResult<Contact, 'unknown'>> {
+    ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
       const response = await axios<GetContactResponseBody>(
         `/contacts/${contactCode}`
       )
@@ -67,11 +83,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
         includePhone?: boolean
         includeEmail?: boolean
         includeAddress?: boolean
+        includeRelations?: boolean
       }
     ): Promise<AdapterResult<Contact[], 'unknown'>> {
       if (contactCodes.length === 0) return { ok: true, data: [] }
 
-      const { includePhone, includeEmail, includeAddress } = options ?? {}
+      const { includePhone, includeEmail, includeAddress, includeRelations } =
+        options ?? {}
 
       const response = await axios<GetContactsResponseBody>(`/contacts/batch`, {
         params: {
@@ -79,6 +97,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           includePhone,
           includeEmail,
           includeAddress,
+          includeRelations,
         },
         // Required: contacts microservice uses Koa's default Node querystring
         // parser (no koa-qs), which doesn't unpack `?code[]=A` into an array.
@@ -89,7 +108,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
 
     async getByTrusteeOfContactCode(
       contactCode: string
-    ): Promise<AdapterResult<Contact, 'unknown'>> {
+    ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
       const response = await axios<GetContactResponseBody>(
         `/contacts/${contactCode}/trustee`
       )
@@ -98,7 +117,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
 
     async getByNationalId(
       nid: string
-    ): Promise<AdapterResult<Contact, 'unknown'>> {
+    ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
       const response = await axios<GetContactResponseBody>(
         `/contacts/by-nid/${nid}`
       )
@@ -121,6 +140,29 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
         `/contacts/by-email-address/${emailAddress}`
       )
       return listResponse(response)
+    },
+
+    async getUpdatedContacts(
+      since: Date | null
+    ): Promise<
+      AdapterResult<{ contact: Contact; timestamp: Date }[], 'unknown'>
+    > {
+      const params = since ? { since: since.toISOString() } : {}
+      const response = await axios<SyncContactsResponseBody>(`/contacts/sync`, {
+        params,
+      })
+
+      if (response.status === 200) {
+        const data = response.data.content.contacts.map(
+          (c: { contact: Contact; timestamp: string }) => ({
+            contact: c.contact,
+            timestamp: new Date(c.timestamp),
+          })
+        )
+        return { ok: true, data }
+      }
+
+      return { ok: false, err: 'unknown', statusCode: response.status }
     },
   }
 }

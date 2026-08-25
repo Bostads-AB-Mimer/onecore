@@ -9,13 +9,16 @@ import {
   ParkingSpaceAcceptOfferEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
+  InvoiceNotificationEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
+import { EmailAttachment } from '@onecore/types'
 import { EmailV4Message, EmailV4Response } from './types'
 import {
   AcceptParkingSpaceOfferTemplateId,
   AdditionalParkingSpaceOfferTemplateId,
+  InvoiceNotificationEmailTemplateId,
   NonScoredParkingSpaceApprovedTemplateId,
   NonScoredParkingSpaceDeniedTemplateId,
   ParkingSpaceAssignedToOtherTemplateId,
@@ -69,6 +72,83 @@ const sendEmailV4 = async (
   }
 
   return response.json() as Promise<EmailV4Response>
+}
+
+// Uses /email/3/send (multipart) for template emails with attachments.
+// Constructs multipart body manually to avoid undici adding ;charset=UTF-8
+// to the Content-Type boundary, which Infobip rejects.
+const sendTemplateEmailWithAttachments = async (params: {
+  to: string
+  placeholders: string
+  templateId: number
+  attachments: EmailAttachment[]
+}): Promise<void> => {
+  const baseUrl = config.infobip.baseUrl.replace(/\/$/, '')
+  const url = `${baseUrl}/email/3/send`
+  const apiKey = config.infobip.apiKey
+  const crlf = '\r\n'
+  const boundary = `----InfobipBoundary${Date.now()}`
+  const enc = new TextEncoder()
+
+  const formFields: Record<string, string> = {
+    from: EMAIL_SENDER,
+    to: params.to,
+    templateId: String(params.templateId),
+    placeholders: params.placeholders,
+  }
+
+  const parts: Uint8Array[] = []
+
+  for (const [name, value] of Object.entries(formFields)) {
+    parts.push(
+      enc.encode(
+        `--${boundary}${crlf}` +
+          `Content-Disposition: form-data; name="${name}"${crlf}${crlf}` +
+          `${value}${crlf}`
+      )
+    )
+  }
+
+  for (const att of params.attachments) {
+    parts.push(
+      enc.encode(
+        `--${boundary}${crlf}` +
+          `Content-Disposition: form-data; name="attachment"; filename="${att.filename}"${crlf}` +
+          `Content-Type: ${att.contentType}${crlf}${crlf}`
+      )
+    )
+    const binary = atob(att.content)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    parts.push(bytes)
+    parts.push(enc.encode(crlf))
+  }
+
+  parts.push(enc.encode(`--${boundary}--${crlf}`))
+
+  const totalLength = parts.reduce((sum, p) => sum + p.length, 0)
+  const body = new Uint8Array(totalLength)
+  let offset = 0
+  for (const part of parts) {
+    body.set(part, offset)
+    offset += part.length
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `App ${apiKey}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.text()
+    throw new Error(
+      `Infobip Email API error: ${response.status} - ${errorBody}`
+    )
+  }
 }
 
 export const sendEmail = async (message: Email) => {
@@ -335,6 +415,48 @@ export const sendBulkEmail = async (email: {
     return { data: response }
   } catch (error) {
     logger.error(error, 'Error sending bulk email')
+    throw error
+  }
+}
+
+export const sendInvoiceNotificationEmail = async (
+  email: InvoiceNotificationEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending invoice notification email'
+  )
+
+  try {
+    const placeholders = JSON.stringify({
+      firstName: email.firstName,
+      address: email.address,
+      invoiceNumber: email.invoiceNumber,
+      dueDate: dateFormatter.format(new Date(email.dueDate)),
+      totalAmount: formatToSwedishCurrency(email.totalAmount),
+    })
+
+    if (email.attachments && email.attachments.length > 0) {
+      await sendTemplateEmailWithAttachments({
+        to: email.to,
+        placeholders,
+        templateId: InvoiceNotificationEmailTemplateId,
+        attachments: email.attachments,
+      })
+      return { data: null }
+    }
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [{ to: [{ destination: email.to, placeholders }] }],
+        content: { templateId: InvoiceNotificationEmailTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
     throw error
   }
 }

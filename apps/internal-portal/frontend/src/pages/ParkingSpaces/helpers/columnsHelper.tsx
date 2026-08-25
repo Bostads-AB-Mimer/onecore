@@ -73,12 +73,13 @@ export const getColumns = (
       flex: 0.7,
     },
     {
-      field: 'monthlyRent',
+      field: 'rent.amount',
       headerName: 'Hyra',
       ...sharedColumnProps,
-      valueGetter: (params: any) => params.row.rentalObject?.monthlyRent ?? 0,
+      valueGetter: (params: any) =>
+        params.row.rentalObject?.availabilityInfo?.rent?.amount ?? 0,
       renderCell: (v: any) => {
-        const rent = v.row.rentalObject?.monthlyRent ?? 0
+        const rent = v.row.rentalObject?.availabilityInfo?.rent?.amount ?? 0
         const showInclVat = v.row.rentalRule === 'NON_SCORED'
         return (
           <span>
@@ -117,7 +118,8 @@ export const getColumns = (
       field: 'vacantFrom',
       headerName: 'Ledig FR.O.M',
       ...sharedColumnProps,
-      valueGetter: (params: any) => params.row.rentalObject?.vacantFrom ?? '',
+      valueGetter: (params: any) =>
+        params.row.rentalObject?.availabilityInfo?.vacantFrom ?? '',
       valueFormatter: (v: any) => printVacantFrom(dateFormatter, v.value),
       flex: 0.6,
     })

@@ -233,7 +233,7 @@ const parseLeasesForHousingContracts = (
 
   const isHousingContract = (lease: Lease) =>
     [leaseTypes.housingContract, leaseTypes.cooperativeTenancyContract].some(
-      (v) => lease.type.includes(v)
+      (v) => lease.type === v
     )
   const housingContracts = leases.filter(isHousingContract)
   if (!housingContracts.length) {

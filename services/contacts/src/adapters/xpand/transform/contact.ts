@@ -13,7 +13,6 @@ import {
   ContactOrganisation,
   ContactType,
   ObjectKey,
-  Trustee,
 } from '@src/domain/contact'
 import { redact, trimRow } from './common'
 import { transformPhoneNumbers } from './phone'
@@ -51,18 +50,6 @@ export const toCommunicationFragment = (
   }
 }
 
-export const toTrustee = (row: DbContact): { trustee?: Trustee } => {
-  if (row.trusteeId) {
-    return {
-      trustee: {
-        contactCode: row.trusteeId.trim(),
-        fullName: row.trusteeName?.trim(),
-      },
-    }
-  }
-  return {}
-}
-
 /**
  * Transform a DbContact row to a ContactIndividual domain object.
  *
@@ -87,7 +74,6 @@ export const toIndividual = (
       nationalId: protectedIdentity ? 'redacted' : row.nid,
       birthDate: protectedIdentity ? 'redacted' : row.birthDate,
     },
-    ...toTrustee(row),
     communication: toCommunicationFragment(
       row,
       contactDetails,

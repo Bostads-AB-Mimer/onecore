@@ -6,6 +6,7 @@ export type ContactIncludeOptions = {
   includePhone?: boolean
   includeEmail?: boolean
   includeAddress?: boolean
+  includeRelations?: boolean
 }
 
 const BASE_COLUMNS = [
@@ -19,8 +20,6 @@ const BASE_COLUMNS = [
   'cmctc.keycmctc as contactKey',
   'cmctc.lagsokt as protectedIdentity',
   'cmctc.utslag as specialAttention',
-  'trustee.cmctcben as trusteeName',
-  'trustee.cmctckod as trusteeId',
 ]
 
 const ADDRESS_COLUMNS = [
@@ -53,7 +52,7 @@ const PHONE_COLUMNS = [
 
 /**
  * Lean batch lookup of contacts by exact contact code. Selects only base
- * `cmctc` columns (plus the trustee self-join) by default — no row explosion.
+ * `cmctc` columns by default — no row explosion.
  * Each `include*` flag adds the corresponding left-join and its columns.
  *
  * Composable: other endpoints can adopt this builder later to gain an
@@ -69,7 +68,6 @@ export const contactsByCodesQuery = async (
 
   let query = db
     .from('cmctc')
-    .leftJoin('cmctc as trustee', 'cmctc.keycmctc2', 'trustee.keycmctc')
     .whereRaw(`TRIM(cmctc.cmctckod) IN (${placeholders})`, trimmed)
 
   const columns: string[] = [...BASE_COLUMNS]

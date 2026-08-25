@@ -17,5 +17,12 @@ export * as communication from './communication'
 export * from './room'
 
 export * as schemas from './schemas'
+export {
+  SyncContactToEconomySchema,
+  type SyncContactToEconomyPayload,
+  SyncContactToWorkOrderSchema,
+  type SyncContactToWorkOrderPayload,
+} from './schemas/v1/contact-sync'
+export { LeaseChangeSchema, type LeaseChange } from './schemas/v1/lease-sync'
 export { paginatedResponseSchema } from './schemas/pagination'
 export * as fileStorageSchemas from './schemas/file-storage'

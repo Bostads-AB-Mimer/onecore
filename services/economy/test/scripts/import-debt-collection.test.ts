@@ -1,4 +1,4 @@
-jest.mock('@src/common/config', () => require('./__mocks__/config'))
+jest.mock('@src/common/config', () => require('@test/common/__mocks__/config'))
 
 jest.mock('ssh2-sftp-client', () => {
   class MockSftpClient {
@@ -20,7 +20,7 @@ jest.mock('@src/services/debt-collection-service/service', () => ({
 }))
 
 import { logger } from '@onecore/utilities'
-import mockConfig from './__mocks__/config'
+import mockConfig from '../common/__mocks__/config'
 import {
   enrichRentInvoices,
   enrichOtherInvoices,

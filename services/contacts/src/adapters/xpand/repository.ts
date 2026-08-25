@@ -1,4 +1,4 @@
-import { type Resource } from '@onecore/utilities'
+import { type Resource, logger } from '@onecore/utilities'
 import knex from 'knex'
 import {
   ContactListParams,
@@ -11,6 +11,7 @@ import {
   NationalIdNumber,
 } from '@src/domain'
 import {
+  cmlogContactChanges,
   contactObjectKeysForEmailAddress,
   contactObjectKeysForPhoneNumber,
   contactsQuery,
@@ -18,6 +19,35 @@ import {
 import { contactsByCodesQuery, ContactIncludeOptions } from './batch-query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
+import {
+  guardianRelations,
+  guardianForRelations,
+  relatedContactsFor,
+  relatedContactsForMany,
+  otherInvoiceRecipientRelations,
+  otherInvoiceRecipientForRelations,
+  ADMINISTRATOR_FORVTYP,
+  TRUSTEE_FORVTYP,
+} from './related-contacts-query'
+
+/**
+ * Populates `relatedContacts` on a batch of contacts using a single grouped
+ * relation query (not N+1). Contacts with no relations get an empty array.
+ */
+const withRelatedContacts = async (
+  db: knex.Knex,
+  contacts: Contact[]
+): Promise<Contact[]> => {
+  if (contacts.length === 0) return contacts
+  const byCode = await relatedContactsForMany(
+    db,
+    contacts.map((c) => c.contactCode)
+  )
+  for (const c of contacts) {
+    c.relatedContacts = byCode.get(c.contactCode) ?? []
+  }
+  return contacts
+}
 
 /**
  * Creates a ContactsRepository that interacts with the Xpand database,
@@ -76,13 +106,19 @@ export const xpandContactsRepository = (
         .hasContactCode(contactCode)
         .getOne(db.get())
 
-      return transformDbContactRows(dbContactRows)[0]
+      const contact = transformDbContactRows(dbContactRows)[0]
+      if (!contact) return null
+      contact.relatedContacts = await relatedContactsFor(
+        db.get(),
+        contact.contactCode
+      )
+      return contact
     },
 
     /**
      * Batch lookup of contacts by their contact codes. Uses the lean
      * `contactsByCodesQuery` which omits phone/email/address joins by
-     * default — only base `cmctc` columns plus the trustee self-join.
+     * default — only base `cmctc` columns.
      */
     getByContactCodeBatch: async (
       contactCodes: ContactCode[],
@@ -91,7 +127,66 @@ export const xpandContactsRepository = (
       if (contactCodes.length === 0) return []
 
       const rows = await contactsByCodesQuery(db.get(), contactCodes, options)
-      return transformDbContactRows(rows)
+      const contacts = transformDbContactRows(rows)
+
+      return options?.includeRelations
+        ? withRelatedContacts(db.get(), contacts)
+        : contacts
+    },
+
+    getAdministrators: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianRelations(
+        db.get(),
+        contactCode,
+        ADMINISTRATOR_FORVTYP
+      )
+      return subjectExists ? related : null
+    },
+
+    getAdministratorsFor: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianForRelations(
+        db.get(),
+        contactCode,
+        ADMINISTRATOR_FORVTYP
+      )
+      return subjectExists ? related : null
+    },
+
+    getTrustees: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianRelations(
+        db.get(),
+        contactCode,
+        TRUSTEE_FORVTYP
+      )
+      return subjectExists ? related : null
+    },
+
+    getTrusteesFor: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await guardianForRelations(
+        db.get(),
+        contactCode,
+        TRUSTEE_FORVTYP
+      )
+      return subjectExists ? related : null
+    },
+
+    getOtherInvoiceRecipients: async (contactCode: ContactCode) => {
+      const { subjectExists, related } = await otherInvoiceRecipientRelations(
+        db.get(),
+        contactCode,
+        new Date()
+      )
+      return subjectExists ? related : null
+    },
+
+    getOtherInvoiceRecipientsFor: async (contactCode: ContactCode) => {
+      const { subjectExists, related } =
+        await otherInvoiceRecipientForRelations(
+          db.get(),
+          contactCode,
+          new Date()
+        )
+      return subjectExists ? related : null
     },
 
     /**
@@ -106,7 +201,13 @@ export const xpandContactsRepository = (
         .hasNationalId(nid.replaceAll(/[^0-9]/g, ''))
         .getOne(db.get())
 
-      return transformDbContactRows(dbContactRows)[0]
+      const contact = transformDbContactRows(dbContactRows)[0]
+      if (!contact) return null
+      contact.relatedContacts = await relatedContactsFor(
+        db.get(),
+        contact.contactCode
+      )
+      return contact
     },
 
     /**
@@ -134,7 +235,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return transformDbContactRows(rows)
+        return withRelatedContacts(db.get(), transformDbContactRows(rows))
       }
 
       return []
@@ -164,10 +265,63 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return transformDbContactRows(rows)
+        return withRelatedContacts(db.get(), transformDbContactRows(rows))
       }
 
       return []
+    },
+
+    /**
+     * Retrieves full Contact objects for the given list of contact codes in a single batch.
+     *
+     * @param codes - The contact codes to fetch.
+     * @returns A promise that resolves to an array of Contact objects.
+     */
+    getByContactCodes: async (
+      codes: ContactCode[],
+      options?: { includeRelations?: boolean }
+    ): Promise<Contact[]> => {
+      if (codes.length === 0) return []
+      const rows = await contactsQuery()
+        .withContactCodeIn(codes)
+        .getPage(db.get(), { page: 0, pageSize: codes.length })
+      const contacts = transformDbContactRows(rows)
+      return options?.includeRelations
+        ? withRelatedContacts(db.get(), contacts)
+        : contacts
+    },
+
+    /**
+     * Retrieves contact codes for contacts updated since the given timestamp,
+     * each paired with the latest logtime for that code. Results are ordered
+     * by timestamp ascending so callers can checkpoint per item. If no
+     * timestamp is provided, returns all matching rows.
+     *
+     * @param since - The timestamp to query changes from, or null for all rows.
+     * @returns A promise that resolves to contact codes with timestamps, ordered ascending.
+     */
+    getChangedContactCodes: async (
+      since: Date | null
+    ): Promise<{ contactCode: string; timestamp: Date }[]> => {
+      const rows = await cmlogContactChanges(db.get(), since)
+
+      const byContactCode = new Map<string, Date>()
+      for (const row of rows) {
+        const match = (row['logmemo'] as string)?.match(/^Kontakt (\S+)/)
+        if (!match) continue
+        byContactCode.set(match[1], row['logtime'] as Date)
+      }
+
+      const contactCodes = Array.from(byContactCode.entries())
+        .map(([contactCode, timestamp]) => ({ contactCode, timestamp }))
+        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+      logger.info(
+        { contactCodes: contactCodes.map((c) => c.contactCode) },
+        'cmlog contact codes updated since last sync'
+      )
+
+      return contactCodes
     },
   }
 }

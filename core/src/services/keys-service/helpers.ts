@@ -57,7 +57,13 @@ export const enrichWithContacts = async (
   )
   if (codes.length === 0) return undefined
 
-  const result = await contactsAdapter.getByContactCodeBatch(codes)
+  // The adapter's validateStatus swallows HTTP errors, but a connection-level
+  // failure (contacts service down) still throws. Catch it here so a missing
+  // sidecar never takes the whole route down with it.
+  const result = await contactsAdapter
+    .getByContactCodeBatch(codes)
+    .catch((err: unknown) => ({ ok: false, err }) as const)
+
   if (!result.ok) {
     logger.error(
       { err: result.err, codeCount: codes.length, metadata },

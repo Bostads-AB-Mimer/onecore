@@ -6,10 +6,12 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { LeaseType } from '@onecore/types'
+
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
 
 /**
  * @swagger
@@ -602,19 +604,12 @@ export const routes = (router: KoaRouter) => {
   router.get('/maintenance-units/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const leases = await leasingAdapter.getLeasesForContactCode(
+      const leases = await leasingAdapter.getLeasesByContactCode(
         ctx.params.contactCode,
-        {
-          includeUpcomingLeases: true,
-          includeTerminatedLeases: false,
-          includeContacts: false,
-        }
+        { status: ['current', 'upcoming'] }
       )
       const promises = leases
-        .filter(
-          (lease) =>
-            lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
-        )
+        .filter((lease) => lease.type === LeaseType.HousingContract)
         .map((lease) =>
           propertyManagementAdapter.getMaintenanceUnitsForRentalProperty(
             lease.rentalPropertyId

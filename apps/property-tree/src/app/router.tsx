@@ -6,6 +6,7 @@ import ComponentLibraryPage from '@/pages/ComponentLibraryPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { EconomyPage } from '@/pages/EconomyPage'
 import { FacilityPage } from '@/pages/FacilityPage'
+import { ImdPage } from '@/pages/ImdPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
@@ -138,6 +139,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: 'economy',
             element: <EconomyPage />,
             handle: { title: 'Ekonomi' },
+          },
+          {
+            path: routes.imd,
+            element: <ImdPage />,
+            handle: { title: 'IMD' },
           },
           {
             path: routes.inspections,

@@ -156,7 +156,10 @@ const searchProperties = (
     return prisma.property
       .findMany({
         where: {
-          OR: [{ designation: { contains: q } }, { code: { contains: q } }],
+          OR: [
+            { designation: { contains: q.toUpperCase() } },
+            { code: { contains: q.toUpperCase() } },
+          ],
         },
         orderBy: { code: 'asc' },
       })

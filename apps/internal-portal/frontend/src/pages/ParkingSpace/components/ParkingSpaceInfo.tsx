@@ -109,10 +109,30 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             </Box>
           </Box>
           <Box display="flex" justifyContent="space-between" flex="1">
+            <Typography>Hyresform</Typography>
+            <Box>
+              <Typography fontWeight="bold">
+                {parkingSpaceListing.rentalObject.availabilityInfo
+                  ?.rentalTenureType?.name || '-'}
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex" justifyContent="space-between" flex="1">
+            <Typography>Uthyrningstyp</Typography>
+            <Box>
+              <Typography fontWeight="bold">
+                {parkingSpaceListing.rentalObject.availabilityInfo?.rentalTags
+                  ?.map((t) => t.name)
+                  .join(', ') || '-'}
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex" justifyContent="space-between" flex="1">
             <Typography>Hyra</Typography>
             <Box>
               <Typography fontWeight="bold">{`${numberFormatter.format(
-                parkingSpaceListing.rentalObject.monthlyRent
+                parkingSpaceListing.rentalObject.availabilityInfo?.rent
+                  ?.amount ?? 0
               )}/mån`}</Typography>
             </Box>
           </Box>
@@ -122,7 +142,8 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
               <Box>
                 <Typography fontWeight="bold">{`${numberFormatter.format(
                   currency(
-                    parkingSpaceListing.rentalObject.monthlyRent
+                    parkingSpaceListing.rentalObject.availabilityInfo?.rent
+                      ?.amount ?? 0
                   ).multiply(1.25).value
                 )}/mån`}</Typography>
               </Box>
@@ -170,7 +191,8 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
                 <Typography fontWeight="bold">
                   {printVacantFrom(
                     dateFormatter,
-                    parkingSpaceListing.rentalObject.vacantFrom
+                    parkingSpaceListing.rentalObject.availabilityInfo
+                      ?.vacantFrom
                   )}
                 </Typography>
               </Box>
