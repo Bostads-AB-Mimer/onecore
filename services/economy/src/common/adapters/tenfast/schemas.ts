@@ -323,7 +323,7 @@ export type TenfastRentalLoss = z.infer<typeof TenfastRentalLossSchema>
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
-  createdAt: z.string(),
+  createdAt: z.string().nullable(),
   hyresvard: z.string(),
   code: z.string(),
   title: z.string(),

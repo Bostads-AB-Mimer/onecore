@@ -236,11 +236,7 @@ const retrieveRentArticles = async () => {
     throw new Error('Could not retrieve rent articles from Tenfast')
   }
 
-  console.log('Got', result.data.length, 'articles')
-
   const correctArticles = result.data.filter((article: any) => article.category)
-
-  console.log('Filtered to', correctArticles.length, 'articles')
 
   const parsedResponse = z
     .array(TenfastRentArticleSchema)
@@ -257,11 +253,10 @@ export const getInvoiceArticle = async (
   articleId: string
 ): Promise<AdapterResult<TenfastRentArticle, string>> => {
   if (!rentArticles || rentArticles.length === 0) {
-    console.log('Getting rentArticles because', rentArticles)
     await retrieveRentArticles()
   }
 
-  const article = rentArticles.find((article) => article.code === articleId)
+  const article = rentArticles.find((article) => article._id === articleId)
 
   if (article) {
     return {
@@ -386,17 +381,17 @@ const enrichInvoiceRowsWithAccounting = async (
               accountConfiguration.accountNr.toString()
             invoiceRowWithAccounting.costCode =
               accountConfiguration.costCenter &&
-              accountConfiguration.costCenter !== ''
+                accountConfiguration.costCenter !== ''
                 ? accountConfiguration.costCenter
                 : undefined
             invoiceRowWithAccounting.property =
               accountConfiguration.property &&
-              accountConfiguration.property !== ''
+                accountConfiguration.property !== ''
                 ? accountConfiguration.property
                 : undefined
             invoiceRowWithAccounting.projectCode =
               accountConfiguration.projectCode &&
-              accountConfiguration.projectCode !== ''
+                accountConfiguration.projectCode !== ''
                 ? accountConfiguration.projectCode
                 : undefined
 
@@ -423,6 +418,8 @@ const enrichInvoiceRowsWithAccounting = async (
           })
           continue
         }
+      } else {
+        logger.error({ article: invoiceRow.rentArticle, articleResult }, 'Could not get article information')
       }
     }
 
@@ -436,12 +433,12 @@ const enrichInvoiceRowsWithAccounting = async (
       )
     ) {
       logger.error(
-        { invoiceId: invoice.invoiceId },
+        { invoiceId: invoice.invoiceId, article: invoiceRowWithAccounting.rentArticleName },
         'Minst en hyresrad på avin saknar hyresobjekt'
       )
       errors.push({
         invoiceNumber: invoice.invoiceId,
-        error: `Minst en hyresrad på avin saknar hyresobjekt`,
+        error: `Minst en hyresrad på avin saknar hyresobjekt (hyresartikel ${invoiceRowWithAccounting.rentArticleName})`,
       })
       continue
     }
@@ -742,7 +739,7 @@ export const getRentalLosses = async (
   const parsedResponse = TenfastRentalLossResponseSchema.safeParse(result.data)
 
   if (parsedResponse.error) {
-    console.log(parsedResponse.error)
+    logger.error({ error: parsedResponse.error }, 'Could not parse rental loss')
     return { ok: false, err: 'schema-error' }
   }
 
@@ -769,7 +766,7 @@ export const getRentalLosses = async (
   return {
     ok: true,
     data: {
-      rentalLosses: rentalLosses.slice(0, 10),
+      rentalLosses: rentalLosses/*.slice(0, 10)*/,
       errors: errors.length ? errors : undefined,
     },
   }

@@ -48,7 +48,7 @@ export const routes = (router: KoaRouter) => {
           aggregateAccountingCsv,
           ledgerAccountingCsv
         )
-        await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
+        //await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
       }
 
       ctx.status = 200
