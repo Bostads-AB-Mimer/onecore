@@ -1,10 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, FilePlus, Home, MessageSquare } from 'lucide-react'
 
-import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooUtils'
-
 import { Building, ResidenceSummary, Staircase } from '@/services/types'
 
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooUtils'
 import { paths } from '@/shared/routes'
 import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'

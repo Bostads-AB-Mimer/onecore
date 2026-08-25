@@ -7,7 +7,6 @@ import {
   COST_RESPONSIBILITY,
   type CostResponsibility,
 } from '../constants'
-
 import { emptyInspectionComponent } from '../lib/inspectionComponent'
 
 type InspectionRoom = components['schemas']['InspectionRoom']

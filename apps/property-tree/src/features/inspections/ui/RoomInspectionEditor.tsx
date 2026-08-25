@@ -11,9 +11,10 @@ import { Skeleton } from '@/shared/ui/Skeleton'
 
 import {
   type CostResponsibility,
-  SURFACE_TYPES,
   getTypeName,
+  SURFACE_TYPES,
 } from '../constants'
+import type { ComponentType } from '../constants/actions'
 import { useRoomComponents } from '../hooks/useRoomComponents'
 import {
   deriveRoomIsHandled,
@@ -24,7 +25,6 @@ import { AddSurfaceComponentMenu } from './AddSurfaceComponentMenu'
 import { ComponentDetailSheet } from './ComponentDetailSheet'
 import { ComponentInspectionCard } from './ComponentInspectionCard'
 import { DetailComponentsSection } from './DetailComponentsSection'
-import type { ComponentType } from '../constants/actions'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 type InspectionComponent = NonNullable<InspectionRoom['components']>[number]
