@@ -7577,6 +7577,7 @@ export interface paths {
       requestBody: {
         content: {
           'application/json': {
+            /** @description List of recipients to look up */
             recipients: {
               recipientId: string
               /** @enum {string} */
