@@ -1,10 +1,7 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { parseRequest } from '../middleware/parse-request'
-import {
-  AnalyzeComponentImageRequestSchema,
-  AIComponentAnalysisSchema,
-} from '../types/component'
+import { AnalyzeComponentImageRequestSchema } from '../types/component'
 import { analyzeComponentImage } from '../adapters/berget-adapter'
 
 /**

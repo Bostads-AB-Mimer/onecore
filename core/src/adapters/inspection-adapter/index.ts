@@ -1,10 +1,5 @@
 import createClient from 'openapi-fetch'
-import {
-  logger,
-  PaginatedResponse,
-  PaginationMeta,
-  PaginationLinks,
-} from '@onecore/utilities'
+import { logger, PaginatedResponse } from '@onecore/utilities'
 import { inspection } from '@onecore/types'
 import config from '../../common/config'
 import { AdapterResult } from '../types'

@@ -91,13 +91,13 @@ export function MiscellaneousInvoiceForm() {
 
   const [reference, setReference] = useState<XledgerContact | null>(null)
 
+  const userEmail = userState.tag === 'success' ? userState.user.email : null
+
   useEffect(() => {
-    if (userState.tag === 'success' && contacts) {
-      setReference(
-        contacts.find((c) => c.email === userState.user.email) ?? null
-      )
+    if (userEmail && contacts) {
+      setReference(contacts.find((c) => c.email === userEmail) ?? null)
     }
-  }, [JSON.stringify(userState), contacts])
+  }, [userEmail, contacts])
 
   const [errors, setErrors] = useState<FormErrors>({})
 

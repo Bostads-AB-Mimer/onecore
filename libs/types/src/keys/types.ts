@@ -53,7 +53,6 @@ import {
   // Pagination schemas
   PaginationMetaSchema,
   PaginationLinksSchema,
-  PaginatedResponseSchema,
   // DAX schemas
   CardSchema,
   CardDetailsSchema,

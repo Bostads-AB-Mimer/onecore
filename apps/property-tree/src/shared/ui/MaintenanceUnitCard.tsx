@@ -1,4 +1,3 @@
-import { Card, CardContent } from '@/shared/ui/Card'
 import { Separator } from '@/shared/ui/Separator'
 
 import { MaintenanceSubComponent } from './MaintenanceSubComponent'
