@@ -2,7 +2,6 @@ import { useState } from 'react'
 
 import type { components } from '@/services/api/core/generated/api-types'
 
-import type { InspectionSubmitData, TenantInfoCardData } from '../types/index'
 import {
   type Checklist,
   CHECKLIST_DEFAULT,
@@ -13,6 +12,7 @@ import {
   type InspectionType,
   isValidInspectionType,
 } from '../constants/inspectionTypes'
+import type { InspectionSubmitData, TenantInfoCardData } from '../types/index'
 
 type Inspection = components['schemas']['InternalInspection']
 

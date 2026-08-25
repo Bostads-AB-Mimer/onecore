@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 
+import { formatInspectorName } from '../lib/inspectorIdentity'
 import {
   canResume,
   canStart,
@@ -29,7 +30,6 @@ import {
   isXpandSource,
   XPAND_ACTION_LABEL,
 } from './statuses'
-import { formatInspectorName } from '../lib/inspectorIdentity'
 
 type Inspection = components['schemas']['InspectionWithSource']
 type KeycloakUser = components['schemas']['KeycloakUser']

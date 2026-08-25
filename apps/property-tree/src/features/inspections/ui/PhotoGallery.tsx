@@ -6,9 +6,8 @@ import { Button } from '@/shared/ui/Button'
 import { Dialog, DialogOverlay, DialogPortal } from '@/shared/ui/Dialog'
 
 import { useInspectionPhotos } from '../hooks/useInspectionPhotos'
-
 import { InspectionPhoto } from './InspectionPhoto'
-import { PhotoCapture, type InspectionPhotoUploadContext } from './PhotoCapture'
+import { type InspectionPhotoUploadContext, PhotoCapture } from './PhotoCapture'
 
 interface PhotoGalleryProps {
   photos: string[]

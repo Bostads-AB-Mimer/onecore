@@ -2,12 +2,13 @@ import { MapPin } from 'lucide-react'
 
 import type { Lease } from '@/services/api/core/leaseService'
 import type { RelatedContact, Tenant } from '@/services/types'
+
 import { CopyableField } from '@/shared/ui/CopyableField'
 import { TooltipProvider } from '@/shared/ui/Tooltip'
 
 import { getTenantRoles, isOrganization } from '../lib/classification'
-import { getIncomingRelationSummary } from '../lib/relations'
 import { formatTenantAddress, formatTenantName } from '../lib/formatting'
+import { getIncomingRelationSummary } from '../lib/relations'
 
 type LeaseTenant = NonNullable<Lease['tenants']>[number]
 

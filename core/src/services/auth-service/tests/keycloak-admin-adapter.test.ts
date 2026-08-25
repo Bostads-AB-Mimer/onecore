@@ -38,7 +38,6 @@ describe('keycloak-admin-adapter', () => {
   beforeEach(() => {
     jest.resetModules()
     jest.doMock('@onecore/utilities', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const ax = require('axios')
       return {
         logger: {
@@ -57,7 +56,7 @@ describe('keycloak-admin-adapter', () => {
         generateRouteMetadata: jest.fn(),
       }
     })
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+
     getUsersByRole = require('../keycloak-admin-adapter').getUsersByRole
   })
 
@@ -406,7 +405,6 @@ describe('keycloak-admin-adapter', () => {
   describe('listAllUsers', () => {
     let listAllUsers: typeof import('../keycloak-admin-adapter').listAllUsers
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       listAllUsers = require('../keycloak-admin-adapter').listAllUsers
     })
 
@@ -439,9 +437,8 @@ describe('keycloak-admin-adapter', () => {
     let getUserById: typeof import('../keycloak-admin-adapter').getUserById
     let updateUser: typeof import('../keycloak-admin-adapter').updateUser
     beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       getUserById = require('../keycloak-admin-adapter').getUserById
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+
       updateUser = require('../keycloak-admin-adapter').updateUser
     })
 

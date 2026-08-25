@@ -11,6 +11,7 @@ import {
 } from '@/features/properties'
 
 import { Button } from '@/shared/ui/Button'
+import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 import {
   Select,
   SelectContent,
@@ -18,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/Select'
-import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 const ALL_BUILDINGS = '__all__'
 
