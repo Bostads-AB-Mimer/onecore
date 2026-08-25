@@ -87,14 +87,18 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    // Bulk shape: one role fetch resolves all ~33 areas. Note this only matches
+    // Bulk shape: one role fetch resolves all ~33 areas. This only matches
     // users who *currently hold* the property-manager role, whereas
     // GET /properties/:code/kvv-area resolves the assigned id directly (one
-    // cheap call on Odoo's per-errand path). They therefore disagree for a
-    // steward who lost the role: unassigned here, still named there. That is
-    // intentional — this endpoint answers "who are the current managers", and
-    // PATCH /kvv-areas/:id/responsible enforces the role on assignment, so the
-    // two only diverge if the role is removed afterwards.
+    // cheap call on Odoo's per-errand path). Intentional — this endpoint
+    // answers "who are the current managers".
+    //
+    // In practice `responsible` is null for a large share of areas (15 of 33 in
+    // TEST_21_DB): every area has a stored id, but many point at users Keycloak
+    // no longer knows — stale ids from the original import, not role removal.
+    // Those resolve to null on *both* paths. Consumers must treat null as
+    // "cannot name the steward", not as "area has no steward"; cleaning the
+    // stored ids is a per-environment data task.
     const resolveUser = await resolvePropertyManagers(
       result.data.some((a) => a.responsibleKeycloakUserId !== null)
     )

@@ -55,7 +55,10 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/PropertyKvvAreaLookup'
    *       404:
-   *         description: Property has no KVV-area link
+   *         description: |
+   *           Property has no KVV-area link. The body carries
+   *           `code: PROPERTY_KVV_AREA_NOT_FOUND` so callers can tell this
+   *           apart from a routing 404.
    *       500:
    *         description: Internal server error
    *     security:
@@ -71,7 +74,13 @@ export const routes = (router: KoaRouter) => {
     if (!result.ok) {
       if (result.err === 'not-found') {
         ctx.status = 404
-        ctx.body = { error: 'Property has no KVV-area', ...metadata }
+        // `code` lets callers distinguish this from a routing 404 — Odoo maps
+        // it to "no district" rather than treating it as a failed request.
+        ctx.body = {
+          error: 'Property has no KVV-area',
+          code: 'PROPERTY_KVV_AREA_NOT_FOUND',
+          ...metadata,
+        }
         return
       }
       logger.error(

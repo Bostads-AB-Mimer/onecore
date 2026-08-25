@@ -251,7 +251,13 @@ export async function getUserById(
     const { url, realm } = config.auth.keycloak
     const res = await loggedAxios.get<KeycloakUser>(
       `${url}/admin/realms/${realm}/users/${encodeURIComponent(userId)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        // leasing-adapter sets `axios.defaults.validateStatus` to accept <500
+        // process-wide. Without this, a 404 resolves and Keycloak's error body
+        // is returned as a "user". Same guard as fetchGroupsByRole/-Members.
+        validateStatus: (status) => status >= 200 && status < 300,
+      }
     )
     return { ok: true, data: res.data }
   } catch (err) {

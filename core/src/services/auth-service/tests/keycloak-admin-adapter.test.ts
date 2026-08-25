@@ -457,6 +457,32 @@ describe('keycloak-admin-adapter', () => {
       expect(r.data.id).toBe('u1')
     })
 
+    it('treats a 404 as an error even when a global validateStatus accepts 4xx', async () => {
+      // leasing-adapter sets `axios.defaults.validateStatus` to accept <500
+      // process-wide. Without an explicit validateStatus, Keycloak's 404 body
+      // would come back as a successful "user" object.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const ax = require('axios')
+      const axios = ax.default ?? ax
+      const original = axios.defaults.validateStatus
+      axios.defaults.validateStatus = (s: number) => s >= 200 && s < 500
+
+      try {
+        mockServer.use(
+          tokenHandler(),
+          http.get(`${url}/admin/realms/${realm}/users/missing`, () =>
+            HttpResponse.json({ error: 'User not found' }, { status: 404 })
+          )
+        )
+
+        const r = await getUserById('missing')
+
+        expect(r.ok).toBe(false)
+      } finally {
+        axios.defaults.validateStatus = original
+      }
+    })
+
     it('sends full UserRepresentation on PUT', async () => {
       let received: unknown
       mockServer.use(
