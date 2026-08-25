@@ -10,8 +10,11 @@ import * as commonXpandAdapter from '@src/services/common/adapters/xpand-db-adap
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
-import { schemas } from '@onecore/types'
-import { Invoice } from '@onecore/types'
+import {
+  schemas,
+  Invoice,
+  SubmitMiscellaneousInvoiceErrorCodes,
+} from '@onecore/types'
 
 const parsedXledger = (invoice: Invoice) => ({ invoice })
 const parsedTenfast = (invoice: Invoice) => ({ invoice })
@@ -471,6 +474,55 @@ describe('Invoice Service', () => {
       )
 
       expect(res.status).toBe(500)
+    })
+  })
+
+  describe('POST /invoices/miscellaneous', () => {
+    const invoiceBody = { invoice: JSON.stringify({ contactCode: 'P123456' }) }
+
+    it('responds with 200 and the created items on success', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'submitMiscellaneousInvoice')
+        .mockResolvedValueOnce({ ok: true, data: [{ node: { dbId: 1 } }] })
+
+      const res = await request(app.callback())
+        .post('/invoices/miscellaneous')
+        .send(invoiceBody)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([{ node: { dbId: 1 } }])
+    })
+
+    it('responds with 404 and error type when the customer is missing in Xledger', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'submitMiscellaneousInvoice')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound,
+        })
+
+      const res = await request(app.callback())
+        .post('/invoices/miscellaneous')
+        .send(invoiceBody)
+
+      expect(res.status).toBe(404)
+      expect(res.body.type).toBe('xledger-customer-not-found')
+    })
+
+    it('responds with 500 on unknown errors', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'submitMiscellaneousInvoice')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: SubmitMiscellaneousInvoiceErrorCodes.Unknown,
+        })
+
+      const res = await request(app.callback())
+        .post('/invoices/miscellaneous')
+        .send(invoiceBody)
+
+      expect(res.status).toBe(500)
+      expect(res.body.type).toBe('unknown')
     })
   })
 })

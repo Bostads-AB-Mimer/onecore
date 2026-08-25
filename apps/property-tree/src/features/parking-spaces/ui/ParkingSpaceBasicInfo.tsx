@@ -22,7 +22,9 @@ export const ParkingSpaceBasicInfo = ({
     <>
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-          Parkering {parkingSpace.parkingSpace.parkingNumber}
+          Parkering{' '}
+          {parkingSpace.parkingSpace.parkingNumber ||
+            parkingSpace.parkingSpace.code}
         </h1>
       </div>
 

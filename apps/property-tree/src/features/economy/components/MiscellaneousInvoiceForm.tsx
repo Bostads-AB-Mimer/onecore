@@ -17,7 +17,10 @@ import { useTenant } from '@/entities/tenant'
 import { TenantSearchResult } from '@/entities/tenant/hooks/useTenantSearch'
 import { useUser } from '@/entities/user'
 
+import { SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
+
 import { Lease as CoreLease } from '@/services/api/core'
+import { ApiError } from '@/services/api/core/baseApi'
 import { economyService } from '@/services/api/core/economyService'
 
 import { useToast } from '@/shared/hooks/useToast'
@@ -65,10 +68,17 @@ export function MiscellaneousInvoiceForm() {
       })
       handleReset()
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      const customerNotFoundInXledger =
+        error instanceof ApiError &&
+        error.message ===
+          SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+
       toast({
         title: 'Fel',
-        description: 'Kunde inte skicka underlaget. Försök igen.',
+        description: customerNotFoundInXledger
+          ? 'Kunden finns inte upplagd i Xledger ännu, vilket ofta gäller hyresgäster med enbart kommande kontrakt. Kontakta ekonomiavdelningen för att lägga upp kunden och försök sedan igen.'
+          : 'Kunde inte skicka underlaget. Försök igen.',
         variant: 'destructive',
       })
     },

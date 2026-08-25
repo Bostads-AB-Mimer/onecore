@@ -4,7 +4,11 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy } from '@onecore/types'
+import {
+  economy,
+  RouteErrorResponse,
+  SubmitMiscellaneousInvoiceErrorCodes,
+} from '@onecore/types'
 
 import {
   getAllInvoicesWithMatchIds,
@@ -213,19 +217,50 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      const success = await submitMiscellaneousInvoice({
+      const result = await submitMiscellaneousInvoice({
         ...JSON.parse(ctx.request.body.invoice),
         attachment: ctx.request.files?.attachment,
       })
 
+      if (!result.ok) {
+        if (
+          result.err ===
+          SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+        ) {
+          ctx.status = 404
+          ctx.body = {
+            type: result.err,
+            title: 'Customer not found in Xledger',
+            status: 404,
+            detail:
+              'The contact does not exist as a customer (subledger) in Xledger.',
+            ...metadata,
+          } satisfies RouteErrorResponse
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = {
+          type: result.err,
+          title: 'Error creating miscellaneous invoice',
+          status: 500,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(success, metadata)
-    } catch (error: any) {
-      logger.error(error)
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    } catch (error) {
+      logger.error({ err: error }, 'POST /invoices/miscellaneous')
       ctx.status = 500
       ctx.body = {
-        message: error.message,
-      }
+        type: SubmitMiscellaneousInvoiceErrorCodes.Unknown,
+        title: 'Error creating miscellaneous invoice',
+        status: 500,
+        detail: error instanceof Error ? error.message : undefined,
+        ...metadata,
+      } satisfies RouteErrorResponse
     }
   })
 

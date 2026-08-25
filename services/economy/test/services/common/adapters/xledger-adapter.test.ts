@@ -763,3 +763,84 @@ describe(adapter.getInvoiceMatchId, () => {
     expect(result).toEqual(matchId)
   })
 })
+
+describe(adapter.submitMiscellaneousInvoice, () => {
+  const invoice = {
+    reference: '12345',
+    invoiceDate: new Date('2026-08-13'),
+    contactCode: 'P123456',
+    tenantName: 'Test Tenant',
+    leaseId: '123-456-78-9012/01',
+    costCentre: 'KC01',
+    propertyCode: '123',
+    invoiceRows: [
+      {
+        price: 100,
+        amount: 1,
+        article: { id: '369800', name: 'Övriga intäkter', standardPrice: 100 },
+      },
+    ],
+  }
+
+  it('returns the created items on success', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          addInvoiceBaseItems: {
+            edges: [{ node: { dbId: 1 } }],
+          },
+        },
+      })
+
+    const result = await adapter.submitMiscellaneousInvoice(invoice)
+
+    expect(result).toEqual({ ok: true, data: [{ node: { dbId: 1 } }] })
+  })
+
+  it('returns xledger-customer-not-found when the subledger is missing', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        errors: [
+          {
+            message:
+              "subledger.code: No value matching owner 42365431, code 'P123456'.",
+          },
+        ],
+      })
+
+    const result = await adapter.submitMiscellaneousInvoice(invoice)
+
+    expect(result).toEqual({ ok: false, err: 'xledger-customer-not-found' })
+  })
+
+  it('returns xledger-customer-not-found when the subledger error arrives with a non-200 status', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(400, {
+        errors: [
+          {
+            message:
+              "subledger.code: No value matching owner 42365431, code 'P123456'.",
+          },
+        ],
+      })
+
+    const result = await adapter.submitMiscellaneousInvoice(invoice)
+
+    expect(result).toEqual({ ok: false, err: 'xledger-customer-not-found' })
+  })
+
+  it('returns unknown on other Xledger errors', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        errors: [{ message: 'Something else went wrong' }],
+      })
+
+    const result = await adapter.submitMiscellaneousInvoice(invoice)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})

@@ -2873,6 +2873,7 @@ export interface components {
       ownershipType: string
       /** Format: date-time */
       registrationDate: string | null
+      /** Format: date-time */
       acquisitionDate: string | null
       isLeasehold: number
       leaseholdTerminationDate: string | null
@@ -3391,7 +3392,7 @@ export interface components {
         propertyObjectId: string
         code: string
         name: string
-        parkingNumber: string
+        parkingNumber: string | null
         parkingSpaceType: {
           code: string
           name: string

@@ -11666,7 +11666,7 @@ export interface components {
         propertyObjectId: string
         code: string
         name: string
-        parkingNumber: string
+        parkingNumber: string | null
         parkingSpaceType: {
           code: string
           name: string
@@ -11677,7 +11677,7 @@ export interface components {
         streetAddress2: string | null
         postalCode: string | null
         city: string | null
-      }
+      } | null
     }
     MaintenanceUnit: {
       id: string
