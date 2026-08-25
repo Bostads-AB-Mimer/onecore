@@ -11,7 +11,6 @@ Check the local commits I've added to the current branch and make suggestions ab
 
 - opportunities for refactoring
 - potential bugs
-- any security concerns
 - best practices to follow
 - libraries to use
 - check that I've followed established patterns in the project and used any apropriate utilities etc.

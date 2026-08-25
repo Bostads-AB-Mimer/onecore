@@ -15,8 +15,6 @@ export const InvoiceFactory = Factory.define<Invoice>((options) => {
     invoiceId,
     leaseIds: ['705-025-03-0205/01'],
     reference: 'P123456',
-    recipientContactCode: 'P123456',
-    recipientName: 'Test Tenant',
     amount: 7687.77,
     fromDate: new Date('2023-03-01T00:00:00.000Z'),
     toDate: new Date('2023-03-31T00:00:00.000Z'),

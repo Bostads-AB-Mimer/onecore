@@ -4,91 +4,28 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { economy, Invoice } from '@onecore/types'
+import { economy } from '@onecore/types'
 
 import {
+  getAllInvoicesWithMatchIds,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
-  getInvoicesByContactCode as getXledgerInvoicesByContactCode,
+  submitMiscellaneousInvoice,
 } from '../common/adapters/xledger-adapter'
+import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
-  getInvoiceRows,
-  getInvoicesByContactCode as getXpandInvoicesByContactCode,
-} from './adapters/xpand-db-adapter'
-import { getInvoiceDetails } from './service'
-import {
-  createAccounting,
-  createRentalLossAccounting,
-  exportRentalInvoicesAccounting,
-  exportRentalLosses,
-  handleRentalBlocks,
-  markInvoicesAsExported,
-  uploadCsvFiles,
-  uploadRentalLossCsvFile,
-} from './servicev2'
+  getInvoicesByContactCode,
+  fetchInvoiceRows,
+  fetchPaymentEvents,
+  getLeaseDetails,
+  stralforsPostChannelLookup,
+  getAutogiroConsent,
+  getPublicInvoiceByOcr,
+} from './service'
+import * as invoiceService from './service'
+import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
-  router.post('(.*)/accounting/import-invoices/{:companyId}', async (ctx) => {
-    try {
-      const companyId = ctx.params.companyId
-
-      if (!companyId) {
-        ctx.status = 400
-        ctx.body = 'Company with specified ID could not be found'
-      }
-
-      const invoicesResult = await exportRentalInvoicesAccounting(companyId)
-
-      if (invoicesResult.exportedInvoices.length > 0) {
-        const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
-          await createAccounting(invoicesResult.exportedInvoices)
-
-        await uploadCsvFiles(
-          companyId,
-          aggregateAccountingCsv,
-          ledgerAccountingCsv
-        )
-        await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
-      }
-
-      ctx.status = 200
-      ctx.body = {
-        errors: invoicesResult.errors,
-        successfulInvoices: invoicesResult.exportedInvoices.map(
-          (invoice) => invoice.invoiceId
-        ),
-        skippedInvoices: invoicesResult.skippedInvoices.map(
-          (invoice) => invoice.invoiceId
-        )
-      }
-    } catch (error) {
-      ctx.status = 500
-      ctx.body = 'Could not export invoices ' + (error as any).message
-    }
-  })
-
-  router.post(
-    '(.*)/accounting/import-rental-loss/{:companyId}',
-    async (ctx) => {
-      const companyId = ctx.params.companyId
-
-      if (!companyId) {
-        ctx.status = 400
-        ctx.body = 'Company with specified ID could not be found'
-      }
-
-      let rentalLosses = await exportRentalLosses(companyId)
-      rentalLosses = await handleRentalBlocks(rentalLosses)
-      /*const { aggregateRentalLossAccountingCsv, errors } = await createRentalLossAccounting(rentalLosses)
-
-      await uploadRentalLossCsvFile(
-        companyId,
-        aggregateRentalLossAccountingCsv
-      )*/
-      ctx.status = 200
-    }
-  )
-
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = economy.GetInvoicesByContactCodeQueryParams.safeParse(
@@ -103,79 +40,13 @@ export const routes = (router: KoaRouter) => {
     const from = queryParams.data?.from
     const contactCode = ctx.params.contactCode
     try {
-      const xledgerInvoices =
-        (await getXledgerInvoicesByContactCode(contactCode, { from: from })) ??
-        []
-      const xpandInvoices =
-        (await getXpandInvoicesByContactCode(contactCode, { from: from })) ?? []
-
-      const xledgerInvoiceIds = xledgerInvoices.map(
-        (invoice) => invoice.invoiceId
-      )
-
-      const regularInvoices: Invoice[] = []
-      const losses: Invoice[] = []
-
-      xledgerInvoices.forEach((i) => {
-        // A loss is recorded as a transaction on account 1529
-        if (i.accountCode === '1529') {
-          losses.push(i)
-        } else {
-          regularInvoices.push(i)
-        }
-      })
-
-      // An invoice is marked as an expected loss if there is a recorded loss with the same invoice number
-      regularInvoices.forEach((i) => {
-        const lossForInvoice = losses.find((l) => l.invoiceId === i.invoiceId)
-        if (lossForInvoice) {
-          i.expectedLoss = true
-        }
-      })
-
-      // If invoice exists in xpand, use period (fromDate, toDate) from xpand invoice
-      // Otherwise use period from xledger invoice
-      const invoices = regularInvoices
-        .map((invoice) => {
-          const xpandInvoice = xpandInvoices.find(
-            (v) => v.invoiceId === invoice.invoiceId
-          )
-
-          if (xpandInvoice?.fromDate && xpandInvoice.toDate) {
-            return {
-              ...invoice,
-              fromDate: xpandInvoice.fromDate,
-              toDate: xpandInvoice.toDate,
-            }
-          } else {
-            return invoice
-          }
-        })
-        .concat(
-          xpandInvoices.filter(
-            (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
-          )
-        )
-
-      const invoiceRows = await getInvoiceRows(
-        new Date().getFullYear(),
-        '001', // Mimer company id.
-        invoices.map((v) => v.invoiceId)
-      )
-
-      const invoicesWithRows = invoices.map((invoice) => {
-        const rows = invoiceRows.filter(
-          (row) => row.invoiceNumber === invoice.invoiceId
-        )
-
-        return { ...invoice, invoiceRows: rows }
-      })
+      const invoices = await getInvoicesByContactCode(contactCode, { from })
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(invoicesWithRows, metadata)
+      ctx.body = makeSuccessResponseBody(invoices, metadata)
     } catch (error: any) {
       logger.error(
-        { error, contactCode: contactCode },
+        { err: error, contactCode: contactCode },
         'Error getting invoices for contact code'
       )
       ctx.status = 500
@@ -185,10 +56,52 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('(.*)/invoices/:ocr/pdf', async (ctx) => {
+    const result = await getInvoicePdf(ctx.params.ocr)
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.set(
+      'Content-Disposition',
+      (
+        result.data.contentDisposition || 'attachment; filename="invoice.pdf"'
+      ).replace(/[\r\n]/g, '')
+    )
+    ctx.body = result.data.data
+  })
+
+  router.get('(.*)/invoices/by-ocr/:ocr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await getPublicInvoiceByOcr(ctx.params.ocr)
+
+    if (!result.ok) {
+      ctx.status = result.err.includes('not found') ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(result.data, metadata)
+  })
+
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    // Xledger invoice numbers are digits with an optional K suffix; reject
+    // anything else before it reaches the GraphQL string interpolation.
+    if (!/^\d{1,20}K?$/i.test(ctx.params.invoiceNumber)) {
+      ctx.status = 404
+      return
+    }
+
     try {
-      const result = await getInvoiceDetails(ctx.params.invoiceNumber)
+      const result = await invoiceService.getInvoiceDetails(
+        ctx.params.invoiceNumber
+      )
       if (!result) {
         ctx.status = 404
         return
@@ -206,6 +119,14 @@ export const routes = (router: KoaRouter) => {
 
   router.get('(.*)/invoices/:invoiceNumber/payment-events', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    // Xledger invoice numbers are digits with an optional K suffix; reject
+    // anything else before it reaches the GraphQL string interpolation.
+    if (!/^\d{1,20}K?$/i.test(ctx.params.invoiceNumber)) {
+      ctx.status = 404
+      return
+    }
+
     try {
       const matchId = await getInvoiceMatchId(ctx.params.invoiceNumber)
       if (!matchId) {
@@ -224,4 +145,225 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.get('(.*)/invoices', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = economy.GetInvoicesQueryParams.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    const pageSize = queryParams.data?.pageSize ?? 500
+    const after = queryParams.data?.after
+
+    try {
+      const invoices = await getAllInvoicesWithMatchIds({
+        from: queryParams.data?.from,
+        to: queryParams.data?.to,
+        remainingAmountGreaterThan:
+          queryParams.data?.remainingAmountGreaterThan,
+        after,
+        pageSize,
+      })
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        {
+          content: invoices.content,
+          pageInfo: invoices.pageInfo,
+        },
+        metadata
+      )
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+  /*
+    Gets property information required to create a miscellaneous invoice for a lease.
+    We could instead get the required information by making several queries to the leasing- and
+    property-services, but since it is only required in one place at the moment
+    (creating miscellaneous invoices from the onecore web application) I decided to keep it
+    isolated here.
+  */
+  router.get('(.*)/invoices/miscellaneous/:rentalId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await getPropertyCodeAndCostCentreForLease(
+        ctx.params.rentalId
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result, metadata)
+    } catch (error: any) {
+      logger.error(error)
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/invoices/miscellaneous', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const success = await submitMiscellaneousInvoice({
+        ...JSON.parse(ctx.request.body.invoice),
+        attachment: ctx.request.files?.attachment,
+      })
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(success, metadata)
+    } catch (error: any) {
+      logger.error(error)
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.put('(.*)/invoices/:invoiceNumber/deferral', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = economy.TenfastGracePeriodRequestSchema.safeParse(
+      ctx.request.body
+    )
+
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = {
+        message: body.error.issues[0]?.message ?? 'Invalid request',
+      }
+      return
+    }
+
+    const result = await invoiceService.deferInvoice({
+      invoiceOcr: ctx.params.invoiceNumber,
+      endDate: body.data.endDate,
+      madeByEmail: body.data.madeByEmail,
+      reason: body.data.reason,
+    })
+
+    if (!result.ok) {
+      if (result.err === 'invoice-not-found') {
+        ctx.status = 404
+      } else if (result.err === 'invoice-not-eligible') {
+        ctx.status = 422
+      } else {
+        ctx.status = 500
+      }
+      ctx.body = { code: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+  })
+
+  router.post('(.*)/rent-invoice-rows/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const invoiceIds = ctx.request.body.invoiceIds as string[] // TODO schema
+
+    try {
+      const invoices = await fetchInvoiceRows(invoiceIds)
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(invoices, metadata)
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/payment-events/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const matchIds = ctx.request.body.matchIds as string[] // TODO schema
+
+    try {
+      const paymentEvents = await fetchPaymentEvents(
+        matchIds.map((id) => parseInt(id))
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(paymentEvents, metadata)
+    } catch (error: any) {
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/lease-details/batch', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const invoiceIds = ctx.request.body.invoiceIds as string[] // TODO schema
+
+    try {
+      const leaseDetails = await getLeaseDetails(invoiceIds)
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(leaseDetails, metadata)
+    } catch (error: any) {
+      logger.error(error, 'Error getting lease details')
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/invoice-channels', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { recipients } = ctx.request.body
+
+    try {
+      const results = await stralforsPostChannelLookup(recipients)
+
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+        content: results,
+      }
+    } catch (error: any) {
+      logger.error(error, 'Invoice channels lookup error')
+      ctx.status = 500
+      ctx.body = { ...metadata, message: error.message }
+    }
+  })
+
+  router.get(
+    '(.*)/autogiro-consent/:nationalRegistrationNumber',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { nationalRegistrationNumber } = ctx.params
+
+      try {
+        const results = await getAutogiroConsent(nationalRegistrationNumber)
+
+        if (results === null) {
+          ctx.status = 404
+          ctx.body = { ...metadata, message: 'No autogiro consent found' }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          ...metadata,
+          content: results,
+        }
+      } catch (error: any) {
+        logger.error(error, 'Error getting autogiro consent')
+        ctx.status = 500
+        ctx.body = { ...metadata, message: error.message }
+      }
+    }
+  )
 }

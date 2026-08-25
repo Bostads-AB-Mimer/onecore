@@ -122,7 +122,7 @@ export const exportRentalInvoicesAccounting = async (
         }
 
         const counterPartCustomer = findCounterPartCustomer(
-          counterPartCustomers,
+          counterPartCustomers.customers,
           invoice.recipientName
         )
 

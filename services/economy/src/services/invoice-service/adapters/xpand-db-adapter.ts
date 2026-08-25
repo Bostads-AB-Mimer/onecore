@@ -56,60 +56,6 @@ export const closeDb = () => {
   db.destroy()
 }
 
-export const enrichInvoiceWithAccounting = async (
-  invoice: InvoiceWithAccounting
-): Promise<InvoiceWithAccounting> => {
-  const year = invoice.invoiceDate.getFullYear()
-  const rentalIds = invoice.invoiceRows
-    .map((invoiceRow: InvoiceRowWithAccounting) => invoiceRow.rentalObject)
-    .filter((rentalObject): rentalObject is string => Boolean(rentalObject))
-  const rentalSpecificRules = await getRentalSpecificRules(
-    rentalIds,
-    year.toString()
-  )
-
-  for (const invoiceRow of invoice.invoiceRows) {
-    // Rows exempt from the rental object requirement (e.g. invoice fees) have
-    // no rental object and therefore no rental-specific accounting rules to
-    // apply. Their accounting is resolved from the article configuration.
-    if (!invoiceRow.rentalObject) {
-      if (isRentalObjectRequirementException(invoiceRow.rentArticleName)) {
-        continue
-      }
-
-      logger.error(
-        { invoiceNumber: invoice.invoiceId },
-        'Invoice row is missing a rental object'
-      )
-      throw new Error(
-        `Minst en hyresrad på avin ${invoice.invoiceId} saknar hyresobjekt`
-      )
-    }
-
-    const rentalSpecificRule = rentalSpecificRules[invoiceRow.rentalObject]
-    if (!rentalSpecificRule || Object.keys(rentalSpecificRule).length === 0) {
-      logger.error(
-        {
-          invoiceNumber: invoice.invoiceId,
-          rentalSpecificRules,
-          rentalObject: invoiceRow.rentalObject,
-        },
-        'Could not get accounting rules for invoice from Xpand'
-      )
-      throw new Error(
-        `Kunde inte hitta konteringsregler för hyresobjektet ${invoiceRow.rentalObject} på faktura ${invoice.invoiceId}`
-      )
-    }
-    invoiceRow.projectCode =
-      invoiceRow.projectCode ?? rentalSpecificRule?.projectCode
-    invoiceRow.costCode = invoiceRow.costCode ?? rentalSpecificRule?.costCode
-    invoiceRow.property = invoiceRow.property ?? rentalSpecificRule?.property
-    invoiceRow.freeCode = invoiceRow.freeCode ?? rentalSpecificRule?.freeCode
-  }
-
-  return invoice
-}
-
 let roundOffInformation: RoundOffInformation | undefined = undefined
 
 export const getRoundOffInformation = async (
@@ -283,7 +229,7 @@ const getAdditionalColumns = async (
   if (row.company === '001' && !additionalColumns['costCode'] && contractCode) {
     specificRule =
       rentalSpecificRules[(row.fromDate as string).substring(0, 4)][
-      contractCode.split('/')[0]
+        contractCode.split('/')[0]
       ]
     if (!specificRule) {
       logger.error(
@@ -559,8 +505,6 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
     fromDate: row.fromDate,
     toDate: row.toDate,
-    recipientContactCode: contactCode,
-    recipientName: '',
     invoiceDate: row.invoiceDate,
     expirationDate: row.expirationDate,
     debitStatus: row.debitStatus,
@@ -656,9 +600,9 @@ inner join cmarg on cmart.keycmarg = cmarg.keycmarg
 inner Join repsk on cmart.keycmart = repsk.keycode
 inner join repsr on repsk.keyrepsr = repsr.keyrepsr
 where repsr.keycode IN (` +
-    keycodes.map((_) => "'" + _ + "'").join(',') +
-    ')' +
-    `and cmcmp.code = ?
+      keycodes.map((_) => "'" + _ + "'").join(',') +
+      ')' +
+      `and cmcmp.code = ?
 and krfkh.fromdate >= ? AND krfkh.fromdate < ?
 and not invoice is null
 and not invoice like 'IH%'`,
@@ -678,8 +622,8 @@ export const getBatchTotalAmount = async (invoiceNumbers: string[]) => {
 	as invoicesTotal \
 	from krfkh \
 	where invoice in (' +
-    invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
-    ')'
+      invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
+      ')'
   )
 
   return total[0].invoicesTotal as number
@@ -860,7 +804,63 @@ function getPaymentStatus(paymentStatusNumber: number) {
   return paymentStatus
 }
 
-const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounting => {
+export const enrichInvoiceWithAccounting = async (
+  invoice: InvoiceWithAccounting
+): Promise<InvoiceWithAccounting> => {
+  const year = invoice.invoiceDate.getFullYear()
+  const rentalIds = invoice.invoiceRows
+    .map((invoiceRow: InvoiceRowWithAccounting) => invoiceRow.rentalObject)
+    .filter((rentalObject): rentalObject is string => Boolean(rentalObject))
+  const rentalSpecificRules = await getRentalSpecificRules(
+    rentalIds,
+    year.toString()
+  )
+
+  for (const invoiceRow of invoice.invoiceRows) {
+    // Rows exempt from the rental object requirement (e.g. invoice fees) have
+    // no rental object and therefore no rental-specific accounting rules to
+    // apply. Their accounting is resolved from the article configuration.
+    if (!invoiceRow.rentalObject) {
+      if (isRentalObjectRequirementException(invoiceRow.rentArticleName)) {
+        continue
+      }
+
+      logger.error(
+        { invoiceNumber: invoice.invoiceId },
+        'Invoice row is missing a rental object'
+      )
+      throw new Error(
+        `Minst en hyresrad på avin ${invoice.invoiceId} saknar hyresobjekt`
+      )
+    }
+
+    const rentalSpecificRule = rentalSpecificRules[invoiceRow.rentalObject]
+    if (!rentalSpecificRule || Object.keys(rentalSpecificRule).length === 0) {
+      logger.error(
+        {
+          invoiceNumber: invoice.invoiceId,
+          rentalSpecificRules,
+          rentalObject: invoiceRow.rentalObject,
+        },
+        'Could not get accounting rules for invoice from Xpand'
+      )
+      throw new Error(
+        `Kunde inte hitta konteringsregler för hyresobjektet ${invoiceRow.rentalObject} på faktura ${invoice.invoiceId}`
+      )
+    }
+    invoiceRow.projectCode =
+      invoiceRow.projectCode ?? rentalSpecificRule?.projectCode
+    invoiceRow.costCode = invoiceRow.costCode ?? rentalSpecificRule?.costCode
+    invoiceRow.property = invoiceRow.property ?? rentalSpecificRule?.property
+    invoiceRow.freeCode = invoiceRow.freeCode ?? rentalSpecificRule?.freeCode
+  }
+
+  return invoice
+}
+
+const transformRentalBlockWithAccounting = (
+  dbRow: any
+): RentalBlockWithAccounting => {
   return {
     account: dbRow.p1.trim(),
     costCode: dbRow.p2?.toString().trimEnd(),
@@ -869,27 +869,34 @@ const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounti
     freeCode: dbRow.p5?.toString().trimEnd(),
     description: dbRow.caption?.toString().trimEnd(),
     fromDate: dbRow.fromDate,
-    toDate: dbRow.toDate
+    toDate: dbRow.toDate,
   }
 }
 
 /**
- * Returns an active rental block with accounting information for a given rental object, if the 
+ * Returns an active rental block with accounting information for a given rental object, if the
  * block is active within the date range and has accounting information. Rental blocks without
  * accounting information are not returned even if they are active within the date range.
  */
-export const getActiveRentalBlocksWithAccounting = async (rentalId: string, from: Date, to: Date) => {
+export const getActiveRentalBlocksWithAccounting = async (
+  rentalId: string,
+  from: Date,
+  to: Date
+) => {
   const year = from.toISOString().substring(0, 4)
 
-  const blockWithAccounting = await db.raw(`select p1, p5, hyspt.fdate as fromDate, hyspt.tdate as toDate, hyspa.caption as caption from hyspt 
+  const blockWithAccounting = await db.raw(
+    `select p1, p5, hyspt.fdate as fromDate, hyspt.tdate as toDate, hyspa.caption as caption from hyspt
   inner join hyspa on hyspt.keyhyspa = hyspa.keyhyspa
   inner join repsk on hyspa.keyhyspa = repsk.keycode
   inner join babuf ON hyspt.keycmobj = babuf.keycmobj
   inner join cmobj on hyspt.keycmobj = cmobj.keycmobj
   where babuf.hyresid = ?
-  and hyspt.fdate < ? 
+  and hyspt.fdate < ?
   and (hyspt.tdate > ? or hyspt.tdate is null)
-  and repsk.year = ?`, [rentalId, from, to, year])
+  and repsk.year = ?`,
+    [rentalId, from, to, year]
+  )
 
   return blockWithAccounting.map(transformRentalBlockWithAccounting)
 }

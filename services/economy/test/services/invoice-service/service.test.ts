@@ -209,11 +209,11 @@ describe('Rental Invoice Service', () => {
     const mockArticles = [
       {
         _id: 'HYRAB',
-        title: 'Hyra bostad',
+        label: 'Hyra bostad',
       },
       {
         _id: 'PARK',
-        title: 'Parkering',
+        label: 'Parkering',
       },
     ]
 

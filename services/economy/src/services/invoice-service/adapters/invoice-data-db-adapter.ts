@@ -28,7 +28,7 @@ export const closeDb = () => {
   db.destroy()
 }
 
-export const createBatch = async (batchTotal: number = 0) => {
+export const createBatch = async (batchTotal: number) => {
   const batchResult = await db('invoice_batch')
     .insert({ BatchTotalAmount: batchTotal })
     .returning('Id')
@@ -105,8 +105,8 @@ export const saveContacts = async (
   let successfulContacts = 0
   let failedContacts = 0
   for (const contact of contacts) {
-    const counterPart = findCounterPartCustomer(
-      counterPartCustomers,
+    const counterPart = counterPartCustomers.find(
+      counterPartCustomers.customers,
       contact.fullName as string
     )
 
@@ -298,19 +298,6 @@ export const getAggregatedInvoiceRows = async (
   return rows
 }
 
-export const getCounterPartCustomers = async (): Promise<
-  CounterPartCustomer[]
-> => {
-  const result = await db('invoice_counterpart')
-
-  return result.map((row) => ({
-    customerName: row.CustomerName,
-    counterPartCode: row.CounterpartCode,
-    ledgerAccount: row.LedgerAccount,
-    totalAccount: row.TotalAccount,
-  }))
-}
-
 export const findCounterPartCustomer = (
   customers: CounterPartCustomer[],
   customerName: string | undefined
@@ -321,6 +308,43 @@ export const findCounterPartCustomer = (
       )
     : undefined
 
+export const getCounterPartCustomers = async (): Promise<{
+  customers: CounterPartCustomer[]
+  find: (
+    customers: CounterPartCustomer[],
+    customerName: string
+  ) => CounterPartCustomer | undefined
+}> => {
+  const result = await db('invoice_counterpart')
+
+  const counterPartCustomers = result.map((row) => {
+    return {
+      customerName: row.CustomerName,
+      counterPartCode: row.CounterpartCode,
+      ledgerAccount: row.LedgerAccount,
+      totalAccount: row.TotalAccount,
+    }
+  })
+
+  const find = (
+    customers: CounterPartCustomer[],
+    customerName: string
+  ): CounterPartCustomer | undefined => {
+    return customers.find(
+      (counterPart) =>
+        0 ===
+        customerName
+          .toLowerCase()
+          .localeCompare(counterPart.customerName.toLowerCase())
+    )
+  }
+
+  return {
+    customers: counterPartCustomers,
+    find,
+  }
+}
+
 export const addAccountInformation = async (
   invoiceDataRows: InvoiceDataRow[]
 ): Promise<InvoiceDataRow[]> => {
@@ -328,8 +352,8 @@ export const addAccountInformation = async (
   for (const row of invoiceDataRows) {
     if ('Öresutjämning'.localeCompare(row.invoiceRowText as string) !== 0) {
       try {
-        const counterPart = findCounterPartCustomer(
-          counterPartCustomers,
+        const counterPart = counterPartCustomers.find(
+          counterPartCustomers.customers,
           row.tenantName as string
         )
 

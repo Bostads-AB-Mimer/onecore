@@ -3,7 +3,6 @@ import {
   addAccountInformation,
   getAggregatedInvoiceRows,
   getCounterPartCustomers,
-  findCounterPartCustomer,
   saveInvoiceRows,
   saveContacts,
   getContacts as getInvoiceContacts,
@@ -25,7 +24,7 @@ import {
   getBatchTotalAmount as getXpandBatchTotalAmount,
 } from './adapters/xpand-db-adapter'
 import {
-  CounterPartCustomer,
+  CounterPartCustomers,
   LedgerInvoice,
   InvoiceContract,
   InvoiceDataRow,
@@ -73,7 +72,7 @@ import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
 
 const createRoundOffRow = async (
   invoice: InvoiceData,
-  counterPartCustomers: CounterPartCustomer[]
+  counterPartCustomers: CounterPartCustomers
 ): Promise<InvoiceDataRow> => {
   const fromDateString = invoice.fromdate as string
   const year = fromDateString.substring(0, 4)
@@ -82,8 +81,8 @@ const createRoundOffRow = async (
   let ledgerAccount = '1530'
   const tenantName = (invoice.cmctcben as string).trimEnd()
 
-  const counterPartCustomer = findCounterPartCustomer(
-    counterPartCustomers,
+  const counterPartCustomer = counterPartCustomers.find(
+    counterPartCustomers.customers,
     tenantName
   )
 
@@ -146,8 +145,8 @@ export const processInvoiceRows = async (
     }
 
     if (invoiceDataRow.tenantName) {
-      const counterPartCustomer = findCounterPartCustomer(
-        counterPartCustomers,
+      const counterPartCustomer = counterPartCustomers.find(
+        counterPartCustomers.customers,
         invoiceDataRow.tenantName.toString()
       )
 
@@ -321,8 +320,8 @@ export const createLedgerRows = async (
     for (const invoice of currentInvoices) {
       const invoiceRows = rowsByInvoiceNumber[invoice.invoiceNumber]
 
-      const counterPart = findCounterPartCustomer(
-        counterPartCustomers,
+      const counterPart = counterPartCustomers.find(
+        counterPartCustomers.customers,
         invoiceRows[0].TenantName as string
       )
 
@@ -409,6 +408,7 @@ export const createAggregateTotalRow = (
     Math.round(((totalRow.amount as number) + Number.EPSILON) * 100) / 100
 
   if (!totalRow.account || totalRow.account == 'null') {
+    console.log(aggregatedRows[0])
     throw new Error('Account is missing in aggregation')
   }
 
@@ -1164,7 +1164,7 @@ const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {
 
         return {
           ...ir,
-          invoiceRowText: article?.title ?? null,
+          invoiceRowText: article?.label ?? null,
         }
       }),
     }

@@ -12,6 +12,7 @@ type SftpConfig = {
   glDirectory?: string
   arDirectory?: string
   useSshDss?: boolean
+  hostFingerprint?: string
 }
 
 export interface Config {
@@ -35,6 +36,13 @@ export interface Config {
     url: string
     apiToken: string
     sftp: SftpConfig
+  }
+  stralfors: {
+    baseUrl: string
+    clientId: string
+    clientSecret: string
+    retryBackoffMs: number
+    maxRetries: number
   }
   procurementInvoices: {
     importDirectory: string
@@ -65,11 +73,16 @@ export interface Config {
   tenfast: {
     baseUrl: string
     apiKey: string
+    companyId: string
   }
   companies: MimerCompany[]
   // Article codes that are exempt from the requirement of having a rental
   // object (hyresobjekt) on an invoice row with accounting.
   rentalObjectRequirementExceptions: string[]
+  stralforsExport: {
+    sftp: SftpConfig
+    notificationEmail: string
+  }
   health: {
     xledger: {
       systemName: string
@@ -128,6 +141,10 @@ const config = configPackage({
     economyDatabase: {
       port: 1438,
     },
+    stralfors: {
+      retryBackoffMs: 500,
+      maxRetries: 10,
+    },
     procurementInvoices: {
       importDirectory: './procurement-invoices/invoices',
       exportDirectory: './procurement-invoices/export',
@@ -158,7 +175,9 @@ const config = configPackage({
     tenfast: {
       baseUrl: '',
       apiKey: '',
+      companyId: '',
     },
+    companies: '[]',
     rentalObjectRequirementExceptions: ['FAKT AVG'],
     health: {
       xledger: {
@@ -174,6 +193,17 @@ const config = configPackage({
         minimumMinutesBetweenRequests: 5,
       },
     },
+    stralforsExport: {
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        port: 22,
+        directory: 'TEST',
+        hostFingerprint: '',
+      },
+      notificationEmail: '',
+    },
   },
 })
 
@@ -182,6 +212,7 @@ const resolvedConfig = {
   xpandDatabase: config.get('xpandDatabase'),
   economyDatabase: config.get('economyDatabase'),
   xledger: config.get('xledger'),
+  stralfors: config.get('stralfors'),
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
   debtCollection: config.get('debtCollection'),
@@ -190,10 +221,11 @@ const resolvedConfig = {
   ),
   infobip: config.get('infobip'),
   tenfast: config.get('tenfast'),
-  companies: JSON.parse(config.get('companies')),
+  companies: JSON.parse(config.get('companies') ?? '[]'),
   rentalObjectRequirementExceptions: config.get(
     'rentalObjectRequirementExceptions'
   ),
+  stralforsExport: config.get('stralforsExport'),
   health: config.get('health'),
 } as Config
 

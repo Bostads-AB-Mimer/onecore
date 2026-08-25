@@ -1,6 +1,7 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
 import ms from 'ms'
+
 dotenv.config()
 
 interface Account {
@@ -9,12 +10,20 @@ interface Account {
   hash: string
 }
 
+export interface HealthCheck {
+  systemName: string
+  minimumMinutesBetweenRequests: number
+}
+
 export interface Config {
   port: number
   tenantsLeasesService: {
     url: string
   }
   propertyInfoService: {
+    url: string
+  }
+  contactsService: {
     url: string
   }
   documentsService: {
@@ -38,10 +47,12 @@ export interface Config {
   exportRentalInvoiceAccounting: {
     companyIds: string[]
   }
+  inspectionService: {
+    url: string
+  }
   keysService: {
     url: string
   }
-
   fileStorageService: {
     url: string
   }
@@ -57,36 +68,47 @@ export interface Config {
       clientSecret: string
     }
   }
+  microsoftGraph: {
+    tenantId: string
+    clientId: string
+    clientSecret: string
+  }
   emailAddresses: {
     leasing: string
     tenantDefault: string
+    economy: string
+    bosociala: string
     dev: string
+    xpandSync: string
+  }
+  homeInsurance: {
+    sftp: {
+      host: string
+      port: number
+      username: string
+      password: string
+      directory: string
+    }
+  }
+  scanner: {
+    allowedIps: string[]
+    errorNotificationEmail: string
+  }
+  infobip: {
+    // Shared secret core validates on the public SMS delivery-report webhook
+    // (/webhooks/infobip-sms). Same value communication embeds in the SMS send.
+    webhookToken: string
   }
   health: {
-    leasing: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    propertyBase: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    propertyManagement: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    communication: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    workOrder: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
-    keys: {
-      systemName: string
-      minimumMinutesBetweenRequests: number
-    }
+    contacts: HealthCheck
+    leasing: HealthCheck
+    propertyBase: HealthCheck
+    propertyManagement: HealthCheck
+    communication: HealthCheck
+    workOrder: HealthCheck
+    keys: HealthCheck
+    fileStorage: HealthCheck
+    inspection: HealthCheck
   }
 }
 
@@ -99,6 +121,9 @@ const config = configPackage({
     },
     propertyInfoService: {
       url: 'http://localhost:5030',
+    },
+    contactsService: {
+      url: 'http://localhost:5093',
     },
     documentsService: {
       url: 'https://mim-shared-apim-apim01-t.azure-api.net/document',
@@ -121,8 +146,11 @@ const config = configPackage({
     exportRentalInvoiceAccounting: {
       companyIds: ['001'],
     },
-    keysService: {
+    inspectionService: {
       url: 'http://localhost:5090',
+    },
+    keysService: {
+      url: 'http://localhost:5092',
     },
     fileStorageService: {
       url: 'http://localhost:5091',
@@ -138,11 +166,39 @@ const config = configPackage({
         clientSecret: 'your-client-secret',
       },
     },
+    microsoftGraph: {
+      tenantId: '',
+      clientId: '',
+      clientSecret: '',
+    },
     emailAddresses: {
       leasing: '',
       tenantDefault: '',
+      economy: '',
+      bosociala: '',
+      xpandSync: '',
+    },
+    homeInsurance: {
+      sftp: {
+        host: '',
+        port: 22,
+        username: '',
+        password: '',
+        directory: '',
+      },
+    },
+    scanner: {
+      allowedIps: [],
+      errorNotificationEmail: '',
+    },
+    infobip: {
+      webhookToken: '',
     },
     health: {
+      contacts: {
+        systemName: 'contacts',
+        minimumMinutesBetweenRequests: 1,
+      },
       leasing: {
         systemName: 'leasing',
         minimumMinutesBetweenRequests: 1,
@@ -167,6 +223,14 @@ const config = configPackage({
         systemName: 'economy',
         minimumMinutesBetweenRequests: 1,
       },
+      inspection: {
+        systemName: 'inspection',
+        minimumMinutesBetweenRequests: 1,
+      },
+      fileStorage: {
+        systemName: 'file-storage',
+        minimumMinutesBetweenRequests: 1,
+      },
       keys: {
         systemName: 'keys',
         minimumMinutesBetweenRequests: 1,
@@ -177,6 +241,7 @@ const config = configPackage({
 
 export default {
   port: config.get('port'),
+  contactsService: config.get('contactsService'),
   tenantsLeasesService: config.get('tenantsLeasesService'),
   propertyInfoService: config.get('propertyInfoService'),
   documentsService: config.get('documentsService'),
@@ -184,11 +249,16 @@ export default {
   workOrderService: config.get('workOrderService'),
   economyService: config.get('economyService'),
   exportRentalInvoiceAccounting: config.get('exportRentalInvoiceAccounting'),
+  inspectionService: config.get('inspectionService'),
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
   auth: config.get('auth'),
+  microsoftGraph: config.get('microsoftGraph'),
   health: config.get('health'),
   propertyBaseService: config.get('propertyBaseService'),
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
+  scanner: config.get('scanner'),
+  homeInsurance: config.get('homeInsurance'),
+  infobip: config.get('infobip'),
 } as Config
