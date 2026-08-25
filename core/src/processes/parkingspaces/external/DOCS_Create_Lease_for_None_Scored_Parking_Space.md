@@ -34,7 +34,7 @@ N --> O
 
 ## Sekvensdiagram
 
-Vilka tjänster och externa system som anropas i varje steg, i vilken ordning, och var processen kan avbrytas vid en misslyckad kontroll. Täcker båda ingångarna (sökandens självbetjäning och handläggarinitierat via Uthyrningsgränssnittet), och visar att backend-tjänsterna Leasing och Economy samt de externa systemen XPand, Tenfast, Creditsafe och Xledger alla är inblandade beroende på vilken väg som tas.
+Vilka tjänster och externa system som anropas i varje steg, i vilken ordning, och var processen kan avbrytas vid en misslyckad kontroll. Täcker båda ingångarna (sökandens självbetjäning och handläggarinitierat via Uthyrningsgränssnittet), och visar att mikrotjänsterna Leasing och Economy samt de externa systemen XPand, Tenfast, Creditsafe och Xledger alla är inblandade beroende på vilken väg som tas.
 
 ```mermaid
 sequenceDiagram

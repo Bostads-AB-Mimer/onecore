@@ -38,7 +38,7 @@ N --> O
 
 ## Sekvensdiagram
 
-Vilka tjänster och externa system som anropas i varje steg, i vilken ordning, och var processen kan avbrytas vid en misslyckad kontroll. Täcker alla fyra ingångarna (handläggarinitierat via Uthyrningsgränssnittet, de två schemalagda jobben, och internt anrop från [Deny Offer](./DOCS_Deny_Offer.md)-processen), och visar att backend-tjänsten Leasing samt de externa systemen XPand och Tenfast är inblandade.
+Vilka tjänster och externa system som anropas i varje steg, i vilken ordning, och var processen kan avbrytas vid en misslyckad kontroll. Täcker alla fyra ingångarna (handläggarinitierat via Uthyrningsgränssnittet, de två schemalagda jobben, och internt anrop från [Deny Offer](./DOCS_Deny_Offer.md)-processen), och visar att mikrotjänsten Leasing samt de externa systemen XPand och Tenfast är inblandade.
 
 ```mermaid
 sequenceDiagram
