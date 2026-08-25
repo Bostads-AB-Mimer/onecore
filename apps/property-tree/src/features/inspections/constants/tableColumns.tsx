@@ -6,7 +6,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { ExternalLink, Eye, Loader2, Play, PlayCircle } from 'lucide-react'
+import { Eye, Loader2, Play, PlayCircle } from 'lucide-react'
 
 import { components } from '@/services/api/core/generated/api-types'
 

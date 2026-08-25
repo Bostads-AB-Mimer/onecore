@@ -147,8 +147,7 @@ export async function getInvoicesSentToDebtCollection(
 }
 
 export async function getMiscellaneousInvoiceDataForLease(
-  rentalId: string,
-  year?: string
+  rentalId: string
 ): Promise<
   AdapterResult<{ costCentre: string; propertyCode: string }, 'unknown'>
 > {

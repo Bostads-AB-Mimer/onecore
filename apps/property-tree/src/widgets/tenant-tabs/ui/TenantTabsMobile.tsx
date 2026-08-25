@@ -34,7 +34,6 @@ interface TenantTabsMobileProps {
   leases: Lease[]
   rentalProperties: Record<string, RentalPropertyInfo | null>
   contactCode: string
-  tenantName: string
   nationalRegistrationNumber: string
   isLoadingLeases: boolean
   isLoadingProperties: boolean
@@ -44,7 +43,6 @@ export const TenantTabsMobile = ({
   leases,
   rentalProperties,
   contactCode,
-  tenantName,
   nationalRegistrationNumber,
   isLoadingLeases,
   isLoadingProperties,
@@ -71,12 +69,7 @@ export const TenantTabsMobile = ({
       id: 'queue',
       icon: Home,
       title: 'Uthyrning',
-      content: (
-        <TenantQueueSystemTabContent
-          contactCode={contactCode}
-          tenantName={tenantName}
-        />
-      ),
+      content: <TenantQueueSystemTabContent contactCode={contactCode} />,
     },
     {
       id: 'work-orders',

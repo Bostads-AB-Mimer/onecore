@@ -651,7 +651,7 @@ describe('sendProtocolToTenants', () => {
   })
 
   it('should handle partial failures when sending to multiple tenants', async () => {
-    const mockSendFn = jest
+    jest
       .spyOn(communicationAdapter, 'sendInspectionProtocolEmail')
       .mockResolvedValueOnce({ ok: true, data: null })
       .mockResolvedValueOnce({ ok: false, err: 'unknown', statusCode: 500 })
