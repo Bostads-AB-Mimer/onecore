@@ -2,6 +2,7 @@ import { AxiosError, HttpStatusCode } from 'axios'
 import {
   Contact,
   CreateNoteOfInterestErrorCodes,
+  CreateOfferErrorCodes,
   DetailedApplicant,
   GetActiveOfferByListingIdErrorCodes,
   Listing,
@@ -293,7 +294,7 @@ const createNoteOfInterestForInternalParkingSpace = async (params: {
 
 const createOffer = async (params: {
   listingId: string
-}): Promise<AdapterResult<unknown, 'no-eligible-applicant' | 'unknown'>> => {
+}): Promise<AdapterResult<unknown, CreateOfferErrorCodes | 'unknown'>> => {
   try {
     const response = await getFromCore<any>({
       method: 'post',
@@ -303,9 +304,16 @@ const createOffer = async (params: {
 
     return { ok: true, data: response.data.content }
   } catch (err) {
-    const axiosError = err as AxiosError
-    if (axiosError.response?.status === HttpStatusCode.NotFound) {
-      return { ok: false, err: 'no-eligible-applicant', statusCode: 404 }
+    const axiosError = err as AxiosError<{ error?: CreateOfferErrorCodes }>
+    if (
+      axiosError.response?.status === HttpStatusCode.NotFound &&
+      axiosError.response.data?.error === CreateOfferErrorCodes.NoApplicants
+    ) {
+      return {
+        ok: false,
+        err: CreateOfferErrorCodes.NoApplicants,
+        statusCode: 404,
+      }
     }
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
