@@ -36,7 +36,7 @@ import { routes as keysExportRoutes } from './keys-export'
 
 import { registerSchema } from '../../utils/openapi'
 import { Contact, Lease } from './schemas/lease'
-import { resolveBuildingManagerToKvvAreaCodes } from './helpers/lease-query'
+import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
 
 /**
  * @swagger
