@@ -17,7 +17,7 @@ import { logger, loggedAxios as axios } from '@onecore/utilities'
 import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
-import { AdapterResult, InvoiceDataRow } from '../../../common/types'
+import { InvoiceDataRow } from '../../../common/types'
 
 const XledgerAuthHeader = {
   Authorization: 'token ' + config.xledger.apiToken,
@@ -337,9 +337,9 @@ const transformToCustomer = (customerData: any): XledgerCustomer => {
   }
 }
 
-const getCustomer = async (contactCode: string) => {
+export const getCustomer = async (contactCode: string) => {
   const query = {
-    query: `{
+    query: gql`{
       customers(first: 1, filter: { code: "${escapeGraphQLString(contactCode)}" }) {
         edges {
           node {
@@ -373,7 +373,18 @@ const getCustomer = async (contactCode: string) => {
 const escapeGraphQLString = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
-const addContact = async (contact: XledgerDbContact) => {
+export interface XledgerCustomerData {
+  contactCode: string
+  fullName: string
+  address: {
+    street: string
+    postalCode: string
+    city: string
+  }
+  emailAddress?: string
+}
+
+export const addCustomer = async (contact: XledgerCustomerData) => {
   // Each customer in Xledger must be connected to a company, so we need to create that first
   const companyQuery = {
     query: gql`
@@ -382,7 +393,7 @@ const addContact = async (contact: XledgerDbContact) => {
           inputs: [
             {
               node: {
-                description: ${JSON.stringify(contact.FullName)}
+                description: ${JSON.stringify(contact.fullName)}
               }
             }
           ]
@@ -403,17 +414,17 @@ const addContact = async (contact: XledgerDbContact) => {
   const customerQuery = {
     query: gql`
       mutation AddCustomer {
-        addCustomers(inputs:[
+        addCustomers(inputs: [
           {
             node: {
               company: {
                 dbId: ${companyDbId}
               },
-              code: "${escapeGraphQLString(contact.ContactCode)}",
-              description: "${escapeGraphQLString(contact.FullName)}",
-              streetAddress: "${escapeGraphQLString(contact.StreetAddress)}",
-              zipCode: "${escapeGraphQLString(contact.PostalCode)}",
-              place: "${escapeGraphQLString(contact.City)}"
+              code: "${escapeGraphQLString(contact.contactCode)}",
+              description: "${escapeGraphQLString(contact.fullName)}",
+              streetAddress: "${escapeGraphQLString(contact.address?.street || '')}",
+              zipCode: "${escapeGraphQLString(contact.address?.postalCode || '')}",
+              place: "${escapeGraphQLString(contact.address?.city || '')}"
             }
           }
         ]) {
@@ -432,13 +443,13 @@ const addContact = async (contact: XledgerDbContact) => {
   return customerResult.data.addCustomers.edges[0].node.dbId
 }
 
-const contactHasChanged = (xledgerContact: any, dbContact: any) => {
+const customerHasChanged = (xledgerCustomer: any, dbCustomer: any) => {
   if (
-    xledgerContact.description != dbContact.FullName ||
-    xledgerContact.email != dbContact.Email ||
-    xledgerContact.address.streetAddress != dbContact.Street ||
-    xledgerContact.address.zipCode != dbContact.PostalCode ||
-    xledgerContact.address.place != dbContact.City
+    xledgerCustomer.description != dbCustomer.FullName ||
+    xledgerCustomer.email != dbCustomer.Email ||
+    xledgerCustomer.address.streetAddress != dbCustomer.Street ||
+    xledgerCustomer.address.zipCode != dbCustomer.PostalCode ||
+    xledgerCustomer.address.place != dbCustomer.City
   ) {
     return true
   } else {
@@ -446,29 +457,50 @@ const contactHasChanged = (xledgerContact: any, dbContact: any) => {
   }
 }
 
-const updateContact = async (xledgerContact: any, dbContact: any) => {
-  if (contactHasChanged(xledgerContact, dbContact)) {
-    // Todo lookup/make sure tenant company exists.
-    const customerQuery = {
-      query: `mutation UpdateContact {
-        updateCustomer(dbId: "${xledgerContact.dbId}", description: "${escapeGraphQLString(dbContact.FullName)}", streetAddress: "${escapeGraphQLString(dbContact.Street)}", zipCode: "${escapeGraphQLString(dbContact.PostalCode)}", place: "${escapeGraphQLString(dbContact.City)}", email: "${escapeGraphQLString(dbContact.Email)}") {
-          dbId
+export const updateCustomer = async (
+  existingCustomer: any,
+  customerPayload: XledgerCustomerData
+) => {
+  if (customerHasChanged(existingCustomer, customerPayload)) {
+    const query = {
+      query: gql`
+        mutation UpdateCustomer {
+          updateCustomers(inputs: [
+            {
+              node: {
+                dbId: "${existingCustomer.dbId}",
+                description: "${escapeGraphQLString(customerPayload.fullName)}",
+                streetAddress: "${escapeGraphQLString(customerPayload.address?.street || '')}",
+                zipCode: "${escapeGraphQLString(customerPayload.address?.postalCode || '')}",
+                place: "${escapeGraphQLString(customerPayload.address?.city || '')}",
+                email: "${escapeGraphQLString(customerPayload.emailAddress || '')}"
+              }
+            }
+          ]) {
+            edges {
+              node {
+                dbId
+              }
+            }
+          }
         }
-      }`,
+      `,
     }
 
-    const customerResult = await makeXledgerRequest(customerQuery)
+    const customerResult = await makeXledgerRequest(query)
 
-    const customerDbId = customerResult.data.updateCustomer.dbId
-    return customerDbId
+    return customerResult.data.updateCustomers.edges[0].node.dbId
   } else {
-    logger.info({}, `Contact ${dbContact.ContactCode} not changed, skipping`)
+    logger.info(
+      {},
+      `Customer ${customerPayload.contactCode} not changed, skipping`
+    )
   }
 }
 
 const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
-    query: `{
+    query: gql`{
       customers (first: 1, filter: { code: "${escapeGraphQLString(contactCode)}" }) {
         edges {
           node {
@@ -677,7 +709,7 @@ export async function getInvoicePaymentEvents(
   invoiceMatchId: string
 ): Promise<InvoicePaymentEvent[]> {
   const query = {
-    query: `{
+    query: gql`{
       arTransactions(first: 25, filter: { matchId: ${invoiceMatchId} }) {
         edges {
           node {
@@ -1001,7 +1033,7 @@ export const getInvoicesByContactCode = async (
 
 export const getInvoices = async (from?: Date, to?: Date) => {
   const query = {
-    query: `
+    query: gql`
       query($from: String, $to: String) {
         arTransactions(
           first: 10000,
