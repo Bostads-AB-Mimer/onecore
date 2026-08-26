@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 import * as rentalObjectAdapter from '../../adapters/xpand/rental-object-adapter'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import { routes } from '../../routes/rental-objects'
+import { toYearMonthDayString } from '../../adapters/tenfast/schemas'
 import * as factory from '../factories'
 
 const app = new Koa()
@@ -846,6 +847,144 @@ describe('parking spaces', () => {
 
       // Assert
       expect(spy).toHaveBeenCalledWith(rentalObjectCodes, false)
+    })
+  })
+
+  describe('GET /rental-objects/by-code/:rentalObjectCode/rent', () => {
+    it('responds with 200 and the mapped rent when the rental object is found', async () => {
+      // Arrange
+      const rentalObject = factory.tenfastRentalObject.build({
+        externalId: 'code-1',
+        hyraExcludingVat: 1000,
+        hyraVat: 0,
+        hyror: [
+          factory.tenfastInvoiceRow.build({
+            amount: 1000,
+            vat: 0,
+            article: 'article-1',
+            label: 'Hyra bostad',
+            from: toYearMonthDayString(new Date('2026-01-01')),
+            to: undefined,
+          }),
+        ],
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValueOnce({ ok: true, data: rentalObject })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/code-1/rent'
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        rentalObjectCode: 'code-1',
+        rent: {
+          amount: 1000,
+          vat: 0,
+          rows: [
+            {
+              code: 'article-1',
+              description: 'Hyra bostad',
+              amount: 1000,
+              vatPercentage: 0,
+              fromDate: new Date('2026-01-01').toISOString(),
+            },
+          ],
+        },
+      })
+    })
+
+    it('responds with 404 when the rental object is not found', async () => {
+      // Arrange
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/missing-1/rent'
+      )
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Rental object not found: missing-1')
+    })
+
+    it('responds with 500 when the adapter call fails', async () => {
+      // Arrange
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValueOnce({ ok: false, err: 'could-not-parse-rental-object' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/code-1/rent'
+      )
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('could-not-parse-rental-object')
+    })
+  })
+
+  describe('GET /rental-objects/by-code/:rentalObjectCode/rent-legacy', () => {
+    it('responds with 200 and the rent when Xpand has rent rows', async () => {
+      // Arrange
+      const rent = factory.rentalObjectRent.build()
+      jest
+        .spyOn(rentalObjectAdapter, 'getRentalObjectRentRows')
+        .mockResolvedValueOnce({ ok: true, data: rent })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/code-1/rent-legacy'
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content.rentalObjectCode).toBe('code-1')
+      expect(res.body.content.rent).toMatchObject({
+        amount: rent.amount,
+        vat: rent.vat,
+        rows: rent.rows,
+      })
+    })
+
+    it('responds with 404 when Xpand has no rent rows for the rental object', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getRentalObjectRentRows')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/missing-1/rent-legacy'
+      )
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe(
+        'No rent rows found in Xpand for rental object: missing-1'
+      )
+    })
+
+    it('responds with 500 when the adapter call fails', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getRentalObjectRentRows')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/code-1/rent-legacy'
+      )
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('unknown')
     })
   })
 })

@@ -79,6 +79,21 @@ describe('leases routes', () => {
 
       expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
     })
+
+    it('responds with 500 when leasing returns leases that do not match the schema', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByRentalObjectCode')
+        .mockResolvedValue([
+          factory.lease.build({ leaseId: 123 as never }),
+        ])
+
+      const res = await request(app.callback()).get(
+        '/leases/by-rental-object-code/123'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toMatchObject({ error: 'Invalid lease data' })
+    })
   })
 
   describe('GET /leases/by-contact-code/:contactCode', () => {
@@ -142,6 +157,21 @@ describe('leases routes', () => {
 
       expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
     })
+
+    it('responds with 500 when leasing returns leases that do not match the schema', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
+        .mockResolvedValue([
+          factory.lease.build({ leaseId: 123 as never }),
+        ])
+
+      const res = await request(app.callback()).get(
+        '/leases/by-contact-code/123'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toMatchObject({ error: 'Invalid lease data' })
+    })
   })
 
   describe('GET /leases/by-pnr/:pnr', () => {
@@ -178,6 +208,24 @@ describe('leases routes', () => {
       expect(res.body.content).toEqual([])
       expect(getLeasesSpy).not.toHaveBeenCalled()
     })
+
+    it('responds with 500 when leasing returns leases that do not match the schema', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactForPnr')
+        .mockResolvedValue(factory.contact.build())
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
+        .mockResolvedValue([
+          factory.lease.build({ leaseId: 123 as never }),
+        ])
+
+      const res = await request(app.callback()).get(
+        '/leases/by-pnr/101010-1010'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body).toMatchObject({ error: 'Invalid lease data' })
+    })
   })
 
   describe('GET /leases/:id', () => {
@@ -207,6 +255,17 @@ describe('leases routes', () => {
       expect(getContactSpy).toHaveBeenCalledWith('123')
       expect(res.status).toBe(200)
       expect(() => LeaseSchema.parse(res.body.content)).not.toThrow()
+    })
+
+    it('responds with 500 when leasing returns a lease that does not match the schema', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLease')
+        .mockResolvedValue(factory.lease.build({ leaseId: 123 as never }))
+
+      const res = await request(app.callback()).get('/leases/1337')
+
+      expect(res.status).toBe(500)
+      expect(res.body).toMatchObject({ error: 'Invalid lease data' })
     })
   })
 

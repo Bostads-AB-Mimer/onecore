@@ -199,4 +199,104 @@ describe('rental-objects adapter', () => {
       loggerSpy.mockRestore()
     })
   })
+
+  describe(leasingAdapter.getRentalObjectRentByCode, () => {
+    it('should return rent when rentalObjectCode exists', async () => {
+      // Arrange
+      const rent = factory.rentalObjectRent.build()
+      nock(config.tenantsLeasesService.url)
+        .get(/rental-objects\/by-code\/123-456-789\/rent$/)
+        .reply(200, { content: { rentalObjectCode: '123-456-789', rent } })
+
+      // Act
+      const result =
+        await leasingAdapter.getRentalObjectRentByCode('123-456-789')
+
+      // Assert
+      assert(result.ok)
+      expect(result.data).toEqual({
+        rentalObjectCode: '123-456-789',
+        rent: expect.objectContaining({ amount: rent.amount }),
+      })
+    })
+
+    it('should return not-found when rentalObjectCode does not exist', async () => {
+      // Arrange
+      nock(config.tenantsLeasesService.url)
+        .get(/rental-objects\/by-code\/not-found-code\/rent$/)
+        .reply(404)
+
+      // Act
+      const result =
+        await leasingAdapter.getRentalObjectRentByCode('not-found-code')
+
+      // Assert
+      assert(!result.ok)
+      expect(result.err).toBe('not-found')
+    })
+
+    it('should return unknown on network error', async () => {
+      // Arrange
+      nock(config.tenantsLeasesService.url)
+        .get(/rental-objects\/by-code\/123\/rent$/)
+        .replyWithError('Network error')
+
+      // Act
+      const result = await leasingAdapter.getRentalObjectRentByCode('123')
+
+      // Assert
+      assert(!result.ok)
+      expect(result.err).toBe('unknown')
+    })
+  })
+
+  describe(leasingAdapter.getRentalObjectLegacyRentByCode, () => {
+    it('should return rent when rentalObjectCode exists', async () => {
+      // Arrange
+      const rent = factory.rentalObjectRent.build()
+      nock(config.tenantsLeasesService.url)
+        .get(/rental-objects\/by-code\/123-456-789\/rent-legacy/)
+        .reply(200, { content: { rentalObjectCode: '123-456-789', rent } })
+
+      // Act
+      const result =
+        await leasingAdapter.getRentalObjectLegacyRentByCode('123-456-789')
+
+      // Assert
+      assert(result.ok)
+      expect(result.data).toEqual({
+        rentalObjectCode: '123-456-789',
+        rent: expect.objectContaining({ amount: rent.amount }),
+      })
+    })
+
+    it('should return not-found when no rent rows exist', async () => {
+      // Arrange
+      nock(config.tenantsLeasesService.url)
+        .get(/rental-objects\/by-code\/not-found-code\/rent-legacy/)
+        .reply(404)
+
+      // Act
+      const result =
+        await leasingAdapter.getRentalObjectLegacyRentByCode('not-found-code')
+
+      // Assert
+      assert(!result.ok)
+      expect(result.err).toBe('not-found')
+    })
+
+    it('should return unknown on network error', async () => {
+      // Arrange
+      nock(config.tenantsLeasesService.url)
+        .get(/rental-objects\/by-code\/123\/rent-legacy/)
+        .replyWithError('Network error')
+
+      // Act
+      const result = await leasingAdapter.getRentalObjectLegacyRentByCode('123')
+
+      // Assert
+      assert(!result.ok)
+      expect(result.err).toBe('unknown')
+    })
+  })
 })
