@@ -638,6 +638,82 @@ describe('replyToOffer', () => {
       expect(denyOfferSpy).toHaveBeenCalledTimes(2)
     })
 
+    it('logs the ids of other offers that failed to be denied', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({
+            rentalObjectCode: listing.rentalObjectCode,
+          })
+          .build(),
+      })
+
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
+
+      const otherOffer1 = factory.offerWithRentalObjectCode.build({
+        id: offer.id + 1,
+        status: OfferStatus.Active,
+        offeredApplicant: { id: offer.offeredApplicant.id },
+      })
+      const otherOffer2 = factory.offerWithRentalObjectCode.build({
+        id: offer.id + 2,
+        status: OfferStatus.Active,
+        offeredApplicant: { id: offer.offeredApplicant.id },
+      })
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [otherOffer1, otherOffer2],
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+
+      denyOfferSpy
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.failed,
+        } as ProcessResult)
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.successful,
+        } as ProcessResult)
+
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      await replyProcesses.acceptOffer(123)
+
+      const notificationLog = sendNotificationToRoleSpy.mock.calls[0][2]
+      expect(notificationLog).toContain(
+        `Kunde inte neka följande andra erbjudanden för kunden: ${otherOffer1.id}`
+      )
+      expect(notificationLog).not.toContain('[object Object]')
+    })
+
     it('closes accepted offers listing', async () => {
       const offer = factory.detailedOffer.build()
       getOfferByIdSpy.mockResolvedValueOnce({

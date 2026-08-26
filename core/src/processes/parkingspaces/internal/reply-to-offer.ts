@@ -242,13 +242,15 @@ export const acceptOffer = async (
       const denyOtherOffers = await Promise.all(
         otherOffers.data.map((o) => denyOffer(o.id))
       )
-      const failedDenyOtherOffers = denyOtherOffers.filter(
-        (o) => o.processStatus === ProcessStatus.failed
-      )
-      if (failedDenyOtherOffers.length > 0) {
+      const failedDenyOtherOfferIds = otherOffers.data
+        .filter(
+          (_, i) => denyOtherOffers[i].processStatus === ProcessStatus.failed
+        )
+        .map((o) => o.id)
+      if (failedDenyOtherOfferIds.length > 0) {
         log.push(
           'Kunde inte neka följande andra erbjudanden för kunden: ' +
-            failedDenyOtherOffers.join(', ')
+            failedDenyOtherOfferIds.join(', ')
         )
       }
     }
