@@ -83,9 +83,7 @@ describe('leases routes', () => {
     it('responds with 500 when leasing returns leases that do not match the schema', async () => {
       jest
         .spyOn(tenantLeaseAdapter, 'getLeasesByRentalObjectCode')
-        .mockResolvedValue([
-          factory.lease.build({ leaseId: 123 as never }),
-        ])
+        .mockResolvedValue([factory.lease.build({ leaseId: 123 as never })])
 
       const res = await request(app.callback()).get(
         '/leases/by-rental-object-code/123'
@@ -161,9 +159,7 @@ describe('leases routes', () => {
     it('responds with 500 when leasing returns leases that do not match the schema', async () => {
       jest
         .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
-        .mockResolvedValue([
-          factory.lease.build({ leaseId: 123 as never }),
-        ])
+        .mockResolvedValue([factory.lease.build({ leaseId: 123 as never })])
 
       const res = await request(app.callback()).get(
         '/leases/by-contact-code/123'
@@ -215,9 +211,7 @@ describe('leases routes', () => {
         .mockResolvedValue(factory.contact.build())
       jest
         .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
-        .mockResolvedValue([
-          factory.lease.build({ leaseId: 123 as never }),
-        ])
+        .mockResolvedValue([factory.lease.build({ leaseId: 123 as never })])
 
       const res = await request(app.callback()).get(
         '/leases/by-pnr/101010-1010'

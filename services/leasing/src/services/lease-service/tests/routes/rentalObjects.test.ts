@@ -917,7 +917,10 @@ describe('parking spaces', () => {
       // Arrange
       jest
         .spyOn(tenfastAdapter, 'getRentalObject')
-        .mockResolvedValueOnce({ ok: false, err: 'could-not-parse-rental-object' })
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'could-not-parse-rental-object',
+        })
 
       // Act
       const res = await request(app.callback()).get(
