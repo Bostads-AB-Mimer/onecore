@@ -393,18 +393,6 @@ export const denyOffer = async (
       rentalObject: parkingSpacesResult.data,
     }
 
-    if (
-      !listingWithoutRentalObject ||
-      !listing.rentalObject.residentialAreaCode
-    ) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        404,
-        `The listing ${offer.listingId.toString()} does not exist or is no longer available.`
-      )
-    }
-
     const closeOffer = await leasingAdapter.closeOfferByDeny(offer.id)
 
     if (!closeOffer.ok) {

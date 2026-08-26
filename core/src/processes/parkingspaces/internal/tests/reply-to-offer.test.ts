@@ -1533,6 +1533,46 @@ describe('replyToOffer', () => {
       })
       expect(createOffer).toHaveBeenCalledTimes(1)
     })
+
+    it('succeeds even if the rental object has no residentialAreaCode', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+
+      closeOfferByDenySpy.mockResolvedValueOnce({ ok: true, data: null })
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({
+            rentalObjectCode: listing.rentalObjectCode,
+            residentialAreaCode: undefined,
+          })
+          .build(),
+      })
+
+      const createOffer = jest
+        .spyOn(createOfferProcesses, 'createOfferForInternalParkingSpace')
+        .mockResolvedValueOnce({
+          data: null,
+          processStatus: ProcessStatus.successful,
+          httpStatus: 200,
+        })
+
+      const result = await replyProcesses.denyOffer(123)
+
+      expect(result).toEqual({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: { listingId: expect.any(Number) },
+      })
+      expect(createOffer).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('expireOffer', () => {
