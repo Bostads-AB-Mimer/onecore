@@ -6,10 +6,12 @@ import {
   XledgerCustomerData,
 } from '../common/adapters/xledger-adapter'
 
-export type SyncCustomerPayload = Pick<
-  Contact,
-  'contactCode' | 'fullName' | 'address' | 'emailAddress'
->
+export type SyncCustomerPayload = Omit<
+  Pick<Contact, 'contactCode' | 'fullName' | 'address' | 'emailAddress'>,
+  'address'
+> & {
+  address?: Omit<NonNullable<Contact['address']>, 'number'>
+}
 
 const transformToXledgerCustomerPayload = (
   payload: SyncCustomerPayload
