@@ -1,6 +1,7 @@
 import { logger } from '@onecore/utilities'
 import { handleExpiredOffers } from '../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../processes/parkingspaces/internal'
+import { ProcessStatus } from '../common/types'
 
 const handleExpiredOffersScript = async () => {
   const handleExpiredOffersResult = await handleExpiredOffers()
@@ -10,18 +11,19 @@ const handleExpiredOffersScript = async () => {
 
     if (affectedListingIds) {
       for (const listingId of affectedListingIds) {
-        try {
+        const result =
           await internalParkingSpaceProcesses.createOfferForInternalParkingSpace(
             listingId
           )
 
+        if (result.processStatus === ProcessStatus.successful) {
           logger.info(
             listingId,
             'Restarted offer batch for listing ' + listingId
           )
-        } catch (err) {
+        } else {
           logger.error(
-            err,
+            result,
             'Could not restart offer batch for listing ' + listingId
           )
         }

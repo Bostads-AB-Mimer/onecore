@@ -1,6 +1,7 @@
 import { logger } from '@onecore/utilities'
 import { getExpiredListingsWithNoOffers } from '../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../processes/parkingspaces/internal'
+import { ProcessStatus } from '../common/types'
 
 const startOfferBatches = async () => {
   const getExpiredListingsResult = await getExpiredListingsWithNoOffers()
@@ -10,11 +11,12 @@ const startOfferBatches = async () => {
 
     if (listingsReadyForOffers) {
       for (const listing of listingsReadyForOffers) {
-        try {
+        const result =
           await internalParkingSpaceProcesses.createOfferForInternalParkingSpace(
             listing.id
           )
 
+        if (result.processStatus === ProcessStatus.successful) {
           logger.info(
             listing.id,
             'Started offer batch for listing ' +
@@ -23,10 +25,10 @@ const startOfferBatches = async () => {
               listing.rentalObjectCode +
               ')'
           )
-        } catch (err) {
+        } else {
           logger.error(
-            err,
-            'Could not restart offer batch for listing ' + listing.id
+            result,
+            'Could not start offer batch for listing ' + listing.id
           )
         }
       }

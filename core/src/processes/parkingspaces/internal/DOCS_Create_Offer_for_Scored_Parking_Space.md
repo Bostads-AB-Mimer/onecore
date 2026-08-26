@@ -56,12 +56,13 @@ sequenceDiagram
         LeasingTeam ->> Core: Create Offer (for one listing)
     else start-offer-batches hittar en annons redo för erbjudande
         ScheduledJob ->> Core: Create Offer (for one listing)
+        note over Core: No HTTP response path — the scheduled<br/>job only logs the outcome (see script).
     else Ett obesvarat erbjudande gått ut (Expire Offer)
         note over Core: Called in-process by the Expire Offer<br/>process, once per affected listing —<br/>not a separate HTTP entry point.
     else Ett tidigare erbjudande på samma annons nekas
         note over Core: Called in-process by the Deny Offer<br/>process (reply-to-offer.ts) — not a<br/>separate HTTP entry point.
     end
-    note over Core: Same process regardless of caller.<br/>Responses below go back to whichever<br/>caller made this call, shown as Leasing Team.
+    note over Core: Same process regardless of caller.<br/>Only the manual route surfaces a response to a<br/>human — the other three only log the outcome.
 
     Core ->> Leasing: Get Listing
     Leasing ->> OneCoreDB: Get Listing
