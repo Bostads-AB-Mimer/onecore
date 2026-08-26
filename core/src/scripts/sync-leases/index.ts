@@ -143,9 +143,41 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
         'syncing other invoice recipient'
       )
 
+      // otherInvoiceRecipient does not have the addresses property that the sync to economy needs, so we need to get the full Contact
+      const otherInvoiceRecipientContactResult =
+        await contactsAdapter.getByContactCode(
+          otherInvoiceRecipient.contactCode
+        )
+
+      if (!otherInvoiceRecipientContactResult.ok) {
+        throw new Error(
+          `Failed to get other invoice recipient ${otherInvoiceRecipient.contactCode} for lease ${lease.leaseId}: ${otherInvoiceRecipientContactResult.err}`
+        )
+      }
+
+      const otherInvoiceRecipientContact =
+        otherInvoiceRecipientContactResult.data
+
+      const otherInvoiceRecipientName =
+        otherInvoiceRecipientContact.type === 'individual'
+          ? otherInvoiceRecipientContact.personal.fullName
+          : otherInvoiceRecipientContact.organisation.name
+      const otherInvoiceRecipientEmail = (
+        otherInvoiceRecipientContact.communication.emailAddresses.find(
+          (e) => e.isPrimary
+        ) || otherInvoiceRecipientContact.communication.emailAddresses[0]
+      )?.emailAddress
+
       const syncResult = await syncContactToEconomy(
-        otherInvoiceRecipient.contactCode,
-        otherInvoiceRecipient
+        otherInvoiceRecipientContact.contactCode,
+        {
+          fullName: otherInvoiceRecipientName,
+          street: otherInvoiceRecipientContact.addresses[0]?.street,
+          zipCode: otherInvoiceRecipientContact.addresses[0]?.zipCode,
+          city: otherInvoiceRecipientContact.addresses[0]?.city,
+          emailAddress: otherInvoiceRecipientEmail,
+        },
+        { create: true } // Create other invoice recipient in economy if needed
       )
       if (!syncResult.ok) {
         throw new Error(
