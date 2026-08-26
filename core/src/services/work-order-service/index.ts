@@ -5,6 +5,7 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as workOrderAdapter from '../../adapters/work-order-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
+import { logOutboundDispatch } from '../../adapters/communication-adapter/log-writes'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
 
@@ -2301,6 +2302,108 @@ export const routes = (router: KoaRouter) => {
         message: `Failed to send email to ${to}, status: ${result.statusCode}`,
         ...metadata,
       }
+    }
+  })
+
+  // Sender label on the dispatch row. Mirrors the SMS sender constant in the
+  // communication service — a Mina sidor message has no real from-address.
+  const MY_PAGES_FROM_ADDRESS = 'Mimer'
+  // The column is NOT NULL and there is no address to publish to; the real
+  // recipient is carried by contactCode.
+  const MY_PAGES_TO_ADDRESS = 'Mina sidor'
+
+  /**
+   * @swagger
+   * /work-orders/log-my-pages-message:
+   *   post:
+   *     summary: Log a message published to a tenant's Mina sidor
+   *     tags:
+   *       - Work Order Service
+   *     description: >
+   *       Records a work-order message that was published to Mina sidor without
+   *       an SMS or email notification. Nothing is sent — the message is
+   *       already visible to the tenant by existing in Odoo; this only writes
+   *       the communication log entry. Called by Odoo.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [workOrderCode, contactCode, text]
+   *             properties:
+   *               workOrderCode:
+   *                 type: string
+   *                 description: od-<odoo id> of the errand, e.g. od-12345.
+   *               contactCode:
+   *                 type: string
+   *                 description: The tenant the message was published to.
+   *               text:
+   *                 type: string
+   *                 description: The message body.
+   *               triggeredByUser:
+   *                 type: string
+   *                 description: The Odoo user who published the message.
+   *     responses:
+   *       '200':
+   *         description: Log entry written.
+   *       '400':
+   *         description: Bad request. Missing or invalid parameters.
+   *       '500':
+   *         description: Failed to write the log entry.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/work-orders/log-my-pages-message', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { workOrderCode, contactCode, text, triggeredByUser } =
+      ctx.request.body
+
+    if (!workOrderCode || !contactCode || !text) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Bad request: workOrderCode, contactCode and text are required',
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await logOutboundDispatch({
+      channel: 'my-pages',
+      fromAddress: MY_PAGES_FROM_ADDRESS,
+      body: text,
+      messageType: 'work_order_tenant_my_pages',
+      provider: 'odoo',
+      triggeredByUser,
+      workOrderCode,
+      recipients: [
+        {
+          contactCode,
+          toAddress: MY_PAGES_TO_ADDRESS,
+          // Terminal on write: a Mina sidor publication has no delivery
+          // webhook that could later move it to 'delivered'.
+          status: 'sent',
+        },
+      ],
+    })
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        message: `Logged Mina sidor message for ${workOrderCode}`,
+        ...metadata,
+      }
+      return
+    }
+
+    logger.error(
+      { error: result.err, workOrderCode },
+      'Failed to log Mina sidor message'
+    )
+    ctx.status = result.statusCode ?? 500
+    ctx.body = {
+      message: `Failed to log Mina sidor message for ${workOrderCode}`,
+      ...metadata,
     }
   })
 }
