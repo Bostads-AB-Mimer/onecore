@@ -3378,7 +3378,7 @@ export interface paths {
             phoneNumber?: string
             /** @description The message to be sent via SMS. */
             text?: string
-            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo ärende. */
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
             workOrderCode?: string
           }
         }
@@ -3429,7 +3429,7 @@ export interface paths {
             subject?: string
             /** @description The message to be sent in the email. */
             text?: string
-            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo ärende. */
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
             workOrderCode?: string
           }
         }

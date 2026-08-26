@@ -131,8 +131,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function MessageRow({ message }: { message: CustomerMessage }) {
   const [isOpen, setIsOpen] = useState(false)
   const { dispatch, recipient } = message
+  const workOrderCode = dispatch.workOrderCode
   // Mina sidor rows carry no subject; the ticket asks them to read
-  // "meddelande Mina sidor" with the ärende beside it (MIM-1957).
+  // "meddelande Mina sidor" with the errand beside it (MIM-1957).
   const title =
     dispatch.subject ??
     (dispatch.channel === 'my-pages'
@@ -150,7 +151,7 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                   <ChannelBadge channel={dispatch.channel} />
                   <h3 className="font-medium text-foreground">{title}</h3>
                   <StatusBadge status={recipient.status} />
-                  {dispatch.workOrderCode && (
+                  {workOrderCode && (
                     <Button
                       variant="link"
                       size="sm"
@@ -160,11 +161,11 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                         // the click would also toggle the row open.
                         e.stopPropagation()
                         linkToWorkOrderInOdoo({
-                          code: dispatch.workOrderCode as string,
+                          code: workOrderCode,
                         })
                       }}
                     >
-                      ärende {dispatch.workOrderCode}
+                      ärende {workOrderCode}
                       <ExternalLink className="h-3 w-3" />
                     </Button>
                   )}

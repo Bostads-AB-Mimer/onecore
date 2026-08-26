@@ -1,7 +1,7 @@
 /**
  * MIM-1957: adds the 'my-pages' channel (a publication to the tenant portal
- * rather than a provider send) and a nullable workOrderCode so kommunikations-
- * logg rows can link to their Odoo ärende.
+ * rather than a provider send) and a nullable workOrderCode so communication
+ * log rows can link to their Odoo errand.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }

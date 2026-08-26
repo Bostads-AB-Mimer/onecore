@@ -47,7 +47,7 @@ interface WorkOrderSms extends Sms {
   contactCode?: string
   // TODO: TEMPORARILY OPTIONAL, same reason as contactCode above — Odoo deploys
   // independently of OneCore, so older callers don't send it yet. od-<odoo id>
-  // of the errand; lets the kommunikationslogg link to the Odoo ärende.
+  // of the errand; lets the communication log link to the Odoo errand.
   workOrderCode?: string
 }
 
@@ -115,7 +115,7 @@ interface WorkOrderEmail extends Email {
   contactCode?: string
   // TODO: TEMPORARILY OPTIONAL, same reason as contactCode above — Odoo deploys
   // independently of OneCore, so older callers don't send it yet. od-<odoo id>
-  // of the errand; lets the kommunikationslogg link to the Odoo ärende.
+  // of the errand; lets the communication log link to the Odoo errand.
   workOrderCode?: string
 }
 

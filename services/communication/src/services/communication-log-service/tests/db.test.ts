@@ -28,7 +28,7 @@ describe('logOutboundDispatch', () => {
     })
   })
 
-  // MIM-1957: the kommunikationslogg links each row to its Odoo ärende via the
+  // MIM-1957: the communication log links each row to its Odoo errand via the
   // od-<id> code; the frontend builds the deep link from that code alone.
   it('persists workOrderCode on the dispatch row', async () => {
     await logOutboundDispatch({

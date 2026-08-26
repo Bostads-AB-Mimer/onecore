@@ -2100,7 +2100,7 @@ export const routes = (router: KoaRouter) => {
    *                 description: The message to be sent via SMS.
    *               workOrderCode:
    *                 type: string
-   *                 description: od-<odoo id> of the errand, used to link the communication-log entry to the Odoo ärende.
+   *                 description: od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand.
    *     responses:
    *       '200':
    *         description: Successfully sent the SMS.
@@ -2218,7 +2218,7 @@ export const routes = (router: KoaRouter) => {
    *                 description: The message to be sent in the email.
    *               workOrderCode:
    *                 type: string
-   *                 description: od-<odoo id> of the errand, used to link the communication-log entry to the Odoo ärende.
+   *                 description: od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand.
    *     responses:
    *       '200':
    *         description: Successfully sent the email.
