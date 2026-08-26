@@ -29,6 +29,7 @@ type ReplyToOfferError =
   | ReplyToOfferErrorCodes.NotEligibleToRent
 
 // PROCESS Part 3 - Accept Offer for Scored Parking Space
+// See DOCS_Accept_Offer.md for the full flow.
 export const acceptOffer = async (
   offerId: number
 ): Promise<ProcessResult<null, ReplyToOfferError>> => {
@@ -336,6 +337,7 @@ export const acceptOffer = async (
 }
 
 // PROCESS Part 3 - Deny Offer for Scored Parking Space
+// See DOCS_Deny_Offer.md for the full flow.
 export const denyOffer = async (
   offerId: number
 ): Promise<ProcessResult<{ listingId: number }, ReplyToOfferError>> => {
