@@ -915,12 +915,10 @@ describe('parking spaces', () => {
 
     it('responds with 500 when the adapter call fails', async () => {
       // Arrange
-      jest
-        .spyOn(tenfastAdapter, 'getRentalObject')
-        .mockResolvedValueOnce({
-          ok: false,
-          err: 'could-not-parse-rental-object',
-        })
+      jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValueOnce({
+        ok: false,
+        err: 'could-not-parse-rental-object',
+      })
 
       // Act
       const res = await request(app.callback()).get(
