@@ -282,10 +282,14 @@ describe('syncLeases', () => {
       contactCode: lease.contactCode,
       relatedContacts: [otherInvoiceRecipient],
     })
+    const otherInvoiceRecipientContact = factory.contactsServiceContact.build({
+      contactCode: otherInvoiceRecipient.contactCode,
+    })
 
     const getByContactCode = jest
       .fn()
-      .mockResolvedValue({ ok: true, data: contact })
+      .mockResolvedValueOnce({ ok: true, data: contact })
+      .mockResolvedValueOnce({ ok: true, data: otherInvoiceRecipientContact })
     jest
       .spyOn(contactsAdapter, 'makeContactsAdapter')
       .mockReturnValue({ getByContactCode } as any)
@@ -316,8 +320,17 @@ describe('syncLeases', () => {
 
     expect(getByContactCode).toHaveBeenCalledWith(lease.contactCode)
     expect(syncContactToEconomySpy).toHaveBeenCalledWith(
-      otherInvoiceRecipient.contactCode,
-      otherInvoiceRecipient
+      otherInvoiceRecipientContact.contactCode,
+      {
+        fullName: otherInvoiceRecipientContact.personal.fullName,
+        street: otherInvoiceRecipientContact.addresses[0].street,
+        zipCode: otherInvoiceRecipientContact.addresses[0].zipCode,
+        city: otherInvoiceRecipientContact.addresses[0].city,
+        emailAddress:
+          otherInvoiceRecipientContact.communication.emailAddresses[0]
+            .emailAddress,
+      },
+      { create: true }
     )
     expect(syncLeaseSpy).toHaveBeenCalledWith(
       lease.leaseId,
