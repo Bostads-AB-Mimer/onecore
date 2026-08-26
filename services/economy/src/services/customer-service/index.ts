@@ -91,7 +91,6 @@ export const routes = (router: KoaRouter) => {
         street: body.street || '',
         postalCode: body.zipCode || '',
         city: body.city || '',
-        number: '',
       },
       emailAddress: body.emailAddress || '',
     }
