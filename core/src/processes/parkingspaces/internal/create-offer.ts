@@ -133,7 +133,7 @@ export const createOfferForInternalParkingSpace = async (
         { listingId: listing.id },
         'No eligible applicant found, no offer created.'
       )
-      return makeProcessError(CreateOfferErrorCodes.NoApplicants, 500, {
+      return makeProcessError(CreateOfferErrorCodes.NoApplicants, 404, {
         message: 'No eligible applicant found, no offer created.',
       })
     }

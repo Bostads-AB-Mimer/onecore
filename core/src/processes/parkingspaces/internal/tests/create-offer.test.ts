@@ -106,7 +106,7 @@ describe('createOfferForInternalParkingSpace', () => {
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
       error: CreateOfferErrorCodes.NoApplicants,
-      httpStatus: 500,
+      httpStatus: 404,
       response: {
         message: 'No eligible applicant found, no offer created.',
         errorCode: CreateOfferErrorCodes.NoApplicants,

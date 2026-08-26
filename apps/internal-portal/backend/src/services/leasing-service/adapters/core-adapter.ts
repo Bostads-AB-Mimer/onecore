@@ -293,7 +293,7 @@ const createNoteOfInterestForInternalParkingSpace = async (params: {
 
 const createOffer = async (params: {
   listingId: string
-}): Promise<AdapterResult<unknown, unknown>> => {
+}): Promise<AdapterResult<unknown, 'no-eligible-applicant' | 'unknown'>> => {
   try {
     const response = await getFromCore<any>({
       method: 'post',
@@ -303,7 +303,11 @@ const createOffer = async (params: {
 
     return { ok: true, data: response.data.content }
   } catch (err) {
-    return { ok: false, err, statusCode: 500 }
+    const axiosError = err as AxiosError
+    if (axiosError.response?.status === HttpStatusCode.NotFound) {
+      return { ok: false, err: 'no-eligible-applicant', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
 
