@@ -1036,6 +1036,9 @@ export const searchLeases = async (
     // without it cross-page sorting is impossible (cursor pagination, natural order;
     // common sort param conventions are silently ignored), so sortBy/sortOrder
     // currently only order rows within the fetched page.
+    //
+    // Main ask (sent to Tenfast, not prioritized yet): a filter[updatedAt] so we
+    // can keep a local cache, delta-sync against Tenfast, and filter ourselves.
     const batchSize = 500
     const page = params.page ?? 1
     const limit = params.limit ?? 20
