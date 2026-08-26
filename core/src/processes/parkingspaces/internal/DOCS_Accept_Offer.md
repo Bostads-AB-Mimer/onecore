@@ -10,9 +10,12 @@ Processens beslutslogik: vilka kontroller som styr om flödet går vidare till n
 
 ```mermaid
 flowchart LR
-A[Start] --> Off{Is Offer Active?}
-Off --> |No| O[End]
-Off --> |Yes| B(Get Listing)
+A[Start] --> Go(Get Offer)
+Go --> Ofo{Offer Found?}
+Ofo --> |No| O[End]
+Ofo --> |Yes| Ofa{Is Offer Active?}
+Ofa --> |No| O
+Ofa --> |Yes| B(Get Listing)
 B --> Lo{Listing and Rental Object Found?}
 Lo --> |No| O
 Lo --> |Yes| X{Is Applicant a Tenant?}
@@ -60,7 +63,11 @@ sequenceDiagram
     OneCoreDB -->> Leasing: Offer
     Leasing -->> Core: Offer
 
-    break when Offer is not found, or not Active
+    break when Offer is not found
+        Core-->User: show error message
+    end
+
+    break when Offer is not Active
         Core-->User: show error message
     end
 
@@ -110,6 +117,13 @@ sequenceDiagram
     end
 
     Core ->> Leasing: Create Lease
+    Leasing ->> XPandDB: Get Contact
+    XPandDB -->> Leasing: Contact
+
+    break when Contact not found in XPand
+        Core-->User: show error message
+    end
+
     Leasing ->> Tenfast: Create Lease
     Tenfast -->> Leasing: Lease
     Leasing -->> Core: Lease
@@ -131,10 +145,12 @@ sequenceDiagram
     XPandSOAP -->> Leasing: Reset
     Leasing -->> Core: Result
 
-    Core ->> Leasing: Get Other Active Offers for Contact
-    Leasing ->> OneCoreDB: Get Offers for Contact
+    Core ->> Leasing: Get Offers for Contact
+    Leasing ->> OneCoreDB: Get Offers for Contact<br/>(all statuses)
     OneCoreDB -->> Leasing: Offers
-    Leasing -->> Core: Other Active Offers
+    Leasing -->> Core: All Offers for Contact
+
+    Core ->> Core: Filter to Other Active Offers<br/>(status Active, excluding this offer —<br/>Leasing does not filter by status)
 
     loop for each Other Active Offer
         Core ->> Core: Deny Offer<br/>(see Deny Offer process — also creates<br/>a new offer for the next applicant)

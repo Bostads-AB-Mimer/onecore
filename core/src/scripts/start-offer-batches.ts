@@ -33,6 +33,11 @@ const startOfferBatches = async () => {
         }
       }
     }
+  } else {
+    logger.error(
+      getExpiredListingsResult,
+      'Could not fetch expired listings ready for offers from leasing'
+    )
   }
 }
 

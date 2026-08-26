@@ -12,7 +12,7 @@ Processens beslutslogik: vilka kontroller som styr om flödet går vidare till n
 flowchart LR
 A[Start] --> B(Get Listing)
 B --> R(Get Parking Space)
-R --> C{Is the Listing Rental Rule Internal/Scored?}
+R --> C{Is the Listing<br/>Rental Rule Scored?}
 C --> |No| O[End]
 C --> |Yes| D[Get Contact]
 D --> E{Is Contact<br/>a Tenant?}
@@ -98,34 +98,45 @@ sequenceDiagram
 
     par Validate Residential Area Rental Rules
         Core ->> Leasing: Validate Residential Area Rental Rules
-        Leasing ->> XPandDB: Get Contact, Residential Area<br/>and Estate Code
-        XPandDB -->> Leasing: Residential Area Data
-        Leasing ->> Tenfast: Get Tenant and Leases
-        Tenfast -->> Leasing: Tenant and Leases
-        Leasing -->> Core: Residential Area Validation Result
+        alt Area has no Specific Rental Rules
+            note over Leasing: Early exit — checked against a<br/>hardcoded list of area codes, no<br/>XPandDB or Tenfast calls made.
+            Leasing -->> Core: No Rules Apply
+        else Area has Specific Rental Rules
+            Leasing ->> XPandDB: Get Contact, Residential Area<br/>and Estate Code
+            XPandDB -->> Leasing: Residential Area Data
+            Leasing ->> Tenfast: Get Tenant and Leases
+            Tenfast -->> Leasing: Tenant and Leases
+            Leasing -->> Core: Residential Area Validation Result
+        end
     and Validate Property Rental Rules
         Core ->> Leasing: Validate Property Rental Rules
         Leasing ->> XPandDB: Get Estate Codes for Property<br/>and each Parking Space Lease
         XPandDB -->> Leasing: Estate Codes
-        Leasing ->> Tenfast: Get Tenant and Leases
-        Tenfast -->> Leasing: Tenant and Leases
-        Leasing -->> Core: Property Validation Result
+        alt Property has no Specific Rental Rules
+            Leasing -->> Core: No Rules Apply<br/>(no Tenfast call made)
+        else Property has Specific Rental Rules
+            Leasing ->> Tenfast: Get Tenant and Leases
+            Tenfast -->> Leasing: Tenant and Leases
+            Leasing -->> Core: Property Validation Result
+        end
     end
 
     break when Applicant is not Eligible to Rent in Parking Space with Specific Rental Rule
         Core-->User: show error message
     end
 
-    Core ->> Economy: Perform Internal Credit Check
+    Core ->> Economy: Get Invoices (last 6 months)
     Economy ->> Xledger: Get Invoices
     Xledger -->> Economy: Invoices
     Economy ->> Tenfast: Get Invoices
     Tenfast -->> Economy: Invoices
-    Economy -->> Core: Credit Check Result
+    Economy -->> Core: Invoices
 
     break when fetching Invoices for Internal Credit Check fails
         Core-->User: show error message
     end
+
+    Core ->> Core: Filter to Invoices sent to Debt<br/>Collection — pass if none found
 
     break when Applicant is not Eligible for Lease
         Core ->> Communication: Notify Leasing Team of Rejection
@@ -137,7 +148,9 @@ sequenceDiagram
 
     alt Contact is not already in Waiting List
         Core ->> Leasing: Add Contact to Waiting List
-        Leasing ->> XPandSOAP: Add Contact to Waiting List
+        Leasing ->> XPandSOAP: Add Contact to Internal<br/>Parking Space Waiting List
+        XPandSOAP -->> Leasing: Added
+        Leasing ->> XPandSOAP: Add Contact to External<br/>Parking Space Waiting List
         XPandSOAP -->> Leasing: Added
     end
 

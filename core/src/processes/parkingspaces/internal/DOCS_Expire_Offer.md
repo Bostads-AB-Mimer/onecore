@@ -13,7 +13,7 @@ flowchart LR
 A[Start: Scheduled Job Runs] --> B[Find All Active Offers<br/>Past Their Response Deadline]
 B --> C{Any Expired Offers Found?}
 C --> |No| O[End]
-C --> |Yes| D[For Each Expired Offer:<br/>Set Offer Status to Expired,<br/>Set Applicant Status to OfferExpired]
+C --> |Yes| D[For Each Expired Offer:<br/>Set Offer Status to Expired,<br/>Set Offer Applicant Snapshot to OfferExpired]
 D --> E[Initiate Create Offer Process<br/>for each Affected Listing]
 E --> O
 ```
@@ -36,7 +36,12 @@ sequenceDiagram
     OneCoreDB -->> Leasing: Expired Offers
 
     loop for each Expired Offer
-        Leasing ->> OneCoreDB: Set Offer Status to Expired,<br/>Applicant Status to OfferExpired
+        Leasing ->> OneCoreDB: Set Offer Status to Expired,<br/>Offer Applicant Snapshot to OfferExpired
+    end
+    note over Leasing: Known issue: the Applicant's own Status field is<br/>never updated here — it stays "Offered" indefinitely,<br/>unlike Deny Offer, which also sets it to OfferDeclined.<br/>The snapshot update above is also scoped only by<br/>applicantId (not offerId/listingId), so it can overwrite<br/>that applicant's snapshot rows from other, unrelated<br/>offer rounds too. To be fixed in a follow-up.
+
+    break when Leasing fails to fetch or process Expired Offers
+        Core-->>ScheduledJob: log error and exit<br/>(no offers are processed this run)
     end
 
     Leasing -->> Core: Affected Listing IDs

@@ -29,6 +29,11 @@ const handleExpiredOffersScript = async () => {
         }
       }
     }
+  } else {
+    logger.error(
+      handleExpiredOffersResult,
+      'Could not fetch expired offers from leasing'
+    )
   }
 }
 

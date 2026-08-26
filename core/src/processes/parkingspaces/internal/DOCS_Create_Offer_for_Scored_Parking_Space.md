@@ -19,8 +19,10 @@ Processens beslutslogik: vilka kontroller som styr om flödet går vidare till n
 flowchart LR
 A[Start] --> B(Get Listing)
 B --> R(Get Rental Object)
-R --> C{Is Listing Expired<br/>and Rental Object Vacant?}
-C --> |No| O[End]
+R --> Fo{Listing and Rental Object Found?}
+Fo --> |No| O[End]
+Fo --> |Yes| C{Is Listing Expired<br/>and Rental Object Vacant?}
+C --> |No| O
 C --> |Yes| D[Get Detailed Applicants]
 D --> Lp[Find First Eligible Applicant,<br/>Disqualifying Ineligible Ones]
 Lp --> F{Eligible Applicant Found?}
@@ -76,6 +78,10 @@ sequenceDiagram
     Tenfast -->> Leasing: Availability
     Leasing -->> Core: Rental Object
 
+    break when Listing or Rental Object not found
+        Core-->LeasingTeam: show error message
+    end
+
     break when Listing is not Expired, or Rental Object has no Vacant-From Date
         Core-->LeasingTeam: show error message
     end
@@ -119,6 +125,7 @@ sequenceDiagram
         end
 
         Core-->LeasingTeam: show error message (no eligible applicant found)
+        note over Core: Known issue: this is an expected business<br/>outcome (the listing simply had no eligible<br/>applicant, and was correctly closed above) —<br/>not a technical failure — but it is currently<br/>returned with the same httpStatus 500 as a<br/>genuine error. To be revisited in a follow-up.
     else Eligible Applicant Found
         Core ->> Leasing: Get Contact
         Leasing ->> XPandDB: Get Contact
