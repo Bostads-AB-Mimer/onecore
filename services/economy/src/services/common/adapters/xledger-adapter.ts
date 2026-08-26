@@ -18,9 +18,7 @@ import { logger, loggedAxios as axios } from '@onecore/utilities'
 import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
-import { AdapterResult, InvoiceDataRow } from '../../../common/types'
-
-const TENANT_COMPANY_DB_ID = 44668660
+import { InvoiceDataRow } from '../../../common/types'
 
 const XledgerAuthHeader = {
   Authorization: 'token ' + config.xledger.apiToken,
@@ -340,9 +338,9 @@ const transformToCustomer = (customerData: any): XledgerCustomer => {
   }
 }
 
-const getCustomer = async (contactCode: string) => {
+export const getCustomer = async (contactCode: string) => {
   const query = {
-    query: `{
+    query: gql`{
       customers(first: 1, filter: { code: "${escapeGraphQLString(contactCode)}" }) {
         edges {
           node {
@@ -376,24 +374,69 @@ const getCustomer = async (contactCode: string) => {
 const escapeGraphQLString = (value: string): string =>
   value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
-const addContact = async (contact: any) => {
-  const customerQuery = {
-    query: `mutation AddCustomers {
-      addCustomers(inputs:[
-        {
-          node: {
-            company:{dbId: ${TENANT_COMPANY_DB_ID}},
-            code:"${escapeGraphQLString(contact.ContactCode)}",
-            description:"${escapeGraphQLString(contact.FullName)}",
-            streetAddress:"${escapeGraphQLString(contact.StreetAddress)}",
-            zipCode:"${escapeGraphQLString(contact.PostalCode)}",
-            place:"${escapeGraphQLString(contact.City)}"
+export interface XledgerCustomerData {
+  contactCode: string
+  fullName: string
+  address: {
+    street: string
+    postalCode: string
+    city: string
+  }
+  emailAddress?: string
+}
+
+export const addCustomer = async (contact: XledgerCustomerData) => {
+  // Each customer in Xledger must be connected to a company, so we need to create that first
+  const companyQuery = {
+    query: gql`
+      mutation AddCompany {
+        addCompanies(
+          inputs: [
+            {
+              node: {
+                description: ${JSON.stringify(contact.fullName)}
+              }
+            }
+          ]
+        ) {
+          edges {
+            node {
+              dbId
+            }
           }
         }
-      ]) {
-        edges { node {dbId} }
       }
-    }`,
+    `,
+  }
+
+  const companyResult = await makeXledgerRequest(companyQuery)
+  const companyDbId = companyResult.data.addCompanies.edges[0].node.dbId
+
+  const customerQuery = {
+    query: gql`
+      mutation AddCustomer {
+        addCustomers(inputs: [
+          {
+            node: {
+              company: {
+                dbId: ${companyDbId}
+              },
+              code: "${escapeGraphQLString(contact.contactCode)}",
+              description: "${escapeGraphQLString(contact.fullName)}",
+              streetAddress: "${escapeGraphQLString(contact.address?.street || '')}",
+              zipCode: "${escapeGraphQLString(contact.address?.postalCode || '')}",
+              place: "${escapeGraphQLString(contact.address?.city || '')}"
+            }
+          }
+        ]) {
+          edges {
+            node {
+              dbId
+            }
+          }
+        }
+      }
+    `,
   }
 
   const customerResult = await makeXledgerRequest(customerQuery)
@@ -401,13 +444,13 @@ const addContact = async (contact: any) => {
   return customerResult.data.addCustomers.edges[0].node.dbId
 }
 
-const contactHasChanged = (xledgerContact: any, dbContact: any) => {
+const customerHasChanged = (xledgerCustomer: any, dbCustomer: any) => {
   if (
-    xledgerContact.description != dbContact.FullName ||
-    xledgerContact.email != dbContact.Email ||
-    xledgerContact.address.streetAddress != dbContact.Street ||
-    xledgerContact.address.zipCode != dbContact.PostalCode ||
-    xledgerContact.address.place != dbContact.City
+    xledgerCustomer.description != dbCustomer.FullName ||
+    xledgerCustomer.email != dbCustomer.Email ||
+    xledgerCustomer.address.streetAddress != dbCustomer.Street ||
+    xledgerCustomer.address.zipCode != dbCustomer.PostalCode ||
+    xledgerCustomer.address.place != dbCustomer.City
   ) {
     return true
   } else {
@@ -415,29 +458,50 @@ const contactHasChanged = (xledgerContact: any, dbContact: any) => {
   }
 }
 
-const updateContact = async (xledgerContact: any, dbContact: any) => {
-  if (contactHasChanged(xledgerContact, dbContact)) {
-    // Todo lookup/make sure tenant company exists.
-    const customerQuery = {
-      query: `mutation UpdateContact {
-        updateCustomer(dbId: "${xledgerContact.dbId}", description: "${escapeGraphQLString(dbContact.FullName)}", streetAddress: "${escapeGraphQLString(dbContact.Street)}", zipCode: "${escapeGraphQLString(dbContact.PostalCode)}", place: "${escapeGraphQLString(dbContact.City)}", email: "${escapeGraphQLString(dbContact.Email)}") {
-          dbId
+export const updateCustomer = async (
+  existingCustomer: any,
+  customerPayload: XledgerCustomerData
+) => {
+  if (customerHasChanged(existingCustomer, customerPayload)) {
+    const query = {
+      query: gql`
+        mutation UpdateCustomer {
+          updateCustomers(inputs: [
+            {
+              node: {
+                dbId: "${existingCustomer.dbId}",
+                description: "${escapeGraphQLString(customerPayload.fullName)}",
+                streetAddress: "${escapeGraphQLString(customerPayload.address?.street || '')}",
+                zipCode: "${escapeGraphQLString(customerPayload.address?.postalCode || '')}",
+                place: "${escapeGraphQLString(customerPayload.address?.city || '')}",
+                email: "${escapeGraphQLString(customerPayload.emailAddress || '')}"
+              }
+            }
+          ]) {
+            edges {
+              node {
+                dbId
+              }
+            }
+          }
         }
-      }`,
+      `,
     }
 
-    const customerResult = await makeXledgerRequest(customerQuery)
+    const customerResult = await makeXledgerRequest(query)
 
-    const customerDbId = customerResult.data.updateCustomer.dbId
-    return customerDbId
+    return customerResult.data.updateCustomers.edges[0].node.dbId
   } else {
-    logger.info({}, `Contact ${dbContact.ContactCode} not changed, skipping`)
+    logger.info(
+      {},
+      `Customer ${customerPayload.contactCode} not changed, skipping`
+    )
   }
 }
 
 const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
   const query = {
-    query: `{
+    query: gql`{
       customers (first: 1, filter: { code: "${escapeGraphQLString(contactCode)}" }) {
         edges {
           node {
@@ -646,7 +710,7 @@ export async function getInvoicePaymentEvents(
   invoiceMatchId: string
 ): Promise<InvoicePaymentEvent[]> {
   const query = {
-    query: `{
+    query: gql`{
       arTransactions(first: 25, filter: { matchId: ${invoiceMatchId} }) {
         edges {
           node {
@@ -970,7 +1034,7 @@ export const getInvoicesByContactCode = async (
 
 export const getInvoices = async (from?: Date, to?: Date) => {
   const query = {
-    query: `
+    query: gql`
       query($from: String, $to: String) {
         arTransactions(
           first: 10000,
@@ -1159,128 +1223,6 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   } catch (err) {
     logger.error(err, 'Error getting invoice match id from Xledger')
     throw err
-  }
-}
-
-export interface XledgerDbContact {
-  ContactCode: string
-  FullName: string
-  StreetAddress: string
-  Street: string
-  PostalCode: string
-  City: string
-  Email: string
-}
-
-export const syncContact = async (
-  dbContact: XledgerDbContact
-): Promise<AdapterResult<any, 'could-not-update-contact' | 'unknown'>> => {
-  try {
-    const xledgerContact = await getCustomer(dbContact.ContactCode)
-
-    if (!xledgerContact) {
-      logger.warn(
-        { contactCode: dbContact.ContactCode },
-        'xledger-adapter.syncContact: contact not found in Xledger, skipping'
-      )
-      return { ok: true, data: null }
-    }
-
-    await updateContact(xledgerContact, dbContact)
-    return { ok: true, data: xledgerContact }
-  } catch (err: unknown) {
-    logger.error({ err }, 'xledger-adapter.syncContact')
-    return { ok: false, err: 'could-not-update-contact' }
-  }
-}
-
-export const createOrUpdateContact = async (
-  dbContact: XledgerDbContact
-): Promise<AdapterResult<any, string>> => {
-  const xledgerContact = await getCustomer(dbContact.ContactCode)
-
-  try {
-    if (!xledgerContact) {
-      await addContact(dbContact)
-    } else {
-      await updateContact(xledgerContact, dbContact)
-    }
-
-    return { ok: true, data: xledgerContact }
-  } catch (error) {
-    return { ok: false, err: (error as any).message }
-  }
-}
-
-const accountJobIds: Record<string, string> = {}
-
-const getAccountDbId = async (account: string) => {
-  if (accountJobIds[account]) {
-    return accountJobIds[account]
-  } else {
-    const accountQuery = {
-      query: `query {
-        accounts(last: 10000, filter: { chartOfAccountDbId: 3 }, objectStatus: OPEN) {
-          edges {
-            node {
-              code
-              dbId
-            }
-          }
-        }
-      }`,
-    }
-
-    const result = await makeXledgerRequest(accountQuery)
-
-    result.data.accounts?.edges.forEach((edge: any) => {
-      accountJobIds[edge.node.code] = edge.node.dbId
-    })
-
-    return accountJobIds[account]
-  }
-}
-
-const _createAggregatedTransaction = async (
-  account: string,
-  postedDate: string,
-  amount: number,
-  vatPercent: number,
-  batchId: string
-) => {
-  const accountJobId = await getAccountDbId(account)
-
-  if (!accountJobId) {
-    logger.error({ account }, 'Job id not found for account')
-    return
-  }
-  const taxRule = vatPercent == 25 ? 'taxRule:{code:"2"},' : ''
-
-  const transactionQuery = {
-    query: `mutation {
-      addGLImportItems(inputs: [
-        {
-          node: {
-            postedDate: "${postedDate}",
-            account: {dbId: ${accountJobId}},
-            transactionSource: {code: "AR"},
-            invoiceAmount: ${amount},
-            ${taxRule}
-            jobLevel: {dbId: 14502},
-            trRegNumber: ${batchId}
-          }
-        }
-      ]) {
-        edges { node {dbId} }
-      }
-    }`,
-  }
-
-  try {
-    const result = await makeXledgerRequest(transactionQuery)
-    return result.data.addGLImportItems.edges
-  } catch (_error) {
-    return
   }
 }
 

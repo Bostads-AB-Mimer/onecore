@@ -599,7 +599,8 @@ export async function recordInvoicePayment(
 
 export async function syncContactToEconomy(
   contactCode: string,
-  contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>
+  contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>,
+  options?: { create?: boolean }
 ): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
   const payload: SyncContactToEconomyPayload = {
     contactCode,
@@ -608,7 +609,7 @@ export async function syncContactToEconomy(
 
   try {
     const response = await axios.post(
-      `${config.economyService.url}/contacts/${contactCode}/sync`,
+      `${config.economyService.url}/customers/${contactCode}/sync${options?.create ? `?create=${options.create}` : ''}`,
       payload
     )
     return { ok: true, data: { skipped: response.data?.skipped === true } }

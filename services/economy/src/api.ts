@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import { routes as invoiceRoutes } from './services/invoice-service'
 import { routes as contactRoutes } from './services/contact-service'
+import { routes as customerRoutes } from './services/customer-service'
 import { routes as projectRoutes } from './services/project-service'
 import { routes as procurementInvoiceRoutes } from './services/procurement-invoice-service'
 import { routes as debtCollectionRoutes } from './services/debt-collection-service'
@@ -12,6 +13,7 @@ const router = new KoaRouter()
 
 invoiceRoutes(router)
 contactRoutes(router)
+customerRoutes(router)
 projectRoutes(router)
 procurementInvoiceRoutes(router)
 debtCollectionRoutes(router)

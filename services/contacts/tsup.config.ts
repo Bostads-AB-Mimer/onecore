@@ -10,7 +10,7 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     dts: false,
-    bundle: false,
+    bundle: true,
     splitting: false,
     outDir: 'build/cjs',
   },

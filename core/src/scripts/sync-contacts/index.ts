@@ -97,13 +97,17 @@ const syncContact = async (update: ContactUpdate): Promise<void> => {
   const payload = toSyncPayload(update.contact)
   const [tenfastResult, xledgerResult, odooResult] = await Promise.all([
     syncContactToLeasing(payload.contactCode),
-    syncContactToEconomy(payload.contactCode, {
-      fullName: payload.fullName,
-      street: payload.street,
-      zipCode: payload.zipCode,
-      city: payload.city,
-      emailAddress: payload.emailAddress,
-    }),
+    syncContactToEconomy(
+      payload.contactCode,
+      {
+        fullName: payload.fullName,
+        street: payload.street,
+        zipCode: payload.zipCode,
+        city: payload.city,
+        emailAddress: payload.emailAddress,
+      },
+      { create: false } // Do not create new contact in economy when syncing contacts, only update existing
+    ),
     syncContactToWorkOrder(payload.contactCode, {
       fullName: payload.fullName,
       emailAddress: payload.emailAddress,

@@ -26,7 +26,7 @@
     "dev:script:home-insurance-export": "tsx src/scripts/home-insurance-export.ts",
     "dev:script:home-insurance-export:local": "LOCAL_OUTPUT=. tsx src/scripts/home-insurance-export.ts",
     "dev:script:sync-contacts": "ts-node src/scripts/sync-contacts/index.ts",
-    "dev:script:sync-leases": "ts-node src/scripts/sync-leases/index.ts",
+    "dev:script:sync-leases": "tsx src/scripts/sync-leases/index.ts",
     "dev:script:sync-xledger-payments-to-tenfast": "DATA_DIR=./data tsx src/scripts/sync-xledger-payments-to-tenfast/index.ts",
     "dev:script:sync-keycloak-entra-id-attributes": "ts-node src/scripts/sync-keycloak-entra-id-attributes.ts",
     "script:handle-expired-offers": "node build/scripts/handle-expired-offers",

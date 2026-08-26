@@ -23,7 +23,7 @@
     },
     "./schema": {
       "types": "./build/esm/schema.d.ts",
-      "require": "./build/cjs/schema.js",
+      "require": "./build/cjs/schema.cjs",
       "import": "./build/esm/schema.js"
     }
   },

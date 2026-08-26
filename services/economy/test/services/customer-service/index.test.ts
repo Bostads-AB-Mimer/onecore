@@ -3,8 +3,8 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 
-import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
-import { routes } from '@src/services/contact-service'
+import * as customerService from '@src/services/customer-service/service'
+import { routes } from '@src/services/customer-service'
 import * as factory from '@test/factories'
 
 const app = new Koa()
@@ -14,64 +14,58 @@ app.use(bodyParser())
 routes(router)
 app.use(router.routes())
 
-describe('POST /contacts/:contactCode/sync', () => {
+describe('POST /customers/:contactCode/sync', () => {
   it('responds with 200 on successful sync', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
-    jest.spyOn(xledgerAdapter, 'syncContact').mockResolvedValueOnce({
-      ok: true,
-      data: { dbId: '12345' },
-    })
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockResolvedValueOnce({ dbId: '12345' })
 
     const res = await request(app.callback())
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync`)
       .send(payload)
 
     expect(res.status).toBe(200)
   })
 
-  it('responds with 500 when xledger sync fails', async () => {
+  it('responds with 500 when sync fails', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
-    jest.spyOn(xledgerAdapter, 'syncContact').mockResolvedValueOnce({
-      ok: false,
-      err: 'could-not-update-contact',
-    })
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockRejectedValueOnce(new Error('could-not-create-or-update-contact'))
 
     const res = await request(app.callback())
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync`)
       .send(payload)
 
     expect(res.status).toBe(500)
-    expect(res.body.error).toBe('Failed to sync contact to Xledger')
+    expect(res.body.error).toBe('Internal server error')
   })
 
-  it('responds with 200 and skipped:true when contact does not exist in Xledger', async () => {
+  it('responds with 200 and skipped:true when contact does not exist and create not requested', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
-    jest.spyOn(xledgerAdapter, 'syncContact').mockResolvedValueOnce({
-      ok: true,
-      data: null,
-    })
+    jest.spyOn(customerService, 'syncCustomer').mockResolvedValueOnce(null)
 
     const res = await request(app.callback())
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync`)
       .send(payload)
 
     expect(res.status).toBe(200)
     expect(res.body.skipped).toBe(true)
   })
 
-  it('responds with 200 and skipped:false when contact is updated', async () => {
+  it('responds with 200 and skipped:false when contact is synced', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
-    jest.spyOn(xledgerAdapter, 'syncContact').mockResolvedValueOnce({
-      ok: true,
-      data: { dbId: '12345' },
-    })
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockResolvedValueOnce({ dbId: '12345' })
 
     const res = await request(app.callback())
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync`)
       .send(payload)
 
     expect(res.status).toBe(200)
@@ -80,14 +74,14 @@ describe('POST /contacts/:contactCode/sync', () => {
 
   it('responds with 400 when request body is invalid', async () => {
     const res = await request(app.callback())
-      .post('/contacts/P12345/sync')
+      .post('/customers/P12345/sync')
       .send({ invalid: true })
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('Invalid request body')
   })
 
-  it('passes correct field mapping to syncContact', async () => {
+  it('passes correct field mapping to syncCustomer', async () => {
     const payload = factory.syncContactToEconomyPayload.build({
       contactCode: 'P99999',
       fullName: 'Testsson, Test',
@@ -98,26 +92,25 @@ describe('POST /contacts/:contactCode/sync', () => {
     })
 
     const spy = jest
-      .spyOn(xledgerAdapter, 'syncContact')
-      .mockResolvedValueOnce({
-        ok: true,
-        data: null,
-      })
+      .spyOn(customerService, 'syncCustomer')
+      .mockResolvedValueOnce(null)
 
     await request(app.callback())
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync?create=true`)
       .send(payload)
 
     expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ContactCode: 'P99999',
-        FullName: 'Testsson, Test',
-        StreetAddress: 'Testgatan 5',
-        Street: 'Testgatan 5',
-        PostalCode: '11111',
-        City: 'Stockholm',
-        Email: 'test@test.se',
-      })
+      {
+        contactCode: 'P99999',
+        fullName: 'Testsson, Test',
+        address: {
+          street: 'Testgatan 5',
+          postalCode: '11111',
+          city: 'Stockholm',
+        },
+        emailAddress: 'test@test.se',
+      },
+      true
     )
   })
 })
