@@ -110,11 +110,9 @@ export const createOfferForInternalParkingSpace = async (
       log
     )
 
-    // discard the first applicant since that is our eligibleApplicant
-    // leasing currently guarantees that the list is sorted correctly
-    const [_first, ...activeApplicants] = await getActiveApplicants(
-      allApplicants.data
-    )
+    const activeApplicants = (
+      await getActiveApplicants(allApplicants.data)
+    ).filter((a) => a.id !== eligibleApplicant?.id)
 
     if (!eligibleApplicant) {
       const updateListingStatus = await leasingAdapter.updateListingStatus(
@@ -286,6 +284,8 @@ export async function validateEligibilityAndDisqualifyIfNot(
   )
 
   if (!validationResultResArea.ok || !validationResultProperty.ok) {
+    applicant.status = ApplicantStatus.Disqualified
+
     try {
       await leasingAdapter.updateApplicantStatus({
         applicantId: applicant.id,
