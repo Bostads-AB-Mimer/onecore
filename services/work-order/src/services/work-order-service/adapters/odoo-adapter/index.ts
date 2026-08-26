@@ -78,6 +78,8 @@ const MESSAGE_DOMAIN = (workOrderIds: number[]) => [
       'tenant_sms',
       'tenant_mail',
       'tenant_mail_and_sms',
+      // Published to Mina sidor only — no SMS/e-post notification (MIM-1957).
+      'tenant_my_pages',
       'failed_tenant_sms',
       'failed_tenant_mail',
       'failed_tenant_mail_and_sms',
