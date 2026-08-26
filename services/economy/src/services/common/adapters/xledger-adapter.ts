@@ -18,7 +18,7 @@ import { logger, loggedAxios as axios } from '@onecore/utilities'
 import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
-import { InvoiceDataRow } from '../../../common/types'
+import { AdapterResult, InvoiceDataRow } from '../../../common/types'
 
 const XledgerAuthHeader = {
   Authorization: 'token ' + config.xledger.apiToken,
