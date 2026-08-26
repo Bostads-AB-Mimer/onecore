@@ -107,7 +107,6 @@ describe('POST /customers/:contactCode/sync', () => {
           street: 'Testgatan 5',
           postalCode: '11111',
           city: 'Stockholm',
-          number: '',
         },
         emailAddress: 'test@test.se',
       },
