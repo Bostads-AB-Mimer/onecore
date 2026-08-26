@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { facilityService, leaseService } from '@/services/api/core'
+import {
+  facilityService,
+  leaseService,
+  rentalObjectService,
+} from '@/services/api/core'
 
 export function useFacilityDetails(rentalId: string | undefined) {
   const facilityQuery = useQuery({
@@ -25,11 +29,20 @@ export function useFacilityDetails(rentalId: string | undefined) {
     (lease) => lease.status === 'Current'
   )
 
+  // The rental object's configured rent from Tenfast — independent of leases,
+  // so it is available for vacant objects too
+  const objectRentQuery = useQuery({
+    queryKey: ['rentalObjectRent', rentalId],
+    queryFn: () => rentalObjectService.getRentByRentalObjectCode(rentalId!),
+    enabled: !!rentalId,
+  })
+
   return {
     facility,
     leases: leasesQuery.data,
     currentLease,
-    currentRent: currentLease?.rentInfo?.currentRent?.currentRent,
+    objectRent: objectRentQuery.data,
+    objectRentIsLoading: objectRentQuery.isLoading,
     isLoading: facilityQuery.isLoading,
     leasesIsLoading: leasesQuery.isLoading,
     error: facilityQuery.error,

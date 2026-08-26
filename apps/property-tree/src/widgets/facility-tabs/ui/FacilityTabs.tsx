@@ -3,12 +3,14 @@ import {
   FileText,
   Info,
   MessageSquare,
+  Receipt,
   Users,
   Wrench,
 } from 'lucide-react'
 
 import { SpaceComponents } from '@/features/component-library'
 import { LeasesTabContent } from '@/features/leases'
+import { RentRowsTabContent } from '@/features/rent-rows'
 import { CurrentTenant } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
@@ -28,12 +30,14 @@ interface FacilityTabsProps {
   facility: Facility
   leases?: Lease[]
   leasesIsLoading: boolean
+  currentLease?: Lease
 }
 
 export function FacilityTabs({
   facility,
   leases,
   leasesIsLoading,
+  currentLease,
 }: FacilityTabsProps) {
   const isMobile = useIsMobile()
   const rentalId = facility.rentalInformation?.rentalId
@@ -44,6 +48,7 @@ export function FacilityTabs({
         facility={facility}
         leases={leases}
         leasesIsLoading={leasesIsLoading}
+        currentLease={currentLease}
       />
     )
   }
@@ -66,6 +71,10 @@ export function FacilityTabs({
         <TabsTrigger value="leases" className="flex items-center gap-1.5">
           <FileText className="h-4 w-4" />
           <span className="hidden sm:inline">Kontrakt</span>
+        </TabsTrigger>
+        <TabsTrigger value="rent-rows" className="flex items-center gap-1.5">
+          <Receipt className="h-4 w-4" />
+          <span className="hidden sm:inline">Hyresrader</span>
         </TabsTrigger>
         <TabsTrigger
           value="inspections"
@@ -104,6 +113,15 @@ export function FacilityTabs({
 
       <TabsContent value="leases">
         {rentalId && <LeasesTabContent rentalPropertyId={rentalId} />}
+      </TabsContent>
+
+      <TabsContent value="rent-rows">
+        {rentalId && (
+          <RentRowsTabContent
+            rentalObjectCode={rentalId}
+            lease={currentLease}
+          />
+        )}
       </TabsContent>
 
       <TabsContent value="work-orders">

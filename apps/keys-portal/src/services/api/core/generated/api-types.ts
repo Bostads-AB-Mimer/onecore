@@ -1818,7 +1818,7 @@ export interface paths {
           areaCodes?: string[]
           /** @description District names */
           districtNames?: string[]
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[]
           /** @description Page number */
           page?: number
@@ -1992,7 +1992,7 @@ export interface paths {
           areaCodes?: string[]
           /** @description District names */
           districtNames?: string[]
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[]
           /** @description Sort field */
           sortBy?:
