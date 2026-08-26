@@ -2097,6 +2097,9 @@ export const routes = (router: KoaRouter) => {
    *               text:
    *                 type: string
    *                 description: The message to be sent via SMS.
+   *               workOrderCode:
+   *                 type: string
+   *                 description: od-<odoo id> of the errand, used to link the communication-log entry to the Odoo ärende.
    *     responses:
    *       '200':
    *         description: Successfully sent the SMS.
@@ -2139,6 +2142,7 @@ export const routes = (router: KoaRouter) => {
       externalContractorName,
       contactCode,
       triggeredByUser,
+      workOrderCode,
     } = ctx.request.body
 
     if (!phoneNumber || !text) {
@@ -2157,6 +2161,7 @@ export const routes = (router: KoaRouter) => {
         externalContractorName,
         contactCode,
         triggeredByUser,
+        workOrderCode,
       })
 
       if (result.ok) {
@@ -2210,6 +2215,9 @@ export const routes = (router: KoaRouter) => {
    *               text:
    *                 type: string
    *                 description: The message to be sent in the email.
+   *               workOrderCode:
+   *                 type: string
+   *                 description: od-<odoo id> of the errand, used to link the communication-log entry to the Odoo ärende.
    *     responses:
    *       '200':
    *         description: Successfully sent the email.
@@ -2253,6 +2261,7 @@ export const routes = (router: KoaRouter) => {
       externalContractorName,
       contactCode,
       triggeredByUser,
+      workOrderCode,
     } = ctx.request.body
 
     if (to === undefined || subject === undefined || text === undefined) {
@@ -2272,6 +2281,7 @@ export const routes = (router: KoaRouter) => {
       externalContractorName,
       contactCode,
       triggeredByUser,
+      workOrderCode,
     })
 
     if (result.ok) {
