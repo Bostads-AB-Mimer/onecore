@@ -29,10 +29,10 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.put('(.*)/offers/handleexpired', async (ctx) => {
-    const affectedListingIds = await offerAdapter.handleExpiredOffers()
+    const affectedListingIds = await offerService.handleExpiredOffers(db)
     const metadata = generateRouteMetadata(ctx)
 
-    if (affectedListingIds.ok && affectedListingIds.data) {
+    if (affectedListingIds.ok) {
       ctx.body = { content: affectedListingIds.data, ...metadata }
     }
   })
