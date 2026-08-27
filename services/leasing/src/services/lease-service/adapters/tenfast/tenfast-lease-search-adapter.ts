@@ -743,6 +743,23 @@ export async function fetchAllLeasesForCache(): Promise<
 }
 
 /**
+ * Fetches only leases updated since `since` for delta cache refresh.
+ * Uses a 30-second look-back buffer (applied by the caller) to guard against
+ * clock skew between Tenfast and this service.
+ */
+export async function fetchLeasesUpdatedSinceForCache(
+  since: Date
+): Promise<leasing.v1.LeaseSearchResult[]> {
+  const result = await tenfastAdapter.getLeasesUpdatedSince(since)
+  if (!result.ok) {
+    throw new Error(
+      `fetchLeasesUpdatedSinceForCache: failed to fetch delta leases — ${result.err}`
+    )
+  }
+  return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
+}
+
+/**
  * Export path for Xpand-bridged filters (buildingManager, buildingCodes, etc.).
  * Fetches ALL matching rental object codes from Xpand, then batch-gets all
  * leases from Tenfast and applies local filters.

@@ -343,6 +343,11 @@ export const getLeases = async (): Promise<
   }
 }
 
+// All non-archived stages we want in the cache. Mirrors the non-cache path
+// which always sends filter[isArchived]=false.
+const ALL_CACHE_STAGES =
+  'active,upcoming,terminationScheduled,preTermination,signingInProgress,draft,terminated'
+
 /**
  * Fetches all leases across all pages using cursor-based pagination on
  * the list endpoint (/v1/hyresvard/avtal). Unlike getLeases() which sends
@@ -356,6 +361,34 @@ export async function getAllLeases(): Promise<
   try {
     const params = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
+      'filter[stage]': ALL_CACHE_STAGES,
+    })
+    const records = await fetchAllPages(
+      (cursor) =>
+        cursor
+          ? `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${cursor}`
+          : `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}`,
+      TenfastPaginatedLeaseResponseSchema
+    )
+    return { ok: true, data: records }
+  } catch (err: any) {
+    return handleTenfastError(err, 'unknown')
+  }
+}
+
+/**
+ * Fetches all leases updated at or after `since` using cursor-based pagination.
+ * Pass a timestamp slightly in the past (e.g. lastSyncedAt - 30s) to guard
+ * against clock skew between Tenfast and the calling service.
+ */
+export async function getLeasesUpdatedSince(
+  since: Date
+): Promise<AdapterResult<TenfastLease[], 'unknown'>> {
+  try {
+    const params = new URLSearchParams({
+      populate: 'hyresobjekt,hyresgaster',
+      updatedAtSince: since.toISOString(),
+      'filter[stage]': ALL_CACHE_STAGES,
     })
     const records = await fetchAllPages(
       (cursor) =>

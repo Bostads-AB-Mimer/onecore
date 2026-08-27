@@ -3,6 +3,8 @@ import { logger } from '@onecore/utilities'
 
 type CacheStatus = 'uninitialized' | 'syncing' | 'ready' | 'error'
 
+const DELTA_BUFFER_MS = 30_000
+
 const state: {
   leases: leasing.v1.LeaseSearchResult[]
   lastSyncedAt: Date | null
@@ -30,20 +32,37 @@ export function getCacheInfo() {
 }
 
 async function sync(
-  fetchFn: () => Promise<leasing.v1.LeaseSearchResult[]>
+  fullFetchFn: () => Promise<leasing.v1.LeaseSearchResult[]>,
+  deltaFetchFn: (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>
 ): Promise<void> {
   if (state.status === 'syncing') return
 
   const hasData = state.leases.length > 0
+  const lastSync = state.lastSyncedAt
   state.status = 'syncing'
-  logger.info({ count: state.leases.length }, 'lease-cache: starting sync')
 
   try {
-    const leases = await fetchFn()
-    state.leases = leases
-    state.lastSyncedAt = new Date()
-    state.status = 'ready'
-    logger.info({ count: leases.length }, 'lease-cache: sync complete')
+    if (hasData && lastSync) {
+      const since = new Date(lastSync.getTime() - DELTA_BUFFER_MS)
+      const changed = await deltaFetchFn(since)
+      const idMap = new Map(state.leases.map((l) => [l.leaseId, l]))
+      for (const lease of changed) {
+        idMap.set(lease.leaseId, lease)
+      }
+      state.leases = Array.from(idMap.values())
+      state.lastSyncedAt = new Date()
+      state.status = 'ready'
+      logger.info(
+        { changed: changed.length, total: state.leases.length },
+        'lease-cache: delta sync complete'
+      )
+    } else {
+      const leases = await fullFetchFn()
+      state.leases = leases
+      state.lastSyncedAt = new Date()
+      state.status = 'ready'
+      logger.info({ count: leases.length }, 'lease-cache: full sync complete')
+    }
   } catch (err) {
     if (hasData) {
       state.status = 'ready'
@@ -56,9 +75,10 @@ async function sync(
 }
 
 export function startLeaseCache(
-  fetchFn: () => Promise<leasing.v1.LeaseSearchResult[]>,
+  fullFetchFn: () => Promise<leasing.v1.LeaseSearchResult[]>,
+  deltaFetchFn: (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>,
   intervalMs = 10 * 60 * 1000
 ): void {
-  sync(fetchFn).catch(() => {})
-  setInterval(() => sync(fetchFn).catch(() => {}), intervalMs)
+  sync(fullFetchFn, deltaFetchFn).catch(() => {})
+  setInterval(() => sync(fullFetchFn, deltaFetchFn).catch(() => {}), intervalMs)
 }

@@ -6,6 +6,7 @@ import {
   getLeases,
   getContacts,
   getContactByContactCode,
+  getEmailAndPhoneByContactCodes,
 } from '../adapters/xpand/tenant-lease-adapter'
 import {
   searchLeases,
@@ -391,10 +392,26 @@ export const routes = (router: KoaRouter) => {
 
     try {
       // Fetch all matching leases using cursor-based pagination (O(n) API calls)
-      const allLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+      const rawLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
         queryParams.data,
         ctx
       )
+
+      // Enrich contacts with email/phone from Xpand (Tenfast only has names)
+      const contactCodes = [
+        ...new Set(
+          rawLeases.flatMap((l) => l.contacts?.map((c) => c.contactCode) ?? [])
+        ),
+      ]
+      const contactInfoMap = await getEmailAndPhoneByContactCodes(contactCodes)
+      const allLeases = rawLeases.map((l) => ({
+        ...l,
+        contacts: l.contacts?.map((c) => ({
+          ...c,
+          email: contactInfoMap.get(c.contactCode)?.email ?? null,
+          phone: contactInfoMap.get(c.contactCode)?.phone ?? null,
+        })),
+      }))
 
       // Create Excel from the complete dataset
       const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({

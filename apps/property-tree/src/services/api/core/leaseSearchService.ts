@@ -136,9 +136,10 @@ async function getContactsByCodes(codes: string[]): Promise<ContactInfo[]> {
 
   return (data.content ?? []).map((c) => ({
     contactCode: c.contactCode,
-    name: 'personal' in c ? c.personal.fullName : c.organisation.name,
-    email: c.communication.emailAddresses[0]?.emailAddress ?? null,
-    phone: c.communication.phoneNumbers[0]?.phoneNumber ?? null,
+    name:
+      c.type === 'individual' ? c.personal.fullName : c.organisation.name,
+    email: c.communication?.emailAddresses[0]?.emailAddress ?? null,
+    phone: c.communication?.phoneNumbers[0]?.phoneNumber ?? null,
   }))
 }
 
