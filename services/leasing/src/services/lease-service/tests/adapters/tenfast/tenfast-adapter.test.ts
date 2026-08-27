@@ -7,6 +7,7 @@ import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
 import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
+import { mapToOnecoreLease } from '../../../helpers/tenfast'
 
 // Shared clock offset used to bust the module-level tag cache (TTL: 5 min) between tests.
 // Each test that needs a fresh tag fetch increments this by 1 hour before mocking Date.now.
@@ -481,9 +482,10 @@ describe(tenfastAdapter.createLease, () => {
     })
 
     // Mock tenfastApi.request to return a successful lease response
+    const mockLease = factory.tenfastLease.build()
     const mockLeaseResponse = {
       status: 200,
-      data: { leaseId: 'LEASE123' }, // adjust to expected structure if needed
+      data: mockLease,
     }
     ;(request as jest.Mock).mockResolvedValue(mockLeaseResponse)
 
@@ -500,7 +502,7 @@ describe(tenfastAdapter.createLease, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: undefined, // adjust if you implement schema parsing for lease response
+      data: mapToOnecoreLease(mockLease),
     })
   })
 
@@ -590,9 +592,10 @@ describe(tenfastAdapter.createLease, () => {
       data: mockRentalObject,
     })
 
+    const mockLease = factory.tenfastLease.build()
     const mockLeaseResponse = {
       status: 201,
-      data: { leaseId: 'LEASE123' },
+      data: mockLease,
     }
     ;(request as jest.Mock).mockResolvedValue(mockLeaseResponse)
 
@@ -609,7 +612,45 @@ describe(tenfastAdapter.createLease, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: undefined, // adjust if you implement schema parsing for lease response
+      data: mapToOnecoreLease(mockLease),
+    })
+  })
+
+  it('should return error "could-not-parse-lease" when Tenfast\'s create-lease response fails schema validation', async () => {
+    // Arrange
+    const mockTemplate = factory.tenfastTemplate.build()
+    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
+      ok: true,
+      data: mockTemplate,
+    })
+
+    const mockTenant = factory.tenfastTenant.build()
+    jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+      ok: true,
+      data: mockTenant,
+    })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+      ok: true,
+      data: mockRentalObject,
+    })
+    ;(request as jest.Mock).mockResolvedValue({ status: 200, data: {} })
+
+    // Act
+    const contact = factory.contact.build()
+    const fromDate = new Date()
+    const result = await tenfastAdapter.createLease(
+      contact,
+      'RENTAL_CODE',
+      fromDate,
+      true
+    )
+
+    // Assert
+    expect(result).toEqual({
+      ok: false,
+      err: 'could-not-parse-lease',
     })
   })
 
