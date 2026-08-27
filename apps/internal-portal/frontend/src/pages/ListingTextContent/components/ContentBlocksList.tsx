@@ -73,26 +73,34 @@ export const ContentBlocksList = ({
     const updatedBlocks = blocks.map((block) => {
       if (block.id !== id) return block
 
-      // When changing type, reset the appropriate fields
+      // When changing type, keep what the user has typed: text-style types
+      // share `content`, and between text and link the text is carried over
+      // (content <-> name) instead of being dropped.
       if (field === 'type') {
-        if (value === 'link') {
-          // Switching to link type - clear content, set name/url
+        const newType = value as ContentBlock['type']
+        const wasLink = block.type === 'link'
+        const isLink = newType === 'link'
+
+        if (wasLink === isLink) {
+          return { ...block, type: newType }
+        }
+
+        if (isLink) {
           return {
             ...block,
-            type: value as ContentBlock['type'],
+            type: newType,
             content: undefined,
-            name: '',
+            name: block.content ?? '',
             url: '',
           }
-        } else {
-          // Switching to text type - clear name/url, set content
-          return {
-            ...block,
-            type: value as ContentBlock['type'],
-            content: '',
-            name: undefined,
-            url: undefined,
-          }
+        }
+
+        return {
+          ...block,
+          type: newType,
+          content: block.name ?? '',
+          name: undefined,
+          url: undefined,
         }
       }
 
