@@ -18,8 +18,8 @@ const menuItems = [
   { label: 'Bilplatser', to: '/bilplatser' },
   { label: 'Publicera bilplatser', to: '/bilplatser/publicera' },
   { label: 'Sök bilplats', to: '/sok-bilplats' },
-  // { label: 'Annonsinnehåll', to: '/annonsinnehall' },
-  // { label: 'Områdestexter', to: '/omradestexter' },
+  { label: 'Annonsinnehåll', to: '/annonsinnehall' },
+  { label: 'Områdestexter', to: '/omradestexter' },
   { label: 'Sökandeprofil', to: '/sokandeprofil' },
 ]
 
