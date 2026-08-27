@@ -6102,7 +6102,11 @@ export interface paths {
             }
           }
         }
-        /** @description Property has no KVV-area link */
+        /**
+         * @description Property has no KVV-area link. The body carries
+         * `code: PROPERTY_KVV_AREA_NOT_FOUND` so callers can tell this
+         * apart from a routing 404.
+         */
         404: {
           content: never
         }
@@ -11857,6 +11861,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -11933,6 +11939,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -12005,6 +12013,8 @@ export interface components {
           | 'HL'
           | 'FÖR'
           | 'SOP'
+          | 'MB'
+          | 'TV'
           | 'ÖVR'
         /** Format: uuid */
         keySystemId?: string | null
@@ -12200,6 +12210,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -12222,6 +12234,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -12388,6 +12402,8 @@ export interface components {
           | 'HL'
           | 'FÖR'
           | 'SOP'
+          | 'MB'
+          | 'TV'
           | 'ÖVR'
         /** Format: uuid */
         keySystemId?: string | null
