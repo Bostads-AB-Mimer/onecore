@@ -36,9 +36,22 @@ Filtret är alltså snävare än vad `cmlog`-parsningen släpper igenom: garage-
 
 Går objektinformationen inte att hämta räknas raden däremot som ett **fel** och hamnar i felkön — skillnaden mot "utanför scope" är avsiktlig.
 
-## Annan fakturamottagare
+## Relaterade kontakter
 
-Vid `create` hämtas hyresgästen från Contacts-tjänsten och kontrolleras för en relaterad kontakt med rollen `otherInvoiceRecipient`. Finns en sådan hämtas hela den kontakten och synkas till Xledger med `create=true` — den ska finnas som kund där innan avtalet börjar aviseras, även om den aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas.
+Vid `create` hämtas hyresgästen via `GET /contacts/{contactCode}`, som till skillnad från synk-endpointen [alltid tar med `relatedContacts`](../DOCS_Sync_Overview.md#relaterade-kontakter). Scriptet har alltså god man, förvaltare och annan fakturamottagare tillgängliga här — men agerar bara på en av dem.
+
+| Roll                              | Vad synken gör med den                                    |
+| --------------------------------- | --------------------------------------------------------- |
+| `otherInvoiceRecipient`           | Skapas/uppdateras som kund i Xledger innan avtalet skapas |
+| `trustee` (god man)               | Läses men används inte                                    |
+| `administrator` (förvaltare)      | Läses men används inte                                    |
+| `*For`-rollerna (omvänd riktning) | Läses men används inte                                    |
+
+God man och förvaltare hamnar ändå i Tenfast, men via en annan väg: när avtalet skapas importeras hyresgästen med `import-contact`, och Tenfast hämtar då kontaktuppgifterna inklusive relationer från OneCore på egen hand. Synken skickar dem aldrig explicit.
+
+### Annan fakturamottagare
+
+Finns en `otherInvoiceRecipient` hämtas hela den kontakten separat — den slimmade relationsposten saknar adressuppgifterna Xledger behöver — och synkas dit med `create=true`. Mottagaren ska finnas som kund i Xledger innan avtalet börjar aviseras, även om hen aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas.
 
 Det här är den enda platsen i XPand-synken där en kund faktiskt _skapas_ i Xledger; [sync-contacts](../sync-contacts/DOCS_Sync_Contacts.md) kör medvetet med `create=false`.
 
@@ -80,9 +93,9 @@ Eq --> |No| Q[Queue for Retry,<br/>Send Failure Mail]
 Eq --> |Yes| F{Residence or<br/>Storage?}
 F --> |No| S[Skip — out of scope,<br/>counted as succeeded]
 F --> |Yes| G{Action}
-G --> |create| H(Get Tenant from Contacts)
-H --> Hq{Other Invoice<br/>Recipient?}
-Hq --> |Yes| I(Create/Update Recipient<br/>in Xledger)
+G --> |create| H(Get Tenant from Contacts,<br/>including Related Contacts)
+H --> Hq{Related Contact with role<br/>otherInvoiceRecipient?}
+Hq --> |Yes| I(Get Full Recipient Contact,<br/>Create/Update it in Xledger)
 Hq --> |No| J
 I --> J(Import Lease into Tenfast<br/>+ attach signed PDF, best-effort)
 G --> |terminate| K(Terminate Lease in Tenfast<br/>per XPand lastDebitDate)
@@ -143,9 +156,10 @@ sequenceDiagram
             opt Action is create
                 Core ->> Contacts: Get Contact by Contact Code
                 Contacts -->> Core: Contact with related contacts
+                note over Core: This endpoint always includes relatedContacts —<br/>trustee (god man), administrator (förvaltare) and<br/>otherInvoiceRecipient. Only the last one is acted<br/>on. The guardian roles reach Tenfast via import-contact.
 
                 opt Contact has an Other Invoice Recipient
-                    Core ->> Contacts: Get Other Invoice Recipient Contact
+                    Core ->> Contacts: Get Full Recipient Contact<br/>(relation row lacks addresses)
                     Contacts -->> Core: Contact
                     Core ->> Economy: Sync Customer (create=true)
                     Economy ->> Xledger: Create or Update Customer
@@ -163,6 +177,7 @@ sequenceDiagram
                 Tenfast -->> Leasing: Tenant (or none)
                 opt Tenant not in Tenfast
                     Leasing ->> Tenfast: Import Contact from ONECore
+                    note over Tenfast: Tenfast pulls the contact itself, relations<br/>(god man / förvaltare) included — the sync<br/>never sends them explicitly.
                     Tenfast -->> Leasing: Tenant
                 end
                 Leasing ->> Tenfast: Get Rental Object by Code

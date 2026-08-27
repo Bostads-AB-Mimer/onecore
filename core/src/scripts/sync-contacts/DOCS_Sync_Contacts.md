@@ -29,6 +29,18 @@ De tre målen svarar olika på en kontakt de inte känner igen, men gemensamt ä
 - **Xledger** — anropas medvetet med `create=false`. Saknas kunden returneras `null` (`skipped`). En kontakt som är helt ny i XPand når alltså aldrig Xledger via det här scriptet; den skapas först när den behövs, t.ex. som annan fakturamottagare i [sync-leases](../sync-leases/DOCS_Sync_Leases.md).
 - **Odoo** — söker upp `maintenance.tenant` på `contact_code`. Hittas ingen loggas det och raden räknas som lyckad. Hittas flera uppdateras samtliga.
 
+## Relaterade kontakter
+
+**Scriptet läser inga relationer.** `GET /contacts/sync` anropas utan `includeRelations`, så `relatedContacts` är odefinierat på varje kontakt scriptet ser, och synkpayloaden bär ingen relationsdata till något av de tre målen.
+
+Det betyder inte att god män och fakturamottagare hamnar utanför synken — bara att de synkas som sig själva. En god man är en egen kontakt med egen kontaktkod i XPand, så när hens uppgifter ändras skrivs en egen `Kontakt `-rad i `cmlog` och hen synkas som vilken kontakt som helst. Det som _inte_ händer är någon fan-out: scriptet slår inte upp vilka huvudmän hen är god man för och rör inte deras poster.
+
+För Tenfast spelar det mindre roll, eftersom propageringen sker på andra sidan. Synken skickar bara kontaktkoden, och Tenfast hämtar då själv färska uppgifter från OneCore och uppdaterar hyresgästen **samt alla relationer som refererar samma `externalId`** — så en ändrad god man slår igenom på huvudmannens hyresgästpost i Tenfast utan att synken behöver veta om det.
+
+För Xledger och Odoo finns ingen sådan mekanism, men det behövs heller inte: inget av systemen har någon relationsmodell att uppdatera.
+
+Den enda plats i XPand-synken där en relation faktiskt läses och agerar på är [sync-leases](../sync-leases/DOCS_Sync_Leases.md#relaterade-kontakter), som hämtar hyresgästen via en endpoint som alltid tar med relationerna.
+
 ## Felhantering
 
 De tre anropen görs parallellt (`Promise.all`) och **alla tre måste lyckas** för att raden ska räknas som synkad. Misslyckas något av dem hamnar hela raden i felkön med ett felmeddelande som anger status per mål (`tenfast=… xledger=… odoo=…`).
@@ -80,7 +92,7 @@ sequenceDiagram
     Core ->> PVC: Read last-timestamp.txt
     PVC -->> Core: Checkpoint (or none — sync everything)
 
-    Core ->> Contacts: Get Updated Contacts since Checkpoint
+    Core ->> Contacts: Get Updated Contacts since Checkpoint<br/>(without includeRelations)
     Contacts ->> XPandDB: Query cmlog for "Kontakt %" rows
     XPandDB -->> Contacts: Changed rows
     note over Contacts: Contact codes deduplicated —<br/>latest logtime per code wins
@@ -93,12 +105,12 @@ sequenceDiagram
     end
 
     loop For each changed contact
-        Core ->> Core: Build Sync Payload<br/>(primary email/phone, first address)
+        Core ->> Core: Build Sync Payload<br/>(primary email/phone, first address —<br/>no related contacts)
 
         par Sync to Tenfast
             Core ->> Leasing: Sync Contact (contact code only)
             Leasing ->> Tenfast: Sync Tenant by Contact Code
-            note over Tenfast: Tenfast pulls fresh contact data<br/>from ONECore itself and updates the<br/>hyresgäst plus every relation<br/>referencing the same externalId.<br/>404 = tenant unknown, treated as skipped.
+            note over Tenfast: Tenfast pulls fresh contact data<br/>from ONECore itself and updates the<br/>hyresgäst plus every relation<br/>referencing the same externalId — so a<br/>changed god man reaches the huvudman's<br/>record without the script fanning out.<br/>404 = tenant unknown, treated as skipped.
             Tenfast -->> Leasing: Updated count (or 404)
             Leasing -->> Core: OK / skipped
         and Sync to Xledger

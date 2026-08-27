@@ -45,6 +45,21 @@ Köraden nycklas på innehållet (`contactCode:timestamp` respektive `leaseId:ac
 
 Posterna är taggade med `type` (`contact` eller `lease`) och varje script hoppar över poster av fel typ. I praktiken har scripten separata PVC:er och läser aldrig varandras kö — taggningen är en kvarleva från när filnamnet delades.
 
+### Relaterade kontakter
+
+En kontakt i XPand kan peka på andra kontakter: **god man** och **förvaltare** (`cmctc.forvtyp` 1 respektive 2), och **annan fakturamottagare** (`ANNANFM`). Contacts-tjänsten exponerar dem som `relatedContacts` på kontakten, i båda riktningarna — `trustee`/`administrator`/`otherInvoiceRecipient` pekar ut vem som är det _åt_ kontakten, medan `trusteeFor`/`administratorFor`/`otherInvoiceRecipientFor` pekar ut vems huvudman eller kund kontakten själv är. Kontakter med skyddad identitet får sina fält maskerade redan i tjänsten.
+
+**De två scripten ser inte samma sak**, eftersom de hämtar kontakter via olika endpoints:
+
+| Script        | Endpoint                      | `relatedContacts` |
+| ------------- | ----------------------------- | ----------------- |
+| sync-contacts | `GET /contacts/sync`          | Nej — hämtas inte |
+| sync-leases   | `GET /contacts/{contactCode}` | Ja — alltid       |
+
+`GET /contacts/sync` stödjer relationer via ett `includeRelations`-flagga i repositoryt, men anropas utan det. Vad det betyder i praktiken står i respektive dokument: [sync-contacts](./sync-contacts/DOCS_Sync_Contacts.md#relaterade-kontakter) och [sync-leases](./sync-leases/DOCS_Sync_Leases.md#relaterade-kontakter).
+
+Värt att hålla isär: **relationer finns bara i Tenfast.** Xledger och Odoo har ingen motsvarighet till god man eller annan fakturamottagare, och får aldrig någon relationsdata från synken — där är en relaterad kontakt bara ännu en vanlig kund respektive hyresgäst.
+
 ### Notifieringar via e-post
 
 Fel mejlas till adressen i `config.emailAddresses.xpandSync` via Communication-tjänsten, med två sorters utskick:
