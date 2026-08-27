@@ -635,7 +635,6 @@ describe(tenfastAdapter.createLease, () => {
       ok: true,
       data: mockRentalObject,
     })
-
     ;(request as jest.Mock).mockResolvedValue({ status: 200, data: {} })
 
     // Act
