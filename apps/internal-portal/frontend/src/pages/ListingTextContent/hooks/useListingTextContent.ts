@@ -6,6 +6,9 @@ import { z } from 'zod'
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
 type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
+type ListingTextContentLookup = z.infer<
+  typeof leasing.v1.ListingTextContentLookupSchema
+>
 type CreateListingTextContentRequest = z.infer<
   typeof leasing.v1.CreateListingTextContentRequestSchema
 >
@@ -13,9 +16,10 @@ type UpdateListingTextContentRequest = z.infer<
   typeof leasing.v1.UpdateListingTextContentRequestSchema
 >
 
-// GET - Fetch listing text content by rental object code
+// GET - Fetch listing text content by rental object code, together with the
+// market-area text of the property it belongs to (null for non-housing).
 export const useListingTextContent = (rentalObjectCode?: string) =>
-  useQuery<ListingTextContent, AxiosError>({
+  useQuery<ListingTextContentLookup, AxiosError>({
     queryKey: ['listingTextContent', rentalObjectCode],
     queryFn: () =>
       axios
@@ -26,10 +30,14 @@ export const useListingTextContent = (rentalObjectCode?: string) =>
           },
           withCredentials: true,
         })
-        .then((res) => res.data.content),
+        .then((res) => ({
+          content: res.data.content,
+          marketArea: res.data.marketArea,
+          areaContent: res.data.areaContent,
+        })),
     enabled: !!rentalObjectCode,
     retry: (failureCount: number, error: AxiosError) => {
-      if (error.response?.status === 401 || error.response?.status === 404) {
+      if (error.response?.status === 401) {
         return false
       } else {
         return failureCount < 3
@@ -59,14 +67,10 @@ export const useCreateListingTextContent = () => {
           }
         )
         .then((res) => res.data.content),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['listingTextContent'],
       })
-      queryClient.setQueryData(
-        ['listingTextContent', data.rentalObjectCode],
-        data
-      )
     },
   })
 }
@@ -93,14 +97,10 @@ export const useUpdateListingTextContent = () => {
           }
         )
         .then((res) => res.data.content),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['listingTextContent'],
       })
-      queryClient.setQueryData(
-        ['listingTextContent', data.rentalObjectCode],
-        data
-      )
     },
   })
 }

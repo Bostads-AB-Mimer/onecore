@@ -252,6 +252,11 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
+  ...zodToJsonSchema(types.MarketAreaSchema, {
+    name: 'MarketArea',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
 }
 
 swaggerSpec.definition.components = {

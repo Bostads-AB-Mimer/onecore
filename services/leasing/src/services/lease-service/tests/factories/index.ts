@@ -20,3 +20,4 @@ export {
   TextContentBlockFactory as textContentBlock,
   LinkContentBlockFactory as linkContentBlock,
 } from './listing-text-content'
+export { ListingAreaTextContentFactory as listingAreaTextContent } from './listing-area-text-content'

@@ -1128,3 +1128,11 @@ export {
   getParkingSpaceByCode,
   getParkingSpaces,
 } from './rental-objects'
+
+export {
+  listListingAreaTextContent,
+  getListingAreaTextContentByMarketAreaCode,
+  createListingAreaTextContent,
+  updateListingAreaTextContent,
+  deleteListingAreaTextContent,
+} from './listing-area-text-content'

@@ -9,6 +9,7 @@ import {
   Offer,
   OfferWithOfferApplicants,
   ReplyToOfferErrorCodes,
+  RentalPropertyInfo,
   Tenant,
   leasing,
   schemas,
@@ -832,13 +833,108 @@ const deleteListingTextContent = async (
 
 const getRentalPropertyByCode = async (
   rentalObjectCode: string
-): Promise<AdapterResult<any, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<RentalPropertyInfo, 'not-found' | 'unknown'>> => {
   try {
-    const response = await getFromCore<{ content: any }>({
+    const response = await getFromCore<{ content: RentalPropertyInfo }>({
       method: 'get',
       url: `${coreBaseUrl}/rental-properties/by-rental-object-code/${rentalObjectCode}`,
     })
     return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+type ListingAreaTextContent = z.infer<
+  typeof leasing.v1.ListingAreaTextContentSchema
+>
+type CreateListingAreaTextContentRequest = z.infer<
+  typeof leasing.v1.CreateListingAreaTextContentRequestSchema
+>
+type UpdateListingAreaTextContentRequest = z.infer<
+  typeof leasing.v1.UpdateListingAreaTextContentRequestSchema
+>
+
+const listListingAreaTextContent = async (): Promise<
+  AdapterResult<ListingAreaTextContent[], 'unknown'>
+> => {
+  try {
+    const response = await getFromCore<{ content: ListingAreaTextContent[] }>({
+      method: 'get',
+      url: `${coreBaseUrl}/listing-area-text-content`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const getListingAreaTextContentByMarketAreaCode = async (
+  marketAreaCode: string
+): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingAreaTextContent }>({
+      method: 'get',
+      url: `${coreBaseUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const createListingAreaTextContent = async (
+  data: CreateListingAreaTextContentRequest
+): Promise<AdapterResult<ListingAreaTextContent, 'conflict' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingAreaTextContent }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listing-area-text-content`,
+      data,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 409) {
+      return { ok: false, err: 'conflict', statusCode: 409 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const updateListingAreaTextContent = async (
+  marketAreaCode: string,
+  data: UpdateListingAreaTextContentRequest
+): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingAreaTextContent }>({
+      method: 'put',
+      url: `${coreBaseUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`,
+      data,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const deleteListingAreaTextContent = async (
+  marketAreaCode: string
+): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
+  try {
+    await getFromCore({
+      method: 'delete',
+      url: `${coreBaseUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`,
+    })
+    return { ok: true, data: null }
   } catch (err) {
     if (err instanceof AxiosError && err.response?.status === 404) {
       return { ok: false, err: 'not-found', statusCode: 404 }
@@ -882,4 +978,9 @@ export {
   updateListingTextContent,
   deleteListingTextContent,
   getRentalPropertyByCode,
+  listListingAreaTextContent,
+  getListingAreaTextContentByMarketAreaCode,
+  createListingAreaTextContent,
+  updateListingAreaTextContent,
+  deleteListingAreaTextContent,
 }
