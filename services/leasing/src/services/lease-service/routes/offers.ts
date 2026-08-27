@@ -34,7 +34,9 @@ export const routes = (router: KoaRouter) => {
 
     if (affectedListingIds.ok) {
       ctx.body = { content: affectedListingIds.data, ...metadata }
-      return
+    } else {
+      ctx.status = 500
+      ctx.body = { error: affectedListingIds.err, ...metadata }
     }
 
     ctx.status = 500

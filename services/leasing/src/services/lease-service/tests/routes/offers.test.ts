@@ -428,7 +428,7 @@ describe('offers', () => {
   })
 
   describe('PUT /offers/handleexpired', () => {
-    it('responds with 200 and the affected listing ids on success', async () => {
+    it('responds with 200 and the affected listing ids', async () => {
       jest
         .spyOn(offerService, 'handleExpiredOffers')
         .mockResolvedValueOnce({ ok: true, data: [1, 2] })
@@ -439,7 +439,7 @@ describe('offers', () => {
       expect(res.body.content).toEqual([1, 2])
     })
 
-    it('responds with 500 when handling expired offers fails', async () => {
+    it('responds with 500 if handling expired offers fails', async () => {
       jest
         .spyOn(offerService, 'handleExpiredOffers')
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
@@ -447,7 +447,7 @@ describe('offers', () => {
       const res = await request(app.callback()).put('/offers/handleexpired')
 
       expect(res.status).toBe(500)
-      expect(res.body).toHaveProperty('error')
+      expect(res.body.error).toBe('unknown')
     })
   })
 })
