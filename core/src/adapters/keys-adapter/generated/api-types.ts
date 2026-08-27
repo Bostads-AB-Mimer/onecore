@@ -1511,6 +1511,38 @@ export interface paths {
       }
     }
   }
+  '/key-systems/{id}/deactivate': {
+    /**
+     * Deactivate a key system and dispose all its keys
+     * @description Sets isActive=false and marks every non-disposed key in the system as disposed, in one transaction. Returns the disposed keys.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to deactivate */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deactivated and keys disposed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DeactivateKeySystemResponse']
+            }
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/keys': {
     /**
      * List keys with pagination
@@ -2879,6 +2911,60 @@ export interface components {
       isActive?: boolean
       notes?: string | null
       schemaFileId?: string | null
+    }
+    DeactivateKeySystemResponse: {
+      keySystem: {
+        /** Format: uuid */
+        id: string
+        systemCode: string
+        name: string
+        manufacturer: string
+        managingSupplier?: string | null
+        /** @enum {string} */
+        type: 'MECHANICAL' | 'ELECTRONIC' | 'HYBRID'
+        propertyIds?: string
+        /** Format: date-time */
+        installationDate?: string | null
+        isActive?: boolean
+        notes?: string | null
+        schemaFileId?: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+        createdBy?: string | null
+        updatedBy?: string | null
+      }
+      disposedKeys: {
+        /** Format: uuid */
+        id: string
+        keyName: string
+        keySequenceNumber?: number | null
+        flexNumber?: number | null
+        rentalObjectCode?: string | null
+        /** @enum {string} */
+        keyType:
+          | 'HN'
+          | 'FS'
+          | 'MV'
+          | 'LGH'
+          | 'PB'
+          | 'GAR'
+          | 'LOK'
+          | 'HL'
+          | 'FÖR'
+          | 'SOP'
+          | 'ÖVR'
+        /** Format: uuid */
+        keySystemId?: string | null
+        /** @default false */
+        disposed?: boolean
+        notes?: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
     }
     CreateKeyLoanRequest: {
       keys?: string[]

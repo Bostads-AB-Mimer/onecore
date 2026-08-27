@@ -2,11 +2,13 @@ import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
 
+type Key = keys.Key
 type KeySystem = keys.KeySystem
 type CreateKeySystemRequest = keys.CreateKeySystemRequest
 type UpdateKeySystemRequest = keys.UpdateKeySystemRequest
 
 const TABLE = 'key_systems'
+const KEYS_TABLE = 'keys'
 
 export async function getKeySystemById(
   id: string,
@@ -33,6 +35,28 @@ export async function updateKeySystem(
     .update({ ...data, updatedAt: dbConnection.fn.now() })
     .returning('*')
   return row
+}
+
+// Returns the disposed keys so callers can audit-log exactly what changed (manual rollback)
+export async function deactivateKeySystemAndDisposeKeys(
+  id: string,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<{ keySystem: KeySystem; disposedKeys: Key[] } | undefined> {
+  return await dbConnection.transaction(async (trx) => {
+    const [keySystem] = await trx(TABLE)
+      .where({ id })
+      .update({ isActive: false, updatedAt: trx.fn.now() })
+      .returning('*')
+
+    if (!keySystem) return undefined
+
+    const disposedKeys = await trx(KEYS_TABLE)
+      .where({ keySystemId: id, disposed: false })
+      .update({ disposed: true, updatedAt: trx.fn.now() })
+      .returning('*')
+
+    return { keySystem, disposedKeys }
+  })
 }
 
 export async function deleteKeySystem(
