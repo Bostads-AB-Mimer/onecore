@@ -1,9 +1,0 @@
-[
-  {
-    "id": "rn-2026-08-27-v210-1",
-    "date": "2026-08-27",
-    "title": "Inaktivering av låssystem kasserar systemets nycklar",
-    "description": "När ett låssystem inaktiveras i nyckelportalen visas en varning, och vid bekräftelse kasseras alla nycklar i systemet – även utlånade. Allt loggas i aktivitetsloggen så att åtgärden kan spåras och vid behov återställas.",
-    "category": "feature"
-  }
-]
