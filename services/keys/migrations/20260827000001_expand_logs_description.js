@@ -22,6 +22,10 @@ exports.up = async function up(knex) {
  */
 exports.down = async function down(knex) {
   await knex.raw('DROP INDEX IF EXISTS idx_logs_objectType_objectId ON logs')
+  // Lossy by necessity: rows longer than the old cap must be truncated to shrink the column
+  await knex.raw(
+    'UPDATE logs SET description = LEFT(description, 1000) WHERE LEN(description) > 1000'
+  )
   await knex.schema.alterTable('logs', (table) => {
     table.string('description', 1000).alter()
   })
