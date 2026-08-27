@@ -35,8 +35,8 @@ type SchemaError = { tag: 'schema-error'; error: z.ZodError }
 /**
  * Fetches all pages from a paginated Tenfast endpoint.
  *
- * @param buildUrl - Called with the current page cursor on each iteration.
- *                   Pass an empty string for the first page.
+ * @param buildUrl - Called with the cursor string for subsequent pages, or
+ *                   null on the first request (no paginate param).
  * @param schema   - Zod schema for the paginated response. Must have
  *                   `records`, `next`, and `totalCount` fields.
  * @returns        - All records across all pages combined, typed as the
@@ -50,14 +50,23 @@ const fetchAllPages = async <
     totalCount: number
   }>,
 >(
-  buildUrl: (paginate: string) => string,
+  buildUrl: (paginate: string | null) => string,
   schema: S
 ): Promise<z.output<S>['records']> => {
-  let next: string | null = ''
+  const MAX_PAGES = 300
+
+  let next: string | null = null
   let totalCount = Infinity
   let records: z.output<S>['records'] = []
+  let page = 0
 
-  while (next !== null && records.length < totalCount) {
+  while (records.length === 0 || (next !== null && records.length < totalCount)) {
+    if (page >= MAX_PAGES) {
+      throw new Error(
+        `fetchAllPages: exceeded ${MAX_PAGES} pages (${records.length} records fetched, totalCount=${totalCount})`
+      )
+    }
+
     const response = await tenfastApi.request({
       method: 'get',
       url: buildUrl(next),
@@ -75,6 +84,7 @@ const fetchAllPages = async <
     records.push(...parsed.data.records)
     next = parsed.data.next
     totalCount = parsed.data.totalCount
+    page++
   }
 
   return records
@@ -328,6 +338,33 @@ export const getLeases = async (): Promise<
       ok: true,
       data: parsedLeaseResponse.data.records,
     }
+  } catch (err: any) {
+    return handleTenfastError(err, 'unknown')
+  }
+}
+
+/**
+ * Fetches all leases across all pages using cursor-based pagination on
+ * the list endpoint (/v1/hyresvard/avtal). Unlike getLeases() which sends
+ * a single request with limit=100000 (ignored by Tenfast), this follows
+ * the `next` cursor until all records are retrieved. Intended for cache
+ * population where completeness matters.
+ */
+export async function getAllLeases(): Promise<
+  AdapterResult<TenfastLease[], 'unknown'>
+> {
+  try {
+    const params = new URLSearchParams({
+      populate: 'hyresobjekt,hyresgaster',
+    })
+    const records = await fetchAllPages(
+      (cursor) =>
+        cursor
+          ? `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${cursor}`
+          : `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}`,
+      TenfastPaginatedLeaseResponseSchema
+    )
+    return { ok: true, data: records }
   } catch (err: any) {
     return handleTenfastError(err, 'unknown')
   }
@@ -1010,8 +1047,10 @@ export async function getLeasesByTenantId(
     })
 
     const leases = await fetchAllPages(
-      (paginate) =>
-        `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${paginate}`,
+      (cursor) =>
+        cursor
+          ? `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${cursor}`
+          : `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}`,
       TenfastPaginatedLeaseResponseSchema
     )
 
@@ -1185,8 +1224,10 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     })
 
     const records = await fetchAllPages(
-      (paginate) =>
-        `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}&paginate=${paginate}`,
+      (cursor) =>
+        cursor
+          ? `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}&paginate=${cursor}`
+          : `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}`,
       TenfastPaginatedLeaseResponseSchema
     )
 

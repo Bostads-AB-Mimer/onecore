@@ -112,7 +112,6 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .transform((val) => val === true || val === 'true')
     .optional(),
 
-  // Sorting (tenantName removed since contacts are fetched separately)
   sortBy: z
     .enum([
       'leaseStartDate',
@@ -121,6 +120,7 @@ export const LeaseSearchQueryParamsSchema = z.object({
       'address',
       'objectType',
       'rentalObjectCode',
+      'tenantName',
     ])
     .optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),

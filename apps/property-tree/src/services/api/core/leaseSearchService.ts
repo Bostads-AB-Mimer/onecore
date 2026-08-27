@@ -43,6 +43,7 @@ export type LeaseSearchQueryParams = {
     | 'address'
     | 'objectType'
     | 'rentalObjectCode'
+    | 'tenantName'
   sortOrder?: 'asc' | 'desc'
 }
 
