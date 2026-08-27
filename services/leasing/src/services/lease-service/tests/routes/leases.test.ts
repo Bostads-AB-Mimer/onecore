@@ -541,7 +541,7 @@ describe('POST /leases', () => {
       .mockResolvedValueOnce({ ok: true, data: contact })
     jest
       .spyOn(tenfastAdapter, 'createLease')
-      .mockResolvedValueOnce({ ok: true, data: undefined })
+      .mockResolvedValueOnce({ ok: true, data: factory.lease.build() })
 
     const res = await request(app.callback())
       .post('/leases')
@@ -598,7 +598,7 @@ describe('POST /leases', () => {
       .mockResolvedValueOnce({ ok: true, data: contact })
     const createLeaseSpy = jest
       .spyOn(tenfastAdapter, 'createLease')
-      .mockResolvedValueOnce({ ok: true, data: undefined })
+      .mockResolvedValueOnce({ ok: true, data: factory.lease.build() })
 
     await request(app.callback()).post('/leases').send(validRequestBody)
 

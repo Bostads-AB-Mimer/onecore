@@ -1,5 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { Contact, RentalObjectAvailabilityInfo } from '@onecore/types'
+import { Contact, Lease, RentalObjectAvailabilityInfo } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -25,6 +25,7 @@ import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
 import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
+import { mapToOnecoreLease } from '../../helpers/tenfast'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -86,7 +87,7 @@ export const createLease = async (
   includeVAT: boolean
 ): Promise<
   AdapterResult<
-    any,
+    Lease,
     | 'could-not-find-template'
     | 'rental-object-has-no-template'
     | 'could-not-retrieve-tenant'
@@ -95,6 +96,7 @@ export const createLease = async (
     | 'lease-could-not-be-created'
     | 'create-lease-bad-request'
     | 'rent-article-is-missing'
+    | 'could-not-parse-lease'
     | 'unknown'
   >
 > => {
@@ -143,8 +145,11 @@ export const createLease = async (
         'lease-could-not-be-created'
       )
 
-    //TODO: create schema for response and convert to onecore lease type here later
-    return { ok: true, data: undefined }
+    const parsedLease = TenfastLeaseSchema.safeParse(leaseResponse.data)
+    if (!parsedLease.success)
+      return handleTenfastError(parsedLease.error, 'could-not-parse-lease')
+
+    return { ok: true, data: mapToOnecoreLease(parsedLease.data) }
   } catch (err) {
     const responseData = isAxiosError(err) ? err.response?.data : undefined
     logger.error(
@@ -432,7 +437,11 @@ export const getAvailabilityForVacantRentalObjects = async (
     do {
       const rentalObjectResponse = await tenfastApi.request({
         method: 'get',
-        url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?hyresvard=${tenfastCompanyId}&states=vacant,soon-vacant&typ=${type}&includeAvtal=true&paginate=${page}`,
+        // includeAvtal must be signed|open|all — Tenfast rejects the legacy `true`.
+        // `all` is required here: the upcoming-lease filter below has to see leases
+        // regardless of signature status, or an object with an unsigned upcoming
+        // lease would wrongly be listed as vacant.
+        url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?hyresvard=${tenfastCompanyId}&states=vacant,soon-vacant&typ=${type}&includeAvtal=all&paginate=${page}`,
       })
       if (rentalObjectResponse.status === 400)
         return handleTenfastError(
