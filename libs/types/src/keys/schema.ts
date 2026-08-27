@@ -217,6 +217,12 @@ export const UpdateKeySystemRequestSchema = z.object({
   schemaFileId: z.string().nullable().optional(),
 })
 
+// disposedKeys is the audit record of what the deactivation changed (manual rollback)
+export const DeactivateKeySystemResponseSchema = z.object({
+  keySystem: KeySystemSchema,
+  disposedKeys: z.array(KeySchema),
+})
+
 // Request schemas for key loans
 
 export const CreateKeyLoanRequestSchema = z.object({

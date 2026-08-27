@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ListPageLayout } from '@/components/shared/layout'
 import { KeySystemsTable } from '@/components/key-systems/KeySystemsTable'
 import { AddKeySystemForm } from '@/components/key-systems/AddKeySystemForm'
+import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
 
 import { KeySystem, Property, Key } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
@@ -28,6 +29,10 @@ export default function KeySystems() {
   const [uploadingSchemaId, setUploadingSchemaId] = useState<string | null>(
     null
   )
+  const [pendingDeactivation, setPendingDeactivation] = useState<{
+    data: Omit<KeySystem, 'id' | 'createdAt' | 'updatedAt'>
+    keyCount: number
+  } | null>(null)
   const { toast } = useToast()
   const checkStale = useStaleGuard()
 
@@ -236,6 +241,22 @@ export default function KeySystems() {
   ) => {
     try {
       if (editingKeySystem) {
+        // Deactivation cascades kassering of all keys — intercept and confirm first
+        const wasActive = editingKeySystem.isActive !== false
+        if (wasActive && KeySystemData.isActive === false) {
+          // Only totalRecords is needed — exact count regardless of system size
+          const keysInSystem = await keyService.searchKeys(
+            { keySystemId: editingKeySystem.id, disposed: 'false' },
+            1,
+            1
+          )
+          setPendingDeactivation({
+            data: KeySystemData,
+            keyCount: keysInSystem._meta.totalRecords,
+          })
+          return
+        }
+
         // Update existing key system
         const updated = await keyService.updateKeySystem(
           editingKeySystem.id,
@@ -310,6 +331,45 @@ export default function KeySystems() {
   const handleCancel = () => {
     setShowAddForm(false)
     setEditingKeySystem(null)
+  }
+
+  const handleConfirmDeactivation = async () => {
+    if (!editingKeySystem || !pendingDeactivation) return
+    try {
+      // Save any other edited fields first, then deactivate (which cascades kassering)
+      const { isActive: _ignored, ...otherFields } = pendingDeactivation.data
+      const updated = await keyService.updateKeySystem(
+        editingKeySystem.id,
+        otherFields
+      )
+      // Reflect saved fields even if the deactivate call below fails
+      setKeySystems((prev) =>
+        prev.map((ls) => (ls.id === editingKeySystem.id ? updated : ls))
+      )
+
+      const result = await keyService.deactivateKeySystem(editingKeySystem.id)
+      setKeySystems((prev) =>
+        prev.map((ls) =>
+          ls.id === editingKeySystem.id ? result.keySystem : ls
+        )
+      )
+      toast({
+        title: 'Låssystem inaktiverat',
+        description: `${result.keySystem.name} har inaktiverats och ${result.disposedKeys.length} nycklar kasserats.`,
+        variant: 'destructive',
+      })
+      setShowAddForm(false)
+      setEditingKeySystem(null)
+    } catch (error) {
+      console.error('Failed to deactivate key system:', error)
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte inaktivera låssystemet.',
+        variant: 'destructive',
+      })
+    } finally {
+      setPendingDeactivation(null)
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -460,6 +520,33 @@ export default function KeySystems() {
         onSchemaUpload={handleSchemaUpload}
         onSchemaDownload={handleSchemaDownload}
         uploadingSchemaId={uploadingSchemaId}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeactivation}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeactivation(null)
+        }}
+        title="Inaktivera låssystem"
+        description={
+          <p>
+            Är du säker på att du vill inaktivera låssystemet
+            {editingKeySystem ? ` "${editingKeySystem.name}"` : ''}?
+            <br />
+            <br />
+            <strong>
+              {pendingDeactivation?.keyCount === 0
+                ? 'Systemet har inga aktiva nycklar att kassera.'
+                : pendingDeactivation?.keyCount === 1
+                  ? 'Nyckeln i systemet kommer att kasseras.'
+                  : `Alla ${pendingDeactivation?.keyCount ?? 0} nycklar i systemet kommer att kasseras, även utlånade.`}
+            </strong>
+            <br />
+            Detta kan inte ångras automatiskt.
+          </p>
+        }
+        confirmLabel="Inaktivera och kassera"
+        onConfirm={handleConfirmDeactivation}
       />
     </ListPageLayout>
   )

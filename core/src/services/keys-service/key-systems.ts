@@ -455,6 +455,92 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /key-systems/{id}/deactivate:
+   *   post:
+   *     summary: Deactivate a key system and dispose all its keys
+   *     description: Sets isActive=false and disposes every non-disposed key in the system in one transaction. Writes an audit log entry on the system listing all disposed key ids (the manual-rollback record).
+   *     tags: [Keys Service]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: The ID of the key system to deactivate
+   *     responses:
+   *       200:
+   *         description: Key system deactivated and keys disposed
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DeactivateKeySystemResponse'
+   *       404:
+   *         description: Key system not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/NotFoundResponse'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/key-systems/:id/deactivate', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await KeySystemsApi.deactivate(ctx.params.id)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { reason: 'Key system not found', ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error deactivating key system'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    const { keySystem, disposedKeys } = result.data
+    const systemLabel = `${keySystem.systemCode} (${keySystem.name})`
+
+    // The key list (with ids) is the rollback record — these exact keys can be un-disposed
+    const keyList = disposedKeys
+      .map((key) => {
+        const keyName = key.keySequenceNumber
+          ? `${key.keyName} ${key.keySequenceNumber}`
+          : key.keyName
+        return `${keyName} (${key.id})`
+      })
+      .join('\n')
+    await createLogEntry(ctx, {
+      eventType: 'update',
+      objectType: 'keySystem',
+      objectId: keySystem.id,
+      description:
+        `Inaktiverad låssystem ${systemLabel}, ${disposedKeys.length} nycklar kasserade.` +
+        (disposedKeys.length > 0 ? `\nKasserade nycklar:\n${keyList}` : ''),
+    })
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /key-systems/{id}:
    *   delete:
    *     summary: Delete a key system

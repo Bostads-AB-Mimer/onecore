@@ -3,6 +3,8 @@ import { client, mapFetchError, ok, fail, parsePaginated } from './helpers'
 import {
   KeySystem,
   KeySystemSchema,
+  DeactivateKeySystemResponse,
+  DeactivateKeySystemResponseSchema,
   PaginatedResponse,
   CommonErr,
   AdapterResult,
@@ -100,6 +102,29 @@ export const KeySystemsApi = {
       return ok(KeySystemSchema.parse(data.content))
     } catch (e) {
       logger.error({ err: e }, 'keys-adapter: PUT /key-systems/{id} failed')
+      return fail('unknown')
+    }
+  },
+
+  deactivate: async (
+    id: string
+  ): Promise<
+    AdapterResult<DeactivateKeySystemResponse, 'not-found' | CommonErr>
+  > => {
+    try {
+      const { data, error, response } = await client().POST(
+        '/key-systems/{id}/deactivate',
+        {
+          params: { path: { id } },
+        }
+      )
+      if (error || !response.ok) return fail(mapFetchError(response))
+      return ok(DeactivateKeySystemResponseSchema.parse(data.content))
+    } catch (e) {
+      logger.error(
+        { err: e },
+        'keys-adapter: POST /key-systems/{id}/deactivate failed'
+      )
       return fail('unknown')
     }
   },
