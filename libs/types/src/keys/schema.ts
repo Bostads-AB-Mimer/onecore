@@ -31,6 +31,8 @@ export const KeyTypeSchema = z.enum([
   'HL',
   'FÖR',
   'SOP',
+  'MB',
+  'TV',
   'ÖVR',
 ])
 export const KeySystemTypeSchema = z.enum([
