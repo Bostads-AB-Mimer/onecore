@@ -109,6 +109,8 @@ export const KeyTypeLabels = {
   HL: 'Hänglås',
   FÖR: 'Förrådsnyckel',
   SOP: 'Sopsug',
+  MB: 'Miljöbod',
+  TV: 'Tvättstuga',
   ÖVR: 'Övrigt',
 } as const
 

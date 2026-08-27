@@ -42,7 +42,7 @@ describe('Test Infrastructure', () => {
         .db('keys')
         .insert({
           keyName: 'TEST_KEY_SHOULD_BE_ROLLED_BACK',
-          keyType: 'test',
+          keyType: 'LGH',
           rentalObjectCode: 'TEST001',
         })
         .returning('*')

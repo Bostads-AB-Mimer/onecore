@@ -11861,6 +11861,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -11937,6 +11939,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -12009,6 +12013,8 @@ export interface components {
           | 'HL'
           | 'FÖR'
           | 'SOP'
+          | 'MB'
+          | 'TV'
           | 'ÖVR'
         /** Format: uuid */
         keySystemId?: string | null
@@ -12204,6 +12210,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -12226,6 +12234,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -12392,6 +12402,8 @@ export interface components {
           | 'HL'
           | 'FÖR'
           | 'SOP'
+          | 'MB'
+          | 'TV'
           | 'ÖVR'
         /** Format: uuid */
         keySystemId?: string | null
