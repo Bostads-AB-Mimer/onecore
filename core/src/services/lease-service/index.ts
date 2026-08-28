@@ -1310,46 +1310,6 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /offers/{offerId}/expire:
-   *   get:
-   *     summary: Expire an offer
-   *     tags:
-   *       - Lease service
-   *     description: Expires an offer
-   *     parameters:
-   *       - in: path
-   *         name: offerId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the offer to expire
-   *     responses:
-   *       '202':
-   *         description: Offer expired successful.
-   *       '500':
-   *         description: Internal server error. Failed to expire the offer.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/offers/:offerId/expire', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await internalParkingSpaceProcesses.expireOffer(
-      parseInt(ctx.params.offerId)
-    )
-
-    if (result.processStatus === ProcessStatus.successful) {
-      logger.info(result)
-      ctx.status = 202
-      ctx.body = { message: 'Offer expired successfully', ...metadata }
-      return
-    }
-
-    ctx.status = 500
-    ctx.body = { error: result.error, ...metadata }
-  })
-
-  /**
-   * @swagger
    * /applicants:
    *   get:
    *     summary: Get applicants by contact code

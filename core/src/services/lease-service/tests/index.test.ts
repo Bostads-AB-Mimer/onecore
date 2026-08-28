@@ -178,33 +178,6 @@ describe('lease-service', () => {
     })
   })
 
-  describe('GET /offers/:offerId/expire', () => {
-    it('responds with successful processStatus', async () => {
-      jest.spyOn(replyToOffer, 'expireOffer').mockResolvedValueOnce({
-        processStatus: ProcessStatus.successful,
-        httpStatus: 202,
-        data: null,
-      })
-
-      const result = await request(app.callback()).get('/offers/123/expire')
-
-      expect(result.status).toBe(202)
-      expect(result.body.message).toBe('Offer expired successfully')
-    })
-    it('expire offer returns 500 on error', async () => {
-      jest.spyOn(replyToOffer, 'expireOffer').mockResolvedValue({
-        processStatus: ProcessStatus.failed,
-        httpStatus: 404,
-        error: ReplyToOfferErrorCodes.NoOffer,
-      })
-
-      const result = await request(app.callback()).get('/offers/123/expire')
-
-      expect(result.status).toBe(500)
-      expect(result.body.error).toBe('no-offer')
-    })
-  })
-
   describe('GET /consumer-reports/by-pnr/:pnr', () => {
     it('responds with a credit information', async () => {
       const getCreditInformationSpy = jest

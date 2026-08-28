@@ -35,6 +35,7 @@ type CreateOfferError =
   | CreateOfferErrorCodes.Unknown
 
 // PROCESS Part 2 - Create Offer for Scored Parking Space
+// See DOCS_Create_Offer_for_Scored_Parking_Space.md for the full flow.
 export const createOfferForInternalParkingSpace = async (
   listingId: number
 ): Promise<ProcessResult<null, CreateOfferError>> => {

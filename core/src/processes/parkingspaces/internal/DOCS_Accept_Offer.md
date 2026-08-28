@@ -1,121 +1,175 @@
-# Accept Offer for Scored Parking Space
+# Acceptera Erbjudande för Poängsatt Bilplats
 
-## Flowchart
+_Del av [processöversikten](./DOCS_Overview.md) för poängsatta bilplatser._
+
+En sökande accepterar ett erbjudande om en poängsatt bilplats, skapat av [Create Offer](./DOCS_Create_Offer_for_Scored_Parking_Space.md)-processen — antingen själv via Mina Sidor eller å sökandens vägnar av en handläggare via Uthyrningsgränssnittet. Processen kontrollerar att erbjudandet är aktivt, att sökanden fortfarande är hyresgäst och uppfyller områdes- och fastighetsspecifika uthyrningsregler, och skapar därefter kontraktet. Eventuella andra aktiva erbjudanden till samma sökande [nekas](./DOCS_Deny_Offer.md) automatiskt — vilket i sin tur skapar ett nytt erbjudande till nästa sökande på de annonserna.
+
+## Flödesdiagram
+
+Processens beslutslogik: vilka kontroller som styr om flödet går vidare till nästa steg, och vad som händer vid godkännande, nekande eller fel. System- och integrationsdetaljer är medvetet utelämnade här — se sekvensdiagrammet nedan för det.
 
 ```mermaid
 flowchart LR
-A[Start] --> X{Is Applicant a Tenant?}
-X -- No --> O(End)
-X -- Yes --> B{Is Applicant Eligible <br/>to Rent Parking Space <br/>with Specific Rental Rule?}
-B -- No --> O
-B -- Yes --> E(Create Contract)
-E --> F(Close Offer By Accept)
-F --> H(Reset Waiting Parking Space Waiting)
-H --> G{Does the Applicant Have Other Offers?}
-G -- Yes --> I(Initiate Process to Decline All Other Active Offers)
-G -- No --> J(Notify Leasing Team)
-I --> J
-J --> K(Notify Contact)
-K --> O
-
+A[Start] --> Go(Get Offer)
+Go --> Ofo{Offer Found?}
+Ofo --> |No| O[End]
+Ofo --> |Yes| Ofa{Is Offer Active?}
+Ofa --> |No| O
+Ofa --> |Yes| B(Get Listing)
+B --> Lo{Listing and Rental Object Found?}
+Lo --> |No| O
+Lo --> |Yes| X{Is Applicant a Tenant?}
+X --> |No| O
+X --> |Yes| Br{Is Applicant Eligible <br/>to Rent Parking Space <br/>with Specific Rental Rule?}
+Br --> |No| O
+Br --> |Yes| E[Create Lease<br/>VAT checked manually afterward]
+E --> Ec{Lease Created?}
+Ec --> |No| O
+Ec --> |Yes| F(Close Offer By Accept)
+F --> H(Reset Waiting List)
+H --> G{Does the Applicant Have<br/>Other Active Offers?}
+G --> |Yes| I(Deny All Other Active Offers)
+G --> |No| K(Notify Contact)
+I --> K
+K --> J(Notify Leasing Team)
+J --> O
 ```
 
-## Sequence Diagram
+## Sekvensdiagram
 
-In progress
+Vilka tjänster och externa system som anropas i varje steg, i vilken ordning, och var processen kan avbrytas vid en misslyckad kontroll. Täcker båda ingångarna (sökandens självbetjäning och handläggarinitierat via Uthyrningsgränssnittet), och visar att mikrotjänsten Leasing samt de externa systemen XPand och Tenfast är inblandade.
 
 ```mermaid
 sequenceDiagram
-    participant System as System
+    actor LeasingTeam as Leasing Team
     actor User as User
     participant Core as Core
     participant Leasing as Leasing
-    participant Property Mgmt as Property Management
     participant Communication as Communication
-    participant OneCore DB as OneCore Database
-    participant XPand DB as XPand SOAP Database
-    participant XPand SOAP as XPand SOAP Service
-    participant Tenfast API
+    participant OneCoreDB as OneCore Database
+    participant XPandDB as XPand Database
+    participant XPandSOAP as XPand SOAP Service
+    participant Tenfast as Tenfast
 
-    User ->> Core: Accept Offer
-    Core ->>Leasing: Get Offer
-        Leasing ->>OneCore DB: Get Offer
-        OneCore DB --> Leasing: Offer
-        Leasing -->> Core: Offer
+    alt Accepteras av sökanden via Mina Sidor
+        User ->> Core: Accept Offer
+    else Accepteras manuellt av handläggare via Uthyrningsgränssnittet
+        LeasingTeam ->> Core: Accept Offer
+    end
+    note over Core: Mina Sidor-vägen är arkitekturellt stödd (samma<br/>endpoint, Keycloak-autentisering) men den delen är<br/>inte implementerad i denna kodbas. Responses below<br/>go back to whichever caller made this call, shown as User.
 
-    Core ->>Leasing: Get Listing
-        Leasing ->>OneCore DB: Get Listing
-        OneCore DB --> Leasing: Listing
-        Leasing -->> Core: Listing
+    Core ->> Leasing: Get Offer
+    Leasing ->> OneCoreDB: Get Offer
+    OneCoreDB -->> Leasing: Offer
+    Leasing -->> Core: Offer
 
-    Core ->>Leasing: Get Parking Space
-        Leasing ->>XPand DB: Get Parking Space
-        XPand DB --> Leasing: Parking Space
-        Leasing -->> Core: Parking Space
+    break when Offer is not found
+        Core-->User: show error message
+    end
+
+    break when Offer is not Active
+        Core-->User: show error message
+    end
+
+    Core ->> Leasing: Get Listing
+    Leasing ->> OneCoreDB: Get Listing
+    OneCoreDB -->> Leasing: Listing
+    Leasing -->> Core: Listing
+
+    Core ->> Leasing: Get Rental Object
+    Leasing ->> XPandDB: Get Parking Space
+    XPandDB -->> Leasing: Parking Space
+    Leasing ->> Tenfast: Get Availability
+    Tenfast -->> Leasing: Availability
+    Leasing -->> Core: Rental Object
+
+    break when Listing or Rental Object not found,<br/>or missing Residential Area Code
+        Core-->User: show error message
+    end
+
+    Core ->> Leasing: Get Leases (current/about-to-end/upcoming)
+    Leasing ->> Tenfast: Get Leases
+    Tenfast -->> Leasing: Leases
+    Leasing -->> Core: Leases
 
     break when Applicant is not a tenant
         Core-->User: show error message
     end
 
-    Core ->> Leasing: Validate Residential Area Rental Rules
-    Leasing ->> XPand DB:Get Estate Code for Listing
-    XPand DB -->> Leasing: Estate Code for Listing
-    Leasing ->> XPand DB:Get Contact
-    XPand DB -->> Leasing: Contact
-
-    Leasing ->> XPand DB:Get Estate Code for Property
-    XPand DB -->> Leasing: Estate Code for Property
-    Leasing ->> XPand DB:For Each Parking Space Contract, Get Estate Code
-    XPand DB -->> Leasing: Estate Codes for Each Parking Space Contract
-    Leasing -->> Core: Residential Area Rental Rule Validation Result
-
-    Core ->> Leasing: Validate Property Rental Rules
-    Leasing ->> XPand DB:Get Contact
-    XPand DB --> Leasing: Contact
-    Leasing -->> Core: Property Rental Rule Validation Result
+    par Validate Residential Area Rental Rules
+        Core ->> Leasing: Validate Residential Area Rental Rules
+        Leasing ->> XPandDB: Get Contact, Residential Area<br/>and Estate Code
+        XPandDB -->> Leasing: Residential Area Data
+        Leasing ->> Tenfast: Get Tenant and Leases
+        Tenfast -->> Leasing: Tenant and Leases
+        Leasing -->> Core: Residential Area Validation Result
+    and Validate Property Rental Rules
+        Core ->> Leasing: Validate Property Rental Rules
+        Leasing ->> XPandDB: Get Estate Codes for Property<br/>and each Parking Space Lease
+        XPandDB -->> Leasing: Estate Codes
+        Leasing ->> Tenfast: Get Tenant and Leases
+        Tenfast -->> Leasing: Tenant and Leases
+        Leasing -->> Core: Property Validation Result
+    end
 
     break when Applicant is not Eligible to Rent in Parking Space with Specific Rental Rule
         Core-->User: show error message
     end
 
-    Core ->>Leasing: Create Lease
-        Leasing ->>XPand SOAP: Create Lease
-        XPand SOAP --> Leasing:
-        Leasing ->>Tenfast API: Create Lease
-        Tenfast API --> Leasing:
-        Leasing -->> Core: Lease
+    Core ->> Leasing: Create Lease
+    Leasing ->> XPandDB: Get Contact
+    XPandDB -->> Leasing: Contact
 
-    Core ->>Leasing: Close Offer
-        Leasing ->>OneCore DB: Close Offer
-        OneCore DB --> Leasing:
-        Leasing -->> Core:
-
-    Core ->>Leasing: Reset Waiting List
-        Leasing ->>XPand SOAP: Reset Waiting List
-        XPand SOAP --> Leasing:
-        Leasing -->> Core:
-
-    Core ->>Leasing: Get Other Offers
-        Leasing ->>OneCore DB: Get Other Offers
-        OneCore DB --> Leasing: Other Offers
-        Leasing -->> Core: Other Offers
-
-    loop For each Other Offer
-        Core ->>Core: Deny Offer
+    break when Contact not found in XPand
+        Core-->User: show error message
     end
 
-    Core ->>Leasing: Get Contact
-        Leasing ->>XPand DB: Get Contact
-        XPand DB --> Leasing: Contact
-        Leasing -->> Core: Contact
+    Leasing ->> Tenfast: Create Lease
+    Tenfast -->> Leasing: Lease
+    Leasing -->> Core: Lease
+    note over Core: VAT is hardcoded to false here —<br/>must be checked manually before signing.
 
-    Core ->>Communication: Send Accept Confirmation to the Contact
-        Communication -->> Core:
+    break when Lease could not be created
+        Core-->User: show error message
+    end
 
-    Core ->>Communication: Send Notification to the Leasing team
-        Communication -->> Core:
+    note over Core: Everything from here on is best-effort:<br/>a failure in any of the following steps is<br/>logged only and does not fail the process<br/>(the lease has already been created).
 
+    Core ->> Leasing: Close Offer By Accept
+    Leasing ->> OneCoreDB: Update Listing, Applicant,<br/>Offer and Offer-Applicant Status
+    OneCoreDB -->> Leasing: Updated
+    Leasing -->> Core: Result
 
-    Core ->> User: Accept Offer success!
+    Core ->> Leasing: Reset Waiting List
+    Leasing ->> XPandSOAP: Reset Waiting List
+    XPandSOAP -->> Leasing: Reset
+    Leasing -->> Core: Result
+
+    Core ->> Leasing: Get Offers for Contact
+    Leasing ->> OneCoreDB: Get Offers for Contact<br/>(all statuses)
+    OneCoreDB -->> Leasing: Offers
+    Leasing -->> Core: All Offers for Contact
+
+    Core ->> Core: Filter to Other Active Offers<br/>(status Active, excluding this offer —<br/>Leasing does not filter by status)
+
+    loop for each Other Active Offer
+        Core ->> Core: Deny Offer<br/>(see Deny Offer process — also creates<br/>a new offer for the next applicant)
+    end
+
+    Core ->> Leasing: Get Contact
+    Leasing ->> XPandDB: Get Contact
+    XPandDB -->> Leasing: Contact
+    Leasing -->> Core: Contact
+
+    alt Contact has an Email Address
+        Core ->> Communication: Send Accept Confirmation
+        Communication ->> User: Accept Confirmation Email
+        Communication -->> Core: Result
+    end
+
+    Core ->> Communication: Notify Leasing Team
+    Communication -->> LeasingTeam: Notification
+
+    Core -->> User: Accept Offer success!
 
 ```

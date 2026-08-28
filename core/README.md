@@ -8,6 +8,11 @@ Core orchestration for ONECore.
 
 Each process (/processes) is documented through flowcharts and sequence diagrams to clearly demonstrate what the process does and which underlying services are used during the process. To create flowcharts and sequence diagrams, we're using Mermaid for markdown which makes adjustments and collaboration easy. Diagrams in Mermaid can be viewed on GitHub or with the help of a plugin, such as https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid for VSCode.
 
+For example, see the parking space processes:
+
+- [Scored parking spaces — overview](./src/processes/parkingspaces/internal/DOCS_Overview.md)
+- [Non-scored parking spaces — create lease](./src/processes/parkingspaces/external/DOCS_Create_Lease_for_None_Scored_Parking_Space.md)
+
 ### Swagger
 
 We utilize `koa2-swagger-ui` and `swagger-jsdoc` for documenting our API. Each endpoint is required to have appropriate JSDoc comments and tags for comprehensive documentation. The Swagger document is exposed on `/swagger`.
