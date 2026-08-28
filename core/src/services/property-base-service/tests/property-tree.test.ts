@@ -388,28 +388,3 @@ describe('GET /property-tree', () => {
     expect(res.status).toBe(500)
   })
 })
-
-describe('GET /market-areas', () => {
-  it('returns 200 with the market areas', async () => {
-    const data = [
-      { id: '1', code: 'MO1', name: 'Centrum' },
-      { id: '2', code: 'MO2', name: null },
-    ]
-    jest
-      .spyOn(propertyBaseAdapter, 'listMarketAreas')
-      .mockResolvedValueOnce({ ok: true, data })
-
-    const res = await request(app.callback()).get('/market-areas')
-    expect(res.status).toBe(200)
-    expect(res.body.content).toEqual(data)
-  })
-
-  it('returns 500 when the adapter fails', async () => {
-    jest
-      .spyOn(propertyBaseAdapter, 'listMarketAreas')
-      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
-
-    const res = await request(app.callback()).get('/market-areas')
-    expect(res.status).toBe(500)
-  })
-})

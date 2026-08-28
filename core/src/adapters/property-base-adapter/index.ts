@@ -1179,7 +1179,6 @@ type GetPropertyTreeQuery = NonNullable<
   paths['/property-tree']['get']['parameters']['query']
 >
 type GetPropertyTreeResponse = components['schemas']['PropertyTree']
-type ListMarketAreasResponse = components['schemas']['MarketAreaSummary'][]
 
 export async function getPropertyTree(
   query: GetPropertyTreeQuery
@@ -1243,23 +1242,6 @@ export async function getRentalObjectDetails(
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getRentalObjectDetails')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-export async function listMarketAreas(): Promise<
-  AdapterResult<ListMarketAreasResponse, 'unknown'>
-> {
-  try {
-    const fetchResponse = await client().GET('/market-areas', {})
-
-    if (fetchResponse.data?.content) {
-      return { ok: true, data: fetchResponse.data.content }
-    }
-
-    return { ok: false, err: 'unknown' }
-  } catch (err) {
-    logger.error({ err }, 'property-base-adapter.listMarketAreas')
     return { ok: false, err: 'unknown' }
   }
 }

@@ -6336,29 +6336,6 @@ export interface paths {
       }
     }
   }
-  '/market-areas': {
-    /**
-     * List marknadsområden
-     * @description All market areas (babya) holding at least one property in an
-     * operating company. Sold stock (Xpand company 999) is excluded.
-     */
-    get: {
-      responses: {
-        /** @description List of market areas */
-        200: {
-          content: {
-            'application/json': {
-              content: components['schemas']['MarketAreaSummary'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/property-tree': {
     /**
      * Get the property tree for one grouping root
@@ -12515,11 +12492,6 @@ export interface components {
       area: number | null
       additionalInfo: string | null
       malarEnergiFacilityId: string | null
-    }
-    MarketAreaSummary: {
-      id: string
-      code: string
-      name: string | null
     }
     RentalObjectSubtype: {
       /** @enum {string} */

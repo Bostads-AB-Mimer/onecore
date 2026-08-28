@@ -1388,12 +1388,6 @@ export const PropertyTreeNodeSchema = z.object({
 
 export type PropertyTreeNode = z.infer<typeof PropertyTreeNodeSchema>
 
-export const MarketAreaSummarySchema = z.object({
-  id: z.string(),
-  code: z.string(),
-  name: z.string().nullable(),
-})
-
 export const PropertyTreeGroupSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -1416,7 +1410,6 @@ export const PropertyTreeSchema = z.object({
 })
 
 export type PropertyTree = z.infer<typeof PropertyTreeSchema>
-export type MarketAreaSummary = z.infer<typeof MarketAreaSummarySchema>
 
 export const PatchKvvAreaResponsibleBodySchema = z.object({
   keycloakUserId: z.string().uuid(),

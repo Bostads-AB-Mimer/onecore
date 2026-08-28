@@ -164,7 +164,6 @@ export const routes = (router: KoaRouter) => {
   registerSchema('PatchedKvvArea', schemas.PatchedKvvAreaSchema)
   registerSchema('RentalObjectSummary', schemas.RentalObjectSummarySchema)
   registerSchema('RentalObjectDetails', schemas.RentalObjectDetailsSchema)
-  registerSchema('MarketAreaSummary', schemas.MarketAreaSummarySchema)
   registerSchema('RentalObjectSubtype', schemas.RentalObjectSubtypeSchema)
   registerSchema('PropertyTreeGroup', schemas.PropertyTreeGroupSchema)
   registerSchema('PropertyTree', schemas.PropertyTreeSchema)

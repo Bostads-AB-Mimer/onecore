@@ -6336,29 +6336,6 @@ export interface paths {
       }
     }
   }
-  '/market-areas': {
-    /**
-     * List marknadsområden
-     * @description All market areas (babya) holding at least one property in an
-     * operating company. Sold stock (Xpand company 999) is excluded.
-     */
-    get: {
-      responses: {
-        /** @description List of market areas */
-        200: {
-          content: {
-            'application/json': {
-              content: components['schemas']['MarketAreaSummary'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/property-tree': {
     /**
      * Get the property tree for one grouping root
@@ -9074,6 +9051,42 @@ export interface paths {
         400: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/{id}/deactivate': {
+    /**
+     * Deactivate a key system and dispose all its keys
+     * @description Sets isActive=false and disposes every non-disposed key in the system in one transaction. Writes an audit log entry on the system listing all disposed key ids (the manual-rollback record).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to deactivate */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deactivated and keys disposed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DeactivateKeySystemResponse']
+            }
           }
         }
         /** @description Key system not found */
@@ -12480,11 +12493,6 @@ export interface components {
       additionalInfo: string | null
       malarEnergiFacilityId: string | null
     }
-    MarketAreaSummary: {
-      id: string
-      code: string
-      name: string | null
-    }
     RentalObjectSubtype: {
       /** @enum {string} */
       type: 'residence' | 'parkingSpace' | 'facility' | 'other'
@@ -13129,6 +13137,10 @@ export interface components {
       isActive?: boolean
       notes?: string | null
       schemaFileId?: string | null
+    }
+    DeactivateKeySystemResponse: {
+      keySystem: components['schemas']['KeySystem']
+      disposedKeys: components['schemas']['Key'][]
     }
     CreateLogRequest: {
       userName: string

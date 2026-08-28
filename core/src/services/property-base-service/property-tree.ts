@@ -6,11 +6,7 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { PROPERTY_MANAGER_ROLE } from './constants'
 import { getCachedUsersByRole, toUserSummary } from './keycloak-users'
 import { parseQuery, parseUpstream, replyError } from './route-helpers'
-import {
-  MarketAreaSummarySchema,
-  PropertyGroupingSchema,
-  PropertyTreeSchema,
-} from './schemas'
+import { PropertyGroupingSchema, PropertyTreeSchema } from './schemas'
 
 const GetPropertyTreeQuerySchema = z.object({
   groupBy: PropertyGroupingSchema,
@@ -27,49 +23,6 @@ const GetPropertyTreeQuerySchema = z.object({
  *     description: Property hierarchy organised by cost center, marknadsområde or företag
  */
 export const routes = (router: KoaRouter) => {
-  /**
-   * @swagger
-   * /market-areas:
-   *   get:
-   *     summary: List marknadsområden
-   *     description: |
-   *       All market areas (babya) holding at least one property in an
-   *       operating company. Sold stock (Xpand company 999) is excluded.
-   *     tags:
-   *       - Property tree
-   *     responses:
-   *       200:
-   *         description: List of market areas
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               required: [content]
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/MarketAreaSummary'
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('(.*)/market-areas', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await propertyBaseAdapter.listMarketAreas()
-    if (!result.ok) return replyError(ctx, result.err, metadata)
-
-    const content = parseUpstream(
-      ctx,
-      MarketAreaSummarySchema.array(),
-      result.data,
-      metadata
-    )
-    if (!content) return
-    ctx.body = { content, ...metadata }
-  })
-
   /**
    * @swagger
    * /property-tree:

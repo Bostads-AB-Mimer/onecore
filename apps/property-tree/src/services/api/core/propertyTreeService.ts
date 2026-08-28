@@ -7,7 +7,9 @@ export type PropertyTreeGroup = PropertyTree['groups'][number]
 /** The uniform node below a group: property, building, trapphus,
  * parkeringsområde or rental-object leaf, told apart by `type`. */
 export type PropertyTreeDataNode = PropertyTreeGroup['properties'][number]
-export type MarketAreaSummary = components['schemas']['MarketAreaSummary']
+// One /market-areas for every consumer since the merge with main's route:
+// same shape, filtered to areas holding live operating-company stock.
+export type MarketAreaSummary = components['schemas']['MarketArea']
 
 export type RentalObjectSubtype = components['schemas']['RentalObjectSubtype']
 export type RentalObjectDetails = components['schemas']['RentalObjectDetails']

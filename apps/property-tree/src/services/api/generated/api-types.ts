@@ -1637,6 +1637,39 @@ export interface paths {
   }
   '/properties/{code}/kvv-area': {
     /**
+     * Get the KVV-area (förvaltningsområde) and cost center of a property
+     * @description Reverse lookup from a property code to the KVV-area it is linked to in
+     * `onecore_property_kvv_area`, the cost center (distrikt) that area
+     * belongs to, and the responsible kvartersvärd (as a Keycloak user id).
+     * Returns 404 when the property has no KVV-area link.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The property code (Xpand `Property.code`). */
+          code: string
+        }
+      }
+      responses: {
+        /** @description The property's KVV-area, cost center and responsible. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /** @description The property has no KVV-area link. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
      * Set the KVV-area (förvaltningsområde) membership of a property
      * @description Upserts the property → KVV-area link in `onecore_property_kvv_area`.
      * Cross-cost-center moves are allowed without validation: the target
@@ -2385,25 +2418,26 @@ export interface paths {
   }
   '/kvv-areas': {
     /**
-     * List kvv-area codes filtered by responsible Keycloak users
-     * @description Returns the codes of kvv-areas (förvaltningsområden) whose
-     * responsibleKeycloakUserId is one of the provided user ids. Repeat the
-     * responsibleUserId query param for each user id. Returns an empty list
-     * if the param is omitted.
+     * List kvv-areas (förvaltningsområden) with their cost center
+     * @description Returns every kvv-area with its cost center (distrikt) and the
+     * responsible kvartersvärd as a Keycloak user id. When one or more
+     * `responsibleUserId` query params are given, only areas whose
+     * responsible is one of those users are returned. Keycloak user details
+     * are NOT expanded here — that composition happens in core.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Keycloak user ids (repeatable) */
+          /** @description Keycloak user ids (repeatable). Omit to list all areas. */
           responsibleUserId?: string[]
         }
       }
       responses: {
-        /** @description List of kvv-area codes */
+        /** @description List of kvv-areas */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KvvAreaSummary'][]
+              content?: components['schemas']['KvvAreaWithCostCenter'][]
             }
           }
         }
@@ -2456,6 +2490,29 @@ export interface paths {
         /** @description KVV area not found */
         404: {
           content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/market-areas': {
+    /**
+     * List all market areas
+     * @description Returns every market area (Xpand babya, "marknadsområde"). No
+     * filters, no pagination — there are only a few dozen rows.
+     */
+    get: {
+      responses: {
+        /** @description List of market areas */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MarketArea'][]
+            }
+          }
         }
         /** @description Internal server error */
         500: {
@@ -2632,30 +2689,6 @@ export interface paths {
       }
     }
   }
-  '/market-areas': {
-    /**
-     * List marknadsområden
-     * @description All market areas (babya) that have at least one property in an
-     * operating company. Sold stock (company 999) is excluded, so this
-     * list matches what the property tree can actually return.
-     */
-    get: {
-      responses: {
-        /** @description List of market areas */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['MarketAreaSummary'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/property-tree': {
     /**
      * Get the property tree for one grouping root
@@ -2668,9 +2701,10 @@ export interface paths {
      * moves sold properties to company 999 rather than delete-marking
      * them, so they are filtered out here.
      *
-     * Membership is read fresh per request; the property-and-below half is
-     * cached in-memory per property for up to one hour, so structural
-     * changes in Xpand may take that long to appear.
+     * Everything is served from in-memory caches: membership (which root
+     * holds which properties) for up to 15 minutes, the property-and-below
+     * half for up to an hour per property — so a moved property or a
+     * structural change in Xpand may take that long to appear.
      */
     get: {
       parameters: {
@@ -3055,7 +3089,7 @@ export interface components {
       property?: {
         name: string | null
         code: string
-        id: string
+        id?: string
       } | null
     }
     Property: {
@@ -3637,7 +3671,7 @@ export interface components {
         propertyObjectId: string
         code: string
         name: string
-        parkingNumber: string
+        parkingNumber: string | null
         parkingSpaceType: {
           code: string
           name: string
@@ -4461,8 +4495,33 @@ export interface components {
       code: string
       name: string
     }
-    KvvAreaSummary: {
+    KvvAreaWithCostCenter: {
+      /** Format: uuid */
+      id: string
       code: string
+      name: string | null
+      costCenter: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string
+      }
+      responsibleKeycloakUserId: string | null
+    }
+    PropertyKvvAreaLookup: {
+      kvvArea: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string | null
+      }
+      costCenter: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string
+      }
+      responsibleKeycloakUserId: string | null
     }
     PropertyTree: {
       /** @enum {string} */
@@ -4541,11 +4600,6 @@ export interface components {
         }[]
       }[]
     }
-    MarketAreaSummary: {
-      id: string
-      code: string
-      name: string | null
-    }
     RentalObjectSubtype: {
       /** @enum {string} */
       type: 'residence' | 'parkingSpace' | 'facility' | 'other'
@@ -4577,6 +4631,11 @@ export interface components {
       /** Format: date-time */
       updatedAt: string
       updatedBy: string | null
+    }
+    MarketArea: {
+      id: string
+      code: string
+      name: string | null
     }
     RentalObjectSummary: {
       rentalId: string
