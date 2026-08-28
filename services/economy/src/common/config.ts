@@ -103,18 +103,18 @@ const config = configPackage({
       importDirectory: './rental-invoice-files',
       exportDirectory: './rental-invoice-export',
       sftp: {
-        host: 'sftp://192.168.1.88:30023/economy',
-        username: 'economy-sftp',
-        password: '6YhBXY5z6CWmvFxdUz7L',
+        host: '',
+        username: '',
+        password: '',
         directory: 'economy',
       },
     },
     debtCollection: {
       xledger: {
         sftp: {
-          host: 'ftp1.primeq.se',
-          username: 'sftp_mimer_xledger',
-          password: 'y2E3NAaw-r3aApEEKN',
+          host: '',
+          username: '',
+          password: '',
           useSshDss: true,
         },
         rentInvoicesDirectory: '',
@@ -152,13 +152,12 @@ const config = configPackage({
       },
     },
     xledger: {
-      url: 'https://demo.xledger.net/graphql',
-      apiToken:
-        'AABVTOc9XgAAAAAChnH32aAkm2T5OIbdiRFPT8sS5za5hkXvcPWaZ0MiA3IZCo1J2quywzotLjnCvMmuph7J67vLmYsvchy1ZfMbwenPlYISfVOtRs6llj5H2IlgJmyHjNIkG2gIavCKusVomnU1asKLVu82MZfhuF9q3pC2dJPLMpj2oAdLN90a2a65zoQOeZssmw48Y8GS0lhwgC-3zCG4IaTe37IOMSISQT-Di4i9hih3gV2a9-DQiijqRWV6Ww6NPu3zAygMshybZ07lmWNoSOXCz3_skrOBENiTvW6tdw2qOrhaqKX0g4GfZEl-3qhdJ50BXZrssgSEHwQA',
+      url: 'https://www.xledger.net/graphql',
+      apiToken: '',
       sftp: {
-        host: 'ftp1.primeq.se',
-        username: 'sftp_mimer_xledger',
-        password: 'y2E3NAaw-r3aApEEKN',
+        host: '',
+        username: '',
+        password: '',
         glDirectory: '/GL',
         arDirectory: '/AR',
         useSshDss: true,

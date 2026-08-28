@@ -97,12 +97,11 @@ const config = configPackage({
       url: 'https://testwebservice.creditsafe.se/CAS/cas_service.asmx',
     },
     tenfast: {
-      baseUrl: 'https://tenfast-test-api.mimer.nu',
-      apiKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlLZXkiOnRydWUsInVzZXIiOiI2OTFkODUwMmE4ODdhYTdhM2ZlMjVlZWIiLCJpYXQiOjE3NjQ4MzkwNDZ9.dBQSWqjNOKPRdSeukAWF9Gsn_ktLOFeZLfzuJwpBQM8',
+      baseUrl: '',
+      apiKey: '',
       username: '',
       password: '',
-      companyId: '6344b398b63ff59d5bde8257',
+      companyId: '',
       leaseTemplates: {
         parkingSpace: '123456',
       },

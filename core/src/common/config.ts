@@ -138,7 +138,7 @@ const config = configPackage({
       url: 'http://localhost:5050',
     },
     economyService: {
-      url: 'https://core-test-yg.mimer.nu/economy',
+      url: 'http://localhost:5080',
     },
     inspectionService: {
       url: 'http://localhost:5090',

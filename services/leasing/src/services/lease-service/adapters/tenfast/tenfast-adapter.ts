@@ -343,31 +343,31 @@ export const getLeases = async (): Promise<
   }
 }
 
-// All non-archived stages we want in the cache. Mirrors the non-cache path
-// which always sends filter[isArchived]=false.
-const ALL_CACHE_STAGES =
-  'active,upcoming,terminationScheduled,preTermination,signingInProgress,draft,terminated'
-
 /**
- * Fetches all leases across all pages using cursor-based pagination on
- * the list endpoint (/v1/hyresvard/avtal). Unlike getLeases() which sends
- * a single request with limit=100000 (ignored by Tenfast), this follows
- * the `next` cursor until all records are retrieved. Intended for cache
- * population where completeness matters.
+ * Fetches all non-archived leases across all pages using cursor-based
+ * pagination on the search endpoint (/v1/hyresvard/avtal/search). Uses the
+ * search endpoint (not the list endpoint) because it supports filter params
+ * such as filter[isArchived], which is required to include preTermination
+ * leases. Intended for full cache population.
  */
 export async function getAllLeases(): Promise<
   AdapterResult<TenfastLease[], 'unknown'>
 > {
   try {
-    const params = new URLSearchParams({
+    // Use the search endpoint — the list endpoint does not support filter params.
+    // Tenfast requires literal brackets/commas — URLSearchParams encodes them.
+    const qs = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
-      'filter[stage]': ALL_CACHE_STAGES,
+      'filter[isArchived]': 'false',
     })
+      .toString()
+      .replace(/%5B/gi, '[')
+      .replace(/%5D/gi, ']')
+      .replace(/%2C/gi, ',')
+    const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${qs}`
     const records = await fetchAllPages(
       (cursor) =>
-        cursor
-          ? `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${cursor}`
-          : `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}`,
+        cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl,
       TenfastPaginatedLeaseResponseSchema
     )
     return { ok: true, data: records }
@@ -385,10 +385,10 @@ export async function getLeasesUpdatedSince(
   since: Date
 ): Promise<AdapterResult<TenfastLease[], 'unknown'>> {
   try {
+    // The list endpoint supports updatedAtSince but not filter params.
     const params = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
       updatedAtSince: since.toISOString(),
-      'filter[stage]': ALL_CACHE_STAGES,
     })
     const records = await fetchAllPages(
       (cursor) =>
