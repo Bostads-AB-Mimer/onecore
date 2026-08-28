@@ -2,12 +2,8 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { z } from 'zod'
 
+import { getPropertyTree } from '../adapters/property-grouping-adapter'
 import {
-  getPropertyTree,
-  listMarketAreas,
-} from '../adapters/property-grouping-adapter'
-import {
-  MarketAreaSummarySchema,
   PropertyGroupingSchema,
   PropertyTreeSchema,
 } from '../types/property-tree'
@@ -33,47 +29,6 @@ const GetPropertyTreeQueryParamsSchema = z.object({
  *     description: Property hierarchy, organised by any supported grouping
  */
 export const routes = (router: KoaRouter) => {
-  /**
-   * @swagger
-   * /market-areas:
-   *   get:
-   *     summary: List marknadsområden
-   *     description: |
-   *       All market areas (babya) that have at least one property in an
-   *       operating company. Sold stock (company 999) is excluded, so this
-   *       list matches what the property tree can actually return.
-   *     tags:
-   *       - Property Tree
-   *     responses:
-   *       200:
-   *         description: List of market areas
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/MarketAreaSummary'
-   *       500:
-   *         description: Internal server error
-   */
-  router.get('(.*)/market-areas', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    try {
-      const rows = await listMarketAreas()
-      ctx.body = {
-        content: rows.map((r) => MarketAreaSummarySchema.parse(r)),
-        ...metadata,
-      }
-    } catch (err) {
-      logger.error({ err }, 'Error fetching market areas')
-      ctx.status = 500
-      ctx.body = { reason: 'Internal server error', ...metadata }
-    }
-  })
-
   /**
    * @swagger
    * /property-tree:

@@ -196,28 +196,3 @@ describe('GET /property-tree', () => {
     expect(JSON.stringify(res.body)).not.toContain('boom')
   })
 })
-
-describe('GET /market-areas', () => {
-  it('returns the market areas', async () => {
-    const rows = [
-      { id: '1', code: 'MO1', name: 'Centrum' },
-      { id: '2', code: 'MO2', name: null },
-    ]
-    jest.spyOn(groupingAdapter, 'listMarketAreas').mockResolvedValueOnce(rows)
-
-    const res = await request(app.callback()).get('/market-areas')
-    expect(res.status).toBe(200)
-    expect(res.body.content).toEqual(rows)
-  })
-
-  it('returns 500 when the adapter throws', async () => {
-    jest
-      .spyOn(groupingAdapter, 'listMarketAreas')
-      .mockRejectedValueOnce(new Error('boom'))
-
-    const res = await request(app.callback()).get('/market-areas')
-    expect(res.status).toBe(500)
-    expect(res.body.reason).toBe('Internal server error')
-    expect(JSON.stringify(res.body)).not.toContain('boom')
-  })
-})

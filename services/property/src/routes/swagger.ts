@@ -242,11 +242,6 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
-  ...zodToJsonSchema(types.MarketAreaSummarySchema, {
-    name: 'MarketAreaSummary',
-    target: 'openApi3',
-    $refStrategy: 'none',
-  }).definitions,
   ...zodToJsonSchema(types.RentalObjectSubtypeSchema, {
     name: 'RentalObjectSubtype',
     target: 'openApi3',

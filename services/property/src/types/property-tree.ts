@@ -12,16 +12,6 @@ export const PropertyGroupingSchema = z.enum([
 
 export type PropertyGrouping = z.infer<typeof PropertyGroupingSchema>
 
-// Marknadsområde (babya) — a flat attribute on the property, so this is a
-// list of roots rather than a hierarchy.
-export const MarketAreaSummarySchema = z.object({
-  id: z.string(),
-  code: z.string(),
-  name: z.string().nullable(),
-})
-
-export type MarketAreaSummary = z.infer<typeof MarketAreaSummarySchema>
-
 // What a tree node can be: the structural levels below a group, plus the
 // rental-object types as leaves.
 export const PROPERTY_TREE_STRUCTURAL_TYPES = [
