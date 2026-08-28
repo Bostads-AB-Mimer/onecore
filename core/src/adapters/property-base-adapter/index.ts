@@ -1211,40 +1211,6 @@ export async function getPropertyTree(
   }
 }
 
-type GetRootRentalObjectsQuery = NonNullable<
-  paths['/rental-objects/by-root']['get']['parameters']['query']
->
-
-export async function getRootRentalObjects(
-  query: GetRootRentalObjectsQuery
-): Promise<
-  AdapterResult<
-    GetRentalObjectsResponse,
-    'not-found' | 'bad-request' | 'unknown'
-  >
-> {
-  try {
-    const fetchResponse = await client().GET('/rental-objects/by-root', {
-      params: { query },
-    })
-
-    if (fetchResponse.data?.content) {
-      return { ok: true, data: fetchResponse.data.content }
-    }
-    if (fetchResponse.response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-    if (fetchResponse.response.status === 400) {
-      return { ok: false, err: 'bad-request' }
-    }
-
-    return { ok: false, err: 'unknown' }
-  } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getRootRentalObjects')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
 type GetRentalObjectDetailsResponse =
   components['schemas']['RentalObjectDetails'][]
 type GetRentalObjectDetailsQuery = NonNullable<

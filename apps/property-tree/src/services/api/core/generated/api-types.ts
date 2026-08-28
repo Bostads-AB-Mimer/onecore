@@ -6376,6 +6376,8 @@ export interface paths {
           groupBy: 'costCenter' | 'marketArea' | 'company'
           /** @description Cost center id (uuid), market area code, or company code */
           rootId: string
+          /** @description Pass 'false' to omit the rental-object leaves */
+          includeObjects?: 'true' | 'false'
         }
       }
       responses: {
@@ -6479,45 +6481,6 @@ export interface paths {
         }
         /** @description Invalid query parameters */
         400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rental-objects/by-root': {
-    /**
-     * Every rental object under one grouping root
-     * @description All rental objects of a district, marknadsområde or company, taking
-     * the same (groupBy, rootId) pair as the property tree and served from
-     * the same cache. Meant for clients that filter, count and list these
-     * locally instead of asking the server per filter change.
-     */
-    get: {
-      parameters: {
-        query: {
-          groupBy: 'costCenter' | 'marketArea' | 'company'
-          rootId: string
-        }
-      }
-      responses: {
-        /** @description The root's rental objects */
-        200: {
-          content: {
-            'application/json': {
-              content: components['schemas']['RentalObjectSummary'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Root not found */
-        404: {
           content: never
         }
         /** @description Internal server error */
@@ -12542,41 +12505,68 @@ export interface components {
         employeeId?: string
       } | null
       properties: {
+        /** @enum {string} */
+        type:
+          | 'property'
+          | 'building'
+          | 'staircase'
+          | 'parkingArea'
+          | 'residence'
+          | 'parkingSpace'
+          | 'facility'
+          | 'other'
         code: string
-        designation: string | null
-        tract: string | null
-        buildings: {
-          buildingCode: string
-          buildingName: string | null
-          buildingType: {
-            code: string | null
-            name: string | null
-          } | null
-          staircases: {
-            code: string
-            name: string | null
-            residenceCount: number
-            parkingCount: number
-            facilityCount: number
-            otherCount: number
-          }[]
-          residenceCount: number
-          parkingCount: number
-          facilityCount: number
-          otherCount: number
-        }[]
-        parkingAreas: {
+        name: string | null
+        subtypeCode: string | null
+        subtypeName: string | null
+        children?: {
+          /** @enum {string} */
+          type:
+            | 'property'
+            | 'building'
+            | 'staircase'
+            | 'parkingArea'
+            | 'residence'
+            | 'parkingSpace'
+            | 'facility'
+            | 'other'
           code: string
           name: string | null
-          parkingCount: number
+          subtypeCode: string | null
+          subtypeName: string | null
+          children?: {
+            /** @enum {string} */
+            type:
+              | 'property'
+              | 'building'
+              | 'staircase'
+              | 'parkingArea'
+              | 'residence'
+              | 'parkingSpace'
+              | 'facility'
+              | 'other'
+            code: string
+            name: string | null
+            subtypeCode: string | null
+            subtypeName: string | null
+            children?: {
+              /** @enum {string} */
+              type:
+                | 'property'
+                | 'building'
+                | 'staircase'
+                | 'parkingArea'
+                | 'residence'
+                | 'parkingSpace'
+                | 'facility'
+                | 'other'
+              code: string
+              name: string | null
+              subtypeCode: string | null
+              subtypeName: string | null
+            }[]
+          }[]
         }[]
-        aggregates: {
-          residenceCount: number
-          parkingCount: number
-          entranceCount: number
-          facilityCount: number
-          otherCount: number
-        }
       }[]
     }
     PropertyTree: {
@@ -12599,41 +12589,68 @@ export interface components {
           employeeId?: string
         } | null
         properties: {
+          /** @enum {string} */
+          type:
+            | 'property'
+            | 'building'
+            | 'staircase'
+            | 'parkingArea'
+            | 'residence'
+            | 'parkingSpace'
+            | 'facility'
+            | 'other'
           code: string
-          designation: string | null
-          tract: string | null
-          buildings: {
-            buildingCode: string
-            buildingName: string | null
-            buildingType: {
-              code: string | null
-              name: string | null
-            } | null
-            staircases: {
-              code: string
-              name: string | null
-              residenceCount: number
-              parkingCount: number
-              facilityCount: number
-              otherCount: number
-            }[]
-            residenceCount: number
-            parkingCount: number
-            facilityCount: number
-            otherCount: number
-          }[]
-          parkingAreas: {
+          name: string | null
+          subtypeCode: string | null
+          subtypeName: string | null
+          children?: {
+            /** @enum {string} */
+            type:
+              | 'property'
+              | 'building'
+              | 'staircase'
+              | 'parkingArea'
+              | 'residence'
+              | 'parkingSpace'
+              | 'facility'
+              | 'other'
             code: string
             name: string | null
-            parkingCount: number
+            subtypeCode: string | null
+            subtypeName: string | null
+            children?: {
+              /** @enum {string} */
+              type:
+                | 'property'
+                | 'building'
+                | 'staircase'
+                | 'parkingArea'
+                | 'residence'
+                | 'parkingSpace'
+                | 'facility'
+                | 'other'
+              code: string
+              name: string | null
+              subtypeCode: string | null
+              subtypeName: string | null
+              children?: {
+                /** @enum {string} */
+                type:
+                  | 'property'
+                  | 'building'
+                  | 'staircase'
+                  | 'parkingArea'
+                  | 'residence'
+                  | 'parkingSpace'
+                  | 'facility'
+                  | 'other'
+                code: string
+                name: string | null
+                subtypeCode: string | null
+                subtypeName: string | null
+              }[]
+            }[]
           }[]
-          aggregates: {
-            residenceCount: number
-            parkingCount: number
-            entranceCount: number
-            facilityCount: number
-            otherCount: number
-          }
         }[]
       }[]
     }

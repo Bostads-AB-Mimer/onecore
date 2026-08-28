@@ -1,9 +1,7 @@
-// Client-side counting over the loaded roots' rental objects — the one source
-// for every count, greying and exclusion question. One pass over ~22k rows is
-// milliseconds vs a 1.2 s server query, so filter toggles cost no request.
-// Unloaded roots answer "unknown": no count, never excluded.
-
-import type { RentalObjectSummary as RentalObject } from '@/services/api/core/rentalObjectService'
+// Client-side counting over the loaded roots' walk trees — the one source
+// for every count, greying and exclusion question. One post-order pass over
+// ~22k leaves is milliseconds, so filter toggles cost no request.
+// Roots whose tree hasn't loaded answer "unknown": no count, never excluded.
 
 import type {
   CheckState,
@@ -11,14 +9,8 @@ import type {
   PropertyTreeSelection,
   RentalObjectType,
 } from './selection'
-import {
-  nodeCheckState,
-  nodeKey,
-  parkingAreaKey,
-  staircaseKey,
-} from './selection'
-
-export type { RentalObject }
+import { nodeCheckState } from './selection'
+import type { RentalObject, WalkNode } from './treeRows'
 
 /** Every object-level restriction the picker applies. A new dimension is
  * added here, in matches and in filterSignature — nowhere else. */
@@ -62,80 +54,45 @@ export function filterSignature(filter: ObjectFilter): string {
   return `${types}|${subtypes}`
 }
 
-/** The object's ancestor chain, shallowest first: property → building →
- * staircase, or property → parkingArea (property-scoped — a markyta can span
- * two fastigheter). Counts roll up the chain; the object hangs under its end. */
-export function objectAncestorKeys(object: RentalObject): string[] {
-  const keys: string[] = []
-  if (object.propertyCode) keys.push(nodeKey('property', object.propertyCode))
-  if (object.buildingCode) {
-    keys.push(nodeKey('building', object.buildingCode))
-    if (object.staircaseCode) {
-      keys.push(staircaseKey(object.buildingCode, object.staircaseCode))
-    }
-  }
-  if (object.parkingAreaCode && object.propertyCode) {
-    keys.push(parkingAreaKey(object.propertyCode, object.parkingAreaCode))
-  }
-  return keys
-}
-
-/** The node the object hangs under — the deepest link of its ancestor chain. */
-export function objectParentKey(object: RentalObject): string | undefined {
-  const keys = objectAncestorKeys(object)
-  return keys.length > 0 ? keys[keys.length - 1] : undefined
-}
-
-/** An object as a node under its parent; selectable=false keeps it display-only. */
-export function objectNode(
-  object: RentalObject,
-  parent: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
-  selectable = true
-): PropertyTreeNode {
-  return {
-    key: nodeKey('object', object.rentalId),
-    level: 'object',
-    value: object.rentalId,
-    label: object.code ?? object.rentalId,
-    ancestors: [...parent.ancestors, parent.key],
-    ...(selectable ? {} : { selectable: false }),
-  }
-}
-
 export interface FacetIndex {
-  // Sparse: only keys some object counted into are present. Whether a missing
-  // key means 0 or "not loaded" is settledRootKeys' call, not key presence.
+  // Every node of an indexed walk has an entry (the post-order pass fills
+  // zeros), so a missing key means "root not loaded", never "no matches".
   countByKey: ReadonlyMap<string, number> // node key → objects matching filter
   totalByKey: ReadonlyMap<string, number> // node key → objects, filter ignored
   matchedRentalIds: ReadonlySet<string> // matching rental ids — leaf rows read
-  /** Root keys whose objects have resolved: below them a missing key is a
-   * true zero; everywhere else it's "not loaded" — no count, never excluded. */
-  settledRootKeys: ReadonlySet<string>
 }
 
-const NO_ROOTS: ReadonlySet<string> = new Set()
-
-/** One pass over the objects: filtered and unfiltered counts per node key. */
+/** One post-order pass over the loaded walks: filtered and unfiltered counts
+ * per node key, rolled up the tree as it unwinds. */
 export function buildFacetIndex(
-  objects: readonly RentalObject[],
-  filter: ObjectFilter,
-  settledRootKeys: ReadonlySet<string> = NO_ROOTS
+  walks: readonly WalkNode[],
+  filter: ObjectFilter
 ): FacetIndex {
   const countByKey = new Map<string, number>()
   const totalByKey = new Map<string, number>()
   const matchedRentalIds = new Set<string>()
   const subtypesByType = compileSubtypes(filter)
 
-  for (const object of objects) {
-    const matched = matches(object, filter.types, subtypesByType)
-    if (matched) matchedRentalIds.add(object.rentalId)
-    for (const key of objectAncestorKeys(object)) {
-      totalByKey.set(key, (totalByKey.get(key) ?? 0) + 1)
-      countByKey.set(key, (countByKey.get(key) ?? 0) + (matched ? 1 : 0))
+  const visit = (walk: WalkNode): { count: number; total: number } => {
+    if (walk.object) {
+      const matched = matches(walk.object, filter.types, subtypesByType)
+      if (matched) matchedRentalIds.add(walk.object.code)
+      return { count: matched ? 1 : 0, total: 1 }
     }
+    let count = 0
+    let total = 0
+    for (const child of walk.children) {
+      const sums = visit(child)
+      count += sums.count
+      total += sums.total
+    }
+    countByKey.set(walk.node.key, count)
+    totalByKey.set(walk.node.key, total)
+    return { count, total }
   }
+  for (const walk of walks) visit(walk)
 
-  return { countByKey, totalByKey, matchedRentalIds, settledRootKeys }
+  return { countByKey, totalByKey, matchedRentalIds }
 }
 
 /** The active filter plus whatever objects have arrived for it. Everything
@@ -145,12 +102,12 @@ export interface ObjectFilterView {
   facets: FacetIndex
 }
 
-// A node's counts are known once its root's objects have resolved — the root
-// is the node's first ancestor, or the node itself at the top.
+// A node's counts are known once its root's walk is indexed — the root is
+// the node's first ancestor, or the node itself at the top.
 const facetKnown = (
   view: ObjectFilterView,
   node: Pick<PropertyTreeNode, 'key' | 'ancestors'>
-): boolean => view.facets.settledRootKeys.has(node.ancestors[0] ?? node.key)
+): boolean => view.facets.totalByKey.has(node.ancestors[0] ?? node.key)
 
 /** Objects under a node matching the active filter — the "Antal" column.
  * Undefined until the node's root's objects have arrived; a missing key under
@@ -217,40 +174,4 @@ export function filterSelection(
     if (!nodeExcluded(node, view)) next.set(key, node)
   }
   return next
-}
-
-/** A node whose count is the sum of its properties' — levels above property. */
-export interface AncestorCounts {
-  key: string
-  propertyKeys: readonly string[]
-}
-
-/** Roll property counts up onto the kvvArea and root nodes. */
-export function addAncestorCounts(
-  facets: FacetIndex,
-  ancestry: readonly AncestorCounts[]
-): FacetIndex {
-  if (ancestry.length === 0) return facets
-  const countByKey = new Map(facets.countByKey)
-  const totalByKey = new Map(facets.totalByKey)
-
-  for (const { key, propertyKeys } of ancestry) {
-    let count = 0
-    let total = 0
-    let known = false
-    for (const propertyKey of propertyKeys) {
-      const propertyTotal = facets.totalByKey.get(propertyKey)
-      if (propertyTotal === undefined) continue
-      known = true
-      count += facets.countByKey.get(propertyKey) ?? 0
-      total += propertyTotal
-    }
-    // Only claim a count when at least one property below is loaded, so the
-    // node falls back to the server's numbers instead of showing zero.
-    if (!known) continue
-    countByKey.set(key, count)
-    totalByKey.set(key, total)
-  }
-
-  return { ...facets, countByKey, totalByKey }
 }

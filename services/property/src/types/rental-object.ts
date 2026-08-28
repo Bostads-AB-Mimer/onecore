@@ -63,20 +63,6 @@ export type GetRentalObjectsQueryParams = z.infer<
 >
 
 /**
- * Every rental object under one grouping root, for clients that filter and
- * count locally instead of asking the server per filter change. Takes the same
- * (groupBy, rootId) pair as the property tree so the two line up exactly.
- */
-export const GetRootRentalObjectsQueryParamsSchema = z.object({
-  groupBy: PropertyGroupingSchema,
-  rootId: z.string().min(1),
-})
-
-export type GetRootRentalObjectsQueryParams = z.infer<
-  typeof GetRootRentalObjectsQueryParamsSchema
->
-
-/**
  * The extra per-object values a listing may show, keyed by rental id and kept
  * out of RentalObjectSummary on purpose: only the object list wants them, so
  * the tree, the picker and the sidebar neither fetch nor hold them.

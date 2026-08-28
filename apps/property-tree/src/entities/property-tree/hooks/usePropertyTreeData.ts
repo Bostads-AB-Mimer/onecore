@@ -10,16 +10,15 @@ import {
 import { costCenterService } from '@/services/api/core/costCenterService'
 import type {
   PropertyTree,
+  PropertyTreeDataNode,
   PropertyTreeGroup,
-  PropertyTreeProperty,
 } from '@/services/api/core/propertyTreeService'
 import { propertyTreeService } from '@/services/api/core/propertyTreeService'
 
-export type { PropertyTree, PropertyTreeGroup, PropertyTreeProperty }
-export type PropertyTreeBuilding = PropertyTreeProperty['buildings'][number]
-export type PropertyTreeStaircase = PropertyTreeBuilding['staircases'][number]
-export type PropertyTreeParkingArea =
-  PropertyTreeProperty['parkingAreas'][number]
+import type { WalkNode } from '../model/treeRows'
+import { walkTreeFor } from '../model/treeRows'
+
+export type { PropertyTree, PropertyTreeDataNode, PropertyTreeGroup }
 
 /** The groupings the picker offers. The endpoint also serves 'company', but
  * that view is for sidebar navigation rather than choosing an audience. */
@@ -127,22 +126,26 @@ export const usePropertyTrees = (
    * memoisation is react-query's rather than a bet on that array staying
    * referentially stable — callers memoise whole tree walks on this value.
    *
-   * A closure, unlike useObjectFacets' module-level combines: results carry no
-   * query key, and a root still in flight has no `data.id` to key it by, so
-   * the roots have to come from outside. Stable as long as `queried` is.
+   * A closure rather than a module-level combine: results carry no query key,
+   * and a root still in flight has no `data.id` to key it by, so the roots
+   * have to come from outside. Stable as long as `queried` is.
    */
   const combine = useCallback(
     (results: UseQueryResult<PropertyTree | undefined>[]) => {
       const states = new Map<string, RootTreeState>()
+      const walks: WalkNode[] = []
       queried.forEach((root, i) => {
-        states.set(root.id, {
-          tree: results[i]?.data,
-          isLoading: !!results[i]?.isLoading,
-        })
+        const tree = results[i]?.data
+        states.set(root.id, { tree, isLoading: !!results[i]?.isLoading })
+        // walkTreeFor caches per tree reference, so walk identities are
+        // stable across combine re-runs.
+        if (tree) walks.push(walkTreeFor(root, tree))
       })
       return {
         stateOf: (rootId: string) => states.get(rootId) ?? NOT_LOADED,
         isLoading: results.some((r) => r.isLoading),
+        /** The loaded roots' walks, in root order — facet counting reads these. */
+        walks,
       }
     },
     [queried]

@@ -7,22 +7,28 @@ type FakeCtx = {
   body: unknown
   headers: Record<string, string>
   requestHeaders: Record<string, string>
+  response: { get(name: string): string }
   set(name: string, value: string): void
   get(name: string): string
 }
 
-const makeCtx = (requestHeaders: Record<string, string> = {}): FakeCtx => ({
-  status: 200,
-  body: null,
-  headers: {},
-  requestHeaders,
-  set(name, value) {
-    this.headers[name.toLowerCase()] = value
-  },
-  get(name) {
-    return this.requestHeaders[name.toLowerCase()] ?? ''
-  },
-})
+const makeCtx = (requestHeaders: Record<string, string> = {}): FakeCtx => {
+  const ctx: FakeCtx = {
+    status: 200,
+    body: null,
+    headers: {},
+    requestHeaders,
+    // Koa reads response headers via ctx.response.get, request via ctx.get.
+    response: { get: (name) => ctx.headers[name.toLowerCase()] ?? '' },
+    set(name, value) {
+      this.headers[name.toLowerCase()] = value
+    },
+    get(name) {
+      return this.requestHeaders[name.toLowerCase()] ?? ''
+    },
+  }
+  return ctx
+}
 
 const middleware = etagMiddleware()
 const run = (ctx: FakeCtx, body: unknown, status = 200) =>
@@ -36,7 +42,9 @@ describe('etagMiddleware', () => {
     const ctx = makeCtx()
     await run(ctx, { a: 1 })
 
-    expect(ctx.headers.etag).toMatch(/^"[0-9a-f]{32}"$/)
+    // Weak on purpose: the same tag identifies the identity and gzip
+    // encodings, which a strong validator must not claim.
+    expect(ctx.headers.etag).toMatch(/^W\/"[0-9a-f]{32}"$/)
     expect(ctx.body).toBe(JSON.stringify({ a: 1 }))
     expect(ctx.status).toBe(200)
   })
@@ -52,12 +60,14 @@ describe('etagMiddleware', () => {
     expect(second.body).toBeNull()
   })
 
-  it('matches weak validators and entries in a list', async () => {
+  it('matches strong-spelled validators and entries in a list', async () => {
     const first = makeCtx()
     await run(first, { a: 1 })
 
+    // A proxy may strip the W/ prefix; the bare tag must still revalidate.
+    const strongSpelled = first.headers.etag.replace(/^W\//, '')
     const second = makeCtx({
-      'if-none-match': `"something-else", W/${first.headers.etag}`,
+      'if-none-match': `"something-else", ${strongSpelled}`,
     })
     await run(second, { a: 1 })
 
@@ -73,6 +83,29 @@ describe('etagMiddleware', () => {
 
     expect(second.status).toBe(200)
     expect(second.body).toBe(JSON.stringify({ a: 2 }))
+  })
+
+  it('marks tagged responses private, on 304s too', async () => {
+    const first = makeCtx()
+    await run(first, { a: 1 })
+    expect(first.headers['cache-control']).toBe('private')
+
+    const second = makeCtx({ 'if-none-match': first.headers.etag })
+    await run(second, { a: 1 })
+    expect(second.status).toBe(304)
+    expect(second.headers['cache-control']).toBe('private')
+  })
+
+  it('keeps a Cache-Control the route already set', async () => {
+    const ctx = makeCtx()
+    await middleware(ctx as unknown as Context, async () => {
+      ctx.status = 200
+      ctx.body = { a: 1 }
+      ctx.set('Cache-Control', 'no-store')
+    })
+
+    expect(ctx.headers['cache-control']).toBe('no-store')
+    expect(ctx.headers.etag).toBeDefined()
   })
 
   it('leaves buffers, strings and non-200 responses untouched', async () => {

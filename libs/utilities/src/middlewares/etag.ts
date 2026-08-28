@@ -2,9 +2,11 @@ import { Context, Next } from 'koa'
 import crypto from 'crypto'
 
 /**
- * Strong MD5 ETags + If-None-Match revalidation for plain-JSON responses.
+ * Weak MD5 ETags + If-None-Match revalidation for plain-JSON responses.
  * Register AFTER compression middleware: the hash must cover the uncompressed
- * body, while compression still applies on the way out.
+ * body, while compression still applies on the way out. Weak (W/) because the
+ * same tag then rides both the identity and gzip encodings, which a strong
+ * validator must not claim (RFC 9110 §8.8.1).
  */
 export const etagMiddleware = () => {
   return async (ctx: Context, next: Next) => {
@@ -25,17 +27,24 @@ export const etagMiddleware = () => {
     }
 
     const content = JSON.stringify(body)
-    const etag = `"${crypto.createHash('md5').update(content).digest('hex')}"`
+    const tag = `"${crypto.createHash('md5').update(content).digest('hex')}"`
 
-    ctx.set('ETag', etag)
+    ctx.set('ETag', `W/${tag}`)
 
-    // Proxies that recompress a response weaken its validator to W/"..." —
-    // still ours, so it must match or those clients never get a 304.
+    // Bodies can be per-requester (capabilities): today the Authorization
+    // header keeps shared caches away, but that guard dies at any edge that
+    // terminates auth. Say it explicitly; routes may still override.
+    if (!ctx.response.get('Cache-Control')) {
+      ctx.set('Cache-Control', 'private')
+    }
+
+    // Compare on the bare tag: clients echo W/"..." back, but a proxy may
+    // have stripped or added the prefix — either spelling is still ours.
     const revalidators = ctx
       .get('If-None-Match')
       .split(',')
       .map((value) => value.trim().replace(/^W\//, ''))
-    if (revalidators.includes(etag)) {
+    if (revalidators.includes(tag)) {
       ctx.status = 304
       ctx.body = null
       return

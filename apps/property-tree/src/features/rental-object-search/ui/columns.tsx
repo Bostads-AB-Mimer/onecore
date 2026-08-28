@@ -5,8 +5,9 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
-import type { RentalObject } from '@/entities/property-tree'
 import { RENTAL_OBJECT_TYPE_LABELS } from '@/entities/property-tree'
+
+import type { RentalObjectSummary as RentalObject } from '@/services/api/core/rentalObjectService'
 
 import { getPropertyObjectPath } from '@/shared/routes'
 

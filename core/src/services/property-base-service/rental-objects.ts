@@ -16,11 +16,6 @@ const repeatable = z
   .transform((v) => (Array.isArray(v) ? v : [v]))
   .optional()
 
-const GetRootRentalObjectsQuerySchema = z.object({
-  groupBy: z.enum(['costCenter', 'marketArea', 'company']),
-  rootId: z.string().min(1),
-})
-
 // Where to look for rental objects — alternatives, not a conjunction. Shared
 // by the search and the details lookup so both read a selection the same way.
 const RentalObjectScopeShape = {
@@ -31,7 +26,8 @@ const RentalObjectScopeShape = {
   buildingCodes: repeatable,
   staircaseCodes: repeatable,
   parkingAreaCodes: repeatable,
-  rentalIds: repeatable,
+  // Same cap as upstream — fail fast here instead of spending a round trip.
+  rentalIds: repeatable.pipe(z.array(z.string()).max(200).optional()),
 }
 
 const SCOPE_KEYS = Object.keys(
@@ -221,65 +217,6 @@ export const routes = (router: KoaRouter) => {
     )
     if (!content) return
     ctx.body = { content, totalCount: result.data.totalCount, ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /rental-objects/by-root:
-   *   get:
-   *     summary: Every rental object under one grouping root
-   *     description: |
-   *       All rental objects of a district, marknadsområde or company, taking
-   *       the same (groupBy, rootId) pair as the property tree and served from
-   *       the same cache. Meant for clients that filter, count and list these
-   *       locally instead of asking the server per filter change.
-   *     tags:
-   *       - Rental objects
-   *     parameters:
-   *       - { in: query, name: groupBy, required: true, schema: { type: string, enum: [costCenter, marketArea, company] } }
-   *       - { in: query, name: rootId, required: true, schema: { type: string } }
-   *     responses:
-   *       200:
-   *         description: The root's rental objects
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               required: [content]
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/RentalObjectSummary'
-   *       400:
-   *         description: Invalid query parameters
-   *       404:
-   *         description: Root not found
-   *       500:
-   *         description: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('(.*)/rental-objects/by-root', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const query = parseQuery(ctx, GetRootRentalObjectsQuerySchema, metadata)
-    if (!query) return
-
-    const result = await propertyBaseAdapter.getRootRentalObjects(query)
-    if (!result.ok) {
-      return replyError(ctx, result.err, metadata, {
-        notFound: 'Root not found',
-      })
-    }
-
-    const content = parseUpstream(
-      ctx,
-      RentalObjectSummarySchema.array(),
-      result.data,
-      metadata
-    )
-    if (!content) return
-    ctx.body = { content, ...metadata }
   })
 
   /**

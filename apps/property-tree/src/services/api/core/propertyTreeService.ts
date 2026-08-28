@@ -4,7 +4,9 @@ import type { components, paths } from './generated/api-types'
 export type PropertyTree = components['schemas']['PropertyTree']
 export type PropertyGrouping = PropertyTree['grouping']
 export type PropertyTreeGroup = PropertyTree['groups'][number]
-export type PropertyTreeProperty = PropertyTreeGroup['properties'][number]
+/** The uniform node below a group: property, building, trapphus,
+ * parkeringsområde or rental-object leaf, told apart by `type`. */
+export type PropertyTreeDataNode = PropertyTreeGroup['properties'][number]
 export type MarketAreaSummary = components['schemas']['MarketAreaSummary']
 
 export type RentalObjectSubtype = components['schemas']['RentalObjectSubtype']
@@ -40,16 +42,6 @@ export const propertyTreeService = {
     })
     if (error) throw error
     return data?.content
-  },
-
-  /** Every rental object under one grouping root — the data clients filter,
-   * count and list locally instead of re-querying per filter change. */
-  async getRootRentalObjects(grouping: PropertyGrouping, rootId: string) {
-    const { data, error } = await GET('/rental-objects/by-root', {
-      params: { query: { groupBy: grouping, rootId } },
-    })
-    if (error) throw error
-    return data?.content || []
   },
 
   /** Grundhyra, BRA, annan information and anläggnings-ID for the objects a

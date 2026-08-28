@@ -4,6 +4,7 @@ import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 
 import { routes as propertyTreeRoutes } from '../property-tree'
+import { clearCachedUsersByRole } from '../keycloak-users'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as keycloakAdapter from '../../auth-service/keycloak-admin-adapter'
 import type { components } from '../../../adapters/property-base-adapter/generated/api-types'
@@ -17,47 +18,64 @@ app.silent = true
 app.use(bodyParser())
 app.use(router.routes())
 
-beforeEach(jest.resetAllMocks)
+beforeEach(() => {
+  jest.resetAllMocks()
+  clearCachedUsersByRole()
+})
 
 const TREE_ID = '11111111-1111-1111-1111-111111111111'
 const KVV_ID = '22222222-2222-2222-2222-222222222222'
 const RESP_ID = 'responsible-user-id'
 
 const property: PropertyTree['groups'][number]['properties'][number] = {
+  type: 'property',
   code: '04101',
-  designation: 'JOSEF 7',
-  tract: 'Josef',
-  buildings: [
+  name: 'JOSEF 7',
+  subtypeCode: null,
+  subtypeName: null,
+  children: [
     {
-      buildingCode: '04101-B1',
-      buildingName: 'Hus 1',
-      buildingType: { code: 'STD', name: 'Standard' },
-      staircases: [
+      type: 'building',
+      code: '04101-B1',
+      name: 'Hus 1',
+      subtypeCode: 'STD',
+      subtypeName: 'Standard',
+      children: [
         {
-          code: '01',
+          type: 'staircase',
+          code: '04101-B1-01',
           name: 'Hus 1 A',
-          residenceCount: 12,
-          parkingCount: 0,
-          facilityCount: 1,
-          otherCount: 0,
+          subtypeCode: null,
+          subtypeName: null,
+          children: [
+            {
+              type: 'residence',
+              code: '041-041-01-0101',
+              name: 'JOSEFSGATAN 1 A',
+              subtypeCode: '3RK',
+              subtypeName: '3 rum och kök',
+            },
+          ],
         },
       ],
-      residenceCount: 26,
-      parkingCount: 0,
-      facilityCount: 1,
-      otherCount: 0,
+    },
+    {
+      type: 'parkingArea',
+      code: '041-717-00',
+      name: 'JOSEFS PARKERING',
+      subtypeCode: null,
+      subtypeName: null,
+      children: [
+        {
+          type: 'parkingSpace',
+          code: '041-717-00-0001',
+          name: 'JOSEFSGATAN 2',
+          subtypeCode: 'CG',
+          subtypeName: 'Centralgarage',
+        },
+      ],
     },
   ],
-  parkingAreas: [
-    { code: '041-717-00', name: 'JOSEFS PARKERING', parkingCount: 4 },
-  ],
-  aggregates: {
-    residenceCount: 26,
-    parkingCount: 4,
-    entranceCount: 5,
-    facilityCount: 1,
-    otherCount: 0,
-  },
 }
 
 const costCenterTree: PropertyTree = {
@@ -165,6 +183,29 @@ describe('GET /property-tree', () => {
     })
   })
 
+  it('forwards includeObjects untouched to the adapter', async () => {
+    const spy = jest
+      .spyOn(propertyBaseAdapter, 'getPropertyTree')
+      .mockResolvedValueOnce({ ok: true, data: costCenterTree })
+    mockUsers([])
+
+    await request(app.callback()).get(
+      `/property-tree?groupBy=costCenter&rootId=${TREE_ID}&includeObjects=false`
+    )
+    expect(spy).toHaveBeenCalledWith({
+      groupBy: 'costCenter',
+      rootId: TREE_ID,
+      includeObjects: 'false',
+    })
+  })
+
+  it('rejects an includeObjects value that is not a boolean literal', async () => {
+    const res = await request(app.callback()).get(
+      `/property-tree?groupBy=costCenter&rootId=${TREE_ID}&includeObjects=maybe`
+    )
+    expect(res.status).toBe(400)
+  })
+
   it('hydrates the group responsible from the property-manager role', async () => {
     jest
       .spyOn(propertyBaseAdapter, 'getPropertyTree')
@@ -180,6 +221,79 @@ describe('GET /property-tree', () => {
     expect(res.body.content.groups[0].responsible).toMatchObject({
       id: RESP_ID,
       username: 'resp',
+    })
+  })
+
+  it('tolerates null keycloak attributes on the responsible user', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getPropertyTree')
+      .mockResolvedValueOnce({ ok: true, data: costCenterTree })
+    // Keycloak sends null (not undefined) for unset optional attributes.
+    const userWithNulls = {
+      id: RESP_ID,
+      username: 'resp',
+      firstName: null,
+      lastName: null,
+      email: null,
+    }
+    mockUsers([userWithNulls])
+
+    const res = await request(app.callback()).get(
+      `/property-tree?groupBy=costCenter&rootId=${TREE_ID}`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.groups[0].responsible).toMatchObject({
+      id: RESP_ID,
+      username: 'resp',
+    })
+  })
+
+  it('reuses the cached property-manager list across requests', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getPropertyTree')
+      .mockResolvedValue({ ok: true, data: costCenterTree })
+    const users = mockUsers([{ id: RESP_ID, username: 'resp' }])
+
+    await request(app.callback()).get(
+      `/property-tree?groupBy=costCenter&rootId=${TREE_ID}`
+    )
+    const second = await request(app.callback()).get(
+      `/property-tree?groupBy=costCenter&rootId=${TREE_ID}`
+    )
+
+    expect(users).toHaveBeenCalledTimes(1)
+    expect(second.body.content.groups[0].responsible).toMatchObject({
+      id: RESP_ID,
+    })
+  })
+
+  it('does not cache a failed keycloak lookup', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getPropertyTree')
+      .mockResolvedValue({ ok: true, data: costCenterTree })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: 'keycloak_unreachable',
+        statusCode: 502,
+      })
+      .mockResolvedValue({
+        ok: true,
+        data: [{ id: RESP_ID, username: 'resp' }],
+      })
+
+    const first = await request(app.callback()).get(
+      `/property-tree?groupBy=costCenter&rootId=${TREE_ID}`
+    )
+    expect(first.body.content.groups[0].responsible).toBeNull()
+
+    const second = await request(app.callback()).get(
+      `/property-tree?groupBy=costCenter&rootId=${TREE_ID}`
+    )
+    expect(second.body.content.groups[0].responsible).toMatchObject({
+      id: RESP_ID,
     })
   })
 

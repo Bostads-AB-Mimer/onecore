@@ -9,6 +9,44 @@ import {
 import { PROPERTY_MANAGER_ROLE } from './constants'
 import { KeycloakUserSummarySchema } from './schemas'
 
+type RoleUsersResult = Awaited<ReturnType<typeof getUsersByRole>>
+
+// Display staleness only: a renamed or added förvaltare shows late, nothing
+// more. Validation paths must keep calling the adapter directly.
+const ROLE_USERS_TTL_MS = 15 * 60 * 1000
+
+interface RoleUsersEntry {
+  promise: Promise<RoleUsersResult>
+  expiresAt: number
+}
+
+const roleUsersCache = new Map<string, RoleUsersEntry>()
+
+/** getUsersByRole for display paths (who is "responsible"), cached per role. */
+export function getCachedUsersByRole(role: string): Promise<RoleUsersResult> {
+  const now = Date.now()
+  const hit = roleUsersCache.get(role)
+  if (hit && hit.expiresAt > now) return hit.promise
+
+  const entry: RoleUsersEntry = {
+    promise: getUsersByRole(role),
+    expiresAt: now + ROLE_USERS_TTL_MS,
+  }
+  // Failures resolve as ok:false rather than throw — evict them so one blip
+  // doesn't pin a null "responsible" for the whole TTL.
+  entry.promise.then((result) => {
+    if (!result.ok && roleUsersCache.get(role) === entry) {
+      roleUsersCache.delete(role)
+    }
+  })
+  roleUsersCache.set(role, entry)
+  return entry.promise
+}
+
+export function clearCachedUsersByRole(): void {
+  roleUsersCache.clear()
+}
+
 // Keycloak returns `null` (not undefined) for unset optional attributes, while
 // KeycloakUserSummarySchema declares them `.optional()` — which rejects null.
 // Normalise here so every caller emits a parseable summary.

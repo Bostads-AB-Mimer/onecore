@@ -23,7 +23,6 @@ import {
   TableRow,
 } from '@/shared/ui/Table'
 
-import { useObjectFacets } from '../hooks/useObjectFacets'
 import type {
   PropertyTree,
   PropertyTreeRoot,
@@ -34,19 +33,14 @@ import {
   usePropertyTreeRoots,
   usePropertyTrees,
 } from '../hooks/usePropertyTreeData'
-import { rootRentalObjectsQuery } from '../hooks/useRootRentalObjects'
 import type { GetParentInfo } from '../hooks/useTreeSelectionState'
-import type {
-  ObjectFilter,
-  ObjectFilterView,
-  RentalObject,
-} from '../model/facets'
+import type { ObjectFilter, ObjectFilterView } from '../model/facets'
 import {
+  buildFacetIndex,
   filterSelection,
+  filterSignature,
   nodeCount,
   nodeExcluded,
-  objectNode,
-  objectParentKey,
   rowCheckState,
 } from '../model/facets'
 import { rememberNodeLabel } from '../model/labels'
@@ -198,7 +192,7 @@ export function PropertyTreePicker({
 
   // Roots whose data is loaded: all of them while searching or expanded, the
   // opened ones otherwise. Counting and bulk selection cover these; the rest
-  // keep the tree's own per-type counts.
+  // show no counts and are never filtered out.
   const loadedRoots = useMemo(
     () =>
       searchActive || expandAll
@@ -219,11 +213,12 @@ export function PropertyTreePicker({
     () => ({ types: activeObjectTypes, subtypeKeys: activeSubtypes }),
     [activeObjectTypes, activeSubtypes]
   )
-  const { facets, objects } = useObjectFacets(
-    grouping,
-    loadedRoots,
-    open,
-    filter
+  const signature = filterSignature(filter)
+  const facets = useMemo(
+    () => buildFacetIndex(treeState.walks, filter),
+    // filter is covered by its signature; walks are combine-memoised.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [treeState.walks, signature]
   )
   const view = useMemo<ObjectFilterView>(
     () => ({ filter, facets }),
@@ -243,28 +238,6 @@ export function PropertyTreePicker({
       ),
     [queryClient, grouping]
   )
-  const cachedObjectsSettled = useCallback(
-    (root: PropertyTreeRoot) =>
-      queryClient.getQueryData(
-        rootRentalObjectsQuery(grouping, root.id).queryKey
-      ) !== undefined,
-    [queryClient, grouping]
-  )
-  // Objects grouped by the node they hang under, so a trapphus or
-  // parkeringsområde can answer for its objects the way a property answers
-  // for its buildings.
-  const objectsByParent = useMemo(() => {
-    const byParent = new Map<string, RentalObject[]>()
-    for (const object of objects) {
-      const parentKey = objectParentKey(object)
-      if (!parentKey) continue
-      const list = byParent.get(parentKey) ?? []
-      list.push(object)
-      byParent.set(parentKey, list)
-    }
-    return byParent
-  }, [objects])
-
   const getParentInfo = useCallback<GetParentInfo>(
     (parentKey) => {
       for (const root of roots) {
@@ -272,32 +245,20 @@ export function PropertyTreePicker({
         if (!tree) continue
         const info = findParentInfo(root, tree, parentKey)
         if (!info) continue
-        // Child lists are complete only once this root's objects have landed;
-        // resolving mid-flight would let roll-up claim unseen loose objects.
-        if (!cachedObjectsSettled(root)) return undefined
-        // Structure children plus the objects drawn under this node; where
-        // objects aren't selectable they only block roll-up, never join it.
-        const own = objectsByParent.get(parentKey)
-        if (!own?.length) return info
+        // A loaded tree carries its object leaves, so child lists are
+        // complete. Where objects aren't selectable they only block roll-up,
+        // never join it.
+        if (selectableObjects) return info
         return {
           node: info.node,
-          children: [
-            ...info.children,
-            ...own.map((object) =>
-              objectNode(object, info.node, selectableObjects)
-            ),
-          ],
+          children: info.children.map((child) =>
+            child.level === 'object' ? { ...child, selectable: false } : child
+          ),
         }
       }
       return undefined
     },
-    [
-      roots,
-      cachedTree,
-      cachedObjectsSettled,
-      objectsByParent,
-      selectableObjects,
-    ]
+    [roots, cachedTree, selectableObjects]
   )
   const handleToggleNode = useCallback(
     (node: PropertyTreeNode) => onToggleNode(node, getParentInfo),
@@ -322,21 +283,14 @@ export function PropertyTreePicker({
     for (const root of roots) {
       const { tree } = treeState.stateOf(root.id)
       if (!tree) continue
-      addCoveredAncestorKeys(
-        root,
-        tree,
-        objectsByParent,
-        selection,
-        out,
-        resolved
-      )
+      addCoveredAncestorKeys(root, tree, selection, out, resolved)
     }
     for (const node of selection.values()) {
       if (resolved.has(node.key)) continue
       for (const ancestor of node.ancestors) out.add(ancestor)
     }
     return out
-  }, [roots, treeState, objectsByParent, selection])
+  }, [roots, treeState, selection])
 
   /**
    * Every row on screen, in order — the table and the header checkbox read
@@ -355,10 +309,9 @@ export function PropertyTreePicker({
           overrides: expandOverrides,
           loading: isLoading,
           expandAllStructure: expandAll,
-          objectsByParent,
         })
       }),
-    [roots, treeState, query, expandOverrides, expandAll, objectsByParent]
+    [roots, treeState, query, expandOverrides, expandAll]
   )
 
   /** Keys of every branch currently open. Read off the rows rather than walked

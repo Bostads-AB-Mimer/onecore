@@ -8,12 +8,9 @@ export {
 } from './hooks/useOccupantData'
 export type {
   PropertyTree,
-  PropertyTreeBuilding,
+  PropertyTreeDataNode,
   PropertyTreeGroup,
-  PropertyTreeParkingArea,
-  PropertyTreeProperty,
   PropertyTreeRoot,
-  PropertyTreeStaircase,
   TreeGrouping,
 } from './hooks/usePropertyTreeData'
 export {
@@ -25,7 +22,6 @@ export {
   subtypeKey,
   useRentalObjectSubtypes,
 } from './hooks/useRentalObjectSubtypes'
-export type { RentalObject } from './hooks/useRootRentalObjects'
 export type { GetParentInfo } from './hooks/useTreeSelectionState'
 export { useTreeSelectionState } from './hooks/useTreeSelectionState'
 export type { FacetIndex, ObjectFilter, ObjectFilterView } from './model/facets'
@@ -44,6 +40,7 @@ export {
   nodeCheckState,
   nodeKey,
 } from './model/selection'
+export type { RentalObject } from './model/treeRows'
 export { rootKeyOf } from './model/treeRows'
 export type { PropertyTreeFilters } from './ui/PropertyTreePicker'
 export { PropertyTreePicker } from './ui/PropertyTreePicker'

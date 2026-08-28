@@ -3,6 +3,10 @@ import { logger } from '@onecore/utilities'
 import { trimStrings } from '@src/utils/data-conversion'
 import { cachedBatch } from '@src/utils/promise-cache'
 import type { CostCenterTreeProperty } from '@src/types/cost-center'
+import type {
+  PropertyTreeChildNode,
+  PropertyTreeNode,
+} from '@src/types/property-tree'
 import type { RentalObjectSummary } from '@src/types/rental-object'
 
 import { prisma } from './db'
@@ -347,18 +351,129 @@ export const buildPropertySubtrees = async (
   return new Map(uniqueCodes.map((code, i) => [code, subtrees[i]]))
 }
 
-/**
- * Every rental object of the given properties, from the same cache and the
- * same refresh as the subtrees above. Flat and rental-id ordered per property:
- * the client groups them itself.
- */
-export const buildPropertyObjects = async (
-  propertyCodes: string[]
-): Promise<RentalObjectSummary[]> => {
-  const uniqueCodes = Array.from(new Set(propertyCodes))
-  if (uniqueCodes.length === 0) return []
+// ------------------------------------------------- property-tree nodes
 
-  subtreeCache.prime(uniqueCodes)
-  const perProperty = await objectCache.get(uniqueCodes)
-  return perProperty.flat()
+type TreeLeaf = Omit<PropertyTreeChildNode, 'children'>
+
+const toLeaf = (o: RentalObjectSummary): TreeLeaf => ({
+  type: o.type,
+  code: o.rentalId,
+  name: o.address,
+  subtypeCode: o.subtypeCode,
+  subtypeName: o.subtypeName,
+})
+
+const pushTo = (map: Map<string, TreeLeaf[]>, key: string, leaf: TreeLeaf) => {
+  const list = map.get(key) ?? []
+  list.push(leaf)
+  map.set(key, list)
+}
+
+/** The property's whole subtree as uniform nodes, its rental objects placed
+ * as leaves. Builds fresh objects — the cached subtree is shared with the
+ * cost-center tree and must stay object-free. */
+const toPropertyNode = (
+  subtree: CostCenterTreeProperty,
+  objects: RentalObjectSummary[]
+): PropertyTreeNode => {
+  const buildingCodes = new Set(subtree.buildings.map((b) => b.buildingCode))
+  const staircaseKeys = new Set(
+    subtree.buildings.flatMap((b) =>
+      b.staircases.map((s) => `${b.buildingCode}:${s.code}`)
+    )
+  )
+  const parkingAreaCodes = new Set(subtree.parkingAreas.map((pa) => pa.code))
+
+  const byStaircase = new Map<string, TreeLeaf[]>()
+  const byBuilding = new Map<string, TreeLeaf[]>()
+  const byParkingArea = new Map<string, TreeLeaf[]>()
+  const loose: TreeLeaf[] = []
+
+  for (const o of objects) {
+    const leaf = toLeaf(o)
+    // Deepest known parent, parkeringsområde first. Parents missing from the
+    // structure fall through to the next level, so no object can vanish.
+    if (o.parkingAreaCode && parkingAreaCodes.has(o.parkingAreaCode)) {
+      pushTo(byParkingArea, o.parkingAreaCode, leaf)
+    } else if (o.buildingCode && buildingCodes.has(o.buildingCode)) {
+      const staircaseKey = `${o.buildingCode}:${o.staircaseCode}`
+      if (o.staircaseCode && staircaseKeys.has(staircaseKey)) {
+        pushTo(byStaircase, staircaseKey, leaf)
+      } else {
+        pushTo(byBuilding, o.buildingCode, leaf)
+      }
+    } else {
+      loose.push(leaf)
+    }
+  }
+
+  return {
+    type: 'property',
+    code: subtree.code,
+    name: subtree.designation,
+    subtypeCode: null,
+    subtypeName: null,
+    children: [
+      ...subtree.buildings.map(
+        (b): PropertyTreeChildNode => ({
+          type: 'building',
+          code: b.buildingCode,
+          name: b.buildingName,
+          subtypeCode: b.buildingType?.code ?? null,
+          subtypeName: b.buildingType?.name ?? null,
+          children: [
+            ...b.staircases.map((s) => ({
+              type: 'staircase' as const,
+              // Canonical staircase id `<bygcode>-<vancode>` — the composite
+              // the search scopes and uppgång URLs already use (bygcodes
+              // contain dashes, vancodes never do). Do not emit the bare code.
+              code: `${b.buildingCode}-${s.code}`,
+              name: s.name,
+              subtypeCode: null,
+              subtypeName: null,
+              children: byStaircase.get(`${b.buildingCode}:${s.code}`) ?? [],
+            })),
+            ...(byBuilding.get(b.buildingCode) ?? []),
+          ],
+        })
+      ),
+      ...subtree.parkingAreas.map(
+        (pa): PropertyTreeChildNode => ({
+          type: 'parkingArea',
+          code: pa.code,
+          name: pa.name,
+          subtypeCode: null,
+          subtypeName: null,
+          children: byParkingArea.get(pa.code) ?? [],
+        })
+      ),
+      ...loose,
+    ],
+  }
+}
+
+/**
+ * The property-and-below part of a tree as uniform nodes with object leaves,
+ * one entry per requested code. Same two caches as above, awaited together.
+ * includeObjects=false skips the object cache for structure-only consumers.
+ */
+export const buildPropertyTreeNodes = async (
+  propertyCodes: string[],
+  includeObjects = true
+): Promise<Map<string, PropertyTreeNode>> => {
+  const uniqueCodes = Array.from(new Set(propertyCodes))
+  if (uniqueCodes.length === 0) return new Map()
+
+  const [subtrees, objectsPerProperty] = await Promise.all([
+    subtreeCache.get(uniqueCodes),
+    includeObjects
+      ? objectCache.get(uniqueCodes)
+      : uniqueCodes.map((): RentalObjectSummary[] => []),
+  ])
+  return new Map(
+    uniqueCodes.map((code, i) => [
+      code,
+      toPropertyNode(subtrees[i], objectsPerProperty[i]),
+    ])
+  )
 }

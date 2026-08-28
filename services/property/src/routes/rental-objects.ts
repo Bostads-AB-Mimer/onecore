@@ -2,7 +2,6 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 import {
-  getRootRentalObjects,
   resolveDetailsPropertyCodes,
   resolveSearchPropertyCodes,
 } from '@src/adapters/property-grouping-adapter'
@@ -15,7 +14,6 @@ import { listRentalObjectSubtypes } from '@src/adapters/rental-object-subtype-ad
 import {
   GetRentalObjectDetailsQueryParamsSchema,
   GetRentalObjectsQueryParamsSchema,
-  GetRootRentalObjectsQueryParamsSchema,
   SearchRentalObjectsQueryParamsSchema,
 } from '@src/types/rental-object'
 
@@ -166,65 +164,6 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { content: rows, totalCount, ...metadata }
       } catch (err) {
         logger.error({ err }, 'Error searching rental objects')
-        ctx.status = 500
-        ctx.body = { reason: 'Internal server error', ...metadata }
-      }
-    }
-  )
-
-  /**
-   * @swagger
-   * /rental-objects/by-root:
-   *   get:
-   *     summary: Every rental object under one grouping root
-   *     description: |
-   *       All rental objects of a district, marknadsområde or company, taking
-   *       the same (groupBy, rootId) pair as the property tree and served from
-   *       the same cache. Meant for clients that filter, count and list these
-   *       locally instead of asking the server per filter change — a whole
-   *       district is thousands of objects but only tens of KB compressed.
-   *     tags:
-   *       - Rental objects
-   *     parameters:
-   *       - { in: query, name: groupBy, required: true, schema: { type: string, enum: [costCenter, marketArea, company] } }
-   *       - { in: query, name: rootId, required: true, schema: { type: string }, description: 'Cost centre uuid, market area code or company code' }
-   *     responses:
-   *       200:
-   *         description: The root's rental objects
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/RentalObjectSummary'
-   *       400:
-   *         description: Invalid query parameters
-   *       404:
-   *         description: Root not found
-   *       500:
-   *         description: Internal server error
-   */
-  router.get(
-    '(.*)/rental-objects/by-root',
-    parseRequest({ query: GetRootRentalObjectsQueryParamsSchema }),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { groupBy, rootId } = ctx.request.parsedQuery
-
-      try {
-        const content = await getRootRentalObjects(groupBy, rootId)
-        if (!content) {
-          ctx.status = 404
-          ctx.body = { reason: 'Root not found', ...metadata }
-          return
-        }
-        ctx.status = 200
-        ctx.body = { content, ...metadata }
-      } catch (err) {
-        logger.error({ err }, 'Error fetching root rental objects')
         ctx.status = 500
         ctx.body = { reason: 'Internal server error', ...metadata }
       }

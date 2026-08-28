@@ -1343,15 +1343,50 @@ export const RentalObjectSubtypeSchema = z.object({
 })
 
 // ---- Property tree (any grouping) ----
-// Mirrors the property service. Everything below the property level is shared
-// with the cost-center tree (CostCenterTreeProperty); only the levels above
-// differ per grouping, and never by more than one intermediate level — hence
-// the explicit groups/properties pair rather than a recursive node shape.
+// Mirrors the property service: one uniform node shape for every level below
+// a group, down to the rental-object leaves. Stamped per depth via factories,
+// not recursive — swagger's $refStrategy 'none' degrades self-references (and
+// reused zod instances) to any/invalid TS.
 export const PropertyGroupingSchema = z.enum([
   'costCenter',
   'marketArea',
   'company',
 ])
+
+export const PROPERTY_TREE_NODE_TYPES = [
+  'property',
+  'building',
+  'staircase',
+  'parkingArea',
+  ...property.RENTAL_OBJECT_TYPES,
+] as const
+
+const propertyTreeNodeFields = () => ({
+  type: z.enum(PROPERTY_TREE_NODE_TYPES),
+  code: z.string(),
+  name: z.string().nullable(),
+  subtypeCode: z.string().nullable(),
+  subtypeName: z.string().nullable(),
+})
+
+const propertyTreeLeaf = () => z.object(propertyTreeNodeFields())
+const propertyTreeDepth1 = () =>
+  z.object({
+    ...propertyTreeNodeFields(),
+    children: z.array(propertyTreeLeaf()).optional(),
+  })
+const propertyTreeDepth2 = () =>
+  z.object({
+    ...propertyTreeNodeFields(),
+    children: z.array(propertyTreeDepth1()).optional(),
+  })
+
+export const PropertyTreeNodeSchema = z.object({
+  ...propertyTreeNodeFields(),
+  children: z.array(propertyTreeDepth2()).optional(),
+})
+
+export type PropertyTreeNode = z.infer<typeof PropertyTreeNodeSchema>
 
 export const MarketAreaSummarySchema = z.object({
   id: z.string(),
@@ -1366,7 +1401,7 @@ export const PropertyTreeGroupSchema = z.object({
   // Expanded from the property service's responsibleKeycloakUserId, and only
   // for the cost-center grouping — the others have no such concept.
   responsible: KeycloakUserSummarySchema.nullable(),
-  properties: z.array(CostCenterTreePropertySchema),
+  properties: z.array(PropertyTreeNodeSchema),
 })
 
 // Properties hang off groups only. Groupings without an intermediate level

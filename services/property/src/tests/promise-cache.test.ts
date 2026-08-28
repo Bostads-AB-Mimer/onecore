@@ -1,4 +1,4 @@
-import { cachedBatch, cachedPromise } from '../utils/promise-cache'
+import { cachedBatch, cachedKeyed, cachedPromise } from '../utils/promise-cache'
 
 afterEach(() => {
   jest.restoreAllMocks()
@@ -64,6 +64,45 @@ describe('cachedPromise', () => {
     await cache.get()
     cache.clear()
     await cache.get()
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('cachedKeyed', () => {
+  it('caches per key and serves each until its TTL passes', async () => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(1_000)
+    const fetch = jest.fn(async (key: string) => `value:${key}`)
+    const cache = cachedKeyed(100, fetch)
+
+    await expect(cache.get('a')).resolves.toBe('value:a')
+    await expect(cache.get('b')).resolves.toBe('value:b')
+    await cache.get('a')
+    expect(fetch).toHaveBeenCalledTimes(2)
+
+    now.mockReturnValue(1_100)
+    await cache.get('a')
+    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(fetch).toHaveBeenLastCalledWith('a')
+  })
+
+  it('does not cache a failure', async () => {
+    const fetch = jest
+      .fn<Promise<string>, [string]>()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValue('ok')
+    const cache = cachedKeyed(100, fetch)
+
+    await expect(cache.get('a')).rejects.toThrow('boom')
+    await expect(cache.get('a')).resolves.toBe('ok')
+  })
+
+  it('clear() forces every key to refetch', async () => {
+    const fetch = jest.fn(async (key: string) => key)
+    const cache = cachedKeyed(100, fetch)
+
+    await cache.get('a')
+    cache.clear()
+    await cache.get('a')
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 })

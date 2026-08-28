@@ -9,14 +9,11 @@ import { getPropertyObjectPath, paths } from '@/shared/routes'
 import { Checkbox } from '@/shared/ui/Checkbox'
 import { TableCell, TableRow } from '@/shared/ui/Table'
 
-import type {
-  OccupantTenant,
-  RentalObjectSummary,
-} from '../hooks/useOccupantData'
+import type { OccupantTenant } from '../hooks/useOccupantData'
 import { RENTAL_OBJECT_TYPE_LABELS } from '../hooks/useOccupantData'
 import { LEVEL_LABELS } from '../model/labels'
 import type { CheckState, PropertyTreeNode } from '../model/selection'
-import type { NodeRowSpec } from '../model/treeRows'
+import type { NodeRowSpec, RentalObject } from '../model/treeRows'
 import { LEVEL_ICONS, OBJECT_TYPE_ICONS } from './icons'
 
 export const COLUMN_COUNT = 4
@@ -184,7 +181,7 @@ export function ObjectRow({
   excluded = false,
 }: {
   depth: number
-  object: RentalObjectSummary
+  object: RentalObject
   /** undefined while the tenant lookup is still loading. */
   tenants: OccupantTenant[] | undefined
   checkState: CheckState
@@ -201,7 +198,7 @@ export function ObjectRow({
     !requiresTenants || (tenants !== undefined && tenants.length > 0)
   const displayState: CheckState =
     reachable && !excluded ? checkState : 'unchecked'
-  const codePath = getPropertyObjectPath(object.type, object.rentalId)
+  const codePath = getPropertyObjectPath(object.type, object.code)
   return (
     <TableRow className={excluded ? 'opacity-60' : undefined}>
       <TableCell className="py-1.5">
@@ -212,7 +209,7 @@ export function ObjectRow({
             disabled={!selectable || excluded}
             onCheckedChange={selectable && !excluded ? onCheck : undefined}
             onClick={(e) => e.stopPropagation()}
-            aria-label={`Välj ${object.rentalId}`}
+            aria-label={`Välj ${object.code}`}
           />
           <TypeIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
@@ -243,7 +240,7 @@ export function ObjectRow({
               </div>
             )}
             <div className="truncate text-xs text-muted-foreground @xl:hidden">
-              <CodeLink code={object.rentalId} path={codePath} />
+              <CodeLink code={object.code} path={codePath} />
             </div>
           </div>
         </Indent>
@@ -252,7 +249,7 @@ export function ObjectRow({
         {object.subtypeName ?? RENTAL_OBJECT_TYPE_LABELS[object.type]}
       </TableCell>
       <TableCell className="hidden py-1.5 text-muted-foreground @xl:table-cell">
-        <CodeLink code={object.rentalId} path={codePath} />
+        <CodeLink code={object.code} path={codePath} />
       </TableCell>
       <TableCell className="hidden py-1.5 @4xl:table-cell" />
     </TableRow>

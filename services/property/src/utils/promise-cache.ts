@@ -39,6 +39,42 @@ export const cachedPromise = <T>(
   }
 }
 
+export interface CachedKeyed<T> {
+  get(key: string): Promise<T>
+  clear(): void
+}
+
+/** One cached value per key, each refetched when older than ttlMs. Expired
+ * entries are swept on refresh — keys may come from client input. */
+export const cachedKeyed = <T>(
+  ttlMs: number,
+  fetch: (key: string) => Promise<T>
+): CachedKeyed<T> => {
+  const cache = new Map<string, Entry<T>>()
+
+  return {
+    get(key) {
+      const now = Date.now()
+      const hit = cache.get(key)
+      if (hit && hit.expiresAt > now) return hit.promise
+
+      for (const [k, entry] of cache) {
+        if (entry.expiresAt <= now) cache.delete(k)
+      }
+
+      const entry: Entry<T> = { promise: fetch(key), expiresAt: now + ttlMs }
+      entry.promise.catch(() => {
+        if (cache.get(key) === entry) cache.delete(key)
+      })
+      cache.set(key, entry)
+      return entry.promise
+    },
+    clear() {
+      cache.clear()
+    },
+  }
+}
+
 export interface CachedBatch<V> {
   /** Start a refresh for any missing or stale key without awaiting it. */
   prime(uniqueKeys: string[]): void

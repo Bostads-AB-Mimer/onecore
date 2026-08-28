@@ -1,11 +1,10 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
-import { getUsersByRole } from '../auth-service/keycloak-admin-adapter'
 import { PROPERTY_MANAGER_ROLE } from './constants'
-import { toUserSummary } from './keycloak-users'
+import { getCachedUsersByRole, toUserSummary } from './keycloak-users'
 import { parseQuery, parseUpstream, replyError } from './route-helpers'
 import {
   MarketAreaSummarySchema,
@@ -16,6 +15,8 @@ import {
 const GetPropertyTreeQuerySchema = z.object({
   groupBy: PropertyGroupingSchema,
   rootId: z.string().min(1),
+  // Forwarded verbatim; 'false' skips the rental-object leaves.
+  includeObjects: z.enum(['true', 'false']).optional(),
 })
 
 /**
@@ -97,6 +98,14 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Cost center id (uuid), market area code, or company code
+   *       - in: query
+   *         name: includeObjects
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: ['true', 'false']
+   *           default: 'true'
+   *         description: Pass 'false' to omit the rental-object leaves
    *     responses:
    *       200:
    *         description: Property tree
@@ -124,11 +133,21 @@ export const routes = (router: KoaRouter) => {
 
     // Only the cost-center grouping has responsible users; fetch them in
     // parallel with the tree so Keycloak never sits on the critical path.
+    const startedAt = Date.now()
+    let treeMs = 0
+    let keycloakMs = 0
     const [result, responsibleUsers] = await Promise.all([
-      propertyBaseAdapter.getPropertyTree(query),
-      query.groupBy === 'costCenter'
-        ? getUsersByRole(PROPERTY_MANAGER_ROLE)
-        : Promise.resolve(null),
+      propertyBaseAdapter.getPropertyTree(query).then((r) => {
+        treeMs = Date.now() - startedAt
+        return r
+      }),
+      (query.groupBy === 'costCenter'
+        ? getCachedUsersByRole(PROPERTY_MANAGER_ROLE)
+        : Promise.resolve(null)
+      ).then((r) => {
+        keycloakMs = Date.now() - startedAt
+        return r
+      }),
     ])
     if (!result.ok) {
       return replyError(ctx, result.err, metadata, {
@@ -157,7 +176,17 @@ export const routes = (router: KoaRouter) => {
       }),
     }
 
+    const parseStartedAt = Date.now()
     const content = parseUpstream(ctx, PropertyTreeSchema, composed, metadata)
+    logger.info(
+      {
+        treeMs,
+        keycloakMs,
+        parseMs: Date.now() - parseStartedAt,
+        rootId: query.rootId,
+      },
+      'property-tree core timing'
+    )
     if (!content) return
     ctx.body = { content, ...metadata }
   })

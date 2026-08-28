@@ -130,6 +130,18 @@ describe('GET /rental-objects/search', () => {
     expect(res.body.totalCount).toBe(137)
   })
 
+  it('rejects more than 200 rental ids without calling upstream', async () => {
+    const spy = jest.spyOn(propertyBaseAdapter, 'searchRentalObjects')
+    const rentalIds = Array.from({ length: 201 }, (_, i) => `id-${i}`)
+
+    const res = await request(app.callback())
+      .get('/rental-objects/search')
+      .query({ rentalIds })
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
   it('normalises a single scope value into an array', async () => {
     const spy = okOnce()
 
@@ -262,60 +274,6 @@ describe('GET /rental-objects/search', () => {
 
     const res = await request(app.callback()).get(
       '/rental-objects/search?propertyCodes=04101'
-    )
-    expect(res.status).toBe(500)
-  })
-})
-
-describe('GET /rental-objects/by-root', () => {
-  it('returns 400 when rootId is missing', async () => {
-    const res = await request(app.callback()).get(
-      '/rental-objects/by-root?groupBy=costCenter'
-    )
-    expect(res.status).toBe(400)
-    expect(res.body.errors).toBeDefined()
-  })
-
-  it('returns 400 when groupBy is not a known grouping', async () => {
-    const res = await request(app.callback()).get(
-      '/rental-objects/by-root?groupBy=district&rootId=cc1'
-    )
-    expect(res.status).toBe(400)
-  })
-
-  it('returns 404 when the root does not exist', async () => {
-    jest
-      .spyOn(propertyBaseAdapter, 'getRootRentalObjects')
-      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
-
-    const res = await request(app.callback()).get(
-      '/rental-objects/by-root?groupBy=costCenter&rootId=missing'
-    )
-    expect(res.status).toBe(404)
-    expect(res.body.reason).toBe('Root not found')
-  })
-
-  it('returns the root objects and forwards the pair unchanged', async () => {
-    const spy = jest
-      .spyOn(propertyBaseAdapter, 'getRootRentalObjects')
-      .mockResolvedValueOnce({ ok: true, data: [summary] })
-
-    const res = await request(app.callback()).get(
-      '/rental-objects/by-root?groupBy=marketArea&rootId=MO1'
-    )
-
-    expect(res.status).toBe(200)
-    expect(res.body.content).toEqual([summary])
-    expect(spy).toHaveBeenCalledWith({ groupBy: 'marketArea', rootId: 'MO1' })
-  })
-
-  it('returns 500 when the adapter fails', async () => {
-    jest
-      .spyOn(propertyBaseAdapter, 'getRootRentalObjects')
-      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
-
-    const res = await request(app.callback()).get(
-      '/rental-objects/by-root?groupBy=costCenter&rootId=cc1'
     )
     expect(res.status).toBe(500)
   })

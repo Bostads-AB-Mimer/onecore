@@ -33,7 +33,7 @@ export const ObjectTenantRow = memo(function ObjectTenantRow({
       object={row.object}
       tenants={
         tenants.data
-          ? (tenants.data.tenantsByCode[row.object.rentalId] ?? [])
+          ? (tenants.data.tenantsByCode[row.object.code] ?? [])
           : undefined
       }
       checkState={checkState}

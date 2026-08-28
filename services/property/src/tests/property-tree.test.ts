@@ -11,40 +11,54 @@ afterEach(() => {
 const UUID = '11111111-1111-1111-1111-111111111111'
 
 const property: PropertyTree['groups'][number]['properties'][number] = {
+  type: 'property',
   code: '04101',
-  designation: 'JOSEF 7',
-  tract: 'Josef',
-  buildings: [
+  name: 'JOSEF 7',
+  subtypeCode: null,
+  subtypeName: null,
+  children: [
     {
-      buildingCode: '04101-B1',
-      buildingName: 'Hus 1',
-      buildingType: { code: 'STD', name: 'Standard' },
-      staircases: [
+      type: 'building',
+      code: '04101-B1',
+      name: 'Hus 1',
+      subtypeCode: 'STD',
+      subtypeName: 'Standard',
+      children: [
         {
-          code: '01',
+          type: 'staircase',
+          code: '04101-B1-01',
           name: 'Hus 1 A',
-          residenceCount: 12,
-          parkingCount: 0,
-          facilityCount: 1,
-          otherCount: 0,
+          subtypeCode: null,
+          subtypeName: null,
+          children: [
+            {
+              type: 'residence',
+              code: '041-041-01-0101',
+              name: 'JOSEFSGATAN 1 A',
+              subtypeCode: '3RK',
+              subtypeName: '3 rum och kök',
+            },
+          ],
         },
       ],
-      residenceCount: 26,
-      parkingCount: 0,
-      facilityCount: 1,
-      otherCount: 0,
+    },
+    {
+      type: 'parkingArea',
+      code: '041-717-00',
+      name: 'JOSEFS PARKERING',
+      subtypeCode: null,
+      subtypeName: null,
+      children: [
+        {
+          type: 'parkingSpace',
+          code: '041-717-00-0001',
+          name: 'JOSEFSGATAN 2',
+          subtypeCode: 'CG',
+          subtypeName: 'Centralgarage',
+        },
+      ],
     },
   ],
-  parkingAreas: [
-    { code: '041-717-00', name: 'JOSEFS PARKERING', parkingCount: 4 },
-  ],
-  aggregates: {
-    residenceCount: 26,
-    parkingCount: 4,
-    entranceCount: 5,
-    facilityCount: 1,
-    otherCount: 0,
-  },
 }
 
 const tree: PropertyTree = {
@@ -110,7 +124,7 @@ describe('GET /property-tree', () => {
     expect(res.body.content.groups[0].responsibleKeycloakUserId).toBe(
       'responsible-user-id'
     )
-    expect(spy).toHaveBeenCalledWith('costCenter', UUID)
+    expect(spy).toHaveBeenCalledWith('costCenter', UUID, true)
   })
 
   it('serves a market-area root by code', async () => {
@@ -138,7 +152,32 @@ describe('GET /property-tree', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.content.groups[0].responsibleKeycloakUserId).toBeNull()
-    expect(spy).toHaveBeenCalledWith('marketArea', 'MO1')
+    expect(spy).toHaveBeenCalledWith('marketArea', 'MO1', true)
+  })
+
+  it('defaults to including object leaves', async () => {
+    const spy = jest
+      .spyOn(groupingAdapter, 'getPropertyTree')
+      .mockResolvedValueOnce(tree)
+
+    await request(app.callback())
+      .get('/property-tree')
+      .query({ groupBy: 'costCenter', rootId: UUID })
+
+    expect(spy).toHaveBeenCalledWith('costCenter', UUID, true)
+  })
+
+  it('passes includeObjects=false through to the adapter', async () => {
+    const spy = jest
+      .spyOn(groupingAdapter, 'getPropertyTree')
+      .mockResolvedValueOnce(tree)
+
+    const res = await request(app.callback())
+      .get('/property-tree')
+      .query({ groupBy: 'costCenter', rootId: UUID, includeObjects: 'false' })
+
+    expect(res.status).toBe(200)
+    expect(spy).toHaveBeenCalledWith('costCenter', UUID, false)
   })
 
   it('returns 500 when the adapter throws', async () => {

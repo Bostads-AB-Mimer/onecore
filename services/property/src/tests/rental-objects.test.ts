@@ -92,6 +92,30 @@ describe('GET /rental-objects', () => {
 
     expect(res.status).toBe(500)
   })
+
+  // The route sits behind the shared etag middleware (registered in
+  // routes/properties.ts, which api.ts mounts first).
+  it('serves JSON with an ETag and answers a matching If-None-Match with 304', async () => {
+    jest
+      .spyOn(rentalObjectAdapter, 'getRentalObjects')
+      .mockResolvedValue([summary])
+
+    const first = await request(app.callback())
+      .get('/rental-objects')
+      .query({ propertyCode: '04101' })
+
+    expect(first.status).toBe(200)
+    expect(first.headers['content-type']).toMatch(/application\/json/)
+    expect(first.headers.etag).toBeDefined()
+    expect(first.body.content).toEqual([summary])
+
+    const second = await request(app.callback())
+      .get('/rental-objects')
+      .query({ propertyCode: '04101' })
+      .set('If-None-Match', first.headers.etag)
+
+    expect(second.status).toBe(304)
+  })
 })
 
 describe('GET /rental-objects/search', () => {
@@ -234,88 +258,6 @@ describe('GET /rental-objects/search', () => {
 
     expect(res.status).toBe(500)
     expect(res.body.reason).toBe('Internal server error')
-  })
-})
-
-describe('GET /rental-objects/by-root', () => {
-  it('returns 400 when rootId is missing', async () => {
-    const res = await request(app.callback())
-      .get('/rental-objects/by-root')
-      .query({ groupBy: 'costCenter' })
-
-    expect(res.status).toBe(400)
-    expect(res.body.status).toBe('error with request query')
-  })
-
-  it('returns 400 when groupBy is not a known grouping', async () => {
-    const res = await request(app.callback())
-      .get('/rental-objects/by-root')
-      .query({ groupBy: 'district', rootId: UUID })
-
-    expect(res.status).toBe(400)
-  })
-
-  it('returns 404 when the root does not exist', async () => {
-    jest
-      .spyOn(groupingAdapter, 'getRootRentalObjects')
-      .mockResolvedValueOnce(null)
-
-    const res = await request(app.callback())
-      .get('/rental-objects/by-root')
-      .query({ groupBy: 'costCenter', rootId: UUID })
-
-    expect(res.status).toBe(404)
-    expect(res.body.reason).toBe('Root not found')
-  })
-
-  it('returns the root objects', async () => {
-    const spy = jest
-      .spyOn(groupingAdapter, 'getRootRentalObjects')
-      .mockResolvedValueOnce([summary])
-
-    const res = await request(app.callback())
-      .get('/rental-objects/by-root')
-      .query({ groupBy: 'marketArea', rootId: 'MO1' })
-
-    expect(res.status).toBe(200)
-    expect(res.body.content).toEqual([summary])
-    expect(spy).toHaveBeenCalledWith('marketArea', 'MO1')
-  })
-
-  // The route sits behind the shared etag middleware (registered in
-  // routes/properties.ts, which api.ts mounts first).
-  it('serves JSON with an ETag and answers a matching If-None-Match with 304', async () => {
-    jest
-      .spyOn(groupingAdapter, 'getRootRentalObjects')
-      .mockResolvedValue([summary])
-
-    const first = await request(app.callback())
-      .get('/rental-objects/by-root')
-      .query({ groupBy: 'marketArea', rootId: 'MO1' })
-
-    expect(first.status).toBe(200)
-    expect(first.headers['content-type']).toMatch(/application\/json/)
-    expect(first.headers.etag).toBeDefined()
-    expect(first.body.content).toEqual([summary])
-
-    const second = await request(app.callback())
-      .get('/rental-objects/by-root')
-      .query({ groupBy: 'marketArea', rootId: 'MO1' })
-      .set('If-None-Match', first.headers.etag)
-
-    expect(second.status).toBe(304)
-  })
-
-  it('returns 500 when the adapter throws', async () => {
-    jest
-      .spyOn(groupingAdapter, 'getRootRentalObjects')
-      .mockRejectedValueOnce(new Error('boom'))
-
-    const res = await request(app.callback())
-      .get('/rental-objects/by-root')
-      .query({ groupBy: 'costCenter', rootId: UUID })
-
-    expect(res.status).toBe(500)
   })
 })
 

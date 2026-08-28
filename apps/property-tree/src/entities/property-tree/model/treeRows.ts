@@ -4,19 +4,18 @@
 
 import type {
   PropertyTree,
+  PropertyTreeDataNode,
   PropertyTreeGroup,
-  PropertyTreeProperty,
   PropertyTreeRoot,
   TreeGrouping,
 } from '../hooks/usePropertyTreeData'
-import type { RentalObject } from './facets'
-import { objectNode } from './facets'
 import type {
   ParentInfo,
   PropertyTreeLevel,
   PropertyTreeNode,
+  RentalObjectType,
 } from './selection'
-import { nodeKey, parkingAreaKey, staircaseComposite } from './selection'
+import { ALL_RENTAL_OBJECT_TYPES, nodeKey, parkingAreaKey } from './selection'
 
 /**
  * How each grouping maps onto picker levels — the one place to edit when a
@@ -54,9 +53,9 @@ export const rootKeyOf = (root: PropertyTreeRoot) => {
   return nodeKey(g.rootLevel, g.rootValue(root))
 }
 
-// Four, not two: search flips every root into "loaded", which fires a tree
-// and an object fetch per district or marknadsområde. Two characters made
-// that happen on the second keystroke of any word.
+// Four, not two: search flips every root into "loaded", which fires a full
+// tree fetch (object leaves included) per district or marknadsområde. Two
+// characters made that happen on the second keystroke of any word.
 export const MIN_SEARCH_LENGTH = 4
 
 export interface NodeRowSpec {
@@ -111,37 +110,38 @@ export const groupLabel = (group: PropertyTreeGroup): string => {
 // parents against the same tree. Cache per tree object — each one belongs to
 // exactly one root, and react-query hands back the same reference until it
 // refetches.
-const walkTreeCache = new WeakMap<
-  PropertyTree,
-  WeakMap<ReadonlyMap<string, RentalObject[]>, WalkNode>
->()
+const walkTreeCache = new WeakMap<PropertyTree, WalkNode>()
 
-const NO_OBJECTS: ReadonlyMap<string, RentalObject[]> = new Map()
-
-function walkTreeFor(
+export function walkTreeFor(
   root: PropertyTreeRoot,
-  tree: PropertyTree,
-  objectsByParent: ReadonlyMap<string, RentalObject[]> = NO_OBJECTS
+  tree: PropertyTree
 ): WalkNode {
-  // Keyed on both: the same tree yields a different walk once its objects
-  // have arrived.
-  const byObjects = walkTreeCache.get(tree) ?? new WeakMap()
-  walkTreeCache.set(tree, byObjects)
-  const cached = byObjects.get(objectsByParent)
+  const cached = walkTreeCache.get(tree)
   if (cached) return cached
-  const walk = buildWalkTree(root, tree, objectsByParent)
-  byObjects.set(objectsByParent, walk)
+  const walk = buildWalkTree(root, tree)
+  walkTreeCache.set(tree, walk)
   return walk
 }
 
-/** Depth-first search for one node of the walk tree. */
-function findWalkNode(walk: WalkNode, key: string): WalkNode | undefined {
-  if (walk.node.key === key) return walk
-  for (const child of walk.children) {
-    const hit = findWalkNode(child, key)
-    if (hit) return hit
+// key → walk node, one build per walk: every resolve (roll-up, roll-down,
+// descendants) is then a lookup instead of a depth-first search.
+const walkIndexCache = new WeakMap<WalkNode, ReadonlyMap<string, WalkNode>>()
+
+function walkIndexFor(walk: WalkNode): ReadonlyMap<string, WalkNode> {
+  const cached = walkIndexCache.get(walk)
+  if (cached) return cached
+  const index = new Map<string, WalkNode>()
+  const visit = (n: WalkNode) => {
+    index.set(n.node.key, n)
+    for (const child of n.children) visit(child)
   }
-  return undefined
+  visit(walk)
+  walkIndexCache.set(walk, index)
+  return index
+}
+
+function findWalkNode(walk: WalkNode, key: string): WalkNode | undefined {
+  return walkIndexFor(walk).get(key)
 }
 
 /**
@@ -181,34 +181,15 @@ export function collectDescendantNodes(
   const out: PropertyTreeNode[] = []
   const collect = (walk: WalkNode) => {
     for (const child of walk.children) {
+      // Levels only: a criterion pinned to a level keeps covering objects
+      // added later, and per-object criteria would swamp the criteria cap.
+      if (child.object) continue
       if (!isExcluded(child.node)) out.push(child.node)
       collect(child)
     }
   }
   collect(hit)
   return out
-}
-
-// key → current-walk ancestors, one build per walk; covered-ancestor lookups
-// then cost O(selection) per selection change instead of a full traversal.
-const ancestorIndexCache = new WeakMap<
-  WalkNode,
-  ReadonlyMap<string, readonly string[]>
->()
-
-function ancestorIndexFor(
-  walk: WalkNode
-): ReadonlyMap<string, readonly string[]> {
-  const cached = ancestorIndexCache.get(walk)
-  if (cached) return cached
-  const index = new Map<string, readonly string[]>()
-  const visit = (n: WalkNode) => {
-    index.set(n.node.key, n.node.ancestors)
-    for (const child of n.children) visit(child)
-  }
-  visit(walk)
-  ancestorIndexCache.set(walk, index)
-  return index
 }
 
 /** Add this walk's ancestors of every selected key found under the root to
@@ -218,41 +199,17 @@ function ancestorIndexFor(
 export function addCoveredAncestorKeys(
   root: PropertyTreeRoot,
   tree: PropertyTree,
-  objectsByParent: ReadonlyMap<string, RentalObject[]>,
   selection: ReadonlyMap<string, unknown>,
   out: Set<string>,
   resolved: Set<string>
 ): void {
-  const index = ancestorIndexFor(walkTreeFor(root, tree, objectsByParent))
+  const index = walkIndexFor(walkTreeFor(root, tree))
   for (const key of selection.keys()) {
-    const ancestors = index.get(key)
-    if (!ancestors) continue
+    const hit = index.get(key)
+    if (!hit) continue
     resolved.add(key)
-    for (const ancestor of ancestors) out.add(ancestor)
+    for (const ancestor of hit.node.ancestors) out.add(ancestor)
   }
-}
-
-/**
- * The property keys under each node above the property level. Objects name
- * their property but not the levels above it, so those nodes' counts are
- * summed from their properties'.
- */
-export function ancestorPropertyKeys(
-  root: PropertyTreeRoot,
-  tree: PropertyTree
-): { key: string; propertyKeys: string[] }[] {
-  const walk = walkTreeFor(root, tree)
-  const propertyKeysUnder = (node: WalkNode): string[] =>
-    node.node.level === 'property'
-      ? [node.node.key]
-      : node.children.flatMap(propertyKeysUnder)
-
-  const out = [{ key: walk.node.key, propertyKeys: propertyKeysUnder(walk) }]
-  for (const child of walk.children) {
-    if (child.node.level === 'property') continue
-    out.push({ key: child.node.key, propertyKeys: propertyKeysUnder(child) })
-  }
-  return out
 }
 
 // ---------------------------------------------------------------- walking
@@ -266,14 +223,14 @@ export function ancestorPropertyKeys(
  * and depth — is uniform, so it lives in one recursive pass instead of being
  * repeated per level.
  */
-interface WalkNode {
+export interface WalkNode {
   node: PropertyTreeNode
   code: string
   searchText: (string | null | undefined)[]
   /** Level-specific row fields (typeLabel, and the codes object lookups need). */
   row?: Partial<NodeRowSpec>
   /** Whether the header's expand-all opens this level. Structural levels only,
-   * so expanding everything never triggers per-property object fetches. */
+   * so expanding everything never floods the table with object rows. */
   expandOnAll: boolean
   children: WalkNode[]
   /** Set on rental-object leaves. They join the walk tree so search, roll-up
@@ -283,6 +240,34 @@ interface WalkNode {
   object?: RentalObject
 }
 
+const isObjectType = (
+  type: PropertyTreeDataNode['type']
+): type is RentalObjectType =>
+  (ALL_RENTAL_OBJECT_TYPES as readonly string[]).includes(type)
+
+/** One rental-object leaf: the tree endpoint's node with its type narrowed
+ * to the object types (the walk checks the enum once, at leaf detection).
+ * `code` is the rentalId, `name` the postal address. */
+export type RentalObject = Omit<PropertyTreeDataNode, 'type' | 'children'> & {
+  type: RentalObjectType
+}
+
+/** An object as a node under its parent; selectable=false keeps it display-only. */
+export function objectNode(
+  object: RentalObject,
+  parent: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
+  selectable = true
+): PropertyTreeNode {
+  return {
+    key: nodeKey('object', object.code),
+    level: 'object',
+    value: object.code,
+    label: object.code,
+    ancestors: [...parent.ancestors, parent.key],
+    ...(selectable ? {} : { selectable: false }),
+  }
+}
+
 /** Rental objects hang under the node they are drawn beneath. */
 const objectLeaf = (
   object: RentalObject,
@@ -290,13 +275,9 @@ const objectLeaf = (
   propertyDesignation: string
 ): WalkNode => ({
   node: objectNode(object, parent),
-  code: object.rentalId,
-  searchText: [
-    object.rentalId,
-    object.code,
-    object.address,
-    object.subtypeName,
-  ],
+  code: object.code,
+  // code = rentalId, name = postal address.
+  searchText: [object.code, object.name, object.subtypeName],
   expandOnAll: false,
   children: [],
   object,
@@ -305,27 +286,18 @@ const objectLeaf = (
 
 function buildWalkTree(
   root: PropertyTreeRoot,
-  tree: PropertyTree | undefined,
-  objectsByParent: ReadonlyMap<string, RentalObject[]>
+  tree: PropertyTree | undefined
 ): WalkNode {
-  const leavesOf = (
-    parent: PropertyTreeNode,
-    propertyDesignation: string
-  ): WalkNode[] =>
-    (objectsByParent.get(parent.key) ?? []).map((o) =>
-      objectLeaf(o, parent, propertyDesignation)
-    )
   const grouping = GROUPINGS[root.grouping]
   const rootKey = rootKeyOf(root)
   const groups = tree?.groups ?? []
 
   const propertyWalk = (
-    p: PropertyTreeProperty,
+    p: PropertyTreeDataNode,
     ancestors: string[]
   ): WalkNode => {
-    const designation = p.designation ?? p.code
+    const designation = p.name ?? p.code
     const propKey = nodeKey('property', p.code)
-    const propAncestors = [...ancestors, propKey]
     const propNode: PropertyTreeNode = {
       key: propKey,
       level: 'property',
@@ -336,80 +308,90 @@ function buildWalkTree(
       ancestors,
       id: p.code,
     }
-    // Object leaves under trapphus and parkeringsområden key their tenant
-    // lookup on the property's designation.
+    // Object leaves key their tenant lookup on the property's designation.
     const propertyContext = { propertyDesignation: designation }
 
-    const buildings = p.buildings.map((b): WalkNode => {
-      const buildingKey = nodeKey('building', b.buildingCode)
-      const buildingAncestors = [...propAncestors, buildingKey]
-      const buildingNode: PropertyTreeNode = {
-        key: buildingKey,
-        level: 'building',
-        value: b.buildingCode,
-        label: b.buildingName ?? b.buildingCode,
-        ancestors: propAncestors,
+    /** One node below the property — the levels only differ in how their
+     * picker key is built (property-scoped markyta). */
+    const childWalk = (
+      n: PropertyTreeDataNode,
+      parent: PropertyTreeNode
+    ): WalkNode => {
+      if (isObjectType(n.type)) {
+        return objectLeaf({ ...n, type: n.type }, parent, designation)
       }
-      return {
-        node: buildingNode,
-        code: b.buildingCode,
-        // Type is shown in the Typ column, so it's searchable too ("garage").
-        searchText: [b.buildingName, b.buildingCode, b.buildingType?.name],
-        row: {
-          ...propertyContext,
-          typeLabel: b.buildingType?.name ?? undefined,
-        },
-        expandOnAll: false,
-        children: [
-          ...leavesOf(buildingNode, designation),
-          ...b.staircases.map((s): WalkNode => {
-            const composite = staircaseComposite(b.buildingCode, s.code)
-            const staircaseNode: PropertyTreeNode = {
-              key: nodeKey('staircase', composite),
-              level: 'staircase',
-              value: composite,
-              label: s.name ?? composite,
-              ancestors: buildingAncestors,
-            }
-            return {
-              node: staircaseNode,
-              code: composite,
-              searchText: [s.name, composite],
-              row: propertyContext,
-              expandOnAll: false,
-              children: leavesOf(staircaseNode, designation),
-            }
-          }),
-        ],
+      const ancestors = [...parent.ancestors, parent.key]
+      const walkChildren = (node: PropertyTreeNode) =>
+        (n.children ?? []).map((c) => childWalk(c, node))
+      switch (n.type) {
+        case 'building': {
+          const node: PropertyTreeNode = {
+            key: nodeKey('building', n.code),
+            level: 'building',
+            value: n.code,
+            label: n.name ?? n.code,
+            ancestors,
+          }
+          return {
+            node,
+            code: n.code,
+            // Type is shown in the Typ column, so it's searchable ("garage").
+            searchText: [n.name, n.code, n.subtypeName],
+            row: { ...propertyContext, typeLabel: n.subtypeName ?? undefined },
+            expandOnAll: false,
+            children: walkChildren(node),
+          }
+        }
+        case 'staircase': {
+          // The code arrives as the canonical `<bygcode>-<vancode>` composite.
+          const node: PropertyTreeNode = {
+            key: nodeKey('staircase', n.code),
+            level: 'staircase',
+            value: n.code,
+            label: n.name ?? n.code,
+            ancestors,
+          }
+          return {
+            node,
+            code: n.code,
+            searchText: [n.name, n.code],
+            row: propertyContext,
+            expandOnAll: false,
+            children: walkChildren(node),
+          }
+        }
+        case 'parkingArea': {
+          const node: PropertyTreeNode = {
+            // Property-scoped: one physical parkeringsområde can be split
+            // between two fastigheter, and then its code alone isn't unique.
+            key: parkingAreaKey(p.code, n.code),
+            level: 'parkingArea',
+            value: n.code,
+            label: n.name ?? n.code,
+            ancestors,
+          }
+          return {
+            node,
+            code: n.code,
+            searchText: [n.name, n.code],
+            row: propertyContext,
+            expandOnAll: false,
+            children: walkChildren(node),
+          }
+        }
+        // 'property' below a property never occurs; walk it as one anyway
+        // rather than dropping data.
+        case 'property':
+          return propertyWalk(n, ancestors)
       }
-    })
-
-    const parkingAreas = p.parkingAreas.map((pa): WalkNode => {
-      const parkingAreaNode: PropertyTreeNode = {
-        // Property-scoped: one physical parkeringsområde can be split
-        // between two fastigheter, and then its code alone isn't unique.
-        key: parkingAreaKey(p.code, pa.code),
-        level: 'parkingArea',
-        value: pa.code,
-        label: pa.name ?? pa.code,
-        ancestors: propAncestors,
-      }
-      return {
-        node: parkingAreaNode,
-        code: pa.code,
-        searchText: [pa.name, pa.code],
-        row: propertyContext,
-        expandOnAll: false,
-        children: leavesOf(parkingAreaNode, designation),
-      }
-    })
+    }
 
     return {
       node: propNode,
       code: p.code,
-      searchText: [p.designation, p.tract, p.code],
+      searchText: [p.name, p.code],
       expandOnAll: false,
-      children: [...buildings, ...parkingAreas],
+      children: (p.children ?? []).map((c) => childWalk(c, propNode)),
     }
   }
 
@@ -490,10 +472,6 @@ export interface TreeRowOptions {
   loading?: boolean
   /** Header expand-all: opens the structural levels (tree data only). */
   expandAllStructure?: boolean
-  /** The rental objects of this root, grouped by the node they hang under.
-   * They join the walk tree, so searching an objektnummer works the same way
-   * searching a byggnad does. */
-  objectsByParent?: ReadonlyMap<string, RentalObject[]>
 }
 
 export function buildTreeRows(
@@ -504,7 +482,6 @@ export function buildTreeRows(
     overrides = NO_OVERRIDES,
     loading = false,
     expandAllStructure = false,
-    objectsByParent = NO_OBJECTS,
   }: TreeRowOptions
 ): RowSpec[] {
   const searchActive = query.length >= MIN_SEARCH_LENGTH
@@ -513,9 +490,7 @@ export function buildTreeRows(
 
   // Through the cache: this runs per root per render, and the walk carries an
   // object leaf per rental object.
-  const walk = tree
-    ? walkTreeFor(root, tree, objectsByParent)
-    : buildWalkTree(root, tree, objectsByParent)
+  const walk = tree ? walkTreeFor(root, tree) : buildWalkTree(root, tree)
   const analysis = analyse(walk, query, searchActive)
   if (searchActive && !analysis.visible) return []
 

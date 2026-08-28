@@ -18,6 +18,11 @@ const GetPropertyTreeQueryParamsSchema = z.object({
   groupBy: PropertyGroupingSchema,
   // Cost center: uuid. Marknadsområde: babya.code. Företag: company code.
   rootId: z.string().min(1),
+  // 'false' skips the rental-object leaves, for structure-only consumers.
+  includeObjects: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
 })
 
 /**
@@ -84,9 +89,10 @@ export const routes = (router: KoaRouter) => {
    *       moves sold properties to company 999 rather than delete-marking
    *       them, so they are filtered out here.
    *
-   *       Membership is read fresh per request; the property-and-below half is
-   *       cached in-memory per property for up to one hour, so structural
-   *       changes in Xpand may take that long to appear.
+   *       Everything is served from in-memory caches: membership (which root
+   *       holds which properties) for up to 15 minutes, the property-and-below
+   *       half for up to an hour per property — so a moved property or a
+   *       structural change in Xpand may take that long to appear.
    *     tags:
    *       - Property Tree
    *     parameters:
@@ -102,6 +108,14 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Cost center id (uuid), market area code, or company code
+   *       - in: query
+   *         name: includeObjects
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: ['true', 'false']
+   *           default: 'true'
+   *         description: Pass 'false' to omit the rental-object leaves
    *     responses:
    *       200:
    *         description: Property tree
@@ -124,19 +138,27 @@ export const routes = (router: KoaRouter) => {
     parseRequest({ query: GetPropertyTreeQueryParamsSchema }),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { groupBy, rootId } = ctx.request.parsedQuery
+      const { groupBy, rootId, includeObjects } = ctx.request.parsedQuery
 
       try {
-        const tree = await getPropertyTree(groupBy, rootId)
+        const startedAt = Date.now()
+        const tree = await getPropertyTree(groupBy, rootId, includeObjects)
         if (!tree) {
           ctx.status = 404
           ctx.body = { reason: 'Root not found', ...metadata }
           return
         }
-        ctx.body = {
-          content: PropertyTreeSchema.parse(tree),
-          ...metadata,
-        }
+        const builtAt = Date.now()
+        const content = PropertyTreeSchema.parse(tree)
+        logger.info(
+          {
+            buildMs: builtAt - startedAt,
+            parseMs: Date.now() - builtAt,
+            rootId,
+          },
+          'property-tree timing'
+        )
+        ctx.body = { content, ...metadata }
       } catch (err) {
         logger.error({ err }, 'Error fetching property tree')
         ctx.status = 500

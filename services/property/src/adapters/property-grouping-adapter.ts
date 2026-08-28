@@ -2,12 +2,9 @@ import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 import type { PropertyGrouping, PropertyTree } from '@src/types/property-tree'
-import type {
-  RentalObjectScopeParams,
-  RentalObjectSummary,
-} from '@src/types/rental-object'
+import type { RentalObjectScopeParams } from '@src/types/rental-object'
 
-import { cachedPromise } from '@src/utils/promise-cache'
+import { cachedKeyed, cachedPromise } from '@src/utils/promise-cache'
 
 import {
   filterToOperatingCompanies,
@@ -15,19 +12,16 @@ import {
 } from './company-scope'
 import { fetchCostCenterMembership } from './cost-center-adapter'
 import { prisma } from './db'
-import {
-  buildPropertyObjects,
-  buildPropertySubtrees,
-} from './property-subtree-adapter'
+import { buildPropertyTreeNodes } from './property-subtree-adapter'
 import { resolveStructurePropertyCodes } from './rental-object-adapter'
 
 // Resolvers turning a grouping root into a set of property codes. Everything
 // below the property level is identical across groupings and is built by the
 // property-subtree adapter, so these are the only grouping-specific queries.
 //
-// Deliberately uncached: each is a single cheap query, and reading membership
-// fresh keeps admin edits (and Xpand moves) correct immediately with no
-// invalidation logic. The expensive half is what carries the cache.
+// The tree path caches membership per root: the queries measured as ~90% of
+// a warm tree request. A KVV/area move can thus lag up to the TTL; the
+// search and details resolvers still read fresh.
 
 interface MarketArea {
   id: string
@@ -156,50 +150,6 @@ export const resolveKvvAreaPropertyCodes = async (
   }
 }
 
-/** The property codes one grouping root covers, or null if it doesn't exist. */
-const resolveRootPropertyCodes = async (
-  grouping: PropertyGrouping,
-  rootId: string
-): Promise<string[] | null> => {
-  if (grouping === 'costCenter') return resolveCostCenterPropertyCodes(rootId)
-  if (grouping === 'marketArea') {
-    const areas = await listMarketAreas()
-    const area = areas.find((a) => a.code === rootId.trim())
-    // null means "no such root", not "root holds nothing" — an existing but
-    // empty root answers 200 with an empty list, as the cost-centre path
-    // already did. Otherwise the same situation 404s or not by grouping.
-    if (!area) return null
-    return resolveMarketAreaPropertyCodes(area.code)
-  }
-  const code = rootId.trim()
-  if (!(OPERATING_COMPANY_CODES as readonly string[]).includes(code)) {
-    return null
-  }
-  return resolveCompanyPropertyCodes(code)
-}
-
-/**
- * Every rental object under one grouping root. Served from the same cache as
- * the tree, for clients that filter and count locally rather than asking the
- * server per filter change. Returns null when the root does not exist.
- */
-export const getRootRentalObjects = async (
-  grouping: PropertyGrouping,
-  rootId: string
-): Promise<RentalObjectSummary[] | null> => {
-  try {
-    const codes = await resolveRootPropertyCodes(grouping, rootId)
-    if (!codes) return null
-    return buildPropertyObjects(codes)
-  } catch (err) {
-    logger.error(
-      { err, grouping, rootId },
-      'property-grouping-adapter.getRootRentalObjects'
-    )
-    throw err
-  }
-}
-
 /**
  * The property codes the grouping-level scopes cover, plus whatever the caller
  * named directly. babuf has no cost-centre or market-area column, so those
@@ -253,21 +203,45 @@ export const resolveDetailsPropertyCodes = async (
   return filterToOperatingCompanies([...fromGrouping, ...fromStructure])
 }
 
+// Shorter than the subtree cache's hour: membership is what an admin edit
+// moves, so its staleness window is the one users actually notice.
+const MEMBERSHIP_CACHE_TTL_MS = 15 * 60 * 1000
+
+const costCenterMembershipCache = cachedKeyed(
+  MEMBERSHIP_CACHE_TTL_MS,
+  fetchCostCenterMembership
+)
+const marketAreaCodesCache = cachedKeyed(
+  MEMBERSHIP_CACHE_TTL_MS,
+  resolveMarketAreaPropertyCodes
+)
+
 /**
- * A property tree for any grouping. Membership is resolved fresh per request;
+ * A property tree for any grouping. Membership is cached per root on a TTL;
  * everything below the property level comes from the shared (cached) builder.
  * Returns null when the root does not exist.
  */
 export const getPropertyTree = async (
   grouping: PropertyGrouping,
-  rootId: string
+  rootId: string,
+  includeObjects = true
 ): Promise<PropertyTree | null> => {
   if (grouping === 'costCenter') {
-    const membership = await fetchCostCenterMembership(rootId)
+    const startedAt = Date.now()
+    const membership = await costCenterMembershipCache.get(rootId)
     if (!membership) return null
+    const resolvedAt = Date.now()
 
     const { costCenter, propertyCodes } = membership
-    const subtrees = await buildPropertySubtrees(propertyCodes)
+    const subtrees = await buildPropertyTreeNodes(propertyCodes, includeObjects)
+    logger.info(
+      {
+        membershipMs: resolvedAt - startedAt,
+        nodesMs: Date.now() - resolvedAt,
+        rootId,
+      },
+      'property-tree membership timing'
+    )
 
     return {
       grouping,
@@ -292,8 +266,18 @@ export const getPropertyTree = async (
     const area = areas.find((a) => a.code === rootId.trim())
     if (!area) return null
 
-    const codes = await resolveMarketAreaPropertyCodes(area.code)
-    const subtrees = await buildPropertySubtrees(codes)
+    const startedAt = Date.now()
+    const codes = await marketAreaCodesCache.get(area.code)
+    const resolvedAt = Date.now()
+    const subtrees = await buildPropertyTreeNodes(codes, includeObjects)
+    logger.info(
+      {
+        membershipMs: resolvedAt - startedAt,
+        nodesMs: Date.now() - resolvedAt,
+        rootId,
+      },
+      'property-tree membership timing'
+    )
     return {
       grouping,
       id: area.id,
@@ -313,13 +297,13 @@ export const getPropertyTree = async (
   }
 
   const code = rootId.trim()
-  // Same null rule as resolveRootPropertyCodes: null is "no such root" — an
-  // existing but empty company answers an empty tree, not a 404.
+  // null is "no such root" — an existing but empty company answers an empty
+  // tree, not a 404.
   if (!(OPERATING_COMPANY_CODES as readonly string[]).includes(code)) {
     return null
   }
   const codes = await resolveCompanyPropertyCodes(code)
-  const subtrees = await buildPropertySubtrees(codes)
+  const subtrees = await buildPropertyTreeNodes(codes, includeObjects)
   return {
     grouping,
     id: code,
