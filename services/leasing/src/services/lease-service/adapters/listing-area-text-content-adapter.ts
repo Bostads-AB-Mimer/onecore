@@ -18,6 +18,15 @@ type UpdateListingAreaTextContentRequest = z.infer<
 
 type ContentBlock = z.infer<typeof leasing.v1.ContentBlockSchema>
 
+// SQL Server error numbers for a violated unique index (2601) or unique
+// constraint (2627) - the only errors that mean "market area already exists".
+const SQL_SERVER_DUPLICATE_KEY_ERROR_NUMBERS = [2601, 2627]
+
+const isDuplicateKeyError = (err: unknown): boolean =>
+  err instanceof RequestError &&
+  err.number !== undefined &&
+  SQL_SERVER_DUPLICATE_KEY_ERROR_NUMBERS.includes(err.number)
+
 function transformFromDbListingAreaTextContent(
   row: DbListingAreaTextContent
 ): ListingAreaTextContent {
@@ -88,7 +97,7 @@ const getByMarketAreaCode = async (
 const create = async (
   listingAreaTextContent: CreateListingAreaTextContentRequest,
   dbConnection = db
-): Promise<AdapterResult<ListingAreaTextContent, Error>> => {
+): Promise<AdapterResult<ListingAreaTextContent, 'duplicate' | 'unknown'>> => {
   try {
     const [inserted] = await dbConnection
       .table('listing_area_text_content')
@@ -103,34 +112,19 @@ const create = async (
       data: transformFromDbListingAreaTextContent(inserted),
     }
   } catch (err) {
-    // Check if this is a unique constraint violation (SQL Server pattern)
-    const isDuplicate =
-      err instanceof RequestError &&
-      (err.message.includes('UQ_listing_area_text_content_market_area_code') ||
-        err.message.includes('unique'))
-
-    if (isDuplicate) {
+    if (isDuplicateKeyError(err)) {
       logger.info(
         { marketAreaCode: listingAreaTextContent.marketAreaCode },
         'listingAreaTextContentAdapter.create - cannot insert duplicate market area code'
       )
-      return {
-        ok: false,
-        err: new Error(
-          `Listing area text content already exists for market area code: ${listingAreaTextContent.marketAreaCode}`
-        ),
-      }
+      return { ok: false, err: 'duplicate' }
     }
 
     logger.error(
       { err, marketAreaCode: listingAreaTextContent.marketAreaCode },
       'listingAreaTextContentAdapter.create'
     )
-
-    return {
-      ok: false,
-      err: err instanceof Error ? err : new Error('Unknown error'),
-    }
+    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -138,7 +132,7 @@ const update = async (
   marketAreaCode: string,
   updateData: UpdateListingAreaTextContentRequest,
   dbConnection = db
-): Promise<AdapterResult<ListingAreaTextContent, Error>> => {
+): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
   try {
     const updateFields: Record<string, unknown> = {}
 
@@ -160,12 +154,7 @@ const update = async (
         { marketAreaCode },
         'Updating listing area text content in leasing DB complete - not found'
       )
-      return {
-        ok: false,
-        err: new Error(
-          `Listing area text content for market area code ${marketAreaCode} not found`
-        ),
-      }
+      return { ok: false, err: 'not-found' }
     }
 
     return {
@@ -177,17 +166,14 @@ const update = async (
       { err, marketAreaCode },
       'listingAreaTextContentAdapter.update'
     )
-    return {
-      ok: false,
-      err: err instanceof Error ? err : new Error('Unknown error'),
-    }
+    return { ok: false, err: 'unknown' }
   }
 }
 
 const remove = async (
   marketAreaCode: string,
   dbConnection = db
-): Promise<AdapterResult<void, Error>> => {
+): Promise<AdapterResult<void, 'not-found' | 'unknown'>> => {
   try {
     const deletedCount = await dbConnection
       .table('listing_area_text_content')
@@ -199,12 +185,7 @@ const remove = async (
         { marketAreaCode },
         'Deleting listing area text content from leasing DB complete - not found'
       )
-      return {
-        ok: false,
-        err: new Error(
-          `Listing area text content for market area code ${marketAreaCode} not found`
-        ),
-      }
+      return { ok: false, err: 'not-found' }
     }
 
     return {
@@ -216,10 +197,7 @@ const remove = async (
       { err, marketAreaCode },
       'listingAreaTextContentAdapter.remove'
     )
-    return {
-      ok: false,
-      err: err instanceof Error ? err : new Error('Unknown error'),
-    }
+    return { ok: false, err: 'unknown' }
   }
 }
 

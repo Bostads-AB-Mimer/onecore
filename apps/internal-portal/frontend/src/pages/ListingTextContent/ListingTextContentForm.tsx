@@ -51,11 +51,12 @@ const ListingTextContentForm = () => {
   const validationQuery = useValidateRentalObject(objectCode)
 
   // Fetch the lookup (object text + market-area text) in edit mode, and in
-  // create mode once the typed object number has been validated.
+  // create mode for the (debounced) object number that actually validated.
+  const validatedCode = validationQuery.validatedCode?.trim()
   const lookupCode = isEditMode
     ? rentalObjectCode
-    : validationQuery.data === true
-      ? objectCode.trim()
+    : validationQuery.data === true && validatedCode
+      ? validatedCode
       : undefined
   const {
     data: existingData,
@@ -149,7 +150,10 @@ const ListingTextContentForm = () => {
     updateMutation.isPending ||
     deleteMutation.isPending
 
-  if (isLoadingExisting) {
+  // Only edit mode waits for the lookup. In create mode it merely feeds the
+  // "already exists" alert and the market-area panel, and unmounting the form
+  // here would blank the object-number field while the user is typing.
+  if (isEditMode && isLoadingExisting) {
     return (
       <Box display="flex" justifyContent="center" padding={4}>
         <CircularProgress />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
+  Alert,
   Box,
   Button,
   FormControl,
@@ -15,7 +16,7 @@ import {
 import SaveIcon from '@mui/icons-material/Save'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { AxiosError } from 'axios'
 
@@ -54,25 +55,28 @@ const ListingAreaTextContentForm = () => {
     error: marketAreasError,
   } = useMarketAreas()
 
-  // Fetch existing data in edit mode
+  // Fetch existing data in edit mode, and in create mode for the selected
+  // area so we can point to an existing template instead of 409ing on save.
   const {
     data: existingData,
     isLoading: isLoadingExisting,
     error: loadError,
-  } = useListingAreaTextContent(isEditMode ? marketAreaCode : undefined)
+  } = useListingAreaTextContent(
+    isEditMode ? marketAreaCode : selectedCode.trim() || undefined
+  )
 
   // Mutations
   const createMutation = useCreateListingAreaTextContent()
   const updateMutation = useUpdateListingAreaTextContent()
   const deleteMutation = useDeleteListingAreaTextContent()
 
-  // Load existing data when in edit mode
+  // Load existing data into the editor in edit mode only
   useEffect(() => {
-    if (existingData) {
+    if (isEditMode && existingData) {
       setSelectedCode(existingData.marketAreaCode)
       setBlocks(fromApiBlocks(existingData.contentBlocks))
     }
-  }, [existingData])
+  }, [isEditMode, existingData])
 
   const handleSubmit = async () => {
     if (!selectedCode.trim()) {
@@ -139,7 +143,9 @@ const ListingAreaTextContentForm = () => {
     updateMutation.isPending ||
     deleteMutation.isPending
 
-  if (isLoadingExisting || isLoadingMarketAreas) {
+  // In create mode the lookup only feeds the "already exists" alert; don't
+  // unmount the form (and the select) while it runs.
+  if ((isEditMode && isLoadingExisting) || isLoadingMarketAreas) {
     return (
       <Box display="flex" justifyContent="center" padding={4}>
         <CircularProgress />
@@ -176,6 +182,10 @@ const ListingAreaTextContentForm = () => {
   const selectedMarketArea = marketAreas?.find(
     (marketArea) => marketArea.code === selectedCode
   )
+
+  // In create mode, the selected area may already have a template - creating
+  // would just 409, so point to the existing entry instead.
+  const hasExistingContent = !isEditMode && existingData != null
 
   return (
     <Box>
@@ -237,7 +247,7 @@ const ListingAreaTextContentForm = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             onClick={handleSubmit}
-            disabled={isSaving}
+            disabled={isSaving || hasExistingContent}
           >
             {isSaving ? 'Sparar...' : 'Spara'}
           </Button>
@@ -279,6 +289,24 @@ const ListingAreaTextContentForm = () => {
                   )}
                 </FormControl>
               </Box>
+
+              {hasExistingContent && (
+                <Alert
+                  severity="info"
+                  action={
+                    <Button
+                      component={Link}
+                      to={`/omradestexter/${encodeURIComponent(selectedCode)}/redigera`}
+                      color="inherit"
+                      size="small"
+                    >
+                      Öppna befintlig
+                    </Button>
+                  }
+                >
+                  Områdestext finns redan för detta marknadsområde.
+                </Alert>
+              )}
 
               <ContentBlocksList blocks={blocks} onBlocksChange={setBlocks} />
             </Stack>

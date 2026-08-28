@@ -1,4 +1,5 @@
 import { RentalPropertyInfo } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import { getListingTextContentLookup } from '@/services/leasing-service/helpers/listing-text-content-lookup'
 import * as leasingCoreAdapter from '@/services/leasing-service/adapters/core-adapter'
@@ -11,6 +12,8 @@ jest.mock('@onecore/utilities', () => ({
   },
   generateRouteMetadata: jest.fn(),
 }))
+
+const mockedLogger = logger as jest.Mocked<typeof logger>
 
 jest.mock('@/services/leasing-service/adapters/core-adapter')
 jest.mock('@/services/property-base-service/adapters/core-adapter')
@@ -77,6 +80,16 @@ const housingRentalPropertyWithEmptyEstateCode: RentalPropertyInfo = {
   property: {
     ...housingRentalProperty.property,
     estateCode: '',
+  },
+}
+
+// estateCode is typed as string but Xpand can deliver NULL (babuf.fstcode);
+// the cast reproduces that runtime shape.
+const housingRentalPropertyWithNullEstateCode: RentalPropertyInfo = {
+  ...housingRentalProperty,
+  property: {
+    ...housingRentalProperty.property,
+    estateCode: null as unknown as string,
   },
 }
 
@@ -252,6 +265,60 @@ describe('getListingTextContentLookup', () => {
     ).not.toHaveBeenCalled()
   })
 
+  it('returns nulls for housing with a null estateCode without calling property/area adapters', async () => {
+    mockedLeasingCoreAdapter.getListingTextContentByRentalObjectCode.mockResolvedValueOnce(
+      { ok: true, data: listingTextContent }
+    )
+    mockedLeasingCoreAdapter.getRentalPropertyByCode.mockResolvedValueOnce({
+      ok: true,
+      data: housingRentalPropertyWithNullEstateCode,
+    })
+
+    const result = await getListingTextContentLookup('123-456-789')
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        content: listingTextContent,
+        marketArea: null,
+        areaContent: null,
+      },
+    })
+    expect(
+      mockedPropertyBaseCoreAdapter.getPropertyDetails
+    ).not.toHaveBeenCalled()
+    expect(
+      mockedLeasingCoreAdapter.getListingAreaTextContentByMarketAreaCode
+    ).not.toHaveBeenCalled()
+  })
+
+  it('returns nulls and logs an error when the rental property lookup fails unexpectedly', async () => {
+    mockedLeasingCoreAdapter.getListingTextContentByRentalObjectCode.mockResolvedValueOnce(
+      { ok: true, data: listingTextContent }
+    )
+    mockedLeasingCoreAdapter.getRentalPropertyByCode.mockResolvedValueOnce({
+      ok: false,
+      err: 'unknown',
+      statusCode: 500,
+    })
+
+    const result = await getListingTextContentLookup('123-456-789')
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        content: listingTextContent,
+        marketArea: null,
+        areaContent: null,
+      },
+    })
+    expect(mockedLogger.error).toHaveBeenCalledTimes(1)
+    expect(mockedLogger.info).not.toHaveBeenCalled()
+    expect(
+      mockedPropertyBaseCoreAdapter.getPropertyDetails
+    ).not.toHaveBeenCalled()
+  })
+
   it('returns nulls when the rental property lookup 404s', async () => {
     mockedLeasingCoreAdapter.getListingTextContentByRentalObjectCode.mockResolvedValueOnce(
       { ok: true, data: listingTextContent }
@@ -281,12 +348,16 @@ describe('getListingTextContentLookup', () => {
     mockedLeasingCoreAdapter.getListingTextContentByRentalObjectCode.mockResolvedValueOnce(
       { ok: false, err: 'unknown', statusCode: 500 }
     )
+    mockedLeasingCoreAdapter.getRentalPropertyByCode.mockResolvedValueOnce({
+      ok: true,
+      data: housingRentalProperty,
+    })
 
     const result = await getListingTextContentLookup('123-456-789')
 
     expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
     expect(
-      mockedLeasingCoreAdapter.getRentalPropertyByCode
+      mockedPropertyBaseCoreAdapter.getPropertyDetails
     ).not.toHaveBeenCalled()
   })
 

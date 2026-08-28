@@ -80,7 +80,13 @@ export const useCreateListingAreaTextContent = () => {
           }
         )
         .then((res) => res.data.content),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // The create form looked this code up (404) before saving; seed the
+      // cache so the edit page does not flash an error before the refetch.
+      queryClient.setQueryData(
+        ['listingAreaTextContent', data.marketAreaCode],
+        data
+      )
       queryClient.invalidateQueries({
         queryKey: ['listingAreaTextContent'],
       })
@@ -110,7 +116,11 @@ export const useUpdateListingAreaTextContent = () => {
           }
         )
         .then((res) => res.data.content),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        ['listingAreaTextContent', data.marketAreaCode],
+        data
+      )
       queryClient.invalidateQueries({
         queryKey: ['listingAreaTextContent'],
       })

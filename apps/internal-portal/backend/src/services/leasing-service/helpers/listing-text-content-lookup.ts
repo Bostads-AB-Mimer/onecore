@@ -19,26 +19,39 @@ type ListingTextContentLookup = z.infer<
 export const getListingTextContentLookup = async (
   rentalObjectCode: string
 ): Promise<AdapterResult<ListingTextContentLookup, 'unknown'>> => {
-  const contentResult =
-    await leasingCoreAdapter.getListingTextContentByRentalObjectCode(
+  // Both depend only on the rental object code, so fetch them concurrently.
+  const [contentResult, rentalPropertyResult] = await Promise.all([
+    leasingCoreAdapter.getListingTextContentByRentalObjectCode(
       rentalObjectCode
-    )
+    ),
+    leasingCoreAdapter.getRentalPropertyByCode(rentalObjectCode),
+  ])
 
   if (!contentResult.ok && contentResult.err === 'unknown') {
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 
   const content = contentResult.ok ? contentResult.data : null
-
-  const rentalPropertyResult =
-    await leasingCoreAdapter.getRentalPropertyByCode(rentalObjectCode)
+  const withoutMarketArea = (): AdapterResult<
+    ListingTextContentLookup,
+    'unknown'
+  > => ({ ok: true, data: { content, marketArea: null, areaContent: null } })
 
   if (!rentalPropertyResult.ok) {
-    logger.info(
-      { rentalObjectCode },
-      'listing-text-content-lookup: rental property not found, skipping market area'
-    )
-    return { ok: true, data: { content, marketArea: null, areaContent: null } }
+    if (rentalPropertyResult.err === 'not-found') {
+      logger.info(
+        { rentalObjectCode },
+        'listing-text-content-lookup: rental property not found, skipping market area'
+      )
+    } else {
+      // Not a data condition but an upstream failure (e.g. core down). The
+      // editor still works without the area text, so degrade rather than fail.
+      logger.error(
+        { rentalObjectCode, err: rentalPropertyResult.err },
+        'listing-text-content-lookup: failed to get rental property, skipping market area'
+      )
+    }
+    return withoutMarketArea()
   }
 
   if (rentalPropertyResult.data.type !== HOUSING_RENTAL_PROPERTY_TYPE) {
@@ -46,29 +59,34 @@ export const getListingTextContentLookup = async (
       { rentalObjectCode, type: rentalPropertyResult.data.type },
       'listing-text-content-lookup: rental property is not housing, skipping market area'
     )
-    return { ok: true, data: { content, marketArea: null, areaContent: null } }
+    return withoutMarketArea()
   }
 
   const { property } = rentalPropertyResult.data
-  if (!('estateCode' in property) || !property.estateCode.trim()) {
-    // Housing rental properties always carry an estateCode; narrow the
-    // ApartmentInfo | CommercialSpaceInfo | ParkingSpaceInfo union.
+  // Narrow the ApartmentInfo | CommercialSpaceInfo | ParkingSpaceInfo union.
+  // estateCode is typed as string but comes unguarded from Xpand
+  // (babuf.fstcode), which can be NULL, so check the runtime type as well.
+  const estateCode =
+    'estateCode' in property && typeof property.estateCode === 'string'
+      ? property.estateCode.trim()
+      : ''
+  if (!estateCode) {
     logger.info(
       { rentalObjectCode },
       'listing-text-content-lookup: rental property has no estateCode, skipping market area'
     )
-    return { ok: true, data: { content, marketArea: null, areaContent: null } }
+    return withoutMarketArea()
   }
 
   const propertyDetailsResult =
-    await propertyBaseCoreAdapter.getPropertyDetails(property.estateCode)
+    await propertyBaseCoreAdapter.getPropertyDetails(estateCode)
 
   if (!propertyDetailsResult.ok || !propertyDetailsResult.data.marketArea) {
     logger.info(
       { rentalObjectCode },
       'listing-text-content-lookup: property has no market area, skipping area text'
     )
-    return { ok: true, data: { content, marketArea: null, areaContent: null } }
+    return withoutMarketArea()
   }
 
   const { marketArea } = propertyDetailsResult.data

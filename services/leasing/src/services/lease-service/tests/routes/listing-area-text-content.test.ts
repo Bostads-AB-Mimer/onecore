@@ -122,7 +122,7 @@ describe('listing-area-text-content routes', () => {
         })
 
       expect(res.status).toBe(400)
-      expect(res.body.error).toBe('Invalid request body')
+      expect(res.body.status).toBe('error')
     })
 
     it('responds with 400 for invalid content block type', async () => {
@@ -134,7 +134,7 @@ describe('listing-area-text-content routes', () => {
         })
 
       expect(res.status).toBe(400)
-      expect(res.body.error).toBe('Invalid request body')
+      expect(res.body.status).toBe('error')
     })
 
     it('responds with 400 for invalid link url in content block', async () => {
@@ -149,18 +149,13 @@ describe('listing-area-text-content routes', () => {
         })
 
       expect(res.status).toBe(400)
-      expect(res.body.error).toBe('Invalid request body')
+      expect(res.body.status).toBe('error')
     })
 
     it('responds with 409 for duplicate market area code', async () => {
       jest
         .spyOn(listingAreaTextContentAdapter, 'create')
-        .mockResolvedValueOnce({
-          ok: false,
-          err: new Error(
-            'Listing area text content already exists for market area code: VAL'
-          ),
-        })
+        .mockResolvedValueOnce({ ok: false, err: 'duplicate' })
 
       const res = await request(app.callback())
         .post('/listing-area-text-content')
@@ -170,15 +165,13 @@ describe('listing-area-text-content routes', () => {
         })
 
       expect(res.status).toBe(409)
+      expect(res.body.error).toContain('already exists')
     })
 
     it('responds with 500 on unexpected adapter error', async () => {
       jest
         .spyOn(listingAreaTextContentAdapter, 'create')
-        .mockResolvedValueOnce({
-          ok: false,
-          err: new Error('Something went wrong'),
-        })
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback())
         .post('/listing-area-text-content')
@@ -219,18 +212,13 @@ describe('listing-area-text-content routes', () => {
         })
 
       expect(res.status).toBe(400)
-      expect(res.body.error).toBe('Invalid request body')
+      expect(res.body.status).toBe('error')
     })
 
     it('responds with 404 when not found', async () => {
       jest
         .spyOn(listingAreaTextContentAdapter, 'update')
-        .mockResolvedValueOnce({
-          ok: false,
-          err: new Error(
-            'Listing area text content for market area code NON_EXISTENT not found'
-          ),
-        })
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback())
         .put('/listing-area-text-content/NON_EXISTENT')
@@ -239,6 +227,20 @@ describe('listing-area-text-content routes', () => {
         })
 
       expect(res.status).toBe(404)
+    })
+
+    it('responds with 500 on unexpected adapter error', async () => {
+      jest
+        .spyOn(listingAreaTextContentAdapter, 'update')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback())
+        .put('/listing-area-text-content/VAL')
+        .send({
+          contentBlocks: [{ type: 'text', content: 'test' }],
+        })
+
+      expect(res.status).toBe(500)
     })
   })
 
@@ -262,18 +264,25 @@ describe('listing-area-text-content routes', () => {
     it('responds with 404 when not found', async () => {
       jest
         .spyOn(listingAreaTextContentAdapter, 'remove')
-        .mockResolvedValueOnce({
-          ok: false,
-          err: new Error(
-            'Listing area text content for market area code NON_EXISTENT not found'
-          ),
-        })
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
       const res = await request(app.callback()).delete(
         '/listing-area-text-content/NON_EXISTENT'
       )
 
       expect(res.status).toBe(404)
+    })
+
+    it('responds with 500 on unexpected adapter error', async () => {
+      jest
+        .spyOn(listingAreaTextContentAdapter, 'remove')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).delete(
+        '/listing-area-text-content/VAL'
+      )
+
+      expect(res.status).toBe(500)
     })
   })
 })

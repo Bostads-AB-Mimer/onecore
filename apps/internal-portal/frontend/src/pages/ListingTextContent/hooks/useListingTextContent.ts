@@ -1,5 +1,10 @@
 import axios, { AxiosError } from 'axios'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  QueryClient,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { leasing } from '@onecore/types'
 import { z } from 'zod'
 
@@ -15,6 +20,22 @@ type CreateListingTextContentRequest = z.infer<
 type UpdateListingTextContentRequest = z.infer<
   typeof leasing.v1.UpdateListingTextContentRequestSchema
 >
+
+// Patch saved content into the cached lookup for its code so the editor never
+// sees a stale `content: null` (or a missing entry) between a successful save
+// and the refetch triggered by invalidation. Keeps the already resolved
+// marketArea/areaContent.
+const setCachedContent = (
+  queryClient: QueryClient,
+  content: ListingTextContent
+) =>
+  queryClient.setQueryData<ListingTextContentLookup>(
+    ['listingTextContent', content.rentalObjectCode],
+    (old) =>
+      old
+        ? { ...old, content }
+        : { content, marketArea: null, areaContent: null }
+  )
 
 // GET - Fetch listing text content by rental object code, together with the
 // market-area text of the property it belongs to (null for non-housing).
@@ -67,7 +88,8 @@ export const useCreateListingTextContent = () => {
           }
         )
         .then((res) => res.data.content),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setCachedContent(queryClient, data)
       queryClient.invalidateQueries({
         queryKey: ['listingTextContent'],
       })
@@ -97,7 +119,8 @@ export const useUpdateListingTextContent = () => {
           }
         )
         .then((res) => res.data.content),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      setCachedContent(queryClient, data)
       queryClient.invalidateQueries({
         queryKey: ['listingTextContent'],
       })

@@ -1,7 +1,9 @@
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 import listingAreaTextContentAdapter from '../adapters/listing-area-text-content-adapter'
 import { leasing } from '@onecore/types'
+
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -39,9 +41,18 @@ export const routes = (router: KoaRouter) => {
   router.get('(.*)/listing-area-text-content', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    const listingAreaTextContent = await listingAreaTextContentAdapter.list()
+    try {
+      const listingAreaTextContent = await listingAreaTextContentAdapter.list()
 
-    ctx.body = { content: listingAreaTextContent, ...metadata }
+      ctx.body = { content: listingAreaTextContent, ...metadata }
+    } catch (err) {
+      logger.error({ err }, 'Error listing listing area text content')
+      ctx.status = 500
+      ctx.body = {
+        error: 'Failed to list listing area text content',
+        ...metadata,
+      }
+    }
   })
 
   /**
@@ -82,16 +93,31 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { marketAreaCode } = ctx.params
 
-    const listingAreaTextContent =
-      await listingAreaTextContentAdapter.getByMarketAreaCode(marketAreaCode)
+    try {
+      const listingAreaTextContent =
+        await listingAreaTextContentAdapter.getByMarketAreaCode(marketAreaCode)
 
-    if (!listingAreaTextContent) {
-      ctx.status = 404
-      ctx.body = { error: 'Listing area text content not found', ...metadata }
-      return
+      if (!listingAreaTextContent) {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Listing area text content not found',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = { content: listingAreaTextContent, ...metadata }
+    } catch (err) {
+      logger.error(
+        { err, marketAreaCode },
+        'Error getting listing area text content'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: 'Failed to get listing area text content',
+        ...metadata,
+      }
     }
-
-    ctx.body = { content: listingAreaTextContent, ...metadata }
   })
 
   /**
@@ -163,45 +189,39 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/listing-area-text-content', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const parseResult =
-      leasing.v1.CreateListingAreaTextContentRequestSchema.safeParse(
+  router.post(
+    '(.*)/listing-area-text-content',
+    parseRequestBody(leasing.v1.CreateListingAreaTextContentRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { marketAreaCode } = ctx.request.body
+
+      const result = await listingAreaTextContentAdapter.create(
         ctx.request.body
       )
 
-    if (!parseResult.success) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Invalid request body',
-        invalid: ctx.request.body,
-        detail: parseResult.error,
-        ...metadata,
-      }
-      return
-    }
+      if (!result.ok) {
+        if (result.err === 'duplicate') {
+          ctx.status = 409
+          ctx.body = {
+            error: `Listing area text content already exists for market area code: ${marketAreaCode}`,
+            ...metadata,
+          }
+          return
+        }
 
-    const result = await listingAreaTextContentAdapter.create(parseResult.data)
-
-    if (!result.ok) {
-      // Check if this is a duplicate market area code error
-      if (result.err.message.includes('already exists for market area code')) {
-        ctx.status = 409
-        ctx.body = { error: result.err.message, ...metadata }
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to create listing area text content',
+          ...metadata,
+        }
         return
       }
 
-      ctx.status = 500
-      ctx.body = {
-        error: 'Failed to create listing area text content',
-        ...metadata,
-      }
-      return
+      ctx.status = 201
+      ctx.body = { content: result.data, ...metadata }
     }
-
-    ctx.status = 201
-    ctx.body = { content: result.data, ...metadata }
-  })
+  )
 
   /**
    * @swagger
@@ -274,48 +294,39 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/listing-area-text-content/:marketAreaCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { marketAreaCode } = ctx.params
+  router.put(
+    '(.*)/listing-area-text-content/:marketAreaCode',
+    parseRequestBody(leasing.v1.UpdateListingAreaTextContentRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { marketAreaCode } = ctx.params
 
-    const parseResult =
-      leasing.v1.UpdateListingAreaTextContentRequestSchema.safeParse(
+      const result = await listingAreaTextContentAdapter.update(
+        marketAreaCode,
         ctx.request.body
       )
 
-    if (!parseResult.success) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Invalid request body',
-        invalid: ctx.request.body,
-        detail: parseResult.error,
-        ...metadata,
-      }
-      return
-    }
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Listing area text content not found',
+            ...metadata,
+          }
+          return
+        }
 
-    const result = await listingAreaTextContentAdapter.update(
-      marketAreaCode,
-      parseResult.data
-    )
-
-    if (!result.ok) {
-      if (result.err.message.includes('not found')) {
-        ctx.status = 404
-        ctx.body = { error: result.err.message, ...metadata }
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to update listing area text content',
+          ...metadata,
+        }
         return
       }
 
-      ctx.status = 500
-      ctx.body = {
-        error: 'Failed to update listing area text content',
-        ...metadata,
-      }
-      return
+      ctx.body = { content: result.data, ...metadata }
     }
-
-    ctx.body = { content: result.data, ...metadata }
-  })
+  )
 
   /**
    * @swagger
@@ -352,9 +363,12 @@ export const routes = (router: KoaRouter) => {
       const result = await listingAreaTextContentAdapter.remove(marketAreaCode)
 
       if (!result.ok) {
-        if (result.err.message.includes('not found')) {
+        if (result.err === 'not-found') {
           ctx.status = 404
-          ctx.body = { error: result.err.message, ...metadata }
+          ctx.body = {
+            error: 'Listing area text content not found',
+            ...metadata,
+          }
           return
         }
 

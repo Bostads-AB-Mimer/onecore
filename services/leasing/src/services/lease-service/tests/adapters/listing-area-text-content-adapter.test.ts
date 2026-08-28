@@ -125,7 +125,7 @@ describe('listing-area-text-content-adapter', () => {
 
         expect(duplicateResult.ok).toBe(false)
         if (!duplicateResult.ok) {
-          expect(duplicateResult.err.message).toContain('already exists')
+          expect(duplicateResult.err).toBe('duplicate')
         }
       }))
   })
@@ -175,7 +175,7 @@ describe('listing-area-text-content-adapter', () => {
 
         expect(result.ok).toBe(false)
         if (!result.ok) {
-          expect(result.err.message).toContain('not found')
+          expect(result.err).toBe('not-found')
         }
       }))
   })
@@ -221,7 +221,7 @@ describe('listing-area-text-content-adapter', () => {
 
         expect(result.ok).toBe(false)
         if (!result.ok) {
-          expect(result.err.message).toContain('not found')
+          expect(result.err).toBe('not-found')
         }
       }))
   })

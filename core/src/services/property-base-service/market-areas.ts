@@ -51,9 +51,15 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    ctx.body = {
-      content: z.array(property.MarketAreaSchema).parse(result.data),
-      ...metadata,
+    try {
+      ctx.body = {
+        content: z.array(property.MarketAreaSchema).parse(result.data),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error({ err }, 'market-areas.get')
+      ctx.status = 500
+      ctx.body = { reason: 'Internal server error', ...metadata }
     }
   })
 }
