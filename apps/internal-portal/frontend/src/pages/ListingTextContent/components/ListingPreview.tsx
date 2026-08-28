@@ -1,4 +1,5 @@
-import { Box, Paper, Typography, Link } from '@mui/material'
+import type { Key } from 'react'
+import { Box, Divider, Paper, Typography, Link } from '@mui/material'
 import { leasing } from '@onecore/types'
 import { z } from 'zod'
 
@@ -15,7 +16,9 @@ interface ContentBlockBase {
 
 interface ListingPreviewProps {
   blocks: ContentBlockBase[]
+  areaBlocks?: ContentBlockBase[]
   rentalObjectCode?: string
+  label?: string
 }
 
 const renderParagraphs = (
@@ -47,9 +50,11 @@ const renderParagraphs = (
 
 export const ListingPreview = ({
   blocks,
+  areaBlocks = [],
   rentalObjectCode,
+  label,
 }: ListingPreviewProps) => {
-  const renderBlock = (block: ContentBlockBase, index: number) => {
+  const renderBlock = (block: ContentBlockBase, index: Key) => {
     switch (block.type) {
       case 'preamble':
         return (
@@ -258,7 +263,7 @@ export const ListingPreview = ({
           minHeight: 300,
         }}
       >
-        {rentalObjectCode && (
+        {(rentalObjectCode || label) && (
           <Typography
             variant="caption"
             sx={{
@@ -269,11 +274,11 @@ export const ListingPreview = ({
               borderRadius: 1,
             }}
           >
-            Objektsnummer: {rentalObjectCode}
+            {rentalObjectCode ? `Objektsnummer: ${rentalObjectCode}` : label}
           </Typography>
         )}
 
-        {blocks.length === 0 ? (
+        {blocks.length === 0 && areaBlocks.length === 0 ? (
           <Box
             sx={{
               display: 'flex',
@@ -287,7 +292,22 @@ export const ListingPreview = ({
             </Typography>
           </Box>
         ) : (
-          <Box>{blocks.map((block, index) => renderBlock(block, index))}</Box>
+          <Box>
+            {blocks.map((block, index) => renderBlock(block, index))}
+
+            {areaBlocks.length > 0 && (
+              <>
+                <Divider sx={{ marginY: 2 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Områdestext
+                  </Typography>
+                </Divider>
+                {areaBlocks.map((block, index) =>
+                  renderBlock(block, `area-${index}`)
+                )}
+              </>
+            )}
+          </Box>
         )}
       </Paper>
 

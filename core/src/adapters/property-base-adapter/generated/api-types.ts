@@ -2495,6 +2495,29 @@ export interface paths {
       }
     }
   }
+  '/market-areas': {
+    /**
+     * List all market areas
+     * @description Returns every market area (Xpand babya, "marknadsområde"). No
+     * filters, no pagination — there are only a few dozen rows.
+     */
+    get: {
+      responses: {
+        /** @description List of market areas */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MarketArea'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/components/analyze-image': {
     /**
      * Analyze component image(s) using AI
@@ -4284,6 +4307,11 @@ export interface components {
       /** Format: date-time */
       updatedAt: string
       updatedBy: string | null
+    }
+    MarketArea: {
+      id: string
+      code: string
+      name: string | null
     }
     ApartmentTemperaturePoint: {
       /** @description Unix timestamp (seconds) at the start of the aggregation bucket. */

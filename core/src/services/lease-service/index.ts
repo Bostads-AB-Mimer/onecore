@@ -32,6 +32,7 @@ import { routes as listings } from './listings'
 import { routes as commentsRoutes } from './comments'
 import { routes as rentalObjectsRoutes } from './rental-objects'
 import { routes as textContentRoutes } from './text-content'
+import { routes as areaTextContentRoutes } from './area-text-content'
 import { routes as keysExportRoutes } from './keys-export'
 
 import { registerSchema } from '../../utils/openapi'
@@ -151,6 +152,7 @@ export const routes = (router: KoaRouter) => {
   commentsRoutes(router)
   rentalObjectsRoutes(router)
   textContentRoutes(router)
+  areaTextContentRoutes(router)
   keysExportRoutes(router)
 
   /**

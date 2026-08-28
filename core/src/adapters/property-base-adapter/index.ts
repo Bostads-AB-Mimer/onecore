@@ -1086,6 +1086,10 @@ export async function getCostCenterTreeById(
 
 export { getApartmentTemperatures } from './apartment-temperatures'
 
+// ==================== MARKET AREAS ====================
+
+export { listMarketAreas } from './market-areas'
+
 type KvvAreaWithCostCenter = components['schemas']['KvvAreaWithCostCenter']
 
 export async function listKvvAreas(

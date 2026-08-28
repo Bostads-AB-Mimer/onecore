@@ -21,6 +21,7 @@ import { routes as aiScannerRoutes } from './routes/ai-scanner'
 import { routes as apartmentTemperaturesRoutes } from './routes/apartment-temperatures'
 import { routes as costCentersRoutes } from './routes/cost-centers'
 import { routes as kvvAreasRoutes } from './routes/kvv-areas'
+import { routes as marketAreasRoutes } from './routes/market-areas'
 
 import { routes as healthRoutes } from './routes/health'
 
@@ -47,6 +48,7 @@ aiScannerRoutes(router)
 apartmentTemperaturesRoutes(router)
 costCentersRoutes(router)
 kvvAreasRoutes(router)
+marketAreasRoutes(router)
 healthRoutes(router)
 
 export default router

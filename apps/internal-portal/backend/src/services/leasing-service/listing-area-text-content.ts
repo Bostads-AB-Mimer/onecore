@@ -1,0 +1,139 @@
+import KoaRouter from '@koa/router'
+import { generateRouteMetadata } from '@onecore/utilities'
+
+import * as coreAdapter from './adapters/core-adapter'
+
+export const routes = (router: KoaRouter) => {
+  router.get('(.*)/listing-area-text-content', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await coreAdapter.listListingAreaTextContent()
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } else {
+      ctx.status = result.statusCode
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  router.get('(.*)/listing-area-text-content/:marketAreaCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { marketAreaCode } = ctx.params
+
+    const result =
+      await coreAdapter.getListingAreaTextContentByMarketAreaCode(
+        marketAreaCode
+      )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } else {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Listing area text content not found',
+          ...metadata,
+        }
+      } else {
+        ctx.status = result.statusCode
+        ctx.body = { error: result.err, ...metadata }
+      }
+    }
+  })
+
+  router.post('(.*)/listing-area-text-content', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = ctx.request.body
+
+    const result = await coreAdapter.createListingAreaTextContent(params)
+
+    if (result.ok) {
+      ctx.status = 201
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } else {
+      if (result.err === 'conflict') {
+        ctx.status = 409
+        ctx.body = {
+          error:
+            'Listing area text content already exists for market area code',
+          ...metadata,
+        }
+      } else {
+        ctx.status = result.statusCode
+        ctx.body = { error: result.err, ...metadata }
+      }
+    }
+  })
+
+  router.put('(.*)/listing-area-text-content/:marketAreaCode', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { marketAreaCode } = ctx.params
+    const params = ctx.request.body
+
+    const result = await coreAdapter.updateListingAreaTextContent(
+      marketAreaCode,
+      params
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } else {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Listing area text content not found',
+          ...metadata,
+        }
+      } else {
+        ctx.status = result.statusCode
+        ctx.body = { error: result.err, ...metadata }
+      }
+    }
+  })
+
+  router.delete(
+    '(.*)/listing-area-text-content/:marketAreaCode',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { marketAreaCode } = ctx.params
+
+      const result =
+        await coreAdapter.deleteListingAreaTextContent(marketAreaCode)
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: result.data,
+          ...metadata,
+        }
+      } else {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Listing area text content not found',
+            ...metadata,
+          }
+        } else {
+          ctx.status = result.statusCode
+          ctx.body = { error: result.err, ...metadata }
+        }
+      }
+    }
+  )
+}

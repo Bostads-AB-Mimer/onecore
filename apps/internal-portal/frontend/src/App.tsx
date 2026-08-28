@@ -24,6 +24,8 @@ import SearchParkingSpaces from './pages/ParkingSpaces/search'
 import PublishParkingSpacesPage from './pages/PublishParkingSpacesListings/PublishParkingSpacesListingsPage'
 import ListingTextContent from './pages/ListingTextContent'
 import ListingTextContentForm from './pages/ListingTextContent/ListingTextContentForm'
+import ListingAreaTextContent from './pages/ListingAreaTextContent'
+import ListingAreaTextContentForm from './pages/ListingAreaTextContent/ListingAreaTextContentForm'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,6 +94,18 @@ function App() {
                   <Route
                     path="/annonsinnehall/:rentalObjectCode/redigera"
                     element={<ListingTextContentForm />}
+                  />
+                  <Route
+                    path="/omradestexter"
+                    element={<ListingAreaTextContent />}
+                  />
+                  <Route
+                    path="/omradestexter/ny"
+                    element={<ListingAreaTextContentForm />}
+                  />
+                  <Route
+                    path="/omradestexter/:marketAreaCode/redigera"
+                    element={<ListingAreaTextContentForm />}
                   />
                   <Route path="/logout" element={<Login />} />
                 </Route>

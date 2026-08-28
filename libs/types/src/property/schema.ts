@@ -90,3 +90,11 @@ export const KvvAreaWithCostCenterSchema = KvvAreaRefSchema.extend({
   costCenter: CostCenterRefSchema,
   responsibleKeycloakUserId: z.string().nullable(),
 })
+
+// Market area (Xpand babya, "marknadsområde") as listed by GET /market-areas.
+// The id is a 15-char Xpand key, not a uuid.
+export const MarketAreaSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+})

@@ -17,7 +17,7 @@ export const useValidateRentalObject = (rentalObjectCode: string | null) => {
     return () => clearTimeout(timer)
   }, [rentalObjectCode])
 
-  return useQuery<boolean, AxiosError>({
+  const query = useQuery<boolean, AxiosError>({
     queryKey: ['validate-rental-object', debouncedCode],
     enabled: Boolean(debouncedCode && debouncedCode.trim().length > 0),
     queryFn: async () => {
@@ -43,4 +43,8 @@ export const useValidateRentalObject = (rentalObjectCode: string | null) => {
     retry: false,
     staleTime: 30000, // Cache for 30 seconds
   })
+
+  // `data` answers for the debounced code, not the live input - expose that
+  // code so callers don't act on a stale validation while the user types.
+  return { ...query, validatedCode: debouncedCode }
 }

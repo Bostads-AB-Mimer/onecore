@@ -38,6 +38,9 @@ const ListingTextContent = () => {
       >
         <Typography variant="h1">Annonsinnehåll</Typography>
         <Box display="flex" flexGrow="1" justifyContent="flex-end" gap="1rem">
+          <Link to="/omradestexter">
+            <Button variant="dark-outlined">Områdestexter</Button>
+          </Link>
           <Link to="/annonsinnehall/ny">
             <Button variant="dark-outlined" startIcon={<AddIcon />}>
               Skapa nytt
@@ -74,34 +77,32 @@ const ListingTextContent = () => {
           </Box>
 
           {error && searchedCode && (
-            <Box>
-              {error.response?.status === 404 ? (
-                <Stack spacing={2}>
-                  <Typography color="text.secondary">
-                    Inget annonsinnehåll hittades för objektsnummer:{' '}
-                    <strong>{searchedCode}</strong>
-                  </Typography>
-                  <Box>
-                    <Link to={`/annonsinnehall/ny?code=${searchedCode}`}>
-                      <Button variant="contained" size="small">
-                        Skapa annonsinnehåll för {searchedCode}
-                      </Button>
-                    </Link>
-                  </Box>
-                </Stack>
-              ) : (
-                <Typography color="error">
-                  Ett fel inträffade vid hämtning av annonsinnehåll.
-                </Typography>
-              )}
-            </Box>
+            <Typography color="error">
+              Ett fel inträffade vid hämtning av annonsinnehåll.
+            </Typography>
           )}
 
           {isLoading && searchedCode && (
             <Typography color="text.secondary">Söker...</Typography>
           )}
 
-          {data && (
+          {data && data.content === null && (
+            <Stack spacing={2}>
+              <Typography color="text.secondary">
+                Inget annonsinnehåll hittades för objektsnummer:{' '}
+                <strong>{searchedCode}</strong>
+              </Typography>
+              <Box>
+                <Link to={`/annonsinnehall/ny?code=${searchedCode}`}>
+                  <Button variant="contained" size="small">
+                    Skapa annonsinnehåll för {searchedCode}
+                  </Button>
+                </Link>
+              </Box>
+            </Stack>
+          )}
+
+          {data && data.content !== null && (
             <Paper elevation={1} sx={{ padding: 3 }}>
               <Stack spacing={2}>
                 <Box
@@ -110,10 +111,10 @@ const ListingTextContent = () => {
                   alignItems="center"
                 >
                   <Typography variant="h6">
-                    Objektsnummer: {data.rentalObjectCode}
+                    Objektsnummer: {data.content.rentalObjectCode}
                   </Typography>
                   <Link
-                    to={`/annonsinnehall/${data.rentalObjectCode}/redigera`}
+                    to={`/annonsinnehall/${data.content.rentalObjectCode}/redigera`}
                   >
                     <Button variant="contained">Visa och redigera</Button>
                   </Link>
@@ -122,18 +123,19 @@ const ListingTextContent = () => {
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Antal innehållsblock:{' '}
-                    <strong>{data.contentBlocks.length}</strong>
+                    <strong>{data.content.contentBlocks.length}</strong>
                   </Typography>
                 </Box>
 
                 <Box>
                   <Typography variant="caption" color="text.secondary">
-                    Skapad: {new Date(data.createdAt).toLocaleString('sv-SE')}
+                    Skapad:{' '}
+                    {new Date(data.content.createdAt).toLocaleString('sv-SE')}
                   </Typography>
                   <br />
                   <Typography variant="caption" color="text.secondary">
                     Uppdaterad:{' '}
-                    {new Date(data.updatedAt).toLocaleString('sv-SE')}
+                    {new Date(data.content.updatedAt).toLocaleString('sv-SE')}
                   </Typography>
                 </Box>
               </Stack>

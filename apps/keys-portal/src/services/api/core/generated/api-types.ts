@@ -491,6 +491,158 @@ export interface paths {
       }
     }
   }
+  '/listing-area-text-content': {
+    /**
+     * List listing area text content
+     * @description Fetch the listing text content for all market areas.
+     */
+    get: {
+      responses: {
+        /** @description List of listing area text content objects */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create listing area text content
+     * @description Create new listing text content for a market area.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateListingAreaTextContentRequest']
+        }
+      }
+      responses: {
+        /** @description Listing area text content created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Listing area text content already exists for market area code */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/listing-area-text-content/{marketAreaCode}': {
+    /**
+     * Get listing area text content by market area code
+     * @description Fetch the listing text content for a specific market area.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The market area code to fetch text content for. */
+          marketAreaCode: string
+        }
+      }
+      responses: {
+        /** @description Listing area text content object */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update listing area text content
+     * @description Update existing listing text content for a market area.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The market area code of the listing text content to update. */
+          marketAreaCode: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateListingAreaTextContentRequest']
+        }
+      }
+      responses: {
+        /** @description Listing area text content updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete listing area text content
+     * @description Delete listing area text content.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The market area code of the listing text content to delete. */
+          marketAreaCode: string
+        }
+      }
+      responses: {
+        /** @description Listing area text content deleted successfully */
+        200: {
+          content: never
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/comments/{targetType}/thread/{targetId}/{commentId}': {
     /**
      * Update a comment in a comment thread
@@ -6078,6 +6230,29 @@ export interface paths {
       }
     }
   }
+  '/market-areas': {
+    /**
+     * List market areas
+     * @description Returns every market area (Xpand babya, "marknadsområde"). No
+     * filters, no pagination — there are only a few dozen rows.
+     */
+    get: {
+      responses: {
+        /** @description List of market areas */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MarketArea'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/properties/{propertyCode}/kvv-area': {
     /**
      * Get the KVV-area (förvaltningsområde) and district of a property
@@ -10479,6 +10654,137 @@ export interface components {
           }
       )[]
     }
+    ListingAreaTextContent: {
+      /** Format: uuid */
+      id: string
+      marketAreaCode: string
+      contentBlocks: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateListingAreaTextContentRequest: {
+      marketAreaCode: string
+      contentBlocks: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+    }
+    UpdateListingAreaTextContentRequest: {
+      contentBlocks?: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+    }
     WorkOrder: {
       accessCaption: string
       caption: string
@@ -11828,6 +12134,11 @@ export interface components {
         mobilePhone?: string
         employeeId?: string
       } | null
+    }
+    MarketArea: {
+      id: string
+      code: string
+      name: string | null
     }
     PropertyKvvAreaLookup: {
       kvvArea: {

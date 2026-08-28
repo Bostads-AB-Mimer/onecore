@@ -7,6 +7,7 @@ import { routes as listingRoutes } from './routes/listings'
 import { routes as applicantsRoutes } from './routes/applicants'
 import { routes as rentalObjectsRoutes } from './routes/rental-objects'
 import { routes as listingTextContentRoutes } from './routes/listing-text-content'
+import { routes as listingAreaTextContentRoutes } from './routes/listing-area-text-content'
 
 export const routes = (router: KoaRouter) => {
   applicantsRoutes(router)
@@ -17,4 +18,5 @@ export const routes = (router: KoaRouter) => {
   listingRoutes(router)
   rentalObjectsRoutes(router)
   listingTextContentRoutes(router)
+  listingAreaTextContentRoutes(router)
 }
