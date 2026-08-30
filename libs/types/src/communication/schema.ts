@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
 export const DIRECTION = ['outbound', 'inbound'] as const
-export const CHANNEL = ['sms', 'email'] as const
+export const CHANNEL = ['sms', 'email', 'call'] as const
+// Templates render message content; calls have none, so template channels
+// stay narrower than dispatch channels.
+export const TEMPLATE_CHANNEL = ['sms', 'email'] as const
 export const RECIPIENT_STATUS = [
   'pending',
   'sent',
@@ -13,6 +16,7 @@ export const RECIPIENT_STATUS = [
 
 export const DirectionSchema = z.enum(DIRECTION)
 export const ChannelSchema = z.enum(CHANNEL)
+export const TemplateChannelSchema = z.enum(TEMPLATE_CHANNEL)
 export const RecipientStatusSchema = z.enum(RECIPIENT_STATUS)
 
 export const DispatchSchema = z.object({
@@ -59,7 +63,7 @@ export const DispatchAttachmentSchema = z.object({
 export const TemplateSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  channels: z.array(ChannelSchema),
+  channels: z.array(TemplateChannelSchema),
   subject: z.string().nullable(),
   body: z.string(),
   categories: z.array(z.string()),
@@ -91,6 +95,22 @@ export const LogOutboundParamsSchema = z.object({
   audienceCriteria: z.object({}).passthrough().optional(),
   templateId: z.string().uuid().optional(),
   recipients: z.array(LogOutboundRecipientSchema),
+})
+
+// Request body POSTed (via core) when an employee triggers a phone call
+// regarding a work order. The service maps it onto a 'call' dispatch itself,
+// so channel/status are not part of the payload. The work order code is
+// embedded in the dispatch body text (like for work-order sms), where the
+// frontend picks it up to link into the source system — it is not stored
+// separately.
+export const LogCallParamsSchema = z.object({
+  phoneNumber: z.string().min(1),
+  contactCode: z.string().min(1),
+  workOrderCode: z.string().min(1),
+  triggeredByUser: z.string().optional(),
+  // The system the call was triggered from, stored as the dispatch provider.
+  // Defaults to 'odoo' server-side, which predates this field.
+  source: z.string().min(1).optional(),
 })
 
 // Read-side response shapes

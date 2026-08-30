@@ -346,6 +346,40 @@ export interface paths {
       }
     }
   }
+  '/communication-log/calls': {
+    /**
+     * Log a phone call regarding a work order
+     * @description Called when an employee triggers a phone call from a work order in a source system such as Odoo. The call has already happened; this only records it in the tenant's communication log. triggeredByUser is taken from the request body since source systems authenticate with service accounts (same as /work-orders/send-sms). The optional source field identifies the calling system and defaults to 'odoo'.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['LogCallParams']
+        }
+      }
+      responses: {
+        /** @description Call logged successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                /** Format: uuid */
+                dispatchId?: string
+              }
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/communication-log/dispatches/{id}': {
     /** Get a dispatch and its recipients by dispatch id */
     get: {
@@ -14348,7 +14382,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'call'
         fromAddress: string
         subject: string | null
         body: string
@@ -14396,7 +14430,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'call'
         fromAddress: string
         subject: string | null
         body: string
@@ -14436,6 +14470,13 @@ export interface components {
         /** Format: date-time */
         createdAt: string
       }[]
+    }
+    LogCallParams: {
+      phoneNumber: string
+      contactCode: string
+      workOrderCode: string
+      triggeredByUser?: string
+      source?: string
     }
     KeycloakUser: {
       id: string

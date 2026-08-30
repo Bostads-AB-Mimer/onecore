@@ -41,6 +41,17 @@ export const parseErrandNumber = (query: string): string | null => {
   return match ? match[1] : null
 }
 
+/**
+ * Finds the first Odoo errand code (`od-<number>`) inside free text, e.g. a
+ * communication-log message body where the errand reference is embedded in
+ * the text rather than stored separately. Returns the full code ("od-123")
+ * or `null` when the text contains none.
+ */
+export const findErrandCode = (text: string): string | null => {
+  const match = text.match(/\bod-\d+\b/i)
+  return match ? match[0].toLowerCase() : null
+}
+
 export interface WorkOrderMetadata {
   propertyName?: string
   type?: string
