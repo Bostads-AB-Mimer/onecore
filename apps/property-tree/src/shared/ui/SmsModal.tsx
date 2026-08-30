@@ -1,14 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
-import {
-  AlertTriangle,
-  ChevronDown,
-  Info,
-  MessageSquare,
-  User,
-} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, ChevronDown, Info, MessageSquare } from 'lucide-react'
 
+import { useRemovableRecipients } from '@/shared/hooks/useRemovableRecipients'
 import { cn } from '@/shared/lib/utils'
-import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
@@ -18,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
+import { RecipientChipList } from '@/shared/ui/RecipientChipList'
 import { Textarea } from '@/shared/ui/Textarea'
 
 const MAX_SMS_LENGTH = 1600
@@ -45,11 +40,14 @@ interface SmsModalSingleProps extends SmsModalBaseProps {
   onSend: (message: string) => Promise<void>
   recipients?: undefined
   totalSelectedItems?: undefined
+  excludedRecipientsCount?: undefined
 }
 
 interface SmsModalBulkProps extends SmsModalBaseProps {
   recipients: SmsRecipient[]
   totalSelectedItems?: number
+  /** Contacts excluded by unchecking rows in the table (all-results mode) */
+  excludedRecipientsCount?: number
   onSend?: (message: string, recipients: SmsRecipient[]) => Promise<void>
   recipientName?: undefined
   phoneNumber?: undefined
@@ -66,16 +64,27 @@ export function SmsModal(props: SmsModalProps) {
   const [showCostConfirmation, setShowCostConfirmation] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
 
+  // Single reset path for per-session state — Esc/overlay dismissal bypasses
+  // handleClose, so resets must not live there
+  useEffect(() => {
+    setMessage('')
+    setShowCostConfirmation(false)
+    setShowAllInvalid(false)
+  }, [open])
+
   const charactersLeft = MAX_SMS_LENGTH - message.length
 
   const recipients = props.recipients ?? []
 
+  const { activeRecipients, removedCount, removeRecipient } =
+    useRemovableRecipients(recipients, open)
+
   const { validRecipients, invalidRecipients } = useMemo(() => {
     if (!isBulk) return { validRecipients: [], invalidRecipients: [] }
-    const valid = recipients.filter((r) => hasPhoneNumber(r.phone))
-    const invalid = recipients.filter((r) => !hasPhoneNumber(r.phone))
+    const valid = activeRecipients.filter((r) => hasPhoneNumber(r.phone))
+    const invalid = activeRecipients.filter((r) => !hasPhoneNumber(r.phone))
     return { validRecipients: valid, invalidRecipients: invalid }
-  }, [isBulk, recipients])
+  }, [isBulk, activeRecipients])
 
   const estimatedCost = validRecipients.length * SMS_COST_SEK
   const duplicatesRemoved =
@@ -133,16 +142,25 @@ export function SmsModal(props: SmsModalProps) {
   ])
 
   const handleClose = () => {
-    setMessage('')
-    setShowCostConfirmation(false)
     onOpenChange(false)
   }
 
+  // Contacts excluded via table-row unchecking
+  const excludedSuffix =
+    isBulk && props.excludedRecipientsCount
+      ? ` \u00b7 ${props.excludedRecipientsCount} ${
+          props.excludedRecipientsCount === 1 ? 'exkluderad' : 'exkluderade'
+        }`
+      : ''
+
+  // Based on the ORIGINAL list: this line explains deduplication, which
+  // manual removals must not skew (removals shown at the "Mottagare" label)
   const description = isBulk
-    ? props.totalSelectedItems != null &&
+    ? (props.totalSelectedItems != null &&
       props.totalSelectedItems !== recipients.length
-      ? `${props.totalSelectedItems} valda hyreskontrakt \u2192 ${recipients.length} unika kontakter`
-      : `Skicka SMS till ${validRecipients.length} av ${recipients.length} valda kunder`
+        ? `${props.totalSelectedItems} valda hyreskontrakt \u2192 ${recipients.length} unika kontakter`
+        : `Skicka SMS till ${validRecipients.length} av ${recipients.length} valda kunder`) +
+      excludedSuffix
     : `Till ${props.recipientName} (${props.phoneNumber})`
 
   return (
@@ -162,19 +180,17 @@ export function SmsModal(props: SmsModalProps) {
               <div>
                 <label className="text-sm font-medium">
                   Mottagare ({validRecipients.length})
+                  {removedCount > 0 && (
+                    <span className="ml-2 font-normal text-muted-foreground">
+                      {removedCount}{' '}
+                      {removedCount === 1 ? 'borttagen' : 'borttagna'}
+                    </span>
+                  )}
                 </label>
-                <div className="mt-2 flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 border rounded-md bg-muted/30">
-                  {validRecipients.map((recipient) => (
-                    <Badge
-                      key={recipient.id}
-                      variant="secondary"
-                      className="flex items-center gap-1"
-                    >
-                      <User className="h-3 w-3" />
-                      {recipient.name}
-                    </Badge>
-                  ))}
-                </div>
+                <RecipientChipList
+                  recipients={validRecipients}
+                  onRemove={removeRecipient}
+                />
               </div>
 
               {(duplicatesRemoved > 0 || invalidRecipients.length > 0) && (

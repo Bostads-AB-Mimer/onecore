@@ -104,9 +104,9 @@ const LeasesPage = () => {
   }
 
   const {
-    selectedIds: selectedLeaseIds,
     allResultsSelected,
     selectedCount,
+    excludedRecipientsCount,
     toggleSelection,
     toggleSelectAll,
     clearSelection,
@@ -139,15 +139,33 @@ const LeasesPage = () => {
     sendBulkEmail: tenantService.sendBulkEmail,
   })
 
+  // Clear selection when the filters change. Keyed on serialized values (sort
+  // excluded) — searchParams gets a new identity on any url change, and
+  // pagination/sorting must NOT wipe the selection.
+  const filterKey = JSON.stringify({
+    ...filters.searchParams,
+    sortBy: undefined,
+    sortOrder: undefined,
+  })
   useEffect(() => {
     clearSelection()
-  }, [filters.searchParams, clearSelection])
+  }, [filterKey, clearSelection])
+
+  // Fully checked only when all results are selected with no exclusions;
+  // indeterminate when something (possibly on another page) is selected
+  const totalRecords = filters.meta?.totalRecords ?? 0
+  const headerCheckboxState =
+    allResultsSelected && totalRecords > 0 && selectedCount === totalRecords
+      ? true
+      : selectedCount > 0
+        ? ('indeterminate' as const)
+        : false
 
   const selectColumn = {
     key: 'select',
     label: (
       <Checkbox
-        checked={allResultsSelected || selectedLeaseIds.length > 0}
+        checked={headerCheckboxState}
         onCheckedChange={toggleSelectAll}
         aria-label="Välj alla"
       />
@@ -345,6 +363,7 @@ const LeasesPage = () => {
         onOpenChange={setShowSmsModal}
         recipients={smsRecipients}
         totalSelectedItems={selectedCount}
+        excludedRecipientsCount={excludedRecipientsCount}
         onSend={handleSendSms}
       />
 
@@ -353,6 +372,7 @@ const LeasesPage = () => {
         onOpenChange={setShowEmailModal}
         recipients={emailRecipients}
         totalSelectedItems={selectedCount}
+        excludedRecipientsCount={excludedRecipientsCount}
         onSend={handleSendEmail}
       />
     </ViewLayout>
