@@ -66,8 +66,58 @@ describe('microsoft-graph-adapter', () => {
     const result = await listUsers()
     expect(result).toEqual({
       ok: true,
-      data: [{ id: 'g1', userPrincipalName: 'a@x.se', employeeId: 'E1' }],
+      data: [
+        {
+          id: 'g1',
+          userPrincipalName: 'a@x.se',
+          employeeId: 'E1',
+          managerUpn: null,
+        },
+      ],
     })
+  })
+
+  it('expands the manager relationship and flattens it to managerUpn', async () => {
+    let requestUrl: string | undefined
+    mockServer.use(
+      http.post(tokenUrl, () =>
+        HttpResponse.json({ access_token: 't', expires_in: 3600 })
+      ),
+      http.get('https://graph.microsoft.com/v1.0/users', ({ request }) => {
+        requestUrl = request.url
+        return HttpResponse.json({
+          value: [
+            {
+              id: 'g1',
+              userPrincipalName: 'a@x.se',
+              employeeId: 'E1',
+              manager: { id: 'g9', userPrincipalName: 'boss@x.se' },
+            },
+            {
+              id: 'g2',
+              userPrincipalName: 'b@x.se',
+              employeeId: 'E2',
+              manager: null,
+            },
+          ],
+        })
+      })
+    )
+
+    const result = await listUsers()
+    if (!result.ok) throw new Error('expected ok')
+
+    // Query asks Graph to expand the manager navigation property
+    const url = new URL(requestUrl ?? '')
+    expect(url.searchParams.get('$expand')).toBe(
+      'manager($select=id,userPrincipalName)'
+    )
+
+    // Nested manager is flattened to a scalar managerUpn; absent manager -> null
+    expect(result.data[0].managerUpn).toBe('boss@x.se')
+    expect(result.data[1].managerUpn).toBeNull()
+    // Nested `manager` object is not leaked onto GraphUser
+    expect('manager' in result.data[0]).toBe(false)
   })
 
   it('follows @odata.nextLink for pagination', async () => {
