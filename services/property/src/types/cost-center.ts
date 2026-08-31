@@ -23,6 +23,9 @@ export const CostCenterTreePropertySchema = z.object({
   tract: z.string().nullable(),
   addresses: z.array(CostCenterTreeAddressSchema),
   aggregates: CostCenterTreeAggregatesSchema,
+  // Present (true) only for split properties — ones with KVV-area exceptions:
+  // the node carries just this area's share of the property.
+  partial: z.boolean().optional(),
 })
 
 export const CostCenterTreeKvvAreaSchema = z.object({

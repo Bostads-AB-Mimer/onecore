@@ -6336,6 +6336,46 @@ export interface paths {
       }
     }
   }
+  '/rental-objects/{rentalId}/kvv-area': {
+    /**
+     * Get the KVV-area (förvaltningsområde) and district of a rental object
+     * @description Object-level lookup for split properties: if the object's building
+     * carries a KVV-area exception, that area wins over the property's
+     * link. For objects in unsplit properties this answers the same as
+     * the property-level lookup. The responsible kvartersvärd is hydrated
+     * from Keycloak (`null` if unset or unreachable). 404 when nothing
+     * resolves.
+     */
+    get: {
+      parameters: {
+        path: {
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description KVV-area, cost center and responsible for the object */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /**
+         * @description Unknown rental id or no KVV-area resolves. The body carries
+         * `code: RENTAL_OBJECT_KVV_AREA_NOT_FOUND` so callers can tell
+         * this apart from a routing 404.
+         */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/search': {
     /**
      * Omni-search for different entities
@@ -8854,6 +8894,42 @@ export interface paths {
         400: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/{id}/deactivate': {
+    /**
+     * Deactivate a key system and dispose all its keys
+     * @description Sets isActive=false and disposes every non-disposed key in the system in one transaction. Writes an audit log entry on the system listing all disposed key ids (the manual-rollback record).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to deactivate */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deactivated and keys disposed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DeactivateKeySystemResponse']
+            }
           }
         }
         /** @description Key system not found */
@@ -11994,6 +12070,7 @@ export interface components {
         parkingCount: number
         entranceCount: number
       }
+      partial?: boolean
     }
     CostCenterTreeKvvArea: {
       /** Format: uuid */
@@ -12026,6 +12103,7 @@ export interface components {
           parkingCount: number
           entranceCount: number
         }
+        partial?: boolean
       }[]
     }
     CostCenterTree: {
@@ -12069,6 +12147,7 @@ export interface components {
             parkingCount: number
             entranceCount: number
           }
+          partial?: boolean
         }[]
       }[]
     }
@@ -12628,6 +12707,10 @@ export interface components {
       isActive?: boolean
       notes?: string | null
       schemaFileId?: string | null
+    }
+    DeactivateKeySystemResponse: {
+      keySystem: components['schemas']['KeySystem']
+      disposedKeys: components['schemas']['Key'][]
     }
     CreateLogRequest: {
       userName: string

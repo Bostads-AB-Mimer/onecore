@@ -334,3 +334,64 @@ describe('GET /properties/:propertyCode/kvv-area', () => {
     expect(res.status).toBe(500)
   })
 })
+
+describe('GET /rental-objects/:rentalId/kvv-area', () => {
+  const RENTAL_ID = '307-048-01-0201'
+
+  it('returns the object-level resolution with the responsible hydrated', async () => {
+    jest.spyOn(keycloakAdapter, 'getUserById').mockResolvedValueOnce({
+      ok: true,
+      data: {
+        id: RESPONSIBLE_ID,
+        username: 'rodrigo.garcia',
+        firstName: 'Rodrigo',
+        lastName: 'Garcia',
+        email: 'rodrigo@example.com',
+        attributes: { mobilePhone: ['070-0000000'], employeeId: ['E-7'] },
+      },
+    })
+    const spy = jest
+      .spyOn(propertyBaseAdapter, 'getKvvAreaByRentalId')
+      .mockResolvedValueOnce({ ok: true, data: lookupFromService() })
+
+    const app = appWithUserRoles([])
+    const res = await request(app.callback()).get(
+      `/rental-objects/${RENTAL_ID}/kvv-area`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.kvvArea.code).toBe('61141')
+    expect(res.body.content.responsible).toMatchObject({
+      id: RESPONSIBLE_ID,
+      username: 'rodrigo.garcia',
+    })
+    expect(spy).toHaveBeenCalledWith(RENTAL_ID)
+  })
+
+  it('returns 404 with a discriminator code when nothing resolves', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getKvvAreaByRentalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const app = appWithUserRoles([])
+    const res = await request(app.callback()).get(
+      `/rental-objects/${RENTAL_ID}/kvv-area`
+    )
+
+    expect(res.status).toBe(404)
+    expect(res.body.code).toBe('RENTAL_OBJECT_KVV_AREA_NOT_FOUND')
+  })
+
+  it('returns 500 on unknown adapter error', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getKvvAreaByRentalId')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const app = appWithUserRoles([])
+    const res = await request(app.callback()).get(
+      `/rental-objects/${RENTAL_ID}/kvv-area`
+    )
+
+    expect(res.status).toBe(500)
+  })
+})

@@ -58,6 +58,72 @@ export const getKvvAreaByPropertyCode = async (
   }
 }
 
+/**
+ * Object-level lookup for split properties: the object's building may carry a
+ * KVV-area exception (onecore_kvv_area_exception) overriding its property's
+ * link — resolution is building exception first, property default second.
+ *
+ * Like the property lookup above, deliberately NOT filtered by
+ * OPERATING_COMPANY_CODES: errands on sold stock must still resolve.
+ */
+export const getKvvAreaByRentalId = async (
+  rentalId: string
+): Promise<PropertyKvvAreaLookup | null> => {
+  const id = rentalId.trim()
+  try {
+    // babuf holds one row per structure element and rooms inherit their
+    // parent's hyresid; the cmobj type filter picks the object row itself.
+    const rows = await prisma.$queryRaw<
+      { propertyCode: string | null; buildingCode: string | null }[]
+    >`
+      SELECT TOP 1
+        LTRIM(RTRIM(b.fstcode)) AS propertyCode,
+        LTRIM(RTRIM(b.bygcode)) AS buildingCode
+      FROM dbo.babuf b
+      INNER JOIN dbo.cmobj o ON o.keycmobj = b.keycmobj
+      WHERE b.deletemark = 0
+        AND b.hyresid = ${id}
+        AND o.keycmobt IN ('balgh', 'babps', 'balok', 'bahyr')
+    `
+
+    const row = rows[0]
+    if (!row?.propertyCode) return null
+
+    if (row.buildingCode) {
+      const exception = await prisma.onecoreKvvAreaException
+        .findUnique({
+          where: {
+            objectType_code: { objectType: 'building', code: row.buildingCode },
+          },
+          include: { kvvArea: { include: { costCenter: true } } },
+        })
+        .then(trimStrings)
+
+      if (exception) {
+        return {
+          kvvArea: {
+            id: exception.kvvArea.id,
+            code: exception.kvvArea.code,
+            name: exception.kvvArea.name ?? null,
+          },
+          costCenter: {
+            id: exception.kvvArea.costCenter.id,
+            code: exception.kvvArea.costCenter.code,
+            name: exception.kvvArea.costCenter.name,
+          },
+          responsibleKeycloakUserId:
+            exception.kvvArea.responsibleKeycloakUserId ?? null,
+        }
+      }
+    }
+
+    return getKvvAreaByPropertyCode(row.propertyCode)
+  } catch (err) {
+    logger.error({ err, rentalId }, 'kvv-area-adapter.getKvvAreaByRentalId')
+    throw err
+  }
+}
+
 export type ListKvvAreasFilter = {
   // When given, only areas whose responsible kvartersvärd is one of these
   // Keycloak user ids are returned. Omit to list every area.

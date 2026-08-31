@@ -8,8 +8,9 @@ model OnecoreKvvArea {
   updatedAt                 DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
   updatedBy                 String?  @map("updated_by") @db.NVarChar(255)
 
-  costCenter    OnecoreCostCenter        @relation(fields: [costCenterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  costCenter    OnecoreCostCenter         @relation(fields: [costCenterId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   propertyLinks OnecorePropertyKvvArea[]
+  exceptions    OnecoreKvvAreaException[]
 
   @@index([costCenterId])
   @@map("onecore_kvv_area")

@@ -15,10 +15,23 @@ type AddressRow = {
 
 type CountRow = {
   propertyCode: string
+  buildingCode: string | null
   residenceCount: number | bigint
   parkingCount: number | bigint
   entranceCount: number | bigint
 }
+
+/** Which buildings of a property one tree node covers: an exception area gets
+ * exactly its excepted buildings, the default area gets everything else
+ * (including markyta stock, which has no building). */
+type BuildingSide =
+  | { include: ReadonlySet<string> }
+  | { exclude: ReadonlySet<string> | undefined }
+
+const sideKeeps = (side: BuildingSide, buildingCode: string | null): boolean =>
+  'include' in side
+    ? buildingCode !== null && side.include.has(buildingCode)
+    : buildingCode === null || !side.exclude?.has(buildingCode)
 
 export const getCostCenterTreeById = async (
   id: string
@@ -37,10 +50,64 @@ export const getCostCenterTreeById = async (
 
     if (!costCenter) return null
 
-    const propertyCodes = costCenter.kvvAreas.flatMap((area) =>
-      area.propertyLinks.map((link) => link.propertyCode)
+    const linkedAreaByProperty = new Map<string, string>()
+    for (const area of costCenter.kvvAreas) {
+      for (const link of area.propertyLinks) {
+        linkedAreaByProperty.set(link.propertyCode, area.id)
+      }
+    }
+    const areaIds = costCenter.kvvAreas.map((area) => area.id)
+    const linkedCodes = Array.from(linkedAreaByProperty.keys())
+
+    // Split-property exceptions touching this cost center: rows pointing into
+    // its areas (foreign properties contribute a pruned node) and rows moving
+    // parts of its linked properties elsewhere (their nodes lose those parts).
+    // v1 stores only building rows; the filter keeps later objectTypes from
+    // silently mangling the tree before it learns them.
+    const exceptionRows = await prisma.onecoreKvvAreaException
+      .findMany({
+        where: {
+          objectType: 'building',
+          OR: [
+            { kvvAreaId: { in: areaIds } },
+            { propertyCode: { in: linkedCodes } },
+          ],
+        },
+      })
+      .then(trimStrings)
+
+    // A row pointing at the property's own default area is a no-op.
+    const exceptions = exceptionRows.filter(
+      (row) => linkedAreaByProperty.get(row.propertyCode) !== row.kvvAreaId
     )
-    const uniqueCodes = Array.from(new Set(propertyCodes))
+
+    const excludedByProperty = new Map<string, Set<string>>()
+    const inboundByArea = new Map<string, Map<string, Set<string>>>()
+    for (const row of exceptions) {
+      let excluded = excludedByProperty.get(row.propertyCode)
+      if (!excluded) {
+        excluded = new Set()
+        excludedByProperty.set(row.propertyCode, excluded)
+      }
+      excluded.add(row.code)
+
+      if (!areaIds.includes(row.kvvAreaId)) continue
+      let perArea = inboundByArea.get(row.kvvAreaId)
+      if (!perArea) {
+        perArea = new Map()
+        inboundByArea.set(row.kvvAreaId, perArea)
+      }
+      let buildings = perArea.get(row.propertyCode)
+      if (!buildings) {
+        buildings = new Set()
+        perArea.set(row.propertyCode, buildings)
+      }
+      buildings.add(row.code)
+    }
+
+    const uniqueCodes = Array.from(
+      new Set([...linkedCodes, ...exceptions.map((row) => row.propertyCode)])
+    )
     const codesJson = JSON.stringify(uniqueCodes)
 
     const [properties, addressRows, countRows] = await Promise.all([
@@ -77,18 +144,21 @@ export const getCostCenterTreeById = async (
               AND s.deletemark = 0
               AND s.bygcode IS NOT NULL
           `.then(trimStrings),
+      // Grouped per building so split properties can be summed per side; the
+      // NULL-building group is markyta stock, which follows the default side.
       uniqueCodes.length === 0
         ? Promise.resolve([] as CountRow[])
         : prisma.$queryRaw<CountRow[]>`
             SELECT
               fstcode AS propertyCode,
+              bygcode AS buildingCode,
               COUNT(DISTINCT keyobjlgh) AS residenceCount,
               COUNT(DISTINCT keyobjbps) AS parkingCount,
               COUNT(DISTINCT keyobjvan) AS entranceCount
             FROM dbo.babuf
             WHERE fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
               AND deletemark = 0
-            GROUP BY fstcode
+            GROUP BY fstcode, bygcode
           `.then(trimStrings),
     ])
 
@@ -122,7 +192,43 @@ export const getCostCenterTreeById = async (
       }
     }
 
-    const countsByProperty = new Map(countRows.map((c) => [c.propertyCode, c]))
+    const countsByProperty = new Map<string, CountRow[]>()
+    for (const row of countRows) {
+      const perProp = countsByProperty.get(row.propertyCode)
+      if (perProp) perProp.push(row)
+      else countsByProperty.set(row.propertyCode, [row])
+    }
+
+    const buildPropertyNode = (propertyCode: string, side: BuildingSide) => {
+      const prop = propertyByCode.get(propertyCode)
+      const addr = addressesByProperty.get(propertyCode)
+      const addresses = addr
+        ? Array.from(addr.values()).filter((a) =>
+            sideKeeps(side, a.buildingCode)
+          )
+        : []
+
+      const aggregates = {
+        residenceCount: 0,
+        parkingCount: 0,
+        entranceCount: 0,
+      }
+      for (const cnt of countsByProperty.get(propertyCode) ?? []) {
+        if (!sideKeeps(side, cnt.buildingCode)) continue
+        aggregates.residenceCount += Number(cnt.residenceCount)
+        aggregates.parkingCount += Number(cnt.parkingCount)
+        aggregates.entranceCount += Number(cnt.entranceCount)
+      }
+
+      return {
+        code: propertyCode,
+        designation: prop?.designation ?? null,
+        tract: prop?.tract ?? null,
+        addresses,
+        aggregates,
+        ...(excludedByProperty.has(propertyCode) ? { partial: true } : {}),
+      }
+    }
 
     return {
       id: costCenter.id,
@@ -135,22 +241,17 @@ export const getCostCenterTreeById = async (
         code: area.code,
         name: area.name ?? null,
         responsibleKeycloakUserId: area.responsibleKeycloakUserId ?? null,
-        properties: area.propertyLinks.map((link) => {
-          const prop = propertyByCode.get(link.propertyCode)
-          const addr = addressesByProperty.get(link.propertyCode)
-          const cnt = countsByProperty.get(link.propertyCode)
-          return {
-            code: link.propertyCode,
-            designation: prop?.designation ?? null,
-            tract: prop?.tract ?? null,
-            addresses: addr ? Array.from(addr.values()) : [],
-            aggregates: {
-              residenceCount: cnt ? Number(cnt.residenceCount) : 0,
-              parkingCount: cnt ? Number(cnt.parkingCount) : 0,
-              entranceCount: cnt ? Number(cnt.entranceCount) : 0,
-            },
-          }
-        }),
+        properties: [
+          ...area.propertyLinks.map((link) =>
+            buildPropertyNode(link.propertyCode, {
+              exclude: excludedByProperty.get(link.propertyCode),
+            })
+          ),
+          ...Array.from(inboundByArea.get(area.id) ?? []).map(
+            ([propertyCode, buildings]) =>
+              buildPropertyNode(propertyCode, { include: buildings })
+          ),
+        ],
       })),
     }
   } catch (err) {
