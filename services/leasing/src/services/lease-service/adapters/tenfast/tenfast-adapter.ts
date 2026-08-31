@@ -59,10 +59,7 @@ const fetchAllPages = async <
   let records: z.output<S>['records'] = []
   let page = 0
 
-  while (
-    records.length === 0 ||
-    (next !== null && records.length < totalCount)
-  ) {
+  while (page === 0 || (next !== null && records.length < totalCount)) {
     if (page >= MAX_PAGES) {
       throw new Error(
         `fetchAllPages: exceeded ${MAX_PAGES} pages (${records.length} records fetched, totalCount=${totalCount})`
