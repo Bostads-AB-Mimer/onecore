@@ -104,15 +104,18 @@ export const createOfferForInternalParkingSpace = async (
       )
     }
 
-    const eligibleApplicant = await findAndDisqualifyIneligibleApplicant(
-      listing,
-      allApplicants.data,
-      log
-    )
+    const { eligibleApplicant, disqualifiedIds } =
+      await findAndDisqualifyIneligibleApplicant(
+        listing,
+        allApplicants.data,
+        log
+      )
 
     const activeApplicants = (
       await getActiveApplicants(allApplicants.data)
-    ).filter((a) => a.id !== eligibleApplicant?.id)
+    ).filter(
+      (a) => a.id !== eligibleApplicant?.id && !disqualifiedIds.includes(a.id)
+    )
 
     if (!eligibleApplicant) {
       const updateListingStatus = await leasingAdapter.updateListingStatus(
@@ -328,17 +331,20 @@ async function findAndDisqualifyIneligibleApplicant(
   listing: Listing,
   applicants: DetailedApplicant[],
   log: string[]
-) {
+): Promise<{
+  eligibleApplicant: DetailedApplicant | undefined
+  disqualifiedIds: number[]
+}> {
+  const disqualifiedIds: number[] = []
   for (const a of applicants) {
-    if (
-      a.priority !== null &&
-      a.status === ApplicantStatus.Active &&
-      (await validateEligibilityAndDisqualifyIfNot(listing, a, log))
-    ) {
-      return a
+    if (a.priority !== null && a.status === ApplicantStatus.Active) {
+      if (await validateEligibilityAndDisqualifyIfNot(listing, a, log)) {
+        return { eligibleApplicant: a, disqualifiedIds }
+      }
+      disqualifiedIds.push(a.id)
     }
   }
-  return undefined
+  return { eligibleApplicant: undefined, disqualifiedIds }
 }
 
 // Ends a process gracefully by debugging log, logging the error, sending the error to the dev team and return a process error with the error code and details

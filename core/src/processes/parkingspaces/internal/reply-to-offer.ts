@@ -363,36 +363,6 @@ export const denyOffer = async (
     }
     const offer = res.data
 
-    //Get listing
-    const listingWithoutRentalObject =
-      await leasingAdapter.getListingByListingId(offer.listingId)
-    if (!listingWithoutRentalObject) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        404,
-        `The listing ${offer.listingId.toString()} cannot be found.`
-      )
-    }
-
-    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
-      listingWithoutRentalObject.rentalObjectCode
-    )
-
-    if (!parkingSpacesResult.ok) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        500,
-        `RentalObject for listing with id ${listingWithoutRentalObject.id} not found`
-      )
-    }
-
-    const listing = {
-      ...listingWithoutRentalObject,
-      rentalObject: parkingSpacesResult.data,
-    }
-
     const closeOffer = await leasingAdapter.closeOfferByDeny(offer.id)
 
     if (!closeOffer.ok) {
@@ -419,7 +389,7 @@ export const denyOffer = async (
     return {
       processStatus: ProcessStatus.successful,
       httpStatus: 202,
-      data: { listingId: listing.id },
+      data: { listingId: offer.listingId },
     }
   } catch (err) {
     return endFailingProcess(

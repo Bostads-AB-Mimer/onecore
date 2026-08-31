@@ -10,7 +10,7 @@ export function mapCreateOfferErrors(
   }>
 ): RequestError<CreateOfferErrorCodes> {
   const defaultError = {
-    status: 500,
+    status: e.response?.status ?? 500,
     errorHeading: 'Något gick fel...',
     errorCode: CreateOfferErrorCodes.Unknown,
     errorMessage: 'Försök igen eller kontakta support',

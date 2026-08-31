@@ -7,6 +7,7 @@ import {
   OfferStatus,
   OfferWithRentalObjectCode,
   ParkingSpaceAcceptOfferEmail,
+  CreateOfferErrorCodes,
   RentalObject,
   ReplyToOfferErrorCodes,
   WaitingListType,
@@ -1474,24 +1475,31 @@ describe('replyToOffer', () => {
       })
     })
 
-    it('returns a process error if no listing found', async () => {
+    it('records the deny even if the listing no longer exists', async () => {
       const offer = factory.detailedOffer.build()
       getOfferByIdSpy.mockResolvedValueOnce({
         ok: true,
         data: offer,
       })
-      getListingByListingIdSpy.mockResolvedValueOnce(undefined)
+      closeOfferByDenySpy.mockResolvedValueOnce({ ok: true, data: null })
+
+      const createOffer = jest
+        .spyOn(createOfferProcesses, 'createOfferForInternalParkingSpace')
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.failed,
+          error: CreateOfferErrorCodes.NoListing,
+          httpStatus: 500,
+          response: { message: 'Listing not found' },
+        })
 
       const result = await replyProcesses.denyOffer(123)
 
+      expect(closeOfferByDenySpy).toHaveBeenCalledWith(offer.id)
+      expect(createOffer).toHaveBeenCalledTimes(1)
       expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: ReplyToOfferErrorCodes.NoListing,
-        httpStatus: 404,
-        response: {
-          message: `The listing ${offer.listingId} cannot be found.`,
-          errorCode: ReplyToOfferErrorCodes.NoListing,
-        },
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: { listingId: offer.listingId },
       })
     })
 
