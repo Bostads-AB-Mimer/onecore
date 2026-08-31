@@ -71,6 +71,22 @@ export type RentalObjectScopeParams = z.infer<
   typeof RentalObjectScopeParamsSchema
 >
 
+/**
+ * Grouping scopes resolved to what babuf can match on. Split properties
+ * (building-level KVV-area exceptions) make this more than property codes: a
+ * default-side share is its property MINUS the excepted buildings, an inbound
+ * share is bare building codes. A property named whole anywhere wins over its
+ * partial form.
+ */
+export type ResolvedScope = {
+  propertyCodes: string[]
+  partialProperties: Array<{
+    propertyCode: string
+    excludedBuildingCodes: string[]
+  }>
+  buildingCodes: string[]
+}
+
 const SCOPE_KEYS = Object.keys(
   RentalObjectScopeParamsSchema.shape
 ) as (keyof RentalObjectScopeParams)[]

@@ -202,6 +202,9 @@ const propertyTreeDepth2 = () =>
 export const PropertyTreeNodeSchema = z.object({
   ...propertyTreeNodeFields(),
   children: z.array(propertyTreeDepth2()).optional(),
+  // true only on a split property: the node carries just this group's share
+  // of it (its KVV-area exceptions' buildings, or everything else).
+  partial: z.boolean().optional(),
 })
 
 export type PropertyTreeNode = z.infer<typeof PropertyTreeNodeSchema>
@@ -287,6 +290,8 @@ export const CostCenterTreePropertySchema = z.object({
   buildings: z.array(CostCenterTreeBuildingSchema),
   parkingAreas: z.array(CostCenterTreeParkingAreaSchema),
   aggregates: CostCenterTreeAggregatesSchema,
+  // true only on a split property — see PropertyTreeNodeSchema.partial.
+  partial: z.boolean().optional(),
 })
 
 export type CostCenterTreeProperty = z.infer<

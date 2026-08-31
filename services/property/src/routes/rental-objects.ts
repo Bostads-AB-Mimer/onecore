@@ -3,7 +3,7 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 import {
   resolveDetailsPropertyCodes,
-  resolveSearchPropertyCodes,
+  resolveSearchScope,
 } from '@src/adapters/property-grouping-adapter'
 import {
   buildRentalObjectDetails,
@@ -111,7 +111,9 @@ export const routes = (router: KoaRouter) => {
    *       are paginated.
    *
    *       Cost centres and marknadsområden are resolved to property codes
-   *       first, since the structure table carries neither.
+   *       first, since the structure table carries neither. A split property
+   *       (building-level KVV-area exception) resolves to only the side the
+   *       scope covers.
    *     tags:
    *       - Rental objects
    *     parameters:
@@ -155,11 +157,8 @@ export const routes = (router: KoaRouter) => {
       const params = ctx.request.parsedQuery
 
       try {
-        const propertyCodes = await resolveSearchPropertyCodes(params)
-        const { rows, totalCount } = await searchRentalObjects(
-          params,
-          propertyCodes
-        )
+        const scope = await resolveSearchScope(params)
+        const { rows, totalCount } = await searchRentalObjects(params, scope)
         ctx.status = 200
         ctx.body = { content: rows, totalCount, ...metadata }
       } catch (err) {
