@@ -1,0 +1,30 @@
+[
+  {
+    "id": "rn-2026-05-26-v347-1",
+    "date": "2026-05-26",
+    "title": "Lägenhetsbesiktning",
+    "description": "Det går nu att skapa och genomföra interna lägenhetsbesiktningar i ONECore. Besiktningsmän kan registrera skick och anmärkningar per komponent, lägga till rum och komponenter, ta foton, ange kostnadsansvar och generera PDF-protokoll. Funktionen är tillgänglig för användare med rollen besiktning.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-05-26-v347-2",
+    "date": "2026-05-26",
+    "title": "Snabbare laddning av nyckel- och lånelistor",
+    "description": "Listorna för nycklar, nyckelknippor och nyckellån i nyckelportalen laddar nu betydligt snabbare.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-05-26-v347-3",
+    "date": "2026-05-26",
+    "title": "Typ av fakturahändelse visas och krediter inkluderas",
+    "description": "Fakturahändelser har nu en Typ-kolumn (Faktura, Kredit, Inbetalning, Påminnelse) och krediterade fakturor visas åter i listan.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-05-26-v347-4",
+    "date": "2026-05-26",
+    "title": "Sammanfattningsruta för betalda fakturor borttagen",
+    "description": "Den gröna rutan med betaldatum, källa och inbetalat belopp som visades ovanför fakturahändelser har tagits bort efter återkoppling från ekonomi och kundcenter.",
+    "category": "improvement"
+  }
+]

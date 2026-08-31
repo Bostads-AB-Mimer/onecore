@@ -1,0 +1,74 @@
+import { BuildingEntrancesTabContent } from '@/features/buildings'
+import { DocumentsTabContent } from '@/features/documents'
+import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
+import { useResidenceStaircaseLookupMap } from '@/features/residences'
+import { WorkOrdersTabContent } from '@/features/work-orders'
+
+import { Building, Staircase } from '@/services/types'
+
+import { useIsMobile } from '@/shared/hooks'
+import { ContextType } from '@/shared/types/ui'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
+
+import { BuildingTabsMobile } from './BuildingTabsMobile'
+
+interface BuildingTabsProps {
+  building: Building
+  staircases: Staircase[]
+}
+
+export const BuildingTabs = ({ building, staircases }: BuildingTabsProps) => {
+  const isMobile = useIsMobile()
+
+  const { residenceStaircaseLookupMap, isLoading: isStaircasesLoading } =
+    useResidenceStaircaseLookupMap(staircases)
+
+  if (isMobile) {
+    return (
+      <BuildingTabsMobile
+        isLoading={isStaircasesLoading}
+        building={building}
+        residenceStaircaseLookupMap={residenceStaircaseLookupMap}
+      />
+    )
+  }
+
+  return (
+    <Tabs defaultValue="entrances" className="space-y-6">
+      <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
+        <TabsTrigger value="entrances">Uppgångar</TabsTrigger>
+        <TabsTrigger value="maintenance-units">Underhållsenheter</TabsTrigger>
+        <TabsTrigger value="work-orders">Ärenden</TabsTrigger>
+        <TabsTrigger value="documents">Dokument</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="entrances">
+        <BuildingEntrancesTabContent
+          isLoading={isStaircasesLoading}
+          residenceStaircaseLookupMap={residenceStaircaseLookupMap}
+        />
+      </TabsContent>
+
+      <TabsContent value="maintenance-units">
+        <MaintenanceUnitsTabContent
+          contextType="building"
+          identifier={building.code}
+        />
+      </TabsContent>
+
+      <TabsContent value="work-orders">
+        <WorkOrdersTabContent
+          contextType={ContextType.Building}
+          id={building.code}
+        />
+      </TabsContent>
+
+      <TabsContent value="documents">
+        <DocumentsTabContent
+          contextType={ContextType.Building}
+          id={building.id}
+        />
+      </TabsContent>
+    </Tabs>
+  )
+}

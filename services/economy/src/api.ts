@@ -1,16 +1,22 @@
 import KoaRouter from '@koa/router'
 import { routes as invoiceRoutes } from './services/invoice-service'
+import { routes as contactRoutes } from './services/contact-service'
+import { routes as projectRoutes } from './services/project-service'
 import { routes as procurementInvoiceRoutes } from './services/procurement-invoice-service'
 import { routes as debtCollectionRoutes } from './services/debt-collection-service'
 import { routes as healthRoutes } from './services/health-service'
-import { routes as reportRoutes } from './services/report-service'
+import { routes as imdRoutes } from './services/imd-service'
+import { routes as paymentSyncRoutes } from './services/payment-sync-service'
 
 const router = new KoaRouter()
 
 invoiceRoutes(router)
+contactRoutes(router)
+projectRoutes(router)
 procurementInvoiceRoutes(router)
 debtCollectionRoutes(router)
 healthRoutes(router)
-reportRoutes(router)
+imdRoutes(router)
+paymentSyncRoutes(router)
 
 export default router

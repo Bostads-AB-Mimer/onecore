@@ -8,6 +8,16 @@ enum LeaseStatus {
   NotSent = 6, // Ej skickat
 }
 
+const LeaseStatusLabel: Record<LeaseStatus, string> = {
+  [LeaseStatus.Current]: 'Gällande',
+  [LeaseStatus.Upcoming]: 'Kommande',
+  [LeaseStatus.AboutToEnd]: 'Uppsagt',
+  [LeaseStatus.Ended]: 'Upphört',
+  [LeaseStatus.NotSent]: 'Ej skickat',
+  [LeaseStatus.PreliminaryTerminated]: 'Preliminärt uppsagt',
+  [LeaseStatus.PendingSignature]: 'Väntar på signering',
+}
+
 enum ParkingSpaceType {
   WarmGarage,
   ColdGarage,
@@ -82,6 +92,19 @@ enum OfferStatus {
   Expired = 4,
 }
 
+enum LeaseType {
+  HousingContract = 'Bostadskontrakt',
+  CampusContract = 'Campuskontrakt',
+  GarageContract = 'Garagekontrakt',
+  CooperativeTenancyContract = 'Kooperativ hyresrätt',
+  CommercialTenantContract = 'Lokalkontrakt',
+  RenegotiationContract = 'Omförhandlingskontrakt',
+  StorageContract = 'Förrådskontrakt',
+  OtherContract = 'Övrigt',
+  ParkingSpaceContract = 'P-Platskontrakt',
+  ShortTermRental = 'Korttidsuthyrning',
+}
+
 enum WaitingListType {
   ParkingSpace = 1,
   Housing = 2,
@@ -90,6 +113,8 @@ enum WaitingListType {
 
 export {
   LeaseStatus,
+  LeaseStatusLabel,
+  LeaseType,
   ParkingSpaceType,
   ParkingSpaceApplicationCategory,
   PaymentStatus,

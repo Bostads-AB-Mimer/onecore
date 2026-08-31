@@ -1,0 +1,510 @@
+import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import {
+  MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceRow,
+  XledgerContact,
+  XledgerProject,
+} from '@onecore/types'
+import { useMutation } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { sv } from 'date-fns/locale'
+import { CalendarIcon } from 'lucide-react'
+
+import { useLeasesByContactCode } from '@/entities/lease'
+import { useRentalProperties } from '@/entities/rental-property'
+import { useTenant } from '@/entities/tenant'
+import { TenantSearchResult } from '@/entities/tenant/hooks/useTenantSearch'
+import { useUser } from '@/entities/user'
+
+import { Lease as CoreLease } from '@/services/api/core'
+import { economyService } from '@/services/api/core/economyService'
+
+import { useToast } from '@/shared/hooks/useToast'
+import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/Button'
+import { Calendar } from '@/shared/ui/Calendar'
+import { Card } from '@/shared/ui/Card'
+import { Label } from '@/shared/ui/Label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
+import { SearchableSelect } from '@/shared/ui/SearchableSelect'
+import { Separator } from '@/shared/ui/Separator'
+
+import { getArticleById } from '@/data/articles/miscellaneousInvoiceArticles'
+
+import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
+import { useXledgerContacts } from '../hooks/useXledgerContacts'
+import { useXledgerProjects } from '../hooks/useXledgerProjects'
+import { MergeFileError, mergeFilesToPdf } from '../lib/mergeFilesToPdf'
+import { AdditionalInfoSection } from './AdditionalInfoSection'
+import { ArticleSection } from './ArticleSection'
+import { LeaseContractSection } from './LeaseContractSection'
+import { TenantSearchSection } from './TenantSearchSection'
+
+interface FormErrors {
+  reference?: string
+  contactCode?: string
+  leaseId?: string
+  articles?: string
+}
+
+export function MiscellaneousInvoiceForm() {
+  const userState = useUser()
+  const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const submitInvoiceMutation = useMutation({
+    mutationFn: async (invoice: MiscellaneousInvoicePayload) => {
+      return await economyService.submitMiscellaneousInvoice(invoice)
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: 'Underlag skickat',
+        description: `Ströfaktura-underlag för ${variables.contactCode} har skickats.`,
+      })
+      handleReset()
+    },
+    onError: () => {
+      toast({
+        title: 'Fel',
+        description: 'Kunde inte skicka underlaget. Försök igen.',
+        variant: 'destructive',
+      })
+    },
+    onSettled: () => {
+      setIsSubmitting(false)
+    },
+  })
+
+  const { data: contacts, isLoading: isLoadingContacts } = useXledgerContacts()
+  const { data: projects, isLoading: isLoadingProjects } = useXledgerProjects()
+
+  const [reference, setReference] = useState<XledgerContact | null>(null)
+
+  useEffect(() => {
+    if (userState.tag === 'success' && contacts) {
+      setReference(
+        contacts.find((c) => c.email === userState.user.email) ?? null
+      )
+    }
+  }, [JSON.stringify(userState), contacts])
+
+  const [errors, setErrors] = useState<FormErrors>({})
+
+  // Form state
+  const [invoiceDate, setInvoiceDate] = useState<Date>(new Date())
+  const [selectedTenant, setSelectedTenant] =
+    useState<TenantSearchResult | null>(null)
+  const { data: leases } = useLeasesByContactCode(selectedTenant?.contactCode)
+
+  const { data: rentalProperties } = useRentalProperties(
+    leases?.map((l) => l.rentalPropertyId) || []
+  )
+
+  const [leaseId, setLeaseId] = useState<string | null>(null)
+  const [selectedLease, setSelectedLease] = useState<CoreLease | null>(null)
+
+  const { data: miscellaneousInvoiceDataForLease } =
+    useMiscellaneousInvoiceDataForLease(selectedLease?.leaseId)
+
+  const [costCentre, setCostCentre] = useState<string | undefined>(
+    miscellaneousInvoiceDataForLease?.costCentre
+  )
+  const [propertyCode, setPropertyCode] = useState<string | undefined>(
+    miscellaneousInvoiceDataForLease?.propertyCode
+  )
+
+  const [invoiceRows, setInvoiceRows] = useState<MiscellaneousInvoiceRow[]>([
+    { price: '', amount: 1 },
+  ])
+  const [selectedProject, setSelectedProject] = useState<XledgerProject | null>(
+    null
+  )
+  const [comment, setComment] = useState('')
+  const [administrativeCosts, setAdministrativeCosts] = useState(false)
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([])
+
+  const setContactCodeParam = useCallback(
+    (code: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (code) {
+            next.set('contactCode', code)
+          } else {
+            next.delete('contactCode')
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
+
+  const handleSelectTenant = useCallback(
+    (tenant: TenantSearchResult | null) => {
+      setSelectedTenant(tenant)
+      setLeaseId(null)
+      setCostCentre(undefined)
+      setPropertyCode(undefined)
+      setErrors((prev) => ({ ...prev, contactCode: undefined }))
+      setContactCodeParam(tenant?.contactCode ?? null)
+    },
+    [setContactCodeParam]
+  )
+
+  const contactCodeFromUrl = searchParams.get('contactCode')
+  const { data: tenantFromUrl, isLoading: isLoadingTenant } = useTenant(
+    contactCodeFromUrl ?? undefined
+  )
+
+  useEffect(() => {
+    if (
+      contactCodeFromUrl &&
+      tenantFromUrl &&
+      selectedTenant?.contactCode !== contactCodeFromUrl
+    ) {
+      handleSelectTenant(tenantFromUrl)
+    }
+  }, [
+    contactCodeFromUrl,
+    handleSelectTenant,
+    selectedTenant?.contactCode,
+    tenantFromUrl,
+  ])
+
+  useEffect(() => {
+    if (
+      contactCodeFromUrl &&
+      !isLoadingTenant &&
+      !tenantFromUrl &&
+      !selectedTenant
+    ) {
+      toast({
+        title: 'Kund kunde inte hittas',
+        description: `Ingen kund med kundnummer ${contactCodeFromUrl} kunde hittas.`,
+        variant: 'destructive',
+      })
+      setContactCodeParam(null)
+    }
+  }, [
+    contactCodeFromUrl,
+    isLoadingTenant,
+    selectedTenant,
+    setContactCodeParam,
+    tenantFromUrl,
+    toast,
+  ])
+
+  const handleLeaseSelect = (leaseId: string) => {
+    setLeaseId(leaseId)
+    const lease = leases?.find((l) => l.leaseId === leaseId)
+    if (lease) {
+      setSelectedLease(lease)
+    }
+    setErrors((prev) => ({ ...prev, leaseId: undefined }))
+  }
+
+  const handleCostCentreChange = (value: string) => {
+    setCostCentre(value)
+  }
+
+  const handlePropertyCodeChange = (value: string) => {
+    setPropertyCode(value)
+  }
+
+  useEffect(() => {
+    setCostCentre(miscellaneousInvoiceDataForLease?.costCentre)
+    setPropertyCode(miscellaneousInvoiceDataForLease?.propertyCode)
+  }, [miscellaneousInvoiceDataForLease])
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {}
+
+    if (!reference) {
+      newErrors.reference = 'Referens måste väljas'
+    }
+
+    if (!selectedTenant) {
+      newErrors.contactCode = 'Kund måste väljas'
+    }
+
+    if (!leaseId) {
+      newErrors.leaseId = 'Hyreskontrakt måste väljas'
+    }
+
+    const hasValidInvoiceRows = invoiceRows.every(
+      (row) =>
+        row.article && row.article.id !== '' && !isNaN(parseFloat(row.price))
+    )
+    if (!hasValidInvoiceRows) {
+      newErrors.articles = 'Minst en artikel eller tjänst måste läggas till'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validateForm()) {
+      toast({
+        title: 'Valideringsfel',
+        description: 'Kontrollera de markerade fälten och försök igen.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const rows = invoiceRows.map((row) => {
+      // Some articles should be sent to Xledger with VAT excluded
+      if (row.article?.vatExcluded) {
+        const vat = 0.25
+
+        return {
+          ...row,
+          price: (parseFloat(row.price) / (1 + vat)).toString(),
+        }
+      }
+
+      return row
+    })
+    if (administrativeCosts) {
+      const article = getArticleById('329000')
+      if (article) {
+        rows.push({
+          article,
+          price: article.standardPrice.toString(),
+          amount: 1,
+        })
+      }
+    }
+
+    setIsSubmitting(true)
+
+    // Xledger only accepts one attachment, so multiple files are merged into
+    // a single PDF. A single file is sent as-is, whatever its type.
+    let attachment: File | undefined
+    if (attachedFiles.length === 1) {
+      attachment = attachedFiles[0]
+    } else if (attachedFiles.length > 1) {
+      try {
+        attachment = await mergeFilesToPdf(attachedFiles)
+      } catch (error) {
+        toast({
+          title: 'Fel',
+          description:
+            error instanceof MergeFileError
+              ? `${error.message}. Underlaget skickades inte.`
+              : 'Filerna kunde inte slås ihop. Underlaget skickades inte.',
+          variant: 'destructive',
+        })
+        setIsSubmitting(false)
+        return
+      }
+    }
+
+    const invoicePayload: MiscellaneousInvoicePayload = {
+      reference: reference?.dbId || '',
+      invoiceDate: invoiceDate,
+      contactCode: selectedTenant?.contactCode ?? '',
+      tenantName: selectedTenant?.fullName ?? '',
+      leaseId: leaseId ?? '',
+      costCentre: costCentre ?? '',
+      propertyCode: propertyCode ?? '',
+      projectCode: selectedProject?.code ?? '',
+      comment: comment,
+      invoiceRows: rows,
+      administrativeCosts: administrativeCosts,
+      attachment,
+    }
+
+    submitInvoiceMutation.mutate(invoicePayload)
+  }
+
+  const handleReset = () => {
+    setInvoiceDate(new Date())
+    setSelectedTenant(null)
+    setLeaseId('')
+    setSelectedLease(null)
+    setInvoiceRows([{ price: '', amount: 1, text: '' }])
+    setSelectedProject(null)
+    setComment('')
+    setAdministrativeCosts(false)
+    setAttachedFiles([])
+    setErrors({})
+    setContactCodeParam(null)
+
+    // Wait a tick before scrolling up since other page updates can interfere with the scroll
+    setTimeout(() => {
+      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 0)
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <Card className="p-4">
+        Nytt ströfaktura-underlag
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <Label>Datum</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !invoiceDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {invoiceDate ? (
+                      format(invoiceDate, 'PPP', { locale: sv })
+                    ) : (
+                      <span>Välj datum</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={invoiceDate}
+                    onSelect={(date) => date && setInvoiceDate(date)}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Referens</Label>
+              {isLoadingContacts ? (
+                <div>Laddar kontakter...</div>
+              ) : (
+                <SearchableSelect
+                  id="contact"
+                  items={[...(contacts ?? [])].sort((a, b) =>
+                    a.fullName.localeCompare(b.fullName)
+                  )}
+                  value={reference}
+                  onChange={setReference}
+                  getKey={(contact) => contact.dbId}
+                  getLabel={(contact) => contact.fullName}
+                  placeholder="Välj referens"
+                  searchPlaceholder="Sök referens..."
+                />
+              )}
+              {errors.reference && (
+                <span className={cn('text-destructive')}>
+                  {errors.reference}
+                </span>
+              )}
+              <p className="text-sm text-muted-foreground">
+                Saknas du som referens? Kontakta{' '}
+                <a href="mailto:ekonomi@mimer.nu" className="underline">
+                  ekonomi@mimer.nu
+                </a>{' '}
+                så lägger de till dig i ekonomisystemet.
+              </p>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Kundinformation</h3>
+            <TenantSearchSection
+              tenantName={
+                isLoadingTenant && !selectedTenant
+                  ? 'Laddar kund...'
+                  : selectedTenant?.fullName
+              }
+              onSelectTenant={handleSelectTenant}
+              error={errors.contactCode}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Kontraktsinformation</h3>
+            <LeaseContractSection
+              leaseContracts={leases ?? []}
+              rentalProperties={rentalProperties}
+              selectedLease={leaseId}
+              costCentre={costCentre}
+              propertyCode={propertyCode}
+              onLeaseSelect={handleLeaseSelect}
+              onCostCentreChange={handleCostCentreChange}
+              onPropertyCodeChange={handlePropertyCodeChange}
+              error={errors.leaseId}
+              disabled={!selectedTenant}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Artikelinformation</h3>
+            <ArticleSection
+              invoiceRows={invoiceRows}
+              administrativeCosts={administrativeCosts}
+              onInvoiceRowsChange={setInvoiceRows}
+              onAdministrativeCostsChange={setAdministrativeCosts}
+              errors={{
+                articles: errors.articles,
+              }}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <h3 className="font-medium">Övrig information</h3>
+            <AdditionalInfoSection
+              selectedProject={selectedProject}
+              projects={projects}
+              isLoadingProjects={isLoadingProjects}
+              comment={comment}
+              onProjectChange={setSelectedProject}
+              onCommentChange={setComment}
+              onFilesChanged={setAttachedFiles}
+              attachedFiles={attachedFiles}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReset}
+              disabled={isSubmitting}
+            >
+              Rensa
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                submitInvoiceMutation.isPending ||
+                !selectedTenant ||
+                !leaseId
+              }
+            >
+              {isSubmitting || submitInvoiceMutation.isPending
+                ? 'Skickar...'
+                : 'Skicka underlag'}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </form>
+  )
+}

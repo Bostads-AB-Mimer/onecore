@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-05-20-v346-1",
+    "date": "2026-05-20",
+    "title": "Inomhustemperatur på lägenhetskortet",
+    "description": "Under Grundläggande information på lägenhetssidan visas nu den senaste inomhustemperaturen, hämtad från EcoGuard Curves. Värdet är medelvärdet av lägenhetens givare vid senaste timmen och visar tidpunkt för senaste mätning samt en länk till noden i EcoGuard Curves.",
+    "category": "feature"
+  }
+]

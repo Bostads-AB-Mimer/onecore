@@ -13,13 +13,13 @@ export type PropertyWithObject = Prisma.PropertyGetPayload<{
 }>
 
 //todo: use actual type and mapper
-const getPropertyById = async (
-  id: string
+const getPropertyByCode = async (
+  code: string
 ): Promise<PropertyWithObject | null> => {
   try {
     const result = await prisma.property.findUnique({
       where: {
-        id: id,
+        code: code,
       },
       include: {
         district: {
@@ -59,7 +59,7 @@ const getPropertyById = async (
 
     return trimStrings(result)
   } catch (err) {
-    logger.error({ err }, 'property-adapter.getPropertyById')
+    logger.error({ err }, 'property-adapter.getPropertyByCode')
     throw err
   }
 }
@@ -156,8 +156,12 @@ const searchProperties = (
     return prisma.property
       .findMany({
         where: {
-          designation: { contains: q },
+          OR: [
+            { designation: { contains: q.toUpperCase() } },
+            { code: { contains: q.toUpperCase() } },
+          ],
         },
+        orderBy: { code: 'asc' },
       })
       .then(trimStrings)
   } catch (err) {
@@ -167,7 +171,7 @@ const searchProperties = (
 }
 
 export {
-  getPropertyById,
+  getPropertyByCode,
   getProperties,
   getPropertyValuesByPropertyObjectId,
   searchProperties,

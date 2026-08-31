@@ -41,8 +41,8 @@ describe('deriveDisplayStatus', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-06-01'))
 
-    // Numeric status 2 → 'ended' via normalizeBackendStatus
-    expect(deriveDisplayStatus(makeLease({ status: 2 as any }))).toBe('ended')
+    // Numeric status 2 → 'abouttoend' → treated as active (fallthrough)
+    expect(deriveDisplayStatus(makeLease({ status: 2 as any }))).toBe('active')
     // String "upcoming" → 'upcoming'
     expect(deriveDisplayStatus(makeLease({ status: 'upcoming' as any }))).toBe(
       'upcoming'

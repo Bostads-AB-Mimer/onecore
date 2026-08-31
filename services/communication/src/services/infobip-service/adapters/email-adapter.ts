@@ -1,0 +1,493 @@
+// fetch is stable in Node.js 20 LTS but eslint-plugin-n still flags it as experimental
+/* eslint-disable n/no-unsupported-features/node-builtins */
+import config from '../../../common/config'
+import {
+  Email,
+  ParkingSpaceOfferEmail,
+  ParkingSpaceNotificationEmail,
+  WorkOrderEmail,
+  ParkingSpaceAcceptOfferEmail,
+  NonScoredParkingSpaceApprovedEmail,
+  NonScoredParkingSpaceDeniedEmail,
+  InvoiceNotificationEmail,
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
+
+import { EmailAttachment } from '@onecore/types'
+import { EmailV4Message, EmailV4Response } from './types'
+import {
+  AcceptParkingSpaceOfferTemplateId,
+  AdditionalParkingSpaceOfferTemplateId,
+  InvoiceNotificationEmailTemplateId,
+  NonScoredParkingSpaceApprovedTemplateId,
+  NonScoredParkingSpaceDeniedTemplateId,
+  ParkingSpaceAssignedToOtherTemplateId,
+  ReplaceParkingSpaceOfferTemplateId,
+  WorkOrderEmailTemplateId,
+  WorkOrderExternalContractorEmailTemplateId,
+} from './infobip-template-ids'
+import {
+  dateFormatter,
+  formatToSwedishCurrency,
+  getParkingSpaceImageUrl,
+} from './parking-space-formatting'
+
+// Response from POSTing to Infobip's /email/4/messages (outbound email send).
+// Order of `messages` matches the destinations array passed in.
+export type InfobipSendEmailResponse = EmailV4Response
+
+// Email sender identity
+const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
+
+// TODO: set applicationId on each message (env public hostname, e.g.
+// epic-mim-1838.dev.mimer.nu / api.mimer.nu) and filter each Infobip
+// delivery-report subscription to its own application, so environments
+// only receive reports for their own sends (stops cross-env PII fan-out).
+const sendEmailV4 = async (
+  messages: EmailV4Message[]
+): Promise<EmailV4Response> => {
+  const baseUrl = config.infobip.baseUrl.replace(/\/$/, '') // Remove trailing slash
+  const url = `${baseUrl}/email/4/messages`
+  const apiKey = config.infobip.apiKey
+
+  logger.info(
+    { url, messageCount: messages.length },
+    'Sending email via v4 API'
+  )
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `App ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ messages }),
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.text()
+    throw new Error(
+      `Infobip Email API error: ${response.status} - ${errorBody}`
+    )
+  }
+
+  return response.json() as Promise<EmailV4Response>
+}
+
+// Uses /email/3/send (multipart) for template emails with attachments.
+// Constructs multipart body manually to avoid undici adding ;charset=UTF-8
+// to the Content-Type boundary, which Infobip rejects.
+const sendTemplateEmailWithAttachments = async (params: {
+  to: string
+  placeholders: string
+  templateId: number
+  attachments: EmailAttachment[]
+}): Promise<void> => {
+  const baseUrl = config.infobip.baseUrl.replace(/\/$/, '')
+  const url = `${baseUrl}/email/3/send`
+  const apiKey = config.infobip.apiKey
+  const crlf = '\r\n'
+  const boundary = `----InfobipBoundary${Date.now()}`
+  const enc = new TextEncoder()
+
+  const formFields: Record<string, string> = {
+    from: EMAIL_SENDER,
+    to: params.to,
+    templateId: String(params.templateId),
+    placeholders: params.placeholders,
+  }
+
+  const parts: Uint8Array[] = []
+
+  for (const [name, value] of Object.entries(formFields)) {
+    parts.push(
+      enc.encode(
+        `--${boundary}${crlf}` +
+          `Content-Disposition: form-data; name="${name}"${crlf}${crlf}` +
+          `${value}${crlf}`
+      )
+    )
+  }
+
+  for (const att of params.attachments) {
+    parts.push(
+      enc.encode(
+        `--${boundary}${crlf}` +
+          `Content-Disposition: form-data; name="attachment"; filename="${att.filename}"${crlf}` +
+          `Content-Type: ${att.contentType}${crlf}${crlf}`
+      )
+    )
+    const binary = atob(att.content)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    parts.push(bytes)
+    parts.push(enc.encode(crlf))
+  }
+
+  parts.push(enc.encode(`--${boundary}--${crlf}`))
+
+  const totalLength = parts.reduce((sum, p) => sum + p.length, 0)
+  const body = new Uint8Array(totalLength)
+  let offset = 0
+  for (const part of parts) {
+    body.set(part, offset)
+    offset += part.length
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `App ${apiKey}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.text()
+    throw new Error(
+      `Infobip Email API error: ${response.status} - ${errorBody}`
+    )
+  }
+}
+
+export const sendEmail = async (message: Email) => {
+  logger.info({ to: message.to, subject: message.subject }, 'Sending email')
+
+  try {
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [{ to: [{ destination: message.to }] }],
+        content: { subject: message.subject, text: message.text },
+      },
+    ])
+
+    logger.info(
+      { to: message.to, subject: message.subject },
+      'Sending email complete'
+    )
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
+  logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending template email')
+  try {
+    const placeholders = JSON.stringify({
+      address: email.address,
+      firstName: email.firstName,
+      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+      deadlineDate: dateFormatter.format(new Date(email.deadlineDate)),
+      rent: formatToSwedishCurrency(email.rent),
+      type: email.type,
+      parkingSpaceId: email.parkingSpaceId,
+      objectId: email.objectId,
+      offerURL: email.offerURL,
+      parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
+    })
+
+    const templateId =
+      email.applicationType === 'Replace'
+        ? ReplaceParkingSpaceOfferTemplateId
+        : AdditionalParkingSpaceOfferTemplateId
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendParkingSpaceAcceptOffer = async (
+  email: ParkingSpaceAcceptOfferEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending Parking Space Accept Offer Email'
+  )
+
+  try {
+    const placeholders = JSON.stringify({
+      firstName: email.firstName,
+      address: email.address,
+      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+      parkingSpaceId: email.parkingSpaceId,
+      objectId: email.objectId,
+      type: email.type,
+      rent: formatToSwedishCurrency(email.rent),
+      parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
+    })
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId: AcceptParkingSpaceOfferTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendNonScoredParkingSpaceApproved = async (
+  email: NonScoredParkingSpaceApprovedEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending Non-Scored Parking Space Approved Email'
+  )
+
+  try {
+    const placeholders = JSON.stringify({
+      leaseId: email.leaseId,
+      address: email.address,
+      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+      parkingSpaceId: email.parkingSpaceId,
+      objectId: email.objectId,
+      type: email.type,
+      rent: formatToSwedishCurrency(email.rent),
+      parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
+    })
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId: NonScoredParkingSpaceApprovedTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendNonScoredParkingSpaceDenied = async (
+  email: NonScoredParkingSpaceDeniedEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending Non-Scored Parking Space Denied Email'
+  )
+
+  try {
+    const placeholders = JSON.stringify({
+      address: email.address,
+      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+      parkingSpaceId: email.parkingSpaceId,
+      objectId: email.objectId,
+      type: email.type,
+      rent: formatToSwedishCurrency(email.rent),
+    })
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId: NonScoredParkingSpaceDeniedTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendParkingSpaceAssignedToOther = async (
+  emails: ParkingSpaceNotificationEmail[]
+) => {
+  try {
+    const recipients = emails.map((email) => ({
+      destination: email.to,
+      placeholders: JSON.stringify({
+        address: email.address,
+        parkingSpaceId: email.parkingSpaceId,
+      }),
+    }))
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [{ to: recipients }],
+        content: { templateId: ParkingSpaceAssignedToOtherTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
+  logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending work order email')
+  try {
+    const placeholders = JSON.stringify({
+      message: email.text,
+      externalContractor: email.externalContractorName,
+    })
+
+    const templateId = email.externalContractorName
+      ? WorkOrderExternalContractorEmailTemplateId
+      : WorkOrderEmailTemplateId
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendBulkEmail = async (email: {
+  emails: string[]
+  subject: string
+  text: string
+}) => {
+  logger.info(
+    { recipientCount: email.emails.length, baseUrl: config.infobip.baseUrl },
+    'Sending bulk email'
+  )
+
+  try {
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: email.emails.map((addr) => ({
+          to: [{ destination: addr }],
+        })),
+        content: { subject: email.subject, text: email.text },
+      },
+    ])
+
+    logger.info(
+      { recipientCount: email.emails.length },
+      'Bulk email sent successfully'
+    )
+    return { data: response }
+  } catch (error) {
+    logger.error(error, 'Error sending bulk email')
+    throw error
+  }
+}
+
+export const sendInvoiceNotificationEmail = async (
+  email: InvoiceNotificationEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending invoice notification email'
+  )
+
+  try {
+    const placeholders = JSON.stringify({
+      firstName: email.firstName,
+      address: email.address,
+      invoiceNumber: email.invoiceNumber,
+      dueDate: dateFormatter.format(new Date(email.dueDate)),
+      totalAmount: formatToSwedishCurrency(email.totalAmount),
+    })
+
+    if (email.attachments && email.attachments.length > 0) {
+      await sendTemplateEmailWithAttachments({
+        to: email.to,
+        placeholders,
+        templateId: InvoiceNotificationEmailTemplateId,
+        attachments: email.attachments,
+      })
+      return { data: null }
+    }
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [{ to: [{ destination: email.to, placeholders }] }],
+        content: { templateId: InvoiceNotificationEmailTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const healthCheck = async () => {
+  const baseUrl = config.infobip.baseUrl.replace(/\/$/, '')
+  const url = `${baseUrl}/email/4/messages`
+  const apiKey = config.infobip.apiKey
+
+  // Send a minimal invalid request to verify API connectivity
+  // We expect a 400 validation error, which proves the API is reachable
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `App ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ messages: [] }),
+  })
+
+  // If we get 401/403, there's an auth problem
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(`Infobip authentication failed: ${response.status}`)
+  }
+
+  // If we get 400 (validation error), the API is reachable and working
+  // If we get 200 (shouldn't happen with empty messages), that's also fine
+  if (response.status !== 400 && response.status !== 200) {
+    const errorBody = await response.text()
+    throw new Error(
+      `Infobip health check failed: ${response.status} - ${errorBody}`
+    )
+  }
+}

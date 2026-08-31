@@ -5,3 +5,4 @@ export {
 } from './invoice'
 
 export * from './tenfast'
+export { SyncContactToEconomyPayloadFactory as syncContactToEconomyPayload } from './sync-contact'

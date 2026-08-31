@@ -1,0 +1,369 @@
+import z from 'zod'
+import { OkapiRouter } from 'koa-okapi-router'
+
+import {
+  ContactSchema,
+  GetContactResponseBodySchema,
+  GetContactsListResponseBodySchema,
+  ONECoreHateOASResponseBodySchema,
+} from './schema'
+import {
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+  RouteMetadata,
+} from '@onecore/utilities'
+import { paginatedResponseSchema } from '@onecore/types'
+
+import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
+import { transformContact, transformContacts } from './transform'
+import { Config } from '@/common/config'
+import { AdapterResult } from '@/adapters/types'
+import type { Contact } from '@onecore/contacts/domain'
+import { ParameterizedContext } from 'koa'
+
+export const routes = (router: OkapiRouter, config: Config) => {
+  const contactsServiceUrl = config.contactsService.url
+
+  const contactsAdapter = makeContactsAdapter(contactsServiceUrl)
+
+  const encodeError = (
+    ctx: ParameterizedContext,
+    result: AdapterResult<any, any>,
+    metadata: RouteMetadata
+  ) => {
+    ctx.status = !result.ok && result.err === 'not-found' ? 404 : 500
+    ctx.body = { ...metadata }
+  }
+
+  const encodeSingleResponse = (
+    ctx: ParameterizedContext,
+    result: AdapterResult<Contact, 'not-found' | 'unknown'>
+  ) => {
+    const metadata = generateRouteMetadata(ctx)
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        transformContact(result.data),
+        metadata
+      )
+    } else {
+      encodeError(ctx, result, metadata)
+    }
+  }
+
+  const encodeListResponse = (
+    ctx: ParameterizedContext,
+    result: AdapterResult<Contact[], 'unknown'>
+  ) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        transformContacts(result.data),
+        metadata
+      )
+    } else {
+      encodeError(ctx, result, metadata)
+    }
+  }
+
+  router.addEntities({
+    ContactV1: ContactSchema,
+  })
+
+  router.get(
+    '/v1/contacts',
+    {
+      summary: 'List and filter(search) for contact information',
+      description: 'Filtering can be done by wildcard search',
+      tags: ['Contacts'],
+      query: {
+        q: {
+          description: 'Wildcard search string',
+          schema: z.optional(z.array(z.string())),
+        },
+        type: {
+          description: 'Filter on contact type',
+          schema: z.optional(z.enum(['individual', 'organisation'])),
+        },
+        page: {
+          description: 'Page number for paginated results (1-based)',
+          schema: z.optional(z.number()),
+        },
+        limit: {
+          description: 'Number of records per page',
+          schema: z.optional(z.number()),
+        },
+      },
+      response: {
+        200: paginatedResponseSchema(ContactSchema),
+        404: ONECoreHateOASResponseBodySchema,
+        500: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { q, type, page, limit } = ctx.query
+
+      const response = await contactsAdapter.listContacts(
+        q ?? [],
+        type,
+        page,
+        limit
+      )
+
+      if (response.ok) {
+        ctx.status = 200
+        ctx.body = {
+          ...response.data,
+          content: transformContacts(response.data.content),
+        }
+      } else {
+        const metadata = generateRouteMetadata(ctx)
+        encodeError(ctx, response, metadata)
+      }
+    }
+  )
+
+  router.get(
+    '/v1/contacts/by-codes',
+    {
+      summary: 'Get multiple contacts by their contact codes',
+      description:
+        'Fetch a batch of contacts by providing a comma-separated list of contact codes.',
+      tags: ['Contacts'],
+      query: {
+        codes: {
+          description: 'Comma-separated list of contact codes',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: z.object({
+          content: z.array(ContactSchema),
+        }),
+        400: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const codesParam = ctx.query.codes as string | undefined
+
+      if (!codesParam) {
+        const metadata = generateRouteMetadata(ctx)
+        ctx.status = 400
+        ctx.body = { ...metadata }
+        return
+      }
+
+      const codes = codesParam
+        .split(',')
+        .map((c: string) => c.trim())
+        .filter(Boolean)
+      if (codes.length === 0) {
+        const metadata = generateRouteMetadata(ctx)
+        ctx.status = 400
+        ctx.body = { ...metadata }
+        return
+      }
+
+      const result = await contactsAdapter.getByContactCodes(codes)
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: transformContacts(result.data),
+        }
+      } else {
+        const metadata = generateRouteMetadata(ctx)
+        encodeError(ctx, result, metadata)
+      }
+    }
+  )
+
+  router.get(
+    '/v1/contacts/batch',
+    {
+      summary: 'Batch lookup of contacts by contact code',
+      description:
+        'Lean by default — returns base contact fields with empty phone/' +
+        'email/address arrays. Set `includePhone`, `includeEmail`, ' +
+        '`includeAddress`, or `includeRelations` to include those joins. ' +
+        'Missing contact codes are simply absent from the response.',
+      tags: ['Contacts'],
+      query: {
+        code: {
+          description:
+            'Contact code(s) to look up. Repeat the parameter for multiple ' +
+            'codes, e.g. ?code=P123&code=P456.',
+          schema: z.array(z.string()).min(1),
+        },
+        includePhone: {
+          description: 'Include phone numbers in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeEmail: {
+          description: 'Include email addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeAddress: {
+          description: 'Include addresses in the response.',
+          schema: z.optional(z.boolean()),
+        },
+        includeRelations: {
+          description:
+            'Include related contacts (god man/förvaltare and annan ' +
+            'fakturamottagare, both directions) in the response.',
+          schema: z.optional(z.boolean()),
+        },
+      },
+      response: {
+        200: GetContactsListResponseBodySchema,
+        500: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const {
+        code,
+        includePhone,
+        includeEmail,
+        includeAddress,
+        includeRelations,
+      } = ctx.query
+
+      const response = await contactsAdapter.getByContactCodeBatch(code, {
+        includePhone,
+        includeEmail,
+        includeAddress,
+        includeRelations,
+      })
+
+      encodeListResponse(ctx, response)
+    }
+  )
+
+  router.get(
+    '/v1/contacts/:contactCode',
+    {
+      summary: 'Get a single contact by canonical id (contact code)',
+      tags: ['Contacts'],
+      params: {
+        contactCode: {
+          description: 'Contact Code',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { contactCode } = ctx.params
+
+      const response = await contactsAdapter.getByContactCode(contactCode)
+
+      encodeSingleResponse(ctx, response)
+    }
+  )
+
+  router.get(
+    '/v1/contacts/:contactCode/trustee',
+    {
+      summary: 'Get the trustee of a contact',
+      tags: ['Contacts'],
+      params: {
+        contactCode: {
+          description: 'Contact Code',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { contactCode } = ctx.params
+
+      const response =
+        await contactsAdapter.getByTrusteeOfContactCode(contactCode)
+
+      encodeSingleResponse(ctx, response)
+    }
+  )
+
+  router.get(
+    '/v1/contacts/by-phone-number/:phoneNumber',
+    {
+      summary: 'List contacts by phone number',
+      tags: ['Contacts'],
+      params: {
+        phoneNumber: {
+          description: 'Phone Number',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { phoneNumber } = ctx.params
+
+      const response = await contactsAdapter.listByPhoneNumber(phoneNumber)
+
+      encodeListResponse(ctx, response)
+    }
+  )
+
+  router.get(
+    '/v1/contacts/by-email-address/:emailAddress',
+    {
+      summary: 'List contacts by email address',
+      tags: ['Contacts'],
+      params: {
+        emailAddress: {
+          description: 'Email Address',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { emailAddress } = ctx.params
+
+      const response = await contactsAdapter.listByEmailAddress(emailAddress)
+
+      encodeListResponse(ctx, response)
+    }
+  )
+
+  router.get(
+    '/v1/contacts/by-national-id/:nid',
+    {
+      summary: 'List contacts by national id (Personnummer / Org.nr)',
+      tags: ['Contacts'],
+      params: {
+        nid: {
+          description: 'National ID',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const { nid } = ctx.params
+
+      const response = await contactsAdapter.getByNationalId(nid)
+
+      encodeSingleResponse(ctx, response)
+    }
+  )
+}

@@ -4,7 +4,8 @@ import { KeyTypeLabels } from '@/services/types'
 import { BeforeAfterDialogBase } from './BeforeAfterDialogBase'
 import type { ExistingLoanInfo } from '@/services/loanTransferHelpers'
 import { AlertCircle } from 'lucide-react'
-import { handleLoanKeys, handleReturnKeys } from '@/services/loanHandlers'
+import { createPendingLoan } from '@/services/loans/createLoan'
+import { keyLoanService } from '@/services/api/keyLoanService'
 import { useToast } from '@/hooks/use-toast'
 
 type Props = {
@@ -32,34 +33,31 @@ export function KeyLoanTransferDialog({
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handleAccept = async () => {
+    if (!contact) {
+      toast({
+        title: 'Fel',
+        description: 'Kontakten saknas — kan inte överföra lånet.',
+        variant: 'destructive',
+      })
+      return
+    }
     setIsProcessing(true)
 
     try {
-      // Step 1: Get all key and card IDs from existing loans to return
-      const allExistingKeyIds = existingLoans.flatMap((loanInfo) =>
-        loanInfo.keys.map((k) => k.id)
+      // Step 1: Close the existing loans (no receipt — their items move to the new
+      // loan, which gets its own loan receipt to sign).
+      const now = new Date().toISOString()
+      const existingLoanIds = Array.from(
+        new Set(existingLoans.map((l) => l.loan.id))
       )
-      const allExistingCardIds = existingLoans.flatMap((loanInfo) =>
-        loanInfo.cards.map((c) => c.cardId)
+      await Promise.all(
+        existingLoanIds.map((id) =>
+          keyLoanService.update(id, { returnedAt: now })
+        )
       )
 
-      // Step 2: Return all keys/cards from existing loans (closes the loans)
-      const returnResult = await handleReturnKeys({
-        keyIds: allExistingKeyIds,
-        cardIds: allExistingCardIds,
-      })
-      if (!returnResult.success) {
-        toast({
-          title: returnResult.title,
-          description: returnResult.message,
-          variant: 'destructive',
-        })
-        setIsProcessing(false)
-        return
-      }
-
-      // Step 3: Get transferred IDs (non-disposed keys + all cards from old loans)
-      // Deduplicate to prevent same item appearing multiple times if it's in multiple loans
+      // Step 2: Transferred IDs (non-disposed keys + all cards from old loans),
+      // deduped so an item shared across loans appears once.
       const transferredKeyIds = Array.from(
         new Set(
           existingLoans.flatMap((loanInfo) =>
@@ -75,15 +73,15 @@ export function KeyLoanTransferDialog({
         )
       )
 
-      // Step 4: Create new loan with new items + transferred items
-      // Deduplicate to ensure no item appears twice in the new loan
+      // Step 3: Create the new (pending) loan with new + transferred items.
       const allNewLoanKeyIds = Array.from(
         new Set([...newKeys.map((k) => k.id), ...transferredKeyIds])
       )
       const allNewLoanCardIds = Array.from(
         new Set([...newCards.map((c) => c.cardId), ...transferredCardIds])
       )
-      const loanResult = await handleLoanKeys({
+      const loanResult = await createPendingLoan({
+        loanType: 'TENANT',
         keyIds: allNewLoanKeyIds,
         cardIds: allNewLoanCardIds,
         contact,

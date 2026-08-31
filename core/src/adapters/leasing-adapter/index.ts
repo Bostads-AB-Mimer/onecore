@@ -10,27 +10,163 @@ import {
   WaitingListType,
   Tenant,
   leasing,
+  Lease,
   IdentityCheckContact,
 } from '@onecore/types'
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
+import type { LeaseChange } from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
+// Accept 2xx–4xx as resolved responses so adapters can inspect the status code directly.
+// 5xx falls outside this range and causes axios to throw, landing in catch blocks as 'unknown'.
 axios.defaults.validateStatus = function (status) {
-  return status >= 200 && status < 500 // override Axios throwing errors so that we can handle errors manually
+  return status >= 200 && status < 500
 }
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
+interface GetLeasesOptions {
+  includeUpcomingLeases: boolean
+  includeTerminatedLeases: boolean
+  includeContacts: boolean
+  includeRentInfo?: boolean // defaults to true
+  includeNonTenantLeases?: boolean
+  includeNonTenantContacts?: boolean
+}
+
+const getLease = async (
+  leaseId: string,
+  includeContacts: string | string[] | undefined
+): Promise<Lease> => {
+  const leaseResponse = await axios.get(
+    tenantsLeasesServiceUrl +
+    '/leases/' +
+    encodeURIComponent(leaseId) +
+    (includeContacts ? '?includeContacts=true' : '')
+  )
+
+  return leaseResponse.data.content
+}
+
+const getLeases = async (
+  leaseIds: string[],
+  includeContacts: string | string[] | undefined
+) => {
+  const uniqueIds = [...new Set(leaseIds)]
+
+  const leaseResults = await Promise.allSettled(
+    uniqueIds.map((id) => getLease(id, includeContacts))
+  )
+
+  const leases = leaseResults
+    .filter((result) => result.status === 'fulfilled')
+    .map((result) => result.value)
+    .filter((lease): lease is Lease => lease != null)
+
+  return Object.fromEntries(leases.map((lease) => [lease.leaseId, lease]))
+}
+
+const getLeasesForPnr = async (
+  nationalRegistrationNumber: string,
+  options: GetLeasesOptions
+): Promise<Lease[]> => {
+  const queryParams = new URLSearchParams({
+    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
+    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
+    includeContacts: options.includeContacts.toString(),
+    ...(options.includeNonTenantLeases && {
+      includeNonTenantLeases: options.includeNonTenantLeases.toString(),
+    }),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
+  })
+
+  const leasesResponse = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/for/nationalRegistrationNumber/${nationalRegistrationNumber}?${queryParams.toString()}`
+  )
+
+  return leasesResponse.data.content
+}
+
+const getLeasesForContactCode = async (
+  contactCode: string,
+  options: GetLeasesOptions
+): Promise<Lease[]> => {
+  const queryParams = new URLSearchParams({
+    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
+    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
+    includeContacts: options.includeContacts.toString(),
+    ...(options.includeNonTenantLeases && {
+      includeNonTenantLeases: options.includeNonTenantLeases.toString(),
+    }),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
+  })
+
+  const leasesResponse = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/by-contact-code/${contactCode}?${queryParams.toString()}`
+  )
+
+  return leasesResponse.data.content
+}
+
+const getLeasesForPropertyId = async (
+  propertyId: string,
+  options: GetLeasesOptions
+): Promise<Lease[]> => {
+  const queryParams = new URLSearchParams({
+    includeUpcomingLeases: options.includeUpcomingLeases.toString(),
+    includeTerminatedLeases: options.includeTerminatedLeases.toString(),
+    includeContacts: options.includeContacts.toString(),
+    includeRentInfo: (options.includeRentInfo !== false).toString(),
+    ...(options.includeNonTenantContacts && {
+      includeNonTenantContacts: options.includeNonTenantContacts.toString(),
+    }),
+  })
+  const leasesResponse = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`
+  )
+  return leasesResponse.data.content
+}
+
+const getLeasesBatch = async (leaseIds: string[]): Promise<Lease[]> => {
+  const pageSize = 500
+  let allLeases: Lease[] = []
+
+  for (let i = 0; i < leaseIds.length; i += pageSize) {
+    const batch = leaseIds.slice(i, i + pageSize)
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/batch`,
+      { leaseIds: batch }
+    )
+
+    allLeases = allLeases.concat(response.data.content)
+  }
+
+  return allLeases
+}
+
+const getParkingSpaceTypes = async (): Promise<
+  { code: string; caption: string }[]
+> => {
+  const response = await axios.get(
+    `${tenantsLeasesServiceUrl}/leases/parking-space-types`
+  )
+  return response.data.content
+}
+
 const getContactForPnr = async (
   nationalRegistrationNumber: string
 ): Promise<Contact> => {
-  const contactResponse = await axios(
+  const contactResponse = await axios.get(
     tenantsLeasesServiceUrl +
-      '/contacts/by-national-registration-number/' +
-      nationalRegistrationNumber
+    '/contacts/by-national-registration-number/' +
+    nationalRegistrationNumber
   )
 
   return contactResponse.data.content
@@ -87,6 +223,23 @@ const getContactsForIdentityCheck = async (
     logger.error({ err }, 'leasing-adapter.getContactsForIdentityCheck')
     return { ok: false, err: 'unknown' }
   }
+}
+
+const getContacts = async (contactCodes: string[]): Promise<Contact[]> => {
+  const pageSize = 500
+  let allContacts: Contact[] = []
+
+  for (let i = 0; i < contactCodes.length; i += pageSize) {
+    const batch = contactCodes.slice(i, i + pageSize)
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/contacts/batch`,
+      { contactCodes: batch }
+    )
+
+    allContacts = allContacts.concat(response.data.content)
+  }
+
+  return allContacts
 }
 
 const getContactByContactCode = async (
@@ -187,7 +340,31 @@ const getTenantByContactCode = async (
       `${tenantsLeasesServiceUrl}/contacts/${contactCode}/tenant`
     )
 
-    if (res.status === 404) return { ok: false, err: 'contact-not-tenant' }
+    if (res.status === 404) {
+      // Expected outcome when the contact is not a tenant — not an error.
+      // Leasing distinguishes the cause via the `type` field in the body.
+      if (res.data?.type === 'contact-not-found') {
+        return { ok: false, err: 'contact-not-found' }
+      }
+      if (res.data?.type === 'no-valid-housing-contract') {
+        return { ok: false, err: 'no-valid-housing-contract' }
+      }
+      // 'contact-not-tenant' and 'contact-leases-not-found' both mean the
+      // contact has no tenancy.
+      if (
+        res.data?.type === 'contact-not-tenant' ||
+        res.data?.type === 'contact-leases-not-found'
+      ) {
+        return { ok: false, err: 'contact-not-tenant' }
+      }
+      // A 404 without a recognized leasing error type is not a business
+      // outcome — e.g. a proxy/gateway 404 or a misrouted service URL.
+      logger.error(
+        { status: res.status, body: res.data },
+        'leasing-adapter.getTenantByContactCode: unrecognized 404 response'
+      )
+      return { ok: false, err: 'unknown' }
+    }
 
     if (!res.data.content) {
       return { ok: false, err: 'unknown' }
@@ -198,9 +375,6 @@ const getTenantByContactCode = async (
     logger.error({ err }, 'leasing-adapter.getTenantByContactCode')
 
     if (err instanceof AxiosError) {
-      if (err.response?.data?.type === 'contact-leases-not-found') {
-        return { ok: false, err: 'contact-not-tenant' }
-      }
       return { ok: false, err: err.response?.data?.type }
     }
     return { ok: false, err: 'unknown' }
@@ -211,7 +385,7 @@ const getContactByPhoneNumber = async (
   phoneNumber: string
 ): Promise<Contact | undefined> => {
   try {
-    const contactResponse = await axios(
+    const contactResponse = await axios.get(
       tenantsLeasesServiceUrl + '/contacts/by-phone-number/' + phoneNumber
     )
     return contactResponse.data.content
@@ -223,10 +397,10 @@ const getContactByPhoneNumber = async (
 const getCreditInformation = async (
   nationalRegistrationNumber: string
 ): Promise<ConsumerReport> => {
-  const informationResponse = await axios(
+  const informationResponse = await axios.get(
     tenantsLeasesServiceUrl +
-      '/cas/getConsumerReport/' +
-      nationalRegistrationNumber
+    '/cas/getConsumerReport/' +
+    nationalRegistrationNumber
   )
   return informationResponse.data.content
 }
@@ -235,15 +409,9 @@ const addApplicantToWaitingList = async (
   contactCode: string,
   waitingListType: WaitingListType
 ) => {
-  const axiosOptions = {
-    method: 'POST',
-    data: {
-      waitingListType: waitingListType,
-    },
-  }
-  return await axios(
+  return await axios.post(
     tenantsLeasesServiceUrl + `/contacts/${contactCode}/waitingLists`,
-    axiosOptions
+    { waitingListType }
   )
 }
 
@@ -252,15 +420,9 @@ const resetWaitingList = async (
   waitingListType: WaitingListType
 ): Promise<AdapterResult<undefined, 'not-in-waiting-list' | 'unknown'>> => {
   try {
-    const axiosOptions = {
-      method: 'POST',
-      data: {
-        waitingListType: waitingListType,
-      },
-    }
-    const res = await axios(
+    const res = await axios.post(
       tenantsLeasesServiceUrl + `/contacts/${contactCode}/waitingLists/reset`,
-      axiosOptions
+      { waitingListType }
     )
 
     if (res.status == 200) return { ok: true, data: undefined }
@@ -475,6 +637,7 @@ const preliminaryTerminateLease = async (
     PreliminaryTerminateLeaseResponseData,
     | 'lease-not-found'
     | 'tenant-email-missing'
+    | 'termination-not-required'
     | 'termination-failed'
     | 'unknown'
   >
@@ -505,6 +668,13 @@ const preliminaryTerminateLease = async (
       }
     }
 
+    if (response.status === 400 && errorType === 'termination-not-required') {
+      return {
+        ok: false,
+        err: 'termination-not-required',
+      }
+    }
+
     logger.error(
       { status: response.status, data: response.data },
       'Failed to preliminary terminate lease'
@@ -529,6 +699,13 @@ const preliminaryTerminateLease = async (
         }
       }
 
+      if (status === 400 && errorType === 'termination-not-required') {
+        return {
+          ok: false,
+          err: 'termination-not-required',
+        }
+      }
+
       logger.error(
         { status, error: errorType, leaseId },
         'Error preliminary terminating lease'
@@ -541,8 +718,155 @@ const preliminaryTerminateLease = async (
   }
 }
 
+const getContactsByFilters = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<AdapterResult<{ content: leasing.v1.ContactInfo[] }, 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/contacts/from-lease-search`,
+      {
+        params: queryParams,
+        paramsSerializer: {
+          indexes: null,
+        },
+      }
+    )
+
+    return { ok: true, data: response.data }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.getContactsByFilters')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+interface ExportLeasesResult {
+  data: Buffer
+  contentType: string
+  contentDisposition: string
+}
+
+const exportLeasesToExcel = async (
+  queryParams: Record<string, string | string[] | undefined>
+): Promise<AdapterResult<ExportLeasesResult, 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/export`,
+      {
+        params: queryParams,
+        responseType: 'arraybuffer',
+        paramsSerializer: {
+          indexes: null,
+        },
+      }
+    )
+
+    return {
+      ok: true,
+      data: {
+        data: response.data,
+        contentType:
+          response.headers['content-type'] ||
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        contentDisposition:
+          response.headers['content-disposition'] ||
+          `attachment; filename="hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx"`,
+      },
+    }
+  } catch (err) {
+    logger.error({ err }, 'leasingAdapter.exportLeasesToExcel')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncContactToLeasing = async (
+  contactCode: string
+): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/sync`
+    )
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: { skipped: response.data?.skipped === true } }
+    }
+
+    logger.error(response.data, 'leasing-adapter.syncContactToLeasing')
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      logger.error(
+        { status: err.response.status, data: err.response.data },
+        'leasing-adapter.syncContactToLeasing'
+      )
+      return { ok: false, err: 'sync-failed', statusCode: err.response.status }
+    }
+    logger.error({ err }, 'leasing-adapter.syncContactToLeasing')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const getUpdatedLeases = async (
+  since: Date | null
+): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
+  try {
+    const params = since ? { since: since.toISOString() } : {}
+    const response = await axios.get(`${tenantsLeasesServiceUrl}/leases/sync`, {
+      params,
+    })
+
+    if (response.status === 200) {
+      const content: LeaseChange[] = response.data.content.map(
+        (c: Omit<LeaseChange, 'timestamp'> & { timestamp: string }) => ({
+          ...c,
+          timestamp: new Date(c.timestamp),
+        })
+      )
+      return { ok: true, data: content }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getUpdatedLeases')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncLease = async (
+  leaseId: string,
+  contactCode: string | undefined,
+  action: 'create' | 'terminate' | 'void'
+): Promise<
+  AdapterResult<
+    {
+      action: 'created' | 'terminated' | 'voided' | 'skipped'
+      leaseId: string
+    },
+    'sync-failed' | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/sync`,
+      { leaseId, contactCode, action }
+    )
+
+    if (response.status === 200 || response.status === 201) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'leasing-adapter.syncLease')
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncLease')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
+  exportLeasesToExcel,
+  syncContactToLeasing,
+  getContactsByFilters,
   getApplicationProfileByContactCode,
   getContactByContactCode,
   getContactByPhoneNumber,
@@ -550,7 +874,14 @@ export {
   getContactForPnr,
   getContactsDataBySearchQuery,
   getContactsForIdentityCheck,
+  getContacts,
   getCreditInformation,
+  getLeases,
+  getLeasesForPnr,
+  getLeasesForContactCode,
+  getLeasesForPropertyId,
+  getLeasesBatch,
+  getParkingSpaceTypes,
   getTenantByContactCode,
   preliminaryTerminateLease,
   resetWaitingList,
@@ -560,6 +891,8 @@ export {
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,
+  getUpdatedLeases,
+  syncLease,
 }
 
 export {
@@ -585,6 +918,7 @@ export {
   cancelLeaseHomeInsurance,
   getBuildingManagers,
   searchLeases,
+  getHomeInsuranceExport,
 } from './leases'
 
 export {
@@ -613,7 +947,12 @@ export {
   updateOfferSentAt,
 } from './offers'
 
-export { getCommentThread, addComment, removeComment } from './comments'
+export {
+  getCommentThread,
+  addComment,
+  removeComment,
+  updateComment,
+} from './comments'
 
 export {
   getAllVacantParkingSpaces,
@@ -621,4 +960,6 @@ export {
   getParkingSpaces,
   getRentalObjectRentByCode,
   getRentalObjectRents,
+  getRentalObjectAvailabilities,
+  getRentalObjectAvailabilityByCode,
 } from './rental-objects'

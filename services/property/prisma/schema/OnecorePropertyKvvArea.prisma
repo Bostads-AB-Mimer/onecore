@@ -1,0 +1,12 @@
+model OnecorePropertyKvvArea {
+  propertyCode String   @id @map("property_code") @db.NVarChar(30)
+  kvvAreaId    String   @map("kvv_area_id") @db.UniqueIdentifier
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.DateTime
+  updatedBy    String?  @map("updated_by") @db.NVarChar(255)
+
+  kvvArea OnecoreKvvArea @relation(fields: [kvvAreaId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([kvvAreaId])
+  @@map("onecore_property_kvv_area")
+}

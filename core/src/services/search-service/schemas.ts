@@ -3,12 +3,14 @@ import { z } from 'zod'
 export const PropertySearchResultSchema = z.object({
   id: z.string().describe('Unique identifier for the search result'),
   type: z.literal('property').describe('Indicates this is a property result'),
+  code: z.string().describe('Property code'),
   name: z.string().describe('Name or designation of the property'),
 })
 
 export const BuildingSearchResultSchema = z.object({
   id: z.string().describe('Unique identifier for the search result'),
   type: z.literal('building').describe('Indicates this is a building result'),
+  code: z.string().describe('Building code'),
   name: z.string().nullable().describe('Name of the building'),
   property: z
     .object({
@@ -82,6 +84,49 @@ export const MaintenanceUnitSearchResultSchema = z.object({
   estate: z.string().nullable().describe('Property name'),
 })
 
+export const StaircaseSearchResultSchema = z.object({
+  id: z.string().describe('Unique identifier for the search result'),
+  type: z.literal('staircase').describe('Indicates this is a staircase result'),
+  code: z.string().describe('Code of the staircase'),
+  name: z.string().nullable().describe('Name (caption) of the staircase'),
+  property: z.object({
+    code: z.string(),
+    name: z
+      .string()
+      .nullable()
+      .describe('Name of property associated with the staircase'),
+  }),
+  building: z.object({
+    code: z.string(),
+    name: z
+      .string()
+      .nullable()
+      .describe('Name of building associated with the staircase'),
+  }),
+})
+
+export const FacilitySearchResultSchema = z.object({
+  id: z.string().describe('Unique identifier for the search result'),
+  type: z.literal('facility').describe('Indicates this is a facility result'),
+  name: z.string().nullable().describe('Name of the facility'),
+  rentalId: z.string().describe('Rental ID of the facility'),
+  code: z.string().describe('Code of the facility'),
+  property: z.object({
+    code: z.string().nullable(),
+    name: z
+      .string()
+      .nullable()
+      .describe('Name of property associated with the facility'),
+  }),
+  building: z.object({
+    code: z.string().nullable(),
+    name: z
+      .string()
+      .nullable()
+      .describe('Name of building associated with the facility'),
+  }),
+})
+
 export const SearchResultSchema = z
   .discriminatedUnion('type', [
     PropertySearchResultSchema,
@@ -89,9 +134,11 @@ export const SearchResultSchema = z
     ResidenceSearchResultSchema,
     ParkingSpaceSearchResultSchema,
     MaintenanceUnitSearchResultSchema,
+    FacilitySearchResultSchema,
+    StaircaseSearchResultSchema,
   ])
   .describe(
-    'A search result that can be either a property, building, residence, parking space or maintenance unit'
+    'A search result that can be either a property, building, residence, parking space, maintenance unit, facility or staircase'
   )
 
 export const SearchQueryParamsSchema = z.object({
@@ -112,5 +159,7 @@ export type ParkingSpaceSearchResult = z.infer<
 export type MaintenanceUnitSearchResult = z.infer<
   typeof MaintenanceUnitSearchResultSchema
 >
+export type FacilitySearchResult = z.infer<typeof FacilitySearchResultSchema>
+export type StaircaseSearchResult = z.infer<typeof StaircaseSearchResultSchema>
 export type SearchResult = z.infer<typeof SearchResultSchema>
 export type SearchQueryParams = z.infer<typeof SearchQueryParamsSchema>

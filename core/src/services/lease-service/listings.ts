@@ -19,7 +19,6 @@ import { z } from 'zod'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { ProcessStatus } from '../../common/types'
-import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from './helpers/lease'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -143,31 +142,42 @@ export const routes = (router: KoaRouter) => {
       } else {
         //filter listings on validToRentForContactCode
         const tenantResult = await leasingAdapter.getTenantByContactCode(
-          query.data?.validToRentForContactCode
+          query.data.validToRentForContactCode
         )
-        let isTenant = true
 
-        if (!tenantResult.ok) {
-          if (tenantResult.err === 'contact-not-tenant') {
-            isTenant = false
-          } else {
-            ctx.status = 500
-            ctx.body = { error: 'Tenant could not be retrieved', ...metadata }
-            return
-          }
+        const leaseAreaCodes = new Set<string>()
+        if (tenantResult.ok) {
+          const current =
+            tenantResult.data.currentHousingContract?.residentialArea?.code
+          const upcoming =
+            tenantResult.data.upcomingHousingContract?.residentialArea?.code
+          if (current) leaseAreaCodes.add(current)
+          if (upcoming) leaseAreaCodes.add(upcoming)
+        } else if (
+          tenantResult.err !== 'contact-not-tenant' &&
+          tenantResult.err !== 'no-valid-housing-contract'
+        ) {
+          // contact-not-found shouldn't happen for an authenticated contact, so
+          // log it alongside any genuinely unexpected errors.
+          logger.error(
+            {
+              err: tenantResult.err,
+              contactCode: query.data.validToRentForContactCode,
+            },
+            'Unexpected error from getTenantByContactCode in /listings; falling back to NON_SCORED-only'
+          )
         }
+        // Any error path leaves leaseAreaCodes empty so the contact still sees
+        // NON_SCORED listings. Expected soft-fail cases (contact-not-tenant /
+        // no-valid-housing-contract — e.g. parking-only contacts) are silent;
+        // unexpected errors are logged above.
 
-        var listings = listingsWithRentalObjects.filter((listing) => {
+        const listings = listingsWithRentalObjects.filter((listing) => {
           return (
             listing.rentalRule == 'NON_SCORED' || //all NON_SCORED will be included
             (listing.rentalRule == 'SCORED' &&
-              isTenant &&
-              tenantResult.ok &&
               listing.rentalObject.residentialAreaCode &&
-              isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
-                listing.rentalObject.residentialAreaCode,
-                tenantResult.data
-              )) // all SCORED where tenant is allowed to rent will be included
+              leaseAreaCodes.has(listing.rentalObject.residentialAreaCode)) // SCORED visible only if contact has a housing contract in that area
           )
         })
 

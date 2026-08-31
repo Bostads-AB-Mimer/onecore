@@ -1,0 +1,171 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+
+import { components } from '@/services/api/core/generated/api-types'
+import { inspectionService } from '@/services/api/core/inspectionService'
+import type { Room } from '@/services/types'
+
+import { useToast } from '@/shared/hooks/useToast'
+import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+
+import {
+  canStart,
+  getCompletedInspectionColumns,
+  getOngoingInspectionColumns,
+  INSPECTION_STATUS,
+  type InspectionTableColumn,
+  isCompleted as isCompletedStatus,
+  isXpandSource,
+  renderInspectionMobileCard,
+} from '../constants'
+import { useInspectors } from '../hooks/useInspectors'
+import { useUpdateInspectionStatus } from '../hooks/useUpdateInspectionStatus'
+import { useUpdateInspector } from '../hooks/useUpdateInspector'
+import { InspectionConductDialog } from './InspectionConductDialog'
+import { InspectionProtocol } from './InspectionProtocol'
+
+type Inspection = components['schemas']['InspectionWithSource']
+type DetailedInspection = components['schemas']['DetailedInspection']
+
+interface InspectionsTableProps {
+  inspections: Inspection[]
+  rentalId?: string
+  isCompleted?: boolean
+  hiddenColumns?: string[]
+  columns?: InspectionTableColumn[]
+  emptyMessage?: string
+  rooms?: Room[]
+}
+
+export function InspectionsTable({
+  inspections,
+  rentalId,
+  isCompleted = false,
+  hiddenColumns = [],
+  columns,
+  emptyMessage,
+  rooms = [],
+}: InspectionsTableProps) {
+  const { data: inspectors } = useInspectors()
+  const { toast } = useToast()
+  const [isResumeDialogOpen, setIsResumeDialogOpen] = useState(false)
+  const [isProtocolDialogOpen, setIsProtocolDialogOpen] = useState(false)
+  const [selectedInspectionId, setSelectedInspectionId] = useState<
+    string | null
+  >(null)
+  const [selectedInspectionSource, setSelectedInspectionSource] = useState<
+    'xpand' | 'internal' | null
+  >(null)
+
+  const { startInspection, isPending, pendingInspectionId } =
+    useUpdateInspectionStatus({
+      rentalId,
+      onSuccess: () => {
+        toast({
+          title: 'Status uppdaterad',
+          description: 'Besiktningsstatus har uppdaterats.',
+        })
+      },
+      onError: () => {
+        toast({
+          title: 'Fel',
+          description: 'Kunde inte uppdatera besiktningsstatus.',
+          variant: 'destructive',
+        })
+      },
+    })
+
+  const { mutate: updateInspector } = useUpdateInspector()
+
+  // Fetch detailed inspection when selected (for the completed-protocol view).
+  // Both sources land on the same DetailedInspection shape — internal goes
+  // through the /details endpoint, which enriches and normalizes server-side.
+  const { data: detailedInspection } = useQuery<DetailedInspection>({
+    queryKey: ['inspections', selectedInspectionSource, selectedInspectionId],
+    queryFn: () =>
+      selectedInspectionSource === 'internal'
+        ? inspectionService.getInternalInspectionDetails(
+            selectedInspectionId as string
+          )
+        : inspectionService.getInspectionById(selectedInspectionId as string),
+    enabled: !!selectedInspectionId && !!selectedInspectionSource,
+  })
+
+  const handleInspectionClick = (inspection: Inspection) => {
+    if (isPending) return
+
+    // Xpand inspections that aren't completed must be handled in Xpand
+    if (
+      isXpandSource(inspection.source) &&
+      !isCompletedStatus(inspection.status)
+    ) {
+      return
+    }
+
+    setSelectedInspectionId(inspection.id)
+    setSelectedInspectionSource(inspection.source)
+
+    if (inspection.status === INSPECTION_STATUS.COMPLETED) {
+      setIsProtocolDialogOpen(true)
+      setIsResumeDialogOpen(false)
+    } else {
+      if (canStart(inspection.status)) {
+        startInspection(inspection.id)
+      }
+      setIsResumeDialogOpen(true)
+      setIsProtocolDialogOpen(false)
+    }
+  }
+
+  // Determine which columns to use
+  const loading = { isPending, pendingInspectionId }
+  const tableColumns =
+    columns ||
+    (isCompleted
+      ? getCompletedInspectionColumns(handleInspectionClick, loading)
+      : getOngoingInspectionColumns(handleInspectionClick, loading, {
+          inspectors: inspectors ?? [],
+          onUpdateInspector: (inspectionId, inspector) =>
+            updateInspector({ inspectionId, inspector }),
+        }))
+
+  // Filter columns if hiddenColumns is used
+  const filteredColumns =
+    hiddenColumns.length > 0
+      ? tableColumns.filter((col) => !hiddenColumns.includes(col.key as any))
+      : tableColumns
+
+  return (
+    <>
+      <ResponsiveTable
+        data={inspections}
+        columns={filteredColumns}
+        keyExtractor={(inspection: Inspection) => inspection.id}
+        emptyMessage={emptyMessage || 'Inga besiktningar i denna kategori'}
+        mobileCardRenderer={renderInspectionMobileCard(
+          handleInspectionClick,
+          loading
+        )}
+      />
+
+      {isResumeDialogOpen && selectedInspectionId && (
+        <InspectionConductDialog
+          inspectionId={selectedInspectionId}
+          rentalId={rentalId}
+          rooms={rooms}
+          isOpen={isResumeDialogOpen}
+          onClose={() => setIsResumeDialogOpen(false)}
+        />
+      )}
+
+      {isProtocolDialogOpen && (
+        <InspectionProtocol
+          inspection={detailedInspection ?? null}
+          isOpen={isProtocolDialogOpen}
+          onClose={() => setIsProtocolDialogOpen(false)}
+          source={selectedInspectionSource ?? 'xpand'}
+        />
+      )}
+    </>
+  )
+}

@@ -1,5 +1,11 @@
-import { GET } from './base-api'
-import type { Tenant } from '@/services/types'
+import type {
+  BulkEmailResult,
+  BulkSmsResult,
+  RelatedContact,
+  Tenant,
+} from '@/services/types'
+
+import { GET, POST } from './baseApi'
 
 export interface ContactSearchResult {
   fullName: string
@@ -36,6 +42,18 @@ async function getContactByContactCode(contactCode: string): Promise<any> {
   return response.content
 }
 
+async function getRelatedContacts(
+  contactCode: string
+): Promise<RelatedContact[]> {
+  const { data, error } = await GET('/v1/contacts/{contactCode}', {
+    params: { path: { contactCode } },
+  })
+
+  if (error) throw error
+
+  return data?.content?.relatedContacts ?? []
+}
+
 async function searchContacts(query: string): Promise<ContactSearchResult[]> {
   const { data, error } = await GET('/contacts/search', {
     params: { query: { q: query } },
@@ -49,8 +67,44 @@ async function searchContacts(query: string): Promise<ContactSearchResult[]> {
   return response.content as ContactSearchResult[]
 }
 
+async function sendBulkSms(
+  recipients: { contactCode: string; phoneNumber: string }[],
+  text: string
+): Promise<{ content: BulkSmsResult; warnings?: string[] }> {
+  const { data, error } = await POST('/sendBulkSms', {
+    body: { recipients, text },
+  })
+
+  if (error) throw error
+  if (!data?.content) throw new Error('Response ok but missing content')
+
+  // warnings is a sibling of content: the SMS sent, but a non-blocking issue
+  // occurred (e.g. communication-log write failed).
+  return { content: data.content, warnings: data.warnings }
+}
+
+async function sendBulkEmail(
+  recipients: { contactCode: string; emailAddress: string }[],
+  subject: string,
+  text: string
+): Promise<{ content: BulkEmailResult; warnings?: string[] }> {
+  const { data, error } = await POST('/sendBulkEmail', {
+    body: { recipients, subject, text },
+  })
+
+  if (error) throw error
+  if (!data?.content) throw new Error('Response ok but missing content')
+
+  // warnings is a sibling of content: the email sent, but a non-blocking issue
+  // occurred (e.g. communication-log write failed).
+  return { content: data.content, warnings: data.warnings }
+}
+
 export const tenantService = {
   getByContactCode,
   getContactByContactCode,
+  getRelatedContacts,
   searchContacts,
+  sendBulkSms,
+  sendBulkEmail,
 }

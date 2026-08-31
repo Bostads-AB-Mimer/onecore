@@ -1,5 +1,5 @@
 import { Factory } from 'fishery'
-import { LeaseStatus, Tenant } from '@onecore/types'
+import { LeaseStatus, LeaseType, Tenant } from '@onecore/types'
 import { components } from '../../src/adapters/work-order-adapter/generated/api-types'
 
 export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
@@ -43,7 +43,7 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
     tenantContactIds: [`P${158769 + sequence}`],
     tenants: undefined,
     terminationDate: undefined,
-    type: 'Bostadskontrakt',
+    type: LeaseType.HousingContract,
   },
   parkingSpaceContracts: [
     {
@@ -64,7 +64,7 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
       tenantContactIds: [`P${158769 + sequence}`],
       tenants: undefined,
       terminationDate: undefined,
-      type: 'P-Platskontrakt',
+      type: LeaseType.ParkingSpaceContract,
     },
   ],
   housingContracts: [
@@ -86,10 +86,14 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
       tenantContactIds: [`P${158769 + sequence}`],
       tenants: undefined,
       terminationDate: undefined,
-      type: 'Bostadskontrakt',
+      type: LeaseType.HousingContract,
     },
   ],
   isAboutToLeave: false,
+  protectedIdentity: false,
+  deceased: false,
+  emigrated: false,
+  noAdvertising: false,
 }))
 
 export const WorkOrderTenantFactory = Factory.define<

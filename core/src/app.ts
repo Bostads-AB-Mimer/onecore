@@ -2,17 +2,20 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
 import cors from '@koa/cors'
-import jwt from 'koa-jwt'
+import { logger, loggerMiddlewares } from '@onecore/utilities'
+import { koaSwagger } from 'koa2-swagger-ui'
+import { makeOkapiRouter } from 'koa-okapi-router'
 import config from './common/config'
 
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
 import { routes as healthRoutes } from './services/health-service'
+import { routes as infobipSmsWebhookRoutes } from './services/communication-service/infobip-sms-webhook'
 
-import { logger, loggerMiddlewares } from '@onecore/utilities'
-import { koaSwagger } from 'koa2-swagger-ui'
-import { routes as swagggerRoutes } from './services/swagger'
-import { requireAuth } from './middlewares/keycloak-auth'
+import { requireAuth, requireRole } from './middlewares/keycloak-auth'
+import { routes as apiRoutes } from './api/index'
+import { routes as swaggerRoutes } from './services/swagger'
+import { extractToken } from './middlewares/extract-token'
 
 const app = new Koa()
 
@@ -38,30 +41,92 @@ app.on('error', (err) => {
   logger.error(err)
 })
 
-app.use(bodyParser({ jsonLimit: '50mb' }))
-
 // Log the start and completion of all incoming requests
 app.use(loggerMiddlewares.pre)
 app.use(loggerMiddlewares.post)
 
+// Body parsing for JSON routes (binary routes like /scan-receipt are naturally skipped
+// since koa-body only parses matching content types like application/json)
+app.use(bodyParser({ multipart: true, jsonLimit: '50mb' }))
+
+// Public routes (no auth required)
 const publicRouter = new KoaRouter()
 
 authRoutes(publicRouter)
 healthRoutes(publicRouter)
-swagggerRoutes(publicRouter)
+// SMS delivery-report webhook (Tele2): token-authenticated, so it lives on the
+// public router and bypasses the Keycloak chain (it validates the token itself).
+infobipSmsWebhookRoutes(publicRouter)
 app.use(publicRouter.routes())
 
-// JWT middleware with multiple options
-app.use((ctx, next) => {
-  if (ctx.cookies.get('auth_token') === undefined) {
-    return jwt({
-      secret: config.auth.secret,
-    })(ctx, next)
+// Token extraction (cookie -> Bearer -> Basic Auth)
+app.use(extractToken)
+
+// Authentication — verifies the extracted token
+app.use(requireAuth)
+
+// Role-based authorization
+app.use(async (ctx, next) => {
+  if (ctx.path.startsWith('/scan-receipt')) {
+    return requireRole('scanner-upload')(ctx, next)
   }
 
-  return requireAuth(ctx, next)
+  // All routes under /leases/for-csc require csc:get or api-access
+  if (ctx.path.startsWith('/leases/for-csc') && ctx.method === 'GET') {
+    return requireRole(['csc:get', 'api-access'])(ctx, next)
+  }
+
+  // All routes under invoices/notify-batch require invoice-notify:post or api-access
+  if (ctx.path.startsWith('/invoices/notify-batch') && ctx.method === 'POST') {
+    return requireRole(['invoice-notify:post', 'api-access'])(ctx, next)
+  }
+
+  // Infobip email delivery-report webhook — authenticated via a Keycloak
+  // service account (client_credentials) holding the infobip-webhook role.
+  if (ctx.path.startsWith('/webhooks/infobip')) {
+    return requireRole('infobip-webhook')(ctx, next)
+  }
+
+  if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
+    return requireRole(['api-access', 'contacts:read'])(ctx, next)
+  }
+
+  if (ctx.path.startsWith('/invoice-channels')) {
+    return requireRole(['invoice-channels:read', 'api-access'])(ctx, next)
+  }
+
+  return requireRole('api-access')(ctx, next)
+})
+
+// Requires 'keys-admin' in addition to 'api-access' for key deletion (single and bulk).
+// Kept as a separate middleware so api-access is always checked first.
+app.use(async (ctx, next) => {
+  if (
+    (ctx.method === 'DELETE' && /^\/keys\/[^/]+$/.test(ctx.path)) ||
+    (ctx.method === 'POST' && ctx.path === '/keys/bulk-delete')
+  ) {
+    return requireRole('keys-admin')(ctx, next)
+  }
+
+  if (ctx.method === 'PUT' && /^\/invoices\/[^/]+\/deferral$/.test(ctx.path)) {
+    return requireRole('invoice-deferral')(ctx, next)
+  }
+
+  return next()
 })
 
 app.use(api.routes())
+
+const apiRouter = makeOkapiRouter(new KoaRouter(), {
+  openapi: {
+    info: { title: `ONECore API` },
+  },
+})
+
+apiRoutes(apiRouter, config)
+
+app.use(apiRouter.routes())
+
+swaggerRoutes(publicRouter, apiRouter)
 
 export default app

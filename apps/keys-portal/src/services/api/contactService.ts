@@ -1,4 +1,4 @@
-import type { Contact } from '@/services/types'
+import type { Contact, ContactV1 } from '@/services/types'
 
 import { GET } from './core/base-api'
 
@@ -24,6 +24,37 @@ export async function fetchContactByContactCode(
 }
 
 /**
+ * Display name for a v1 Contact (discriminated union by `type`).
+ * Reads from `personal.fullName` for individuals, `organisation.name` for
+ * organisations. Falls back to the contact code if the name is empty.
+ */
+export function getContactFullName(contact: ContactV1): string {
+  if (contact.type === 'individual') {
+    return contact.personal.fullName || contact.contactCode
+  }
+  if (contact.type === 'organisation') {
+    return contact.organisation.name || contact.contactCode
+  }
+  throw new Error(`Unknown contact type: ${(contact as { type: string }).type}`)
+}
+
+/**
+ * National registration number for an individual contact, or organisation
+ * number for an organisation. Returns undefined when the value is empty.
+ */
+export function getContactRegistrationNumber(
+  contact: ContactV1
+): string | undefined {
+  if (contact.type === 'individual') {
+    return contact.personal.nationalRegistrationNumber || undefined
+  }
+  if (contact.type === 'organisation') {
+    return contact.organisation.organisationNumber || undefined
+  }
+  throw new Error(`Unknown contact type: ${(contact as { type: string }).type}`)
+}
+
+/**
  * Search contacts by query string (name, contact code, or national registration number).
  * Returns array of full contact objects.
  * @param query - Search query string
@@ -35,10 +66,16 @@ export async function searchContacts(
 ): Promise<Contact[]> {
   if (!query.trim()) return []
 
+  // Strip hyphen from Swedish personal numbers (YYYYMMDD-XXXX or YYMMDD-XXXX)
+  let q = query.trim()
+  if (/^\d{6,8}-\d{0,4}$/.test(q)) {
+    q = q.replace('-', '')
+  }
+
   const { data, error } = await GET('/contacts/search', {
     params: {
       query: {
-        q: query.trim(),
+        q,
         ...(contactType && { contactType }),
       },
     },

@@ -1,5 +1,5 @@
-import { Component } from '../../types'
-import { GET, POST, PUT } from './base-api'
+import { Component, ComponentModel } from '../../types'
+import { GET, POST, PUT } from './baseApi'
 
 export const componentService = {
   async getByRoomId(roomId: string): Promise<Component[]> {
@@ -106,7 +106,7 @@ export const componentService = {
       condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
       quantity?: number
       ncsCode?: string
-      installationDate: string
+      installationDate: string | null
       installationCost: number
       orderNumber?: string
       spaceType?: 'OBJECT' | 'PropertyObject'
@@ -176,7 +176,7 @@ export const componentService = {
     instanceId: string,
     roomId: string,
     installationData: {
-      installationDate: string
+      installationDate: string | null
       installationCost: number
       orderNumber?: string
       spaceType?: 'OBJECT' | 'PropertyObject'
@@ -224,5 +224,11 @@ export const componentService = {
       throw new Error('Failed to update component instance')
 
     return response.content as Component
+  },
+
+  async getSurfaceModels(): Promise<ComponentModel[]> {
+    const { data, error } = await GET('/component-models/surface', {})
+    if (error) throw error
+    return data?.content ?? []
   },
 }

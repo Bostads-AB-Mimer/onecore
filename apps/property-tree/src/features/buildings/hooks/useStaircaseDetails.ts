@@ -1,0 +1,48 @@
+import { useQuery } from '@tanstack/react-query'
+
+import { buildingService, residenceService } from '@/services/api/core'
+import { staircaseService } from '@/services/api/core/staircaseService'
+
+export function useStaircaseDetails(
+  buildingCode: string | undefined,
+  staircaseCode: string | undefined
+) {
+  const buildingQuery = useQuery({
+    queryKey: ['building', buildingCode],
+    queryFn: () => buildingService.getByBuildingCode(buildingCode!),
+    enabled: !!buildingCode,
+  })
+
+  const staircaseQuery = useQuery({
+    queryKey: ['staircase', buildingCode, staircaseCode],
+    queryFn: () =>
+      staircaseService.getByBuildingCode(buildingCode!, staircaseCode!),
+    enabled: !!buildingCode && !!staircaseCode,
+  })
+
+  const residencesQuery = useQuery({
+    queryKey: ['residences', buildingCode, staircaseCode],
+    queryFn: () =>
+      residenceService.getByBuildingCodeAndStaircaseCode(
+        buildingCode!,
+        staircaseCode!
+      ),
+    enabled: !!buildingCode && !!staircaseCode,
+  })
+
+  const staircase = staircaseQuery.data?.[0]
+  const building = buildingQuery.data
+
+  const isLoading =
+    buildingQuery.isLoading ||
+    staircaseQuery.isLoading ||
+    residencesQuery.isLoading
+
+  return {
+    building,
+    staircase: staircase && building ? staircase : undefined,
+    residences: residencesQuery.data,
+    isLoading,
+    error: staircaseQuery.error || buildingQuery.error,
+  }
+}

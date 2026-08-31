@@ -4,6 +4,7 @@ import {
   Listing,
   ListingStatus,
   Invoice,
+  Tenant,
 } from '@onecore/types'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
 import * as economyAdapter from '../../../../adapters/economy-adapter'
@@ -18,6 +19,9 @@ import {
   mockedApplicantWithLeases,
   mockedApplicantWithoutAddress,
   mockedUnpaidInvoice,
+  mockedTenantWithHousingContractInSameArea,
+  mockedTenantWithHousingContractInDifferentArea,
+  mockedLease,
 } from './index.mocks'
 import { AdapterResult } from '../../../../adapters/types'
 
@@ -43,11 +47,10 @@ describe('parkingspaces', () => {
       [contactCode: string, from?: Date],
       any
     >
-    let sendNotificationToContactSpy: jest.SpyInstance<
-      Promise<any>,
-      [recipientContact: Contact, subject: string, message: string],
-      any
-    >
+    let getLeasesForContactCodeSpy: jest.SpyInstance
+    let getParkingSpaceByCodeSpy: jest.SpyInstance
+    let sendNonScoredParkingSpaceApprovedEmailSpy: jest.SpyInstance
+    let sendNonScoredParkingSpaceDeniedEmailSpy: jest.SpyInstance
     let sendNotificationToRoleSpy: jest.SpyInstance<
       Promise<any>,
       [recipientRole: string, subject: string, message: string],
@@ -69,6 +72,19 @@ describe('parkingspaces', () => {
       [listingId: number, status: ListingStatus],
       any
     >
+    let getTenantByContactCodeSpy: jest.SpyInstance<
+      Promise<
+        AdapterResult<
+          Tenant,
+          | 'unknown'
+          | 'no-valid-housing-contract'
+          | 'contact-not-found'
+          | 'contact-not-tenant'
+        >
+      >,
+      [contactCode: string],
+      any
+    >
     const mockedListing = factory.listing.build({
       id: 1,
       publishedFrom: new Date('2024-03-26T09:06:56.000Z'),
@@ -85,15 +101,43 @@ describe('parkingspaces', () => {
       getContactSpy = jest
         .spyOn(leasingAdapter, 'getContactByContactCode')
         .mockResolvedValue({ ok: true, data: mockedApplicantWithoutLeases })
+      getLeasesForContactCodeSpy = jest
+        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .mockResolvedValue([])
       getCreditInformationSpy = jest
         .spyOn(leasingAdapter, 'getCreditInformation')
         .mockResolvedValue(successfulConsumerReport)
       getInvoicesSentToDebtCollectionSpy = jest
         .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
         .mockResolvedValue({ ok: true, data: [] })
-      sendNotificationToContactSpy = jest
-        .spyOn(communcationAdapter, 'sendNotificationToContact')
-        .mockResolvedValue({})
+      getParkingSpaceByCodeSpy = jest
+        .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            rentalObjectCode: '705-808-00-0006',
+            address: 'Testgatan 1',
+            availabilityInfo: {
+              rent: {
+                amount: 500,
+                vat: 0.25,
+                rows: [],
+              },
+              rentalObjectCode: '705-808-00-0006',
+              rentalTenureType: { id: 'Bilplats', name: 'Bilplats' },
+            },
+            objectTypeCaption: 'Bilplats',
+            objectTypeCode: 'BP',
+            residentialAreaCaption: 'Test',
+            residentialAreaCode: 'TST',
+          },
+        })
+      sendNonScoredParkingSpaceApprovedEmailSpy = jest
+        .spyOn(communcationAdapter, 'sendNonScoredParkingSpaceApprovedEmail')
+        .mockResolvedValue({ ok: true, data: null })
+      sendNonScoredParkingSpaceDeniedEmailSpy = jest
+        .spyOn(communcationAdapter, 'sendNonScoredParkingSpaceDeniedEmail')
+        .mockResolvedValue({ ok: true, data: null })
       sendNotificationToRoleSpy = jest
         .spyOn(communcationAdapter, 'sendNotificationToRole')
         .mockResolvedValue({})
@@ -103,6 +147,9 @@ describe('parkingspaces', () => {
       updateListingStatusSpy = jest
         .spyOn(leasingAdapter, 'updateListingStatus')
         .mockResolvedValue({ ok: true, data: null })
+      getTenantByContactCodeSpy = jest
+        .spyOn(leasingAdapter, 'getTenantByContactCode')
+        .mockResolvedValue({ ok: false, err: 'contact-not-tenant' })
     })
 
     it('gets the parking space', async () => {
@@ -222,7 +269,7 @@ describe('parkingspaces', () => {
 
     it('sends a notification to the applicant if external credit check fails', async () => {
       getCreditInformationSpy.mockResolvedValue(failedConsumerReport)
-      sendNotificationToContactSpy.mockReset()
+      sendNonScoredParkingSpaceDeniedEmailSpy.mockReset()
 
       await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
@@ -230,10 +277,10 @@ describe('parkingspaces', () => {
         '2034-04-21'
       )
 
-      expect(sendNotificationToContactSpy).toHaveBeenCalledWith(
-        expect.anything(),
-        'Nekad ansökan om extern bilplats',
-        expect.any(String)
+      expect(sendNonScoredParkingSpaceDeniedEmailSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Nekad ansökan om bilplats',
+        })
       )
     })
 
@@ -259,6 +306,7 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy.mockReset()
       getCreditInformationSpy.mockReset()
 
@@ -275,11 +323,43 @@ describe('parkingspaces', () => {
       expect(getCreditInformationSpy).not.toHaveBeenCalled()
     })
 
+    it('requests current and upcoming leases when deciding the credit-check path', async () => {
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
+        mockedApplicantWithoutLeases.contactCode,
+        expect.objectContaining({ includeUpcomingLeases: true })
+      )
+    })
+
+    it('performs an internal credit check if applicant has an upcoming lease', async () => {
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
+      getInvoicesSentToDebtCollectionSpy.mockReset().mockResolvedValue({
+        ok: true,
+        data: [],
+      })
+      getCreditInformationSpy.mockReset()
+
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(getInvoicesSentToDebtCollectionSpy).toHaveBeenCalled()
+      expect(getCreditInformationSpy).not.toHaveBeenCalled()
+    })
+
     it('fails lease creation if internal credit check fails', async () => {
       getContactSpy.mockResolvedValue({
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
         ok: true,
         data: [mockedUnpaidInvoice],
@@ -358,10 +438,15 @@ describe('parkingspaces', () => {
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy
         .mockReset()
         .mockResolvedValue({ ok: true, data: [] })
       getCreditInformationSpy.mockReset()
+      getTenantByContactCodeSpy.mockResolvedValue({
+        ok: true,
+        data: mockedTenantWithHousingContractInSameArea,
+      })
 
       await parkingProcesses.createLeaseForExternalParkingSpace(
         'foo',
@@ -378,12 +463,45 @@ describe('parkingspaces', () => {
       )
     })
 
+    it('creates a contract with VAT if applicant has no housing contract in the same area as the parking space', async () => {
+      createContractSpy.mockReset()
+
+      getContactSpy.mockResolvedValue({
+        ok: true,
+        data: mockedApplicantWithLeases,
+      })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
+      getInvoicesSentToDebtCollectionSpy
+        .mockReset()
+        .mockResolvedValue({ ok: true, data: [] })
+      getCreditInformationSpy.mockReset()
+      getTenantByContactCodeSpy.mockResolvedValue({
+        ok: true,
+        data: mockedTenantWithHousingContractInDifferentArea,
+      })
+
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(createContractSpy).toHaveBeenCalledWith(
+        mockedListing.rentalObjectCode,
+        mockedApplicantWithLeases.contactCode,
+        expect.any(String),
+        '001',
+        true
+      )
+    })
+
     it('does not create a contract if internal credit check fails', async () => {
       createContractSpy.mockReset()
       getContactSpy.mockResolvedValue({
         ok: true,
         data: mockedApplicantWithLeases,
       })
+      getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
       getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
         ok: true,
         data: [mockedUnpaidInvoice],

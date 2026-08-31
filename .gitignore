@@ -60,6 +60,22 @@ lib-cov
 *.sw?
 .turbo
 
+.claude/*
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/prereview.md
+!.claude/skills/
+!.claude/skills/*
+CLAUDE.md
 
 # --- Private Keys --- 
 *.pem
+
+# --- Documentation ---
+docs/
+
+examples/
+.envrc
+
+data
+runcommands.md

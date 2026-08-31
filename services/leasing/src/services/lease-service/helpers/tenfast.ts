@@ -1,4 +1,10 @@
-import { Lease, LeaseStatus, LeaseRentRow, RentalObject } from '@onecore/types'
+import {
+  Lease,
+  LeaseStatus,
+  LeaseRentRow,
+  LeaseType,
+  RentalObject,
+} from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import {
@@ -7,7 +13,28 @@ import {
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
 
-const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
+/**
+ * Map TenFAST rental object type to LeaseType enum.
+ * TenFAST uses lowercase Swedish: 'bostad', 'parkering', 'lokal', etc.
+ */
+const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
+  bostad: LeaseType.HousingContract,
+  parkering: LeaseType.ParkingSpaceContract,
+  lokal: LeaseType.CommercialTenantContract,
+  garage: LeaseType.GarageContract,
+  forrad: LeaseType.StorageContract,
+  mark: LeaseType.OtherContract,
+  ovrigt: LeaseType.OtherContract,
+}
+
+export const mapTenfastTypToLeaseType = (
+  typ: string | undefined
+): LeaseType => {
+  if (!typ) return LeaseType.OtherContract
+  return TENFAST_TYP_TO_LEASE_TYPE[typ.toLowerCase()] ?? LeaseType.OtherContract
+}
+
+export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const { stage } = lease
 
   switch (stage) {
@@ -46,18 +73,24 @@ const mapToOnecoreRentalObject = (
   return {
     rentalObjectCode: rentalObject.externalId,
     address: rentalObject.postadress,
-    rent: {
+    availabilityInfo: {
       rentalObjectCode: rentalObject.externalId,
-      amount: rentalObject.hyraExcludingVat,
-      vat: rentalObject.hyraVat,
-      rows: rentalObject.hyror.map((row) => ({
-        code: row.article ?? '',
-        description: row.label ?? '',
-        amount: row.amount,
-        vatPercentage: row.vat,
-        fromDate: row.from ? new Date(row.from) : undefined,
-        toDate: row.to ? new Date(row.to) : undefined,
-      })),
+      rentalTenureType: {
+        id: rentalObject.category.code,
+        name: rentalObject.category.label,
+      },
+      rent: {
+        amount: rentalObject.hyraExcludingVat ?? 0,
+        vat: rentalObject.hyraVat ?? 0,
+        rows: (rentalObject.hyror ?? []).map((row) => ({
+          code: row.article ?? '',
+          description: row.label ?? '',
+          amount: row.amount,
+          vatPercentage: row.vat,
+          fromDate: row.from ? new Date(row.from) : undefined,
+          toDate: row.to ? new Date(row.to) : undefined,
+        })),
+      },
     },
     residentialAreaCaption: rentalObject.stadsdel ?? '',
     residentialAreaCode: rentalObject.stadsdel ?? '',
@@ -84,6 +117,10 @@ const mapToOnecoreRentalObject = (
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
 export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
+  const rentalObject = lease.hyresobjekt[0]
+
+  const stadsdel = rentalObject?.stadsdel ?? rentalObject?.fastighet?.stadsdel
+
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
@@ -98,14 +135,17 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
     contractDate: lease.signedAt ?? undefined,
     lastDebitDate: lease.endDate ?? undefined,
     approvalDate: lease.signedAt ?? undefined,
-    residentialArea: undefined,
+    residentialArea: stadsdel
+      ? { code: stadsdel, caption: stadsdel }
+      : undefined,
     tenantContactIds: lease.hyresgaster.map((tenant) => tenant.externalId),
+    subletContactId: lease.andraHandHG?.externalId ?? undefined,
     tenants: undefined,
     rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
-    rentalObject: lease.hyresobjekt[0]
-      ? mapToOnecoreRentalObject(lease.hyresobjekt[0])
+    rentalObject: rentalObject
+      ? mapToOnecoreRentalObject(rentalObject)
       : undefined,
-    type: lease.hyresobjekt[0]?.typ ?? 'missing', // TODO: Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
+    type: mapTenfastTypToLeaseType(rentalObject?.typ),
     rentRows: lease.hyror.map(mapToOnecoreRentRow),
   }
 }

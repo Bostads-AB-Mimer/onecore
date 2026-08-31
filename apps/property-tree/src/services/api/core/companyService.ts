@@ -1,5 +1,5 @@
 import { Company, CompanyDetails } from '../../types'
-import { GET } from './base-api'
+import { GET } from './baseApi'
 
 export const companyService = {
   // Get all companies
@@ -13,11 +13,13 @@ export const companyService = {
     return data.content || []
   },
 
-  // Get company by ID
-  async getById(companyId: string): Promise<CompanyDetails | null> {
-    const { data, error } = await GET('/companies/{id}', {
+  // Get company by organization number
+  async getByOrganizationNumber(
+    organizationNumber: string
+  ): Promise<CompanyDetails | null> {
+    const { data, error } = await GET('/companies/{organizationNumber}', {
       params: {
-        path: { id: companyId },
+        path: { organizationNumber },
       },
     })
     if (error) throw error

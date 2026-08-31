@@ -2,7 +2,7 @@ import { AxiosError } from 'axios'
 
 import { RequestError } from '../../../types'
 
-export declare enum AddCommentRequestErrorCodes {
+export enum AddCommentRequestErrorCodes {
   EmptyComment = 'empty-comment',
   Unknown = 'unknown',
 }

@@ -1,0 +1,48 @@
+{
+  "type": "individual",
+  "contactCode": "P000338",
+  "contactKey": "_0J4157QSC",
+  "personal": {
+    "firstName": "Jonny",
+    "lastName": "Hare",
+    "fullName": "Hare Jonny",
+    "nationalId": "170728350617",
+    "birthDate": "1902-10-28T00:00:00.000Z"
+  },
+  "communication": {
+    "phoneNumbers": [
+      {
+        "phoneNumber": "189976  63",
+        "type": "unspecified",
+        "isPrimary": false
+      },
+      {
+        "phoneNumber": "021-683590",
+        "type": "unspecified",
+        "isPrimary": false,
+        "comment": "(fru)"
+      }
+    ],
+    "emailAddresses": [],
+    "specialAttention": false
+  },
+  "addresses": [
+    {
+      "street": "Holländargatan 1 A",
+      "zipCode": "722 14",
+      "city": "VÄSTERÅS",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Holländargatan 1 A, 722 14, VÄSTERÅS, SVERIGE"
+    },
+    {
+      "street": "Almogeplatsen 27",
+      "zipCode": "722 41",
+      "city": "VÄSTERÅS",
+      "country": "SVERIGE",
+      "region": "SE",
+      "full": "Almogeplatsen 27, 722 41, VÄSTERÅS, SVERIGE",
+      "careOf": "c/o Jörgen Jörgsson"
+    }
+  ]
+}

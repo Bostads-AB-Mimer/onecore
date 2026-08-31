@@ -10,6 +10,8 @@ import {
   ListChecks,
 } from 'lucide-react'
 import { useLocation, Link } from 'react-router-dom'
+import { getPropertyTreeBaseUrl } from '@/utils/externalLinks'
+import onecoreLogo from '@/components/assets/logos/simple/onecore_simple_black.svg'
 
 import {
   Collapsible,
@@ -38,13 +40,18 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader>
-        <h1 className="text-lg font-bold px-2">Nyckelportalen</h1>
+        <div className="flex items-center gap-2 px-2">
+          <a href={getPropertyTreeBaseUrl()} title="Gå till Property Tree">
+            <img src={onecoreLogo} alt="ONECore" className="h-6 w-6" />
+          </a>
+          <h1 className="text-lg font-bold">Nyckelportalen</h1>
+        </div>
       </SidebarHeader>
       <SidebarContent className="gap-0">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {/* Utlåning */}
+              {/* Lånehantering */}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
@@ -52,7 +59,7 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 >
                   <Link to="/KeyLoan">
                     <KeyRound className="h-4 w-4" />
-                    <span>Utlåning</span>
+                    <span>Lånehantering</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

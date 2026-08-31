@@ -35,6 +35,8 @@ export const routes = (router: KoaRouter) => {
     'MaintenanceUnitSearchResult',
     schemas.MaintenanceUnitSearchResultSchema
   )
+  registerSchema('FacilitySearchResult', schemas.FacilitySearchResultSchema)
+  registerSchema('StaircaseSearchResult', schemas.StaircaseSearchResultSchema)
   registerSchema('SearchResult', schemas.SearchResultSchema)
 
   /**
@@ -51,7 +53,9 @@ export const routes = (router: KoaRouter) => {
    *       - Residences: Matches on rental ID or residence name
    *       - Parking Spaces: Matches on rental ID or parking space name
    *       - Maintenance Units: Matches on code
-   *       Returns up to 10 results per entity type (max 50 total results).
+   *       - Facilities: Matches on rental ID or facility name
+   *       - Staircases: Matches on staircase name
+   *       Returns up to 10 results per entity type (max 70 total results).
    *     parameters:
    *       - in: query
    *         name: q
@@ -90,31 +94,33 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const getProperties = await propertyBaseAdapter.searchProperties(
-      queryParams.data.q
-    )
-
-    const getBuildings = await propertyBaseAdapter.searchBuildings(
-      queryParams.data.q
-    )
-
-    const getResidences = await propertyBaseAdapter.searchResidences(
-      queryParams.data.q
-    )
-
-    const getParkingSpaces = await propertyBaseAdapter.searchParkingSpaces(
-      queryParams.data.q
-    )
-
-    const getMaintenanceUnits =
-      await propertyBaseAdapter.searchMaintenanceUnits(queryParams.data.q)
+    const q = queryParams.data.q
+    const [
+      getProperties,
+      getBuildings,
+      getResidences,
+      getParkingSpaces,
+      getMaintenanceUnits,
+      getFacilities,
+      getStaircases,
+    ] = await Promise.all([
+      propertyBaseAdapter.searchProperties(q),
+      propertyBaseAdapter.searchBuildings(q),
+      propertyBaseAdapter.searchResidences(q),
+      propertyBaseAdapter.searchParkingSpaces(q),
+      propertyBaseAdapter.searchMaintenanceUnits(q),
+      propertyBaseAdapter.searchFacilities(q),
+      propertyBaseAdapter.searchStaircases(q),
+    ])
 
     if (
       !getProperties.ok ||
       !getBuildings.ok ||
       !getResidences.ok ||
       !getParkingSpaces.ok ||
-      !getMaintenanceUnits.ok
+      !getMaintenanceUnits.ok ||
+      !getFacilities.ok ||
+      !getStaircases.ok
     ) {
       ctx.status = 500
       return
@@ -124,6 +130,7 @@ export const routes = (router: KoaRouter) => {
       (property): schemas.PropertySearchResult => ({
         id: property.id,
         type: 'property',
+        code: property.code,
         name: property.designation,
       })
     )
@@ -132,6 +139,7 @@ export const routes = (router: KoaRouter) => {
       (building): schemas.BuildingSearchResult => ({
         id: building.id,
         type: 'building',
+        code: building.code,
         name: building.name,
         property: building.property,
       })
@@ -172,6 +180,35 @@ export const routes = (router: KoaRouter) => {
       })
     )
 
+    const mappedFacilities = getFacilities.data.map(
+      (facility): schemas.FacilitySearchResult => ({
+        id: facility.id,
+        type: 'facility',
+        name: facility.name,
+        rentalId: facility.rentalId,
+        code: facility.code,
+        property: facility.property,
+        building: facility.building,
+      })
+    )
+
+    const mappedStaircases = getStaircases.data.map(
+      (staircase): schemas.StaircaseSearchResult => ({
+        id: staircase.id,
+        type: 'staircase',
+        code: staircase.code,
+        name: staircase.name,
+        property: {
+          code: staircase.property.propertyCode,
+          name: staircase.property.propertyName,
+        },
+        building: {
+          code: staircase.building.buildingCode,
+          name: staircase.building.buildingName,
+        },
+      })
+    )
+
     ctx.body = {
       ...metadata,
       content: [
@@ -180,6 +217,8 @@ export const routes = (router: KoaRouter) => {
         ...mappedResidences,
         ...mappedParkingSpaces,
         ...mappedMaintenanceUnits,
+        ...mappedFacilities,
+        ...mappedStaircases,
       ] satisfies SearchResultResponseContent,
     }
   })

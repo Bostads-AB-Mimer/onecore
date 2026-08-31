@@ -4,6 +4,7 @@ import { leasing, WaitingListType, RouteErrorResponse } from '@onecore/types'
 import { z } from 'zod'
 
 import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
+import { valid as isValidPersonnummer } from '../../../helpers/personnummer'
 import * as applicationProfileAdapter from '../adapters/application-profile-adapter'
 import * as contactCommentsAdapter from '../adapters/xpand/contact-comments-adapter'
 import {
@@ -12,6 +13,7 @@ import {
   getContactByPhoneNumber,
 } from '../adapters/xpand/tenant-lease-adapter'
 
+import { syncTenant } from '../adapters/tenfast/tenfast-adapter'
 import {
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
@@ -160,7 +162,7 @@ export const routes = (router: KoaRouter) => {
    * /contacts/for-identity-check:
    *   get:
    *     summary: Get contacts for deceased/protected identity check
-   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Filters out organizations, deceased contacts, and those with invalid registration numbers.
+   *     description: Returns paginated list of person contacts eligible for deceased/protected identity verification. Filters out organizations, deceased contacts, and those with invalid registration numbers. Note - Results are validated using the personnummer package, so the actual count may be fewer than the requested limit if invalid personnummer are filtered out.
    *     tags: [Contacts]
    *     parameters:
    *       - in: query
@@ -225,8 +227,21 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await tenantLeaseAdapter.getContactsForIdentityCheck(ctx)
 
+      // Filter out contacts with invalid personnummer
+      const validContacts = result.content.filter((contact) =>
+        isValidPersonnummer(contact.nationalRegistrationNumber)
+      )
+
       ctx.status = 200
-      ctx.body = { ...metadata, ...result }
+      ctx.body = {
+        ...metadata,
+        ...result,
+        content: validContacts,
+        _meta: {
+          ...result._meta,
+          count: validContacts.length,
+        },
+      }
     } catch (err) {
       logger.error({ err }, 'contacts.for-identity-check')
       ctx.status = 500
@@ -276,12 +291,22 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({
+      includeTerminatedLeases: 'false',
+      includeNonTenantLeases: 'false',
+    })
   router.get(
     '(.*)/contacts/by-national-registration-number/:pnr',
     async (ctx) => {
-      const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+      const metadata = generateRouteMetadata(ctx, [
+        'includeTerminatedLeases',
+        'includeNonTenantLeases',
+      ])
       const queryParams = getContactByPnrQueryParamSchema.safeParse(ctx.query)
 
       if (!queryParams.success) {
@@ -291,7 +316,8 @@ export const routes = (router: KoaRouter) => {
 
       const responseData = await getContactByNationalRegistrationNumber(
         ctx.params.pnr,
-        queryParams.data.includeTerminatedLeases
+        queryParams.data.includeTerminatedLeases,
+        queryParams.data.includeNonTenantLeases
       )
 
       ctx.status = 200
@@ -342,11 +368,21 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({
+      includeTerminatedLeases: 'false',
+      includeNonTenantLeases: 'false',
+    })
 
   router.get('(.*)/contacts/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['includeTerminatedLeases'])
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeNonTenantLeases',
+    ])
 
     const queryParams = getContactByContactCodeQueryParamSchema.safeParse(
       ctx.query
@@ -359,7 +395,8 @@ export const routes = (router: KoaRouter) => {
 
     const result = await getContactByContactCode(
       ctx.params.contactCode,
-      queryParams.data.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases,
+      queryParams.data.includeNonTenantLeases
     )
 
     if (!result.ok) {
@@ -407,7 +444,10 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   description: The tenant data.
    *       404:
-   *         description: Not found.
+   *         description: >
+   *           No tenant found for this contact code. The response body `type`
+   *           distinguishes the cause: `contact-not-found`, `contact-not-tenant`,
+   *           `contact-leases-not-found` or `no-valid-housing-contract`.
    *       500:
    *         description: Internal server error. Failed to retrieve Tenant information.
    */
@@ -428,11 +468,11 @@ export const routes = (router: KoaRouter) => {
       }
 
       if (result.err === 'no-valid-housing-contract') {
-        ctx.status = 500
+        ctx.status = 404
         ctx.body = {
           type: result.err,
           title: 'No valid housing contract found',
-          status: 500,
+          status: 404,
           detail: 'No active or upcoming contract found.',
           ...metadata,
         } satisfies RouteErrorResponse
@@ -440,12 +480,24 @@ export const routes = (router: KoaRouter) => {
       }
 
       if (result.err === 'contact-not-tenant') {
-        ctx.status = 500
+        ctx.status = 404
         ctx.body = {
           type: result.err,
           title: 'Contact is not a tenant',
-          status: 500,
+          status: 404,
           detail: 'No active or upcoming contract found.',
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      if (result.err === 'contact-leases-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          type: result.err,
+          title: 'Contact has no leases',
+          status: 404,
+          detail: 'No leases found for contact.',
           ...metadata,
         } satisfies RouteErrorResponse
         return
@@ -503,11 +555,21 @@ export const routes = (router: KoaRouter) => {
         .enum(['true', 'false'])
         .optional()
         .transform((value) => value === 'true'),
+      includeNonTenantLeases: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     })
-    .default({ includeTerminatedLeases: 'false' })
+    .default({
+      includeTerminatedLeases: 'false',
+      includeNonTenantLeases: 'false',
+    })
 
   router.get('(.*)/contacts/by-phone-number/:phoneNumber', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, [
+      'includeTerminatedLeases',
+      'includeNonTenantLeases',
+    ])
 
     const queryParams = getContactByPhoneNumberQueryParamSchema.safeParse(
       ctx.query
@@ -519,7 +581,8 @@ export const routes = (router: KoaRouter) => {
     }
     const responseData = await getContactByPhoneNumber(
       ctx.params.phoneNumber,
-      queryParams.data.includeTerminatedLeases
+      queryParams.data.includeTerminatedLeases,
+      queryParams.data.includeNonTenantLeases
     )
 
     ctx.status = 200
@@ -1072,4 +1135,49 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/sync:
+   *   post:
+   *     summary: Sync a contact to tenFAST
+   *     description: Triggers tenFAST to pull the latest contact data from ONECore and update the matching hyresgast (and any relations referencing the externalId).
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to sync
+   *     responses:
+   *       200:
+   *         description: Contact synced successfully to tenFAST
+   *       500:
+   *         description: Failed to sync contact to tenFAST
+   */
+  router.post('(.*)/contacts/:contactCode/sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { contactCode } = ctx.params
+
+    const result = await syncTenant(contactCode)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        type: 'tenfast-error',
+        title: `Could not sync tenant to tenFAST: ${result.err}`,
+        status: 500,
+        ...metadata,
+      } satisfies RouteErrorResponse
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: result.data,
+      skipped: result.data === null,
+      ...metadata,
+    }
+  })
 }

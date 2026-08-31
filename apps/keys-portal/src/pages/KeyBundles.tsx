@@ -3,7 +3,7 @@ import { ListPageLayout } from '@/components/shared/layout'
 import { KeyBundlesTable } from '@/components/key-bundles/KeyBundlesTable'
 import { AddKeyBundleForm } from '@/components/key-bundles/AddKeyBundleForm'
 import { ConfirmDialog } from '@/components/shared/dialogs/ConfirmDialog'
-import { KeyBundle, KeyDetails } from '@/services/types'
+import { KeyBundle, KeyDetails, ContactV1 } from '@/services/types'
 import { useToast } from '@/hooks/use-toast'
 import * as keyBundleService from '@/services/api/keyBundleService'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
@@ -22,6 +22,9 @@ export default function KeyBundles() {
   const [keysForExpandedBundle, setKeysForExpandedBundle] = useState<
     KeyDetails[]
   >([])
+  const [contactsForExpandedBundle, setContactsForExpandedBundle] = useState<
+    Record<string, ContactV1>
+  >({})
   const [isLoadingKeys, setIsLoadingKeys] = useState(false)
   const [deletingBundleId, setDeletingBundleId] = useState<string | null>(null)
   const { toast } = useToast()
@@ -213,6 +216,7 @@ export default function KeyBundles() {
       // Collapse if already expanded
       setExpandedBundleId(null)
       setKeysForExpandedBundle([])
+      setContactsForExpandedBundle({})
     } else {
       // Expand and load keys with loan status
       setExpandedBundleId(bundleId)
@@ -222,11 +226,14 @@ export default function KeyBundles() {
           includeLoans: true,
           includeEvents: true,
           includeKeySystem: true,
+          includeContacts: true,
         })
         if (response) {
           setKeysForExpandedBundle(response.keys)
+          setContactsForExpandedBundle(response.contacts ?? {})
         } else {
           setKeysForExpandedBundle([])
+          setContactsForExpandedBundle({})
         }
       } catch (error) {
         console.error('Failed to load keys with loan status:', error)
@@ -236,6 +243,7 @@ export default function KeyBundles() {
           variant: 'destructive',
         })
         setKeysForExpandedBundle([])
+        setContactsForExpandedBundle({})
       } finally {
         setIsLoadingKeys(false)
       }
@@ -269,6 +277,7 @@ export default function KeyBundles() {
         expandedBundleId={expandedBundleId}
         onToggleExpand={handleToggleExpand}
         keysForExpandedBundle={keysForExpandedBundle}
+        contactsForExpandedBundle={contactsForExpandedBundle}
         isLoadingKeys={isLoadingKeys}
         isLoading={isLoading}
         onRefresh={loadKeyBundles}

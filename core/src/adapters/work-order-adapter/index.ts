@@ -1,10 +1,16 @@
 import createClient from 'openapi-fetch'
+import { z } from 'zod'
 import { logger } from '@onecore/utilities'
+import type { SyncContactToWorkOrderPayload } from '@onecore/types'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import {
+  CreateInspectionWorkOrdersResponse,
+  CreateInspectionWorkOrdersResponseSchema,
   CreateWorkOrderResponse,
   CreateWorkOrderResponseSchema,
+  MaintenanceTeam,
+  MaintenanceTeamSchema,
 } from '../../services/work-order-service/schemas'
 import { components, paths } from './generated/api-types'
 
@@ -13,8 +19,35 @@ export type XpandWorkOrder = components['schemas']['XpandWorkOrder']
 export type XpandWorkOrderDetails =
   components['schemas']['XpandWorkOrderDetails']
 
+type SyncContactPaths = paths & {
+  '/contacts/{contactCode}/sync': {
+    post: {
+      parameters: { path: { contactCode: string } }
+      requestBody: {
+        content: { 'application/json': SyncContactToWorkOrderPayload }
+      }
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              content: unknown
+              skipped: boolean
+            }
+          }
+        }
+        400: {
+          content: { 'application/json': { error: string } }
+        }
+        500: {
+          content: { 'application/json': { error: string } }
+        }
+      }
+    }
+  }
+}
+
 const client = () =>
-  createClient<paths>({
+  createClient<SyncContactPaths>({
     baseUrl: config.workOrderService.url,
     headers: {
       'Content-Type': 'application/json',
@@ -397,6 +430,39 @@ export const getXpandWorkOrderDetails = async (
   }
 }
 
+export const getWorkOrderByCode = async (
+  code: string
+): Promise<AdapterResult<OdooWorkOrder, 'not-found' | 'unknown'>> => {
+  try {
+    // Errand codes are formatted `od-<id>`; the id is the Odoo record id.
+    const id = code.replace(/^od-/i, '')
+
+    const fetchResponse = await client().GET('/workOrders/id/{id}', {
+      params: { path: { id } },
+    })
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (fetchResponse.error) {
+      throw fetchResponse.error
+    }
+
+    if (!fetchResponse.data.content?.workOrder) {
+      throw 'missing-content'
+    }
+
+    return {
+      ok: true,
+      data: fetchResponse.data.content.workOrder,
+    }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getWorkOrderByCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const createWorkOrder = async (
   CreateWorkOrder: components['schemas']['CreateWorkOrderBody']
 ): Promise<AdapterResult<CreateWorkOrderResponse, string>> => {
@@ -428,6 +494,63 @@ export const createWorkOrder = async (
     logger.error({ error }, 'work-order-adapter.createWorkOrder')
     const errorMessage = error instanceof Error ? error.message : 'unknown'
     return { ok: false, err: errorMessage }
+  }
+}
+
+export const getMaintenanceTeams = async (): Promise<
+  AdapterResult<
+    MaintenanceTeam[],
+    'request-failed' | 'schema-error' | 'request-error'
+  >
+> => {
+  try {
+    const fetchResponse = await client().GET('/workOrders/maintenanceTeams', {})
+
+    if (fetchResponse.error) {
+      return { ok: false, err: 'request-failed' }
+    }
+
+    const parsed = z
+      .array(MaintenanceTeamSchema)
+      .safeParse(fetchResponse.data?.content)
+    if (!parsed.success) {
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: parsed.data }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.getMaintenanceTeams')
+    return { ok: false, err: 'request-error' }
+  }
+}
+
+export const createInspectionWorkOrders = async (
+  body: components['schemas']['CreateInspectionWorkOrdersBody']
+): Promise<
+  AdapterResult<
+    CreateInspectionWorkOrdersResponse,
+    'request-failed' | 'schema-error' | 'request-error'
+  >
+> => {
+  try {
+    const fetchResponse = await client().POST('/workOrders/fromInspection', {
+      body,
+    })
+
+    if (fetchResponse.data?.content) {
+      const parsed = CreateInspectionWorkOrdersResponseSchema.safeParse(
+        fetchResponse.data.content
+      )
+      if (!parsed.success) {
+        return { ok: false, err: 'schema-error' }
+      }
+      return { ok: true, data: parsed.data }
+    }
+
+    return { ok: false, err: 'request-failed' }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.createInspectionWorkOrders')
+    return { ok: false, err: 'request-error' }
   }
 }
 
@@ -480,5 +603,37 @@ export const closeWorkOrder = async (
     logger.error({ error }, 'work-order-adapter.closeWorkOrder')
     const errorMessage = error instanceof Error ? error.message : 'unknown'
     return { ok: false, err: errorMessage }
+  }
+}
+
+export async function syncContactToWorkOrder(
+  contactCode: string,
+  contactData: Omit<SyncContactToWorkOrderPayload, 'contactCode'>
+): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
+  try {
+    const response = await client().POST('/contacts/{contactCode}/sync', {
+      params: { path: { contactCode } },
+      body: { contactCode, ...contactData },
+    })
+
+    if (response.error) {
+      logger.error(
+        { error: response.error },
+        'work-order-adapter.syncContactToWorkOrder'
+      )
+      return {
+        ok: false,
+        err: 'sync-failed',
+        statusCode: response.response.status,
+      }
+    }
+
+    return {
+      ok: true,
+      data: { skipped: response.data?.skipped === true },
+    }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.syncContactToWorkOrder')
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }

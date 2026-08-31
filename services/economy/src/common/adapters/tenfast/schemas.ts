@@ -1,36 +1,20 @@
 import { z } from 'zod'
 
-export const TenfastLeaseSchema = z.object({
-  _id: z.string(),
-  hyresgaster: z.array(
-    z.object({
-      externalId: z.string(),
-      name: z.object({
-        first: z.string(),
-        last: z.string(),
-      }),
-      _id: z.string(),
-      isCompany: z.boolean(),
-      displayName: z.string(),
-    })
-  ),
-  hyresobjekt: z.array(
-    z.object({
-      _id: z.string(),
-      nummer: z.string(),
-      postadress: z.string(),
-      skvNummer: z.number().nullable(),
-      displayName: z.string(),
-      subType: z.string(),
-      states: z.array(z.any()),
-    })
-  ),
-  reference: z.number(),
-  stage: z.string(),
-  invitationsToRegister: z.array(z.any()),
-  canDelete: z.boolean(),
-  depositState: z.array(z.any()),
-  id: z.string(),
+// Handles '', null, undefined, Date, or ISO string — normalises to Date | null
+export const optionalDateField = z
+  .union([z.string(), z.date(), z.null(), z.undefined()])
+  .transform((val) => (!val || val === '' ? null : val))
+  .pipe(z.coerce.date().nullable())
+
+const TenfastPartOfYearSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+})
+
+const TenfastFileSchema = z.object({
+  key: z.string(),
+  location: z.string(),
+  originalName: z.string(),
 })
 
 export const TenfastInvoiceRowSchema = z.object({
@@ -46,6 +30,119 @@ export const TenfastInvoiceRowSchema = z.object({
   _id: z.string(),
 })
 
+export const TenfastRentalPropertySchema = z.object({
+  hyresvard: z.string(),
+  hyra: z.number(),
+  hyraExcludingVat: z.number(),
+  hyraVat: z.number(),
+  hyror: z.array(TenfastInvoiceRowSchema),
+  nummer: z.string(),
+  skvNummer: z.number().nullable(),
+  postnummer: z.string(),
+  postadress: z.string(),
+  commonName: z.string().optional(),
+  stad: z.string(),
+  stadsdel: z.string(),
+  typ: z.string(),
+  kvm: z.number(),
+  roomCount: z.number().nullable(),
+  bostadType: z.string().nullable(),
+  parkeringType: z.string().nullable(),
+  lokalType: z.string().nullable(),
+  category: z.any(), // TODO ? ska vara string
+  description: z.string().optional(),
+  public: z.boolean().optional(),
+  images: z.array(TenfastFileSchema),
+  files: z.array(TenfastFileSchema),
+  comments: z.array(z.string()),
+  tags: z.array(z.string()),
+  externalId: z.string(),
+  useCounter: z.number(),
+  contractTemplate: z.string().optional(),
+  terminationTemplate: z.string().optional(),
+  avtalStates: z.array(z.string()),
+  states: z.array(z.string()),
+  lastStateChanged: z.string(),
+  rentFreePeriod: TenfastPartOfYearSchema.optional(),
+  displayName: z.string(),
+  createdAt: z.coerce.date().optional(),
+  updatedAt: z.coerce.date(),
+})
+
+export const TenfastLeaseSchema = z.object({
+  _id: z.string(),
+  id: z.string(),
+  externalId: z.string(), // Onecore canonical lease id, e.g. "306-008-01-0201/02"
+  stage: z.enum([
+    'archived',
+    'voided',
+    'terminated',
+    'active',
+    'signingInProgress',
+    'upcoming',
+    'draft',
+    'terminationScheduled',
+    'preTermination',
+  ]),
+  startDate: z.coerce
+    .date()
+    .optional()
+    .default(() => new Date()),
+  endDate: optionalDateField,
+  hyresgaster: z
+    .array(
+      z.object({
+        name: z.object({
+          first: z.string(),
+          last: z.string(),
+        }),
+        _id: z.string(),
+        isCompany: z.boolean(),
+        displayName: z.string(),
+        externalId: z.string()
+      })
+    )
+    .min(1),
+  hyresobjekt: z.array(TenfastRentalPropertySchema).min(1),
+  reference: z.number(),
+  invitationsToRegister: z.array(z.any()),
+  canDelete: z.boolean(),
+  depositState: z.array(z.any()),
+})
+
+export const TenfastInvoiceStateSchema = z.enum([
+  'betald',
+  'ny',
+  'ej-avprickad',
+  'forsenad',
+  'delvis-betald',
+  'krediterad',
+  'makulerad',
+  'draft',
+  'pamind',
+  'gracePeriod',
+])
+
+export type TenfastInvoiceState = z.infer<typeof TenfastInvoiceStateSchema>
+
+/** Tenfast invoice states parsed but not exposed as Invoice. */
+export const EXCLUDED_TENFAST_INVOICE_STATES: readonly TenfastInvoiceState[] = [
+  'draft',
+]
+
+export function isVisibleTenfastInvoice(invoice: {
+  state: TenfastInvoiceState
+}): boolean {
+  return !EXCLUDED_TENFAST_INVOICE_STATES.includes(invoice.state)
+}
+
+export const TenfastGracePeriodSchema = z.object({
+  endDate: z.string(),
+  reason: z.string(),
+  madeBy: z.string(),
+  madeByEmail: z.string(),
+})
+
 export const TenfastInvoiceSchema = z.object({
   interval: z.object({
     from: z.string(),
@@ -53,14 +150,13 @@ export const TenfastInvoiceSchema = z.object({
   }),
   _id: z.string(),
   hyresvard: z.string(),
-  avtal: z.array(z.string()),
-  hyror: z.array(TenfastInvoiceRowSchema),
+  avtal: z.array(TenfastLeaseSchema),
+  hyror: TenfastInvoiceRowSchema.array(),
   vatEnabled: z.boolean(),
   propertyTax: z.boolean(),
   simpleHyra: z.boolean(),
   amount: z.number(),
   amountPaid: z.number(),
-  roundingAmount: z.number(),
   acceptDiff: z.boolean(),
   aviseringsTyp: z.string(),
   expectedInvoiceDate: z.string(),
@@ -72,18 +168,209 @@ export const TenfastInvoiceSchema = z.object({
   ekoNotifications: z.array(z.any()),
   skipEmail: z.boolean(),
   markedAsLate: z.boolean(),
+  roundingAmount: z.number().optional(),
+  reference: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  __v: z.number(),
   ocrNumber: z.string(),
   late: z.boolean(),
-  state: z.string(),
-  reference: z.coerce.string(),
+  state: TenfastInvoiceStateSchema,
+  gracePeriod: TenfastGracePeriodSchema.nullish(),
   recipientContactCode: z.string().optional(),
   recipientName: z.string().optional(),
   contractCode: z.string().optional(),
-  //id: z.string(),
 })
+
+export const TenfastTenantSchema = z.object({
+  _id: z.string(),
+  hyresvard: z.string(),
+  isCompany: z.boolean(),
+  name: z.object({
+    first: z.string(),
+    last: z.string(),
+  }),
+  company: z.string().optional(),
+  idbeteckning: z.string(),
+  moms: z.number(),
+  phone: z.string(),
+  normalizedPhone: z.string().optional(),
+  postadress: z.string(),
+  careOfAddress: z.string().optional(),
+  postnummer: z.string(),
+  stad: z.string(),
+  fortnoxSendMethod: z.string().nullable().optional(),
+  invoiceEmail: z.string().optional(),
+  user: z.string().optional(),
+  borgenarer: z.array(
+    z.object({
+      idbeteckning: z.string(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+    })
+  ),
+  firmatecknare: z.array(
+    z.object({
+      idbeteckning: z.string(),
+      email: z.string().optional(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+    })
+  ),
+  fakturaMottagare: z
+    .object({
+      name: z.string().nullable().optional(),
+      idbeteckning: z.string().optional(),
+      email: z.string().nullable().optional(),
+      phone: z.string().nullable().optional(),
+      postadress: z.string().nullable().optional(),
+      postnummer: z.string().nullable().optional(),
+      godMan: z.boolean().optional(),
+    })
+    .optional(),
+  isTrustee: z.boolean().optional(),
+  trustee: z
+    .object({
+      name: z.string().nullable().optional(),
+      idbeteckning: z.string().optional(),
+      email: z.string().nullable().optional(),
+      phone: z.string().nullable().optional(),
+      postadress: z.string().nullable().optional(),
+      postnummer: z.string().nullable().optional(),
+    })
+    .optional(),
+  alternatePhones: z.array(z.string()),
+  comments: z.array(z.any()),
+  fortnoxId: z.string().nullable().optional(),
+  externalId: z.string(),
+  signeringsMetod: z.string(),
+  displayName: z.string(),
+  onlineInboxes: z.record(z.any()).optional(),
+  archivedAt: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+})
+
+export const TenfastAccountConfigurationSchema = z.object({
+  accountNr: z.number(),
+  categoryCode: z.string(),
+  debitType: z.string(),
+  costCenter: z.string(),
+  property: z.string(),
+  freeText: z.string(),
+  projectCode: z.string(),
+})
+
+export type TenfastAccountConfiguration = z.infer<
+  typeof TenfastAccountConfigurationSchema
+>
+export const TenfastRentArticleSchema = z.object({
+  includeInContract: z.boolean(),
+  _id: z.string(),
+  label: z.string(),
+  type: z.string(),
+  accountNr: z.string().nullable(),
+  createdAt: z.string(),
+  hyresvard: z.string(),
+  code: z.string(),
+  title: z.string(),
+  accountConfigurations: z.array(TenfastAccountConfigurationSchema).optional(),
+})
+
+// Lean lease schema for the batch-get endpoint, where hyresgaster/hyresobjekt
+// are returned as string IDs (not populated objects) unless requested via extra
+// query params we don't need here.
+export const TenfastBatchGetLeaseSchema = TenfastLeaseSchema.extend({
+  hyresgaster: z.array(
+    z.union([z.string(), z.object({ _id: z.string() }).passthrough()])
+  ),
+  hyresobjekt: z.array(
+    z.union([z.string(), z.object({ _id: z.string() }).passthrough()])
+  ),
+})
+
+export const TenfastBatchGetRentalObjectSchema = z
+  .object({
+    _id: z.string(),
+    externalId: z.string(), // rental object code, e.g. "306-008-01-0201"
+    avtal: z.array(TenfastBatchGetLeaseSchema),
+  })
+  .passthrough()
+
+export const TenfastBatchGetRentalObjectsResponseSchema = z.array(
+  TenfastBatchGetRentalObjectSchema
+)
+
+// No schema for this in Tenfast docs currently, this is guesswork based on response
+export const TenfastAutogiroConsentSchema = z.object({
+  _id: z.string(),
+  hyresgast: z.string(),
+  hyresvard: z.string(),
+  hyresvardBankgiro: z.string(),
+  payerNumber: z.number(),
+  fixedDueDay: z.coerce.date().nullable(), // TODO is this a date string?
+  isCompany: z.boolean(),
+  payerSSN: z.string(),
+  status: z.enum(['ACTIVE', 'MANUAL']), // TODO are there more possible statuses?
+  statusChangedAt: z.coerce.date(),
+  extra: z.object({
+    nameAndAddress1: z.string(),
+    mismatch: z.string().nullable(), // TODO is this a string?
+  }),
+  payerBankAccountNumber: z.string(),
+})
+
+export const TenfastAutogiroConsentResponseSchema = z.object({
+  records: z.array(TenfastAutogiroConsentSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
+export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
+export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
+export type TenfastInvoicesByTenantIdResponse = z.infer<
+  typeof TenfastInvoicesByTenantIdResponseSchema
+>
+export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
+export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
+export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
+export type TenfastBatchGetLease = z.infer<typeof TenfastBatchGetLeaseSchema>
+export type TenfastBatchGetRentalObject = z.infer<
+  typeof TenfastBatchGetRentalObjectSchema
+>
+export type TenfastBatchGetRentalObjectsResponse = z.infer<
+  typeof TenfastBatchGetRentalObjectsResponseSchema
+>
+
+export type TenfastRentalProperty = z.infer<typeof TenfastRentalPropertySchema>
+
+export type TenfastAutogiroConsent = z.infer<
+  typeof TenfastAutogiroConsentSchema
+>
+
+export const TenfastOutboundExportSchema = z.object({
+  _id: z.string(),
+  provider: z.string(),
+  type: z.string(),
+  format: z.string(),
+  status: z.enum(['NEW', 'SENT', 'FAILED']),
+  size: z.number(),
+  filename: z.string(),
+  invoicesCount: z.number(),
+  sentAt: z.string().nullable(),
+  failedAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export const TenfastOutboundExportListSchema = z.object({
+  records: z.array(TenfastOutboundExportSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
+export type TenfastOutboundExport = z.infer<typeof TenfastOutboundExportSchema>
 
 export const TenfastInvoiceSnapshotSchema = z.object({
   hyresvard: z.object({
@@ -147,13 +434,14 @@ export const TenfastInvoicesByExportedResponseSchema = z.object({
   records: z.array(
     TenfastInvoiceSchema.extend({
       avtal: z.array(
-        TenfastLeaseSchema.extend({ externalId: z.string().optional() })
+        TenfastLeaseSchema.extend({
+          canVoid: z.boolean().optional(),
+        })
       ),
       ocrNumber: z.string().optional(),
       reference: z.coerce.string().optional(),
     }).transform((data) => ({
       ...data,
-      avtal: data.avtal.map((x) => x.id),
       reference: data.reference ?? '',
       ocrNumber: data.ocrNumber ?? '',
       contractCode: data.avtal[0]?.externalId,
@@ -185,66 +473,16 @@ export const TenfastInvoicesByOcrResponseSchema = z.object({
 export const TenfastInvoicesByTenantIdResponseSchema =
   z.array(TenfastInvoiceSchema)
 
-export const TenfastTenantSchema = z.object({
-  name: z.object({
-    first: z.string(),
-    last: z.string(),
-  }),
-  moms: z.number(),
-  alternatePhones: z.array(z.any()),
-  comments: z.array(z.any()),
-  onlineInboxes: z.record(z.any()),
-  signeringsMetod: z.string(),
-  _id: z.string(),
-  hyresvard: z.string(),
-  isCompany: z.boolean(),
-  phone: z.string(),
-  idbeteckning: z.string(),
-  postadress: z.string(),
-  postnummer: z.string(),
-  stad: z.string(),
-  externalId: z.string(),
-  borgenarer: z.array(z.any()),
-  firmatecknare: z.array(z.any()),
-  displayName: z.string(),
-})
-
-/*export const TenfastTenantByContactCodeResponseSchema = z.object({
-  records: z.array(TenfastTenantSchema),
-})*/
-
 export const TenfastTenantByContactCodeResponseSchema = TenfastTenantSchema
 
-export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
-export type TenfastInvoice = z.infer<typeof TenfastInvoiceSchema>
 export type TenfastInvoicesByExportedResponse = z.infer<
   typeof TenfastInvoicesByExportedResponseSchema
 >
 export type TenfastInvoicesByOcrResponse = z.infer<
   typeof TenfastInvoicesByOcrResponseSchema
 >
-export type TenfastInvoicesByTenantIdResponse = z.infer<
-  typeof TenfastInvoicesByTenantIdResponseSchema
->
-export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
 export type TenfastTenantByContactCodeResponse = z.infer<
   typeof TenfastTenantByContactCodeResponseSchema
->
-
-export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
-
-export const TenfastAccountConfigurationSchema = z.object({
-  accountNr: z.number(),
-  categoryCode: z.string(),
-  debitType: z.string(),
-  costCenter: z.string(),
-  property: z.string(),
-  freeText: z.string(),
-  projectCode: z.string(),
-})
-
-export type TenfastAccountConfiguration = z.infer<
-  typeof TenfastAccountConfigurationSchema
 >
 
 // Rental loss (hyresbortfall) for a single rental object for a single month.
@@ -319,15 +557,3 @@ export const TenfastRentalLossResponseSchema = z.array(TenfastRentalLossSchema)
 
 export type TenfastRentalLossHyra = z.infer<typeof TenfastRentalLossHyraSchema>
 export type TenfastRentalLoss = z.infer<typeof TenfastRentalLossSchema>
-
-export const TenfastRentArticleSchema = z.object({
-  includeInContract: z.boolean(),
-  _id: z.string(),
-  createdAt: z.string().nullable(),
-  hyresvard: z.string(),
-  code: z.string(),
-  title: z.string(),
-  accountConfigurations: z.array(TenfastAccountConfigurationSchema).optional(),
-})
-
-export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>

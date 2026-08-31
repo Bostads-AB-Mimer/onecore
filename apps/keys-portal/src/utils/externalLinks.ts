@@ -58,5 +58,5 @@ export function getPropertyTreeBaseUrl(): string {
 export function getTenantViewLink(contactCode: string): string {
   const baseUrl = getPropertyTreeBaseUrl()
   if (!baseUrl) return ''
-  return `${baseUrl}/tenants/${contactCode}`
+  return `${baseUrl}/hyresgaster/${contactCode}`
 }

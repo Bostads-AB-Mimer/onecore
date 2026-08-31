@@ -1,15 +1,10 @@
 import { jsPDF } from 'jspdf'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
+import QRCode from 'qrcode'
 
-import type {
-  ReceiptData,
-  MaintenanceReceiptData,
-  Card,
-  KeyDetails,
-} from '@/services/types'
+import type { ReceiptData, Card, KeyDetails } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
-import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 import { sortKeys } from '@/utils/sortKeys'
 
 import { registerCustomFonts, FONT_BISON, FONT_GRAPHIK } from './pdf-fonts'
@@ -18,8 +13,9 @@ import logoUrl from '../../assets/MimerLogo_RGB_blk-blue.png'
 // Layout constants
 const PAGE_W = 210
 const MARGIN_X = 20
-const MARGIN_TOP = 20
-const FOOTER_H = 40
+const MARGIN_TOP = 10
+const MARGIN_TOP_CONTINUATION = 35
+const FOOTER_H = 25
 const BLUE = { r: 0, g: 123, b: 196 }
 const RED = { r: 200, g: 0, b: 0 }
 
@@ -31,7 +27,6 @@ const FONT_SIZE = {
   TABLE_HEADER: 10, // Nyckelnamn, Typ, Löp.nr, Flex.nr
   BODY: 10, // Regular body text
   FOOTER: 8, // Footer text
-  RECEIPT_ID: 7, // Small receipt ID at bottom
 }
 
 // Content area calculation
@@ -61,6 +56,27 @@ const generateReceiptNumber = (type: 'loan' | 'return'): string => {
   const timestamp = format(now, 'yyyyMMdd-HHmmss')
   const prefix = type === 'loan' ? 'NYL' : 'NYÅ'
   return `${prefix}-${timestamp}`
+}
+
+/**
+ * Generates a QR code as a data URL and adds it to the top-right of every page.
+ * Only added to loan receipts so scanners can read the loan UUID.
+ * QR on every page enables batch scanning — pages are grouped by UUID.
+ */
+const addQrCode = async (doc: jsPDF, loanId: string): Promise<void> => {
+  const qrDataUrl = await QRCode.toDataURL(loanId, {
+    width: 200,
+    margin: 1,
+    errorCorrectionLevel: 'M',
+  })
+  const qrSize = 35
+  const x = PAGE_W - MARGIN_X - qrSize
+  const y = 5
+  const totalPages = doc.getNumberOfPages()
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page)
+    doc.addImage(qrDataUrl, 'PNG', x, y, qrSize, qrSize)
+  }
 }
 
 /* ============================================================================
@@ -102,18 +118,24 @@ const addMeta = (doc: jsPDF, y: number, type: 'loan' | 'return'): number => {
   y += 5
   doc.text(`Tid: ${format(when, 'HH:mm')}`, MARGIN_X, y)
 
-  return y + 12
+  return y + 8
 }
 
 /**
  * Adds tenant info (Hyresgäst) and lease info (Avtal) in two columns
  */
-const addTenantInfo = async (
+const addTenantInfo = (
   doc: jsPDF,
-  tenants: ReceiptData['tenants'],
-  lease: ReceiptData['lease'],
+  data: Pick<
+    ReceiptData,
+    'contacts' | 'leaseDisplayId' | 'rentalPropertyId' | 'address'
+  >,
   y: number
-): Promise<number> => {
+): number => {
+  const tenants = data.contacts
+  // All values are pre-resolved by receiptHandlers; this only lays out text.
+  const rentalPropertyId = data.rentalPropertyId || '-'
+  const leaseId = data.leaseDisplayId ?? null
   const leftCol = MARGIN_X
   const rightCol = 110
 
@@ -151,55 +173,79 @@ const addTenantInfo = async (
     leftY += 8
   })
 
-  // Right column: Display lease info
-  doc.text(`Hyresobjekt: ${lease.rentalPropertyId}`, rightCol, rightY)
+  // Right column: Display lease info (rental object ID in bold)
+  const hyresobjektLabel = 'Hyresobjekt: '
+  doc.text(hyresobjektLabel, rightCol, rightY)
+  const labelWidth = doc.getTextWidth(hyresobjektLabel)
+  doc.setFont(FONT_GRAPHIK, 'bold')
+  doc.text(rentalPropertyId, rightCol + labelWidth, rightY)
+  doc.setFont(FONT_GRAPHIK, 'normal')
   rightY += 5
 
   // Wrap long leaseId
-  const leaseIdLines = doc.splitTextToSize(`Avtals-ID: ${lease.leaseId}`, 75)
+  const leaseIdLines = doc.splitTextToSize(`Avtals-ID: ${leaseId || '-'}`, 75)
   doc.text(leaseIdLines, rightCol, rightY)
   rightY += Array.isArray(leaseIdLines) ? leaseIdLines.length * 5 : 5
 
-  // Display address from lease data, with API search fallback
-  let addressStr: string | null = null
-  const addr = lease.rentalProperty?.address
-  if (addr) {
-    const street = [addr.street, addr.number].filter(Boolean).join(' ')
-    const city = [addr.postalCode, addr.city].filter(Boolean).join(' ')
-    addressStr = [street, city].filter(Boolean).join(', ') || null
-  }
-
-  if (!addressStr) {
-    try {
-      const fetched = await rentalObjectSearchService.getAddressByRentalId(
-        lease.rentalPropertyId
-      )
-      if (fetched && fetched !== 'Okänd adress') {
-        addressStr = fetched
-      }
-    } catch {
-      // ignore - will show "-"
-    }
-  }
-
-  doc.text(`Adress: ${addressStr || '-'}`, rightCol, rightY)
+  doc.text(`Adress: ${data.address || '-'}`, rightCol, rightY)
   rightY += 5
 
-  return Math.max(leftY, rightY) + 10
+  return Math.max(leftY, rightY) + 6
 }
+
+/**
+ * Column x-positions for the keys table. The maintenance variant adds a
+ * Tillhörighet column between Löp.nr and Flex.nr; tenant keeps the original
+ * 6-column layout.
+ */
+const KEYS_COLS_TENANT = {
+  namn: MARGIN_X,
+  lassystem: 50,
+  lopnr: 90,
+  flexnr: 115,
+  typ: 145,
+  status: 175,
+} as const
+
+const KEYS_COLS_MAINTENANCE = {
+  namn: MARGIN_X,
+  lassystem: 42,
+  lopnr: 62,
+  scope: 78,
+  scopeMax: 136 - 78, // 58mm available before Flex.nr
+  flexnr: 136,
+  typ: 150,
+  status: 175,
+} as const
 
 /**
  * Renders table header row for keys table
  */
-const renderKeysTableHeader = (doc: jsPDF, y: number): void => {
+const renderKeysTableHeader = (
+  doc: jsPDF,
+  y: number,
+  withScope = false
+): void => {
   doc.setFont(FONT_GRAPHIK, 'bold')
   doc.setFontSize(FONT_SIZE.TABLE_HEADER)
-  doc.text('Namn', MARGIN_X, y)
-  doc.text('Låssystem', 50, y)
-  doc.text('Löp.nr', 90, y)
-  doc.text('Flex.nr', 115, y)
-  doc.text('Typ', 145, y)
-  doc.text('Status', 175, y)
+  if (withScope) {
+    const c = KEYS_COLS_MAINTENANCE
+    doc.text('Namn', c.namn, y)
+    doc.text('Låssystem', c.lassystem, y)
+    doc.text('Löp.nr', c.lopnr, y)
+    doc.text('Tillhörighet', c.scope, y)
+    doc.text('Flex.nr', c.flexnr, y)
+    doc.text('Typ', c.typ, y)
+    doc.text('Status', c.status, y)
+  } else {
+    const c = KEYS_COLS_TENANT
+    doc.text('Namn', c.namn, y)
+    doc.text('Låssystem', c.lassystem, y)
+    doc.text('Löp.nr', c.lopnr, y)
+    doc.text('Flex.nr', c.flexnr, y)
+    doc.text('Typ', c.typ, y)
+    doc.text('Status', c.status, y)
+  }
 
   doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
   doc.setLineWidth(0.3)
@@ -224,22 +270,48 @@ const renderCardsTableHeader = (doc: jsPDF, y: number): void => {
 }
 
 /**
- * Renders a single key row
+ * Renders a single key row. Returns the height used (lets the caller advance
+ * correctly when a long Tillhörighet value wraps to a second line on the
+ * maintenance variant).
  */
-const renderKeyRow = (doc: jsPDF, k: KeyDetails, y: number): void => {
+const renderKeyRow = (
+  doc: jsPDF,
+  k: KeyDetails,
+  y: number,
+  scope?: string
+): number => {
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
 
-  doc.text(k.keyName, MARGIN_X, y)
-  const systemCode = k.keySystem?.systemCode || '-'
-  doc.text(systemCode, 50, y)
-  doc.text(k.keySequenceNumber ? String(k.keySequenceNumber) : '-', 90, y)
-  doc.text(k.flexNumber ? String(k.flexNumber) : '-', 115, y)
   const labelForType =
     (KeyTypeLabels as Record<string, string>)[k.keyType as unknown as string] ||
     (k.keyType as string)
-  doc.text(labelForType, 145, y)
-  doc.text(k.disposed ? 'Kasserad' : 'Aktiv', 175, y)
+  const systemCode = k.keySystem?.systemCode || '-'
+  const status = k.disposed ? 'Kasserad' : 'Aktiv'
+  const lopnr = k.keySequenceNumber ? String(k.keySequenceNumber) : '-'
+  const flexnr = k.flexNumber ? String(k.flexNumber) : '-'
+
+  if (scope !== undefined) {
+    const c = KEYS_COLS_MAINTENANCE
+    const lines = doc.splitTextToSize(scope, c.scopeMax) as string[]
+    doc.text(k.keyName, c.namn, y)
+    doc.text(systemCode, c.lassystem, y)
+    doc.text(lopnr, c.lopnr, y)
+    doc.text(lines, c.scope, y)
+    doc.text(flexnr, c.flexnr, y)
+    doc.text(labelForType, c.typ, y)
+    doc.text(status, c.status, y)
+    return Math.max(6, lines.length * 5)
+  }
+
+  const c = KEYS_COLS_TENANT
+  doc.text(k.keyName, c.namn, y)
+  doc.text(systemCode, c.lassystem, y)
+  doc.text(lopnr, c.lopnr, y)
+  doc.text(flexnr, c.flexnr, y)
+  doc.text(labelForType, c.typ, y)
+  doc.text(status, c.status, y)
+  return 6
 }
 
 /**
@@ -259,7 +331,9 @@ const renderCardRow = (doc: jsPDF, c: Card, y: number): void => {
 }
 
 /**
- * Renders keys and cards as two separate tables under one section header
+ * Renders keys and cards as two separate tables under one section header.
+ * When `scopeByKeyId` is provided, the keys table switches to the
+ * maintenance variant with an inline Tillhörighet column per row.
  */
 const renderItemsTableSection = (
   doc: jsPDF,
@@ -268,7 +342,7 @@ const renderItemsTableSection = (
   y: number,
   headerText: string,
   headerColor: { r: number; g: number; b: number } = BLUE,
-  reserveAfter: number = 0
+  scopeByKeyId?: Record<string, string>
 ): number => {
   const hasKeys = keys.length > 0
   const hasCards = cards && cards.length > 0
@@ -276,11 +350,12 @@ const renderItemsTableSection = (
 
   const bottom = contentBottom(doc)
   const minSpaceNeeded = 35
-  const rowH = 6
+  const defaultRowH = 6
+  const withScope = !!scopeByKeyId
 
   if (y + minSpaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header in Bison Bold
@@ -294,18 +369,15 @@ const renderItemsTableSection = (
 
   // Keys table
   if (hasKeys) {
-    renderKeysTableHeader(doc, cy)
+    renderKeysTableHeader(doc, cy, withScope)
     cy += 9
 
-    keys.forEach((key, index) => {
-      const isLast = index === keys.length - 1 && !hasCards
-      const spaceNeeded = isLast ? reserveAfter + 15 : rowH + 5
-
-      if (cy + spaceNeeded > bottom) {
+    keys.forEach((key) => {
+      if (cy + defaultRowH + 5 > bottom) {
         doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
-        cy = MARGIN_TOP
+        cy = MARGIN_TOP_CONTINUATION
 
         doc.setFont(FONT_BISON, 'bold')
         doc.setFontSize(FONT_SIZE.SECTION_HEADER)
@@ -314,12 +386,17 @@ const renderItemsTableSection = (
         doc.setTextColor(0, 0, 0)
 
         cy += 10
-        renderKeysTableHeader(doc, cy)
+        renderKeysTableHeader(doc, cy, withScope)
         cy += 9
       }
 
-      renderKeyRow(doc, key, cy)
-      cy += rowH
+      const defaultRowHeight = renderKeyRow(
+        doc,
+        key,
+        cy,
+        scopeByKeyId?.[key.id]
+      )
+      cy += defaultRowHeight
     })
 
     // Bottom line for keys table
@@ -334,21 +411,18 @@ const renderItemsTableSection = (
 
     if (cy + minSpaceNeeded > bottom) {
       doc.addPage()
-      cy = MARGIN_TOP
+      cy = MARGIN_TOP_CONTINUATION
     }
 
     renderCardsTableHeader(doc, cy)
     cy += 9
 
-    cards.forEach((card, index) => {
-      const isLast = index === cards.length - 1
-      const spaceNeeded = isLast ? reserveAfter + 15 : rowH + 5
-
-      if (cy + spaceNeeded > bottom) {
+    cards.forEach((card) => {
+      if (cy + defaultRowH + 5 > bottom) {
         doc.setDrawColor(BLUE.r, BLUE.g, BLUE.b)
         doc.line(MARGIN_X, cy, PAGE_W - MARGIN_X, cy)
         doc.addPage()
-        cy = MARGIN_TOP
+        cy = MARGIN_TOP_CONTINUATION
 
         doc.setFont(FONT_BISON, 'bold')
         doc.setFontSize(FONT_SIZE.SECTION_HEADER)
@@ -362,7 +436,7 @@ const renderItemsTableSection = (
       }
 
       renderCardRow(doc, card, cy)
-      cy += rowH
+      cy += defaultRowH
     })
 
     // Bottom line for cards table
@@ -388,7 +462,7 @@ const renderItemsTableSection = (
     doc.text(`Totalt antal nycklar: ${keys.length}`, MARGIN_X, cy)
   }
 
-  return cy + 10
+  return cy + 14
 }
 
 /**
@@ -399,7 +473,7 @@ const renderItemsTable = (
   keys: ReceiptData['keys'],
   cards: Card[] | undefined,
   y: number,
-  reserveAfter: number = 0
+  scopeByKeyId?: Record<string, string>
 ): number => {
   const hasCards = cards && cards.length > 0
   const headerText = hasCards ? 'NYCKLAR OCH DROPPAR' : 'NYCKLAR'
@@ -410,12 +484,15 @@ const renderItemsTable = (
     y,
     headerText,
     BLUE,
-    reserveAfter
+    scopeByKeyId
   )
 }
 
 /**
- * Renders items tables for return receipts (returned, missing, disposed sections)
+ * Renders items tables for return receipts (returned, missing, remaining-on-loan,
+ * disposed sections). missing and remaining-on-loan are mutually exclusive: a
+ * receipt is either a "missing keys" return (full loan close, items unaccounted
+ * for) or a partial return (items continue on a new loan), never both.
  */
 const renderReturnItemsTable = (
   doc: jsPDF,
@@ -424,29 +501,35 @@ const renderReturnItemsTable = (
   missingKeys: ReceiptData['keys'] | undefined,
   missingCards: Card[] | undefined,
   disposedKeys: ReceiptData['keys'] | undefined,
+  remainingLoanKeys: ReceiptData['keys'] | undefined,
+  remainingLoanCards: Card[] | undefined,
   y: number,
-  reserveAfter: number = 0
+  scopeByKeyId?: Record<string, string>
 ): number => {
   const hasMissingKeys = missingKeys && missingKeys.length > 0
   const hasMissingCards = missingCards && missingCards.length > 0
   const hasMissing = hasMissingKeys || hasMissingCards
+  const hasRemainingKeys = remainingLoanKeys && remainingLoanKeys.length > 0
+  const hasRemainingCards = remainingLoanCards && remainingLoanCards.length > 0
+  const hasRemaining = hasRemainingKeys || hasRemainingCards
   const hasDisposed = disposedKeys && disposedKeys.length > 0
   const hasCards =
-    (returnedCards && returnedCards.length > 0) || hasMissingCards
+    (returnedCards && returnedCards.length > 0) ||
+    hasMissingCards ||
+    hasRemainingCards
 
   // Determine header text based on what sections exist
   let returnedHeader = 'NYCKLAR'
   if (hasCards) {
     returnedHeader =
-      hasMissing || hasDisposed
+      hasMissing || hasRemaining || hasDisposed
         ? 'INLÄMNADE NYCKLAR OCH DROPPAR'
         : 'NYCKLAR OCH DROPPAR'
-  } else if (hasMissing || hasDisposed) {
+  } else if (hasMissing || hasRemaining || hasDisposed) {
     returnedHeader = 'INLÄMNADE NYCKLAR'
   }
 
   // Returned items section
-  const returnedReserve = hasMissing || hasDisposed ? 0 : reserveAfter
   y = renderItemsTableSection(
     doc,
     returnedKeys,
@@ -454,13 +537,12 @@ const renderReturnItemsTable = (
     y,
     returnedHeader,
     BLUE,
-    returnedReserve
+    scopeByKeyId
   )
 
   // Missing items section (red)
   if (hasMissing) {
     y += 4
-    const missingReserve = hasDisposed ? 0 : reserveAfter
     const missingHeader = hasCards
       ? 'SAKNADE NYCKLAR OCH DROPPAR'
       : 'SAKNADE NYCKLAR'
@@ -471,7 +553,24 @@ const renderReturnItemsTable = (
       y,
       missingHeader,
       RED,
-      missingReserve
+      scopeByKeyId
+    )
+  }
+
+  // Remaining-on-loan items (partial return) — blue, since this isn't a problem
+  if (hasRemaining) {
+    y += 4
+    const remainingHeader = hasRemainingCards
+      ? 'NYCKLAR OCH DROPPAR KVAR PÅ LÅN'
+      : 'NYCKLAR KVAR PÅ LÅN'
+    y = renderItemsTableSection(
+      doc,
+      remainingLoanKeys || [],
+      remainingLoanCards,
+      y,
+      remainingHeader,
+      BLUE,
+      scopeByKeyId
     )
   }
 
@@ -485,7 +584,7 @@ const renderReturnItemsTable = (
       y,
       'KASSERADE NYCKLAR',
       BLUE,
-      reserveAfter
+      scopeByKeyId
     )
   }
 
@@ -493,55 +592,36 @@ const renderReturnItemsTable = (
 }
 
 /**
- * Adds maintenance info (Företag) and details in two columns
+ * Adds the Företag header block for a maintenance receipt. Per-key Tillhörighet
+ * is rendered inline in the Nycklar table further down, so no right column here.
  */
 const addMaintenanceInfo = (
   doc: jsPDF,
-  data: MaintenanceReceiptData,
+  data: Pick<ReceiptData, 'contacts' | 'contactPerson'>,
   y: number
 ): number => {
   const leftCol = MARGIN_X
-  const rightCol = 110
+  const company = data.contacts[0]
 
-  // Section headers - BOLD (Graphik Semibold)
   doc.setFont(FONT_GRAPHIK, 'bold')
   doc.setFontSize(FONT_SIZE.SUB_HEADER)
   doc.setTextColor(0, 0, 0)
-
-  // Left column header
   doc.text('Företag', leftCol, y)
-  // Right column header (only if we have content)
-  if (data.contactPerson || data.description) {
-    doc.text('Detaljer', rightCol, y)
-  }
 
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
   let leftY = y + 7
-  let rightY = y + 7
 
-  // Left column: Company name and customer number
-  doc.text(`Namn: ${data.contactName}`, leftCol, leftY)
+  doc.text(`Namn: ${company?.fullName || '-'}`, leftCol, leftY)
   leftY += 5
-  doc.text(`Kundnummer: ${data.contact}`, leftCol, leftY)
-  leftY += 8
-
-  // Right column: Contact person and description
+  doc.text(`Kundnummer: ${company?.contactCode || '-'}`, leftCol, leftY)
+  leftY += 5
   if (data.contactPerson) {
-    doc.text(`Kontaktperson: ${data.contactPerson}`, rightCol, rightY)
-    rightY += 5
+    doc.text(`Kontaktperson: ${data.contactPerson}`, leftCol, leftY)
+    leftY += 5
   }
 
-  if (data.description) {
-    const descLines = doc.splitTextToSize(
-      `Beskrivning: ${data.description}`,
-      75
-    )
-    doc.text(descLines, rightCol, rightY)
-    rightY += Array.isArray(descLines) ? descLines.length * 5 : 5
-  }
-
-  return Math.max(leftY, rightY) + 10
+  return leftY + 6
 }
 
 /**
@@ -549,11 +629,21 @@ const addMaintenanceInfo = (
  */
 const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
   const bottom = contentBottom(doc)
-  const spaceNeeded = 55
+
+  const confirmText =
+    'För Mimers personal: Lån av nycklar sker under förutsättning att nyckellånaren tar hela ansvaret för dess användande. Om nyckel förkommer skall nyckellånaren omgående informera aktuell Distriktschef för vidare hantering. Nycklar ska alltid fästas med kedja.\n\nFör övriga: Lån av huvudnyckel/fastighetsskötarnyckel sker under förutsättning att nyckellånaren tar hela ansvaret för dess användande enligt ansvarsförbindelsen. Denne förbinder sig att svara för samtliga kostnader som kan uppstå genom förlust av utkvitterad nyckel, såsom till exempel byte av låssystem inkl. nycklar och cylindrar och ev. nödvändig bevakning under tiden. Nycklar ska alltid fästas med kedja.'
+
+  // Pre-compute wrapped lines to calculate actual space needed
+  doc.setFont(FONT_GRAPHIK, 'normal')
+  doc.setFontSize(FONT_SIZE.BODY)
+  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
+  const textHeight = lines.length * 5.5
+  // header (10) + text + gap (10) + signature line (5) + label (10)
+  const spaceNeeded = 10 + textHeight + 10 + 5 + 10
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header
@@ -569,16 +659,12 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
 
-  const confirmText =
-    'Jag bekräftar att jag har mottagit ovanstående nycklar och att jag är ansvarig för dem. Vid förlust eller skada debiteras kostnad för byte av lås.'
-
-  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
   lines.forEach((line: string) => {
     doc.text(line, MARGIN_X, y)
     y += 5.5
   })
 
-  y += 15
+  y += 10
 
   // Signature line
   doc.setDrawColor(0, 0, 0)
@@ -596,61 +682,19 @@ const addMaintenanceLoanConfirmation = (doc: jsPDF, y: number): number => {
 }
 
 /**
- * Adds the BEKRÄFTELSE (confirmation) section for maintenance return receipts
- */
-const addMaintenanceReturnConfirmation = (
-  doc: jsPDF,
-  y: number,
-  hasMissingItems: boolean
-): number => {
-  const bottom = contentBottom(doc)
-  const spaceNeeded = 35
-
-  if (y + spaceNeeded > bottom) {
-    doc.addPage()
-    y = MARGIN_TOP
-  }
-
-  // Section header
-  doc.setFont(FONT_BISON, 'bold')
-  doc.setFontSize(FONT_SIZE.SECTION_HEADER)
-  doc.setTextColor(BLUE.r, BLUE.g, BLUE.b)
-  doc.text('BEKRÄFTELSE', MARGIN_X, y)
-  doc.setTextColor(0, 0, 0)
-
-  y += 10
-
-  // Confirmation text
-  doc.setFont(FONT_GRAPHIK, 'normal')
-  doc.setFontSize(FONT_SIZE.BODY)
-
-  const confirmText = hasMissingItems
-    ? 'Ovanstående nycklar och droppar har återlämnats och kontrollerats. Observera att vissa nycklar eller droppar saknas (se lista ovan).'
-    : 'Ovanstående nycklar har återlämnats och kontrollerats.'
-
-  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
-  lines.forEach((line: string) => {
-    doc.text(line, MARGIN_X, y)
-    y += 5.5
-  })
-
-  return y + 10
-}
-
-/**
  * Adds the BEKRÄFTELSE (confirmation) section for loan receipts
  */
 const addLoanConfirmation = (
   doc: jsPDF,
   y: number,
-  tenants: ReceiptData['tenants']
+  contacts: ReceiptData['contacts']
 ): number => {
   const bottom = contentBottom(doc)
-  const spaceNeeded = 55
+  const spaceNeeded = 50
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header
@@ -675,7 +719,7 @@ const addLoanConfirmation = (
     y += 5.5
   })
 
-  y += 15
+  y += 10
 
   // Signature line
   doc.setDrawColor(0, 0, 0)
@@ -686,10 +730,10 @@ const addLoanConfirmation = (
   y += 5
   doc.setFontSize(FONT_SIZE.BODY)
 
-  // Get first tenant name for signature label
-  const tenant = tenants[0]
-  const name = `${tenant?.firstName || ''} ${tenant?.lastName || ''}`.trim()
-  const fullName = name || tenant?.fullName || 'Förnamn Efternamn'
+  // Get first contact name for signature label
+  const contact = contacts[0]
+  const name = `${contact?.firstName || ''} ${contact?.lastName || ''}`.trim()
+  const fullName = name || contact?.fullName || 'Förnamn Efternamn'
 
   doc.text(`Signatur – ${fullName}`, MARGIN_X, y)
   doc.text('Datum', 130, y)
@@ -698,19 +742,22 @@ const addLoanConfirmation = (
 }
 
 /**
- * Adds the BEKRÄFTELSE (confirmation) section for return receipts
+ * Adds the BEKRÄFTELSE (confirmation) section for return receipts. Tenant returns
+ * are checked by Mimer's staff; maintenance returns omit that clause (`byStaff`).
  */
 const addReturnConfirmation = (
   doc: jsPDF,
   y: number,
-  hasMissingItems: boolean
+  hasMissingItems: boolean,
+  hasRemainingItems: boolean,
+  byStaff = true
 ): number => {
   const bottom = contentBottom(doc)
   const spaceNeeded = 35
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header
@@ -726,14 +773,29 @@ const addReturnConfirmation = (
   doc.setFont(FONT_GRAPHIK, 'normal')
   doc.setFontSize(FONT_SIZE.BODY)
 
-  const confirmText = hasMissingItems
-    ? 'Ovanstående nycklar och droppar har återlämnats och kontrollerats av Mimers personal. Observera att vissa nycklar eller droppar saknas (se lista ovan).'
-    : 'Ovanstående nycklar har återlämnats och kontrollerats av Mimers personal.'
+  const paragraphs: string[] = [
+    byStaff
+      ? 'Ovanstående nycklar har återlämnats och kontrollerats av Mimers personal.'
+      : 'Ovanstående nycklar har återlämnats och kontrollerats.',
+  ]
+  if (hasMissingItems) {
+    paragraphs.push(
+      'Observera att vissa nycklar eller droppar saknas (se lista ovan).'
+    )
+  }
+  if (hasRemainingItems) {
+    paragraphs.push(
+      'Övriga nycklar och droppar är kvar på lån (se lista ovan).'
+    )
+  }
 
-  const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
-  lines.forEach((line: string) => {
-    doc.text(line, MARGIN_X, y)
-    y += 5.5
+  paragraphs.forEach((paragraph, i) => {
+    if (i > 0) y += 3
+    const lines = doc.splitTextToSize(paragraph, PAGE_W - 2 * MARGIN_X)
+    lines.forEach((line: string) => {
+      doc.text(line, MARGIN_X, y)
+      y += 5.5
+    })
   })
 
   return y + 10
@@ -751,7 +813,7 @@ const addComment = (doc: jsPDF, y: number, comment?: string): number => {
 
   if (y + spaceNeeded > bottom) {
     doc.addPage()
-    y = MARGIN_TOP
+    y = MARGIN_TOP_CONTINUATION
   }
 
   // Section header - Bison Bold blue (same style as NYCKLAR, DROPPAR)
@@ -776,7 +838,7 @@ const addComment = (doc: jsPDF, y: number, comment?: string): number => {
 /**
  * Adds footer with Mimer logo and contact info
  */
-const addFooter = async (doc: jsPDF, receiptId?: string): Promise<void> => {
+const addFooter = async (doc: jsPDF): Promise<void> => {
   const h = doc.internal.pageSize.height as number
   const totalPages = doc.getNumberOfPages()
 
@@ -812,12 +874,6 @@ const addFooter = async (doc: jsPDF, receiptId?: string): Promise<void> => {
       footerY + 2
     )
 
-    // Receipt ID if provided
-    if (receiptId) {
-      doc.setFontSize(FONT_SIZE.RECEIPT_ID)
-      doc.text(receiptId, MARGIN_X, h - 8)
-    }
-
     // Page numbering
     if (totalPages > 1) {
       doc.text(`Sida ${i} av ${totalPages}`, PAGE_W - MARGIN_X, h - 8, {
@@ -831,22 +887,40 @@ const addFooter = async (doc: jsPDF, receiptId?: string): Promise<void> => {
  * BUILD FUNCTIONS
  * ============================================================================ */
 
-async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
-  const doc = new jsPDF()
+/** Party header block, forked by loan type (Hyresgäst+Avtal vs Företag). */
+const addPartyHeader = (doc: jsPDF, data: ReceiptData, y: number): number =>
+  data.loanType === 'MAINTENANCE'
+    ? addMaintenanceInfo(doc, data, y)
+    : addTenantInfo(doc, data, y)
+
+async function buildLoanDoc(data: ReceiptData) {
+  const doc = new jsPDF({ compress: true })
   registerCustomFonts(doc)
 
   let y = addTitle(doc, 'loan')
   y = addMeta(doc, y, 'loan')
-  y = await addTenantInfo(doc, data.tenants, data.lease, y)
+  y = addPartyHeader(doc, data, y)
 
-  // Combined keys and cards table (sorted by type, system, name, flex, sequence)
-  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y, 55)
+  // Keys + cards table; maintenance passes the per-key Tillhörighet scope map.
+  y = renderItemsTable(
+    doc,
+    sortKeys(data.keys),
+    data.cards,
+    y,
+    data.scopeByKeyId
+  )
 
-  y = addLoanConfirmation(doc, y, data.tenants)
+  y =
+    data.loanType === 'MAINTENANCE'
+      ? addMaintenanceLoanConfirmation(doc, y)
+      : addLoanConfirmation(doc, y, data.contacts)
   addComment(doc, y, data.comment)
-  await addFooter(doc, receiptId)
+  await addFooter(doc)
+  if (data.loanId) {
+    await addQrCode(doc, data.loanId)
+  }
 
-  const fileName = `nyckelutlaning_${data.tenants[0].contactCode}_${format(
+  const fileName = `nyckelutlaning_${data.contacts[0].contactCode}_${format(
     new Date(),
     'yyyyMMdd'
   )}.pdf`
@@ -854,21 +928,23 @@ async function buildLoanDoc(data: ReceiptData, receiptId?: string) {
   return { doc, fileName }
 }
 
-async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
-  const doc = new jsPDF()
+async function buildReturnDoc(data: ReceiptData) {
+  const doc = new jsPDF({ compress: true })
   registerCustomFonts(doc)
 
   let y = addTitle(doc, 'return')
   y = addMeta(doc, y, 'return')
-  y = await addTenantInfo(doc, data.tenants, data.lease, y)
+  y = addPartyHeader(doc, data, y)
 
-  // Check for missing items
-  const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
-  const hasMissingCards = data.missingCards && data.missingCards.length > 0
-  const hasMissingItems = hasMissingKeys || hasMissingCards
+  const hasMissingItems = Boolean(
+    data.missingKeys?.length || data.missingCards?.length
+  )
+  const hasRemainingItems = Boolean(
+    data.remainingLoanKeys?.length || data.remainingLoanCards?.length
+  )
 
-  // Combined keys and cards table (returned, missing, disposed sections)
-  // Sort each category for consistent löpnummer ordering
+  // Returned, missing, remaining-on-loan, disposed — each sorted for stable löpnr
+  // ordering; maintenance passes the per-key Tillhörighet scope map.
   y = renderReturnItemsTable(
     doc,
     sortKeys(data.keys),
@@ -876,85 +952,24 @@ async function buildReturnDoc(data: ReceiptData, receiptId?: string) {
     data.missingKeys ? sortKeys(data.missingKeys) : undefined,
     data.missingCards,
     data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
+    data.remainingLoanKeys ? sortKeys(data.remainingLoanKeys) : undefined,
+    data.remainingLoanCards,
     y,
-    35
+    data.scopeByKeyId
   )
 
-  y = addReturnConfirmation(doc, y, hasMissingItems)
-  addComment(doc, y, data.comment)
-  await addFooter(doc, receiptId)
-
-  const fileName = `nyckelaterlamning_${data.tenants[0].contactCode}_${format(
-    new Date(),
-    'yyyyMMdd'
-  )}.pdf`
-
-  return { doc, fileName }
-}
-
-/* ============================================================================
- * MAINTENANCE BUILD FUNCTIONS
- * ============================================================================ */
-
-async function buildMaintenanceLoanDoc(
-  data: MaintenanceReceiptData,
-  receiptId?: string
-) {
-  const doc = new jsPDF()
-  registerCustomFonts(doc)
-
-  let y = addTitle(doc, 'loan')
-  y = addMeta(doc, y, 'loan')
-  y = addMaintenanceInfo(doc, data, y)
-
-  // Combined keys and cards table (sorted)
-  y = renderItemsTable(doc, sortKeys(data.keys), data.cards, y, 55)
-
-  y = addMaintenanceLoanConfirmation(doc, y)
-  addComment(doc, y, data.description ?? undefined)
-  await addFooter(doc, receiptId)
-
-  const fileName = `nyckelutlaning_${data.contact}_${format(
-    new Date(),
-    'yyyyMMdd'
-  )}.pdf`
-
-  return { doc, fileName }
-}
-
-async function buildMaintenanceReturnDoc(
-  data: MaintenanceReceiptData,
-  receiptId?: string
-) {
-  const doc = new jsPDF()
-  registerCustomFonts(doc)
-
-  let y = addTitle(doc, 'return')
-  y = addMeta(doc, y, 'return')
-  y = addMaintenanceInfo(doc, data, y)
-
-  // Check for missing items
-  const hasMissingKeys = data.missingKeys && data.missingKeys.length > 0
-  const hasMissingCards = data.missingCards && data.missingCards.length > 0
-  const hasMissingItems = hasMissingKeys || hasMissingCards
-
-  // Combined keys and cards table (returned, missing, disposed sections, sorted)
-  y = renderReturnItemsTable(
+  // Tenant returns are checked by Mimer staff; maintenance returns omit that clause.
+  y = addReturnConfirmation(
     doc,
-    sortKeys(data.keys),
-    data.cards,
-    data.missingKeys ? sortKeys(data.missingKeys) : undefined,
-    data.missingCards,
-    data.disposedKeys ? sortKeys(data.disposedKeys) : undefined,
     y,
-    35
+    hasMissingItems,
+    hasRemainingItems,
+    data.loanType !== 'MAINTENANCE'
   )
+  addComment(doc, y, data.comment)
+  await addFooter(doc)
 
-  y = addMaintenanceReturnConfirmation(doc, y, hasMissingItems)
-  addComment(doc, y, data.description ?? undefined)
-  await addFooter(doc, receiptId)
-
-  const fileName = `nyckelaterlamning_${data.contact}_${format(
+  const fileName = `nyckelaterlamning_${data.contacts[0].contactCode}_${format(
     new Date(),
     'yyyyMMdd'
   )}.pdf`
@@ -967,37 +982,15 @@ async function buildMaintenanceReturnDoc(
  * ============================================================================ */
 
 export const generateLoanReceiptBlob = async (
-  data: ReceiptData,
-  receiptId?: string
+  data: ReceiptData
 ): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildLoanDoc(data, receiptId)
-  const blob = doc.output('blob') as Blob
-  return { blob, fileName }
+  const { doc, fileName } = await buildLoanDoc(data)
+  return { blob: doc.output('blob') as Blob, fileName }
 }
 
 export const generateReturnReceiptBlob = async (
-  data: ReceiptData,
-  receiptId?: string
+  data: ReceiptData
 ): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildReturnDoc(data, receiptId)
-  const blob = doc.output('blob') as Blob
-  return { blob, fileName }
-}
-
-export const generateMaintenanceLoanReceiptBlob = async (
-  data: MaintenanceReceiptData,
-  receiptId?: string
-): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildMaintenanceLoanDoc(data, receiptId)
-  const blob = doc.output('blob') as Blob
-  return { blob, fileName }
-}
-
-export const generateMaintenanceReturnReceiptBlob = async (
-  data: MaintenanceReceiptData,
-  receiptId?: string
-): Promise<{ blob: Blob; fileName: string }> => {
-  const { doc, fileName } = await buildMaintenanceReturnDoc(data, receiptId)
-  const blob = doc.output('blob') as Blob
-  return { blob, fileName }
+  const { doc, fileName } = await buildReturnDoc(data)
+  return { blob: doc.output('blob') as Blob, fileName }
 }

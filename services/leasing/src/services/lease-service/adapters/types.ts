@@ -75,6 +75,7 @@ export type DbComment = {
   AuthorName: string
   AuthorId: string
   CreatedAt: Date
+  UpdatedAt: Date | null
   Type: 'COMMENT' | 'WARNING' | 'STOP'
   Comment: string
 }

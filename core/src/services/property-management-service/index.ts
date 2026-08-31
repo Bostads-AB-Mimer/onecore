@@ -7,12 +7,11 @@
  */
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { LeaseType } from '@onecore/types'
 
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { getFloorPlanStream } from './adapters/document-adapter'
-import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
-import { createNoteOfInterestForInternalParkingSpace } from '../../processes/parkingspaces/internal'
 
 /**
  * @swagger
@@ -458,229 +457,6 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /parking-spaces/{parkingSpaceId}/leases:
-   *   post:
-   *     summary: Create lease for an external parking space
-   *     tags:
-   *       - Property management service
-   *     description: Creates a new lease for the specified external parking space.
-   *     parameters:
-   *       - in: path
-   *         name: parkingSpaceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: ID of the parking space for which the lease is being created.
-   *       - in: body
-   *         name: Lease details
-   *         required: true
-   *         description: Lease information including contact ID and start date.
-   *         schema:
-   *           type: object
-   *           required:
-   *             - contactId
-   *             - startDate
-   *           properties:
-   *             contactId:
-   *               type: string
-   *               description: ID of the contact associated with the lease.
-   *             startDate:
-   *               type: string
-   *               format: date-time
-   *               description: Start date of the lease.
-   *     responses:
-   *       '201':
-   *         description: Lease successfully created
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *       '400':
-   *         description: Bad request
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Parking space id is missing. It needs to be passed in the url.
-   *       '500':
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: A technical error has occured.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.post('/parking-spaces/:parkingSpaceId/leases', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const parkingSpaceId = ctx.params.parkingSpaceId
-
-    if (!parkingSpaceId) {
-      ctx.status = 400
-      ctx.body = {
-        message:
-          'Parking space id is missing. It needs to be passed in the url.',
-        ...metadata,
-      }
-
-      return
-    }
-
-    // Accept both contactId and contactCode for backward compatibility
-    const contactId = ctx.request.body.contactId || ctx.request.body.contactCode
-
-    if (!contactId) {
-      ctx.status = 400
-      ctx.body = {
-        reason:
-          'Contact id/code is missing. It needs to be passed in the body (contactId or contactCode)',
-        ...metadata,
-      }
-
-      return
-    }
-
-    const startDate = ctx.request.body.startDate
-
-    try {
-      const result = await createLeaseForExternalParkingSpace(
-        parkingSpaceId,
-        contactId,
-        startDate
-      )
-
-      ctx.status = result.httpStatus
-      ctx.body = { content: result.response, ...metadata }
-    } catch (error) {
-      // Step 6: Communicate error to dev team and customer service
-      logger.error(error, 'Error')
-      ctx.status = 500
-      ctx.body = {
-        error: 'A technical error has occured',
-        ...metadata,
-      }
-    }
-  })
-
-  /**
-   * @swagger
-   * /parking-spaces/{parkingSpaceId}/note-of-interests:
-   *   post:
-   *     summary: Create a note of interest for an internal parking space
-   *     tags:
-   *       - Property management service
-   *     description: Creates a new note of interest for the specified internal parking space.
-   *     parameters:
-   *       - in: path
-   *         name: parkingSpaceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: ID of the parking space for which the note of interest is being created.
-   *       - in: body
-   *         name: Note of Interest details
-   *         required: true
-   *         description: Note of interest information including contact code and application type.
-   *         schema:
-   *           type: object
-   *           required:
-   *             - contactCode
-   *           properties:
-   *             contactCode:
-   *               type: string
-   *               description: Code of the contact associated with the note of interest.
-   *             applicationType:
-   *               type: string
-   *               description: Optional. Type of application for the note of interest.
-   *     responses:
-   *       '201':
-   *         description: Note of interest successfully created
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *       '400':
-   *         description: Bad request
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Contact code is missing. It needs to be passed in the body (contactCode)
-   *       '500':
-   *         description: Internal server error
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: A technical error has occured.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.post(
-    '/parking-spaces/:parkingSpaceId/note-of-interests',
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const parkingSpaceId = ctx.params.parkingSpaceId
-
-      const contactCode = ctx.request.body.contactCode
-
-      if (!contactCode) {
-        ctx.status = 400
-        ctx.body = {
-          reason:
-            'Contact code is missing. It needs to be passed in the body (contactCode)',
-          ...metadata,
-        }
-        return
-      }
-
-      const applicationType = ctx.request.body.applicationType
-      if (applicationType && applicationType == '') {
-        ctx.status = 400
-        ctx.body = {
-          reason:
-            'Application type is missing. It needs to be passed in the body (applicationType)',
-          ...metadata,
-        }
-        return
-      }
-
-      try {
-        const result = await createNoteOfInterestForInternalParkingSpace(
-          parkingSpaceId,
-          contactCode,
-          applicationType
-        )
-
-        ctx.status = result.httpStatus
-        ctx.body = { content: result.response, ...metadata }
-      } catch (err) {
-        // Step 6: Communicate error to dev team and customer service
-        logger.error({ err }, 'Error when creating note of interest')
-        ctx.status = 500
-        ctx.body = {
-          error: 'A technical error has occured',
-          ...metadata,
-        }
-      }
-    }
-  )
-
-  /**
-   * @swagger
    * /rental-properties/by-rental-object-code/{rentalObjectCode}:
    *   get:
    *     summary: Get rental property information from Xpand
@@ -833,10 +609,7 @@ export const routes = (router: KoaRouter) => {
         { status: ['current', 'upcoming'] }
       )
       const promises = leases
-        .filter(
-          (lease) =>
-            lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
-        )
+        .filter((lease) => lease.type === LeaseType.HousingContract)
         .map((lease) =>
           propertyManagementAdapter.getMaintenanceUnitsForRentalProperty(
             lease.rentalPropertyId

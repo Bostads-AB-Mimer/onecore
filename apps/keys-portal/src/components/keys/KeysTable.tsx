@@ -11,18 +11,21 @@ import {
   TableEmptyState,
 } from '@/components/ui/table'
 import {
+  ContactV1,
   KeyDetails,
   KeyLoan,
   KeyBundle,
   getKeyTypeFilterOptions,
 } from '@/services/types'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
-import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { UseItemSelectionReturn } from '@/hooks/useItemSelection'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { getKeyBundlesByKeyId } from '@/services/api/keyBundleService'
-import { fetchContactByContactCode } from '@/services/api/contactService'
+import {
+  getContactFullName,
+  getContactRegistrationNumber,
+} from '@/services/api/contactService'
 import { useExpandableRows } from '@/hooks/useExpandableRows'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
@@ -51,6 +54,7 @@ interface ExpandedKeyData {
 
 interface KeysTableProps {
   keys: KeyDetails[]
+  contactsByCode: Record<string, ContactV1>
   keySystemMap: Record<string, string>
   onEdit: (key: KeyDetails) => void
   onDelete: (keyId: string) => void
@@ -58,14 +62,12 @@ interface KeysTableProps {
   onTypeFilterChange: (value: string | null) => void
   selectedDisposed: string | null
   onDisposedFilterChange: (value: string | null) => void
-  createdAtAfter: string | null
-  createdAtBefore: string | null
-  onDatesChange: (afterDate: string | null, beforeDate: string | null) => void
   selection?: UseItemSelectionReturn
 }
 
 export function KeysTable({
   keys,
+  contactsByCode,
   keySystemMap,
   onEdit,
   onDelete,
@@ -73,58 +75,36 @@ export function KeysTable({
   onTypeFilterChange,
   selectedDisposed,
   onDisposedFilterChange,
-  createdAtAfter,
-  createdAtBefore,
-  onDatesChange,
   selection,
 }: KeysTableProps) {
   const expansion = useExpandableRows<ExpandedKeyData>({
     onExpand: async (keyId) => {
-      const [loans, bundles] = await Promise.all([
-        keyLoanService.getByKeyId(keyId),
+      const [loansWithContacts, bundles] = await Promise.all([
+        keyLoanService.getByKeyIdWithContacts(keyId),
         getKeyBundlesByKeyId(keyId),
       ])
 
-      const sortedLoans = loans.sort(
+      const sortedLoans = loansWithContacts.loans.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
       const sortedBundles = bundles.sort((a, b) => a.name.localeCompare(b.name))
 
-      const uniqueContactCodes = new Set<string>()
-      loans.forEach((loan) => {
-        if (loan.contact) uniqueContactCodes.add(loan.contact)
-        if (loan.contact2) uniqueContactCodes.add(loan.contact2)
-      })
-
+      // Flatten the v1 Contact union into the compact shape KeyLoansList
+      // expects. Missing entries are simply absent — KeyLoansList falls back
+      // to rendering the raw code.
       const contactData: ExpandedKeyData['contactData'] = {}
-      await Promise.all(
-        Array.from(uniqueContactCodes).map(async (contactCode) => {
-          try {
-            const contact = await fetchContactByContactCode(contactCode)
-            if (contact) {
-              contactData[contactCode] = {
-                fullName: contact.fullName ?? contactCode,
-                contactCode,
-                nationalRegistrationNumber:
-                  contact.nationalRegistrationNumber || undefined,
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch contact ${contactCode}:`, error)
-            contactData[contactCode] = { fullName: contactCode, contactCode }
-          }
-        })
-      )
+      for (const contact of Object.values(loansWithContacts.contacts)) {
+        contactData[contact.contactCode] = {
+          fullName: getContactFullName(contact),
+          contactCode: contact.contactCode,
+          nationalRegistrationNumber: getContactRegistrationNumber(contact),
+        }
+      }
 
       return { loans: sortedLoans, bundles: sortedBundles, contactData }
     },
   })
-
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('sv-SE')
-  }
 
   // Column count for expanded rows (base 11 + 1 if selection enabled)
   const columnCount = selection ? 12 : 11
@@ -170,13 +150,7 @@ export function KeysTable({
                 onSelectionChange={onDisposedFilterChange}
               />
             </FilterableTableHeader>
-            <FilterableTableHeader label="Skapad">
-              <DateRangeFilterDropdown
-                afterDate={createdAtAfter}
-                beforeDate={createdAtBefore}
-                onDatesChange={onDatesChange}
-              />
-            </FilterableTableHeader>
+            <TableHead>Låntagare</TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -255,7 +229,15 @@ export function KeysTable({
                         showActive
                       />
                     </TableCell>
-                    <TableCellMuted>{formatDate(key.createdAt)}</TableCellMuted>
+                    <TableCellMuted>
+                      {key.activeLoanContact
+                        ? contactsByCode[key.activeLoanContact]
+                          ? getContactFullName(
+                              contactsByCode[key.activeLoanContact]
+                            )
+                          : key.activeLoanContact
+                        : '-'}
+                    </TableCellMuted>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
                         <NotePopover text={key.notes} />

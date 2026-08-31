@@ -18,6 +18,9 @@ import { routes as facilitiesRoutes } from './routes/facilities'
 import { routes as documentsRoutes } from './routes/documents'
 import { routes as aiAnalysisRoutes } from './routes/ai-analysis'
 import { routes as aiScannerRoutes } from './routes/ai-scanner'
+import { routes as apartmentTemperaturesRoutes } from './routes/apartment-temperatures'
+import { routes as costCentersRoutes } from './routes/cost-centers'
+import { routes as kvvAreasRoutes } from './routes/kvv-areas'
 
 import { routes as healthRoutes } from './routes/health'
 
@@ -41,6 +44,9 @@ maintenanceUnitsRoutes(router)
 facilitiesRoutes(router)
 aiAnalysisRoutes(router)
 aiScannerRoutes(router)
+apartmentTemperaturesRoutes(router)
+costCentersRoutes(router)
+kvvAreasRoutes(router)
 healthRoutes(router)
 
 export default router

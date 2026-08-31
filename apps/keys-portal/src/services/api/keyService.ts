@@ -7,6 +7,7 @@ import type {
   CreateKeySystemRequest,
   UpdateKeySystemRequest,
   PaginatedResponse,
+  ContactV1,
 } from '@/services/types'
 import { querySerializer } from '@/utils/querySerializer'
 
@@ -31,13 +32,26 @@ export const keyService = {
   async getAllKeys(
     page: number = 1,
     limit: number = 60,
-    includeKeySystem: boolean = false
-  ): Promise<PaginatedResponse<KeyDetails>> {
+    includeKeySystem: boolean = false,
+    options?: { includeContacts?: boolean }
+  ): Promise<
+    PaginatedResponse<KeyDetails> & { contacts?: Record<string, ContactV1> }
+  > {
     const { data, error } = await GET('/keys', {
-      params: { query: { page, limit, includeKeySystem } },
+      params: {
+        query: {
+          page,
+          limit,
+          includeKeySystem,
+          ...(options?.includeContacts ? { includeContacts: true } : {}),
+        },
+      },
     })
     if (error) throw error
-    return ensurePaginatedResponse<KeyDetails>(data)
+    return {
+      ...ensurePaginatedResponse<KeyDetails>(data),
+      contacts: data?.contacts,
+    }
   },
 
   async getKey(id: string): Promise<Key> {
@@ -64,22 +78,42 @@ export const keyService = {
   },
 
   async deleteKey(id: string): Promise<void> {
-    const { error } = await DELETE('/keys/{id}', { params: { path: { id } } })
-    if (error) throw error
+    const { error, response } = await DELETE('/keys/{id}', {
+      params: { path: { id } },
+    })
+    if (error) {
+      const err = new Error(response.statusText)
+      ;(err as any).status = response.status
+      throw err
+    }
   },
 
   async searchKeys(
     searchParams: Record<string, string | number | string[] | undefined>,
     page: number = 1,
     limit: number = 60,
-    includeKeySystem: boolean = false
-  ): Promise<PaginatedResponse<KeyDetails>> {
+    includeKeySystem: boolean = false,
+    options?: { includeContacts?: boolean }
+  ): Promise<
+    PaginatedResponse<KeyDetails> & { contacts?: Record<string, ContactV1> }
+  > {
     const { data, error } = await GET('/keys/search', {
-      params: { query: { ...searchParams, page, limit, includeKeySystem } },
+      params: {
+        query: {
+          ...searchParams,
+          page,
+          limit,
+          includeKeySystem,
+          ...(options?.includeContacts ? { includeContacts: true } : {}),
+        },
+      },
       querySerializer,
     })
     if (error) throw error
-    return ensurePaginatedResponse<KeyDetails>(data)
+    return {
+      ...ensurePaginatedResponse<KeyDetails>(data),
+      contacts: data?.contacts,
+    }
   },
 
   async getKeysByRentalObjectCode(
@@ -120,10 +154,14 @@ export const keyService = {
   },
 
   async bulkDeleteKeys(keyIds: string[]): Promise<number> {
-    const { data, error } = await POST('/keys/bulk-delete', {
+    const { data, error, response } = await POST('/keys/bulk-delete', {
       body: { keyIds },
     })
-    if (error) throw error
+    if (error) {
+      const err = new Error(response.statusText)
+      ;(err as any).status = response.status
+      throw err
+    }
     return data?.content as number
   },
 

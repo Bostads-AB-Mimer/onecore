@@ -1,14 +1,15 @@
-import { GET } from './base-api'
+import { GET } from './baseApi'
 import type { components } from './generated/api-types'
 
 type Room = components['schemas']['Room']
 
 export const roomService = {
-  async getByResidenceId(residenceId: string): Promise<Room[]> {
+  async getByRentalId(rentalId: string, roomCode?: string): Promise<Room[]> {
     const { data, error } = await GET('/rooms', {
       params: {
         query: {
-          residenceId,
+          rentalId,
+          roomCode,
         },
       },
     })

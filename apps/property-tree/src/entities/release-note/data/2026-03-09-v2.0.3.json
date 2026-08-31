@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-03-09-v203-1",
+    "date": "2026-03-09",
+    "title": "Förbättrade e-postmallar för poängfria bilplatser",
+    "description": "E-postmeddelanden för godkända och nekade ansökningar om poängfria bilplatser använder nu Infobip-mallar istället för hårdkodade texter. Detta ger ett enhetligt utseende och gör det enklare att uppdatera innehållet.",
+    "category": "improvement"
+  }
+]

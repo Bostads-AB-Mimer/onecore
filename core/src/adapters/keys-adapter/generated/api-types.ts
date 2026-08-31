@@ -1610,7 +1610,7 @@ export interface paths {
           page?: number
           /** @description Number of records per page */
           limit?: number
-          /** @description Search query for OR search across fields specified in 'fields' parameter */
+          /** @description Search query for OR search across fields specified in 'fields' parameter. Minimum length requirement is waived when keySystemId filter is provided. */
           q?: string
           /** @description Comma-separated list of fields for OR search (e.g., "keyName,keyType"). Defaults to keyName. */
           fields?: string
@@ -2406,6 +2406,43 @@ export interface paths {
       }
     }
   }
+  '/scan-receipt': {
+    /**
+     * Process a scanned receipt image (single or batch)
+     * @description Receives a scanned receipt image (JPEG, PNG, BMP, or multi-page PDF).
+     * Extracts QR codes from each page, groups pages by loan UUID,
+     * and creates a receipt for each unique loan.
+     * Returns an array of results and any errors.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: byte */
+            imageData?: string
+          }
+        }
+      }
+      responses: {
+        /** @description All receipts created successfully */
+        201: {
+          content: never
+        }
+        /** @description Partial success — some receipts created, some failed */
+        207: {
+          content: never
+        }
+        /** @description Missing image data */
+        400: {
+          content: never
+        }
+        /** @description No receipts could be created (decode/QR errors) */
+        422: {
+          content: never
+        }
+      }
+    }
+  }
   '/signatures/send': {
     /** Send a document for digital signature via SimpleSign */
     post: {
@@ -2536,7 +2573,7 @@ export interface components {
             id: string
             /** @enum {string} */
             loanType: 'TENANT' | 'MAINTENANCE'
-            contact?: string
+            contact?: string | null
             contact2?: string | null
             contactPerson?: string | null
             notes?: string | null
@@ -2552,6 +2589,8 @@ export interface components {
             updatedAt: string
             createdBy?: string | null
             updatedBy?: string | null
+            keyCount?: number
+            cardCount?: number
           }[]
         | null
     }
@@ -2677,7 +2716,7 @@ export interface components {
       id: string
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -2693,6 +2732,8 @@ export interface components {
       updatedAt: string
       createdBy?: string | null
       updatedBy?: string | null
+      keyCount?: number
+      cardCount?: number
     }
     KeyDetails: {
       /** Format: uuid */
@@ -2751,7 +2792,7 @@ export interface components {
             id: string
             /** @enum {string} */
             loanType: 'TENANT' | 'MAINTENANCE'
-            contact?: string
+            contact?: string | null
             contact2?: string | null
             contactPerson?: string | null
             notes?: string | null
@@ -2767,6 +2808,8 @@ export interface components {
             updatedAt: string
             createdBy?: string | null
             updatedBy?: string | null
+            keyCount?: number
+            cardCount?: number
           }[]
         | null
       events?:
@@ -2774,7 +2817,7 @@ export interface components {
             /** Format: uuid */
             id: string
             /** @enum {string} */
-            type: 'FLEX' | 'ORDER' | 'LOST'
+            type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
             /** @enum {string} */
             status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
             /** Format: uuid */
@@ -2785,6 +2828,7 @@ export interface components {
             updatedAt: string
           }[]
         | null
+      activeLoanContact?: string | null
     }
     PaginationMeta: {
       totalRecords: number
@@ -2841,7 +2885,7 @@ export interface components {
       keyCards?: string[]
       /** @enum {string} */
       loanType: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -2858,7 +2902,7 @@ export interface components {
       keyCards?: string[]
       /** @enum {string} */
       loanType?: 'TENANT' | 'MAINTENANCE'
-      contact?: string
+      contact?: string | null
       contact2?: string | null
       contactPerson?: string | null
       notes?: string | null
@@ -2899,6 +2943,8 @@ export interface components {
       updatedAt: components['schemas']['KeyLoan']['updatedAt']
       createdBy?: components['schemas']['KeyLoan']['createdBy']
       updatedBy?: components['schemas']['KeyLoan']['updatedBy']
+      keyCount?: components['schemas']['KeyLoan']['keyCount']
+      cardCount?: components['schemas']['KeyLoan']['cardCount']
       keysArray: components['schemas']['KeyDetails'][]
       keyCardsArray: components['schemas']['Card'][]
       receipts: components['schemas']['Receipt'][]
@@ -2992,7 +3038,7 @@ export interface components {
     CreateKeyEventRequest: {
       keys: string[]
       /** @enum {string} */
-      type: 'FLEX' | 'ORDER' | 'LOST'
+      type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
       /** @enum {string} */
       status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
       /** Format: uuid */
@@ -3001,7 +3047,7 @@ export interface components {
     UpdateKeyEventRequest: {
       keys?: string[]
       /** @enum {string} */
-      type?: 'FLEX' | 'ORDER' | 'LOST'
+      type?: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
       /** @enum {string} */
       status?: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
       /** Format: uuid */
@@ -3011,7 +3057,7 @@ export interface components {
       /** Format: uuid */
       id: string
       /** @enum {string} */
-      type: 'FLEX' | 'ORDER' | 'LOST'
+      type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
       /** @enum {string} */
       status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
       /** Format: uuid */

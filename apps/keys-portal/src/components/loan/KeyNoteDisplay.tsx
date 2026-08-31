@@ -59,7 +59,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [minHeight, setMinHeight] = useState<number | null>(null)
+  const [minHeight, setMinHeight] = useState<number>(150)
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set())
 
   // Group leases by status and filter to unique objects
@@ -213,7 +213,7 @@ export function KeyNoteDisplay({ leases }: KeyNoteDisplayProps) {
     if (!tenantCard) return
 
     const updateMinHeight = () =>
-      setMinHeight(tenantCard.getBoundingClientRect().height)
+      setMinHeight(Math.max(tenantCard.getBoundingClientRect().height, 150))
     updateMinHeight()
 
     const resizeObserver = new ResizeObserver(updateMinHeight)

@@ -1,0 +1,24 @@
+{
+  "type": "organisation",
+  "contactCode": "F055405",
+  "contactKey": "_1YZ0YVZJ5Q25BC",
+  "organisation": {
+    "organisationNumber": null,
+    "name": "Kaffesump AB"
+  },
+  "communication": {
+    "phoneNumbers": [],
+    "emailAddresses": [],
+    "specialAttention": false
+  },
+  "addresses": [
+    {
+      "street": "Holländargatan 52",
+      "zipCode": "631 07",
+      "city": "ESKILSTUNA",
+      "country": "",
+      "region": "SE",
+      "full": "Holländargatan 52, 631 07, ESKILSTUNA"
+    }
+  ]
+}

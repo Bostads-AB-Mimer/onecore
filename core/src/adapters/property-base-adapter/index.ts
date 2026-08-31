@@ -1,4 +1,5 @@
 import { logger, PaginatedResponse } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import createClient from 'openapi-fetch'
 import axios from 'axios'
 
@@ -80,6 +81,27 @@ export async function searchResidences(
   } catch (err) {
     logger.error({ err }, '@onecore/property-adapter.searchResidences')
     return { ok: false, err: 'unknown' }
+  }
+}
+
+type SearchStaircasesResponse = components['schemas']['Staircase'][]
+
+export async function searchStaircases(
+  q: string
+): Promise<AdapterResult<SearchStaircasesResponse, 'staircase-search-failed'>> {
+  try {
+    const response = await client().GET('/staircases/search', {
+      params: { query: { q } },
+    })
+
+    if (response.data) {
+      return { ok: true, data: response.data.content ?? [] }
+    }
+
+    return { ok: false, err: 'staircase-search-failed' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.searchStaircases')
+    return { ok: false, err: 'staircase-search-failed' }
   }
 }
 
@@ -177,15 +199,21 @@ export async function getCompanies(): Promise<
   }
 }
 
-type GetCompanyByIdResponse = components['schemas']['CompanyDetails']
+type GetCompanyByOrganizationNumberResponse =
+  components['schemas']['CompanyDetails']
 
-export async function getCompanyById(
-  id: string
-): Promise<AdapterResult<GetCompanyByIdResponse, 'not-found' | 'unknown'>> {
+export async function getCompanyByOrganizationNumber(
+  organizationNumber: string
+): Promise<
+  AdapterResult<GetCompanyByOrganizationNumberResponse, 'not-found' | 'unknown'>
+> {
   try {
-    const fetchResponse = await client().GET('/companies/{id}', {
-      params: { path: { id } },
-    })
+    const fetchResponse = await client().GET(
+      '/companies/{organizationNumber}',
+      {
+        params: { path: { organizationNumber } },
+      }
+    )
 
     if (fetchResponse.data?.content) {
       return {
@@ -200,7 +228,10 @@ export async function getCompanyById(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error(err, '@onecore/property-adapter.getCompanyById')
+    logger.error(
+      err,
+      '@onecore/property-adapter.getCompanyByOrganizationNumber'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -230,11 +261,11 @@ export async function getProperties(
 type GetPropertyDetailsResponse = components['schemas']['PropertyDetails']
 
 export async function getPropertyDetails(
-  propertyId: string
+  propertyCode: string
 ): Promise<AdapterResult<GetPropertyDetailsResponse, 'not-found' | 'unknown'>> {
   try {
-    const fetchResponse = await client().GET('/properties/{id}', {
-      params: { path: { id: propertyId } },
+    const fetchResponse = await client().GET('/properties/{code}', {
+      params: { path: { code: propertyCode } },
     })
 
     if (fetchResponse.data?.content) {
@@ -250,6 +281,52 @@ export async function getPropertyDetails(
     )
   } catch (err) {
     logger.error({ err }, '@onecore/property-adapter.getPropertyDetails')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export type PropertyKvvAreaLink = {
+  propertyCode: string
+  kvvAreaId: string
+  updatedAt: string
+  updatedBy: string | null
+}
+
+export async function updatePropertyKvvArea(
+  propertyCode: string,
+  body: { kvvAreaId: string; updatedBy?: string | null }
+): Promise<
+  AdapterResult<
+    PropertyKvvAreaLink,
+    'property-not-found' | 'kvv-area-not-found' | 'unknown'
+  >
+> {
+  try {
+    const response = await client().PUT('/properties/{code}/kvv-area', {
+      params: { path: { code: propertyCode } },
+      body: {
+        kvvAreaId: body.kvvAreaId,
+        ...(body.updatedBy ? { updatedBy: body.updatedBy } : {}),
+      },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      // services/property emits a discriminator `code` on 404 bodies. Switching
+      // on it keeps us decoupled from the human-readable `reason` text.
+      const errBody = response.error as { code?: string } | undefined
+      if (errBody?.code === 'KVV_AREA_NOT_FOUND') {
+        return { ok: false, err: 'kvv-area-not-found' }
+      }
+      return { ok: false, err: 'property-not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.updatePropertyKvvArea')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -272,39 +349,6 @@ export async function getResidences(
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, '@onecore/property-adapter.getResidences')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-type GetResidenceDetailsResponse = components['schemas']['ResidenceDetails']
-
-export async function getResidenceDetails(
-  residenceId: string,
-  options?: { active?: boolean }
-): Promise<
-  AdapterResult<GetResidenceDetailsResponse, 'not-found' | 'unknown'>
-> {
-  try {
-    const fetchResponse = await client().GET('/residences/{id}', {
-      params: {
-        path: { id: residenceId },
-        query: { active: options?.active },
-      },
-    })
-
-    if (fetchResponse.data?.content) {
-      return { ok: true, data: fetchResponse.data.content }
-    }
-
-    if (fetchResponse.response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    throw new Error(
-      `Unexpected response status: ${fetchResponse.response.status}`
-    )
-  } catch (err) {
-    logger.error({ err }, '@onecore/property-adapter.getResidenceDetails')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -342,14 +386,58 @@ export async function getResidenceByRentalId(
   }
 }
 
+export async function updateMalarEnergiFacilityId(
+  rentalId: string,
+  body: property.UpdateMalarEnergiFacilityIdRequest
+): Promise<
+  AdapterResult<
+    property.UpdateMalarEnergiFacilityIdResponse,
+    'not-found' | 'unknown'
+  >
+> {
+  try {
+    const fetchResponse = await client().PUT(
+      '/residences/rental-id/{rentalId}/malar-energi-facility-id',
+      {
+        params: { path: { rentalId } },
+        body,
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: {
+          malarEnergiFacilityId:
+            fetchResponse.data.content.malarEnergiFacilityId ??
+            body.malarEnergiFacilityId,
+        },
+      }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      { err },
+      '@onecore/property-adapter.updateMalarEnergiFacilityId'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type GetStaircasesResponse = components['schemas']['Staircase'][]
 
 export async function getStaircases(
-  buildingCode: string
+  buildingCode: string,
+  staircaseCode?: string
 ): Promise<AdapterResult<GetStaircasesResponse, 'not-found' | 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/staircases', {
-      params: { query: { buildingCode } },
+      params: { query: { buildingCode, staircaseCode } },
     })
 
     if (fetchResponse.data?.content) {
@@ -366,11 +454,12 @@ export async function getStaircases(
 type GetRoomsResponse = components['schemas']['Room'][]
 
 export async function getRooms(
-  residenceId: string
+  rentalId: string,
+  roomCode?: string
 ): Promise<AdapterResult<GetRoomsResponse, 'unknown'>> {
   try {
     const fetchResponse = await client().GET('/rooms', {
-      params: { query: { residenceId } },
+      params: { query: { rentalId, roomCode } },
     })
 
     if (!fetchResponse.data?.content) {
@@ -887,6 +976,168 @@ export async function getBlockReasons(): Promise<
   }
 }
 
+type Room = components['schemas']['Room']
+type CreateRoomBody = components['schemas']['CreateRoomRequest']
+
+export async function createRoom(
+  body: CreateRoomBody
+): Promise<AdapterResult<Room, 'not-found' | 'validation' | 'unknown'>> {
+  try {
+    const response = await client().POST('/rooms', { body })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    const status = response.response?.status
+    if (status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (status === 400) {
+      return { ok: false, err: 'validation' }
+    }
+
+    logger.error(
+      { status, error: response.error },
+      'property-base-adapter.createRoom unexpected response'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createRoom')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type ListCostCentersResponse = components['schemas']['CostCenterSummary'][]
+
+export async function listCostCenters(): Promise<
+  AdapterResult<ListCostCentersResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/cost-centers')
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.listCostCenters')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function deleteRoom(
+  roomId: string
+): Promise<AdapterResult<void, 'not-found' | 'has-components' | 'unknown'>> {
+  try {
+    const response = await client().DELETE('/rooms/{id}', {
+      params: { path: { id: roomId } },
+    })
+
+    const status = response.response?.status
+    if (status === 204) {
+      return { ok: true, data: undefined }
+    }
+    if (status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (status === 409) {
+      return { ok: false, err: 'has-components' }
+    }
+
+    logger.error(
+      { status, error: response.error, roomId },
+      'property-base-adapter.deleteRoom unexpected response'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err, roomId }, 'property-base-adapter.deleteRoom')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetCostCenterTreeResponse = components['schemas']['CostCenterTree']
+
+export async function getCostCenterTreeById(
+  id: string
+): Promise<AdapterResult<GetCostCenterTreeResponse, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/cost-centers/{id}/tree', {
+      params: { path: { id } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getCostCenterTreeById')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
+
+export { getApartmentTemperatures } from './apartment-temperatures'
+
+export async function findKvvAreaCodesByResponsibles(
+  userIds: string[]
+): Promise<AdapterResult<string[], 'unknown'>> {
+  if (userIds.length === 0) return { ok: true, data: [] }
+  try {
+    const fetchResponse = await client().GET('/kvv-areas', {
+      params: { query: { responsibleUserId: userIds } },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content.map((r) => r.code) }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      { err },
+      'property-base-adapter.findKvvAreaCodesByResponsibles'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type UpdateKvvAreaResponsibleResponse = components['schemas']['KvvArea']
+
+export async function updateKvvAreaResponsible(
+  id: string,
+  body: { keycloakUserId: string; updatedBy: string }
+): Promise<
+  AdapterResult<UpdateKvvAreaResponsibleResponse, 'not-found' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().PATCH('/kvv-areas/{id}/responsible', {
+      params: { path: { id } },
+      body,
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.updateKvvAreaResponsible')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== COMPONENTS ====================
 
 export {
@@ -915,12 +1166,14 @@ export {
   createComponentModel,
   updateComponentModel,
   deleteComponentModel,
+  getSurfaceModels,
   // Components
   getComponents,
   getComponentById,
   createComponent,
   updateComponent,
   deleteComponent,
+  updateComponentInspectionState,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

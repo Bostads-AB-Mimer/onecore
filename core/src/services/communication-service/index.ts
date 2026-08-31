@@ -1,0 +1,509 @@
+import KoaRouter from '@koa/router'
+import { z } from 'zod'
+import { generateRouteMetadata } from '@onecore/utilities'
+import { BulkSms, BulkEmail, communication } from '@onecore/types'
+
+import * as communicationAdapter from '../../adapters/communication-adapter'
+import { registerSchema } from '../../utils/openapi'
+
+const BulkSmsResult = z.object({
+  successful: z.array(z.string()).describe('Phone numbers that received SMS'),
+  invalid: z.array(z.string()).describe('Invalid phone numbers'),
+  totalSent: z.number(),
+  totalInvalid: z.number(),
+})
+
+const BulkEmailResult = z.object({
+  successful: z
+    .array(z.string())
+    .describe('Email addresses that received email'),
+  invalid: z.array(z.string()).describe('Invalid email addresses'),
+  totalSent: z.number(),
+  totalInvalid: z.number(),
+})
+
+/**
+ * @swagger
+ * openapi: 3.0.0
+ * tags:
+ *   - name: Communication service
+ *     description: Operations related to communication (SMS, email)
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ * security:
+ *   - bearerAuth: []
+ */
+
+export const routes = (router: KoaRouter) => {
+  registerSchema('BulkSmsResult', BulkSmsResult)
+  registerSchema('BulkEmailResult', BulkEmailResult)
+  registerSchema('CustomerMessage', communication.CustomerMessageSchema)
+  registerSchema(
+    'DispatchWithRecipients',
+    communication.DispatchWithRecipientsSchema
+  )
+
+  /**
+   * @swagger
+   * /sendBulkSms:
+   *   post:
+   *     summary: Send SMS to multiple contacts
+   *     description: Either `phoneNumbers` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
+   *     tags:
+   *       - Communication service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - text
+   *             properties:
+   *               phoneNumbers:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *               recipients:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - phoneNumber
+   *                   properties:
+   *                     contactCode:
+   *                       type: string
+   *                     phoneNumber:
+   *                       type: string
+   *               text:
+   *                 type: string
+   *               logMeta:
+   *                 type: object
+   *                 properties:
+   *                   audienceCriteria:
+   *                     type: object
+   *                     additionalProperties: true
+   *                   templateId:
+   *                     type: string
+   *     responses:
+   *       '200':
+   *         description: SMS sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/BulkSmsResult'
+   *                 warnings:
+   *                   type: array
+   *                   description: Non-blocking issues (e.g. communication-log write failed); the SMS was still sent.
+   *                   items:
+   *                     type: string
+   *       '400':
+   *         description: Invalid request
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/sendBulkSms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = ctx.request.body as BulkSms
+    const triggeredByUser =
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
+
+    const result = await communicationAdapter.sendBulkSms({
+      ...body,
+      logMeta: { ...body.logMeta, triggeredByUser },
+    })
+
+    if (result.ok) {
+      ctx.status = 200
+      // warnings sits beside content: the SMS succeeded but a non-blocking
+      // issue occurred (e.g. communication-log writing failed). Included only
+      // when present so the response carries no empty/undefined warnings key.
+      ctx.body = {
+        content: result.data.content,
+        ...(result.data.warnings?.length && {
+          warnings: result.data.warnings,
+        }),
+        ...metadata,
+      }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /sendBulkEmail:
+   *   post:
+   *     summary: Send email to multiple contacts
+   *     description: Either `emails` or `recipients` is required. Pass `recipients` (with contactCode) for per-customer audit logging.
+   *     tags:
+   *       - Communication service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - subject
+   *               - text
+   *             properties:
+   *               emails:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *               recipients:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - emailAddress
+   *                   properties:
+   *                     contactCode:
+   *                       type: string
+   *                     emailAddress:
+   *                       type: string
+   *               subject:
+   *                 type: string
+   *               text:
+   *                 type: string
+   *               logMeta:
+   *                 type: object
+   *                 properties:
+   *                   audienceCriteria:
+   *                     type: object
+   *                     additionalProperties: true
+   *                   templateId:
+   *                     type: string
+   *     responses:
+   *       '200':
+   *         description: Email sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/BulkEmailResult'
+   *                 warnings:
+   *                   type: array
+   *                   description: Non-blocking issues (e.g. communication-log write failed); the email was still sent.
+   *                   items:
+   *                     type: string
+   *       '400':
+   *         description: Invalid request
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/sendBulkEmail', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = ctx.request.body as BulkEmail
+    const triggeredByUser =
+      ctx.state.user?.name ?? ctx.state.user?.preferred_username
+
+    const result = await communicationAdapter.sendBulkEmail({
+      ...body,
+      logMeta: { ...body.logMeta, triggeredByUser },
+    })
+
+    if (result.ok) {
+      ctx.status = 200
+      // warnings sits beside content: the email succeeded but a non-blocking
+      // issue occurred (e.g. communication-log writing failed). Included only
+      // when present so the response carries no empty/undefined warnings key.
+      ctx.body = {
+        content: result.data.content,
+        ...(result.data.warnings?.length && {
+          warnings: result.data.warnings,
+        }),
+        ...metadata,
+      }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /webhooks/infobip:
+   *   post:
+   *     summary: Infobip email delivery-report webhook
+   *     description: >
+   *       Receives Infobip email delivery reports and forwards them to the
+   *       communication service for processing. Authenticated via a Keycloak
+   *       service account holding the `infobip-webhook` realm role (enforced in
+   *       app.ts). SMS delivery reports do NOT use this route — they hit the
+   *       communication service directly (Tele2 per-message webhook + token).
+   *     tags:
+   *       - Communication service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       '200':
+   *         description: Delivery report accepted
+   *       '401':
+   *         description: Missing or invalid Keycloak credentials / role
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/webhooks/infobip', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.forwardDeliveryReport(
+      ctx.request.body
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /communication-log/customers/{contactCode}/messages:
+   *   get:
+   *     summary: Get the communication timeline for a customer
+   *     description: Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Customer id (contactCode)
+   *     responses:
+   *       '200':
+   *         description: Array of (dispatch + recipient) pairs, newest first
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/CustomerMessage'
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '(.*)/communication-log/customers/:contactCode/messages',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await communicationAdapter.getCustomerMessages(
+        ctx.params.contactCode
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /communication-log/dispatches/{id}:
+   *   get:
+   *     summary: Get a dispatch and its recipients by dispatch id
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Dispatch id (UUID)
+   *     responses:
+   *       '200':
+   *         description: Dispatch + recipients
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DispatchWithRecipients'
+   *       '404':
+   *         description: Dispatch not found
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/communication-log/dispatches/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.getDispatchById(ctx.params.id)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /getLinearTickets:
+   *   get:
+   *     summary: Get Linear tickets with mimer-visible label
+   *     description: Fetch Linear issues that have the mimer-visible label
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: query
+   *         name: first
+   *         schema:
+   *           type: integer
+   *           default: 10
+   *         description: Number of tickets to fetch
+   *       - in: query
+   *         name: after
+   *         schema:
+   *           type: string
+   *         description: Cursor for pagination
+   *     responses:
+   *       '200':
+   *         description: Linear tickets fetched successfully
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/getLinearTickets', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const firstParam = ctx.query.first
+    const afterParam = ctx.query.after
+    const first =
+      typeof firstParam === 'string' ? parseInt(firstParam, 10) : undefined
+    const after = typeof afterParam === 'string' ? afterParam : undefined
+
+    const result = await communicationAdapter.getLinearTickets({ first, after })
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data.tickets,
+        pageInfo: result.data.pageInfo,
+        ...metadata,
+      }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /createLinearErrand:
+   *   post:
+   *     summary: Create a new Linear errand
+   *     description: Create a new issue in Linear with specified team, project, and labels
+   *     tags:
+   *       - Communication service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - title
+   *               - description
+   *               - categoryLabelId
+   *             properties:
+   *               title:
+   *                 type: string
+   *                 description: Errand title
+   *               description:
+   *                 type: string
+   *                 description: Errand description
+   *               categoryLabelId:
+   *                 type: string
+   *                 description: Label ID for category (Bug, Improvement, etc.)
+   *     responses:
+   *       '200':
+   *         description: Linear errand created successfully
+   *       '400':
+   *         description: Invalid request
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/createLinearErrand', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.createLinearErrand(
+      ctx.request.body
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /getLinearLabels:
+   *   get:
+   *     summary: Get Linear category labels
+   *     description: Fetch available category labels (Bug, Improvement, new feature)
+   *     tags:
+   *       - Communication service
+   *     responses:
+   *       '200':
+   *         description: Linear labels fetched successfully
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/getLinearLabels', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.getLinearLabels()
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+}

@@ -1,15 +1,8 @@
 import knex from 'knex'
+import { RentInvoiceRow } from '@onecore/types'
+
 import config from '../../../common/config'
-import { RentInvoiceRow, RentInvoice, RentalProperty } from '../types'
-import { InvoiceDeliveryMethod, XpandContact } from '../../../common/types'
 import trimStrings from '../../../utils/trimStrings'
-import {
-  Address,
-  Invoice,
-  InvoiceTransactionType,
-  invoiceTransactionTypeTranslation,
-  paymentStatusTranslation,
-} from '@onecore/types'
 
 const db = knex({
   connection: {
@@ -18,7 +11,7 @@ const db = knex({
     password: config.xpandDatabase.password,
     port: config.xpandDatabase.port,
     database: config.xpandDatabase.database,
-    requestTimeout: 15000,
+    requestTimeout: 30000,
   },
   pool: {
     min: 0,
@@ -26,20 +19,6 @@ const db = knex({
   },
   client: 'mssql',
 })
-
-// TODO zod schema?
-type XpandInvoice = {
-  keycmctc2: string | null
-  invoiceNumber: string
-  reference: string
-  roundoff: number
-  fromDate: Date
-  toDate: Date
-  invoiceDate: Date
-  expiryDate: Date
-  lastDebitDate: Date | null
-  careOf: string | null
-}
 
 type XpandInvoiceRow = {
   invoiceNumber: string
@@ -52,184 +31,8 @@ type XpandInvoiceRow = {
   printGroup: string | null
   invoiceRowType: string
   rentType: string | null
-}
-
-const buildRentalPropertyQuery = ({
-  rentalIds,
-  entityTable,
-  typeCaptionTable,
-  typeJoin,
-  areaSizeKey,
-}: {
-  rentalIds: string[]
-  entityTable: string
-  typeCaptionTable: string
-  typeJoin: string
-  areaSizeKey?: string
-}) => {
-  const query = db
-    .select(
-      'babuf.hyresid AS rentalId',
-      'babuf.caption AS address',
-      'babuf.code',
-      'cmadr.adress3 AS postalCode',
-      'cmadr.adress4 AS city',
-      `${typeCaptionTable}.caption AS type`,
-      areaSizeKey ? 'cmval.value AS areaSize' : db.raw('NULL AS areaSize')
-    )
-    .from('babuf')
-    .innerJoin('cmobj', 'babuf.keycmobj', 'cmobj.keycmobj')
-    .innerJoin(entityTable, 'cmobj.keycmobj', `${entityTable}.keycmobj`)
-    .innerJoin(
-      typeCaptionTable,
-      `${entityTable}.${typeJoin}`,
-      `${typeCaptionTable}.${typeJoin}`
-    )
-    .leftJoin('cmadr', 'cmobj.keycmobj', 'cmadr.keycode')
-    .where('cmobj.keycmobt', entityTable)
-    .whereRaw(
-      `babuf.hyresid IN (${rentalIds.map((id) => `'${id}'`).join(', ')})`
-    )
-
-  if (areaSizeKey) {
-    query.leftJoin('cmval', function () {
-      this.on('cmobj.keycmobj', '=', 'cmval.keycode').andOn(
-        'cmval.keycmvat',
-        '=',
-        db.raw('?', [areaSizeKey])
-      )
-    })
-  }
-
-  return query.then(trimStrings)
-}
-
-export const getRentalProperties = async (
-  rentalIds: string[]
-): Promise<RentalProperty[]> => {
-  if (rentalIds.length === 0) {
-    return []
-  }
-
-  const [residences, parkingSpaces, facilities, other] = await Promise.all([
-    buildRentalPropertyQuery({
-      rentalIds,
-      entityTable: 'balgh',
-      typeCaptionTable: 'balgt',
-      typeJoin: 'keybalgt',
-      areaSizeKey: 'BOA',
-    }),
-    buildRentalPropertyQuery({
-      rentalIds,
-      entityTable: 'babps',
-      typeCaptionTable: 'babpt',
-      typeJoin: 'keybabpt',
-      areaSizeKey: 'BRA',
-    }),
-    buildRentalPropertyQuery({
-      rentalIds,
-      entityTable: 'balok',
-      typeCaptionTable: 'balot',
-      typeJoin: 'keybalot',
-      areaSizeKey: 'BRA',
-    }),
-    buildRentalPropertyQuery({
-      rentalIds,
-      entityTable: 'bahyr',
-      typeCaptionTable: 'bahyt',
-      typeJoin: 'keybahyt',
-    }),
-  ])
-
-  return [
-    ...residences.map(
-      (r): RentalProperty => ({
-        rentalPropertyType: 'Residence',
-        rentalId: r.rentalId,
-        address: r.address,
-        code: r.code,
-        postalCode: r.postalCode,
-        city: r.city,
-        type: r.type,
-        areaSize: r.areaSize,
-      })
-    ),
-    ...parkingSpaces.map(
-      (p): RentalProperty => ({
-        rentalPropertyType: 'ParkingSpace',
-        rentalId: p.rentalId,
-        address: p.address,
-        code: p.code,
-        postalCode: p.postalCode,
-        city: p.city,
-        type: p.type,
-        areaSize: p.areaSize,
-      })
-    ),
-    ...facilities.map(
-      (f): RentalProperty => ({
-        rentalPropertyType: 'Facility',
-        rentalId: f.rentalId,
-        address: f.address,
-        code: f.code,
-        postalCode: f.postalCode,
-        city: f.city,
-        type: f.type,
-        areaSize: f.areaSize,
-      })
-    ),
-    ...other.map(
-      (o): RentalProperty => ({
-        rentalPropertyType: 'Other',
-        rentalId: o.rentalId,
-        address: o.address,
-        code: o.code,
-        postalCode: o.postalCode,
-        city: o.city,
-        type: o.type,
-        areaSize: null,
-      })
-    ),
-  ]
-}
-
-export const getInvoices = async (
-  invoiceNumbers: string[]
-): Promise<RentInvoice[]> => {
-  const invoices = await db
-    .select(
-      'krfkh.keycmctc2',
-      'krfkh.invoice AS invoiceNumber',
-      'krfkh.reference',
-      'krfkh.roundoff',
-      'krfkh.fromdate AS fromDate',
-      'krfkh.todate AS toDate',
-      'krfkh.invdate AS invoiceDate',
-      'krfkh.expdate AS expiryDate',
-      'hyobj.sistadeb AS lastDebitDate',
-      'cmctc.cmctcben AS careOf'
-    )
-    .from('krfkh')
-    .innerJoin('hyobj', 'krfkh.reference', 'hyobj.hyobjben')
-    .leftJoin('cmctc', 'krfkh.keycmctc2', 'cmctc.keycmctc')
-    .whereRaw(
-      `krfkh.invoice IN (${invoiceNumbers.map((n) => `'${n}'`).join(', ')})`
-    )
-    .then(trimStrings<XpandInvoice[]>)
-
-  return invoices.map((invoice) => ({
-    invoiceNumber: invoice.invoiceNumber,
-    reference: invoice.reference,
-    roundoff: invoice.roundoff,
-    fromDate: new Date(invoice.fromDate),
-    toDate: new Date(invoice.toDate),
-    invoiceDate: new Date(invoice.invoiceDate),
-    expiryDate: new Date(invoice.expiryDate),
-    lastDebitDate: invoice.lastDebitDate
-      ? new Date(invoice.lastDebitDate)
-      : undefined,
-    careOf: invoice.careOf ?? undefined,
-  }))
+  fromDate: Date
+  toDate: Date
 }
 
 export const getInvoiceRows = async (
@@ -245,6 +48,8 @@ export const getInvoiceRows = async (
       'krfkr.code',
       'krfkr.rowtype AS rowType',
       'krfkr.printgroup AS printGroup',
+      'krfkr.fromdate AS fromDate',
+      'krfkr.todate AS toDate',
       'cmarg.caption AS invoiceRowType',
       'hysum.hysumben AS rentType'
     )
@@ -256,6 +61,7 @@ export const getInvoiceRows = async (
     .whereRaw(
       `krfkh.invoice IN (${invoiceNumbers.map((n) => `'${n}'`).join(', ')})`
     )
+    .whereNotNull('krfkh.fromdate')
     .orderBy('krfkr.printsort', 'asc')
     .then(trimStrings<XpandInvoiceRow[]>)
 
@@ -271,148 +77,76 @@ export const getInvoiceRows = async (
       code: row.code,
       rowType: row.rowType,
       printGroup: row.printGroup,
+      fromDate: new Date(row.fromDate),
+      toDate: new Date(row.toDate),
     }
   })
 }
 
-export const getContacts = async (
-  contactCodes: string[]
-): Promise<XpandContact[]> => {
-  const contactQuery = db
-    .from('cmctc')
-    .select(
-      'cmctc.cmctckod as contactCode',
-      'cmctc.fnamn as firstName',
-      'cmctc.enamn as lastName',
-      'cmctc.cmctcben as fullName',
-      'cmctc.persorgnr as nationalRegistrationNumber',
-      'cmctc.birthdate as birthDate',
-      'cmctc.keycmobj as keycmobj',
-      'cmctc.keycmctc as contactKey',
-      'cmctc.lagsokt as protectedIdentity',
-      'cmctcCareOf.cmctcben as careOf',
-      'krknr.autogiro as autogiro'
-    )
-    .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
-    .leftJoin('cmctc AS cmctcCareOf', 'cmctc.keycmctc2', 'cmctcCareOf.keycmctc')
+export const mapContactFlags = (row: {
+  protectedIdentity: unknown
+  deceased: unknown
+  emigrated: unknown
+  noAdvertising: unknown
+}) => ({
+  protectedIdentity: row.protectedIdentity !== null,
+  deceased: row.deceased !== null,
+  emigrated: row.emigrated !== null,
+  noAdvertising: row.noAdvertising == null ? false : row.noAdvertising !== 0,
+})
 
-  const rows = await contactQuery
-    .distinct()
-    .whereIn('cmctc.cmctckod', contactCodes)
+export const getPropertyCodeAndCostCentreForLease = async (
+  rentalId: string,
+  year?: number
+): Promise<{ costCentre: string; propertyCode: string } | null> => {
+  const queries = [
+    // First try: join via babyg when keyobjbyg exists
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.p3 AS propertyCode')
+      .from('babuf')
+      .innerJoin('babyg', 'babyg.keycmobj', 'babuf.keyobjbyg')
+      .innerJoin('repsk', 'repsk.keycode', 'babyg.keybabyg')
+      .where('babuf.hyresid', rentalId)
+      .whereNotNull('babuf.keyobjbyg')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
 
-  const emailAddresses = await db('cmeml')
-    .select('cmemlben', 'cmctckod')
-    .innerJoin('cmctc', 'cmeml.keycmobj', 'cmctc.keycmobj')
-    .whereIn('cmctckod', contactCodes)
-    .orderBy('main', 'desc')
+    // Second try: join via keyobjyta when keyobjbyg is null
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.p3 AS propertyCode')
+      .from('babuf')
+      .innerJoin('repsk', 'repsk.keycode', 'babuf.keyobjyta')
+      .where('babuf.hyresid', rentalId)
+      .whereNull('babuf.keyobjbyg')
+      .whereNotNull('babuf.keyobjyta')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
 
-  const invoiceAddresses = await db('cmadr')
-    .select('cmctckod', 'adress1', 'adress3', 'adress4')
-    .innerJoin('cmctc', 'cmadr.keycode', 'cmctc.keycmobj')
-    .whereIn('cmctckod', contactCodes)
-    .orderBy('cmctckod', 'asc')
-    .orderBy('fdate', 'desc')
-    .orderBy('tdate', 'desc')
+    // Third try: join via fstcode as fallback
+    db
+      .select('repsk.p2 AS costCentre', 'repsk.p3 AS propertyCode')
+      .from('babuf')
+      .innerJoin('repsk', 'repsk.p3', 'babuf.fstcode')
+      .where('babuf.hyresid', rentalId)
+      .whereNotNull('babuf.fstcode')
+      .orderBy('repsk.year', 'desc')
+      .limit(1),
+  ]
 
-  const phoneNumbers = await db
-    .from('cmctc')
-    .select(
-      'cmctc.cmctckod as contactCode',
-      'cmtel.cmtelben as phoneNumber',
-      'cmtel.keycmtet as type',
-      'cmtel.main as isMainNumber'
-    )
-    .innerJoin('cmtel', 'cmctc.keycmobj', 'cmtel.keycmobj')
-    .whereIn('cmctc.cmctckod', contactCodes)
-    .then(trimStrings)
+  for (const query of queries) {
+    if (year) {
+      query.where('repsk.year', year)
+    }
 
-  const getContactEmail = (contactCode: string): string => {
-    const emailAddress = emailAddresses.find((emailAddress) => {
-      return (
-        emailAddress['cmctckod'] &&
-        emailAddress['cmctckod'].localeCompare(contactCode) === 0
-      )
-    })
+    const result = await query.then(trimStrings)
 
-    return emailAddress?.cmemlben ? emailAddress.cmemlben?.trimEnd() : ''
-  }
-
-  const getContactAddress = (contactCode: string): Address => {
-    const invoiceAddress = invoiceAddresses.find((invoiceAddress) => {
-      return (
-        invoiceAddress['cmctckod'] &&
-        invoiceAddress['cmctckod'].localeCompare(contactCode) === 0
-      )
-    })
-
-    if (invoiceAddress) {
+    if (result.length > 0) {
       return {
-        street: invoiceAddress.adress1?.trimEnd(),
-        postalCode: invoiceAddress.adress3?.trimEnd(),
-        city: invoiceAddress.adress4?.trimEnd(),
-        number: '',
-      }
-    } else {
-      return {
-        street: '',
-        postalCode: '',
-        number: '',
-        city: '',
+        costCentre: result[0].costCentre ?? '',
+        propertyCode: result[0].propertyCode ?? '',
       }
     }
   }
 
-  const getPhoneNumbers = (contactCode: string) => {
-    const phoneNumbersForContact = phoneNumbers.filter((pn) => {
-      return pn.contactCode && pn.contactCode.localeCompare(contactCode) === 0
-    })
-
-    return phoneNumbersForContact
-  }
-
-  const contacts = rows.map((contactRow) => {
-    let nationalRegistrationNumber =
-      contactRow.nationalRegistrationNumber?.trimEnd()
-
-    if (nationalRegistrationNumber) {
-      if (nationalRegistrationNumber.length > 11) {
-        nationalRegistrationNumber = nationalRegistrationNumber.substring(2)
-      }
-
-      nationalRegistrationNumber =
-        nationalRegistrationNumber.substring(
-          0,
-          nationalRegistrationNumber.length - 4
-        ) +
-        '-' +
-        nationalRegistrationNumber.substring(
-          nationalRegistrationNumber.length - 4
-        )
-    }
-
-    const contactCode = contactRow.contactCode?.trimEnd()
-    const emailAddress = getContactEmail(contactCode)
-
-    return {
-      contactCode: contactRow.contactCode?.trimEnd(),
-      contactKey: contactRow.contactKey?.trimEnd(),
-      firstName: contactRow.firstName?.trimEnd(),
-      lastName: contactRow.lastName?.trimEnd(),
-      fullName: contactRow.fullName?.trimEnd(),
-      careOf: contactRow.careOf?.trimEnd(),
-      nationalRegistrationNumber,
-      birthDate: contactRow.birthDate,
-      isTenant: true,
-      address: getContactAddress(contactCode),
-      phoneNumbers: getPhoneNumbers(contactCode),
-      emailAddress: emailAddress,
-      autogiro: contactRow.autogiro && contactRow.autogiro !== 0,
-      invoiceDeliveryMethod:
-        emailAddress !== ''
-          ? InvoiceDeliveryMethod.Email
-          : InvoiceDeliveryMethod.Other,
-    }
-  })
-
-  return contacts
+  return null
 }

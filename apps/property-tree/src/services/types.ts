@@ -1,11 +1,12 @@
-import type { components } from './api/core/generated/api-types'
 import type {
-  ResidentialArea,
-  ApplicantStatus,
-  WaitingListType,
-  ApplicationProfileHousingReference,
   Address,
+  ApplicantStatus,
+  ApplicationProfileHousingReference,
+  ResidentialArea,
+  WaitingListType,
 } from '@onecore/types'
+
+import type { components } from './api/core/generated/api-types'
 
 export interface WaitingListResponse {
   queueTime: string
@@ -43,13 +44,19 @@ export interface ApplicationProfileResponse {
 // Re-export shared types for convenience
 export type {
   ApplicantStatus,
-  WaitingListType,
   ApplicationProfileHousingReference,
+  WaitingListType,
 }
 
 // Extract types from the generated schemas
 export type Company = components['schemas']['Company']
 export type CompanyDetails = components['schemas']['CompanyDetails']
+export type CostCenterSummary = components['schemas']['CostCenterSummary']
+export type CostCenterTree = components['schemas']['CostCenterTree']
+export type CostCenterTreeKvvArea =
+  components['schemas']['CostCenterTreeKvvArea']
+export type CostCenterTreeProperty =
+  components['schemas']['CostCenterTreeProperty']
 export type Property = components['schemas']['Property']
 export type Building = components['schemas']['Building']
 export type Staircase = components['schemas']['Staircase']
@@ -217,16 +224,6 @@ export interface NavigationItem {
   }
 }
 
-export interface DashboardCard {
-  id: string
-  title: string
-  icon: any // LucideIcon type from lucide-react
-  description: string
-  path: string
-  isExternal: boolean
-  isDisabled: boolean
-}
-
 // Tenant-related types
 export interface ContractType {
   leaseId: string
@@ -273,6 +270,22 @@ export interface Tenant {
   currentHousingContract: ContractType
   parkingSpaceContracts: ContractType[]
   housingContracts: ContractType[]
+}
+
+export type RelatedContactRole =
+  | 'trustee'
+  | 'administrator'
+  | 'trusteeFor'
+  | 'administratorFor'
+  | 'otherInvoiceRecipient'
+  | 'otherInvoiceRecipientFor'
+
+export interface RelatedContact {
+  contactCode: string
+  role: RelatedContactRole
+  fullName: string
+  firstName: string
+  lastName: string
 }
 
 // Queue System Types
@@ -398,19 +411,6 @@ export interface TenantCommentsResponse {
 
 export type DocumentWithUrl = components['schemas']['DocumentWithUrl']
 
-// Release Notes types
-export type ReleaseNoteCategory =
-  | 'feature'
-  | 'fix'
-  | 'improvement'
-  | 'info'
-  | 'warning'
-
-export interface ReleaseNote {
-  id: string
-  date: string // ISO date string, e.g., '2026-02-03'
-  title: string
-  description: string
-  category: ReleaseNoteCategory
-  pinned?: boolean // Pinned items always appear at the top
-}
+// Bulk communication result types
+export type BulkSmsResult = components['schemas']['BulkSmsResult']
+export type BulkEmailResult = components['schemas']['BulkEmailResult']

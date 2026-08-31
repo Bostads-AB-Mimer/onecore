@@ -11,18 +11,20 @@ import {
   TableLink,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { KeyLoan, KeyLoanWithDetails } from '@/services/types'
-import { fetchContactByContactCode } from '@/services/api/contactService'
+import { ContactV1, KeyLoan, KeyLoanWithDetails } from '@/services/types'
+import {
+  getContactFullName,
+  getContactRegistrationNumber,
+} from '@/services/api/contactService'
 import { keyLoanService } from '@/services/api/keyLoanService'
 import { LoanItemsTable } from '@/components/key-loans/LoanItemsTable'
-import { ReturnMaintenanceKeysDialog } from '@/components/maintenance/dialogs/ReturnMaintenanceKeysDialog'
+import { ReturnKeysDialog } from '@/components/loan/dialogs/ReturnKeysDialog'
 import { FilterDropdown } from '@/components/ui/filter-dropdown'
 import { NumberRangeFilterDropdown } from '@/components/ui/number-range-filter-dropdown'
 import { DateRangeFilterDropdown } from '@/components/ui/date-range-filter-dropdown'
 import { DualNullableFilterDropdown } from '@/components/ui/dual-nullable-filter-dropdown'
 import { ExpandButton } from '@/components/shared/tables/ExpandButton'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
-import { ActionMenu } from '@/components/shared/tables/ActionMenu'
 import { NotePopover } from '@/components/shared/tables/NotePopover'
 import { LoanActionMenu } from '@/components/loan/LoanActionMenu'
 import {
@@ -41,6 +43,7 @@ interface LoanExpandedData {
 
 interface KeyLoansTableProps {
   keyLoans: KeyLoan[]
+  contactsByCode: Record<string, ContactV1>
   isLoading: boolean
   onRefresh?: () => void
   onEdit?: (loan: KeyLoan) => void
@@ -77,14 +80,15 @@ interface KeyLoansTableProps {
     after: string | null
     before: string | null
   }) => void
+  autoExpandLoanId?: string | null
 }
 
 export function KeyLoansTable({
   keyLoans,
+  contactsByCode,
   isLoading,
   onRefresh,
   onEdit,
-  onDelete,
   loanTypeFilter,
   onLoanTypeFilterChange,
   minKeys,
@@ -97,17 +101,8 @@ export function KeyLoansTable({
   onPickedUpDateChange,
   returnedDateFilter,
   onReturnedDateChange,
+  autoExpandLoanId,
 }: KeyLoansTableProps) {
-  const [contactData, setContactData] = useState<
-    Record<
-      string,
-      {
-        fullName: string
-        contactCode: string
-        nationalRegistrationNumber?: string
-      }
-    >
-  >({})
   const [returnLoan, setReturnLoan] = useState<KeyLoanWithDetails | null>(null)
 
   const expansion = useExpandableRows<LoanExpandedData>({
@@ -129,43 +124,12 @@ export function KeyLoansTable({
     },
   })
 
-  // Fetch contact names for all loans
+  // Auto-expand a specific loan when navigating from another page
   useEffect(() => {
-    const fetchContactNames = async () => {
-      const uniqueContactCodes = new Set<string>()
-
-      keyLoans.forEach((loan) => {
-        if (loan.contact) uniqueContactCodes.add(loan.contact)
-        if (loan.contact2) uniqueContactCodes.add(loan.contact2)
-      })
-
-      const data: typeof contactData = {}
-      await Promise.all(
-        Array.from(uniqueContactCodes).map(async (contactCode) => {
-          try {
-            const contact = await fetchContactByContactCode(contactCode)
-            if (contact) {
-              data[contactCode] = {
-                fullName: contact.fullName ?? contactCode,
-                contactCode,
-                nationalRegistrationNumber:
-                  contact.nationalRegistrationNumber || undefined,
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to fetch contact ${contactCode}:`, error)
-            data[contactCode] = { fullName: contactCode, contactCode }
-          }
-        })
-      )
-
-      setContactData(data)
+    if (autoExpandLoanId && keyLoans.length > 0) {
+      expansion.expand(autoExpandLoanId)
     }
-
-    if (keyLoans.length > 0) {
-      fetchContactNames()
-    }
-  }, [keyLoans])
+  }, [autoExpandLoanId, keyLoans])
 
   const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return '-'
@@ -181,9 +145,11 @@ export function KeyLoansTable({
     if (codes.length === 0) return '-'
 
     const values = codes.map((code) => {
-      const data = contactData[code]
-      if (!data) return field === 'contactCode' ? code : '-'
-      return data[field] ?? '-'
+      const contact = contactsByCode[code]
+      if (!contact) return field === 'contactCode' ? code : '-'
+      if (field === 'contactCode') return contact.contactCode
+      if (field === 'fullName') return getContactFullName(contact)
+      return getContactRegistrationNumber(contact) ?? '-'
     })
 
     if (values.length === 1) return values[0]
@@ -200,7 +166,7 @@ export function KeyLoansTable({
   return (
     <>
       {returnLoan && (
-        <ReturnMaintenanceKeysDialog
+        <ReturnKeysDialog
           open={!!returnLoan}
           onOpenChange={(open) => {
             if (!open) setReturnLoan(null)
@@ -314,8 +280,6 @@ export function KeyLoansTable({
                   isExpanded &&
                   expansion.isLoading &&
                   expansion.expandedId === loan.id
-                const isActive = !!loan.pickedUpAt && !loan.returnedAt
-
                 return (
                   <React.Fragment key={loan.id}>
                     <TableRow className="hover:bg-muted/50">
@@ -338,7 +302,7 @@ export function KeyLoansTable({
 
                           const renderLink = (code: string) => {
                             const displayCode =
-                              contactData[code]?.contactCode ?? code
+                              contactsByCode[code]?.contactCode ?? code
                             const to =
                               loan.loanType === 'MAINTENANCE'
                                 ? `/maintenance-keys?contact=${displayCode}`
@@ -371,12 +335,7 @@ export function KeyLoansTable({
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {isExpanded && !isLoadingThis && expansion.loadedData
-                            ? (expansion.loadedData.loanDetails.keysArray
-                                ?.length || 0) +
-                              (expansion.loadedData.loanDetails.keyCardsArray
-                                ?.length || 0)
-                            : '-'}
+                          {(loan.keyCount ?? 0) + (loan.cardCount ?? 0)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -394,24 +353,22 @@ export function KeyLoansTable({
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
                           <NotePopover text={loan.notes} />
-                          {isExpanded &&
-                          !isLoadingThis &&
-                          expansion.loadedData ? (
-                            <LoanActionMenu
-                              loan={expansion.loadedData.loanDetails}
-                              onRefresh={onRefresh}
-                              onReturn={() =>
-                                setReturnLoan(expansion.loadedData!.loanDetails)
-                              }
-                            />
-                          ) : (
-                            <ActionMenu
-                              onEdit={() => onEdit?.(loan)}
-                              onDelete={
-                                isActive ? undefined : () => onDelete?.(loan)
-                              }
-                            />
-                          )}
+                          <LoanActionMenu
+                            loan={
+                              isExpanded && expansion.loadedData
+                                ? expansion.loadedData.loanDetails
+                                : loan
+                            }
+                            onRefresh={onRefresh}
+                            onEdit={
+                              onEdit
+                                ? (enrichedLoan) => onEdit(enrichedLoan)
+                                : undefined
+                            }
+                            onReturn={(enrichedLoan) => {
+                              setReturnLoan(enrichedLoan)
+                            }}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>

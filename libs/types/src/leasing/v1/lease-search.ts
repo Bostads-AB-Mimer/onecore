@@ -1,5 +1,9 @@
 import { z } from 'zod'
-import { LeaseStatus } from '../../enums'
+import { LeaseStatus, LeaseType } from '../../enums'
+
+export const LeaseContactTypeSchema = z.enum(['tenant', 'subletTenant'])
+
+export type LeaseContactType = z.infer<typeof LeaseContactTypeSchema>
 
 /**
  * Contact info schema - reusable for lease contacts
@@ -9,6 +13,7 @@ export const ContactInfoSchema = z.object({
   contactCode: z.string(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
+  contactType: LeaseContactTypeSchema.optional(),
 })
 
 export type ContactInfo = z.infer<typeof ContactInfoSchema>
@@ -20,6 +25,10 @@ export const LeaseSearchQueryParamsSchema = z.object({
   // Text search
   q: z.string().optional(),
 
+  // Explicit search fields (used by search)
+  name: z.string().optional(),
+  address: z.string().optional(),
+
   // Filters
   objectType: z
     .union([z.string(), z.array(z.string())])
@@ -27,6 +36,16 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .optional(),
 
   status: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .optional(),
+
+  leaseType: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .optional(),
+
+  parkingSpaceType: z
     .union([z.string(), z.array(z.string())])
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
@@ -58,6 +77,11 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .transform((val) => (Array.isArray(val) ? val : [val]))
     .optional(),
 
+  kvvAreaCodes: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .optional(),
+
   buildingManager: z
     .union([z.string(), z.array(z.string())])
     .transform((val) => (Array.isArray(val) ? val : [val]))
@@ -67,18 +91,47 @@ export const LeaseSearchQueryParamsSchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1)),
+    .transform((val) => (val ? parseInt(val, 10) : 1))
+    .refine((val) => !isNaN(val), { message: 'page must be a valid number' }),
   limit: z
     .string()
     .optional()
-    .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20)),
+    .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20))
+    .refine((val) => !isNaN(val), { message: 'limit must be a valid number' }),
+
+  // When false (default), Upphört (status 3) is excluded. When true, all statuses are returned.
+  includeEnded: z
+    .union([z.string(), z.boolean()])
+    .transform((val) => val === true || val === 'true')
+    .optional(),
+
+  // When true, joins district + parking-type tables and always includes property/building/area fields
+  // regardless of which filters were used. Use when consuming the result for export-like purposes.
+  forExport: z
+    .union([z.string(), z.boolean()])
+    .transform((val) => val === true || val === 'true')
+    .optional(),
 
   // Sorting (tenantName removed since contacts are fetched separately)
-  sortBy: z.enum(['leaseStartDate', 'lastDebitDate', 'leaseId']).optional(),
+  sortBy: z
+    .enum([
+      'leaseStartDate',
+      'lastDebitDate',
+      'leaseId',
+      'address',
+      'objectType',
+      'rentalObjectCode',
+    ])
+    .optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
 })
 
 export type LeaseSearchQueryParams = z.infer<
+  typeof LeaseSearchQueryParamsSchema
+>
+
+/** Raw input type (before Zod transforms) — matches Koa ctx.query shape */
+export type LeaseSearchQueryParamsInput = z.input<
   typeof LeaseSearchQueryParamsSchema
 >
 
@@ -89,12 +142,17 @@ export const LeaseSearchResultSchema = z.object({
   // Core lease fields (always returned)
   leaseId: z.string(),
   objectTypeCode: z.string(),
-  leaseType: z.string(),
+  leaseType: z.nativeEnum(LeaseType),
   contacts: z.array(ContactInfoSchema),
   address: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  city: z.string().nullable(),
   startDate: z.date().nullable(),
   lastDebitDate: z.date().nullable(),
   status: z.nativeEnum(LeaseStatus),
+
+  // Rental object code (objektnummer) - always included
+  rentalObjectCode: z.string().nullable(),
 
   // Property/Building/Area fields - optional (only included when filter used)
   // nullable().optional() = omit when not queried, null when queried but empty in DB
@@ -103,6 +161,10 @@ export const LeaseSearchResultSchema = z.object({
   area: z.string().nullable().optional(),
   buildingManager: z.string().nullable().optional(),
   districtName: z.string().nullable().optional(),
+  parkingSpaceType: z.string().nullable().optional(),
+
+  // Rent aggregate (only included when forExport=true triggers the join)
+  totalYearRent: z.number().nullable().optional(),
 })
 
 export type LeaseSearchResult = z.infer<typeof LeaseSearchResultSchema>

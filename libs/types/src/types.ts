@@ -2,6 +2,7 @@ import { z } from 'zod'
 import {
   ApplicantStatus,
   LeaseStatus,
+  LeaseType,
   ListingStatus,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
@@ -18,8 +19,16 @@ import {
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
   InvoiceSchema,
+  XledgerContactSchema,
+  RentInvoiceRowSchema,
   LeaseRentRowSchema,
 } from './schemas/v1'
+import {
+  MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceRow,
+} from './economy'
+import { XledgerProjectSchema } from './schemas/v1/project'
 import { IdentityCheckContactSchema } from './leasing/v1'
 
 interface Contact {
@@ -32,7 +41,7 @@ interface Contact {
   fullName: string
   nationalRegistrationNumber: string
   birthDate: Date
-  address: Address | undefined
+  address?: Address
   phoneNumbers: PhoneNumber[] | undefined
   emailAddress?: string
   isTenant: boolean
@@ -40,6 +49,11 @@ interface Contact {
   housingWaitingList?: WaitingList
   storageWaitingList?: WaitingList
   specialAttention?: boolean
+  protectedIdentity: boolean
+  deceased: boolean
+  emigrated: boolean
+  noAdvertising: boolean
+  careOf?: string
 }
 
 type NonEmptyArray<T> = [T, ...T[]]
@@ -68,10 +82,11 @@ interface Lease {
   leaseEndDate: Date | undefined
   status: LeaseStatus
   tenantContactIds: string[] | undefined
-  tenants: Contact[] | undefined
+  subletContactId?: string
+  tenants: (Contact & { leaseContactType?: string })[] | undefined //SHould really be renamed contacts if it should sitll include second hand tenants and incvopice recipients
   rentalPropertyId: string
   rentalObject?: RentalObject
-  type: string
+  type: LeaseType
   noticeGivenBy: string | undefined
   noticeDate: Date | undefined
   noticeTimeTenant: string | undefined
@@ -104,6 +119,7 @@ interface RentalProperty {
 
 interface Address {
   street?: string
+  street2?: string
   number: string
   postalCode: string
   city: string
@@ -185,10 +201,27 @@ interface ConsumerReportError {
   Reject_comment: string
 }
 
+interface EmailAttachment {
+  filename: string
+  content: string // base64 string
+  contentType: string // e.g., 'application/pdf'
+}
+
 interface Email {
   to: string
   subject: string
   text: string
+  attachments?: EmailAttachment[]
+}
+
+interface InvoiceNotificationEmail {
+  to: string
+  firstName: string
+  address: string
+  invoiceNumber: string
+  dueDate: string
+  totalAmount: string
+  attachments?: EmailAttachment[]
 }
 
 interface Sms {
@@ -275,6 +308,12 @@ interface RentalPropertyInfo {
   type: string
   property: ApartmentInfo | CommercialSpaceInfo | ParkingSpaceInfo
   maintenanceUnits?: MaintenanceUnitInfo[]
+  districtCode: string
+  district: string
+  marketAreaCode: string
+  marketArea: string
+  building: BuildingInfo
+  address?: Address
 }
 
 interface ApartmentInfo {
@@ -316,6 +355,16 @@ interface ParkingSpaceInfo {
   code: string
 }
 
+interface BuildingInfo {
+  buildingCode: string
+  building: string
+  constructionYear?: number
+  renovationYear?: number
+  assessmentYear?: number
+  buildingTypeCode: string
+  buildingTypeCaption: string
+}
+
 interface ParkingSpace {
   parkingSpaceId: string
   address: Address
@@ -329,6 +378,7 @@ interface RentalObject {
   rentalObjectCode: string
   address: string
   rent?: RentalObjectRent
+  availabilityInfo?: RentalObjectAvailabilityInfo
   districtCaption?: string
   districtCode?: string
   propertyCaption?: string
@@ -337,7 +387,8 @@ interface RentalObject {
   residentialAreaCode: string
   objectTypeCaption: string
   objectTypeCode: string
-  vacantFrom?: Date
+  blockStartDate?: Date //will be moved to a separate type in the future when Blocks has been moved to OneCore
+  blockEndDate?: Date //will be moved to a separate type in the future when Blocks has been moved to OneCore
   braArea?: number
   btaArea?: number
   boaArea?: number
@@ -345,8 +396,21 @@ interface RentalObject {
   isSpecialProperty?: boolean
 }
 
-interface RentalObjectRent {
+interface RentalTag {
+  id: string
+  name: string
+}
+
+// This type is used as the return type of the function that parses the availability info of a rental object.
+interface RentalObjectAvailabilityInfo {
   rentalObjectCode: string
+  vacantFrom?: Date
+  rent: RentalObjectRent
+  rentalTenureType: RentalTag
+  rentalTags?: RentalTag[]
+}
+
+interface RentalObjectRent {
   amount: number
   vat: number
   rows: Array<RentalObjectRentRow>
@@ -383,6 +447,9 @@ type CommentThread = z.infer<typeof CommentThreadSchema>
 type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
+type RentInvoiceRow = z.infer<typeof RentInvoiceRowSchema>
+type XledgerContact = z.infer<typeof XledgerContactSchema>
+type XledgerProject = z.infer<typeof XledgerProjectSchema>
 type LeaseRentRow = z.infer<typeof LeaseRentRowSchema>
 
 type IdentityCheckContact = z.infer<typeof IdentityCheckContactSchema>
@@ -404,11 +471,17 @@ export type {
   Invoice,
   InvoiceRow,
   InvoicePaymentEvent,
+  RentInvoiceRow,
+  XledgerContact,
+  XledgerProject,
   RentalObject,
+  RentalTag,
+  RentalObjectAvailabilityInfo,
   RentalObjectRent,
   RentalObjectRentRow as RentRow,
   ParkingSpace,
   Email,
+  EmailAttachment,
   Sms,
   WaitingList,
   Listing,
@@ -431,4 +504,8 @@ export type {
   Comment,
   LeaseRentRow,
   IdentityCheckContact,
+  MiscellaneousInvoicePayload,
+  MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceRow,
+  InvoiceNotificationEmail,
 }

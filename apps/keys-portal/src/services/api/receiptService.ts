@@ -19,23 +19,17 @@ export const receiptService = {
   },
 
   /**
-   * Create a new receipt with a file in a single call
-   * The file is uploaded along with the receipt creation (more efficient than create + uploadFile)
+   * Create a new receipt and upload its file. Two backend calls — POST /receipts
+   * ignores fileData on creation, so we create the row first and then push the
+   * bytes through /receipts/{id}/upload.
    */
   async createWithFile(
     payload: Omit<CreateReceiptRequest, 'fileData' | 'fileContentType'>,
     file: File
   ): Promise<Receipt> {
-    const fileData = await blobToBase64(file)
-    const { data, error } = await POST('/receipts', {
-      body: {
-        ...payload,
-        fileData,
-        fileContentType: file.type || 'application/pdf',
-      },
-    })
-    if (error) throw error
-    return data?.content as Receipt
+    const receipt = await this.create(payload)
+    const { fileId } = await this.uploadFile(receipt.id, file)
+    return { ...receipt, fileId }
   },
 
   /**

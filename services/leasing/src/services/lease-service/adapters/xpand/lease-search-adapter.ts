@@ -1,10 +1,12 @@
 import { Knex } from 'knex'
 import { Context } from 'koa'
-import { leasing, LeaseStatus } from '@onecore/types'
+import { leasing, LeaseStatus, LeaseStatusLabel } from '@onecore/types'
 import { paginateKnex, PaginatedResponse } from '@onecore/utilities'
+import { logger } from '@onecore/utilities'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 import { calculateStatus } from '../../helpers/transformFromXPandDb'
+import { parseLeaseType } from '../../helpers/lease-type-parser'
 import { analyzeSearchTerm } from '../../helpers/searchTermAnalyzer'
 
 /** Maps enum values to normalized status keys */
@@ -13,6 +15,9 @@ const STATUS_ENUM_MAP: Record<string, string> = {
   [LeaseStatus.Upcoming]: 'upcoming',
   [LeaseStatus.AboutToEnd]: 'abouttoend',
   [LeaseStatus.Ended]: 'ended',
+  [LeaseStatus.PreliminaryTerminated]: 'preliminary-terminated',
+  [LeaseStatus.PendingSignature]: 'pending-signature',
+  [LeaseStatus.NotSent]: 'not-sent',
 }
 
 /** Maps normalized status keys to SQL WHERE conditions */
@@ -45,16 +50,38 @@ const normalizeObjectType = (type: string): string =>
   OBJECT_TYPE_MAP[type.toLowerCase()] ?? type
 
 /**
+ * Xpand hyobj.keyhyobt code for "Avtalsmall" (agreement template).
+ * Template rows are not real contracts — they have all dates NULL, so
+ * calculateStatus would classify them as "Gällande" and they'd leak into
+ * search results. Xpand's own UI hides them; excluded here from all searches.
+ */
+const XPAND_HYOBT_AVTALSMALL = '1'
+
+export interface LeaseSearchOptions {
+  forExport?: boolean
+  /**
+   * If provided, skip the COUNT query and use this value as totalRecords.
+   * Used by createExcelFromPaginated to avoid redundant COUNT queries after page 1.
+   */
+  totalCount?: number
+}
+
+/**
  * Modular query builder for lease search
  * Only joins tables when filters require them
  */
-class LeaseSearchQueryBuilder {
+export class LeaseSearchQueryBuilder {
   private query: Knex.QueryBuilder
   private joinedTables: Set<string>
   private params: leasing.v1.LeaseSearchQueryParams
+  private options: LeaseSearchOptions
 
-  constructor(params: leasing.v1.LeaseSearchQueryParams) {
+  constructor(
+    params: leasing.v1.LeaseSearchQueryParams,
+    options?: LeaseSearchOptions
+  ) {
     this.params = params
+    this.options = options || {}
     this.joinedTables = new Set()
     this.query = this.buildBaseQuery()
   }
@@ -79,6 +106,7 @@ class LeaseSearchQueryBuilder {
       .innerJoin('cmobj', 'cmobj.keycmobj', 'hykop.keycmobj')
       .where('hyobj.deletemark', 0)
       .whereNot('hyobj.hyobjben', 'like', '%M%')
+      .whereNot('hyobj.keyhyobt', XPAND_HYOBT_AVTALSMALL)
 
     this.joinedTables.add('hyobj')
     this.joinedTables.add('hyhav')
@@ -149,6 +177,40 @@ class LeaseSearchQueryBuilder {
   }
 
   /**
+   * Ensure parking space type (babpt) table is joined via babps
+   * Uses LEFT JOIN so non-parking leases are not filtered out
+   */
+  private ensureBabptJoin(): void {
+    if (!this.joinedTables.has('babpt')) {
+      this.query
+        .leftJoin('babps', 'babps.keycmobj', 'hykop.keycmobj')
+        .leftJoin('babpt', 'babpt.keybabpt', 'babps.keybabpt')
+      this.joinedTables.add('babpt')
+    }
+  }
+
+  /**
+   * Ensure the yearly rent aggregate is joined on babuf.hyresid (rental object code).
+   * The aggregate sums yearrent rows per rentalpropertyid so each lease gets one totalYearRent.
+   * LEFT JOIN — leases without rent rows just see null.
+   */
+  private ensureRentJoin(): void {
+    this.ensureBabufJoin()
+    if (!this.joinedTables.has('rent')) {
+      this.query.leftJoin(
+        xpandDb.raw(`(
+          SELECT rentalpropertyid, SUM(yearrent) as totalYearRent
+          FROM hy_debitrowrentalproperty_xpand_api
+          GROUP BY rentalpropertyid
+        ) as rent`),
+        'rent.rentalpropertyid',
+        'babuf.hyresid'
+      )
+      this.joinedTables.add('rent')
+    }
+  }
+
+  /**
    * Apply text search filter
    * Uses smart analysis to only search relevant columns based on input pattern
    * Uses EXISTS subquery for contact search to avoid row duplication
@@ -205,13 +267,62 @@ class LeaseSearchQueryBuilder {
   }
 
   /**
-   * Apply object type filter
-   * Accepts friendly names (bostad, parkering, lokal, ovrigt) or DB codes (balgh, babps, balok, bahyr)
+   * Apply object type filter combined with parking space type filter.
+   *
+   * Semantics:
+   * - Only objectType: WHERE cmobj.keycmobt IN (...)
+   * - Only parkingSpaceType: WHERE babpt.code IN (...)
+   * - Both set, with non-parking objectTypes: WHERE (cmobj.keycmobt IN (...non-parking...) OR babpt.code IN (...))
+   *
+   * When parkingSpaceType is set, the 'parkering' (babps) entry is stripped from objectType
+   * so the specific subtypes dominate. "All parking" (babps) and specific subtypes are
+   * mutually exclusive — picking a subtype means "just this one", not "all parking PLUS this".
+   *
+   * Accepts friendly objectType names (bostad, parkering, lokal, ovrigt) or DB codes.
    */
-  applyObjectTypeFilter(): this {
-    if (this.params.objectType && this.params.objectType.length > 0) {
-      const dbCodes = this.params.objectType.map(normalizeObjectType)
-      this.query.whereIn('cmobj.keycmobt', dbCodes)
+  applyObjectAndParkingFilters(): this {
+    const hasObjectType =
+      this.params.objectType && this.params.objectType.length > 0
+    const hasParkingSpaceType =
+      this.params.parkingSpaceType && this.params.parkingSpaceType.length > 0
+
+    if (!hasObjectType && !hasParkingSpaceType) {
+      return this
+    }
+
+    if (hasParkingSpaceType) {
+      this.ensureBabptJoin()
+    }
+
+    const rawObjectTypeCodes = hasObjectType
+      ? this.params.objectType!.map(normalizeObjectType)
+      : []
+    // When parkingSpaceType is set, subtypes dominate — drop the broad 'babps' entry
+    const objectTypeCodes = hasParkingSpaceType
+      ? rawObjectTypeCodes.filter((code) => code !== 'babps')
+      : rawObjectTypeCodes
+    const parkingCodes = hasParkingSpaceType
+      ? this.params.parkingSpaceType!
+      : null
+
+    this.query.where(function () {
+      if (objectTypeCodes.length > 0) {
+        this.whereIn('cmobj.keycmobt', objectTypeCodes)
+      }
+      if (parkingCodes) {
+        this.orWhereIn('babpt.code', parkingCodes)
+      }
+    })
+
+    return this
+  }
+
+  /**
+   * Apply lease type filter (e.g., Garagekontrakt, P-Platskontrakt)
+   */
+  applyLeaseTypeFilter(): this {
+    if (this.params.leaseType && this.params.leaseType.length > 0) {
+      this.query.whereIn('hyhav.hyhavben', this.params.leaseType)
     }
 
     return this
@@ -222,19 +333,24 @@ class LeaseSearchQueryBuilder {
    * Uses STATUS_CONDITIONS lookup for cleaner code
    */
   applyStatusFilter(): this {
-    if (!this.params.status?.length) return this
-
-    const statuses = this.params.status
     const currentDate = new Date().toISOString().split('T')[0]
 
-    this.query.where(function () {
-      for (const status of statuses) {
-        const condition = STATUS_CONDITIONS[normalizeStatus(status)]
-        if (condition) {
-          this.orWhere((qb) => condition(qb, currentDate))
+    if (this.params.status?.length) {
+      // Explicit status filter — use exactly what was requested
+      const statuses = this.params.status
+      this.query.where(function () {
+        for (const status of statuses) {
+          const condition = STATUS_CONDITIONS[normalizeStatus(status)]
+          if (condition) {
+            this.orWhere((qb) => condition(qb, currentDate))
+          }
         }
-      }
-    })
+      })
+    } else if (!this.params.includeEnded) {
+      // Default: exclude Upphört (status 3) for performance
+      const endedCondition = STATUS_CONDITIONS['ended']
+      this.query.whereNot((qb) => endedCondition(qb, currentDate))
+    }
 
     return this
   }
@@ -312,28 +428,36 @@ class LeaseSearchQueryBuilder {
   }
 
   /**
-   * Apply building manager filter (Kvartersvärd)
+   * Apply KVV-area filter (förvaltningsområde). Matches bafen.code against
+   * the area codes resolved by core from the responsible Keycloak users.
    */
-  applyBuildingManagerFilter(): this {
-    if (this.params.buildingManager && this.params.buildingManager.length > 0) {
+  applyKvvAreaFilter(): this {
+    if (this.params.kvvAreaCodes && this.params.kvvAreaCodes.length > 0) {
       this.ensureDistrictJoin()
-      this.query.whereIn('bafen.omrade', this.params.buildingManager)
+      this.query.whereIn('bafen.code', this.params.kvvAreaCodes)
     }
 
     return this
   }
 
   /**
-   * Ensure all joins needed for response fields
-   * Contact/email/phone are fetched separately via getContactsForLeases()
-   */
-  /**
    * Build SELECT fields
    * Only selects property/area/district fields if those filters were used
+   * (unless forExport is true, then always include them)
    */
   buildSelectFields(): this {
     // Always join address for display
     this.ensureAddressJoin()
+
+    // Always join babuf for rental object code (objektnummer)
+    this.ensureBabufJoin()
+
+    // Force joins for export to ensure all fields are populated
+    if (this.options.forExport) {
+      this.ensureDistrictJoin()
+      this.ensureBabptJoin()
+      this.ensureRentJoin()
+    }
 
     // Always selected (core display fields)
     this.query.select(
@@ -343,7 +467,10 @@ class LeaseSearchQueryBuilder {
       'hyobj.sistadeb as lastDebitDate',
       'cmobj.keycmobt as objectTypeCode',
       'hyhav.hyhavben as leaseType',
-      'cmadr.adress1 as address'
+      'cmadr.adress1 as address',
+      'babuf.hyresid as rentalObjectCode',
+      'cmadr.adress3 as postalCode',
+      'cmadr.adress4 as city'
     )
 
     // Add JSON subquery to fetch contacts with email/phone in one go
@@ -363,8 +490,11 @@ class LeaseSearchQueryBuilder {
       ) as contactsJson`)
     )
 
-    // Conditionally select if tables were joined by filters
-    if (this.joinedTables.has('babuf')) {
+    // Conditionally select property fields if property/building filter was used or exporting
+    const hasPropertyFilter =
+      (this.params.property && this.params.property.length > 0) ||
+      (this.params.buildingCodes && this.params.buildingCodes.length > 0)
+    if (this.options.forExport || hasPropertyFilter) {
       this.query.select(
         'babuf.fstcaption as property',
         'babuf.bygcode as buildingCode'
@@ -382,6 +512,14 @@ class LeaseSearchQueryBuilder {
       )
     }
 
+    if (this.joinedTables.has('babpt')) {
+      this.query.select('babpt.caption as parkingSpaceType')
+    }
+
+    if (this.joinedTables.has('rent')) {
+      this.query.select('rent.totalYearRent')
+    }
+
     return this
   }
 
@@ -397,10 +535,35 @@ class LeaseSearchQueryBuilder {
       leaseStartDate: 'hyobj.fdate',
       lastDebitDate: 'hyobj.sistadeb',
       leaseId: 'hyobj.hyobjben',
+      address: 'cmadr.adress1',
+      objectType: 'cmobj.keycmobt',
+      rentalObjectCode: 'babuf.hyresid',
     }
 
-    const sortField = sortFieldMap[sortBy] || 'hyobj.fdate'
-    this.query.orderBy(sortField, sortOrder)
+    if (sortBy === 'address') {
+      // Natural sort: split street name from street number so "2" comes before "10"
+      const dir = sortOrder === 'desc' ? 'desc' : 'asc'
+      this.query
+        .orderBy(
+          xpandDb.raw(
+            `LEFT(cmadr.adress1, CASE WHEN PATINDEX('%[0-9]%', cmadr.adress1) > 0 THEN PATINDEX('%[0-9]%', cmadr.adress1) - 1 ELSE LEN(cmadr.adress1) END)`
+          ) as unknown as string,
+          dir
+        )
+        .orderBy(
+          xpandDb.raw(
+            `CASE WHEN PATINDEX('%[0-9]%', cmadr.adress1) > 0
+              THEN CAST(SUBSTRING(cmadr.adress1, PATINDEX('%[0-9]%', cmadr.adress1), PATINDEX('%[^0-9]%', SUBSTRING(cmadr.adress1, PATINDEX('%[0-9]%', cmadr.adress1), 100) + ' ') - 1) AS INT)
+              ELSE 0
+            END`
+          ) as unknown as string,
+          dir
+        )
+        .orderBy('cmadr.adress1', dir)
+    } else {
+      const sortField = sortFieldMap[sortBy] || 'hyobj.fdate'
+      this.query.orderBy(sortField, sortOrder)
+    }
 
     return this
   }
@@ -416,10 +579,10 @@ class LeaseSearchQueryBuilder {
 /**
  * Map object type codes to Swedish labels
  */
-const getObjectTypeLabel = (objectTypeCode: string): string => {
+export const getObjectTypeLabel = (objectTypeCode: string): string => {
   const typeMap: Record<string, string> = {
     balgh: 'Bostad',
-    babps: 'Parkering',
+    babps: 'Bilplats',
     balok: 'Lokal',
     bahyr: 'Övrigt',
   }
@@ -427,103 +590,18 @@ const getObjectTypeLabel = (objectTypeCode: string): string => {
 }
 
 /**
- * Batch fetch contacts for a list of lease keys
- * Returns a Map from leaseKey to array of ContactInfo
+ * Map numeric status to Swedish label for Excel export
  */
-const getContactsForLeases = async (
-  leaseKeys: string[]
-): Promise<Map<string, leasing.v1.ContactInfo[]>> => {
-  if (leaseKeys.length === 0) {
-    return new Map()
-  }
-
-  // Query 1: Get contacts for all leases
-  const startContacts = Date.now()
-  const rows = await xpandDb
-    .from('hyavk')
-    .select(
-      'hyavk.keyhyobj as leaseKey',
-      'cmctc.cmctcben as name',
-      'cmctc.cmctckod as contactCode',
-      'cmctc.keycmobj'
-    )
-    .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
-    .whereIn('hyavk.keyhyobj', leaseKeys)
-  console.log(
-    `  Contact names query: ${Date.now() - startContacts}ms (${rows.length} contacts)`
-  )
-
-  if (rows.length === 0) {
-    const result = new Map<string, leasing.v1.ContactInfo[]>()
-    leaseKeys.forEach((key) => result.set(key, []))
-    return result
-  }
-
-  const keycmobjs = [...new Set(rows.map((r) => r.keycmobj as string))]
-  console.log(
-    `  Fetching emails/phones for ${keycmobjs.length} unique contacts`
-  )
-
-  // Batch fetch emails and phones in parallel
-  const startEmailPhone = Date.now()
-  const [emailRows, phoneRows] = await Promise.all([
-    xpandDb
-      .from('cmeml')
-      .select('keycmobj', 'cmemlben as email')
-      .whereIn('keycmobj', keycmobjs)
-      .where('main', 1)
-      .then((result) => {
-        console.log(
-          `    Email query: ${Date.now() - startEmailPhone}ms (${result.length} emails)`
-        )
-        return result
-      }),
-    xpandDb
-      .from('cmtel')
-      .select('keycmobj', 'cmtelben as phone')
-      .whereIn('keycmobj', keycmobjs)
-      .where('main', 1)
-      .then((result) => {
-        console.log(
-          `    Phone query: ${Date.now() - startEmailPhone}ms (${result.length} phones)`
-        )
-        return result
-      }),
-  ])
-
-  // Build lookups
-  const emailByKeycmobj = new Map(
-    emailRows.map((r) => [r.keycmobj, trimRow(r).email as string])
-  )
-  const phoneByKeycmobj = new Map(
-    phoneRows.map((r) => [r.keycmobj, trimRow(r).phone as string])
-  )
-
-  // Group contacts by lease key
-  const result = new Map<string, leasing.v1.ContactInfo[]>()
-  leaseKeys.forEach((key) => result.set(key, []))
-
-  for (const row of rows) {
-    const trimmed = trimRow(row)
-    const contact: leasing.v1.ContactInfo = {
-      name: trimmed.name as string,
-      contactCode: trimmed.contactCode as string,
-      email: emailByKeycmobj.get(row.keycmobj as string) || null,
-      phone: phoneByKeycmobj.get(row.keycmobj as string) || null,
-    }
-    result.get(row.leaseKey as string)!.push(contact)
-  }
-
-  return result
+export const getStatusLabel = (status: LeaseStatus): string => {
+  return LeaseStatusLabel[status] ?? String(status)
 }
 
 /**
  * Transform database row to LeaseSearchResult with calculated status
- * Contacts are attached separately via getContactsForLeases()
  * Only includes optional fields (property/area/district) if they were selected
  * Fields are omitted entirely when not queried (vs null when queried but empty in DB)
  */
-const transformRow = (
+export const transformRow = (
   row: any
 ): Omit<leasing.v1.LeaseSearchResult, 'contacts'> => {
   const trimmedRow = trimRow(row)
@@ -536,10 +614,13 @@ const transformRow = (
   const result: Omit<leasing.v1.LeaseSearchResult, 'contacts'> = {
     leaseId: trimmedRow.leaseId,
     objectTypeCode: getObjectTypeLabel(trimmedRow.objectTypeCode),
-    leaseType: trimmedRow.leaseType,
+    leaseType: parseLeaseType(trimmedRow.leaseType),
     address: trimmedRow.address || null,
+    postalCode: trimmedRow.postalCode || null,
+    city: trimmedRow.city || null,
     startDate: trimmedRow.startDate || null,
     lastDebitDate: trimmedRow.lastDebitDate || null,
+    rentalObjectCode: trimmedRow.rentalObjectCode || null,
     status,
   }
 
@@ -559,91 +640,178 @@ const transformRow = (
     result.districtName = trimmedRow.districtName || null
   }
 
+  if (trimmedRow.parkingSpaceType !== undefined) {
+    result.parkingSpaceType = trimmedRow.parkingSpaceType || null
+  }
+
+  if (trimmedRow.totalYearRent !== undefined) {
+    result.totalYearRent =
+      typeof trimmedRow.totalYearRent === 'number'
+        ? trimmedRow.totalYearRent
+        : null
+  }
+
   return result
 }
 
 // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
 /**
- * Main search function with pagination
+ * Parse contacts JSON from the SQL subquery result
  */
-export const getBuildingManagers = async (): Promise<
-  { code: string; name: string; district: string }[]
-> => {
-  const rows = await xpandDb
-    .from('bafen')
-    .select(
-      'bafen.code as code',
-      'bafen.omrade as name',
-      'bafen.distrikt as district'
-    )
-    .distinct()
-    .whereNotNull('bafen.omrade')
-    .where('bafen.omrade', '!=', '')
-    .orderBy('bafen.distrikt')
-    .orderBy('bafen.omrade')
+export const parseContactsJson = (
+  contactsJson: string | null
+): leasing.v1.ContactInfo[] => {
+  if (!contactsJson) return []
 
-  return rows.map((row: { code: string; name: string; district: string }) => ({
-    code: row.code.trim(),
-    name: row.name.trim(),
-    district: row.district?.trim() ?? '',
-  }))
+  try {
+    const parsed = JSON.parse(contactsJson)
+    return parsed.map((c: any) => ({
+      name: c.name ? String(c.name).trim() : '',
+      contactCode: c.contactCode ? String(c.contactCode).trim() : '',
+      email: c.email ? String(c.email).trim() : null,
+      phone: c.phone ? String(c.phone).trim() : null,
+    }))
+  } catch (e) {
+    logger.warn(e, 'parseContactsJson: failed to parse contacts JSON')
+    return []
+  }
 }
 
+export const getParkingSpaceTypes = async (): Promise<
+  { code: string; caption: string }[]
+> => {
+  try {
+    const rows = await xpandDb
+      .from('babpt')
+      .select('babpt.code as code', 'babpt.caption as caption')
+      .orderBy('babpt.caption')
+
+    return rows.map((row: { code: string; caption: string }) => ({
+      code: row.code.trim(),
+      caption: row.caption.trim(),
+    }))
+  } catch (err) {
+    logger.error({ err }, 'getParkingSpaceTypes')
+    throw err
+  }
+}
+
+/**
+ * Get distinct rental object codes (hyresid) managed by
+ * the given building manager name(s).
+ *
+ * Used by the Tenfast search adapter to post-filter leases
+ * by building manager. Returns Xpand rental object IDs that
+ * match Tenfast's hyresobjekt externalId.
+ */
+export const getRentalObjectCodesByBuildingManager = async (
+  buildingManagers: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('bafen')
+    .innerJoin('babuf', 'babuf.fencode', 'bafen.code')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('bafen.omrade', buildingManagers)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given building code(s).
+ */
+export const getRentalObjectCodesByBuildingCodes = async (
+  buildingCodes: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('babuf.bygcode', buildingCodes)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given area code(s) (område).
+ *
+ * Join chain: babuf → bafst (property) → babya (area)
+ */
+export const getRentalObjectCodesByAreaCodes = async (
+  areaCodes: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .innerJoin('bafst', 'bafst.keycmobj', 'babuf.keyobjfst')
+    .innerJoin('babya', 'babya.keybabya', 'bafst.keybabya')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('babya.code', areaCodes)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given district name(s).
+ *
+ * Join chain: babuf → bafen (neighborhood manager, which has district)
+ */
+export const getRentalObjectCodesByDistrictNames = async (
+  districtNames: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('babuf')
+    .innerJoin('bafen', 'bafen.code', 'babuf.fencode')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('bafen.distrikt', districtNames)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Main search function with pagination
+ */
 export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
-  ctx: Context
+  ctx: Context,
+  options?: LeaseSearchOptions
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const builder = new LeaseSearchQueryBuilder(params)
-
-  // Apply all filters based on params
+  const builder = new LeaseSearchQueryBuilder(params, options)
   builder
     .applySearch()
-    .applyObjectTypeFilter()
+    .applyObjectAndParkingFilters()
+    .applyLeaseTypeFilter()
     .applyStatusFilter()
     .applyDateFilters()
     .applyPropertyFilter()
     .applyBuildingFilter()
     .applyAreaFilter()
     .applyDistrictFilter()
-    .applyBuildingManagerFilter()
+    .applyKvvAreaFilter()
     .buildSelectFields()
     .applySorting()
 
   const query = builder.getQuery()
 
-  // DEBUG: Log SQL query and timing
-  const sqlDebug = query.toSQL()
-  console.log('=== LEASE SEARCH SQL ===')
-  console.log('SQL:', sqlDebug.sql)
-  console.log('Bindings:', sqlDebug.bindings)
-  console.log('========================')
-
-  const startQuery = Date.now()
-  // Use pagination utility
+  // Use pagination utility (pass totalCount to skip COUNT on pages 2+)
   const paginatedResult = await paginateKnex<any>(query, ctx, {}, params.limit)
-  const queryTime = Date.now() - startQuery
-  console.log(`Main query time (with contacts): ${queryTime}ms`)
 
   // Transform rows and parse contacts JSON
   const transformedContent = paginatedResult.content.map((row: any) => {
     const basicData = transformRow(row)
-
-    // Parse contacts JSON from subquery
-    let contacts: leasing.v1.ContactInfo[] = []
-    if (row.contactsJson) {
-      try {
-        const parsed = JSON.parse(row.contactsJson)
-        contacts = parsed.map((c: any) => ({
-          name: c.name ? String(c.name).trim() : '',
-          contactCode: c.contactCode ? String(c.contactCode).trim() : '',
-          email: c.email ? String(c.email).trim() : null,
-          phone: c.phone ? String(c.phone).trim() : null,
-        }))
-      } catch (e) {
-        console.error('Failed to parse contacts JSON:', e)
-      }
-    }
-
+    const contacts = parseContactsJson(row.contactsJson)
     return { ...basicData, contacts }
   })
 

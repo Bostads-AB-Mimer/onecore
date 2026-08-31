@@ -2,13 +2,13 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ['**']
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch to run CI workflow on?"
+        description: 'Branch to run CI workflow on?'
         required: true
-        default: "main"
+        default: 'main'
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -26,7 +26,7 @@ jobs:
       matrix: ${{ steps.read-matrix.outputs.matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
@@ -60,7 +60,7 @@ jobs:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
@@ -80,7 +80,7 @@ jobs:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
@@ -100,7 +100,7 @@ jobs:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
@@ -108,6 +108,15 @@ jobs:
         uses: ./.github/actions/pnpm-setup
         with:
           run-generate-static: ${{ matrix.runGenerateStatic }}
+
+      - name: Build dependencies
+        run: |
+          pnpm run \
+            --filter ${{ matrix.package }}... \
+            --filter !${{ matrix.package }} \
+            --filter !@onecore/utilities \
+            --filter !@onecore/types build && \
+          pnpm install
 
       - name: Run Typecheck
         run: pnpm run --filter ${{ matrix.package }} typecheck
@@ -122,7 +131,7 @@ jobs:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
@@ -132,8 +141,14 @@ jobs:
           run-generate-static: ${{ matrix.runGenerateStatic }}
 
       - name: Build
-        run: pnpm run --filter ${{ matrix.package }} build
-
+        run: |
+          pnpm run \
+            --filter ${{ matrix.package }}... \
+            --filter !${{ matrix.package }} \
+            --filter !@onecore/utilities \
+            --filter !@onecore/types build && \
+          pnpm install && \
+          pnpm run --filter ${{ matrix.package }} build
 
   test:
     name: ${{ matrix.package }} - Run Tests
@@ -145,12 +160,21 @@ jobs:
         include: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Setup
         uses: ./.github/actions/pnpm-setup
+
+      - name: Build dependencies
+        run: |
+          pnpm run \
+            --filter ${{ matrix.package }}... \
+            --filter !${{ matrix.package }} \
+            --filter !@onecore/utilities \
+            --filter !@onecore/types build && \
+          pnpm install
 
       - name: Run tests
         run: pnpm run --filter "${{ matrix.package }}" test

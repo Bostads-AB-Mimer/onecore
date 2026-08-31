@@ -1,11 +1,16 @@
 import KoaRouter from '@koa/router'
+import { z } from 'zod'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { SyncContactToWorkOrderSchema } from '@onecore/types'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
+  CreateInspectionWorkOrdersBodySchema,
+  CreateInspectionWorkOrdersResponseSchema,
   CreateWorkOrderBodySchema,
   CreateWorkOrderDetailsSchema,
   GetWorkOrdersFromXpandQuerySchema,
   LeaseSchema,
+  MaintenanceTeamSchema,
   RentalPropertySchema,
   TenantSchema,
   WorkOrder,
@@ -41,6 +46,15 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Lease', LeaseSchema)
   registerSchema('Tenant', TenantSchema)
   registerSchema('RentalProperty', RentalPropertySchema)
+  registerSchema('MaintenanceTeam', MaintenanceTeamSchema)
+  registerSchema(
+    'CreateInspectionWorkOrdersBody',
+    CreateInspectionWorkOrdersBodySchema
+  )
+  registerSchema(
+    'CreateInspectionWorkOrdersResponse',
+    CreateInspectionWorkOrdersResponseSchema
+  )
 
   /**
    * @swagger
@@ -535,6 +549,120 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /workOrders/id/{id}:
+   *   get:
+   *     summary: Get a single work order by its Odoo id
+   *     tags:
+   *       - Work Order Service
+   *     description: Retrieves a single work order (errand) by its numeric Odoo id.
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The numeric Odoo id of the work order.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrder:
+   *                       $ref: '#/components/schemas/WorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '400':
+   *         description: Bad request. The id is not a valid number.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid id
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '404':
+   *         description: Work order not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Work order not found
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve the work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/id/:id', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const id = Number(ctx.params.id)
+    if (!Number.isInteger(id)) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid id', ...metadata }
+      return
+    }
+
+    try {
+      const workOrder = await odooAdapter.getWorkOrderById(id)
+
+      if (!workOrder) {
+        ctx.status = 404
+        ctx.body = {
+          error: `Work order with id ${id} not found`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          workOrder: workOrder satisfies WorkOrder,
+        },
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      ctx.status = 500
+
+      if (error instanceof Error) {
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  })
 
   /**
    * @swagger
@@ -1240,6 +1368,125 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /workOrders/maintenanceTeams:
+   *   get:
+   *     summary: List maintenance teams (resursgrupper)
+   *     tags:
+   *       - Work Order Service
+   *     description: Returns the selectable Odoo maintenance teams (resursgrupper).
+   *     responses:
+   *       '200':
+   *         description: Maintenance teams retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MaintenanceTeam'
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/maintenanceTeams', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await odooAdapter.getMaintenanceTeams()
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = 500
+      ctx.body = { error: 'Failed to get maintenance teams', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /workOrders/fromInspection:
+   *   post:
+   *     summary: Create work orders from an inspection (one per resursgrupp)
+   *     tags:
+   *       - Work Order Service
+   *     description: >
+   *       Creates one maintenance.request per resursgrupp group. Each group is an
+   *       independent Odoo commit, so the response reports per-group success/failure.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateInspectionWorkOrdersBody'
+   *     responses:
+   *       '200':
+   *         description: Work orders processed (see per-group results)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/CreateInspectionWorkOrdersResponse'
+   *       '400':
+   *         description: Bad request. Invalid body.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/workOrders/fromInspection', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const { rentalProperty, inspectionId, groups } =
+        CreateInspectionWorkOrdersBodySchema.parse(ctx.request.body)
+
+      const result = await odooAdapter.createInspectionWorkOrders(
+        rentalProperty,
+        groups,
+        inspectionId
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: { results: result.data },
+          ...metadata,
+        }
+      } else {
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to create inspection work orders',
+          ...metadata,
+        }
+      }
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        ctx.status = 400
+        ctx.body = {
+          error: error.issues.map(({ message, path }) => ({ message, path })),
+          ...metadata,
+        }
+        return
+      }
+      logger.error(
+        { err: error },
+        'work-order-service.createInspectionWorkOrders'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to create inspection work orders',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
    * /workOrders/{workOrderId}/update:
    *   post:
    *     summary: Add a message to a work order
@@ -1412,6 +1659,103 @@ export const routes = (router: KoaRouter) => {
           error: error.message,
           ...metadata,
         }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/sync:
+   *   post:
+   *     summary: Sync a contact to Odoo
+   *     description: Updates tenant records in Odoo that match the provided contact code. If no matching tenants are found, the operation is skipped.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to sync
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - contactCode
+   *               - fullName
+   *             properties:
+   *               contactCode:
+   *                 type: string
+   *               fullName:
+   *                 type: string
+   *               emailAddress:
+   *                 type: string
+   *                 nullable: true
+   *               phoneNumber:
+   *                 type: string
+   *                 nullable: true
+   *     responses:
+   *       200:
+   *         description: Contact synced successfully to Odoo
+   *       400:
+   *         description: Invalid request body
+   *       500:
+   *         description: Failed to sync contact to Odoo
+   */
+  router.post('(.*)/contacts/:contactCode/sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parseResult = SyncContactToWorkOrderSchema.safeParse(ctx.request.body)
+
+    if (!parseResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: parseResult.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    const body = parseResult.data
+    const { contactCode } = ctx.params as { contactCode: string }
+
+    if (body.contactCode !== contactCode) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Path contactCode must match body contactCode',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await odooAdapter.syncContact(body)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to sync contact to Odoo',
+          details: result.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        skipped: result.data === null,
+        ...metadata,
+      }
+    } catch (err: unknown) {
+      logger.error(err, 'Error syncing contact to Odoo')
+      ctx.status = 500
+      ctx.body = {
+        error: 'Internal server error',
+        ...metadata,
       }
     }
   })

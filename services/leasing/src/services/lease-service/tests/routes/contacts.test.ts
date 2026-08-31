@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 import { leasing, WaitingListType } from '@onecore/types'
 
 import { routes } from '../../routes/contacts'
+import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
@@ -12,6 +13,7 @@ import * as applicationProfileService from '../../create-or-update-application-p
 import * as factories from '../../tests/factories'
 import * as tenants from '../../get-tenant'
 import * as factory from '../factories'
+import * as personnummerHelper from '../../../../helpers/personnummer'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -182,17 +184,18 @@ describe('GET /contacts/search', () => {
 
 describe('GET /contacts/for-identity-check', () => {
   it('returns paginated contacts for identity check', async () => {
+    jest.spyOn(personnummerHelper, 'valid').mockReturnValue(true)
     jest
       .spyOn(tenantLeaseAdapter, 'getContactsForIdentityCheck')
       .mockResolvedValueOnce({
         content: [
           {
             contactCode: 'P12345',
-            nationalRegistrationNumber: '198501011234',
+            nationalRegistrationNumber: 'FAKE-PNR-001',
           },
           {
             contactCode: 'P67890',
-            nationalRegistrationNumber: '197012315678',
+            nationalRegistrationNumber: 'FAKE-PNR-002',
           },
         ],
         _meta: {
@@ -217,7 +220,7 @@ describe('GET /contacts/for-identity-check', () => {
     expect(res.body.content).toHaveLength(2)
     expect(res.body.content[0]).toEqual({
       contactCode: 'P12345',
-      nationalRegistrationNumber: '198501011234',
+      nationalRegistrationNumber: 'FAKE-PNR-001',
     })
     expect(res.body._meta.totalRecords).toBe(2)
   })
@@ -236,13 +239,14 @@ describe('GET /contacts/for-identity-check', () => {
   })
 
   it('supports pagination parameters', async () => {
+    jest.spyOn(personnummerHelper, 'valid').mockReturnValue(true)
     jest
       .spyOn(tenantLeaseAdapter, 'getContactsForIdentityCheck')
       .mockResolvedValueOnce({
         content: [
           {
             contactCode: 'P12345',
-            nationalRegistrationNumber: '198501011234',
+            nationalRegistrationNumber: 'FAKE-PNR-001',
           },
         ],
         _meta: {
@@ -382,7 +386,7 @@ describe('GET /contacts/:contactCode/tenant', () => {
     expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(tenant))
   })
 
-  it("responds with 500 and an error with the correct info when tenant doesn't have a valid housing contract", async () => {
+  it("responds with 404 and an error with the correct info when tenant doesn't have a valid housing contract", async () => {
     jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
       ok: false,
       err: 'no-valid-housing-contract',
@@ -390,10 +394,87 @@ describe('GET /contacts/:contactCode/tenant', () => {
 
     const res = await request(app.callback()).get('/contacts/1231234/tenant')
 
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(404)
     expect(res.body.type).toEqual('no-valid-housing-contract')
     expect(res.body.title).toEqual('No valid housing contract found')
-    expect(res.body.status).toEqual(500)
+    expect(res.body.status).toEqual(404)
     expect(res.body.detail).toEqual('No active or upcoming contract found.')
+  })
+
+  it('responds with 404 and an error with the correct info when contact is not a tenant', async () => {
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'contact-not-tenant',
+    })
+
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
+
+    expect(res.status).toBe(404)
+    expect(res.body.type).toEqual('contact-not-tenant')
+    expect(res.body.title).toEqual('Contact is not a tenant')
+    expect(res.body.status).toEqual(404)
+  })
+
+  it('responds with 404 when contact has no leases', async () => {
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'contact-leases-not-found',
+    })
+
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
+
+    expect(res.status).toBe(404)
+    expect(res.body.type).toEqual('contact-leases-not-found')
+  })
+
+  it('responds with 500 on unexpected errors', async () => {
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'get-contact',
+    })
+
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
+
+    expect(res.status).toBe(500)
+  })
+})
+
+describe('POST /contacts/:contactCode/sync', () => {
+  it('responds with 200 and skipped:false on successful sync', async () => {
+    const syncResult = { updatedCount: 1 }
+    const syncTenantSpy = jest
+      .spyOn(tenfastAdapter, 'syncTenant')
+      .mockResolvedValueOnce({ ok: true, data: syncResult })
+
+    const res = await request(app.callback()).post('/contacts/P12345/sync')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(syncResult)
+    expect(res.body.skipped).toBe(false)
+    expect(syncTenantSpy).toHaveBeenCalledWith('P12345')
+  })
+
+  it('responds with 200 and skipped:true when tenant does not exist', async () => {
+    jest.spyOn(tenfastAdapter, 'syncTenant').mockResolvedValueOnce({
+      ok: true,
+      data: null,
+    })
+
+    const res = await request(app.callback()).post('/contacts/P12345/sync')
+
+    expect(res.status).toBe(200)
+    expect(res.body.skipped).toBe(true)
+  })
+
+  it('responds with 500 when sync fails', async () => {
+    jest.spyOn(tenfastAdapter, 'syncTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'could-not-update-tenant',
+    })
+
+    const res = await request(app.callback()).post('/contacts/P12345/sync')
+
+    expect(res.status).toBe(500)
+    expect(res.body.type).toBe('tenfast-error')
   })
 })

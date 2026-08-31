@@ -1,19 +1,21 @@
 import {
-  sendNotificationToContact,
   sendNotificationToRole,
+  sendNonScoredParkingSpaceApprovedEmail,
+  sendNonScoredParkingSpaceDeniedEmail,
 } from '../../../adapters/communication-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
-import {
-  ListingStatus,
-  parkingSpaceApplicationCategoryTranslation,
-} from '@onecore/types'
+import { ListingStatus } from '@onecore/types'
 import {
   createLease,
   getContactByContactCode,
   getCreditInformation,
   getActiveListingByRentalObjectCode,
+  getTenantByContactCode,
+  getLeasesForContactCode,
+  getParkingSpaceByCode,
   updateListingStatus,
 } from '../../../adapters/leasing-adapter'
+import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from '../../../services/lease-service/helpers/lease'
 import { logger } from '@onecore/utilities'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
 import dayjs from 'dayjs'
@@ -25,8 +27,8 @@ import dayjs from 'dayjs'
 // Steps:
 // 1. Get parking space from mimer.nu API
 // 2. Get applicant from onecore-leasing
-// 3a. If applicant has no contracts, perform external credit check in onecore-leasing
-// 3b. If applicant has contracts, perform internal credit check by fetching payment history from onecore-leasing
+// 3a. If applicant has no current or upcoming contracts, perform external credit check in onecore-leasing
+// 3b. If applicant has current or upcoming contracts, perform internal credit check by fetching payment history from onecore-leasing
 // 4. If credit check is approved, create contract by calling Xpand soap service
 // 5a. If contract is created successfully, notify applicant and role uthyrning using onecore-communication
 // 5b. If contract could not be created, notify applicant and role uthyrning using onecore-communication
@@ -36,7 +38,8 @@ import dayjs from 'dayjs'
 export const createLeaseForExternalParkingSpace = async (
   parkingSpaceId: string,
   contactId: string,
-  startDate: string | undefined
+  startDate: string | undefined,
+  triggeredBy?: string
 ): Promise<ProcessResult<unknown, unknown>> => {
   const log: string[] = [
     `Ansökan om extern bilplats`,
@@ -63,6 +66,22 @@ export const createLeaseForExternalParkingSpace = async (
     }
 
     const listing = listingResponse.data
+
+    // Fetch rental object separately (listing doesn't include full rental object data)
+    const parkingSpaceResult = await getParkingSpaceByCode(parkingSpaceId)
+
+    if (!parkingSpaceResult.ok || !parkingSpaceResult.data) {
+      return {
+        processStatus: ProcessStatus.failed,
+        error: 'rental-object-not-found',
+        httpStatus: 404,
+        response: {
+          message: `The rental object ${parkingSpaceId} could not be retrieved.`,
+        },
+      }
+    }
+
+    const rentalObject = parkingSpaceResult.data
 
     if (listing.rentalRule != 'NON_SCORED') {
       return {
@@ -109,8 +128,18 @@ export const createLeaseForExternalParkingSpace = async (
     }
 
     let creditCheck = false
-    const applicantHasNoLease =
-      !applicantContact.leaseIds || applicantContact.leaseIds.length == 0
+
+    // Applicants with a current or upcoming lease (any object type) count as
+    // existing tenants and get the internal payment-history check.
+    const applicantLeases = await getLeasesForContactCode(
+      applicantContact.contactCode,
+      {
+        includeUpcomingLeases: true,
+        includeTerminatedLeases: false,
+        includeContacts: false,
+      }
+    )
+    const applicantHasNoLease = applicantLeases.length === 0
 
     if (applicantHasNoLease) {
       const creditInformation = await getCreditInformation(
@@ -118,8 +147,7 @@ export const createLeaseForExternalParkingSpace = async (
       )
       creditCheck = creditInformation.status === '1'
       log.push(
-        `Extern kreditupplysning genomförd. Resultat: ${
-          creditInformation.status_text
+        `Extern kreditupplysning genomförd. Resultat: ${creditInformation.status_text
         } ${creditInformation.errorList?.[0]?.Reject_text ?? ''}`
       )
     } else {
@@ -153,15 +181,26 @@ export const createLeaseForExternalParkingSpace = async (
       creditCheck = debtCollectionInvoices.data.length === 0
 
       log.push(
-        `Intern kreditkontroll genomförd, resultat: ${
-          creditCheck ? 'inga anmärkningar' : 'hyresfakturor hos inkasso'
+        `Intern kreditkontroll genomförd, resultat: ${creditCheck ? 'inga anmärkningar' : 'hyresfakturor hos inkasso'
         }`
       )
     }
 
     if (creditCheck) {
       // Step 4A. Create lease
-      const includeVAT = applicantHasNoLease
+      const tenantResult = await getTenantByContactCode(
+        applicantContact.contactCode
+      )
+      const includeVAT =
+        !tenantResult.ok ||
+        !isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
+          rentalObject.residentialAreaCode,
+          tenantResult.data
+        )
+
+      log.push(
+        `Momsbedömning: ${includeVAT ? 'Moms inkluderas (inget bostadsavtal i samma område)' : 'Ingen moms (bostadsavtal finns i samma område)'}`
+      )
       const createLeaseResult = await createLease(
         listing.rentalObjectCode,
         applicantContact.contactCode,
@@ -196,10 +235,6 @@ export const createLeaseForExternalParkingSpace = async (
 
       log.push(`Kontrakt skapat: ${leaseId}`)
 
-      log.push(
-        'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
-      )
-
       //update listing status
       const updateListingResult = await updateListingStatus(
         listing.id,
@@ -224,11 +259,22 @@ export const createLeaseForExternalParkingSpace = async (
         )
       }
 
-      await sendNotificationToContact(
-        applicantContact,
-        'Godkänd ansökan om bilplats',
-        `Din ansökan om bilplats har godkänts!\n\nDet här händer nu:\n\n * Kontraktet: Du kommer snart få ett digitalt kontrakt att skriva under. En av våra medarbetare kommer att göra i ordning kontraktet och skicka det till dig för digital signering. Kontraktet skickas vanligtvis kommande arbetsdag men under semesterperioden kan det dröja lite längre, håll utkik i din inkorg. Kontraktsnumret är: ${leaseId}.\n\n * Faktura: Din första faktura finns på Mina sidor. Logga in och klicka på Mina fakturor för att se förfallodatum och betalningsuppgifter.\n\n * Eventuella nycklar: Om det behövs nycklar till bilplatsen så hämtar du dom på Mimers kundcenter, Gasverksgatan 7, efter kl. 12.00 den dag kontraktet börjar gälla. Om det är en helgdag, kan du hämta dem kommande vardag efter kl. 12.00.\n\nHälsningar\n\nBostads AB Mimer\n`
-      )
+      if (applicantContact.emailAddress) {
+        await sendNonScoredParkingSpaceApprovedEmail({
+          to: applicantContact.emailAddress,
+          contactCode: applicantContact.contactCode,
+          triggeredBy,
+          subject: 'Godkänd ansökan om bilplats',
+          text: 'Din ansökan om bilplats har godkänts.',
+          leaseId: leaseId,
+          address: rentalObject.address,
+          availableFrom: startDate ?? new Date().toISOString(),
+          parkingSpaceId: listing.rentalObjectCode,
+          objectId: listing.id.toString(),
+          type: rentalObject.objectTypeCaption ?? 'Bilplats',
+          rent: String(rentalObject.availabilityInfo?.rent?.amount ?? ''),
+        })
+      }
       await sendNotificationToRole(
         'leasing',
         'Godkänd ansökan om bilplats',
@@ -250,11 +296,21 @@ export const createLeaseForExternalParkingSpace = async (
         `Ansökan kunde inte beviljas på grund av ouppfyllda kreditkrav (se ovan).`
       )
 
-      await sendNotificationToContact(
-        applicantContact,
-        'Nekad ansökan om extern bilplats',
-        'Din ansökan om bilplats kunde tyvärr inte godkännas på grund av ouppfyllda kreditkrav.\n\nOm du har frågor kring din ansökan, kontakta Mimers kundcenter. Du hittar kontaktuppgifter på https://www.mimer.nu/kontakta-oss/.\n\nMed vänlig hälsning,\nBostads Mimer AB'
-      )
+      if (applicantContact.emailAddress) {
+        await sendNonScoredParkingSpaceDeniedEmail({
+          to: applicantContact.emailAddress,
+          contactCode: applicantContact.contactCode,
+          triggeredBy,
+          subject: 'Nekad ansökan om bilplats',
+          text: 'Din ansökan om bilplats kunde inte godkännas.',
+          address: rentalObject.address,
+          availableFrom: startDate ?? new Date().toISOString(),
+          parkingSpaceId: listing.rentalObjectCode,
+          objectId: listing.id.toString(),
+          type: rentalObject.objectTypeCaption ?? 'Bilplats',
+          rent: String(rentalObject.availabilityInfo?.rent?.amount ?? ''),
+        })
+      }
       await sendNotificationToRole(
         'leasing',
         'Nekad ansökan om extern bilplats',

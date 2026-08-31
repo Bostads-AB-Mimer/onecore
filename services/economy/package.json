@@ -5,7 +5,7 @@
   "description": "ONECore Economy Service",
   "license": "MIT",
   "author": "",
-  "packageManager": "pnpm@10.28.0",
+  "packageManager": "pnpm@10.28.1",
   "main": "./src/index.ts",
   "scripts": {
     "test": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test jest",
@@ -28,6 +28,8 @@
     "dev:script:import-procurement-invoices": "ts-node -r tsconfig-paths/register src/scripts/import-procurement-invoices",
     "dev:script:import-debt-collection": "ts-node -r tsconfig-paths/register src/scripts/import-debt-collection",
     "dev:script:get-contact-details": "ts-node -r tsconfig-paths/register src/scripts/get-contact-details",
+    "script:transfer-stralfors-files": "node build/scripts/transfer-stralfors-files-entrypoint",
+    "dev:script:transfer-stralfors-files": "ts-node -r tsconfig-paths/register src/scripts/transfer-stralfors-files-entrypoint",
     "ts:watch": "tsc --watch --noEmit",
     "test:ci": "NODE_ENV=test-ci jest --silent",
     "ts:ci": " tsc --noEmit",

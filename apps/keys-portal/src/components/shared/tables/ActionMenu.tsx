@@ -17,6 +17,7 @@ export interface ActionMenuProps {
   deleteDisabledReason?: string
   extraItems?: React.ReactNode
   extraItemsAfter?: React.ReactNode
+  onOpenChange?: (open: boolean) => void
 }
 
 /** Dropdown menu for table row actions (Edit, Delete, etc.) */
@@ -29,13 +30,14 @@ export function ActionMenu({
   deleteDisabledReason,
   extraItems,
   extraItemsAfter,
+  onOpenChange,
 }: ActionMenuProps) {
   if (!onEdit && !onDelete && !extraItems && !extraItemsAfter) {
     return null
   }
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
           <MoreHorizontal className="h-4 w-4" />

@@ -153,7 +153,7 @@ export const acceptOffer = async (
       return endFailingProcess(
         log,
         validationResultProperty.err ??
-          ReplyToOfferErrorCodes.NotEligibleToRent,
+        ReplyToOfferErrorCodes.NotEligibleToRent,
         400,
         `Applicant ${offer.offeredApplicant.contactCode} is not eligible for renting due to Property Rental Rules`
       )
@@ -248,7 +248,7 @@ export const acceptOffer = async (
       if (failedDenyOtherOffers.length > 0) {
         log.push(
           'Kunde inte neka följande andra erbjudanden för kunden: ' +
-            failedDenyOtherOffers.join(', ')
+          failedDenyOtherOffers.join(', ')
         )
       }
     }
@@ -278,12 +278,15 @@ export const acceptOffer = async (
       const acceptEmailResult =
         await communicationAdapter.sendParkingSpaceAcceptOfferEmail({
           to: contactResult.data.emailAddress,
+          contactCode: offer.offeredApplicant.contactCode,
           subject: 'Du har tackat ja till en bilplats',
           text: 'Du har tackat ja till en bilplats hos Bostads Mimer.',
           address: listing.rentalObject.address,
           firstName: contactResult.data.firstName,
           availableFrom: calculateVacantFrom(listing).toISOString(),
-          rent: String(listing.rentalObject.rent?.amount ?? ''),
+          rent: String(
+            listing.rentalObject.availabilityInfo?.rent?.amount ?? ''
+          ),
           type: listing.rentalObject.objectTypeCaption ?? '',
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),

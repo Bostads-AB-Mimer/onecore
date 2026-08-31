@@ -5,9 +5,21 @@ import { z } from 'zod'
 type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
 type ContentBlock = z.infer<typeof leasing.v1.ContentBlockSchema>
 
-export const ContentBlockFactory = Factory.define<ContentBlock>(() => ({
+// Factory for text-based content blocks
+export const TextContentBlockFactory = Factory.define<
+  Extract<ContentBlock, { type: 'text' }>
+>(() => ({
   type: 'text',
   content: 'Sample text content',
+}))
+
+// Factory for link content blocks
+export const LinkContentBlockFactory = Factory.define<
+  Extract<ContentBlock, { type: 'link' }>
+>(({ sequence }) => ({
+  type: 'link',
+  name: `Link ${sequence}`,
+  url: `https://example.com/link-${sequence}`,
 }))
 
 export const ListingTextContentFactory = Factory.define<ListingTextContent>(

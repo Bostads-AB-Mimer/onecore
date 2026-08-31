@@ -76,9 +76,12 @@ export async function getKeyLoanByIdWithDetails(
         .select('cardId')
     ).map((row) => row.cardId)
 
-    if (cardIds.length > 0 && keysArray.length > 0) {
-      const rentalObjectCode = keysArray[0].rentalObjectCode
+    if (cardIds.length > 0) {
+      const rentalObjectCode =
+        keysArray.length > 0 ? keysArray[0].rentalObjectCode : null
+
       if (rentalObjectCode) {
+        // Batch lookup via rental object code (efficient when keys exist)
         try {
           const cardOwners = await daxAdapter.searchCardOwners({
             nameFilter: rentalObjectCode,
@@ -89,6 +92,18 @@ export async function getKeyLoanByIdWithDetails(
           keyCardsArray = cardIds
             .map((cid) => cardMap.get(cid))
             .filter((c): c is Card => c !== undefined)
+        } catch (error) {
+          console.error('Failed to fetch cards from DAX:', error)
+        }
+      } else {
+        // No keys to derive rentalObjectCode from — fetch each card individually
+        try {
+          const cards = await Promise.all(
+            cardIds.map((cid) =>
+              daxAdapter.getCardById(cid, 'codes').catch(() => null)
+            )
+          )
+          keyCardsArray = cards.filter((c): c is Card => c !== null)
         } catch (error) {
           console.error('Failed to fetch cards from DAX:', error)
         }
@@ -276,7 +291,18 @@ export function getKeyLoansSearchQuery(
   options: KeyLoansSearchOptions = {},
   dbConnection: Knex | Knex.Transaction = db
 ): Knex.QueryBuilder {
-  let query = dbConnection(TABLE).select(`${TABLE}.*`)
+  let query = dbConnection(TABLE)
+    .select(`${TABLE}.*`)
+    .select(
+      dbConnection.raw(
+        `(SELECT COUNT(*) FROM key_loan_keys WHERE keyLoanId = ${TABLE}.id) as keyCount`
+      )
+    )
+    .select(
+      dbConnection.raw(
+        `(SELECT COUNT(*) FROM key_loan_cards WHERE keyLoanId = ${TABLE}.id) as cardCount`
+      )
+    )
 
   // Filter by key name, rental object code, or contact
   if (options.keyNameOrObjectCode) {

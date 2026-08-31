@@ -863,6 +863,13 @@
             "required": true,
             "schema": { "type": "string" },
             "description": "The building code of the building."
+          },
+          {
+            "in": "query",
+            "name": "staircaseCode",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "The code of the staircase (optional)."
           }
         ],
         "responses": {
@@ -913,6 +920,13 @@
             "required": true,
             "schema": { "type": "string" },
             "description": "The residence code where the rooms are located."
+          },
+          {
+            "in": "query",
+            "name": "roomCode",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "The code of the room (optional)."
           }
         ],
         "responses": {
@@ -991,18 +1005,18 @@
         }
       }
     },
-    "/companies/{id}": {
+    "/companies/{organizationNumber}": {
       "get": {
         "summary": "Get detailed information about a specific company",
-        "description": "Retrieves comprehensive information about a company using its unique identifier.\n",
+        "description": "Retrieves comprehensive information about a company using its organization number.\n",
         "tags": ["Companies"],
         "parameters": [
           {
             "in": "path",
-            "name": "id",
+            "name": "organizationNumber",
             "required": true,
             "schema": { "type": "string" },
-            "description": "The ID of the company."
+            "description": "The organization number of the company."
           }
         ],
         "responses": {

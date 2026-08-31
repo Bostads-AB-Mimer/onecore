@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { ExternalLink } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -75,6 +77,7 @@ export function KeyLoansList({ loans, contactData = {} }: KeyLoansListProps) {
           <TableHead>Skapad</TableHead>
           <TableHead>Upphämtat</TableHead>
           <TableHead>Återlämnat</TableHead>
+          <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -103,6 +106,15 @@ export function KeyLoansList({ loans, contactData = {} }: KeyLoansListProps) {
             <TableCellMuted>{formatDate(loan.createdAt)}</TableCellMuted>
             <TableCellMuted>{formatDate(loan.pickedUpAt)}</TableCellMuted>
             <TableCellMuted>{formatDate(loan.returnedAt)}</TableCellMuted>
+            <TableCell>
+              <Link
+                to={`/key-loans?expandLoanId=${loan.id}`}
+                className="text-muted-foreground hover:text-foreground"
+                title="Visa lån i nyckellånstabellen"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

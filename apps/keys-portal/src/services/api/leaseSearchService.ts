@@ -2,18 +2,6 @@ import type { Lease, Tenant } from '@/services/types'
 
 import { GET } from './core/base-api'
 
-function isMaculated(lease: Lease): boolean {
-  const n = (lease.leaseNumber ?? '').trim()
-  // Check if lease number contains 'M' or 'm' (e.g., "01M", "02M2", "07M")
-  if (n && /[Mm]/.test(n)) return true
-
-  const idTail = (lease.leaseId ?? '').split('/').pop() ?? ''
-  // Check if lease ID tail contains 'M' or 'm'
-  if (idTail && /[Mm]/.test(idTail.trim())) return true
-
-  return false
-}
-
 export function dedupeLeases(leases: Lease[]): Lease[] {
   const seen = new Set<string>()
   return (leases ?? []).filter((l) => {
@@ -40,36 +28,22 @@ export const equalPnr = (a?: string, b?: string) =>
   last10(a ?? '') === last10(b ?? '')
 
 // ---------- queries ----------
+// includeContacts has to be passed explicitly: core defaults it to false, and
+// without it `tenants` comes back undefined.
 export async function fetchLeasesByRentalPropertyId(
-  rentalObjectCode: string,
-  {
-    includeUpcomingLeases = true,
-    includeTerminatedLeases = true,
-    includeContacts = true,
-  }: {
-    includeUpcomingLeases?: boolean
-    includeTerminatedLeases?: boolean
-    includeContacts?: boolean
-  } = {}
+  rentalObjectCode: string
 ): Promise<Lease[]> {
   const { data, error } = await GET(
     '/leases/by-rental-object-code/{rentalObjectCode}',
     {
       params: {
         path: { rentalObjectCode },
-        query: {
-          includeUpcomingLeases,
-          includeTerminatedLeases,
-          includeContacts,
-        },
+        query: { includeContacts: true },
       },
     }
   )
   if (error) return []
-  const list = (data?.content ?? []) as Lease[]
-  const deduped = dedupeLeases(Array.isArray(list) ? list : [])
-  const filtered = deduped.filter((l) => !isMaculated(l)) // ⬅️ hide /..M
-  return filtered
+  return dedupeLeases((data?.content ?? []) as Lease[])
 }
 
 export async function fetchTenantAndLeasesByPnr(
@@ -81,14 +55,12 @@ export async function fetchTenantAndLeasesByPnr(
   const { data, error } = await GET('/leases/by-pnr/{pnr}', {
     params: {
       path: { pnr: normalized },
-      query: { includeUpcomingLeases: true, includeTerminatedLeases: true },
+      query: { includeContacts: true },
     },
   })
   if (error) return null
 
-  const raw = (data?.content ?? []) as Lease[]
-  const deduped = dedupeLeases(Array.isArray(raw) ? raw : [])
-  const contracts = deduped.filter((l) => !isMaculated(l)) // ⬅️ hide /..M
+  const contracts = dedupeLeases((data?.content ?? []) as Lease[])
   if (contracts.length === 0) return null
 
   const target = normalized
@@ -111,18 +83,14 @@ export async function fetchTenantAndLeasesByContactCode(
   const { data, error } = await GET('/leases/by-contact-code/{contactCode}', {
     params: {
       path: { contactCode: normalized },
-      query: { includeUpcomingLeases: true, includeTerminatedLeases: true },
+      query: { includeContacts: true },
     },
   })
-  if (error || !data) return null
+  if (error) return null
 
-  // API returns { content: Lease[] } similar to other endpoints
-  const raw = (data as any)?.content ?? []
-  const deduped = dedupeLeases(Array.isArray(raw) ? raw : [])
-  const contracts = deduped.filter((l) => !isMaculated(l)) // ⬅️ hide /..M
+  const contracts = dedupeLeases((data?.content ?? []) as Lease[])
   if (contracts.length === 0) return null
 
-  // Find the tenant with matching contact code
   const picked: Tenant | undefined =
     contracts
       .flatMap((l) => l.tenants ?? [])

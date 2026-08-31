@@ -1,15 +1,19 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
 
 import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
+import { Knex } from 'knex'
 import { Context } from 'koa'
 import { AdapterResult } from '../types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
+import transformFromXPandDb from '../../helpers/transformFromXPandDb'
 
 interface GetLeasesOptions {
   includeUpcomingLeases: boolean
   includeTerminatedLeases: boolean
   includeRentInfo?: boolean // defaults to true for backwards compatibility
+  includeNonTenantLeases?: boolean
+  includeNonTenantContacts?: boolean
 }
 
 type PartialLease = {
@@ -82,10 +86,15 @@ const getStorageWaitingList = (rows: Array<any>): WaitingList | undefined => {
 const transformFromDbContact = (
   rows: Array<any>,
   phoneNumbers: any,
-  leases: any
+  leaseIds: string[],
+  isTenant: boolean
 ): Contact => {
   const row = trimRow(rows[0])
   const protectedIdentity = row.protectedIdentity !== null
+  const deceased = row.deceased !== null
+  const emigrated = row.emigrated !== null
+  const noAdvertising =
+    row.noAdvertising == null ? false : row.noAdvertising !== 0
 
   const contact = {
     contactCode: row.contactCode,
@@ -93,17 +102,22 @@ const transformFromDbContact = (
     firstName: protectedIdentity ? undefined : row.firstName,
     lastName: protectedIdentity ? undefined : row.lastName,
     fullName: protectedIdentity ? undefined : row.fullName,
-    leaseIds: leases,
+    leaseIds,
     nationalRegistrationNumber: protectedIdentity
       ? undefined
       : row.nationalRegistrationNumber,
     birthDate: protectedIdentity ? undefined : row.birthDate,
-    address: {
-      street: row.street,
-      number: '',
-      postalCode: row.postalCode,
-      city: row.city,
-    },
+    ...(row.street || row.street2 || row.postalCode || row.city
+      ? {
+        address: {
+          street: row.street,
+          street2: row.street2,
+          number: '',
+          postalCode: row.postalCode,
+          city: row.city,
+        },
+      }
+      : {}),
     phoneNumbers: phoneNumbers,
     emailAddress:
       process.env.NODE_ENV === 'production'
@@ -111,16 +125,21 @@ const transformFromDbContact = (
           ? undefined
           : row.emailAddress
         : 'redacted',
-    isTenant: leases.length > 0,
+    isTenant,
     parkingSpaceWaitingList: getParkingSpaceWaitingList(rows),
     housingWaitingList: getHousingWaitingList(rows),
     storageWaitingList: getStorageWaitingList(rows),
     specialAttention: !!row.specialAttention,
+    protectedIdentity: protectedIdentity,
+    deceased: deceased,
+    emigrated: emigrated,
+    noAdvertising: noAdvertising,
   }
 
   return contact
 }
 
+// TODO: NON-TENANT-CONTACTS
 const getResidentialAreaByRentalPropertyId = async (
   rentalPropertyId: string
 ): Promise<AdapterResult<{ code: any; caption: any } | undefined, unknown>> => {
@@ -150,6 +169,24 @@ const getResidentialAreaByRentalPropertyId = async (
   }
 }
 
+// Xpand contact code prefixes: P = private person, F = company,
+// K = municipal/public-sector customer (e.g. K010000 Västerås Stad).
+// Both F and K count as companies when filtering search results.
+const applyContactTypeFilter = (
+  qb: Knex.QueryBuilder,
+  contactType?: 'company' | 'person'
+) => {
+  if (contactType === 'company') {
+    qb.andWhere((builder) => {
+      builder
+        .where('cmctc.cmctckod', 'like', 'F%')
+        .orWhere('cmctc.cmctckod', 'like', 'K%')
+    })
+  } else if (contactType === 'person') {
+    qb.andWhere('cmctc.cmctckod', 'like', 'P%')
+  }
+}
+
 const getContactsDataBySearchQuery = async (
   q: string,
   contactType?: 'company' | 'person'
@@ -165,6 +202,7 @@ const getContactsDataBySearchQuery = async (
 > => {
   try {
     const isEmailSearch = q.includes('@')
+    const isPhoneNumberSearch = /^[0+][\d\-+]*$/.test(q)
 
     if (isEmailSearch) {
       // Email search only
@@ -179,12 +217,33 @@ const getContactsDataBySearchQuery = async (
             .from('cmeml')
             .where('cmemlben', 'like', `${q}%`)
         )
-        .modify((qb) => {
-          if (contactType === 'company')
-            qb.andWhere('cmctc.cmctckod', 'like', 'F%')
-          else if (contactType === 'person')
-            qb.andWhere('cmctc.cmctckod', 'like', 'P%')
-        })
+        .modify((qb) => applyContactTypeFilter(qb, contactType))
+        .limit(10)
+
+      return {
+        ok: true,
+        data: rows,
+      }
+    }
+
+    if (isPhoneNumberSearch) {
+      const rows = await xpandDb
+        .from('cmctc')
+        .select(
+          'cmctc.cmctckod as contactCode',
+          'cmctc.cmctcben as fullName',
+          'cmctc.persorgnr as nationalRegistrationNumber'
+        )
+        .where(
+          'cmctc.keycmobj',
+          'in',
+          xpandDb
+            .select('keycmobj')
+            .from('cmtel')
+            .where('cmtelben', 'like', `${q}%`)
+        )
+        .where('cmctc.deletemark', '=', '0')
+        .modify((qb) => applyContactTypeFilter(qb, contactType))
         .limit(10)
 
       return {
@@ -212,12 +271,7 @@ const getContactsDataBySearchQuery = async (
           builder.orWhereRaw('CONTAINS(cmctc.cmctcben, ?)', [searchTerms])
         }
       })
-      .modify((qb) => {
-        if (contactType === 'company')
-          qb.andWhere('cmctc.cmctckod', 'like', 'F%')
-        else if (contactType === 'person')
-          qb.andWhere('cmctc.cmctckod', 'like', 'P%')
-      })
+      .modify((qb) => applyContactTypeFilter(qb, contactType))
       .limit(10)
 
     return {
@@ -244,6 +298,7 @@ const searchContactsPaginated = async (
   ctx: Context
 ): Promise<PaginatedResponse<{ contactCode: string; fullName: string }>> => {
   const isEmailSearch = q.includes('@')
+  const isPhoneNumberSearch = /^[0+][\d\-+]*$/.test(q)
 
   if (isEmailSearch) {
     const query = xpandDb
@@ -257,6 +312,24 @@ const searchContactsPaginated = async (
           .from('cmeml')
           .where('cmemlben', 'like', `${q}%`)
       )
+
+    return paginateKnex(query, ctx)
+  }
+
+  if (isPhoneNumberSearch) {
+    const query = xpandDb
+      .from('cmctc')
+      .select('cmctc.cmctckod as contactCode', 'cmctc.cmctcben as fullName')
+      .where(
+        'cmctc.keycmobj',
+        'in',
+        xpandDb
+          .select('keycmobj')
+          .from('cmtel')
+          .where('cmtelben', 'like', `${q}%`)
+      )
+      .where('cmctc.deletemark', '=', '0')
+      .orderBy('cmctc.cmctcben', 'asc')
 
     return paginateKnex(query, ctx)
   }
@@ -293,6 +366,9 @@ const searchContactsPaginated = async (
  * - Have contact code starting with 'P' (persons, not organizations)
  * - Have valid national registration numbers (not organizations, not test numbers, no letters)
  * - Are not already marked as deceased
+ * - Have non-empty personnummer
+ * - Have personnummer with valid length (10-12 digits)
+ * - Are not samordningsnummer (coordination numbers with day > 31)
  *
  * @param ctx - Koa context for pagination params
  * @returns Paginated response with identity check contacts
@@ -314,6 +390,10 @@ const getContactsForIdentityCheck = async (
     .whereNot('cmctc.persorgnr', 'like', '1900%')
     .whereRaw("cmctc.persorgnr NOT LIKE '%[A-Za-z]%'")
     .whereNull('cmctc.avliden')
+    .whereNot('cmctc.persorgnr', '=', '')
+    .whereRaw('LEN(cmctc.persorgnr) >= 10')
+    .whereRaw('LEN(cmctc.persorgnr) <= 12')
+    .whereRaw('TRY_CAST(SUBSTRING(cmctc.persorgnr, 7, 2) AS INT) <= 31')
     .orderBy('cmctc.cmctckod', 'asc')
 
   return paginateKnex(query, ctx)
@@ -321,7 +401,8 @@ const getContactsForIdentityCheck = async (
 
 const getContactByNationalRegistrationNumber = async (
   nationalRegistrationNumber: string,
-  includeTerminatedLeases: boolean
+  includeTerminatedLeases: boolean,
+  includeNonTenantLeases: boolean = false
 ) => {
   const rows = await getContactQuery().where({
     persorgnr: nationalRegistrationNumber,
@@ -329,11 +410,12 @@ const getContactByNationalRegistrationNumber = async (
 
   if (rows && rows.length > 0) {
     const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-    const leases = await getLeaseIds(
+    const { leaseIds, isLeaseHolder } = await getLeaseIds(
       rows[0].contactKey,
-      includeTerminatedLeases
+      includeTerminatedLeases,
+      includeNonTenantLeases
     )
-    return transformFromDbContact(rows, phoneNumbers, leases)
+    return transformFromDbContact(rows, phoneNumbers, leaseIds, isLeaseHolder)
   }
 
   return null
@@ -341,7 +423,8 @@ const getContactByNationalRegistrationNumber = async (
 
 const getContactByContactCode = async (
   contactKey: string,
-  includeTerminatedLeases: boolean
+  includeTerminatedLeases: boolean,
+  includeNonTenantLeases: boolean = false
 ): Promise<AdapterResult<Contact | null, unknown>> => {
   try {
     const rows = await getContactQuery().where({ cmctckod: contactKey })
@@ -350,12 +433,18 @@ const getContactByContactCode = async (
     }
 
     const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-    const leases = await getLeaseIds(
+    const { leaseIds, isLeaseHolder } = await getLeaseIds(
       rows[0].contactKey,
-      includeTerminatedLeases
+      includeTerminatedLeases,
+      includeNonTenantLeases
     )
 
-    const contact = transformFromDbContact(rows, phoneNumbers, leases)
+    const contact = transformFromDbContact(
+      rows,
+      phoneNumbers,
+      leaseIds,
+      isLeaseHolder
+    )
 
     return {
       ok: true,
@@ -369,7 +458,8 @@ const getContactByContactCode = async (
 
 const getContactByPhoneNumber = async (
   phoneNumber: string,
-  includeTerminatedLeases: boolean
+  includeTerminatedLeases: boolean,
+  includeNonTenantLeases: boolean = false
 ) => {
   const keycmobj = await getContactForPhoneNumber(phoneNumber)
   if (keycmobj && keycmobj.length > 0) {
@@ -379,24 +469,37 @@ const getContactByPhoneNumber = async (
 
     if (rows && rows.length > 0) {
       const phoneNumbers = await getPhoneNumbersForContact(rows[0].keycmobj)
-      const leases = await getLeaseIds(
+      const { leaseIds, isLeaseHolder } = await getLeaseIds(
         rows[0].contactKey,
-        includeTerminatedLeases
+        includeTerminatedLeases,
+        includeNonTenantLeases
       )
-      return transformFromDbContact(rows, phoneNumbers, leases)
+      return transformFromDbContact(rows, phoneNumbers, leaseIds, isLeaseHolder)
     }
   }
 }
 
-const getContactsByLeaseId = async (leaseId: string) => {
+const getContactsByLeaseId = async (
+  leaseId: string,
+  includeNonTenantContacts: boolean = false
+) => {
   const rows = await xpandDb
     .from('hyavk')
-    .select('hyavk.keycmctc as contactKey')
+    .select(
+      'hyavk.keycmctc as contactKey',
+      'hyavk.keyhyakt as leaseContactType'
+    )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .where({ hyobjben: leaseId })
 
+  let junctionRows = rows
+
+  if (!includeNonTenantContacts) {
+    junctionRows = junctionRows.filter(isLeaseHolderRelation)
+  }
+
   const contacts = await Promise.all(
-    rows.map(async (row) => {
+    junctionRows.map(async (row) => {
       const contactRows = await getContactQuery().where({
         'cmctc.keycmctc': row.contactKey,
       })
@@ -405,13 +508,22 @@ const getContactsByLeaseId = async (leaseId: string) => {
         const phoneNumbers = await getPhoneNumbersForContact(
           contactRows[0].keycmobj
         )
-        return transformFromDbContact(contactRows, phoneNumbers, [])
+        const contact = transformFromDbContact(
+          contactRows,
+          phoneNumbers,
+          [],
+          false
+        )
+        return {
+          ...contact,
+          leaseContactType: (row.leaseContactType as string)?.trim(),
+        }
       }
       return null
     })
   )
 
-  return contacts.filter((c): c is Contact => c !== null)
+  return contacts.filter((c) => c !== null)
 }
 
 const getContactQuery = () => {
@@ -426,6 +538,7 @@ const getContactQuery = () => {
         'cmctc.persorgnr as nationalRegistrationNumber',
         'cmctc.birthdate as birthDate',
         'cmadr.adress1 as street',
+        'cmadr.adress2 as street2',
         'cmadr.adress3 as postalCode',
         'cmadr.adress4 as city',
         'cmeml.cmemlben as emailAddress',
@@ -434,19 +547,37 @@ const getContactQuery = () => {
         'bkkty.bkktyben as queueName',
         'bkqte.quetime as queueTime',
         'cmctc.lagsokt as protectedIdentity',
-        'cmctc.utslag as specialAttention'
+        'cmctc.utslag as specialAttention',
+        'cmctc.avliden as deceased',
+        'cmctc.konkurs as emigrated',
+        'cmctc.blockinfo as noAdvertising'
       )
-      .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
-      .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
+      .leftJoin('cmadr', function () {
+        this.on('cmadr.keycode', '=', 'cmctc.keycmobj')
+          .andOn(function () {
+            this.onNull('cmadr.fdate').orOn(
+              'cmadr.fdate',
+              '<=',
+              xpandDb.raw('CAST(GETDATE() AS DATE)')
+            )
+          })
+          .andOn(function () {
+            this.onNull('cmadr.tdate').orOn(
+              'cmadr.tdate',
+              '>=',
+              xpandDb.raw('CAST(GETDATE() AS DATE)')
+            )
+          })
+      })
+      .leftJoin('cmeml', function () {
+        this.on('cmeml.keycmobj', '=', 'cmctc.keycmobj').andOn(
+          'cmeml.main',
+          '=',
+          xpandDb.raw('1')
+        )
+      })
       .leftJoin('bkqte', 'bkqte.keycmctc', 'cmctc.keycmctc')
       .leftJoin('bkkty', 'bkkty.keybkkty', 'bkqte.keybkkty')
-      // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
-      .where(function () {
-        this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
-      })
-      .where(function () {
-        this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
-      })
       .where('cmctc.deletemark', '=', '0')
       // Sort addresses so that those with a non-null fdate come first (ordered by fdate ascending), and addresses with fdate = null come last.
       // This is to prioritize addresses with a defined start date.
@@ -485,23 +616,156 @@ const getContactForPhoneNumber = async (phoneNumber: string) => {
 //todo: be able to filter on active contracts
 const getLeaseIds = async (
   keycmctc: string,
-  includeTerminatedLeases: boolean
+  includeTerminatedLeases: boolean,
+  includeNonTenantLeases: boolean = false
 ) => {
   const rows = await xpandDb
     .from('hyavk')
     .select(
       'hyobj.hyobjben as leaseId',
       'hyobj.fdate as leaseStartDate',
-      'hyobj.sistadeb as lastDebitDate'
+      'hyobj.sistadeb as lastDebitDate',
+      'hyavk.keyhyakt as leaseContactType'
     )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .where({ keycmctc: keycmctc })
 
+  let leases = rows
+
   if (!includeTerminatedLeases) {
-    return rows.filter(isLeaseActive).map((x) => x.leaseId)
+    leases = leases.filter(isLeaseActive)
   }
-  return rows.map((x) => x.leaseId)
+
+  if (!includeNonTenantLeases) {
+    leases = leases.filter(isLeaseHolderRelation)
+  }
+
+  return {
+    leaseIds: leases.map((x) => x.leaseId),
+    isLeaseHolder: rows.some(isLeaseHolderRelation),
+  }
 }
+// TODO: NON-TENANT-CONTACTS
+const getLeases = async (leaseIds: string[]) => {
+  const rows = await xpandDb
+    .from('hyobj')
+    .select(
+      'hyobj.hyobjben as leaseId',
+      'hyhav.hyhavben as leaseType',
+      'hyobj.uppsagtav as noticeGivenBy',
+      'hyobj.avtalsdat as contractDate',
+      'hyobj.sistadeb as lastDebitDate',
+      'hyobj.godkdatum as approvalDate',
+      'hyobj.uppsdatum as noticeDate',
+      'hyobj.fdate as fromDate',
+      'hyobj.tdate as toDate',
+      'hyobj.uppstidg as noticeTimeTenant',
+      'hyobj.onskflytt AS preferredMoveOutDate',
+      'hyobj.makuldatum AS terminationDate'
+    )
+    .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
+    .whereRaw(
+      `hyobj.hyobjben IN (${leaseIds.map((id) => `'${id}'`).join(', ')})`
+    )
+
+  return rows.map((row) => transformFromXPandDb.toLease(row, [], []))
+}
+
+const getContacts = async (contactCodes: string[]) => {
+  const rows = await xpandDb
+    .from('cmctc')
+    .select(
+      'cmctc.cmctckod as contactCode',
+      'cmctc.fnamn as firstName',
+      'cmctc.enamn as lastName',
+      'cmctc.cmctcben as fullName',
+      'cmctc.persorgnr as nationalRegistrationNumber',
+      'cmctc.birthdate as birthDate',
+      'cmadr.adress1 as street',
+      'cmadr.adress3 as postalCode',
+      'cmadr.adress4 as city',
+      'cmeml.cmemlben as emailAddress',
+      'cmtel.cmtelben as phoneNumber',
+      'cmctc.keycmobj as keycmobj',
+      'cmctc.keycmctc as contactKey',
+      'cmctc.lagsokt as protectedIdentity',
+      'cmctc.avliden as deceased',
+      'cmctc.utslag as specialAttention',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising'
+    )
+    .leftJoin('cmadr', 'cmadr.keycode', 'cmctc.keycmobj')
+    .leftJoin('cmeml', function () {
+      this.on('cmeml.keycmobj', '=', 'cmctc.keycmobj').andOn(
+        'cmeml.main',
+        '=',
+        xpandDb.raw('1')
+      )
+    })
+    .leftJoin('cmtel', function () {
+      this.on('cmtel.keycmobj', '=', 'cmctc.keycmobj').andOn(
+        'cmtel.main',
+        '=',
+        xpandDb.raw('1')
+      )
+    })
+    // Only include addresses where fdate is null or in the past, and tdate is null or in the future (i.e. currently valid)
+    .where(function () {
+      this.whereNull('cmadr.fdate').orWhere('cmadr.fdate', '<=', new Date())
+    })
+    .where(function () {
+      this.whereNull('cmadr.tdate').orWhere('cmadr.tdate', '>=', new Date())
+    })
+    .where('cmctc.deletemark', '=', '0')
+    .whereIn('cmctc.cmctckod', contactCodes)
+
+  return rows.map((row: any): Contact => {
+    const protectedIdentity = row.protectedIdentity !== null
+    const deceased = row.deceased !== null
+    const emigrated = row.emigrated !== null
+    const noAdvertising =
+      row.noAdvertising == null ? false : row.noAdvertising !== 0
+    return {
+      contactCode: row.contactCode,
+      contactKey: row.contactKey,
+      firstName: protectedIdentity ? undefined : row.firstName,
+      lastName: protectedIdentity ? undefined : row.lastName,
+      fullName: protectedIdentity ? undefined : row.fullName,
+      nationalRegistrationNumber: protectedIdentity
+        ? undefined
+        : row.nationalRegistrationNumber,
+      birthDate: protectedIdentity ? undefined : row.birthDate,
+      address: {
+        street: row.street,
+        number: '',
+        postalCode: row.postalCode,
+        city: row.city,
+      },
+      phoneNumbers: row.phoneNumber
+        ? [
+          {
+            phoneNumber: row.phoneNumber,
+            type: '',
+            isMainNumber: true,
+          },
+        ]
+        : [],
+      emailAddress:
+        process.env.NODE_ENV === 'production'
+          ? row.emailAddress == null || protectedIdentity
+            ? undefined
+            : row.emailAddress
+          : 'redacted',
+      isTenant: false,
+      specialAttention: !!row.specialAttention,
+      protectedIdentity: protectedIdentity,
+      deceased: deceased,
+      emigrated: emigrated,
+      noAdvertising: noAdvertising,
+    }
+  })
+}
+// END TODO: NON-TENANT-CONTACTS
 
 const filterLeasesByOptions = (
   leases: Array<Lease>,
@@ -529,6 +793,9 @@ const filterLeasesByOptions = (
       return false
     })
 }
+
+const isLeaseHolderRelation = (x: { leaseContactType: unknown }) =>
+  (x.leaseContactType as string)?.trim() === 'INNEHAVARE'
 
 const isLeaseActive = (lease: Lease | PartialLease): boolean => {
   return !isLeaseUpcoming(lease) && !isLeaseTerminated(lease)
@@ -560,10 +827,12 @@ const formatDate = (date: Date) => {
 }
 
 export {
+  getLeases,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
   getContactByPhoneNumber,
   getContactForPhoneNumber,
+  getContacts,
   filterLeasesByOptions,
   isLeaseActive,
   isLeaseUpcoming,

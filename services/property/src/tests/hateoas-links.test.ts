@@ -32,7 +32,6 @@ describe('HATEOAS Links Navigation', () => {
 
     // Follow link to staircases
     const staircasesUrl = building._links.staircases.href
-    console.log('staircasesUrl', staircasesUrl)
     const staircasesResponse = await request(app.callback()).get(staircasesUrl)
     expect(staircasesResponse.status).toBe(200)
 

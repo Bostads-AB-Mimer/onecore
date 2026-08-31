@@ -15,8 +15,9 @@ import { z } from 'zod'
  */
 
 /**
- * Contact schema for Swagger OpenAPI generation
- * Matches the response from GET /contacts/{contactCode}
+ * GET /contacts/{contactCode} schema. KEEP IN SYNC WITH Lease.tenants below: all
+ * tenants are contacts, so a tenant carries every Contact field (may add or narrow,
+ * never drop/loosen). Inline copy avoids a shared $ref. See contact-tenant-sync.test.ts.
  */
 export const Contact = z.object({
   contactCode: z.string(),
@@ -29,20 +30,23 @@ export const Contact = z.object({
   birthDate: z.coerce.date().nullable(),
   address: z
     .object({
-      street: z.string(),
+      street: z.string().optional(),
       number: z.string(),
       postalCode: z.string(),
       city: z.string(),
     })
-    .nullable(),
-  phoneNumbers: z.array(
-    z.object({
-      phoneNumber: z.string(),
-      type: z.string(),
-      isMainNumber: z.boolean(),
-    })
-  ),
-  emailAddress: z.string().nullable(),
+    .nullable()
+    .optional(),
+  phoneNumbers: z
+    .array(
+      z.object({
+        phoneNumber: z.string(),
+        type: z.string(),
+        isMainNumber: z.boolean(),
+      })
+    )
+    .optional(),
+  emailAddress: z.string().nullable().optional(),
   isTenant: z.boolean(),
   specialAttention: z.boolean().optional(),
 })
@@ -62,6 +66,7 @@ export const Lease = z.object({
     'NotSent',
   ]),
   tenantContactIds: z.array(z.string()).optional(),
+  subletContactId: z.string().optional(),
   rentalPropertyId: z.string(),
   rentalObject: z
     .object({
@@ -145,7 +150,7 @@ export const Lease = z.object({
     .optional(),
   noticeGivenBy: z.string().optional(),
   noticeDate: z.coerce.date().optional(),
-  noticeTimeTenant: z.string().optional(),
+  noticeTimeTenant: z.union([z.string(), z.number()]).optional(),
   preferredMoveOutDate: z.coerce.date().optional(),
   terminationDate: z.coerce.date().optional(),
   contractDate: z.coerce.date().optional(),
@@ -170,17 +175,20 @@ export const Lease = z.object({
       })
     )
     .optional(),
+  // KEEP IN SYNC WITH `Contact` above (all tenants are contacts): carry every Contact
+  // field, here adding parkingSpaceWaitingList + leaseContactType. Inline copy avoids
+  // a shared $ref. Enforced by tests/contact-tenant-sync.test.ts.
   tenants: z
     .array(
       z.object({
         contactCode: z.string(),
         contactKey: z.string(),
         leaseIds: z.array(z.string()).optional(),
-        firstName: z.string(),
-        lastName: z.string(),
-        fullName: z.string(),
+        firstName: z.string().nullable(),
+        lastName: z.string().nullable(),
+        fullName: z.string().nullable(),
         nationalRegistrationNumber: z.string(),
-        birthDate: z.coerce.date(),
+        birthDate: z.coerce.date().nullable(),
         address: z
           .object({
             street: z.string().optional(),
@@ -188,6 +196,7 @@ export const Lease = z.object({
             postalCode: z.string(),
             city: z.string(),
           })
+          .nullable()
           .optional(),
         phoneNumbers: z
           .array(
@@ -198,8 +207,10 @@ export const Lease = z.object({
             })
           )
           .optional(),
-        emailAddress: z.string().optional(),
+        emailAddress: z.string().nullable().optional(),
         isTenant: z.boolean(),
+        specialAttention: z.boolean().optional(),
+        // --- tenant-only additions (not part of Contact) ---
         parkingSpaceWaitingList: z
           .object({
             queueTime: z.coerce.date(),
@@ -207,7 +218,7 @@ export const Lease = z.object({
             type: z.number(),
           })
           .optional(),
-        specialAttention: z.boolean().optional(),
+        leaseContactType: z.string().optional(),
       })
     )
     .optional(),
@@ -240,6 +251,7 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     leaseEndDate: lease.leaseEndDate,
     status: mapLeaseStatus(lease.status),
     tenantContactIds: lease.tenantContactIds,
+    subletContactId: lease.subletContactId,
     rentalPropertyId: lease.rentalPropertyId,
     rentalObject: lease.rentalObject,
     type: lease.type,
@@ -264,8 +276,15 @@ const IncludeContactsQueryParamSchema = z.object({
     .transform((value) => value === 'true'),
 })
 
+const IncludeNonTenantContactsQueryParamSchema = z.object({
+  includeNonTenantContacts: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+})
+
 export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
   IncludeContactsQueryParamSchema
-)
+).merge(IncludeNonTenantContactsQueryParamSchema)
 
 export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema

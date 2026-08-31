@@ -83,7 +83,7 @@ export const createOfferForInternalParkingSpace = async (
       )
     }
 
-    if (!listing.rentalObject.vacantFrom) {
+    if (!listing.rentalObject.availabilityInfo?.vacantFrom) {
       return endFailingProcess(
         log,
         CreateOfferErrorCodes.RentalObjectNotVacant,
@@ -203,6 +203,7 @@ export const createOfferForInternalParkingSpace = async (
       const acceptEmailResult =
         await communicationAdapter.sendParkingSpaceOfferEmail({
           to: contact.emailAddress,
+          contactCode: contact.contactCode,
           subject: 'Erbjudande om bilplats',
           text: 'Erbjudande om bilplats',
           address: listing.rentalObject.address,
@@ -211,13 +212,15 @@ export const createOfferForInternalParkingSpace = async (
             : '',
           availableFrom: calculateVacantFrom(listing).toISOString(),
           deadlineDate: new Date(offer.data.expiresAt).toISOString(),
-          rent: String(listing.rentalObject.rent?.amount ?? ''),
+          rent: String(
+            listing.rentalObject.availabilityInfo?.rent?.amount ?? ''
+          ),
           type: listing.rentalObject.objectTypeCaption ?? '',
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           applicationType:
             eligibleApplicant.applicationType &&
-            eligibleApplicant.applicationType === 'Replace'
+              eligibleApplicant.applicationType === 'Replace'
               ? 'Replace'
               : 'Additional',
           offerURL: constructOfferURL(offer.data.id),
@@ -296,7 +299,7 @@ export async function validateEligibilityAndDisqualifyIfNot(
       if (_err instanceof Error) {
         log.push(
           _err.message ??
-            `Unknown error updating disqualified applicant status for applicant ${applicant.id}`
+          `Unknown error updating disqualified applicant status for applicant ${applicant.id}`
         )
         logger.debug(log)
       }

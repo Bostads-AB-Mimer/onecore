@@ -1,20 +1,23 @@
-import { GET } from './base-api'
-import { resolve } from '@/utils/env'
+import { resolve } from '@/shared/lib/env'
+
 import type {
-  Residence,
-  ResidenceDetails,
-  ResidenceSummary,
   RentalBlock,
   RentalBlocksSearchParams,
+  ResidenceDetails,
+  ResidenceSummary,
 } from '../../types'
+import { GET, PUT } from './baseApi'
 
 const CORE_API_URL = resolve('VITE_CORE_API_URL', 'http://localhost:5010')
 
 export const residenceService = {
-  async getByBuildingCode(buildingCode: string): Promise<Residence[]> {
-    const { data, error } = await GET('/residences', {
-      params: { query: { buildingCode } },
-    })
+  async getByBuildingCode(buildingCode: string): Promise<ResidenceSummary[]> {
+    const { data, error } = await GET(
+      '/residences/summary/by-building-code/{buildingCode}',
+      {
+        params: { path: { buildingCode } },
+      }
+    )
     if (error) throw error
     return data.content || []
   },
@@ -33,11 +36,10 @@ export const residenceService = {
     return data.content || []
   },
 
-  async getById(residenceId: string): Promise<ResidenceDetails> {
-    const { data, error } = await GET(`/residences/{residenceId}`, {
+  async getByRentalId(rentalId: string): Promise<ResidenceDetails> {
+    const { data, error } = await GET('/residences/by-rental-id/{rentalId}', {
       params: {
-        path: { residenceId },
-        query: { active: true },
+        path: { rentalId },
       },
     })
 
@@ -45,6 +47,21 @@ export const residenceService = {
     if (!data.content) throw new Error('No data returned from API')
 
     return data.content
+  },
+
+  async updateMalarEnergiFacilityId(
+    rentalId: string,
+    malarEnergiFacilityId: string
+  ): Promise<string> {
+    const { data, error } = await PUT(
+      '/residences/by-rental-id/{rentalId}/malar-energi-facility-id',
+      {
+        params: { path: { rentalId } },
+        body: { malarEnergiFacilityId },
+      }
+    )
+    if (error) throw error
+    return data.content?.malarEnergiFacilityId ?? malarEnergiFacilityId
   },
 
   async getRentalBlocksByRentalId(

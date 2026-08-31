@@ -75,6 +75,15 @@ export const CreateWorkOrderResponseSchema = z.object({
   newWorkOrderId: z.number(),
 })
 
+// Shared with the work-order service via @onecore/types
+// (libs/types/src/work-order/schema.ts) — re-exported so core's swagger
+// registration and consumers keep a single import path.
+export {
+  MaintenanceTeamSchema,
+  CreateInspectionWorkOrdersRequestSchema,
+  CreateInspectionWorkOrdersResponseSchema,
+} from '@onecore/types'
+
 export const GetWorkOrdersFromXpandQuerySchema = z.object({
   skip: z.coerce.number().optional(),
   limit: z.coerce.number().optional(),
@@ -93,3 +102,7 @@ export type CoreXpandWorkOrderDetails = z.infer<
 export type CreateWorkOrderResponse = z.infer<
   typeof CreateWorkOrderResponseSchema
 >
+export type {
+  MaintenanceTeam,
+  CreateInspectionWorkOrdersResponse,
+} from '@onecore/types'

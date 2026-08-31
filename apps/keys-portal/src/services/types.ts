@@ -1,5 +1,5 @@
 // Import directly from types, only for generics like pagination, all specific response types come from generated api-types
-import { keys } from '@onecore/types'
+import { keys, LeaseType } from '@onecore/types'
 
 import type { paths, components } from './api/core/generated/api-types'
 
@@ -39,6 +39,9 @@ export type TenantAddress = NonNullable<
 
 // Contact type from registered Contact schema in OpenAPI
 export type Contact = components['schemas']['Contact']
+
+// v1 Contact (discriminated union by `type`) returned by the /v1/contacts/* routes
+export type ContactV1 = components['schemas']['ContactV1']
 
 // Request types
 export type CreateKeyRequest = components['schemas']['CreateKeyRequest']
@@ -144,20 +147,20 @@ export function getKeyTypeFilterOptions() {
 
 // Custom types that aren't in the API (if needed)
 
-// Lease type constant values - matches services/leasing/src/constants/leaseTypes.ts
-// String values taken from Xpand
+// Lease type constant values - re-exported from @onecore/types enum
 export const leaseTypes = {
-  housingContract: 'Bostadskontrakt',
-  campusContract: 'Campuskontrakt',
-  garageContract: 'Garagekontrakt',
-  cooperativeTenancyContract: 'Kooperativ hyresrätt',
-  commercialTenantContract: 'Lokalkontrakt',
-  renegotiationContract: 'Omförhandlingskontrakt',
-  otherContract: 'Övrigt',
-  parkingspaceContract: 'P-Platskontrakt',
+  housingContract: LeaseType.HousingContract,
+  campusContract: LeaseType.CampusContract,
+  garageContract: LeaseType.GarageContract,
+  cooperativeTenancyContract: LeaseType.CooperativeTenancyContract,
+  commercialTenantContract: LeaseType.CommercialTenantContract,
+  renegotiationContract: LeaseType.RenegotiationContract,
+  otherContract: LeaseType.OtherContract,
+  parkingspaceContract: LeaseType.ParkingSpaceContract,
+  shortTermRental: LeaseType.ShortTermRental,
 } as const
 
-export type LeaseType = keyof typeof leaseTypes
+export { LeaseType }
 
 // ----- Key Loans (UI/domain) -----
 // Loan type labels in Swedish
@@ -205,6 +208,7 @@ export const KeyEventTypeLabels = {
   FLEX: 'Flex',
   ORDER: 'Extranyckel',
   LOST: 'Bortappad',
+  REPLACEMENT: 'Ersättning',
 } as const
 
 export type KeyEventType = keyof typeof KeyEventTypeLabels
@@ -241,31 +245,44 @@ export interface LogFilterParams {
 // ----- Receipts (UI/domain) -----
 // Note: Receipt API types are already defined above (lines 39-75) from generated OpenAPI types
 
-// UI-only helper type for PDF generation
-// Uses KeyDetails to include keySystem directly (no separate keySystemMap needed)
-export interface ReceiptData {
-  lease: Lease
-  tenants: Tenant[]
-  keys: KeyDetails[] // Keys with keySystem included for display
-  receiptType: 'LOAN' | 'RETURN'
-  operationDate?: Date
-  missingKeys?: KeyDetails[] // For RETURN: keys not returned (unchecked, non-disposed)
-  disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
-  cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
-  missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
-  comment?: string // Optional comment for the receipt (max 280 chars)
+/**
+ * The borrower fields a receipt renders. A lease Tenant and a Contact both satisfy
+ * this, so tenant and maintenance receipts name their party the same way.
+ */
+export interface ReceiptContact {
+  firstName?: string | null
+  lastName?: string | null
+  fullName?: string | null
+  contactCode: string
+  nationalRegistrationNumber?: string | null
 }
 
-export interface MaintenanceReceiptData {
-  contact: string // Contact code (e.g., F088710)
-  contactName: string // Company name (from Contact.fullName)
-  contactPerson: string | null
-  description?: string | null
-  keys: KeyDetails[] // Keys with keySystem included for display
+/**
+ * The single PDF-layer input for every receipt. `loanType` drives the header fork
+ * (Hyresgäst+Avtal vs Företag+Tillhörighet); the missing/disposed/remaining buckets
+ * are RETURN-only. All values are pre-resolved strings — the PDF layer lays out text,
+ * it resolves nothing.
+ */
+export interface ReceiptData {
   receiptType: 'LOAN' | 'RETURN'
+  loanType: 'TENANT' | 'MAINTENANCE'
+  contacts: ReceiptContact[] // borrower(s): tenant(s) or the maintenance company
+  contactPerson?: string | null // maintenance only
+  keys: KeyDetails[] // keySystem included for display
+  cards?: Card[]
   operationDate?: Date
-  missingKeys?: KeyDetails[] // For RETURN: keys not returned (unchecked, non-disposed)
-  disposedKeys?: KeyDetails[] // For RETURN: keys that were disposed
-  cards?: Card[] // For RETURN: cards that were returned (checked in dialog)
-  missingCards?: Card[] // For RETURN: cards not returned (unchecked in dialog)
+  loanId?: string // used for the QR code on printed loan receipts
+  comment?: string // KOMMENTAR box (maintenance loans: loan notes + print comment)
+  // Tenant Avtal block (resolved from the loan's keys / picked in the dialog):
+  rentalPropertyId?: string
+  leaseDisplayId?: string
+  address?: string | null
+  // Maintenance Tillhörighet column (rentalObjectCode→address, else keySystem.name):
+  scopeByKeyId?: Record<string, string>
+  // RETURN-only: keys/cards not returned, disposed, or continuing on a new loan.
+  missingKeys?: KeyDetails[]
+  missingCards?: Card[]
+  disposedKeys?: KeyDetails[]
+  remainingLoanKeys?: KeyDetails[]
+  remainingLoanCards?: Card[]
 }

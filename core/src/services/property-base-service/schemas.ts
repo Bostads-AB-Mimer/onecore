@@ -1,7 +1,7 @@
 import { z } from 'zod'
+import { property } from '@onecore/types'
 
-// Xpand ID validation - variable length IDs (max 15 chars) from legacy system
-const xpandIdSchema = z.string().max(15)
+export { CreateRoomRequestSchema, type CreateRoomRequest } from '@onecore/types'
 
 export const BuildingSchema = z.object({
   id: z.string(),
@@ -200,105 +200,6 @@ export const ResidenceSchema = z.object({
   }),
 })
 
-export const ResidenceDetailsSchema = z.object({
-  id: z.string(),
-  code: z.string(),
-  name: z.string().nullable(),
-  status: z.enum(['VACANT', 'LEASED']).nullable(),
-  location: z.string().nullable(),
-  accessibility: z.object({
-    wheelchairAccessible: z.boolean(),
-    residenceAdapted: z.boolean(),
-    elevator: z.boolean(),
-  }),
-  features: z.object({
-    balcony1: z
-      .object({
-        location: z.string(),
-        type: z.string(),
-      })
-      .optional(),
-    balcony2: z
-      .object({
-        location: z.string(),
-        type: z.string(),
-      })
-      .optional(),
-    patioLocation: z.string().nullable(),
-    hygieneFacility: z.string().nullable(),
-    sauna: z.boolean(),
-    extraToilet: z.boolean(),
-    sharedKitchen: z.boolean(),
-    petAllergyFree: z.boolean(),
-    electricAllergyIntolerance: z
-      .boolean()
-      .describe('Is the apartment checked for electric allergy intolerance?'),
-    smokeFree: z.boolean(),
-    asbestos: z.boolean(),
-  }),
-  floor: z.string().nullable(),
-  partNo: z.number().optional().nullable(),
-  part: z.string().optional().nullable(),
-  deleted: z.boolean(),
-  validityPeriod: z.object({
-    fromDate: z.coerce.date(),
-    toDate: z.coerce.date(),
-  }),
-  residenceType: z.object({
-    residenceTypeId: z.string(),
-    code: z.string(),
-    name: z.string().nullable(),
-    roomCount: z.number().nullable(),
-    kitchen: z.number(),
-    systemStandard: z.number(),
-    checklistId: z.string().nullable(),
-    componentTypeActionId: z.string().nullable(),
-    statisticsGroupSCBId: z.string().nullable(),
-    statisticsGroup2Id: z.string().nullable(),
-    statisticsGroup3Id: z.string().nullable(),
-    statisticsGroup4Id: z.string().nullable(),
-    timestamp: z.string(),
-  }),
-  propertyObject: z.object({
-    energy: z.object({
-      energyClass: z.number(),
-      energyRegistered: z.coerce.date().optional(),
-      energyReceived: z.date().optional(),
-      energyIndex: z.number().optional(),
-    }),
-    rentalId: z.string().nullable(),
-    rentalInformation: z
-      .object({
-        apartmentNumber: z.string().nullable(),
-        type: z.object({
-          code: z.string(),
-          name: z.string().nullable(),
-        }),
-      })
-      .nullable(),
-    rentalBlocks: z.array(
-      z.object({
-        id: z.string(),
-        blockReasonId: z.string(),
-        blockReason: z.string(),
-        fromDate: z.coerce.date(),
-        toDate: z.coerce.date().nullable(),
-        amount: z.number().nullable(),
-      })
-    ),
-  }),
-  property: z.object({
-    name: z.string().nullable(),
-    code: z.string().nullable(),
-  }),
-  building: z.object({
-    name: z.string().nullable(),
-    code: z.string().nullable(),
-  }),
-  malarEnergiFacilityId: z.string().nullable(),
-  size: z.number().nullable(),
-})
-
 export const StaircaseSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -326,28 +227,74 @@ export const StaircaseSchema = z.object({
     })
     .optional(),
   deleted: z.boolean(),
-  timestamp: z.string().datetime(),
+  timestamp: z.string(),
 })
 
-export const ResidenceByRentalIdSchema = z.object({
+export const ResidenceDetailsSchema = z.object({
   id: z.string(),
   code: z.string(),
   name: z.string().nullable(),
+  status: z.enum(['VACANT', 'LEASED']).nullable(),
+  entrance: z.string().nullable(),
+  location: z.string().nullable(),
+  floor: z.string().nullable(),
+  partNo: z.number().nullable(),
+  part: z.string().nullable(),
+  deleted: z.boolean(),
+  validityPeriod: z.object({
+    fromDate: z.coerce.date(),
+    toDate: z.coerce.date(),
+  }),
   accessibility: z.object({
     wheelchairAccessible: z.boolean(),
     elevator: z.boolean(),
+    residenceAdapted: z.boolean(),
   }),
   features: z.object({
     hygieneFacility: z.string().nullable(),
+    balcony1: z
+      .object({
+        location: z.string(),
+        type: z.string(),
+      })
+      .optional(),
+    balcony2: z
+      .object({
+        location: z.string(),
+        type: z.string(),
+      })
+      .optional(),
+    patioLocation: z.string().nullable(),
+    sauna: z.boolean(),
+    extraToilet: z.boolean(),
+    sharedKitchen: z.boolean(),
+    petAllergyFree: z.boolean(),
+    electricAllergyIntolerance: z
+      .boolean()
+      .describe('Is the apartment checked for electric allergy intolerance?'),
+    smokeFree: z.boolean(),
+    asbestos: z.boolean(),
   }),
-  entrance: z.string().nullable(),
-  floor: z.string().nullable(),
-  deleted: z.boolean(),
   type: z.object({
     code: z.string(),
     name: z.string().nullable(),
     roomCount: z.number().nullable(),
     kitchen: z.number(),
+  }),
+  residenceType: z.object({
+    residenceTypeId: z.string(),
+    code: z.string(),
+    name: z.string().nullable(),
+    roomCount: z.number().nullable(),
+    kitchen: z.number(),
+    systemStandard: z.number(),
+    checklistId: z.string().nullable(),
+    componentTypeActionId: z.string().nullable(),
+    statisticsGroupSCBId: z.string().nullable(),
+    statisticsGroup2Id: z.string().nullable(),
+    statisticsGroup3Id: z.string().nullable(),
+    statisticsGroup4Id: z.string().nullable(),
+    timestamp: z.string(),
   }),
   rentalInformation: z
     .object({
@@ -359,6 +306,33 @@ export const ResidenceByRentalIdSchema = z.object({
       }),
     })
     .nullable(),
+  propertyObject: z.object({
+    energy: z.object({
+      energyClass: z.number(),
+      energyRegistered: z.coerce.date().optional(),
+      energyReceived: z.coerce.date().optional(),
+      energyIndex: z.number().optional(),
+    }),
+    rentalId: z.string().nullable(),
+    rentalInformation: z
+      .object({
+        type: z.object({
+          code: z.string(),
+          name: z.string().nullable(),
+        }),
+      })
+      .nullable(),
+    rentalBlocks: z.array(
+      z.object({
+        id: z.string(),
+        blockReasonId: z.string().nullable(),
+        blockReason: z.string().nullable(),
+        fromDate: z.coerce.date(),
+        toDate: z.coerce.date().nullable(),
+        amount: z.number().nullable(),
+      })
+    ),
+  }),
   property: z.object({
     id: z.string().nullable(),
     name: z.string().nullable(),
@@ -371,6 +345,7 @@ export const ResidenceByRentalIdSchema = z.object({
   }),
   staircase: StaircaseSchema.nullable(),
   areaSize: z.number().nullable(),
+  malarEnergiFacilityId: z.string().nullable(),
 })
 
 export const RoomTypeSchema = z.object({
@@ -411,6 +386,7 @@ export const RoomSchema = z.object({
   deleted: z.boolean(),
   timestamp: z.string(),
   roomType: RoomTypeSchema.nullable(),
+  area: z.number().optional(),
 })
 
 export const ParkingSpaceSchema = z.object({
@@ -487,7 +463,8 @@ export const FacilityDetailsSchema = z.object({
 })
 
 export const GetRoomsQueryParamsSchema = z.object({
-  residenceId: z.string().min(1, { message: 'residenceId is required.' }),
+  rentalId: z.string().min(1, { message: 'rentalId is required.' }),
+  roomCode: z.string().optional(),
 })
 
 export const GetBuildingsQueryParamsSchema = z.object({
@@ -508,6 +485,7 @@ export const StaircasesQueryParamsSchema = z.object({
   buildingCode: z
     .string()
     .min(7, { message: 'buildingCode must be at least 7 characters long.' }),
+  staircaseCode: z.string().optional(),
 })
 
 export const ResidenceSummaryQueryParamsSchema = z.object({
@@ -613,9 +591,7 @@ export type Property = z.infer<typeof PropertySchema>
 export type PropertyDetails = z.infer<typeof PropertyDetailsSchema>
 export type Residence = z.infer<typeof ResidenceSchema>
 export type ResidenceDetails = z.infer<typeof ResidenceDetailsSchema>
-export type ResidenceByRentalIdDetails = z.infer<
-  typeof ResidenceByRentalIdSchema
->
+export type ResidenceByRentalIdDetails = ResidenceDetails
 export type ResidenceSummary = z.infer<typeof ResidenceSummarySchema>
 export type Staircase = z.infer<typeof StaircaseSchema>
 export type RoomType = z.infer<typeof RoomTypeSchema>
@@ -738,7 +714,7 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
   componentId: z.string().uuid(),
   spaceId: z.string().nullable(),
   spaceType: SpaceTypeEnum,
-  installationDate: z.string(),
+  installationDate: z.string().nullable(),
   deinstallationDate: z.string().nullable(),
   orderNumber: z.string().nullable().optional(),
   cost: z.number().min(0),
@@ -762,6 +738,7 @@ export const ComponentSchema = z.object({
   ncsCode: z.string().nullable().optional(),
   status: ComponentStatusEnum,
   condition: ComponentConditionEnum.nullable().optional(),
+  lastInspectionDate: z.string().nullable().optional(),
   quantity: z.number().min(0),
   economicLifespan: z.number().min(0),
   createdAt: z.string(),
@@ -777,7 +754,7 @@ export const ComponentInstallationSchema = z.object({
   componentId: z.string().uuid(),
   spaceId: z.string().nullable(),
   spaceType: SpaceTypeEnum,
-  installationDate: z.string(),
+  installationDate: z.string().nullable(),
   deinstallationDate: z.string().nullable(),
   orderNumber: z.string().nullable().optional(),
   cost: z.number().min(0),
@@ -949,7 +926,7 @@ export const CreateComponentInstallationSchema = z.object({
   componentId: z.string().uuid(),
   spaceId: z.string().optional(),
   spaceType: SpaceTypeEnum,
-  installationDate: z.coerce.date(),
+  installationDate: z.coerce.date().nullable().optional(),
   deinstallationDate: z.coerce.date().optional(),
   orderNumber: z.string().trim().optional(),
   cost: z.number().min(0),
@@ -1156,3 +1133,125 @@ export const AddComponentResponseSchema = z.object({
 
 export type AddComponentRequest = z.infer<typeof AddComponentRequestSchema>
 export type AddComponentResponse = z.infer<typeof AddComponentResponseSchema>
+
+// ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
+// Re-exported from @onecore/types (single source of truth shared with the
+// property service). Keep the local export names so consumers / swagger
+// registration are unaffected.
+
+export const ApartmentTemperaturesIntervalSchema =
+  property.ApartmentTemperaturesIntervalSchema
+export const ApartmentTemperaturesQueryParamsSchema =
+  property.ApartmentTemperaturesQuerySchema
+export const ApartmentTemperaturePointSchema =
+  property.ApartmentTemperaturePointSchema
+export const ApartmentTemperatureSeriesSchema =
+  property.ApartmentTemperatureSeriesSchema
+export const ApartmentTemperaturesResponseSchema =
+  property.ApartmentTemperaturesResponseSchema
+
+export type ApartmentTemperaturesResponse =
+  property.ApartmentTemperaturesResponse
+
+export const KeycloakUserSummarySchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().optional(),
+  mobilePhone: z.string().optional(),
+  employeeId: z.string().optional(),
+})
+
+export const CostCenterTreeAddressSchema = z.object({
+  buildingCode: z.string(),
+  buildingName: z.string().nullable(),
+  buildingType: z
+    .object({
+      code: z.string().nullable(),
+      name: z.string().nullable(),
+    })
+    .nullable(),
+})
+
+export const CostCenterTreeAggregatesSchema = z.object({
+  residenceCount: z.number().int().nonnegative(),
+  parkingCount: z.number().int().nonnegative(),
+  entranceCount: z.number().int().nonnegative(),
+})
+
+export const CostCenterTreePropertySchema = z.object({
+  code: z.string(),
+  designation: z.string().nullable(),
+  tract: z.string().nullable(),
+  addresses: z.array(CostCenterTreeAddressSchema),
+  aggregates: CostCenterTreeAggregatesSchema,
+})
+
+export const CostCenterTreeKvvAreaSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+  properties: z.array(CostCenterTreePropertySchema),
+})
+
+export const CostCenterTreeCapabilitiesSchema = z.object({
+  canEdit: z.boolean(),
+})
+
+export const CostCenterTreeSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+  lead: KeycloakUserSummarySchema.nullable(),
+  deputy: KeycloakUserSummarySchema.nullable(),
+  capabilities: CostCenterTreeCapabilitiesSchema,
+  kvvAreas: z.array(CostCenterTreeKvvAreaSchema),
+})
+
+export type CostCenterTree = z.infer<typeof CostCenterTreeSchema>
+
+export const CostCenterSummarySchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+})
+
+export type CostCenterSummary = z.infer<typeof CostCenterSummarySchema>
+
+export const KvvAreaSummarySchema = z.object({
+  code: z.string(),
+})
+
+export type KvvAreaSummary = z.infer<typeof KvvAreaSummarySchema>
+
+export const PutPropertyKvvAreaBodySchema = z.object({
+  kvvAreaId: z.string().uuid(),
+})
+
+export type PutPropertyKvvAreaBody = z.infer<
+  typeof PutPropertyKvvAreaBodySchema
+>
+
+export const PropertyKvvAreaLinkSchema = z.object({
+  propertyCode: z.string(),
+  kvvAreaId: z.string().uuid(),
+  updatedAt: z.string(),
+  updatedBy: z.string().nullable(),
+})
+
+export type PropertyKvvAreaLink = z.infer<typeof PropertyKvvAreaLinkSchema>
+
+export const PatchKvvAreaResponsibleBodySchema = z.object({
+  keycloakUserId: z.string().uuid(),
+})
+
+export const PatchedKvvAreaSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+})
+
+export type PatchedKvvArea = z.infer<typeof PatchedKvvAreaSchema>

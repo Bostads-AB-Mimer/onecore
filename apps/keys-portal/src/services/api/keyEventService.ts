@@ -124,6 +124,21 @@ export const keyEventService = {
   },
 
   /**
+   * Helper to create a REPLACEMENT event with ORDERED status for a single key
+   */
+  async createReplacementOrder(
+    keyId: string,
+    workOrderId?: string
+  ): Promise<KeyEvent> {
+    return this.create({
+      keys: [keyId],
+      type: 'REPLACEMENT',
+      status: 'ORDERED',
+      workOrderId: workOrderId ?? null,
+    })
+  },
+
+  /**
    * Helper to update an event status
    */
   async updateStatus(

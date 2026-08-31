@@ -10,6 +10,10 @@ interface SearchInputProps {
   placeholder?: string
   /** Additional className for the wrapper */
   className?: string
+  /** Focus handler */
+  onFocus?: () => void
+  /** Blur handler */
+  onBlur?: () => void
 }
 
 /** Search input with icon */
@@ -18,6 +22,8 @@ export function SearchInput({
   onChange,
   placeholder = 'Sök...',
   className = 'max-w-sm',
+  onFocus,
+  onBlur,
 }: SearchInputProps) {
   return (
     <div className={`relative flex-1 ${className}`}>
@@ -26,6 +32,8 @@ export function SearchInput({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
         className="pl-10"
       />
     </div>

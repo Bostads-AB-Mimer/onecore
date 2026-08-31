@@ -1,0 +1,517 @@
+import { Invoice, InvoicePaymentEvent, PaymentStatus } from '@onecore/types'
+import { format, parseISO } from 'date-fns'
+import { FileText } from 'lucide-react'
+import { match, P } from 'ts-pattern'
+
+import { Badge } from '@/shared/ui/Badge'
+import { Button } from '@/shared/ui/Button'
+import {
+  CollapsibleTable,
+  CollapsibleTableColumn,
+} from '@/shared/ui/CollapsibleTable'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
+
+import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
+import { hasInvoiceDeferral } from '../lib/invoiceDeferral'
+import { InvoiceDeferralAction } from './InvoiceDeferralAction'
+
+const currencyFormatter = new Intl.NumberFormat('sv-SE', {
+  style: 'currency',
+  currency: 'SEK',
+  currencyDisplay: 'code',
+  maximumFractionDigits: 2,
+})
+
+const paymentEventTypeLabels: Record<string, string> = {
+  INVOICE: 'Faktura',
+  CREDIT_MEMO: 'Kredit',
+  ELECTRONIC_PAYMENT: 'Inbetalning',
+  PAYMENT: 'Inbetalning',
+  REMINDER: 'Påminnelse',
+}
+
+const formatPaymentEventType = (slTransactionType: string | null) => {
+  if (!slTransactionType) return '-'
+  return paymentEventTypeLabels[slTransactionType] ?? slTransactionType
+}
+
+type Props = {
+  invoices: Invoice[]
+  onInvoiceRowClick: (invoiceId: string | null) => void
+  expandedInvoiceId: string | null
+  contactCode?: string
+}
+
+export const InvoicesTable = (props: Props) => {
+  // Sort invoices by invoice date, latest first
+  const sortedInvoices = [...props.invoices].sort((a, b) => {
+    const dateA =
+      typeof a.invoiceDate === 'string'
+        ? parseISO(a.invoiceDate)
+        : a.invoiceDate
+    const dateB =
+      typeof b.invoiceDate === 'string'
+        ? parseISO(b.invoiceDate)
+        : b.invoiceDate
+    return dateB.getTime() - dateA.getTime()
+  })
+
+  const formatCurrency = (amount: number) => {
+    return currencyFormatter.format(amount)
+  }
+
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return '-'
+    const dateObj = typeof date === 'string' ? new Date(date) : date
+    return format(dateObj, 'yyyy-MM-dd')
+  }
+
+  const getStatusBadge = (invoice: Invoice) => {
+    return match(invoice)
+      .with({ credit: { originalInvoiceId: P.string } }, () => (
+        <Badge variant="secondary">Kredit</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.Paid }, () => (
+        <Badge variant="success">Betald</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.PartlyPaid }, () => (
+        <Badge variant="priority-medium">Delvis betald</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.Unpaid }, () => (
+        <Badge variant="secondary">Obetald</Badge>
+      ))
+      .with({ paymentStatus: PaymentStatus.Overdue }, () => (
+        <Badge variant="destructive">Förfallen</Badge>
+      ))
+      .otherwise((v) => (
+        <Badge variant="secondary">Okänd betalstatus: {v.paymentStatus}</Badge>
+      ))
+  }
+
+  const getDeferralBadge = (invoice: Invoice) => {
+    if (!hasInvoiceDeferral(invoice)) {
+      return null
+    }
+
+    const badge = <Badge variant="destructive">Anstånd</Badge>
+
+    if (invoice.deferral?.madeBy) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{badge}</span>
+          </TooltipTrigger>
+          <TooltipContent>Beviljat av {invoice.deferral.madeBy}</TooltipContent>
+        </Tooltip>
+      )
+    }
+
+    return badge
+  }
+
+  const getInvoiceType = (invoice: Invoice): string => {
+    if (invoice.type === 'Other') return 'Ströfaktura'
+    return 'Avi'
+  }
+
+  const handleOpenPDF = (url: string) => {
+    window.open(url, '_blank')
+  }
+
+  // Check if a row is a contract header (rowType 3)
+  const isContractHeader = (row: any): boolean => {
+    return row?.rowType === 3
+  }
+
+  // TODO(AL): Move to backend
+  // Calculate subtotals for rows under each header
+  const calculateSubtotals = (rows: any[]) => {
+    const subtotals: Record<
+      number,
+      { amount: number; vat: number; total: number }
+    > = {}
+
+    for (let i = 0; i < rows.length; i++) {
+      if (isContractHeader(rows[i])) {
+        let amount = 0
+        let vat = 0
+        let total = 0
+
+        // Sum up all rows until the next header or end
+        for (let j = i + 1; j < rows.length; j++) {
+          if (isContractHeader(rows[j])) break
+
+          amount += rows[j].amount || 0
+          vat += rows[j].vat || 0
+          total += rows[j].totalAmount || 0
+        }
+
+        subtotals[i] = { amount, vat, total }
+      }
+    }
+
+    return subtotals
+  }
+
+  // Component to render expiration date with deferment indicator
+  const ExpirationDateCell = ({ invoice }: { invoice: Invoice }) => {
+    if (!invoice.expirationDate) return <span>-</span>
+
+    const dateLabel = formatDate(invoice.expirationDate)
+
+    if (!hasInvoiceDeferral(invoice)) {
+      return <span>{dateLabel}</span>
+    }
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-help">{dateLabel}*</span>
+        </TooltipTrigger>
+        <TooltipContent>Förfallodatum efter anstånd</TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  // Component to display payment events table
+  const InvoicePaymentEventsTable = ({
+    events,
+    isLoading,
+    error,
+  }: {
+    events: InvoicePaymentEvent[] | undefined
+    isLoading: boolean
+    error: Error | null
+  }) => {
+    if (isLoading) {
+      return (
+        <div className="bg-background rounded-lg p-3 shadow-sm">
+          <div className="font-medium text-sm mb-3 text-muted-foreground">
+            Betalningshändelser
+          </div>
+          <div className="text-sm text-muted-foreground italic">
+            Laddar betalningshändelser...
+          </div>
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div className="bg-background rounded-lg p-3 shadow-sm">
+          <div className="font-medium text-sm mb-3 text-muted-foreground">
+            Betalningshändelser
+          </div>
+          <div className="text-sm text-muted-foreground italic">
+            Inga betalningshändelser hittades
+          </div>
+        </div>
+      )
+    }
+
+    if (!events || events.length === 0) {
+      return (
+        <div className="bg-background rounded-lg p-3 shadow-sm">
+          <div className="font-medium text-sm mb-3 text-muted-foreground">
+            Betalningshändelser
+          </div>
+          <div className="text-sm text-muted-foreground italic">
+            Inga betalningshändelser hittades
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="bg-background rounded-lg p-3 shadow-sm">
+        <div className="font-medium text-sm mb-3 text-muted-foreground">
+          Betalningshändelser
+        </div>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="text-left p-2 text-xs font-medium">Typ</th>
+              <th className="text-left p-2 text-xs font-medium">Källa</th>
+              <th className="text-left p-2 text-xs font-medium">Belopp</th>
+              <th className="text-left p-2 text-xs font-medium">Text</th>
+              <th className="text-left p-2 text-xs font-medium">Betaldatum</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((event, idx) => (
+              <tr key={idx} className="border-b last:border-0">
+                <td className="p-2 text-sm">
+                  {formatPaymentEventType(event.slTransactionType)}
+                </td>
+                <td className="p-2 text-sm">{event.transactionSourceCode}</td>
+                <td className="p-2 text-sm">{formatCurrency(event.amount)}</td>
+                <td className="p-2 text-sm">{event.text || '-'}</td>
+                <td className="p-2 text-sm">{formatDate(event.paymentDate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  // Component that wraps payment info and events for XLedger invoices
+  const InvoiceDetailsWithPaymentInfo = ({ invoice }: { invoice: Invoice }) => {
+    const {
+      data: events,
+      isLoading,
+      error,
+    } = useInvoicePaymentEvents(invoice.invoiceId)
+
+    return (
+      <InvoicePaymentEventsTable
+        events={events}
+        isLoading={isLoading}
+        error={error}
+      />
+    )
+  }
+
+  // Column definitions for CollapsibleTable
+  const invoiceColumns: CollapsibleTableColumn<Invoice>[] = [
+    {
+      key: 'invoiceId',
+      label: 'Fakturanummer',
+      render: (invoice) => <span className="text-sm">{invoice.invoiceId}</span>,
+      className: 'p-3 text-sm',
+    },
+    {
+      key: 'invoiceDate',
+      label: 'Fakturadatum',
+      render: (invoice) => (
+        <span className="text-sm">{formatDate(invoice.invoiceDate)}</span>
+      ),
+      className: 'p-3 text-sm',
+    },
+    {
+      key: 'expirationDate',
+      label: 'Förfallodatum',
+      render: (invoice) => <ExpirationDateCell invoice={invoice} />,
+      className: 'p-3 text-sm',
+    },
+    {
+      key: 'amount',
+      label: 'Belopp',
+      render: (invoice) => (
+        <span className="text-sm">{formatCurrency(invoice.amount)}</span>
+      ),
+      className: 'p-3 text-sm text-right',
+    },
+    {
+      key: 'remainingAmount',
+      label: 'Saldo',
+      render: (invoice) => (
+        <span className="text-sm">
+          {formatCurrency(invoice.remainingAmount || 0)}
+        </span>
+      ),
+      className: 'p-3 text-sm text-right',
+    },
+    {
+      key: 'type',
+      label: 'Fakturatyp',
+      render: (invoice) => (
+        <span className="text-sm">{getInvoiceType(invoice)}</span>
+      ),
+      className: 'p-3 text-sm',
+    },
+    {
+      key: 'debtCollection',
+      label: 'Inkasso',
+      render: (invoice) => (
+        <span className="text-sm">
+          {invoice.sentToDebtCollection ? 'Ja' : 'Nej'}
+        </span>
+      ),
+      className: 'p-3 text-sm',
+    },
+    {
+      key: 'deferral',
+      label: 'Anstånd',
+      render: (invoice) => getDeferralBadge(invoice),
+      className: 'p-3 text-sm',
+    },
+    {
+      key: 'status',
+      label: 'Betalstatus',
+      render: (invoice) => getStatusBadge(invoice),
+      className: 'p-3 text-sm',
+    },
+  ]
+
+  // Expanded content renderer
+  const renderExpandedInvoiceContent = (invoice: Invoice) => {
+    return (
+      <>
+        {invoice.description && (
+          <div className="text-sm bg-background/50 rounded p-2">
+            <span className="font-medium">Text:</span> {invoice.description}
+            {invoice.expectedLoss && <div>Befarad kundförlust</div>}
+          </div>
+        )}
+        {invoice.deferral?.madeBy && (
+          <div className="mb-3 text-sm bg-background/50 rounded p-2">
+            <span className="font-medium">Anstånd beviljat av:</span>{' '}
+            {invoice.deferral.madeBy}
+          </div>
+        )}
+        {invoice.credit && (
+          <div className="mb-3 text-sm bg-background/50 rounded p-2">
+            <span className="font-medium">Krediterar faktura:</span>{' '}
+            {invoice.credit.originalInvoiceId}
+          </div>
+        )}
+        {invoice.invoiceFileUrl && (
+          <div className="mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOpenPDF(invoice.invoiceFileUrl!)
+              }}
+              className="w-full sm:w-auto"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Se PDF
+            </Button>
+          </div>
+        )}
+        {props.contactCode && (
+          <InvoiceDeferralAction
+            invoice={invoice}
+            contactCode={props.contactCode}
+          />
+        )}
+        {invoice.invoiceRows.length > 0 && (
+          <div className="bg-background rounded-lg p-3 shadow-sm mb-4">
+            <div className="font-medium text-sm mb-3 text-muted-foreground">
+              Fakturarader
+            </div>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-2 text-xs font-medium">Belopp</th>
+                  <th className="text-left p-2 text-xs font-medium">Moms</th>
+                  <th className="text-left p-2 text-xs font-medium">Totalt</th>
+                  <th className="text-left p-2 text-xs font-medium">
+                    Hyresartikel
+                  </th>
+                  <th className="text-left p-2 text-xs font-medium">
+                    Beskrivning
+                  </th>
+                  <th className="text-left p-2 text-xs font-medium">
+                    Utskriftsgrupp
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const subtotals = calculateSubtotals(invoice.invoiceRows)
+                  return invoice.invoiceRows.map((item, idx) => {
+                    const isHeader = isContractHeader(item)
+                    const subtotal = isHeader ? subtotals[idx] : null
+
+                    return (
+                      <tr
+                        key={idx}
+                        className={`border-b last:border-0 ${isHeader ? 'bg-slate-100/70 font-semibold' : ''}`}
+                      >
+                        <td className="p-2 text-sm">
+                          {isHeader && subtotal
+                            ? formatCurrency(subtotal.amount)
+                            : formatCurrency(item.amount)}
+                        </td>
+                        <td className="p-2 text-sm">
+                          {isHeader && subtotal
+                            ? formatCurrency(subtotal.vat)
+                            : formatCurrency(item.vat)}
+                        </td>
+                        <td className="p-2 text-sm">
+                          {isHeader && subtotal
+                            ? formatCurrency(subtotal.total)
+                            : formatCurrency(item.totalAmount)}
+                        </td>
+                        <td className="p-2 text-sm">
+                          {isHeader ? 'Summa objekt:' : item.rentArticle}
+                        </td>
+                        <td className="p-2 text-sm">{item.invoiceRowText}</td>
+                        <td className="p-2 text-sm">{item.printGroup}</td>
+                      </tr>
+                    )
+                  })
+                })()}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {invoice.source?.toLowerCase() === 'next' && (
+          <InvoiceDetailsWithPaymentInfo invoice={invoice} />
+        )}
+      </>
+    )
+  }
+
+  // Mobile summary renderer
+  const renderInvoiceMobileSummary = (invoice: Invoice) => {
+    return (
+      <>
+        <div className="flex items-start justify-between mb-2">
+          <div className="space-y-1">
+            <div className="font-medium">{invoice.invoiceId}</div>
+            <div className="text-sm text-muted-foreground">
+              {getInvoiceType(invoice)}
+            </div>
+          </div>
+          {getStatusBadge(invoice)}
+        </div>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Belopp:</span>
+            <span className="font-medium">
+              {formatCurrency(invoice.amount)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Inkasso:</span>
+            <span>{invoice.sentToDebtCollection ? 'Ja' : 'Nej'}</span>
+          </div>
+          {hasInvoiceDeferral(invoice) && (
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Anstånd:</span>
+              {getDeferralBadge(invoice)}
+            </div>
+          )}
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <CollapsibleTable
+      data={sortedInvoices}
+      expandedKeys={props.expandedInvoiceId ? [props.expandedInvoiceId] : []}
+      onExpandedChange={(expandedKeys) =>
+        props.onInvoiceRowClick(expandedKeys[0] ?? null)
+      }
+      columns={invoiceColumns}
+      keyExtractor={(invoice) => invoice.invoiceId}
+      expandedContentRenderer={renderExpandedInvoiceContent}
+      mobileCardConfig={{
+        summaryRenderer: renderInvoiceMobileSummary,
+      }}
+      expansionConfig={{
+        allowMultiple: false,
+        chevronPosition: 'end',
+        animated: true,
+      }}
+      emptyMessage="Inga fakturor hittades."
+      className="rounded-lg border"
+    />
+  )
+}

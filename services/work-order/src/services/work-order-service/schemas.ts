@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CreateInspectionWorkOrderGroupSchema } from '@onecore/types'
 
 export const WorkOrderMessageSchema = z.object({
   id: z.number(),
@@ -90,8 +91,8 @@ export const MaintenanceUnitSchema = z.object({
   code: z.string(),
   caption: z.string(),
   type: z.string(),
-  estateCode: z.string(),
-  estate: z.string(),
+  estateCode: z.string().nullable(),
+  estate: z.string().nullable(),
 })
 
 export const RentalPropertySchema = z.object({
@@ -106,8 +107,8 @@ export const RentalPropertySchema = z.object({
     // This is not nullable in onecore-types, but it is actually nullable
     washSpace: z.string().nullable(),
     area: z.number(),
-    estateCode: z.string(),
-    estate: z.string(),
+    estateCode: z.string().nullable(),
+    estate: z.string().nullable(),
     buildingCode: z.string(),
     building: z.string(),
   }),
@@ -184,6 +185,24 @@ export const CreateWorkOrderBodySchema = z.object({
   details: CreateWorkOrderDetailsSchema,
 })
 
+// Shared with core via @onecore/types (libs/types/src/work-order/schema.ts) —
+// re-exported here so the service's swagger registration and consumers keep a
+// single import path.
+export {
+  MaintenanceTeamSchema,
+  CreateInspectionWorkOrderGroupSchema,
+  CreateInspectionWorkOrderResultSchema,
+  CreateInspectionWorkOrdersResponseSchema,
+} from '@onecore/types'
+
+export const CreateInspectionWorkOrdersBodySchema = z.object({
+  rentalProperty: RentalPropertySchema,
+  // Keys the Odoo records to the inspection so retries upsert the existing
+  // request instead of creating duplicates. Optional for older core versions.
+  inspectionId: z.string().optional(),
+  groups: z.array(CreateInspectionWorkOrderGroupSchema).min(1),
+})
+
 export const GetWorkOrdersFromXpandQuerySchema = z.object({
   skip: z.coerce.number().optional(),
   limit: z.coerce.number().optional(),
@@ -208,3 +227,11 @@ export type CreateWorkOrderDetails = z.infer<
 >
 export type CreateWorkOrderRow = z.infer<typeof CreateWorkOrderRowSchema>
 export type CreateWorkOrderBody = z.infer<typeof CreateWorkOrderBodySchema>
+export type CreateInspectionWorkOrdersBody = z.infer<
+  typeof CreateInspectionWorkOrdersBodySchema
+>
+export type {
+  MaintenanceTeam,
+  CreateInspectionWorkOrderGroup,
+  CreateInspectionWorkOrderResult,
+} from '@onecore/types'

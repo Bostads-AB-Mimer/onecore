@@ -13,6 +13,9 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
+type HomeInsuranceExportRow = z.infer<
+  typeof schemas.v1.HomeInsuranceExportRowSchema
+>
 
 export const getLease = async (leaseId: string): Promise<Lease | null> => {
   const leaseResponse = await axios(
@@ -56,6 +59,13 @@ export const getLeasesByRentalObjectCode = async (
   const leasesResponse = await axios(
     `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${rentalObjectCode}?${queryParams.toString()}`
   )
+
+  // Leasing answers 404 for a rental object it cannot find, and validateStatus
+  // stops axios from throwing on it, so `content` would be undefined.
+  if (leasesResponse.status === 404) {
+    return []
+  }
+
   return leasesResponse.data.content
 }
 
@@ -189,8 +199,8 @@ export const getBuildingManagers = async (): Promise<
 }
 
 export const searchLeases = async (
-  queryParams: Record<string, string | string[] | undefined>
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  queryParams: leasing.v1.LeaseSearchQueryParamsInput
+): Promise<PaginatedResponse<Lease>> => {
   const params = new URLSearchParams()
 
   Object.entries(queryParams).forEach(([key, value]) => {
@@ -198,7 +208,7 @@ export const searchLeases = async (
     if (Array.isArray(value)) {
       value.forEach((v) => params.append(key, v))
     } else {
-      params.append(key, value)
+      params.append(key, value.toString())
     }
   })
 
@@ -207,4 +217,38 @@ export const searchLeases = async (
   )
 
   return response.data
+}
+
+export const getHomeInsuranceExport = async (): Promise<
+  AdapterResult<HomeInsuranceExportRow[], 'schema-error' | 'unknown'>
+> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/lf-export`
+    )
+
+    if (response.status !== 200) {
+      logger.error(
+        { status: response.status, data: response.data },
+        'leases/lf-export returned unexpected status'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const parsed = schemas.v1.HomeInsuranceExportResponseSchema.safeParse(
+      response.data
+    )
+    if (!parsed.success) {
+      logger.error(
+        { err: parsed.error },
+        'leases/lf-export response failed schema validation'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return { ok: true, data: parsed.data.content }
+  } catch (err) {
+    logger.error({ err }, 'leases/lf-export failed')
+    return { ok: false, err: 'unknown' }
+  }
 }

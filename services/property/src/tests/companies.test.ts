@@ -19,28 +19,28 @@ describe('Companies API', () => {
     expect(company._links.properties).toBeDefined()
   })
 
-  it('should return company details by ID', async () => {
-    // First get a company ID from the list
+  it('should return company details by organization number', async () => {
+    // First get an organization number from the list
     const companiesResponse = await request(app.callback()).get('/companies')
-    const companyId = companiesResponse.body.content[0].id
+    const organizationNumber =
+      companiesResponse.body.content[0].organizationNumber
 
     const response = await request(app.callback()).get(
-      `/companies/${companyId}`
+      `/companies/${organizationNumber}`
     )
     expect(response.status).toBe(200)
     expect(response.body.content).toBeDefined()
 
     const company = response.body.content
-    expect(company.id).toBe(companyId)
+    expect(company.organizationNumber).toBe(organizationNumber)
     expect(company.code).toBeDefined()
     expect(company.name).toBeDefined()
-    expect(company.organizationNumber).toBeDefined()
     expect(company._links).toBeDefined()
     expect(company._links.self).toBeDefined()
     expect(company._links.properties).toBeDefined()
   })
 
-  it('should return 404 for non-existent company ID', async () => {
+  it('should return 404 for non-existent organization number', async () => {
     const response = await request(app.callback()).get('/companies/nonexistent')
     expect(response.status).toBe(404)
   })

@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { KeyBundlesApi } from '../../adapters/keys-adapter'
-import { createLogEntry } from './helpers'
+import { createLogEntry, enrichWithContacts } from './helpers'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -478,6 +478,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The key bundle ID
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the keys' loans
+   *           and attaches them as a `contacts` sidecar keyed by contactCode.
+   *           Soft fails — if the contacts service errors, the response is
+   *           returned without the sidecar.
    *     responses:
    *       200:
    *         description: Bundle information and keys with loan status
@@ -488,6 +498,11 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/KeyBundleDetailsResponse'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       404:
    *         description: Key bundle not found
    *       500:
@@ -500,11 +515,13 @@ export const routes = (router: KoaRouter) => {
       'includeLoans',
       'includeEvents',
       'includeKeySystem',
+      'includeContacts',
     ])
+    const { includeContacts, ...adapterQuery } = ctx.query
 
     const result = await KeyBundlesApi.getWithLoanStatus(
       ctx.params.id,
-      ctx.query
+      adapterQuery
     )
 
     if (!result.ok) {
@@ -523,8 +540,22 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.keys.flatMap((k) =>
+              (k.loans ?? []).flatMap((l) => [l.contact, l.contact2])
+            ),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = {
+      content: result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+      ...metadata,
+    }
   })
 
   /**

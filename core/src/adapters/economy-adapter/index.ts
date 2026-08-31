@@ -1,8 +1,51 @@
+import fs from 'node:fs'
+import z from 'zod'
 import { loggedAxios as axios, logger } from '@onecore/utilities'
-import { Invoice, InvoicePaymentEvent } from '@onecore/types'
+import {
+  economy,
+  Invoice,
+  InvoicePaymentEvent,
+  RentInvoiceRow,
+  SyncContactToEconomyPayload,
+  XledgerContact,
+  XledgerProject,
+  schemas,
+} from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from './../types'
+import { AxiosError } from 'axios'
+
+export async function getInvoicePdf(
+  ocr: string
+): Promise<
+  AdapterResult<
+    { data: Buffer; contentDisposition: string },
+    'not-found' | 'unknown'
+  >
+> {
+  const response = await axios.get(
+    `${config.economyService.url}/invoices/${ocr}/pdf`,
+    { responseType: 'arraybuffer', validateStatus: () => true }
+  )
+
+  if (response.status === 404) return { ok: false, err: 'not-found' }
+  if (response.status !== 200) {
+    logger.error(
+      { ocr, status: response.status },
+      'economy-adapter.getInvoicePdf'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+
+  return {
+    ok: true,
+    data: {
+      data: Buffer.from(response.data),
+      contentDisposition: response.headers['content-disposition'] ?? '',
+    },
+  }
+}
 
 export async function getInvoiceByInvoiceId(
   invoiceId: string
@@ -21,6 +64,31 @@ export async function getInvoiceByInvoiceId(
 
   logger.error(response.data, 'economy-adapter.getInvoiceByInvoiceId')
   return { ok: false, err: 'unknown' }
+}
+
+export async function getInvoiceByOcr(
+  ocr: string
+): Promise<AdapterResult<Invoice, 'not-found' | 'unknown'>> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/invoices/by-ocr/${ocr}`,
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.getInvoiceByOcr')
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoiceByOcr')
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 export async function getInvoicePaymentEvents(
@@ -96,4 +164,456 @@ export async function getInvoicesSentToDebtCollection(
   })
 
   return { ok: true, data: hasDebtCollection }
+}
+
+export async function getMiscellaneousInvoiceDataForLease(
+  rentalId: string,
+  year?: string
+): Promise<
+  AdapterResult<{ costCentre: string; propertyCode: string }, 'unknown'>
+> {
+  const url = `${config.economyService.url}/invoices/miscellaneous/${rentalId}`
+  const response = await axios.get(url)
+  if (response.status === 200) {
+    return { ok: true, data: response.data.content }
+  }
+
+  return { ok: false, err: 'unknown' }
+}
+
+export async function submitMiscellaneousInvoice(
+  invoice: any,
+  attachment: any
+): Promise<AdapterResult<boolean, 'unknown'>> {
+  // eslint-disable-next-line n/no-unsupported-features/node-builtins
+  const formData = new FormData()
+
+  if (attachment) {
+    const fileBuffer = fs.readFileSync(attachment.filepath)
+
+    formData.append(
+      'attachment',
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      new Blob([fileBuffer]),
+      attachment.originalFilename
+    )
+  }
+
+  formData.append('invoice', JSON.stringify(invoice))
+
+  try {
+    const url = `${config.economyService.url}/invoices/miscellaneous`
+    const response = await axios.postForm(url, formData)
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+    return { ok: false, err: 'unknown' }
+  } catch (err: unknown) {
+    logger.error(err, 'Error submitting miscellaneous invoice')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export async function getInvoices({
+  from,
+  to,
+  remainingAmountGreaterThan,
+}: {
+  from?: Date
+  to?: Date
+  remainingAmountGreaterThan?: number
+}): Promise<AdapterResult<Invoice[], 'unknown'>> {
+  try {
+    const pageSize = 500
+    let after: string | undefined = undefined
+    let allInvoices: Invoice[] = []
+    let hasNextPage = true
+
+    while (hasNextPage) {
+      const response: any = await axios.get(
+        `${config.economyService.url}/invoices`,
+        {
+          params: { from, to, remainingAmountGreaterThan, after, pageSize },
+        }
+      )
+
+      if (response.status === 200) {
+        const { content, pageInfo } = response.data.content
+        allInvoices = allInvoices.concat(content)
+        hasNextPage = pageInfo?.hasNextPage
+        after = pageInfo?.endCursor
+      } else {
+        logger.error(response.data, 'economy-adapter.getInvoices')
+        return { ok: false, err: 'unknown', statusCode: 500 }
+      }
+    }
+
+    return { ok: true, data: allInvoices }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoices')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function getRentInvoiceRows(
+  invoiceIds: string[]
+): Promise<AdapterResult<RentInvoiceRow[], 'unknown'>> {
+  try {
+    const pageSize = 500
+    let allRows: RentInvoiceRow[] = []
+    for (let i = 0; i < invoiceIds.length; i += pageSize) {
+      const batch = invoiceIds.slice(i, i + pageSize)
+      const response = await axios.post(
+        `${config.economyService.url}/rent-invoice-rows/batch`,
+        { invoiceIds: batch }
+      )
+      if (response.status === 200) {
+        allRows = allRows.concat(response.data.content)
+      } else {
+        logger.error(response.data, 'economy-adapter.getRentInvoiceRows')
+        return { ok: false, err: 'unknown', statusCode: 500 }
+      }
+    }
+    return { ok: true, data: allRows }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getRentInvoiceRows')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function deferInvoice(params: {
+  invoiceId: string
+  endDate: string
+  madeByEmail: string
+  reason: string
+}): Promise<AdapterResult<true, economy.DeferralErrorCode | 'unknown'>> {
+  try {
+    const response = await axios.put(
+      `${config.economyService.url}/invoices/${params.invoiceId}/deferral`,
+      {
+        endDate: params.endDate,
+        madeByEmail: params.madeByEmail,
+        reason: params.reason,
+      },
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: true }
+    }
+
+    const code = response.data?.code
+    if (economy.isDeferralErrorCode(code)) {
+      if (response.status === 404 && code === 'invoice-not-found') {
+        return { ok: false, err: 'invoice-not-found', statusCode: 404 }
+      }
+      if (response.status === 422 && code === 'invoice-not-eligible') {
+        return { ok: false, err: 'invoice-not-eligible', statusCode: 422 }
+      }
+      if (response.status === 500 && code === 'tenfast-failed') {
+        return { ok: false, err: 'tenfast-failed', statusCode: 500 }
+      }
+      if (response.status === 500 && code === 'xledger-failed') {
+        return { ok: false, err: 'xledger-failed', statusCode: 500 }
+      }
+    }
+
+    logger.error(response.data, 'economy-adapter.deferInvoice')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: unknown) {
+    logger.error(err, 'economy-adapter.deferInvoice')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function getContacts(): Promise<
+  AdapterResult<XledgerContact[], 'unknown'>
+> {
+  const url = `${config.economyService.url}/contacts`
+  const response = await axios.get(url)
+  if (response.status === 200) {
+    return { ok: true, data: response.data.content }
+  }
+
+  return { ok: false, err: 'unknown' }
+}
+
+export async function getProjects(): Promise<
+  AdapterResult<XledgerProject[], 'unknown'>
+> {
+  const url = `${config.economyService.url}/projects`
+  const response = await axios.get(url)
+  if (response.status === 200) {
+    return { ok: true, data: response.data.content }
+  }
+
+  return { ok: false, err: 'unknown' }
+}
+
+export async function getPaymentEvents(
+  matchIds: number[]
+): Promise<AdapterResult<InvoicePaymentEvent[], 'unknown'>> {
+  try {
+    const pageSize = 500
+    let allEvents: InvoicePaymentEvent[] = []
+    for (let i = 0; i < matchIds.length; i += pageSize) {
+      const batch = matchIds.slice(i, i + pageSize)
+      const response = await axios.post(
+        `${config.economyService.url}/payment-events/batch`,
+        { matchIds: batch }
+      )
+      if (response.status === 200) {
+        allEvents = allEvents.concat(response.data.content)
+      } else {
+        logger.error(response.data, 'economy-adapter.getPaymentEvents')
+        return { ok: false, err: 'unknown', statusCode: 500 }
+      }
+    }
+    return { ok: true, data: allEvents }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getPaymentEvents')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+type InvoiceDetails = {
+  invoiceId: string
+  details: { leaseId: string; costCentre: string }[]
+}
+
+export async function getLeaseDetailsForInvoices(
+  invoiceIds: string[]
+): Promise<AdapterResult<InvoiceDetails[], 'unknown'>> {
+  try {
+    const pageSize = 500
+    let allLeaseDetails: InvoiceDetails[] = []
+    for (let i = 0; i < invoiceIds.length; i += pageSize) {
+      const batch = invoiceIds.slice(i, i + pageSize)
+      const response = await axios.post(
+        `${config.economyService.url}/lease-details/batch`,
+        { invoiceIds: batch }
+      )
+      if (response.status === 200) {
+        allLeaseDetails = allLeaseDetails.concat(response.data.content)
+      } else {
+        logger.error(response.data, 'economy-adapter.getLeaseDetailsForInvoice')
+        return { ok: false, err: 'unknown', statusCode: 500 }
+      }
+    }
+    return { ok: true, data: allLeaseDetails }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getLeaseDetailsForInvoice')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function processIMD(
+  csv: string
+): Promise<
+  AdapterResult<
+    z.infer<typeof economy.ProcessIMDResponseSchema>,
+    'invalid-csv' | 'unknown'
+  >
+> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/imd/process`,
+      { csv }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 400) {
+      return { ok: false, err: 'invalid-csv', statusCode: 400 }
+    }
+
+    logger.error(response.data, 'economy-adapter.processIMD')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err) {
+    logger.error(err, 'economy-adapter.processIMD')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function getInvoiceChannels(
+  recipients: economy.LookupRecipient[]
+): Promise<AdapterResult<economy.ChannelLookupResponse, string>> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/invoice-channels`,
+      {
+        recipients,
+      }
+    )
+
+    if (response.status === 200) {
+      const parsed = economy.ChannelLookupResponseSchema.safeParse(
+        response.data.content
+      )
+      if (!parsed.success) {
+        logger.error(
+          parsed.error,
+          'Failed to parse invoice channel lookup response'
+        )
+        return { ok: false, err: 'schema-error' }
+      }
+
+      return {
+        ok: true,
+        data: parsed.data,
+      }
+    }
+    logger.error(response.data, 'economy-adapter.getInvoiceChannels')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoiceChannels')
+    if (err instanceof AxiosError) {
+      return { ok: false, err: err.response?.data.message }
+    }
+
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const AutogiroConsentSchema = z.object({
+  payerSSN: z.string(),
+  status: z.enum(['ACTIVE', 'MANUAL']),
+})
+
+type AutogiroConsent = z.infer<typeof AutogiroConsentSchema>
+
+export async function getAutogiroConsent(
+  nationalRegistrationNumber: string
+): Promise<AdapterResult<AutogiroConsent, 'not-found' | 'unknown'>> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/autogiro-consent/${nationalRegistrationNumber}`
+    )
+
+    if (response.status === 200) {
+      const parsed = AutogiroConsentSchema.parse(response.data.content)
+      return { ok: true, data: parsed }
+    }
+
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+
+    logger.error(response.data, 'economy-adapter.getAutogiroConsent')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getAutogiroConsent')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const PaymentsSinceResultSchema = z.object({
+  events: schemas.v1.InvoicePaymentEventSchema.array(),
+  lastCursor: z.string().nullable(),
+})
+
+export type PaymentsSinceResult = z.infer<typeof PaymentsSinceResultSchema>
+
+export async function getLatestPaymentCursor(): Promise<
+  AdapterResult<string | null, 'unknown'>
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/payments/latest-cursor`
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+    logger.error(response.data, 'economy-adapter.getLatestPaymentCursor')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getLatestPaymentCursor')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function getPaymentsSince(
+  afterCursor: string
+): Promise<AdapterResult<PaymentsSinceResult, 'unknown'>> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/payments/since`,
+      { params: { after: afterCursor } }
+    )
+
+    if (response.status === 200) {
+      const parsed = PaymentsSinceResultSchema.parse(response.data.content)
+      return { ok: true, data: parsed }
+    }
+
+    logger.error(response.data, 'economy-adapter.getPaymentsSince')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getPaymentsSince')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function recordInvoicePayment(
+  invoiceId: string,
+  payment: { amount: number; dateTime: Date; method: string }
+): Promise<AdapterResult<null, 'not-found' | 'unknown'>> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/invoices/${encodeURIComponent(invoiceId)}/payments`,
+      {
+        amount: payment.amount,
+        dateTime: payment.dateTime.toISOString(),
+        method: payment.method,
+      }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: null }
+    }
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+
+    logger.error(response.data, 'economy-adapter.recordInvoicePayment')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: any) {
+    if (axios.isAxiosError(err) && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    logger.error(err, 'economy-adapter.recordInvoicePayment')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function syncContactToEconomy(
+  contactCode: string,
+  contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>
+): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
+  const payload: SyncContactToEconomyPayload = {
+    contactCode,
+    ...contactData,
+  }
+
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/contacts/${contactCode}/sync`,
+      payload
+    )
+    return { ok: true, data: { skipped: response.data?.skipped === true } }
+  } catch (err) {
+    logger.error(err, 'economy-adapter.syncContactToEconomy')
+    if (axios.isAxiosError(err) && err.response) {
+      return {
+        ok: false,
+        err: 'sync-failed',
+        statusCode: err.response.status,
+      }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
 }

@@ -1,4 +1,5 @@
 import { Comment, CommentThread, CommentThreadId } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 import { DbComment } from './types'
 import { leasing } from '@onecore/types'
 import z from 'zod'
@@ -14,6 +15,7 @@ const getCommentThreadById = async (
     .select<Array<DbComment>>(
       'c.id AS Id',
       'c.createdAt AS CreatedAt',
+      'c.updatedAt AS UpdatedAt',
       'c.type AS Type',
       'c.authorId AS AuthorId',
       'c.authorName AS AuthorName',
@@ -35,6 +37,7 @@ const getCommentThreadById = async (
         type: c.Type,
         comment: c.Comment,
         createdAt: c.CreatedAt,
+        updatedAt: c.UpdatedAt ?? undefined,
       }
     }),
   }
@@ -88,4 +91,53 @@ const removeComment = async (
   return
 }
 
-export default { getCommentThreadById, addComment, removeComment }
+type UpdateCommentRequest = z.infer<
+  typeof leasing.v1.UpdateCommentRequestParamsSchema
+>
+
+const updateComment = async (
+  threadId: CommentThreadId,
+  commentId: number,
+  comment: UpdateCommentRequest,
+  dbConnection = db
+): Promise<Comment | undefined> => {
+  try {
+    const [updated] = await dbConnection
+      .table('comment')
+      .where({
+        Id: commentId,
+        TargetType: threadId.targetType,
+        TargetId: threadId.targetId,
+      })
+      .update({
+        Type: comment.type,
+        Comment: comment.comment,
+        UpdatedAt: dbConnection.raw('SYSDATETIMEOFFSET()'),
+      })
+      .returning('*')
+
+    if (!updated) {
+      return undefined
+    }
+
+    return {
+      id: updated.id,
+      authorName: updated.authorName,
+      authorId: updated.authorId,
+      type: updated.type,
+      comment: updated.comment,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt ?? undefined,
+    }
+  } catch (err) {
+    logger.error({ err }, 'commentAdapter.updateComment')
+    throw err
+  }
+}
+
+export default {
+  getCommentThreadById,
+  addComment,
+  removeComment,
+  updateComment,
+}

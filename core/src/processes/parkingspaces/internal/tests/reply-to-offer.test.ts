@@ -733,7 +733,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: undefined,
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: undefined,
+            }),
           })
           .build(),
       })
@@ -783,7 +785,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: oneMonthFromNow,
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: oneMonthFromNow,
+            }),
           })
           .build(),
       })
@@ -833,7 +837,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: new Date('2023-01-01'),
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: new Date('2023-01-01'),
+            }),
           })
           .build(),
       })
@@ -886,7 +892,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: undefined,
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: undefined,
+            }),
           })
           .build(),
       })
@@ -952,7 +960,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: vacantFrom,
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: vacantFrom,
+            }),
           })
           .build(),
       })

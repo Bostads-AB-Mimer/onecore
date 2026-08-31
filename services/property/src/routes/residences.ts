@@ -3,11 +3,13 @@ import {
   logger,
   generateRouteMetadata,
   buildPaginatedResponse,
+  setExcelDownloadHeaders,
+  createExcelFromPaginated,
+  formatDateForExcel,
 } from '@onecore/utilities'
 import { z } from 'zod'
 
 import {
-  getResidenceById,
   getResidenceSizeByRentalId,
   getResidencesByBuildingCode,
   getResidencesByBuildingCodeAndStaircaseCode,
@@ -17,24 +19,23 @@ import {
   getRentalBlocksByRentalId,
   getAllRentalBlocks,
   searchRentalBlocks,
-  getAllRentalBlocksForExport,
   getDistinctBlockReasons,
+  upsertMalarEnergiFacilityId,
 } from '../adapters/residence-adapter'
 import {
   residencesQueryParamsSchema,
   ResidenceSchema,
-  ResidenceDetailedSchema,
   ResidenceSearchResult,
   GetResidenceByRentalIdResponse,
   ResidenceSummarySchema,
   RentalBlock,
+  RentalBlockWithRentalObject,
   getAllRentalBlocksQueryParamsSchema,
   searchRentalBlocksQueryParamsSchema,
   exportRentalBlocksQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
-
-type ResidenceDetails = z.infer<typeof ResidenceDetailedSchema>
+import { property } from '@onecore/types'
 
 /**
  * @swagger
@@ -282,26 +283,38 @@ export const routes = (router: KoaRouter) => {
         // Search for residences by rental id and name
         const residences = await searchResidences(q, ['rentalId', 'name'])
 
+        const content = residences.map(
+          (r): ResidenceSearchResult => ({
+            id: r.id,
+            code: r.code,
+            name: r.name || '',
+            deleted: Boolean(r.deleted),
+            validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
+            rentalId: r.propertyObject.propertyStructures[0].rentalId,
+            property: {
+              code: r.propertyObject.propertyStructures[0].propertyCode,
+              name: r.propertyObject.propertyStructures[0].propertyName,
+            },
+            building: {
+              code: r.propertyObject.propertyStructures[0].buildingCode,
+              name: r.propertyObject.propertyStructures[0].buildingName,
+            },
+          })
+        )
+
+        // rentalId comes from a nested to-many relation, so it can't be ordered
+        // in the Prisma query like the other search endpoints — sort the mapped
+        // results here instead. Object numbers are zero-padded fixed-width
+        // (e.g. "807-033-03-0302"), so a plain lexicographic sort yields numeric
+        // order and stays consistent with the DB-side `orderBy` used by the
+        // other search endpoints (and with keys-portal's sortByRentalId).
+        content.sort((a, b) =>
+          (a.rentalId ?? '').localeCompare(b.rentalId ?? '', 'sv')
+        )
+
         ctx.status = 200
         ctx.body = {
-          content: residences.map(
-            (r): ResidenceSearchResult => ({
-              id: r.id,
-              code: r.code,
-              name: r.name || '',
-              deleted: Boolean(r.deleted),
-              validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
-              rentalId: r.propertyObject.propertyStructures[0].rentalId,
-              property: {
-                code: r.propertyObject.propertyStructures[0].propertyCode,
-                name: r.propertyObject.propertyStructures[0].propertyName,
-              },
-              building: {
-                code: r.propertyObject.propertyStructures[0].buildingCode,
-                name: r.propertyObject.propertyStructures[0].buildingName,
-              },
-            })
-          ),
+          content,
           ...metadata,
         }
       } catch (err) {
@@ -346,31 +359,117 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await getResidenceByRentalId(ctx.params.rentalId)
       const areaSize = await getResidenceSizeByRentalId(ctx.params.rentalId)
+      const residence = result.propertyObject.residence
+      const residenceType = residence.residenceType
 
       const payload: GetResidenceByRentalIdResponse = {
         content: {
-          id: result.propertyObject.residence.id,
-          code: result.propertyObject.residence.code,
-          name: result.propertyObject.residence.name,
+          id: residence.id,
+          code: residence.code,
+          name: residence.name,
           entrance: result.staircaseCode,
-          floor: result.propertyObject.residence.floor,
+          location: residence.location,
+          floor: residence.floor,
+          partNo: residence.partNo,
+          part: residence.part,
+          deleted: Boolean(residence.deleted),
+          validityPeriod: {
+            fromDate: residence.fromDate,
+            toDate: residence.toDate,
+          },
           accessibility: {
-            elevator: Boolean(result.propertyObject.residence.elevator),
-            wheelchairAccessible: Boolean(
-              result.propertyObject.residence.wheelchairAccessible
-            ),
+            elevator: Boolean(residence.elevator),
+            wheelchairAccessible: Boolean(residence.wheelchairAccessible),
+            residenceAdapted: Boolean(residence.residenceAdapted),
           },
           features: {
-            hygieneFacility: result.propertyObject.residence.hygieneFacility,
+            hygieneFacility: residence.hygieneFacility,
+            balcony1: residence.balcony1Location
+              ? {
+                  location: residence.balcony1Location,
+                  type: residence.balcony1Type || '',
+                }
+              : undefined,
+            balcony2: residence.balcony2Location
+              ? {
+                  location: residence.balcony2Location,
+                  type: residence.balcony2Type || '',
+                }
+              : undefined,
+            patioLocation: residence.patioLocation,
+            sauna: Boolean(residence.sauna),
+            extraToilet: Boolean(residence.extraToilet),
+            sharedKitchen: Boolean(residence.sharedKitchen),
+            petAllergyFree: Boolean(residence.petAllergyFree),
+            electricAllergyIntolerance: Boolean(
+              residence.electricAllergyIntolerance
+            ),
+            smokeFree: Boolean(residence.smokeFree),
+            asbestos: Boolean(residence.asbestos),
           },
-          deleted: Boolean(result.propertyObject.residence.deleted),
           type: {
-            code: result.propertyObject.residence.residenceType.code,
-            name: result.propertyObject.residence.residenceType.name,
-            roomCount: result.propertyObject.residence.residenceType.roomCount,
-            kitchen: result.propertyObject.residence.residenceType.kitchen,
+            code: residenceType.code,
+            name: residenceType.name,
+            roomCount: residenceType.roomCount,
+            kitchen: residenceType.kitchen,
           },
-          areaSize: areaSize?.value ?? null,
+          residenceType: {
+            residenceTypeId: residenceType.id || '',
+            code: residenceType.code,
+            name: residenceType.name,
+            roomCount: residenceType.roomCount,
+            kitchen: residenceType.kitchen,
+            systemStandard: residenceType.systemStandard || 0,
+            checklistId: residenceType.checklistId,
+            componentTypeActionId: residenceType.componentTypeActionId,
+            statisticsGroupSCBId: residenceType.statisticsGroupSCBId,
+            statisticsGroup2Id: residenceType.statisticsGroup2Id,
+            statisticsGroup3Id: residenceType.statisticsGroup3Id,
+            statisticsGroup4Id: residenceType.statisticsGroup4Id,
+            timestamp: residenceType.timestamp || new Date().toISOString(),
+          },
+          rentalInformation: {
+            rentalId: result.rentalId,
+            apartmentNumber:
+              result.propertyObject.rentalInformation.apartmentNumber,
+            type: {
+              code: result.propertyObject.rentalInformation
+                .rentalInformationType.code,
+              name: result.propertyObject.rentalInformation
+                .rentalInformationType.name,
+            },
+          },
+          propertyObject: {
+            energy: {
+              energyClass: result.propertyObject.energyClass || 0,
+              energyRegistered:
+                result.propertyObject.energyRegistered || undefined,
+              energyReceived: result.propertyObject.energyReceived || undefined,
+              energyIndex: result.propertyObject.energyIndex?.toNumber(),
+            },
+            rentalId: result.rentalId,
+            rentalInformation: !result.propertyObject.rentalInformation
+              ? null
+              : {
+                  apartmentNumber:
+                    result.propertyObject.rentalInformation.apartmentNumber,
+                  type: {
+                    code: result.propertyObject.rentalInformation
+                      .rentalInformationType.code,
+                    name: result.propertyObject.rentalInformation
+                      .rentalInformationType.name,
+                  },
+                },
+            rentalBlocks:
+              result.propertyObject.rentalBlocks?.map((rb) => ({
+                id: rb.id,
+                blockReasonId: rb.blockReasonId,
+                blockReason: rb.blockReason?.caption ?? null,
+                fromDate: rb.fromDate,
+                toDate: rb.toDate,
+                amount: rb.amount,
+              })) || [],
+          },
           building: {
             id: result.buildingId,
             code: result.buildingCode,
@@ -400,17 +499,8 @@ export const routes = (router: KoaRouter) => {
                 timestamp: result.staircase.timestamp,
               }
             : null,
-          rentalInformation: {
-            rentalId: result.rentalId,
-            apartmentNumber:
-              result.propertyObject.rentalInformation.apartmentNumber,
-            type: {
-              code: result.propertyObject.rentalInformation
-                .rentalInformationType.code,
-              name: result.propertyObject.rentalInformation
-                .rentalInformationType.name,
-            },
-          },
+          areaSize: areaSize?.value ?? null,
+          malarEnergiFacilityId: residence.comments?.[0]?.text || null,
         },
         ...metadata,
       }
@@ -424,6 +514,98 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
+
+  /**
+   * @swagger
+   * /residences/rental-id/{rentalId}/malar-energi-facility-id:
+   *   put:
+   *     summary: Update or add a residence's Mälarenergi facility id.
+   *     description: |
+   *       Upserts the "Anläggnings ID Mälarenergi" for the residence identified
+   *       by the rental id. The value is stored as a free-text comment row in
+   *       Xpand (cmtex) under the shared "Anläggningsid" template — the existing
+   *       row is updated when present, otherwise a new one is inserted.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental id of the residence.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - malarEnergiFacilityId
+   *             properties:
+   *               malarEnergiFacilityId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: The updated Mälarenergi facility id.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     malarEnergiFacilityId:
+   *                       type: string
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: Residence not found for the supplied rentalId.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.put(
+    '(.*)/residences/rental-id/:rentalId/malar-energi-facility-id',
+    parseRequest({ body: property.UpdateMalarEnergiFacilityIdRequestSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { malarEnergiFacilityId } = ctx.request
+        .parsedBody as property.UpdateMalarEnergiFacilityIdRequest
+
+      const result = await upsertMalarEnergiFacilityId(
+        ctx.params.rentalId,
+        malarEnergiFacilityId
+      )
+
+      if (!result.ok) {
+        if (result.err === 'residence-not-found') {
+          ctx.status = 404
+          ctx.body = { reason: 'Residence not found', ...metadata }
+          return
+        }
+        if (result.err === 'template-not-found') {
+          ctx.status = 500
+          ctx.body = {
+            reason: 'Anläggningsid template not found',
+            ...metadata,
+          }
+          return
+        }
+        ctx.status = 500
+        ctx.body = { reason: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          malarEnergiFacilityId: result.data,
+        } satisfies property.UpdateMalarEnergiFacilityIdResponse,
+        ...metadata,
+      }
+    }
+  )
 
   /**
    * @swagger
@@ -597,70 +779,69 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const allBlocks = await getAllRentalBlocksForExport(
-          ctx.request.parsedQuery
-        )
+        // Create Excel using streaming - fetches pages incrementally
+        // Pass all filter params to match search endpoint behavior
+        const { active, ...filterParams } = ctx.request.parsedQuery
 
-        // Dynamic import of ExcelJS to avoid loading it on every request
-        const ExcelJS = await import('exceljs')
-        const workbook = new ExcelJS.default.Workbook()
-        const worksheet = workbook.addWorksheet('Spärrlista')
+        const buffer =
+          await createExcelFromPaginated<RentalBlockWithRentalObject>(
+            async (page: number, limit: number, knownTotal?: number) => {
+              const offset = (page - 1) * limit
+              const { data, totalCount } = await searchRentalBlocks({
+                ...filterParams,
+                active,
+                limit,
+                offset,
+                totalCount: knownTotal,
+              })
+              // Wrap in PaginatedResponse format for the utility
+              return {
+                content: data,
+                _meta: {
+                  totalRecords: totalCount,
+                  page,
+                  limit,
+                  count: data.length,
+                },
+                _links: [],
+              }
+            },
+            {
+              sheetName: 'Spärrlista',
+              columns: [
+                { header: 'Hyresobjekt', key: 'rentalId', width: 15 },
+                { header: 'Kategori', key: 'category', width: 12 },
+                { header: 'Typ', key: 'type', width: 15 },
+                { header: 'Adress', key: 'address', width: 30 },
+                { header: 'Fastighet', key: 'property', width: 15 },
+                { header: 'Distrikt', key: 'distrikt', width: 15 },
+                { header: 'Orsak', key: 'blockReason', width: 35 },
+                { header: 'Startdatum', key: 'fromDate', width: 12 },
+                { header: 'Slutdatum', key: 'toDate', width: 12 },
+                { header: 'Årshyra (kr/år)', key: 'yearlyRent', width: 15 },
+              ],
+              rowMapper: (block: RentalBlockWithRentalObject) => ({
+                rentalId:
+                  block.rentalObject?.rentalId ||
+                  block.rentalObject?.code ||
+                  '',
+                category: block.rentalObject?.category || '',
+                type: block.rentalObject?.type || '',
+                address: block.rentalObject?.address || '',
+                property: block.property?.name || '',
+                distrikt: block.distrikt || '',
+                blockReason: block.blockReason || '',
+                fromDate: formatDateForExcel(block.fromDate),
+                toDate: formatDateForExcel(block.toDate),
+                yearlyRent: block.rentalObject?.yearlyRent
+                  ? Math.round(block.rentalObject.yearlyRent)
+                  : null,
+              }),
+              batchSize: 500,
+            }
+          )
 
-        // Add columns
-        worksheet.columns = [
-          { header: 'Hyresobjekt', key: 'hyresobjekt', width: 15 },
-          { header: 'Kategori', key: 'kategori', width: 12 },
-          { header: 'Typ', key: 'typ', width: 15 },
-          { header: 'Adress', key: 'adress', width: 30 },
-          { header: 'Fastighet', key: 'fastighet', width: 15 },
-          { header: 'Distrikt', key: 'distrikt', width: 15 },
-          { header: 'Orsak', key: 'orsak', width: 35 },
-          { header: 'Startdatum', key: 'startdatum', width: 12 },
-          { header: 'Slutdatum', key: 'slutdatum', width: 12 },
-          { header: 'Årshyra (kr/år)', key: 'hyra', width: 15 },
-        ]
-
-        // Style header row
-        worksheet.getRow(1).font = { bold: true }
-
-        // Add rows
-        for (const block of allBlocks) {
-          worksheet.addRow({
-            hyresobjekt:
-              block.rentalObject?.rentalId || block.rentalObject?.code || '',
-            kategori: block.rentalObject?.category || '',
-            typ: block.rentalObject?.type || '',
-            adress: block.rentalObject?.address || '',
-            fastighet: block.property?.name || '',
-            distrikt: block.distrikt || '',
-            orsak: block.blockReason || '',
-            startdatum: block.fromDate
-              ? new Date(block.fromDate).toLocaleDateString('sv-SE')
-              : '',
-            slutdatum: block.toDate
-              ? new Date(block.toDate).toLocaleDateString('sv-SE')
-              : '',
-            hyra: block.rentalObject?.yearlyRent
-              ? Math.round(block.rentalObject.yearlyRent)
-              : null,
-          })
-        }
-
-        // Generate buffer
-        const buffer = await workbook.xlsx.writeBuffer()
-
-        // Set response headers for file download
-        const timestamp = new Date().toISOString().split('T')[0]
-        ctx.set(
-          'Content-Type',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        ctx.set(
-          'Content-Disposition',
-          `attachment; filename="sparrlista-${timestamp}.xlsx"`
-        )
-
-        ctx.status = 200
+        setExcelDownloadHeaders(ctx, 'sparrlista')
         ctx.body = buffer
       } catch (err) {
         logger.error(err, 'Error exporting rental blocks to Excel')
@@ -974,188 +1155,6 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (err) {
       logger.error(err, 'Error fetching block reasons')
-      ctx.status = 500
-      const errorMessage = err instanceof Error ? err.message : 'unknown error'
-      ctx.body = { reason: errorMessage, ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
-   * /residences/{id}:
-   *   get:
-   *     summary: Get a residence by ID
-   *     description: Returns a residence with the specified ID
-   *     tags:
-   *       - Residences
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the residence
-   *       - in: query
-   *         name: active
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *         description: Filter rental blocks by active status. true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, include all blocks.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved the residence
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/ResidenceDetails'
-   *       404:
-   *         description: Residence not found
-   *       500:
-   *         description: Internal server error
-   */
-  router.get('(.*)/residences/:id', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const id = ctx.params.id
-    const activeParam = ctx.query.active as string | undefined
-    const active =
-      activeParam === 'true'
-        ? true
-        : activeParam === 'false'
-          ? false
-          : undefined
-
-    try {
-      const residence = await getResidenceById(id, { active })
-      if (!residence) {
-        ctx.status = 404
-        return
-      }
-      // TODO: find out why building is null in residence
-
-      const rentalId =
-        residence.propertyObject?.propertyStructures?.length > 0
-          ? residence.propertyObject.propertyStructures[0].rentalId
-          : null
-
-      // Get area size for the residence (yta)
-      const size = rentalId ? await getResidenceSizeByRentalId(rentalId) : null
-
-      const mappedResidence = {
-        id: residence.id,
-        code: residence.code,
-        name: residence.name,
-        location: residence.location,
-        floor: residence.floor,
-        partNo: residence.partNo,
-        part: residence.part,
-        deleted: Boolean(residence.deleted),
-        accessibility: {
-          wheelchairAccessible: Boolean(residence.wheelchairAccessible),
-          residenceAdapted: Boolean(residence.residenceAdapted),
-          elevator: Boolean(residence.elevator),
-        },
-        features: {
-          balcony1: residence.balcony1Location
-            ? {
-                location: residence.balcony1Location,
-                type: residence.balcony1Type || '',
-              }
-            : undefined,
-          balcony2: residence.balcony2Location
-            ? {
-                location: residence.balcony2Location,
-                type: residence.balcony2Type || '',
-              }
-            : undefined,
-          patioLocation: residence.patioLocation,
-          hygieneFacility: residence.hygieneFacility,
-          sauna: Boolean(residence.sauna),
-          extraToilet: Boolean(residence.extraToilet),
-          sharedKitchen: Boolean(residence.sharedKitchen),
-          petAllergyFree: Boolean(residence.petAllergyFree),
-          electricAllergyIntolerance: Boolean(
-            residence.electricAllergyIntolerance
-          ),
-          smokeFree: Boolean(residence.smokeFree),
-          asbestos: Boolean(residence.asbestos),
-        },
-        validityPeriod: {
-          fromDate: residence.fromDate,
-          toDate: residence.toDate,
-        },
-        residenceType: {
-          residenceTypeId: residence.residenceType?.id || '',
-          code: residence.residenceType?.code || '',
-          name: residence.residenceType?.name,
-          roomCount: residence.residenceType?.roomCount,
-          kitchen: residence.residenceType?.kitchen || 0,
-          systemStandard: residence.residenceType?.systemStandard || 0,
-          checklistId: residence.residenceType?.checklistId,
-          componentTypeActionId: residence.residenceType?.componentTypeActionId,
-          statisticsGroupSCBId: residence.residenceType?.statisticsGroupSCBId,
-          statisticsGroup2Id: residence.residenceType?.statisticsGroup2Id,
-          statisticsGroup3Id: residence.residenceType?.statisticsGroup3Id,
-          statisticsGroup4Id: residence.residenceType?.statisticsGroup4Id,
-          timestamp:
-            residence.residenceType?.timestamp || new Date().toISOString(),
-        },
-        propertyObject: {
-          energy: {
-            energyClass: residence.propertyObject?.energyClass || 0,
-            energyRegistered:
-              residence.propertyObject?.energyRegistered || undefined,
-            energyReceived:
-              residence.propertyObject?.energyReceived || undefined,
-            energyIndex: residence.propertyObject?.energyIndex?.toNumber(),
-          },
-          rentalId,
-          rentalInformation: !residence.propertyObject?.rentalInformation
-            ? null
-            : {
-                apartmentNumber:
-                  residence.propertyObject.rentalInformation.apartmentNumber ??
-                  null,
-                type: {
-                  code: residence.propertyObject.rentalInformation
-                    .rentalInformationType.code,
-                  name: residence.propertyObject.rentalInformation
-                    .rentalInformationType.name,
-                },
-              },
-          rentalBlocks:
-            residence.propertyObject?.rentalBlocks.map((rb) => {
-              return {
-                id: rb.id,
-                blockReasonId: rb.blockReasonId,
-                blockReason: rb.blockReason?.caption ?? null,
-                fromDate: rb.fromDate,
-                toDate: rb.toDate,
-                amount: rb.amount,
-              }
-            }) || [],
-        },
-        property: {
-          code: residence.propertyObject.propertyStructures[0].propertyCode,
-          name: residence.propertyObject.propertyStructures[0].propertyName,
-        },
-        building: {
-          code: residence.propertyObject.propertyStructures[0].buildingCode,
-          name: residence.propertyObject.propertyStructures[0].buildingName,
-        },
-        malarEnergiFacilityId: residence.comments?.[0]?.text || null,
-        size: size?.value || null,
-      } satisfies ResidenceDetails
-
-      ctx.status = 200
-      ctx.body = {
-        content: mappedResidence,
-        ...metadata,
-      }
-    } catch (err) {
-      logger.error(err, 'Error fetching residence by ID')
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }

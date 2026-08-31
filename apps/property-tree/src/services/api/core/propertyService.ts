@@ -1,5 +1,6 @@
 import type { Company } from '../../types'
-import { GET } from './base-api'
+import { GET, PUT } from './baseApi'
+import type { components } from './generated/api-types'
 
 /** Display-only type for property search results */
 interface PropertySearchResult {
@@ -8,6 +9,8 @@ interface PropertySearchResult {
   designation: string
   tract: string
 }
+
+export type PropertyKvvAreaLink = components['schemas']['PropertyKvvAreaLink']
 
 export const propertyService = {
   // Get all properties
@@ -20,9 +23,9 @@ export const propertyService = {
     return data?.content
   },
 
-  async getPropertyById(propertyId: string) {
-    const { data, error } = await GET(`/properties/{propertyId}`, {
-      params: { path: { propertyId } },
+  async getPropertyByCode(propertyCode: string) {
+    const { data, error } = await GET(`/properties/{propertyCode}`, {
+      params: { path: { propertyCode } },
     })
     if (error) throw error
     return data?.content
@@ -34,5 +37,18 @@ export const propertyService = {
     })
     if (error) throw error
     return (data?.content || []) as PropertySearchResult[]
+  },
+
+  async updateKvvArea(
+    propertyCode: string,
+    kvvAreaId: string
+  ): Promise<PropertyKvvAreaLink> {
+    const { data, error } = await PUT('/properties/{propertyCode}/kvv-area', {
+      params: { path: { propertyCode } },
+      body: { kvvAreaId },
+    })
+    if (error) throw error
+    if (!data?.content) throw new Error('Empty response')
+    return data.content
   },
 }

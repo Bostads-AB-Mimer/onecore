@@ -91,7 +91,7 @@ const buildInvoice = (
 ): InvoiceWithAccounting =>
   ({
     invoiceId: '55123456',
-    leaseId: '705-025-03-0205/01',
+    leaseIds: ['705-025-03-0205/01'],
     recipientContactCode: 'P123456',
     recipientName: 'Test Tenant',
     amount: 1000,

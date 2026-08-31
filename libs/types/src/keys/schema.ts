@@ -59,7 +59,7 @@ export const KeySchema = z.object({
 export const KeyLoanSchema = z.object({
   id: z.string().uuid(),
   loanType: LoanTypeSchema,
-  contact: z.string().optional(),
+  contact: z.string().nullable().optional(),
   contact2: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -70,6 +70,8 @@ export const KeyLoanSchema = z.object({
   updatedAt: z.coerce.date(),
   createdBy: z.string().nullable().optional(),
   updatedBy: z.string().nullable().optional(),
+  keyCount: z.number().optional(),
+  cardCount: z.number().optional(),
 })
 
 export const KeySystemSchema = z.object({
@@ -128,7 +130,12 @@ export const KeyBundleSchema = z.object({
 // Removed: KeyLoanMaintenanceKeysWithDetailsSchema - use KeyLoanWithDetailsSchema instead
 
 // Key Event schemas (defined here before usage in KeyWithMaintenanceLoanStatusSchema)
-export const KeyEventTypeSchema = z.enum(['FLEX', 'ORDER', 'LOST'])
+export const KeyEventTypeSchema = z.enum([
+  'FLEX',
+  'ORDER',
+  'LOST',
+  'REPLACEMENT',
+])
 export const KeyEventStatusSchema = z.enum(['ORDERED', 'RECEIVED', 'COMPLETED'])
 
 export const KeyEventSchema = z.object({
@@ -145,6 +152,7 @@ export const KeyDetailsSchema = KeySchema.extend({
   keySystem: KeySystemSchema.optional().nullable(),
   loans: z.array(KeyLoanSchema).optional().nullable(),
   events: z.array(KeyEventSchema).optional().nullable(),
+  activeLoanContact: z.string().nullable().optional(),
 })
 
 // Response schema for key bundle with loan status endpoint
@@ -215,7 +223,7 @@ export const CreateKeyLoanRequestSchema = z.object({
   keys: z.array(z.string()).optional(),
   keyCards: z.array(z.string()).optional(),
   loanType: LoanTypeSchema,
-  contact: z.string().optional(),
+  contact: z.string().nullable().optional(),
   contact2: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -229,7 +237,7 @@ export const UpdateKeyLoanRequestSchema = z.object({
   keys: z.array(z.string()).optional(),
   keyCards: z.array(z.string()).optional(),
   loanType: LoanTypeSchema.optional(),
-  contact: z.string().optional(),
+  contact: z.string().nullable().optional(),
   contact2: z.string().nullable().optional(),
   contactPerson: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),

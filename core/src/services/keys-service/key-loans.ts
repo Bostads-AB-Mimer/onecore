@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { KeyLoansApi } from '../../adapters/keys-adapter'
-import { getUserName, createLogEntry } from './helpers'
+import { getUserName, createLogEntry, enrichWithContacts } from './helpers'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -147,6 +147,16 @@ export const routes = (router: KoaRouter) => {
    *         name: updatedAt
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the loans and
+   *           attaches them as a `contacts` sidecar keyed by contactCode. Soft
+   *           fails — if the contacts service errors, loans are still returned
+   *           without the sidecar.
    *     responses:
    *       200:
    *         description: Successfully retrieved search results
@@ -159,6 +169,11 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/KeyLoan'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       400:
    *         description: Bad request
    *         content:
@@ -183,9 +198,14 @@ export const routes = (router: KoaRouter) => {
       'maxKeys',
       'hasPickedUp',
       'hasReturned',
+      'includeContacts',
     ])
 
-    const result = await KeyLoansApi.search(ctx.query)
+    // Strip orchestration-only flags before forwarding to the keys microservice
+    // search call (it does not know about `includeContacts`).
+    const { includeContacts, ...searchQuery } = ctx.query
+
+    const result = await KeyLoansApi.search(searchQuery)
 
     if (!result.ok) {
       if (result.err === 'bad-request') {
@@ -199,8 +219,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.content.flatMap((l) => [l.contact, l.contact2]),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { ...metadata, ...result.data }
+    ctx.body = {
+      ...metadata,
+      ...result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**
@@ -217,6 +249,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The key ID to fetch loans for
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the loans and
+   *           attaches them as a `contacts` sidecar keyed by contactCode. Soft
+   *           fails — if the contacts service errors, loans are still returned
+   *           without the sidecar.
    *     responses:
    *       200:
    *         description: Array of loans for this key
@@ -229,6 +271,11 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/KeyLoan'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       500:
    *         description: Internal server error
    *         content:
@@ -239,7 +286,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-loans/by-key/:keyId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
+    const metadata = generateRouteMetadata(ctx, ['includeContacts'])
 
     const result = await KeyLoansApi.getByKey(ctx.params.keyId)
 
@@ -253,8 +300,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      ctx.query.includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.flatMap((l) => [l.contact, l.contact2]),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = {
+      ...metadata,
+      content: result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**
@@ -420,6 +479,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Filter by return status (true = returned, false = not returned)
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the loans and
+   *           attaches them as a `contacts` sidecar keyed by contactCode. Soft
+   *           fails — if the contacts service errors, loans are still returned
+   *           without the sidecar.
    *     responses:
    *       200:
    *         description: Array of key loans with full key details
@@ -432,6 +501,11 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       500:
    *         description: Internal server error
    *         content:
@@ -442,11 +516,16 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-loans/by-contact/:contact/with-keys', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+    const metadata = generateRouteMetadata(ctx, [
+      'loanType',
+      'returned',
+      'includeContacts',
+    ])
+    const { includeContacts, ...adapterQuery } = ctx.query
 
     const result = await KeyLoansApi.getByContactWithKeys(
       ctx.params.contact,
-      ctx.query
+      adapterQuery
     )
 
     if (!result.ok) {
@@ -459,8 +538,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.flatMap((l) => [l.contact, l.contact2]),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = {
+      ...metadata,
+      content: result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**
@@ -490,6 +581,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Filter by return status (true = returned, false = not returned)
+   *       - in: query
+   *         name: includeContacts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: |
+   *           When true, batch-fetches contacts referenced by the loans and
+   *           attaches them as a `contacts` sidecar keyed by contactCode. Soft
+   *           fails — if the contacts service errors, loans are still returned
+   *           without the sidecar.
    *     responses:
    *       200:
    *         description: Array of key loans with full key details
@@ -502,6 +603,11 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/KeyLoanWithDetails'
+   *                 contacts:
+   *                   type: object
+   *                   description: Present only when `includeContacts=true` and the fetch succeeded.
+   *                   additionalProperties:
+   *                     $ref: '#/components/schemas/ContactV1'
    *       500:
    *         description: Internal server error
    *         content:
@@ -512,11 +618,16 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get('/key-loans/by-bundle/:bundleId/with-keys', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['loanType', 'returned'])
+    const metadata = generateRouteMetadata(ctx, [
+      'loanType',
+      'returned',
+      'includeContacts',
+    ])
+    const { includeContacts, ...adapterQuery } = ctx.query
 
     const result = await KeyLoansApi.getByBundleWithKeys(
       ctx.params.bundleId,
-      ctx.query
+      adapterQuery
     )
 
     if (!result.ok) {
@@ -529,8 +640,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const contactsByCode =
+      includeContacts === 'true'
+        ? await enrichWithContacts(
+            result.data.flatMap((l) => [l.contact, l.contact2]),
+            metadata
+          )
+        : undefined
+
     ctx.status = 200
-    ctx.body = { content: result.data, ...metadata }
+    ctx.body = {
+      ...metadata,
+      content: result.data,
+      ...(contactsByCode ? { contacts: contactsByCode } : {}),
+    }
   })
 
   /**

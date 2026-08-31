@@ -4,6 +4,7 @@ import { logger } from '@onecore/utilities'
 import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
+import { generateXpandId } from '@src/utils/generate-xpand-id'
 import {
   calculateYearlyRentFromYearRentRows,
   calculateEstimatedHyresbortfall,
@@ -154,10 +155,20 @@ export const getResidenceByRentalId = async (rentalId: string) => {
         },
         propertyObject: {
           select: {
+            energyClass: true,
+            energyRegistered: true,
+            energyReceived: true,
+            energyIndex: true,
             rentalInformation: {
               select: {
                 apartmentNumber: true,
                 rentalInformationType: { select: { name: true, code: true } },
+              },
+            },
+            rentalBlocks: {
+              where: buildActiveFilter(true),
+              include: {
+                blockReason: true,
               },
             },
             residence: {
@@ -170,12 +181,50 @@ export const getResidenceByRentalId = async (rentalId: string) => {
                 hygieneFacility: true,
                 name: true,
                 wheelchairAccessible: true,
+                location: true,
+                residenceAdapted: true,
+                balcony1Location: true,
+                balcony1Type: true,
+                balcony2Location: true,
+                balcony2Type: true,
+                patioLocation: true,
+                sauna: true,
+                extraToilet: true,
+                sharedKitchen: true,
+                petAllergyFree: true,
+                electricAllergyIntolerance: true,
+                smokeFree: true,
+                asbestos: true,
+                fromDate: true,
+                toDate: true,
+                partNo: true,
+                part: true,
                 residenceType: {
                   select: {
+                    id: true,
                     code: true,
                     name: true,
                     roomCount: true,
                     kitchen: true,
+                    systemStandard: true,
+                    checklistId: true,
+                    componentTypeActionId: true,
+                    statisticsGroupSCBId: true,
+                    statisticsGroup2Id: true,
+                    statisticsGroup3Id: true,
+                    statisticsGroup4Id: true,
+                    timestamp: true,
+                  },
+                },
+                comments: {
+                  where: {
+                    template: {
+                      type: 'balgh',
+                      caption: 'Anläggningsid',
+                    },
+                  },
+                  select: {
+                    text: true,
                   },
                 },
               },
@@ -194,71 +243,35 @@ export const getResidenceByRentalId = async (rentalId: string) => {
     )
 
     const {
-      propertyObject: { residence, rentalInformation },
+      propertyObject: {
+        residence,
+        rentalInformation,
+        energyClass,
+        energyRegistered,
+        energyReceived,
+        energyIndex,
+        rentalBlocks,
+      },
       staircase,
     } = propertyStructure
 
     return trimStrings({
       ...propertyStructure,
-      propertyObject: { residence, rentalInformation },
+      propertyObject: {
+        residence,
+        rentalInformation,
+        energyClass,
+        energyRegistered,
+        energyReceived,
+        energyIndex,
+        rentalBlocks,
+      },
       staircase,
     })
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getResidenceByRentalId')
     throw err
   }
-}
-
-export const getResidenceById = async (
-  id: string,
-  options?: { active?: boolean }
-): Promise<ResidenceWithRelations | null> => {
-  const activeFilter = buildActiveFilter(options?.active)
-  const hasActiveFilter = Object.keys(activeFilter).length > 0
-
-  const response = await prisma.residence
-    .findFirst({
-      where: {
-        id: id,
-      },
-      include: {
-        residenceType: true,
-        propertyObject: {
-          include: {
-            rentalInformation: { include: { rentalInformationType: true } },
-            rentalBlocks: {
-              ...(hasActiveFilter && { where: activeFilter }),
-              include: {
-                blockReason: true,
-              },
-            },
-            propertyStructures: {
-              select: {
-                rentalId: true,
-                buildingCode: true,
-                buildingName: true,
-                propertyCode: true,
-                propertyName: true,
-              },
-            },
-          },
-        },
-        comments: {
-          where: {
-            template: {
-              type: 'balgh',
-              caption: 'Anläggningsid',
-            },
-          },
-          select: {
-            text: true,
-          },
-        },
-      },
-    })
-    .then(trimStrings)
-
-  return response
 }
 
 export const getResidencesByBuildingCode = async (
@@ -1276,6 +1289,11 @@ export interface SearchRentalBlocksOptions {
   active?: boolean
   limit?: number
   offset?: number
+  /**
+   * If provided, skip the COUNT query and use this value as totalCount.
+   * Used by createExcelFromPaginated to avoid redundant COUNT queries after page 1.
+   */
+  totalCount?: number
 }
 
 /**
@@ -1298,6 +1316,7 @@ async function searchRentalBlocksWithDistriktRaw(
     active,
     limit,
     offset,
+    totalCount,
   } = options
 
   const conditions: string[] = []
@@ -1391,16 +1410,21 @@ async function searchRentalBlocksWithDistriktRaw(
 
   const whereClause = conditions.join(' AND ')
 
-  // Get total count
-  const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
-    SELECT COUNT(*) AS count
-    FROM hyspt
-    LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
-    LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
-    LEFT JOIN bafen ON bafen.code = babuf.fencode
-    WHERE ${whereClause}
-  `)
-  const totalCount = countResult[0]?.count ?? 0
+  // Skip COUNT query if totalCount is provided (e.g., from page 1 of export)
+  let resolvedTotal: number
+  if (totalCount !== undefined) {
+    resolvedTotal = totalCount
+  } else {
+    const countResult = await prisma.$queryRawUnsafe<Array<{ count: number }>>(`
+      SELECT COUNT(*) AS count
+      FROM hyspt
+      LEFT JOIN hyspa ON hyspt.keyhyspa = hyspa.keyhyspa
+      LEFT JOIN babuf ON hyspt.keycmobj = babuf.keycmobj
+      LEFT JOIN bafen ON bafen.code = babuf.fencode
+      WHERE ${whereClause}
+    `)
+    resolvedTotal = countResult[0]?.count ?? 0
+  }
 
   // Get paginated IDs with ordering
   const paginationClause =
@@ -1421,7 +1445,7 @@ async function searchRentalBlocksWithDistriktRaw(
 
   return {
     ids: rows.map((r) => r.id.trim()),
-    totalCount,
+    totalCount: resolvedTotal,
   }
 }
 
@@ -1470,7 +1494,7 @@ export const searchRentalBlocks = async (
   options: SearchRentalBlocksOptions
 ) => {
   try {
-    const { limit, offset, distrikt } = options
+    const { limit, offset, distrikt, totalCount: knownTotal } = options
 
     let totalCount: number
     let rentalBlocks: Awaited<
@@ -1511,10 +1535,10 @@ export const searchRentalBlocks = async (
       // No distrikt filter - use standard Prisma query
       const whereClause = buildRentalBlockWhereClause(options)
 
-      // Run count and data queries in parallel for better performance
-      const [count, blocks] = await Promise.all([
-        prisma.rentalBlock.count({ where: whereClause }),
-        prisma.rentalBlock.findMany({
+      // Skip COUNT query if knownTotal is provided (e.g., from page 1 of export)
+      if (knownTotal !== undefined) {
+        totalCount = knownTotal
+        rentalBlocks = await prisma.rentalBlock.findMany({
           where: whereClause,
           include: rentalBlockInclude,
           orderBy: {
@@ -1522,11 +1546,25 @@ export const searchRentalBlocks = async (
           },
           ...(limit && { take: limit }),
           ...(offset && { skip: offset }),
-        }),
-      ])
+        })
+      } else {
+        // Run count and data queries in parallel for better performance
+        const [count, blocks] = await Promise.all([
+          prisma.rentalBlock.count({ where: whereClause }),
+          prisma.rentalBlock.findMany({
+            where: whereClause,
+            include: rentalBlockInclude,
+            orderBy: {
+              fromDate: 'desc',
+            },
+            ...(limit && { take: limit }),
+            ...(offset && { skip: offset }),
+          }),
+        ])
 
-      totalCount = count
-      rentalBlocks = blocks
+        totalCount = count
+        rentalBlocks = blocks
+      }
     }
 
     // Get unique rental IDs for fetching rent data
@@ -1575,41 +1613,6 @@ export const searchRentalBlocks = async (
     }
   } catch (err) {
     logger.error({ err }, 'residence-adapter.searchRentalBlocks')
-    throw err
-  }
-}
-
-export type ExportRentalBlocksOptions = RentalBlockFilterOptions
-
-export const getAllRentalBlocksForExport = async (
-  options: ExportRentalBlocksOptions
-) => {
-  try {
-    // Fetch rental blocks using raw SQL with explicit JOINs
-    const rawBlocks = await fetchRentalBlocksRaw(options)
-
-    // Get unique rental IDs for fetching rent data
-    const uniqueRentalIds = [
-      ...new Set(
-        rawBlocks
-          .map((rb) => rb.rentalId?.trim())
-          .filter((id): id is string => !!id)
-      ),
-    ]
-
-    // Fetch rent data using batched queries
-    const rentByRentalId = await fetchRentDataBatched(uniqueRentalIds)
-
-    // Transform raw rows to API response format
-    const transformedBlocks = rawBlocks.map((row) => {
-      const rentalId = row.rentalId?.trim()
-      const rentRows = rentalId ? rentByRentalId.get(rentalId) || [] : []
-      return transformRawRentalBlockRow(row, rentRows)
-    })
-
-    return sortRentalBlocksByFutureThenActive(transformedBlocks)
-  } catch (err) {
-    logger.error({ err }, 'residence-adapter.getAllRentalBlocksForExport')
     throw err
   }
 }
@@ -1668,5 +1671,99 @@ export const getDistinctBlockReasons = async () => {
   } catch (err) {
     logger.error({ err }, 'residence-adapter.getDistinctBlockReasons')
     throw err
+  }
+}
+
+export type UpsertMalarEnergiFacilityIdResult =
+  | { ok: true; data: string }
+  | {
+      ok: false
+      err: 'residence-not-found' | 'template-not-found' | 'unknown'
+    }
+
+/**
+ * Upserts a residence's "Anläggnings ID Mälarenergi" (Mälarenergi facility id).
+ *
+ * The value is not a column on the residence — it is a free-text comment row in
+ * the Xpand `cmtex` table (Prisma `TypeText`) linked to the residence
+ * (`cmtex.keycode` -> `balgh.keybalgh`) via an "Anläggningsid" template
+ * (`cmtep` where type='balgh', caption='Anläggningsid'). More than one such
+ * template can exist, so this matches the comment across all of them (mirroring
+ * the read) — updating the existing row(s) when present, otherwise inserting one.
+ *
+ * Char(15) key columns are space-padded in Xpand, but SQL Server's `=` compares
+ * char/varchar trailing-space-insensitively and INSERT right-pads automatically,
+ * so keying the write off the DB-resolved ids is safe.
+ */
+export const upsertMalarEnergiFacilityId = async (
+  rentalId: string,
+  value: string
+): Promise<UpsertMalarEnergiFacilityIdResult> => {
+  try {
+    // 1. Resolve the residence PRIMARY KEY (balgh.keybalgh) from the rentalId.
+    // cmtex.keycode references balgh.keybalgh (= Residence.id), so we must use
+    // that — NOT propertyStructure.residenceId, which maps to babuf.keyobjlgh
+    // (the residence's propertyObject/cmobj key) and would never match a real
+    // comment row. Resolve it via the same relation path the read uses. Also
+    // pull the babuf timestamp — the cmtex row carries a non-null Char(10)
+    // Xpand row-version, and reusing an existing one is what room-adapter does.
+    const residenceStructure = await prisma.propertyStructure.findFirst({
+      where: {
+        rentalId,
+        propertyObject: { objectTypeId: 'balgh' },
+        NOT: { rentalId: { endsWith: 'X' } },
+      },
+      select: {
+        timestamp: true,
+        propertyObject: { select: { residence: { select: { id: true } } } },
+      },
+    })
+    const residenceId = residenceStructure?.propertyObject?.residence?.id
+    if (!residenceId) {
+      return { ok: false, err: 'residence-not-found' }
+    }
+    const timestampVal = residenceStructure.timestamp
+
+    // 2. Resolve ALL "Anläggningsid" templates (cmtep). There can be more than
+    // one row with this type+caption, and Xpand may have stored a residence's
+    // comment under any of them — so the write must consider all of them, the
+    // same way the read filters comments by template type+caption (not by a
+    // single keycmtep). Keeping this symmetric with the read is what lets us
+    // update pre-existing values instead of writing a duplicate row.
+    const templates = await prisma.template.findMany({
+      where: { type: 'balgh', caption: 'Anläggningsid' },
+      select: { id: true },
+    })
+    if (templates.length === 0) {
+      return { ok: false, err: 'template-not-found' }
+    }
+    const templateIds = templates.map((t) => t.id)
+
+    // 3. Update-or-insert in a single transaction, driven by the update count
+    // so there is no separate existence check and no duplicate-row risk:
+    // updateMany hits the actually-displayed row regardless of which template
+    // it uses (and collapses any duplicates), and we only INSERT when the
+    // residence genuinely has no matching comment yet.
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.typeText.updateMany({
+        where: { keycode: residenceId, keycmtep: { in: templateIds } },
+        data: { text: value },
+      })
+      if (updated.count === 0) {
+        const newCmtexId = generateXpandId()
+        await tx.$executeRaw`
+          INSERT INTO cmtex (keycmtex, keycmtep, keycode, text, timestamp)
+          VALUES (${newCmtexId}, ${templateIds[0]}, ${residenceId}, ${value}, ${timestampVal})
+        `
+      }
+    })
+
+    return { ok: true, data: value }
+  } catch (err) {
+    logger.error(
+      { err, rentalId },
+      'residence-adapter.upsertMalarEnergiFacilityId'
+    )
+    return { ok: false, err: 'unknown' }
   }
 }

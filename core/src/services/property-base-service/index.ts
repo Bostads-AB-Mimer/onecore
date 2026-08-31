@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { LeaseType, property } from '@onecore/types'
 import { z } from 'zod'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
@@ -9,6 +10,9 @@ import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
 
 import { routes as componentRoutes } from './components'
+import { routes as costCenterRoutes } from './cost-centers'
+import { routes as kvvAreaRoutes } from './kvv-areas'
+import { routes as propertyKvvAreaRoutes } from './property-kvv-area'
 
 /**
  * @swagger
@@ -48,12 +52,9 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ResidenceSummary', schemas.ResidenceSummarySchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
   registerSchema('Room', schemas.RoomSchema)
+  registerSchema('CreateRoomRequest', schemas.CreateRoomRequestSchema)
   registerSchema('ParkingSpace', schemas.ParkingSpaceSchema)
   registerSchema('MaintenanceUnit', schemas.MaintenanceUnitSchema)
-  registerSchema(
-    'ResidenceByRentalIdDetails',
-    schemas.ResidenceByRentalIdSchema
-  )
   registerSchema('FacilityDetails', schemas.FacilityDetailsSchema)
   registerSchema('RentalBlock', schemas.RentalBlockSchema)
   registerSchema(
@@ -120,9 +121,39 @@ export const routes = (router: KoaRouter) => {
     schemas.AnalyzeComponentImageRequestSchema
   )
   registerSchema('AIComponentAnalysis', schemas.AIComponentAnalysisSchema)
+  registerSchema(
+    'ApartmentTemperaturePoint',
+    schemas.ApartmentTemperaturePointSchema
+  )
+  registerSchema(
+    'ApartmentTemperatureSeries',
+    schemas.ApartmentTemperatureSeriesSchema
+  )
+  registerSchema(
+    'ApartmentTemperaturesResponse',
+    schemas.ApartmentTemperaturesResponseSchema
+  )
+
+  registerSchema('KeycloakUserSummary', schemas.KeycloakUserSummarySchema)
+  registerSchema('CostCenterTreeAddress', schemas.CostCenterTreeAddressSchema)
+  registerSchema(
+    'CostCenterTreeAggregates',
+    schemas.CostCenterTreeAggregatesSchema
+  )
+  registerSchema('CostCenterTreeProperty', schemas.CostCenterTreePropertySchema)
+  registerSchema('CostCenterTreeKvvArea', schemas.CostCenterTreeKvvAreaSchema)
+  registerSchema('CostCenterTree', schemas.CostCenterTreeSchema)
+  registerSchema('CostCenterSummary', schemas.CostCenterSummarySchema)
+  registerSchema('KvvAreaSummary', schemas.KvvAreaSummarySchema)
+  registerSchema('PutPropertyKvvAreaBody', schemas.PutPropertyKvvAreaBodySchema)
+  registerSchema('PropertyKvvAreaLink', schemas.PropertyKvvAreaLinkSchema)
+  registerSchema('PatchedKvvArea', schemas.PatchedKvvAreaSchema)
 
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)
+  costCenterRoutes(router)
+  kvvAreaRoutes(router)
+  propertyKvvAreaRoutes(router)
 
   /**
    * @swagger
@@ -501,20 +532,20 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /companies/{id}:
+   * /companies/{organizationNumber}:
    *   get:
    *     summary: Get detailed information about a specific company
    *     tags:
    *       - Property base Service
    *     description: |
-   *       Retrieves comprehensive information about a company using its unique identifier.
+   *       Retrieves comprehensive information about a company using its organization number.
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: organizationNumber
    *         required: true
    *         schema:
    *           type: string
-   *         description: The ID of the company.
+   *         description: The organization number of the company.
    *     responses:
    *       '200':
    *         description: Successfully retrieved company information
@@ -548,12 +579,15 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/companies/:id', async (ctx) => {
+  router.get('(.*)/companies/:organizationNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { id } = ctx.params
+    const { organizationNumber } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getCompanyById(id)
+      const result =
+        await propertyBaseAdapter.getCompanyByOrganizationNumber(
+          organizationNumber
+        )
 
       if (!result.ok) {
         if (result.err === 'not-found') {
@@ -846,19 +880,19 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /properties/{propertyId}:
+   * /properties/{propertyCode}:
    *   get:
-   *     summary: Get property by property id
+   *     summary: Get property by property code
    *     tags:
    *       - Property base Service
-   *     description: Retrieves property by property id
+   *     description: Retrieves property by property code
    *     parameters:
    *       - in: path
-   *         name: propertyId
+   *         name: propertyCode
    *         required: true
    *         schema:
    *           type: string
-   *         description: The id of the property
+   *         description: The code of the property
    *     responses:
    *       200:
    *         description: Successfully retrieved property
@@ -892,12 +926,12 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/properties/:propertyId', async (ctx) => {
+  router.get('(.*)/properties/:propertyCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { propertyId } = ctx.params
+    const { propertyCode } = ctx.params
 
     try {
-      const result = await propertyBaseAdapter.getPropertyDetails(propertyId)
+      const result = await propertyBaseAdapter.getPropertyDetails(propertyCode)
 
       if (!result.ok) {
         if (result.err === 'not-found') {
@@ -947,7 +981,7 @@ export const routes = (router: KoaRouter) => {
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/ResidenceByRentalIdDetails'
+   *                   $ref: '#/components/schemas/ResidenceDetails'
    *       404:
    *         description: Residence not found
    *         content:
@@ -991,12 +1025,131 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const residence = getResidence.data
+    const rentalPropertyId = residence.propertyObject.rentalId
+
+    let status: schemas.ResidenceDetails['status'] = null
+    if (rentalPropertyId) {
+      const leases = await leasingAdapter.getLeasesForPropertyId(
+        rentalPropertyId,
+        {
+          includeUpcomingLeases: true,
+          includeTerminatedLeases: false,
+          includeContacts: false,
+        }
+      )
+      status = calculateResidenceStatus(leases)
+    }
+
     ctx.status = 200
     ctx.body = {
-      content: getResidence.data satisfies schemas.ResidenceByRentalIdDetails,
+      content: schemas.ResidenceDetailsSchema.parse({ ...residence, status }),
       ...metadata,
     }
   })
+
+  /**
+   * @swagger
+   * /residences/by-rental-id/{rentalId}/malar-energi-facility-id:
+   *   put:
+   *     summary: Update or add a residence's Mälarenergi facility id.
+   *     description: |
+   *       Forwards to property-base-service which upserts the "Anläggnings ID
+   *       Mälarenergi" comment row (cmtex) in Xpand for the residence.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - malarEnergiFacilityId
+   *             properties:
+   *               malarEnergiFacilityId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: The updated Mälarenergi facility id.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     malarEnergiFacilityId:
+   *                       type: string
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: Residence not found.
+   *       500:
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.put(
+    '(.*)/residences/by-rental-id/:rentalId/malar-energi-facility-id',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalId } = ctx.params
+
+      const parsed =
+        property.UpdateMalarEnergiFacilityIdRequestSchema.safeParse(
+          ctx.request.body
+        )
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = { errors: parsed.error.errors, ...metadata }
+        return
+      }
+
+      try {
+        const result = await propertyBaseAdapter.updateMalarEnergiFacilityId(
+          rentalId,
+          parsed.data
+        )
+
+        if (!result.ok) {
+          if (result.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Residence not found', ...metadata }
+            return
+          }
+          logger.error(
+            { err: result.err, metadata },
+            'PUT /residences/by-rental-id/:rentalId/malar-energi-facility-id failed'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content:
+            result.data satisfies property.UpdateMalarEnergiFacilityIdResponse,
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(
+          { err, metadata },
+          'PUT /residences/by-rental-id/:rentalId/malar-energi-facility-id failed'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger
@@ -1605,130 +1758,6 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /residences/{residenceId}:
-   *   get:
-   *     summary: Get residence data by residenceId
-   *     tags:
-   *       - Property base Service
-   *     description: Retrieves residence data by residenceId
-   *     parameters:
-   *       - in: path
-   *         name: residenceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Id for the residence to fetch
-   *       - in: query
-   *         name: active
-   *         required: false
-   *         schema:
-   *           type: boolean
-   *         description: Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks.
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved residence.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/ResidenceDetails'
-   *       404:
-   *         description: Residence not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Residence not found
-   *       500:
-   *         description: Internal server error. Failed to retrieve residence data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 error:
-   *                   type: string
-   *                   example: Internal server error
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('(.*)/residences/:residenceId', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { residenceId } = ctx.params
-    const queryParams = schemas.GetResidenceDetailsQueryParamsSchema.safeParse(
-      ctx.query
-    )
-
-    if (!queryParams.success) {
-      ctx.status = 400
-      ctx.body = { error: queryParams.error.errors, ...metadata }
-      return
-    }
-
-    const { active: rentalBlockActive } = queryParams.data
-
-    try {
-      const getResidence = await propertyBaseAdapter.getResidenceDetails(
-        residenceId,
-        { active: rentalBlockActive }
-      )
-
-      if (!getResidence.ok) {
-        if (getResidence.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = { error: 'Residence not found', ...metadata }
-          return
-        }
-
-        logger.error(
-          { err: getResidence.err, metadata },
-          'Internal server error'
-        )
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
-        return
-      }
-
-      if (!getResidence.data.propertyObject.rentalId) {
-        ctx.status = 200
-        ctx.body = {
-          content: schemas.ResidenceDetailsSchema.parse({
-            ...getResidence.data,
-            status: null,
-          }),
-          ...metadata,
-        }
-        return
-      }
-
-      const leases = await leasingAdapter.getLeasesByRentalObjectCode(
-        getResidence.data.propertyObject.rentalId
-      )
-
-      const status = calculateResidenceStatus(leases)
-
-      ctx.status = 200
-      ctx.body = {
-        content: schemas.ResidenceDetailsSchema.parse({
-          ...getResidence.data,
-          status,
-        }),
-        ...metadata,
-      }
-    } catch (error) {
-      logger.error({ error, metadata }, 'Internal server error')
-      ctx.status = 500
-      ctx.body = { error: 'Internal server error', ...metadata }
-    }
-  })
-
-  /**
-   * @swagger
    * /residences/summary/by-building-code/{buildingCode}:
    *   get:
    *     summary: Get residences by building code, optionally filtered by staircase code.
@@ -1828,6 +1857,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Code for the building to fetch staircases for
+   *       - in: query
+   *         name: staircaseCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the staircase (optional).
    *     responses:
    *       200:
    *         description: Successfully retrieved staircases.
@@ -1871,10 +1906,13 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { errors: queryParams.error.errors }
       return
     }
-    const { buildingCode } = queryParams.data
+    const { buildingCode, staircaseCode } = queryParams.data
 
     try {
-      const result = await propertyBaseAdapter.getStaircases(buildingCode)
+      const result = await propertyBaseAdapter.getStaircases(
+        buildingCode,
+        staircaseCode
+      )
       if (!result.ok) {
         logger.error({ metadata, err: result.err }, 'Internal server error')
         ctx.status = 500
@@ -1898,17 +1936,23 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /rooms:
    *   get:
-   *     summary: Get rooms by residence id.
+   *     summary: Get rooms by rental id.
    *     description: Returns all rooms belonging to a residence.
    *     tags:
    *       - Property base Service
    *     parameters:
    *       - in: query
-   *         name: residenceId
+   *         name: rentalId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The id of the residence.
+   *         description: The rental id of the residence.
+   *       - in: query
+   *         name: roomCode
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: The code of the room (optional).
    *     responses:
    *       200:
    *         description: Successfully retrieved the rooms.
@@ -1934,12 +1978,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const { residenceId } = queryParams.data
+    const { rentalId, roomCode } = queryParams.data
 
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      const result = await propertyBaseAdapter.getRooms(residenceId)
+      const result = await propertyBaseAdapter.getRooms(rentalId, roomCode)
       if (!result.ok) {
         logger.error(
           { err: result.err, metadata },
@@ -1952,6 +1996,86 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: result.data satisfies Array<schemas.Room>,
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /rooms:
+   *   post:
+   *     summary: Create a room for a residence.
+   *     description: |
+   *       Forwards to property-base-service which performs a transactional
+   *       3-table Xpand write (cmobj, barum, babuf). Returns the created
+   *       Room in the same shape as GET /rooms.
+   *     tags:
+   *       - Property base Service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateRoomRequest'
+   *     responses:
+   *       201:
+   *         description: Room created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/Room'
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: Residence not found.
+   *       500:
+   *         description: Internal server error.
+   */
+  // Note: literal '/rooms' rather than '(.*)/rooms' — the wildcard prefix
+  // (used elsewhere in this file) would also match e.g.
+  // /inspections/internal/:id/rooms and intercept that route's POST.
+  router.post('/rooms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsed = schemas.CreateRoomRequestSchema.safeParse(ctx.request.body)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = { errors: parsed.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createRoom(parsed.data)
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Residence not found', ...metadata }
+          return
+        }
+        if (result.err === 'validation') {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Validation error from property service',
+            ...metadata,
+          }
+          return
+        }
+        logger.error({ err: result.err, metadata }, 'Error creating room')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: result.data satisfies schemas.Room,
         ...metadata,
       }
     } catch (error) {
@@ -2298,10 +2422,7 @@ export const routes = (router: KoaRouter) => {
 
         // TODO: This (Promise.all) doesn't work as intended because getMaintenanceUnitsForRentalProperty is not going to throw an error bc of AdapterResult
         const promises = leases
-          .filter(
-            (lease) =>
-              lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
-          )
+          .filter((lease) => lease.type === LeaseType.HousingContract)
           .map((lease) =>
             propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(
               lease.rentalPropertyId
@@ -2888,6 +3009,104 @@ export const routes = (router: KoaRouter) => {
         content: result.data satisfies Array<schemas.ParkingSpaceSearchResult>,
         ...metadata,
       }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /apartments/{objectNumber}/temperatures:
+   *   get:
+   *     summary: Get indoor temperatures for an apartment
+   *     description: |
+   *       Fetches indoor temperature time series for an apartment by its object
+   *       number, sourced from the EcoGuard "Curves" platform. Each series entry
+   *       corresponds to one sub-node (sensor) under the apartment node, with
+   *       avg/min/max merged per time bucket. Defaults to the last 24 hours at
+   *       hourly intervals.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: objectNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Apartment object number (e.g. "806-032-01-0101").
+   *       - in: query
+   *         name: from
+   *         required: false
+   *         schema:
+   *           type: integer
+   *         description: Unix timestamp (seconds) for range start. Defaults to `to - 86400`.
+   *       - in: query
+   *         name: to
+   *         required: false
+   *         schema:
+   *           type: integer
+   *         description: Unix timestamp (seconds) for range end. Defaults to now.
+   *       - in: query
+   *         name: interval
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [H, D]
+   *         description: Aggregation bucket size. Defaults to "H" (hourly).
+   *     responses:
+   *       200:
+   *         description: Temperature series successfully retrieved.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ApartmentTemperaturesResponse'
+   *       400:
+   *         description: Invalid query parameters.
+   *       404:
+   *         description: No apartment node found for the given object number.
+   *       500:
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/apartments/:objectNumber/temperatures', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ApartmentTemperaturesQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getApartmentTemperatures(
+        ctx.params.objectNumber,
+        params.data
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'apartment-node-not-found', ...metadata }
+          return
+        }
+        logger.error(
+          { err: result.err, metadata },
+          'Error fetching apartment temperatures from property-base'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = { content: result.data, ...metadata }
     } catch (error) {
       logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500

@@ -2,29 +2,8 @@ import { Factory } from 'fishery'
 import {
   TenfastInvoiceRow,
   TenfastRentalObject,
-  TenfastRentalObjectByRentalObjectCodeResponse,
   toYearMonthDayString,
 } from '../../adapters/tenfast/schemas'
-
-export const TenfastRentalObjectByRentalObjectCodeResponseFactory =
-  Factory.define<TenfastRentalObjectByRentalObjectCodeResponse>(
-    ({ sequence }) => ({
-      records: [
-        {
-          _id: '67eb8af5545c8f1195bef2e6' + sequence,
-          hyra: 287.17,
-          hyraVat: 0, // total moms pa hyran
-          hyraExcludingVat: 287.17, // hyran exklusive moms
-          hyror: TenfastInvoiceRowFactory.buildList(3),
-          externalId: `externalId-${sequence}`,
-          contractTemplate: 'template-001',
-        },
-      ],
-      prev: null,
-      next: null,
-      totalCount: 1,
-    })
-  )
 
 export const TenfastRentalObjectFactory = Factory.define<TenfastRentalObject>(
   ({ sequence }) => ({
@@ -35,6 +14,9 @@ export const TenfastRentalObjectFactory = Factory.define<TenfastRentalObject>(
     hyror: [TenfastInvoiceRowFactory.build()],
     externalId: 'externalId-1',
     contractTemplate: 'template-001',
+    category: { code: 'Bilplats', label: 'Bilplats' },
+    tags: [],
+    avtal: [],
   })
 )
 

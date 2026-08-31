@@ -12,3 +12,4 @@ export {
 export { LeaseFactory as lease } from './lease'
 export { RentalPropertyFactory as rentalProperty } from './rental-property'
 export { TenantFactory as tenant } from './tenant'
+export { SyncContactToWorkOrderPayloadFactory as syncContactToWorkOrderPayload } from './sync-contact'

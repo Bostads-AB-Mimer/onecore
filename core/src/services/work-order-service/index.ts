@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import { ApartmentInfo, Lease, RentalPropertyInfo } from '@onecore/types'
 import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
@@ -12,6 +13,18 @@ import { registerSchema } from '../../utils/openapi'
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
 }
+
+/*
+  Work-order creation requires apartment fields (maintenance.rental.property in
+  Odoo). We know rentalPropertyInfo.property is of type ApartmentInfo when the
+  type is 'Lägenhet', but that is not reflected in the RentalPropertyInfo type,
+  so we do a little narrowing.
+*/
+const rentalPropertyIsApartment = (
+  rentalPropertyInfo: RentalPropertyInfo
+): rentalPropertyInfo is RentalPropertyInfo & {
+  property: ApartmentInfo
+} => rentalPropertyInfo.type === 'Lägenhet'
 
 /**
  * @swagger
@@ -31,6 +44,15 @@ interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
 export const routes = (router: KoaRouter) => {
   registerSchema('WorkOrder', schemas.CoreWorkOrderSchema)
   registerSchema('XpandWorkOrder', schemas.CoreXpandWorkOrderSchema)
+  registerSchema('MaintenanceTeam', schemas.MaintenanceTeamSchema)
+  registerSchema(
+    'CreateInspectionWorkOrdersRequest',
+    schemas.CreateInspectionWorkOrdersRequestSchema
+  )
+  registerSchema(
+    'CreateInspectionWorkOrdersResponse',
+    schemas.CreateInspectionWorkOrdersResponseSchema
+  )
 
   /**
    * @swagger
@@ -1341,6 +1363,111 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /work-orders/by-code/{code}:
+   *   get:
+   *     summary: Get a single work order by its errand code
+   *     tags:
+   *       - Work Order Service
+   *     description: >
+   *       Retrieves a single Odoo work order (errand) by its code. The code may be
+   *       provided with or without the `od-` prefix (e.g. `od-12345` or `12345`).
+   *     parameters:
+   *       - in: path
+   *         name: code
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The errand code, with or without the `od-` prefix.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/WorkOrder'
+   *       '404':
+   *         description: Work order not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Work order not found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve the work order.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/work-orders/by-code/:code', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const result = await workOrderAdapter.getWorkOrderByCode(ctx.params.code)
+
+      if (result.ok) {
+        const v = result.data
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            accessCaption: v.AccessCaption,
+            caption: v.Caption,
+            code: v.Code,
+            dueDate: v.DueDate ? new Date(v.DueDate) : null,
+            contactCode: v.ContactCode,
+            description: v.Description,
+            detailsCaption: v.DetailsCaption,
+            externalResource: v.ExternalResource,
+            id: v.Id,
+            lastChanged: new Date(v.LastChanged),
+            priority: v.Priority,
+            registered: new Date(v.Registered),
+            rentalObjectCode: v.RentalObjectCode,
+            status: v.Status,
+            url: v.Url,
+            workOrderRows: v.WorkOrderRows.map((row) => ({
+              description: row.Description,
+              locationCode: row.LocationCode,
+              equipmentCode: row.EquipmentCode,
+            })),
+          } satisfies schemas.CoreWorkOrder,
+          ...metadata,
+        }
+        return
+      }
+
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'Work order not found', ...metadata }
+        return
+      }
+
+      logger.error(
+        { err: result.err, metadata },
+        'Error getting work order by code'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    } catch (error) {
+      logger.error(error, 'Error getting work order by code')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /work-orders/xpand/{code}:
    *   get:
    *     summary: Get work order details by rental property id from xpand
@@ -1573,16 +1700,6 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      /*
-        We know that rentalPropertyInfo.property is of type ApartmentInfo here,
-        but that is not reflected in the RentalPropertyInfo type, so we do a little narrowing
-      */
-      const rentalPropertyIsApartment = (
-        rentalPropertyInfo: RentalPropertyInfo
-      ): rentalPropertyInfo is RentalPropertyInfo & {
-        property: ApartmentInfo
-      } => rentalPropertyInfo.type === 'Lägenhet'
-
       if (!rentalPropertyIsApartment(rentalPropertyInfo)) {
         ctx.status = 400
         ctx.body = {
@@ -1648,6 +1765,145 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = {
         error: 'Failed to create new work orders',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /work-orders/maintenance-teams:
+   *   get:
+   *     summary: List maintenance teams (resursgrupper)
+   *     tags:
+   *       - Work Order Service
+   *     description: Returns the selectable Odoo maintenance teams (resursgrupper) for the inspection work-order picker.
+   *     responses:
+   *       '200':
+   *         description: Maintenance teams retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/MaintenanceTeam'
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/work-orders/maintenance-teams', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await workOrderAdapter.getMaintenanceTeams()
+
+    if (!result.ok) {
+      logger.error({ err: result.err }, 'Error fetching maintenance teams')
+      ctx.status = 500
+      ctx.body = { error: 'Failed to fetch maintenance teams', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /work-orders/from-inspection:
+   *   post:
+   *     summary: Create work orders from an inspection (one per resursgrupp)
+   *     tags:
+   *       - Work Order Service
+   *     description: >
+   *       Resolves the apartment from rentalObjectCode, then creates one work order
+   *       per resursgrupp group. Each group is an independent Odoo commit, so the
+   *       response reports per-group success/failure.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateInspectionWorkOrdersRequest'
+   *     responses:
+   *       '200':
+   *         description: Work orders processed (see per-group results)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/CreateInspectionWorkOrdersResponse'
+   *       '400':
+   *         description: Bad request (invalid body or not an apartment).
+   *       '404':
+   *         description: Rental property not found.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/work-orders/from-inspection', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const { rentalObjectCode, inspectionId, groups } =
+        schemas.CreateInspectionWorkOrdersRequestSchema.parse(ctx.request.body)
+
+      const rentalPropertyInfo =
+        await propertyManagementAdapter.getRentalPropertyInfo(rentalObjectCode)
+      if (!rentalPropertyInfo) {
+        ctx.status = 404
+        ctx.body = { reason: 'Rental property not found', ...metadata }
+        return
+      }
+
+      if (!rentalPropertyIsApartment(rentalPropertyInfo)) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Rental property is not an apartment',
+          ...metadata,
+        }
+        return
+      }
+
+      const result = await workOrderAdapter.createInspectionWorkOrders({
+        rentalProperty: rentalPropertyInfo,
+        inspectionId,
+        groups,
+      })
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err },
+          'Error creating inspection work orders'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to create inspection work orders',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        ctx.status = 400
+        ctx.body = {
+          reason: 'Invalid request body',
+          error: error.issues.map(({ message, path }) => ({ message, path })),
+          ...metadata,
+        }
+        return
+      }
+      logger.error({ err: error }, 'Error creating inspection work orders')
+      ctx.status = 500
+      ctx.body = {
+        error: 'Failed to create inspection work orders',
         ...metadata,
       }
     }
@@ -1862,7 +2118,13 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('/work-orders/send-sms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { phoneNumber, text, externalContractorName } = ctx.request.body
+    const {
+      phoneNumber,
+      text,
+      externalContractorName,
+      contactCode,
+      triggeredByUser,
+    } = ctx.request.body
 
     if (!phoneNumber || !text) {
       ctx.status = 400
@@ -1878,6 +2140,8 @@ export const routes = (router: KoaRouter) => {
         phoneNumber,
         text,
         externalContractorName,
+        contactCode,
+        triggeredByUser,
       })
 
       if (result.ok) {
@@ -1928,7 +2192,7 @@ export const routes = (router: KoaRouter) => {
    *               subject:
    *                 type: string
    *                 description: The subject of the email.
-   *               message:
+   *               text:
    *                 type: string
    *                 description: The message to be sent in the email.
    *     responses:
@@ -1967,7 +2231,14 @@ export const routes = (router: KoaRouter) => {
    */
   router.post('/work-orders/send-email', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const { to, subject, text, externalContractorName } = ctx.request.body
+    const {
+      to,
+      subject,
+      text,
+      externalContractorName,
+      contactCode,
+      triggeredByUser,
+    } = ctx.request.body
 
     if (to === undefined || subject === undefined || text === undefined) {
       ctx.status = 400
@@ -1984,6 +2255,8 @@ export const routes = (router: KoaRouter) => {
       subject,
       text,
       externalContractorName,
+      contactCode,
+      triggeredByUser,
     })
 
     if (result.ok) {

@@ -1,0 +1,2098 @@
+import KoaRouter from '@koa/router'
+
+import * as inspectionAdapter from '../../adapters/inspection-adapter'
+import * as leasingAdapter from '../../adapters/leasing-adapter'
+import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
+import * as schemas from './schemas'
+import { inspection } from '@onecore/types'
+import { registerSchema } from '../../utils/openapi'
+
+import { logger, generateRouteMetadata } from '@onecore/utilities'
+import { generateInspectionProtocolPdf } from './helpers/pdf-generator'
+import { fetchEnrichedInspection } from './helpers/inspection-fetcher'
+import { fetchEnrichedInternalInspection } from './helpers/internal-inspection-fetcher'
+import { writeBackComponentInspectionStates } from './helpers/component-write-back'
+import { sendProtocolForInspection } from './helpers/protocol-sender'
+import { buildTenantContactsResponse } from './helpers/tenant-contacts-builder'
+import {
+  logSourceError,
+  tagAndEnrichInspections,
+} from './helpers/merge-inspections'
+
+/**
+ * @swagger
+ * openapi: 3.0.0
+ * tags:
+ *   - name: Inspection Service
+ *     description: Operations related to inspections
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ * security:
+ *   - bearerAuth: []
+ */
+export const routes = (router: KoaRouter) => {
+  registerSchema('Inspection', schemas.InspectionSchema)
+  registerSchema('InspectionComponent', inspection.InspectionComponentSchema)
+  registerSchema('InspectionRoom', inspection.InspectionRoomSchema)
+  registerSchema('DetailedInspection', schemas.DetailedInspectionSchema)
+  registerSchema(
+    'DetailedInspectionRoom',
+    inspection.DetailedXpandInspectionRoomSchema
+  )
+  registerSchema(
+    'DetailedInspectionRemark',
+    inspection.DetailedXpandInspectionRemarkSchema
+  )
+  registerSchema('TenantContactsResponse', schemas.TenantContactsResponseSchema)
+  registerSchema('SendProtocolRequest', schemas.SendProtocolRequestSchema)
+  registerSchema('SendProtocolResponse', schemas.SendProtocolResponseSchema)
+  registerSchema(
+    'CreateInspectionRequest',
+    schemas.CreateInspectionRequestSchema
+  )
+  registerSchema(
+    'UpdateInspectionStatusRequest',
+    schemas.UpdateInspectionStatusRequestSchema
+  )
+  registerSchema('InspectionWithSource', schemas.InspectionWithSourceSchema)
+  registerSchema('InternalInspection', inspection.InternalInspectionSchema)
+  registerSchema(
+    'SaveInspectionDraftRequest',
+    inspection.SaveInspectionDraftRequestSchema
+  )
+  registerSchema(
+    'ComponentWriteBackError',
+    inspection.ComponentWriteBackErrorSchema
+  )
+  registerSchema(
+    'AddInspectionRoomRequest',
+    schemas.AddInspectionRoomRequestSchema
+  )
+
+  /**
+   * @swagger
+   * /inspections:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve inspections from all sources
+   *     description: Retrieves inspections from both the local database and Xpand, merged with a source indicator per item.
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number for pagination.
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 25
+   *         description: Maximum number of records to return.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
+   *       - in: query
+   *         name: sortAscending
+   *         schema:
+   *           type: string
+   *           enum: [true, false]
+   *         description: Whether to sort the results in ascending order.
+   *       - in: query
+   *         name: inspector
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by inspector name.
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by address.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved inspections from all sources.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/InspectionWithSource'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *       '400':
+   *         description: Invalid query parameters.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid query parameters
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedParams =
+      inspection.GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
+    if (!parsedParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        ...metadata,
+      }
+      return
+    }
+
+    const { page, limit, statusFilter, sortAscending, inspector, address } =
+      parsedParams.data
+
+    try {
+      const [internalResult, xpandResult] = await Promise.allSettled([
+        inspectionAdapter.getInternalInspections({
+          page,
+          limit,
+          statusFilter,
+          sortAscending,
+          inspector,
+          address,
+        }),
+        inspectionAdapter.getXpandInspections({
+          page,
+          limit,
+          statusFilter,
+          sortAscending,
+          inspector,
+          address,
+        }),
+      ])
+
+      logSourceError(
+        internalResult,
+        'Error getting internal inspections, continuing with xpand only'
+      )
+      logSourceError(
+        xpandResult,
+        'Error getting xpand inspections, continuing with internal only'
+      )
+
+      const internalInspections =
+        internalResult.status === 'fulfilled' && internalResult.value.ok
+          ? (internalResult.value.data.content ?? [])
+          : []
+      const internalTotal =
+        internalResult.status === 'fulfilled' && internalResult.value.ok
+          ? (internalResult.value.data._meta?.totalRecords ?? 0)
+          : 0
+
+      const xpandInspections =
+        xpandResult.status === 'fulfilled' && xpandResult.value.ok
+          ? (xpandResult.value.data.content ?? [])
+          : []
+      const xpandTotal =
+        xpandResult.status === 'fulfilled' && xpandResult.value.ok
+          ? (xpandResult.value.data._meta?.totalRecords ?? 0)
+          : 0
+
+      const inspectionsWithLeaseData = await tagAndEnrichInspections(
+        internalInspections,
+        xpandInspections
+      )
+
+      const totalRecords = internalTotal + xpandTotal
+
+      ctx.status = 200
+      ctx.body = {
+        content: inspectionsWithLeaseData,
+        _meta: {
+          totalRecords,
+          page: page ?? 1,
+          limit: limit ?? 25,
+          count: inspectionsWithLeaseData.length,
+        },
+        _links:
+          xpandResult.status === 'fulfilled' && xpandResult.value.ok
+            ? xpandResult.value.data._links
+            : [],
+      }
+    } catch (error) {
+      logger.error(error, 'Error getting inspections from all sources')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/residence/{residenceId}:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve inspections by residence ID from all sources
+   *     description: Retrieves inspections associated with a specific residence ID from both the local database and Xpand.
+   *     parameters:
+   *       - in: path
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the residence to retrieve inspections for.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved inspections for the specified residence ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspections:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/InspectionWithSource'
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/residence/:residenceId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { residenceId } = ctx.params
+
+    const parsedQuery =
+      inspection.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
+    const statusFilter = parsedQuery.success
+      ? parsedQuery.data.statusFilter
+      : undefined
+
+    try {
+      const [internalResult, xpandResult] = await Promise.allSettled([
+        inspectionAdapter.getInternalInspectionsByResidenceId(
+          residenceId,
+          statusFilter
+        ),
+        inspectionAdapter.getXpandInspectionsByResidenceId(
+          residenceId,
+          statusFilter
+        ),
+      ])
+
+      logSourceError(
+        internalResult,
+        'Error getting internal inspections by residenceId, continuing with xpand only',
+        { residenceId }
+      )
+      logSourceError(
+        xpandResult,
+        'Error getting xpand inspections by residenceId, continuing with internal only',
+        { residenceId }
+      )
+
+      const internalInspections =
+        internalResult.status === 'fulfilled' && internalResult.value.ok
+          ? internalResult.value.data
+          : []
+      const xpandInspections =
+        xpandResult.status === 'fulfilled' && xpandResult.value.ok
+          ? xpandResult.value.data
+          : []
+
+      const inspectionsWithLeaseData = await tagAndEnrichInspections(
+        internalInspections,
+        xpandInspections
+      )
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspections: inspectionsWithLeaseData,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(
+        { error, residenceId },
+        'Error getting inspections by residenceId from all sources'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/xpand:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve inspections from Xpand
+   *     description: Retrieves inspections from Xpand with pagination and status filtering support.
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number for pagination.
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 25
+   *         description: Maximum number of records to return.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
+   *       - in: query
+   *         name: sortAscending
+   *         schema:
+   *           type: string
+   *           enum: [true, false]
+   *         description: Whether to sort the results in ascending order.
+   *       - in: query
+   *         name: inspector
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by inspector name.
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Filter inspections by address.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved inspections.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Inspection'
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       href:
+   *                         type: string
+   *                       rel:
+   *                         type: string
+   *       '400':
+   *         description: Invalid query parameters.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid query parameters
+   *       '500':
+   *         description: Internal server error. Failed to retrieve inspections.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/xpand', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsedParams =
+      inspection.GetInspectionsFromXpandQuerySchema.safeParse(ctx.query)
+    if (!parsedParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        ...metadata,
+      }
+      return
+    }
+
+    const { page, limit, statusFilter, sortAscending, inspector, address } =
+      parsedParams.data
+
+    try {
+      const result = await inspectionAdapter.getXpandInspections({
+        page,
+        limit,
+        statusFilter,
+        sortAscending,
+        inspector,
+        address,
+      })
+
+      if (result.ok) {
+        const inspections = result.data.content ?? []
+
+        const leaseIds = inspections
+          .filter(
+            (inspection) =>
+              inspection.leaseId !== null && inspection.leaseId !== ''
+          )
+          .map((inspection) => inspection.leaseId)
+
+        const leasesById =
+          leaseIds.length > 0
+            ? await leasingAdapter.getLeases(leaseIds, 'true')
+            : {}
+
+        const inspectionsWithLeaseData = inspections.map((inspection) => ({
+          ...inspection,
+          lease: inspection.leaseId ? leasesById[inspection.leaseId] : null,
+        }))
+
+        ctx.status = 200
+        ctx.body = {
+          content: inspectionsWithLeaseData,
+          _meta: result.data._meta,
+          _links: result.data._links,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            metadata,
+          },
+          'Error getting inspections from xpand'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(error, 'Error getting inspections from xpand')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/xpand/residence/{residenceId}:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve inspections by residence ID from Xpand
+   *     description: Retrieves inspections associated with a specific residence ID from Xpand.
+   *     parameters:
+   *       - in: path
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the residence to retrieve inspections for.
+   *       - in: query
+   *         name: statusFilter
+   *         schema:
+   *           type: string
+   *           enum: [ongoing, completed]
+   *         description: Filter inspections by status (ongoing or completed).
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved inspections for the specified residence ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspections:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/Inspection'
+   *       '404':
+   *         description: No inspections found for the specified residence ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: not-found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve inspections.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/xpand/residence/:residenceId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { residenceId } = ctx.params
+
+    const parsedQuery =
+      inspection.GetInspectionsByResidenceIdQuerySchema.safeParse(ctx.query)
+    const statusFilter = parsedQuery.success
+      ? parsedQuery.data.statusFilter
+      : undefined
+
+    try {
+      const result = await inspectionAdapter.getXpandInspectionsByResidenceId(
+        residenceId,
+        statusFilter
+      )
+
+      if (result.ok) {
+        const leaseIds = result.data
+          .filter(
+            (inspection) =>
+              inspection.leaseId !== null && inspection.leaseId !== ''
+          )
+          .map((inspection) => inspection.leaseId)
+
+        const leasesById =
+          leaseIds.length > 0
+            ? await leasingAdapter.getLeases(leaseIds, 'true')
+            : {}
+
+        const inspectionsWithLeaseData = result.data.map((inspection) => ({
+          ...inspection,
+          lease: inspection.leaseId ? leasesById[inspection.leaseId] : null,
+        }))
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            inspections: inspectionsWithLeaseData,
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            residenceId,
+            metadata,
+          },
+          'Error getting inspections by residenceId from xpand'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(
+        { error, residenceId },
+        'Error getting inspections by residenceId from xpand'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/xpand/{inspectionId}:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve an inspection by ID from Xpand
+   *     description: Retrieves a specific inspection by its ID from Xpand.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to retrieve.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DetailedInspection'
+   *       '404':
+   *         description: Inspection not found for the specified ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: not-found
+   *       '500':
+   *         description: Internal server error. Failed to retrieve the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/xpand/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result = await fetchEnrichedInspection(inspectionId)
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = {
+          content: result.data,
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            inspectionId,
+            metadata,
+          },
+          'Error getting inspection by id from xpand'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error getting inspection by id from xpand'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/xpand/{inspectionId}/pdf:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Generate PDF protocol for an inspection
+   *     description: Generates and returns a PDF protocol for a specific inspection by its ID.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to generate a PDF for.
+   *       - in: query
+   *         name: includeCosts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: true
+   *         description: Whether to include cost information in the PDF.
+   *     responses:
+   *       '200':
+   *         description: Successfully generated PDF protocol.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     pdfBase64:
+   *                       type: string
+   *                       description: Base64 encoded PDF document
+   *       '404':
+   *         description: Inspection not found for the specified ID.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: not-found
+   *       '500':
+   *         description: Internal server error. Failed to generate PDF.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/xpand/:inspectionId/pdf', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+    const includeCosts = ctx.query.includeCosts !== 'false'
+
+    try {
+      const result = await fetchEnrichedInspection(inspectionId)
+
+      if (result.ok) {
+        const inspection = result.data
+
+        const protocol = await generateInspectionProtocolPdf(inspection, {
+          includeCosts,
+        })
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            pdfBase64: protocol.toString('base64'),
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          {
+            err: result.err,
+            inspectionId,
+            metadata,
+          },
+          'Error getting inspection by id from xpand for PDF generation'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (err) {
+      logger.error(
+        { err, inspectionId },
+        'Error generating PDF protocol for xpand inspection'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/details:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Retrieve an enriched internal inspection by ID
+   *     description: Retrieves a specific internal inspection by its ID, normalized into the same shape as Xpand inspections (with lease, residence, and flattened room remarks) so it can be rendered by the protocol UI without source-specific branching.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to retrieve.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DetailedInspection'
+   *       '404':
+   *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/internal/:inspectionId/details', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result = await fetchEnrichedInternalInspection(inspectionId)
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } else {
+        logger.error(
+          { err: result.err, inspectionId, metadata },
+          'Error getting internal inspection details'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error getting internal inspection details'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/pdf:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Generate PDF protocol for an internal inspection
+   *     description: Generates and returns a PDF protocol for a specific internal inspection by its ID.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to generate a PDF for.
+   *       - in: query
+   *         name: includeCosts
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *           default: true
+   *         description: Whether to include cost information in the PDF.
+   *     responses:
+   *       '200':
+   *         description: Successfully generated PDF protocol.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     pdfBase64:
+   *                       type: string
+   *                       description: Base64 encoded PDF document
+   *       '404':
+   *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/internal/:inspectionId/pdf', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+    const includeCosts = ctx.query.includeCosts !== 'false'
+
+    try {
+      const result = await fetchEnrichedInternalInspection(inspectionId)
+
+      if (result.ok) {
+        const inspection = result.data
+
+        const protocol = await generateInspectionProtocolPdf(inspection, {
+          includeCosts,
+        })
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            pdfBase64: protocol.toString('base64'),
+          },
+          ...metadata,
+        }
+      } else {
+        logger.error(
+          { err: result.err, inspectionId, metadata },
+          'Error getting internal inspection for PDF generation'
+        )
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (err) {
+      logger.error(
+        { err, inspectionId },
+        'Error generating PDF protocol for internal inspection'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/tenant-contacts:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Get tenant contacts for an internal inspection
+   *     description: Retrieves contact information for new and previous tenants associated with an internal inspection's residence.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved tenant contacts.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/TenantContactsResponse'
+   *       '404':
+   *         description: Inspection or residence not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/inspections/internal/:inspectionId/tenant-contacts',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { inspectionId } = ctx.params
+
+      try {
+        const inspectionResult =
+          await inspectionAdapter.getInternalInspectionById(inspectionId)
+
+        if (!inspectionResult.ok) {
+          logger.error(
+            { err: inspectionResult.err, inspectionId },
+            'tenant-contacts.internal: error fetching inspection'
+          )
+          ctx.status = inspectionResult.statusCode || 500
+          ctx.body = { error: inspectionResult.err, ...metadata }
+          return
+        }
+
+        const response = await buildTenantContactsResponse(
+          inspectionResult.data
+        )
+        ctx.status = 200
+        ctx.body = { content: response, ...metadata }
+      } catch (error) {
+        logger.error({ err: error, inspectionId }, 'tenant-contacts.internal')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/send-protocol:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Send inspection protocol to tenant for an internal inspection
+   *     description: Sends the inspection protocol PDF via email to the specified tenant (new or previous) for an internal inspection.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SendProtocolRequest'
+   *     responses:
+   *       '200':
+   *         description: Protocol sent successfully.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/SendProtocolResponse'
+   *       '400':
+   *         description: Invalid request or no contract found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '404':
+   *         description: Inspection not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/inspections/internal/:inspectionId/send-protocol',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { inspectionId } = ctx.params
+
+      try {
+        const validation = schemas.SendProtocolRequestSchema.safeParse(
+          ctx.request.body
+        )
+
+        if (!validation.success) {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Invalid request body',
+            details: validation.error.errors,
+            ...metadata,
+          }
+          return
+        }
+
+        const inspectionResult =
+          await fetchEnrichedInternalInspection(inspectionId)
+
+        if (!inspectionResult.ok) {
+          logger.error(
+            { err: inspectionResult.err, inspectionId },
+            'send-protocol.internal: error fetching inspection'
+          )
+          ctx.status = inspectionResult.statusCode || 500
+          ctx.body = { error: inspectionResult.err, ...metadata }
+          return
+        }
+
+        const { status, body } = await sendProtocolForInspection(
+          inspectionResult.data,
+          validation.data.recipient
+        )
+        ctx.status = status
+        ctx.body = { content: body, ...metadata }
+      } catch (error) {
+        logger.error({ err: error, inspectionId }, 'send-protocol.internal')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /inspections/{inspectionId}/tenant-contacts:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Get tenant contacts for inspection protocol modal
+   *     description: Retrieves contact information for new and previous tenants to display in confirmation modal before sending protocol
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The inspection ID
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved tenant contacts
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/TenantContactsResponse'
+   *       '404':
+   *         description: Inspection or residence not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Inspection not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/:inspectionId/tenant-contacts', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const inspectionResult =
+        await inspectionAdapter.getXpandInspectionById(inspectionId)
+
+      if (!inspectionResult.ok) {
+        logger.error(
+          { err: inspectionResult.err, inspectionId },
+          'tenant-contacts.xpand: error fetching inspection'
+        )
+        ctx.status = inspectionResult.statusCode || 500
+        ctx.body = { error: inspectionResult.err, ...metadata }
+        return
+      }
+
+      const response = await buildTenantContactsResponse(inspectionResult.data)
+      ctx.status = 200
+      ctx.body = { content: response, ...metadata }
+    } catch (error) {
+      logger.error({ err: error, inspectionId }, 'tenant-contacts.xpand')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/{inspectionId}/send-protocol:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Send inspection protocol to tenant
+   *     description: Sends the inspection protocol PDF via email to the specified tenant (new or previous)
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The inspection ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SendProtocolRequest'
+   *     responses:
+   *       '200':
+   *         description: Protocol sent successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/SendProtocolResponse'
+   *       '400':
+   *         description: Invalid request or no contract found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Invalid request body
+   *       '404':
+   *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Inspection not found
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/inspections/:inspectionId/send-protocol', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const validation = schemas.SendProtocolRequestSchema.safeParse(
+        ctx.request.body
+      )
+
+      if (!validation.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid request body',
+          details: validation.error.errors,
+          ...metadata,
+        }
+        return
+      }
+
+      const inspectionResult = await fetchEnrichedInspection(inspectionId)
+
+      if (!inspectionResult.ok) {
+        logger.error(
+          { err: inspectionResult.err, inspectionId },
+          'send-protocol.xpand: error fetching inspection'
+        )
+        ctx.status = inspectionResult.statusCode || 500
+        ctx.body = { error: inspectionResult.err, ...metadata }
+        return
+      }
+
+      const { status, body } = await sendProtocolForInspection(
+        inspectionResult.data,
+        validation.data.recipient
+      )
+      ctx.status = status
+      ctx.body = { content: body, ...metadata }
+    } catch (error) {
+      logger.error({ err: error, inspectionId }, 'send-protocol.xpand')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Create a new inspection
+   *     description: Creates a new inspection in the local inspection database
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateInspectionRequest'
+   *     responses:
+   *       '201':
+   *         description: Inspection created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/DetailedInspection'
+   *       '400':
+   *         description: Invalid request body
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/inspections', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await inspectionAdapter.createInspection(ctx.request.body)
+
+      if (result.ok) {
+        ctx.status = 201
+        ctx.body = {
+          content: {
+            inspection: result.data,
+          },
+          ...metadata,
+        }
+      } else {
+        ctx.status = 400
+        ctx.body = { error: result.err, ...metadata }
+      }
+    } catch (error) {
+      logger.error({ error }, 'Error creating inspection')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}:
+   *   patch:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Update internal inspection
+   *     description: Updates an internal inspection. Supports updating status (with valid transitions Registrerad → Påbörjad → Genomförd) and/or inspector. At least one field must be provided.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the inspection to update
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateInspectionStatusRequest'
+   *     responses:
+   *       '200':
+   *         description: Inspection updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/InternalInspection'
+   *                     componentWriteBackErrors:
+   *                       type: array
+   *                       description: Per-component write-back errors recorded when transitioning to "Genomförd". Empty for other status transitions.
+   *                       items:
+   *                         $ref: '#/components/schemas/ComponentWriteBackError'
+   *       '400':
+   *         description: Invalid request body or invalid status transition
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '404':
+   *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.patch('/inspections/internal/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    const bodyResult = schemas.UpdateInspectionStatusRequestSchema.safeParse(
+      ctx.request.body
+    )
+    if (!bodyResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: bodyResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+    const body = bodyResult.data
+
+    try {
+      const result = await inspectionAdapter.updateInspectionStatus(
+        inspectionId,
+        body
+      )
+
+      if (!result.ok) {
+        ctx.status = result.statusCode || 500
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      // On transition to "Genomförd" (completed), write each component's
+      // condition + lastInspectionDate back to property-base. Best-effort:
+      // per-component failures are aggregated and returned alongside the
+      // inspection so the UI can surface them — the inspection itself still
+      // completes.
+      const componentWriteBackErrors =
+        body.status === 'Genomförd'
+          ? await writeBackComponentInspectionStates(result.data)
+          : []
+      if (componentWriteBackErrors.length > 0) {
+        logger.warn(
+          { inspectionId, errors: componentWriteBackErrors },
+          'Some component inspection states failed to write back'
+        )
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: {
+          inspection: result.data,
+          componentWriteBackErrors,
+        },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, inspectionId }, 'Error updating inspection status')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}:
+   *   get:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Get internal inspection by ID including draft room data
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       '200':
+   *         description: Internal inspection with draft room data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     inspection:
+   *                       $ref: '#/components/schemas/InternalInspection'
+   *       '404':
+   *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/inspections/internal/:inspectionId', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    try {
+      const result =
+        await inspectionAdapter.getInternalInspectionById(inspectionId)
+
+      if (!result.ok) {
+        ctx.status = result.err === 'not-found' ? 404 : 500
+        ctx.body = {
+          error:
+            result.err === 'not-found'
+              ? `Inspection ${inspectionId} not found`
+              : 'Failed to fetch inspection',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: { inspection: result.data }, ...metadata }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error fetching internal inspection'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/draft:
+   *   patch:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Save inspection draft data (rooms and inspector name)
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SaveInspectionDraftRequest'
+   *     responses:
+   *       '200':
+   *         description: Draft saved successfully
+   *       '400':
+   *         description: Invalid request body
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '404':
+   *         description: Inspection not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/rooms:
+   *   post:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Add a room to a residence during an inspection.
+   *     description: |
+   *       Creates a new room in Xpand (via property-base) for the residence
+   *       associated with the inspection, then records the xpand-issued room id
+   *       in the inspection's tracking table so the inspector sees the room as
+   *       'added during this inspection'.
+   *
+   *       If the property write fails, no inspection state is touched. If the
+   *       property write succeeds but the inspection-tracking write fails, the
+   *       room exists in Xpand and is returned to the caller; the caller is
+   *       expected to refresh the inspection to pick it up.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/AddInspectionRoomRequest'
+   *     responses:
+   *       '201':
+   *         description: Room created.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     room:
+   *                       $ref: '#/components/schemas/Room'
+   *       '400':
+   *         description: Invalid request body or no residence linked to the inspection.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '404':
+   *         description: Inspection or residence not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *       '500':
+   *         description: Internal server error.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/inspections/internal/:inspectionId/rooms', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    const parsed = schemas.AddInspectionRoomRequestSchema.safeParse(
+      ctx.request.body
+    )
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = { errors: parsed.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const inspectionResult =
+        await inspectionAdapter.getInternalInspectionById(inspectionId)
+      if (!inspectionResult.ok) {
+        if (inspectionResult.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: 'Inspection not found', ...metadata }
+          return
+        }
+        logger.error(
+          { err: inspectionResult.err, inspectionId, metadata },
+          'Failed to load inspection'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      const rentalId = inspectionResult.data.residenceId
+      if (!rentalId) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Inspection has no associated residence',
+          ...metadata,
+        }
+        return
+      }
+
+      const createResult = await propertyBaseAdapter.createRoom({
+        rentalId,
+        ...parsed.data,
+      })
+      if (!createResult.ok) {
+        if (createResult.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = {
+            error: 'Residence not found for inspection',
+            ...metadata,
+          }
+          return
+        }
+        if (createResult.err === 'validation') {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Validation error from property service',
+            ...metadata,
+          }
+          return
+        }
+        logger.error(
+          { err: createResult.err, inspectionId, metadata },
+          'Failed to create room'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      const createdRoom = createResult.data
+
+      // Partial-success: if tracking insert fails after the Xpand write
+      // succeeded, the room still exists and we return it. The flag just
+      // won't show up; refreshing the inspection picks the room up via
+      // draftRooms once the FE saves the draft.
+      const trackResult = await inspectionAdapter.addRoomToInspection(
+        inspectionId,
+        createdRoom.id
+      )
+      if (!trackResult.ok) {
+        logger.error(
+          {
+            err: trackResult.err,
+            inspectionId,
+            xpandRoomId: createdRoom.id,
+            metadata,
+          },
+          'createRoom succeeded but addRoomToInspection failed — partial success'
+        )
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        content: { room: createdRoom },
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error(
+        { error, inspectionId },
+        'Error orchestrating inspection room creation'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /inspections/internal/{inspectionId}/rooms/{roomId}:
+   *   delete:
+   *     tags:
+   *       - Inspection Service
+   *     summary: Remove a room that was added during the current inspection.
+   *     description: |
+   *       Symmetric to POST /inspections/internal/{inspectionId}/rooms.
+   *       Verifies the room was added during this inspection (via the
+   *       inspection_added_room tracking table) before deleting it from Xpand
+   *       and dropping the tracking row.
+   *
+   *       The isAddedInThisInspection check is authoritative — the frontend
+   *       gate is just UX. Rooms that originated from the property system
+   *       (isAddedInThisInspection: false) cannot be removed through this
+   *       endpoint.
+   *     parameters:
+   *       - in: path
+   *         name: inspectionId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: path
+   *         name: roomId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       '204':
+   *         description: Room removed.
+   *       '404':
+   *         description: |
+   *           Inspection not found, room not found in Xpand, or the room was
+   *           not added during this inspection.
+   *       '409':
+   *         description: Room has installed components and cannot be removed.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.delete(
+    '/inspections/internal/:inspectionId/rooms/:roomId',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { inspectionId, roomId } = ctx.params
+
+      try {
+        const inspectionResult =
+          await inspectionAdapter.getInternalInspectionById(inspectionId)
+        if (!inspectionResult.ok) {
+          if (inspectionResult.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Inspection not found', ...metadata }
+            return
+          }
+          logger.error(
+            { err: inspectionResult.err, inspectionId, metadata },
+            'Failed to load inspection'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        // Authoritative isAddedInThisInspection check. The inspection's rooms
+        // are decorated by the inspection service via the join on the
+        // inspection_added_room tracking table — so this is the DB-backed
+        // validation. Frontend gating is just UX.
+        const targetRoom = inspectionResult.data.rooms?.find(
+          (r) => r.roomId === roomId
+        )
+        if (!targetRoom || !targetRoom.isAddedInThisInspection) {
+          ctx.status = 404
+          ctx.body = {
+            error: 'room-not-added-in-this-inspection',
+            ...metadata,
+          }
+          return
+        }
+
+        const deleteResult = await propertyBaseAdapter.deleteRoom(roomId)
+        if (!deleteResult.ok) {
+          if (deleteResult.err === 'not-found') {
+            ctx.status = 404
+            ctx.body = { error: 'Room not found in Xpand', ...metadata }
+            return
+          }
+          if (deleteResult.err === 'has-components') {
+            ctx.status = 409
+            ctx.body = { error: 'room-has-components', ...metadata }
+            return
+          }
+          logger.error(
+            { err: deleteResult.err, inspectionId, roomId, metadata },
+            'Failed to delete room in Xpand'
+          )
+          ctx.status = 500
+          ctx.body = { error: 'Internal server error', ...metadata }
+          return
+        }
+
+        // Partial-success ordering matches the add path: if the tracking-row
+        // drop fails after the Xpand delete succeeds, the room is gone but
+        // the tracking row is stale. The next inspection load won't surface
+        // it (draftRooms no longer contains the room once the FE saves), so
+        // the orphan row is harmless. Log and return 204.
+        const trackResult =
+          await inspectionAdapter.removeAddedRoomFromInspection(
+            inspectionId,
+            roomId
+          )
+        if (!trackResult.ok) {
+          // 'not-found' is the documented partial-success case (e.g. retry of
+          // a previously-half-completed delete) — warn, not error. 'unknown'
+          // is genuinely unexpected and stays at error.
+          const payload = {
+            err: trackResult.err,
+            inspectionId,
+            roomId,
+            metadata,
+          }
+          const msg =
+            'deleteRoom succeeded but removeAddedRoomFromInspection failed — partial success'
+          if (trackResult.err === 'not-found') {
+            logger.warn(payload, msg)
+          } else {
+            logger.error(payload, msg)
+          }
+        }
+
+        ctx.status = 204
+      } catch (error) {
+        logger.error(
+          { error, inspectionId, roomId },
+          'Error orchestrating inspection room removal'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
+
+  router.patch('/inspections/internal/:inspectionId/draft', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { inspectionId } = ctx.params
+
+    const validationResult =
+      inspection.SaveInspectionDraftRequestSchema.safeParse(ctx.request.body)
+    if (!validationResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: validationResult.error.errors,
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      // The schema uses z.coerce.date() so `date` arrives as a Date here, but
+      // the openapi-fetch adapter wants the JSON-serializable ISO string the
+      // OpenAPI spec advertises. Convert once at the boundary.
+      const { date, ...rest } = validationResult.data
+      const result = await inspectionAdapter.saveInspectionDraft(inspectionId, {
+        ...rest,
+        ...(date ? { date: date.toISOString() } : {}),
+      })
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: { success: true }, ...metadata }
+    } catch (error) {
+      logger.error({ error, inspectionId }, 'Error saving inspection draft')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+}

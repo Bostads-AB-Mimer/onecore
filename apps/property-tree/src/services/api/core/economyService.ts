@@ -1,14 +1,23 @@
-import { GET } from './base-api'
-import { Invoice, InvoicePaymentEvent } from '@onecore/types'
+import {
+  economy,
+  Invoice,
+  InvoicePaymentEvent,
+  XledgerProject,
+} from '@onecore/types'
+import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
+import { XledgerContact } from '@onecore/types/src/types'
 
-// TODO: Fix the ts-ignore by updating the OpenAPI spec
+import { GET, POST, PUT } from './baseApi'
+import type { paths } from './generated/api-types'
+
+// TODO: Fix the @ts-expect-error by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(
 
 async function getInvoicesByContactCode(
   contactCode: string
 ): Promise<Invoice[]> {
   const { data, error } = await GET(
-    //@ts-ignore
+    // @ts-expect-error
     `/invoices/by-contact-code/${contactCode}`,
     {
       params: { path: { contactCode } },
@@ -24,11 +33,32 @@ async function getInvoicesByContactCode(
   return response.content.data as Invoice[]
 }
 
+async function getInvoiceByNumber(
+  invoiceNumber: string
+): Promise<Invoice | null> {
+  const { data, error, response } = await GET(
+    // @ts-expect-error
+    `/invoices/${invoiceNumber}`,
+    {
+      params: { path: { invoiceId: invoiceNumber } },
+    }
+  )
+
+  if (response.status === 404) return null
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const responseData = data as any
+  if (!responseData?.content) throw new Error('Response ok but missing content')
+
+  return responseData.content as Invoice
+}
+
 async function getInvoicePaymentEvents(
   invoiceId: string
 ): Promise<InvoicePaymentEvent[]> {
   const { data, error } = await GET(
-    //@ts-ignore
+    // @ts-expect-error
     `/invoices/${invoiceId}/payment-events`,
     {
       params: { path: { invoiceId } },
@@ -44,7 +74,152 @@ async function getInvoicePaymentEvents(
   return response.content as InvoicePaymentEvent[]
 }
 
+async function getInvoiceChannels(recipient: economy.LookupRecipient) {
+  const { data, error } = await POST('/invoice-channels', {
+    body: {
+      recipients: [recipient],
+    },
+  })
+
+  if (error) throw error
+
+  return data.content
+}
+
+async function getAutogiroConsent(nationalRegistrationNumber: string) {
+  const { data, error } = await GET(
+    '/autogiro-consent/{nationalRegistrationNumber}',
+    {
+      params: {
+        path: { nationalRegistrationNumber },
+      },
+    }
+  )
+
+  if (error) throw error
+
+  return data.content
+}
+
+async function getMiscellaneousInvoiceDataForLease(
+  leaseId: string
+): Promise<{ costCentre: string; propertyCode: string } | null> {
+  const rentalId = leaseId.split('/')[0]
+  const { data, error } = await GET(
+    // @ts-expect-error
+    `/invoices/miscellaneous/${rentalId}`,
+    {
+      params: {
+        path: { rentalId },
+      },
+    }
+  )
+
+  if (error) {
+    console.log('error', error)
+    throw error
+  }
+
+  // @ts-expect-error
+  return data.content.data
+}
+
+async function submitMiscellaneousInvoice(
+  invoice: MiscellaneousInvoicePayload
+) {
+  const formData = new FormData()
+
+  const invoiceForSubmission = {
+    ...invoice,
+    invoiceRows: invoice.invoiceRows.map((row) => ({
+      ...row,
+      price: parseFloat(row.price),
+    })),
+  }
+
+  if (invoice.attachment) {
+    const attachmentBytes = await invoice.attachment.bytes()
+    formData.append(
+      'attachment',
+      new Blob([attachmentBytes]),
+      invoice.attachment.name
+    )
+    delete invoiceForSubmission['attachment']
+  }
+
+  formData.append('invoice', JSON.stringify(invoiceForSubmission))
+
+  const { data, error } = await POST(
+    // @ts-expect-error
+    `/invoices/miscellaneous`,
+    {
+      body: formData,
+    }
+  )
+
+  if (error) throw error
+
+  return data
+}
+
+async function getXledgerContacts(): Promise<XledgerContact[]> {
+  // @ts-expect-error
+  const { data, error } = await GET(`/xledger-contacts`, {})
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content as XledgerContact[]
+}
+
+async function getXledgerProjects(): Promise<XledgerProject[]> {
+  // @ts-expect-error
+  const { data, error } = await GET(`/xledger-projects`, {})
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content as XledgerProject[]
+}
+
+type DeferralResponses =
+  paths['/invoices/{invoiceId}/deferral']['put']['responses']
+export type DeferralError =
+  | DeferralResponses[422]['content']['application/json']
+  | DeferralResponses[404]['content']['application/json']
+  | DeferralResponses[500]['content']['application/json']
+
+async function updateInvoiceDeferralDate(params: {
+  invoiceId: string
+  endDate: string
+  reason: string
+}): Promise<void> {
+  const { error } = await PUT('/invoices/{invoiceId}/deferral', {
+    params: { path: { invoiceId: params.invoiceId } },
+    body: {
+      endDate: params.endDate,
+      reason: params.reason,
+    },
+  })
+
+  if (error) throw error
+}
+
 export const economyService = {
   getInvoicesByContactCode,
+  getInvoiceByNumber,
   getInvoicePaymentEvents,
+  getMiscellaneousInvoiceDataForLease,
+  getInvoiceChannels,
+  getAutogiroConsent,
+  submitMiscellaneousInvoice,
+  getXledgerContacts,
+  getXledgerProjects,
+  updateInvoiceDeferralDate,
 }

@@ -8,7 +8,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { ScrollText, ChevronDown, ChevronUp } from 'lucide-react'
-import { formatRelativeTime } from '@/lib/dateUtils'
+import { formatAbsoluteTime } from '@/lib/dateUtils'
 import { eventTypeColors, objectTypeColors } from './constants'
 import { type Log } from '@/services/types'
 import { logService } from '@/services/api/logService'
@@ -48,7 +48,7 @@ export function LogEventCard({ log }: { log: Log }) {
               <div className="flex items-start justify-between gap-2 mb-2">
                 <p className="text-sm font-medium">{log.userName}</p>
                 <time className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatRelativeTime(log.eventTime)}
+                  {formatAbsoluteTime(log.eventTime)}
                 </time>
               </div>
 
@@ -104,7 +104,7 @@ export function LogEventCard({ log }: { log: Log }) {
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-xs font-medium">{eventLog.userName}</p>
                       <time className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatRelativeTime(eventLog.eventTime)}
+                        {formatAbsoluteTime(eventLog.eventTime)}
                       </time>
                     </div>
 

@@ -17,6 +17,7 @@ import {
   xledgerDateString,
   XpandContact,
 } from '@src/common/types'
+import { mapContactFlags } from '@src/services/common/adapters/xpand-db-adapter'
 import { match, P } from 'ts-pattern'
 import {
   InvoiceRowWithAccounting,
@@ -160,7 +161,10 @@ export const getInvoices = async (rows: InvoiceDataRow[]) => {
   return invoices
 }
 
-const getRentalSpecificRules = async (rentalIds: string[], year: string) => {
+export const getRentalSpecificRules = async (
+  rentalIds: string[],
+  year: string
+) => {
   const specificRules: RentalSpecificRules = {}
   const specificRulesBuildingsQuery = db('repsk')
     .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
@@ -236,7 +240,7 @@ const getRentalRowSpecificRule = async (
       )
 
       throw new Error(
-        `Accounting for rent article ${row.rentArticle} on invoice ${row.invoiceNumber} could not be determined (multiple accounting rules found)`
+        `Konteringsregler för hyresartikeln ${row.rentArticle} på faktura ${row.invoiceNumber} kunde inte hämtas (det finns flera uppsättningar konteringsregler för artikeln)`
       )
     }
   }
@@ -264,12 +268,14 @@ const getRentalRowSpecificRule = async (
 const getAdditionalColumns = async (
   row: InvoiceDataRow,
   rentalSpecificRules: Record<string, RentalSpecificRules>
-): Promise<InvoiceDataRow | null> => {
+): Promise<{ row: InvoiceDataRow | undefined; error?: string | undefined }> => {
   const contractCode = row.contractCode as string
   const additionalColumns: InvoiceDataRow = {}
 
   if ('Öresutjämning' == row.invoiceRowText) {
-    return {}
+    return {
+      row: undefined,
+    }
   }
 
   let specificRule: RentalSpecificRule | null = null
@@ -284,7 +290,10 @@ const getAdditionalColumns = async (
         row,
         'Could not find cost code and property for normal rent row'
       )
-      return {}
+      return {
+        row: undefined,
+        error: `Kunde inte hitta kostnadsställe och fastighet för hyresobjekt ${contractCode.split('/')[0]} på faktura ${row.invoiceNumber} med fråndatum ${row.fromDate}. Denna faktura måste bokföras manuellt i Xledger (både reskontra och intäktskonton)`,
+      }
     }
   } else if (row.company === '006') {
     specificRule = await getRentalRowSpecificRule(row)
@@ -303,7 +312,7 @@ const getAdditionalColumns = async (
     }
   }
 
-  return additionalColumns
+  return { row: additionalColumns }
 }
 
 export const enrichInvoiceRows = async (
@@ -361,25 +370,33 @@ export const enrichInvoiceRows = async (
           rentalSpecificRules
         )
 
-        if (!additionalColumns) {
+        if (!additionalColumns.row && additionalColumns.error) {
           logger.error(
-            { invoiceNumber: row.invoiceNumber },
+            {
+              invoiceNumber: row.invoiceNumber,
+              error: additionalColumns.error,
+            },
             'No additional columns'
           )
           errors.push({
             invoiceNumber: row.invoiceNumber as string,
             error:
+              additionalColumns.error ??
               'Kunde inte hitta fastighet eller kostnadsställe för fakturan',
           })
           return null
+        } else {
+          return { ...row, ...additionalColumns.row }
         }
-
-        return { ...row, ...additionalColumns }
       }
     )
   )
 
-  const rows = (await Promise.all(enrichedInvoiceRows)).filter((row) => row)
+  const errorInvoiceNumbers = new Set(errors.map((e) => e.invoiceNumber))
+  const rows = (await Promise.all(enrichedInvoiceRows)).filter(
+    (row) =>
+      row !== null && !errorInvoiceNumbers.has(row.invoiceNumber as string)
+  )
 
   return { rows: rows as InvoiceDataRow[], errors }
 }
@@ -399,7 +416,11 @@ export const getContacts = async (
       'cmctc.keycmobj as keycmobj',
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
-      'krknr.autogiro as autogiro'
+      'krknr.autogiro as autogiro',
+      'krknr.stopdate as autogiroCancelledAt',
+      'cmctc.avliden as deceased',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising'
     )
     .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
 
@@ -480,6 +501,9 @@ export const getContacts = async (
     const contactCode = contactRow.contactCode?.trimEnd()
     const emailAddress = getContactEmail(contactCode)
 
+    const { protectedIdentity, deceased, emigrated, noAdvertising } =
+      mapContactFlags(contactRow)
+
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
       contactKey: contactRow.contactKey?.trimEnd(),
@@ -492,11 +516,18 @@ export const getContacts = async (
       address: getContactAddress(contactCode),
       phoneNumbers: undefined,
       emailAddress: emailAddress,
-      autogiro: contactRow.autogiro && contactRow.autogiro !== 0,
+      autogiro:
+        contactRow.autogiro &&
+        contactRow.autogiro !== 0 &&
+        contactRow.autogiroCancelledAt === null,
       invoiceDeliveryMethod:
         emailAddress !== ''
           ? InvoiceDeliveryMethod.Email
           : InvoiceDeliveryMethod.Other,
+      protectedIdentity,
+      deceased,
+      emigrated,
+      noAdvertising,
     }
   })
 
@@ -524,7 +555,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   return {
     reference: contactCode,
     invoiceId: row.invoiceId.trim(),
-    leaseId: row.leaseId?.trim(),
+    leaseIds: row.leaseId ? [row.leaseId.trim()] : [],
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
     fromDate: row.fromDate,
     toDate: row.toDate,
@@ -655,7 +686,6 @@ export const getBatchTotalAmount = async (invoiceNumbers: string[]) => {
 }
 
 export const getInvoiceRows = async (
-  year: number,
   companyId: string,
   invoiceNumbers: string[]
 ): Promise<InvoiceRow[]> => {
@@ -663,8 +693,7 @@ export const getInvoiceRows = async (
     return []
   }
 
-  const keycodes =
-    companyId === '001' ? ['FADBT_HYRA'] : [/*'FADBT_INTHYRA',*/ 'FADBT_HYRA']
+  const keycodes = companyId === '001' ? ['FADBT_HYRA'] : ['FADBT_HYRA']
   const invoiceRowsQuery = db.raw(
     `
     SELECT
@@ -690,16 +719,16 @@ export const getInvoiceRows = async (
     LEFT JOIN repsr ON repsk.keyrepsr = repsr.keyrepsr
     WHERE
       (
-        (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = ?) OR
+        (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = datepart(year, krfkh.fromdate)) OR
         (krfkh.invoice like '5%' and (repsr.keycode is null and keyrektk is null and repsk.year is null)) or
-        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = ?) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
+        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = datepart(year, krfkh.fromdate)) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
       )
       AND cmcmp.code = ?
       AND (krfkh.type = 1 OR krfkh.type = 2)
       AND invoice IN (${invoiceNumbers.map((_) => `'${_}'`).join(',')})
     ORDER BY invoice ASC, krfkr.printsort ASC
     `,
-    [year, year, companyId]
+    [companyId]
   )
 
   const invoiceRows = await invoiceRowsQuery
@@ -729,15 +758,47 @@ export const getInvoiceRows = async (
     return column ? (column as string).trimEnd() : column
   }
 
+  // Derive "current month" strings in UTC so they share the same calendar as
+  // xledgerDateString (which uses toISOString → UTC). Comparing in any other
+  // timezone risks a row being rewritten to a different month than the one
+  // its formatted date string ends up in around month boundaries.
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const y = now.getUTCFullYear()
+  const m = pad(now.getUTCMonth() + 1)
+  const lastDay = pad(
+    new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)
+    ).getUTCDate()
+  )
+  const startOfCurrentMonthString = `${y}${m}01`
+  const endOfCurrentMonthString = `${y}${m}${lastDay}`
+
   const convertedInvoiceRows: InvoiceRow[] = invoiceRows.map(
     (invoiceRow: any) => {
       try {
         const type = invoiceRow['type'] as number
 
+        const invoiceFromDateString = xledgerDateString(
+          invoiceRow['invoiceFromDate'] as Date
+        )
+        const fromDateString =
+          invoiceFromDateString < startOfCurrentMonthString
+            ? startOfCurrentMonthString
+            : invoiceFromDateString
+
+        const invoiceToDateString = xledgerDateString(
+          invoiceRow['invoiceToDate'] as Date
+        )
+        const toDateString =
+          invoiceToDateString < startOfCurrentMonthString
+            ? endOfCurrentMonthString
+            : invoiceToDateString
+
         const invoice: InvoiceRow = {
           amount: sumColumns(invoiceRow['rowAmount']),
           deduction: sumColumns(invoiceRow['rowReduction']),
-          fromDate: xledgerDateString(invoiceRow['invoiceFromDate'] as Date),
+          fromDate: fromDateString,
           invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
           invoiceDueDate: xledgerDateString(
             invoiceRow['expirationDate'] as Date
@@ -748,7 +809,7 @@ export const getInvoiceRows = async (
           rentArticle: trim(invoiceRow['rentArticle']),
           roundoff: sumColumns(invoiceRow['roundoff']),
           rowType: sumColumns(invoiceRow['rowtype']),
-          toDate: xledgerDateString(invoiceRow['invoiceToDate'] as Date),
+          toDate: toDateString,
           totalAmount: sumColumns(
             invoiceRow['rowAmount'],
             invoiceRow['rowReduction'],

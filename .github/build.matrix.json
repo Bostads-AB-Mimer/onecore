@@ -48,10 +48,12 @@
     "imageName": "onecore-keys-portal",
     "build_args": {
       "test": {
-        "VITE_PROPERTY_TREE_URL": "https://property-tree-test.mimer.nu"
+        "VITE_PROPERTY_TREE_URL": "https://property-tree-test.mimer.nu",
+        "VITE_ALLIERA_BASE_URL": "https://srvmimhk21.mimerbygg.local/Alliera"
       },
       "release": {
-        "VITE_PROPERTY_TREE_URL": "https://property-tree.mimer.nu"
+        "VITE_PROPERTY_TREE_URL": "https://property-tree.mimer.nu",
+        "VITE_ALLIERA_BASE_URL": "https://srvmimhk21.mimerbygg.local/Alliera"
       }
     }
   },
@@ -73,12 +75,29 @@
     "runGenerateStatic": true
   },
   {
+    "name": "inspection",
+    "label": "ONECore Inspection Service",
+    "package": "@onecore/inspection",
+    "path": "services/inspection",
+    "docker": true,
+    "imageName": "onecore-inspection",
+    "runGenerateStatic": true
+  },
+  {
     "name": "work-order",
     "label": "ONECore Work Order Service",
     "package": "@onecore/work-order",
     "path": "services/work-order",
     "docker": true,
     "imageName": "onecore-work-order"
+  },
+  {
+    "name": "contacts",
+    "label": "ONECore Contacts Service",
+    "package": "@onecore/contacts",
+    "path": "services/contacts",
+    "docker": true,
+    "imageName": "onecore-contacts"
   },
   {
     "name": "core",

@@ -39,6 +39,11 @@ const schemas = {
     name: 'Room',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.CreateRoomRequestSchema, {
+    name: 'CreateRoomRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
   ...zodToJsonSchema(types.CompanySchema, {
     name: 'Company',
     target: 'openApi3',
@@ -50,8 +55,8 @@ const schemas = {
   ...zodToJsonSchema(types.MaintenanceUnitSchema, {
     name: 'MaintenanceUnit',
   }).definitions,
-  ...zodToJsonSchema(types.ResidenceByRentalIdSchema, {
-    name: 'ResidenceByRentalId',
+  ...zodToJsonSchema(types.ResidenceDetailedSchema, {
+    name: 'ResidenceDetailed',
     target: 'openApi3',
   }).definitions,
   ...zodToJsonSchema(types.ResidenceSummarySchema, {
@@ -209,6 +214,36 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(types.AIComponentAnalysisSchema, {
     name: 'AIComponentAnalysis',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CostCenterTreeSchema, {
+    name: 'CostCenterTree',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CostCenterSummarySchema, {
+    name: 'CostCenterSummary',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.KvvAreaSummarySchema, {
+    name: 'KvvAreaSummary',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.PutPropertyKvvAreaBodySchema, {
+    name: 'PutPropertyKvvAreaBody',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.PropertyKvvAreaLinkSchema, {
+    name: 'PropertyKvvAreaLink',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.KvvAreaSchema, {
+    name: 'KvvArea',
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,

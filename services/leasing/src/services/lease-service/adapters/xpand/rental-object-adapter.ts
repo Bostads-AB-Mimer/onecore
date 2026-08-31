@@ -74,33 +74,6 @@ function transformFromXpandRentalObject(row: any): RentalObject {
   const isSpecialProperty = ['24104', '23001', '23002', '23003'].includes(
     row.estatecode?.trim() || ''
   )
-  // Determine vacantFrom date
-  const lastDebitDate = row.lastdebitdate
-  const lastBlockStartDate = row.blockstartdate?.length
-    ? row.blockstartdate[row.blockstartdate.length - 1]
-    : row.blockstartdate
-  const lastBlockEndDate = row.blockenddate?.length
-    ? row.blockenddate[row.blockenddate.length - 1]
-    : row.blockenddate
-  let vacantFrom
-  if (lastBlockEndDate && lastBlockEndDate >= new Date()) {
-    //if the object is blocked to a date in the future, vacantFrom should be the day after
-    vacantFrom = new Date(lastBlockEndDate)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  } else if (lastBlockStartDate && !lastBlockEndDate) {
-    //if there is a block but no end date, vacantFrom should be undefined
-    vacantFrom = undefined
-  } else if (lastDebitDate) {
-    //if there is no block but a last debit date, vacantFrom should be the day after
-    vacantFrom = new Date(lastDebitDate)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  } else {
-    //there is no block and no last debit date, the parking space is vacant as of today
-    vacantFrom = new Date()
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  }
 
   return {
     rentalObjectCode: row.rentalObjectCode,
@@ -111,7 +84,8 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     residentialAreaCaption: row.residentialareacaption,
     objectTypeCaption: row.vehiclespacetypecaption,
     objectTypeCode: row.vehiclespacetypecode,
-    vacantFrom: vacantFrom,
+    blockStartDate: row.blockstartdate,
+    blockEndDate: row.blockenddate,
     districtCaption: district,
     districtCode: districtCode,
     braArea: row.braarea,
@@ -123,7 +97,6 @@ function transformFromXpandRentalObject(row: any): RentalObject {
 const buildMainQuery = (queries: {
   parkingSpacesQuery: any
   activeRentalBlocksQuery?: any
-  latestContractPerParkingSpaceQuery?: any
   rentalBlockDatesQuery?: any
   latestEndedContractPerParkingSpaceQuery?: any
 }) => {
@@ -144,21 +117,7 @@ const buildMainQuery = (queries: {
       'ps.residentialareacaption'
     )
 
-  if (queries.latestContractPerParkingSpaceQuery) {
-    query = query
-      .select(
-        'ac.contractid',
-        'ac.fromdate as contractfromdate',
-        'ac.todate as contracttodate',
-        'ac.lastdebitdate',
-        'cmvalbar.value as braarea'
-      )
-      .leftJoin(
-        queries.latestContractPerParkingSpaceQuery,
-        'ac.keycmobj',
-        'ps.keycmobj'
-      )
-  } else if (queries.latestEndedContractPerParkingSpaceQuery) {
+  if (queries.latestEndedContractPerParkingSpaceQuery) {
     query = query
       .select(
         'ac.contractid',
@@ -220,32 +179,6 @@ const buildSubQueries = () => {
     .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
     .where('babuf.cmpcode', '=', '001') //only gets parking spaces with company code 001
 
-  const latestContractPerParkingSpaceQuery = xpandDb.raw(`
-  (
-    SELECT *
-    FROM (
-      SELECT
-        hyinf.keycmobj,
-        hyobj.hyobjben as contractid,
-        hyobj.avtalsdat as contractdate,
-        hyobj.fdate as fromdate,
-        hyobj.tdate as todate,
-        hyobj.sistadeb as lastdebitdate,
-        ROW_NUMBER() OVER (
-          PARTITION BY hyinf.keycmobj
-          ORDER BY hyobj.fdate DESC
-        ) as rn
-      FROM hyobj
-      INNER JOIN hykop ON hykop.keyhyobj = hyobj.keyhyobj AND hykop.ordning = 1
-      INNER JOIN hyinf ON hyinf.keycmobj = hykop.keycmobj
-      WHERE hyobj.keyhyobt IN ('3', '5', '_1WP0JXVK8', '_1WP0KDMOO')
-        AND hyobj.makuldatum IS NULL
-        AND hyobj.deletemark = 0
-    ) sub
-    WHERE sub.rn = 1
-  ) as ac
-`)
-
   //query that gets the block with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
   const rentalBlockDatesQuery = xpandDb.raw(`
     (
@@ -268,7 +201,6 @@ const buildSubQueries = () => {
 
   return {
     parkingSpacesQuery,
-    latestContractPerParkingSpaceQuery,
     rentalBlockDatesQuery,
   }
 }
@@ -277,24 +209,15 @@ const getAllVacantParkingSpaces = async (): Promise<
   AdapterResult<RentalObject[], 'get-all-vacant-parking-spaces-failed'>
 > => {
   try {
-    const {
-      parkingSpacesQuery,
-      latestContractPerParkingSpaceQuery,
-      rentalBlockDatesQuery,
-    } = buildSubQueries()
+    const { parkingSpacesQuery, rentalBlockDatesQuery } = buildSubQueries()
 
     const results = await buildMainQuery({
       parkingSpacesQuery,
-      latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     })
       //exclude parking spaces with a blocks that has no end date
       .where(function () {
         this.whereNull('orb.keycmobj').orWhereNotNull('orb.blockenddate')
-      })
-      // Exkludera parkeringsplatser som har ett aktivt kontrakt utan lastdebitdate
-      .where(function () {
-        this.whereNull('ac.keycmobj').orWhereNotNull('ac.lastdebitdate')
       })
       .orderBy('ps.rentalObjectCode', 'asc')
 
@@ -315,15 +238,10 @@ const getParkingSpace = async (
   AdapterResult<RentalObject, 'unknown' | 'parking-space-not-found'>
 > => {
   try {
-    const {
-      parkingSpacesQuery,
-      latestContractPerParkingSpaceQuery,
-      rentalBlockDatesQuery,
-    } = buildSubQueries()
+    const { parkingSpacesQuery, rentalBlockDatesQuery } = buildSubQueries()
 
     const mainQuery = buildMainQuery({
       parkingSpacesQuery,
-      latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     })
       .where('ps.rentalObjectCode', '=', rentalObjectCode)
@@ -368,7 +286,7 @@ const getParkingSpaces = async (
   try {
     const {
       parkingSpacesQuery,
-      latestContractPerParkingSpaceQuery,
+      // latestContractPerParkingSpaceQuery,
       rentalBlockDatesQuery,
     } = buildSubQueries()
 
@@ -380,7 +298,6 @@ const getParkingSpaces = async (
       for (const batch of batches) {
         let query = buildMainQuery({
           parkingSpacesQuery,
-          latestContractPerParkingSpaceQuery,
           rentalBlockDatesQuery,
         }).whereIn('ps.rentalObjectCode', batch)
 
@@ -390,11 +307,11 @@ const getParkingSpaces = async (
         }
       }
     } else {
-      allResults = await buildMainQuery({
+      const query = buildMainQuery({
         parkingSpacesQuery,
-        latestContractPerParkingSpaceQuery,
         rentalBlockDatesQuery,
       })
+      allResults = await query
     }
 
     if (!allResults || allResults.length === 0) {

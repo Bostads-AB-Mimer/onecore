@@ -34,7 +34,7 @@ export const TenfastTenantSchema = z.object({
   hyresvard: z.string(),
   isCompany: z.boolean(),
   phone: z.string(),
-  idbeteckning: z.string(),
+  idbeteckning: z.string().optional().nullable(),
   postadress: z.string(),
   postnummer: z.string(),
   stad: z.string(),
@@ -42,39 +42,83 @@ export const TenfastTenantSchema = z.object({
   borgenarer: z.array(z.any()),
   firmatecknare: z.array(z.any()),
   displayName: z.string().optional(),
+  invoiceEmail: z.string().optional().nullable(),
 })
 
 export const TenfastRentalObjectSchema = z.object({
   _id: z.string(),
   externalId: z.string(),
-  hyra: z.number(), //total hyra inklusive moms
-  hyraVat: z.number(), // total moms pa hyran
-  hyraExcludingVat: z.number(), // hyran exklusive moms
-  hyror: z.array(TenfastInvoiceRowSchema),
-  contractTemplate: z.string().optional(),
+  hyra: z.number().optional(), //total hyra inklusive moms
+  hyraVat: z.number().optional(), // total moms pa hyran
+  hyraExcludingVat: z.number().optional(), // hyran exklusive moms
+  hyror: z.array(TenfastInvoiceRowSchema).optional(),
+  contractTemplate: z.string().optional().nullable(),
   postadress: z.string().nullish(),
   stadsdel: z.string().nullish(),
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
+  category: z.object({
+    code: z.string(),
+    label: z.string(),
+  }),
+  tags: z.array(z.string()).optional(),
   kvm: z.number().nullish(),
+  roomCount: z.number().nullish(),
+  avtal: z
+    .array(
+      z.lazy(
+        (): z.ZodTypeAny =>
+          TenfastLeaseSchema.partial().omit({
+            hyresgaster: true,
+            hyresobjekt: true,
+          })
+      )
+    )
+    .optional(), // We omit tenants and rental objects to avoid circular reference, also we don't need them in the context of rental object
+  displayName: z.string().optional(),
 })
 
-export const TenfastTenantByContactCodeResponseSchema = z.object({
-  records: z.array(TenfastTenantSchema),
-})
+export const TenfastRentalObjectWithEstateSchema =
+  TenfastRentalObjectSchema.extend({
+    fastighet: z
+      .object({
+        _id: z.string(),
+        fastighetsbeteckning: z.string(),
+        stadsdel: z.string().optional(),
+      })
+      .optional(),
+  })
+
 export const TenfastRentalObjectByRentalObjectCodeResponseSchema = z.object({
   records: z.array(TenfastRentalObjectSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
 })
 
 export type TenfastInvoiceRow = z.infer<typeof TenfastInvoiceRowSchema>
 export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
-export type TenfastTenantByContactCodeResponse = z.infer<
-  typeof TenfastTenantByContactCodeResponseSchema
->
+export const TenfastTagSchema = z.object({
+  _id: z.string(),
+  code: z.string(),
+  name: z.string(),
+})
+
+export type TenfastTag = z.infer<typeof TenfastTagSchema>
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
-export type TenfastRentalObjectByRentalObjectCodeResponse = z.infer<
-  typeof TenfastRentalObjectByRentalObjectCodeResponseSchema
->
+
+export const TenfastSubletTenantSchema = z.object({
+  startDate: z.coerce.date().optional().nullable(),
+  endDate: z.coerce.date().optional().nullable(),
+  externalId: z.string().optional().nullable(),
+  name: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  idbeteckning: z.string().nullable().optional(),
+  reason: z.string().nullable().optional(),
+})
+
+export type TenfastSubletTenant = z.infer<typeof TenfastSubletTenantSchema>
 
 // TODO byt namn
 export const TenfastContractSchema = z.object({
@@ -137,6 +181,9 @@ export const NotificationTypeSchema = z.enum([
   'email',
   'post',
   'none',
+  'stralfors',
+  'svefaktura',
+  'external',
 ])
 
 // Helper to handle optional date fields that might be empty strings, null, undefined, or Date objects
@@ -160,7 +207,7 @@ export const TenfastLeaseSchema = z.object({
   externalId: z.string(), // This is Onecore canonical lease id
   reference: z.number(),
   version: z.number(),
-  originalData: z.unknown(),
+  originalData: z.unknown().optional(),
   hyror: z.array(TenfastInvoiceRowSchema),
   simpleHyra: z.boolean(),
   startDate: z.coerce.date(),
@@ -210,7 +257,13 @@ export const TenfastLeaseSchema = z.object({
   _id: z.string(),
   hyresvard: z.string(),
   hyresgaster: z.array(TenfastTenantSchema),
-  hyresobjekt: z.array(TenfastRentalObjectSchema),
+  // Filter out incomplete/invalid rental objects (e.g. test data with missing fields)
+  hyresobjekt: z.array(z.unknown()).transform((items) =>
+    items.flatMap((item) => {
+      const result = TenfastRentalObjectWithEstateSchema.safeParse(item)
+      return result.success ? [result.data] : []
+    })
+  ),
   invitations: z.array(
     z.object({
       _id: z.string(),
@@ -229,9 +282,10 @@ export const TenfastLeaseSchema = z.object({
       originalName: z.string(),
     })
   ),
-  versions: z.unknown(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
+  andraHandHG: TenfastSubletTenantSchema.optional().nullable(),
+  versions: z.unknown().optional(),
+  createdAt: optionalDateField,
+  updatedAt: optionalDateField,
   startInvoicingFrom: optionalDateField,
   signedAt: optionalDateField, // When the lease was finalized as in tenant signed it or manually marked by mimer if offline sign.
   stage: z.string(),
@@ -241,3 +295,18 @@ export const TenfastLeaseSchema = z.object({
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 
 // TODO: I'd like to scope all these under "tenfast" instead, i.e tenfast.Lease, tenfast.Tenant etc
+
+export const TenfastLeaseTemplateResponseSchema = z.object({
+  records: z.array(TenfastLeaseSchema),
+})
+
+export const TenfastPaginatedLeaseResponseSchema = z.object({
+  records: z.array(TenfastLeaseSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
+export type TenfastPaginatedLeaseResponse = z.infer<
+  typeof TenfastPaginatedLeaseResponseSchema
+>

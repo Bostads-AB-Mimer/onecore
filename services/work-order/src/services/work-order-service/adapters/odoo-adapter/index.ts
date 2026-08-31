@@ -1,5 +1,6 @@
 import Odoo from 'odoo-await'
 import striptags from 'striptags'
+import { logger } from '@onecore/utilities'
 import { groupBy } from 'lodash'
 import z from 'zod'
 import Config from '../../../../common/config'
@@ -10,9 +11,12 @@ import {
 } from './utils'
 import { AdapterResult } from '../../types'
 import {
+  CreateInspectionWorkOrderGroup,
+  CreateInspectionWorkOrderResult,
   CreateWorkOrderDetails,
   CreateWorkOrderRow,
   Lease,
+  MaintenanceTeam,
   MaintenanceUnit,
   OdooWorkOrder,
   OdooWorkOrderMessage,
@@ -21,6 +25,12 @@ import {
   WorkOrder,
   WorkOrderMessage,
 } from '../../schemas'
+import type { SyncContactToWorkOrderPayload } from '@onecore/types'
+
+// Inspection-origin work orders all use this category + space; resolved by name
+// at runtime because Odoo ids differ per environment.
+const INSPECTION_WORK_ORDER_CATEGORY = 'Besiktning'
+const INSPECTION_SPACE_CAPTION = 'Lägenhet'
 
 const odoo = new Odoo({
   baseUrl: Config.odoo.url,
@@ -44,6 +54,7 @@ const WORK_ORDER_FIELDS: string[] = [
   'space_code',
   'equipment_code',
   'estate_code',
+  'property_code', // Mirrors `estate_code` for property-level maintenance requests; both fields hold the same value
   'building_code',
   'rental_property_id',
   'create_date',
@@ -94,7 +105,11 @@ export const getWorkOrdersByResidenceId = async (
 
     const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
-      ['rental_property_id', '=', residenceId],
+      [
+        ['rental_property_id', '=', residenceId],
+        ['building_code', '=', false],
+        ['maintenance_unit_code', '=', false],
+      ],
       WORK_ORDER_FIELDS
     )
 
@@ -115,9 +130,9 @@ export const getWorkOrdersByResidenceId = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByResidenceId')
+    throw err
   }
 }
 
@@ -147,9 +162,9 @@ export const getWorkOrdersByContactCode = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByContactCode')
+    throw err
   }
 }
 
@@ -161,7 +176,12 @@ export const getWorkOrdersByPropertyId = async (
 
     const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
-      ['estate_code', '=', propertyId],
+      [
+        ['property_code', '=', propertyId],
+        ['rental_property_id', '=', false],
+        ['building_code', '=', false],
+        ['maintenance_unit_code', '=', false],
+      ],
       WORK_ORDER_FIELDS
     )
 
@@ -182,9 +202,9 @@ export const getWorkOrdersByPropertyId = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByPropertyId')
+    throw err
   }
 }
 
@@ -196,7 +216,12 @@ export const getWorkOrdersByBuildingId = async (
 
     const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
-      ['building_code', '=', buildingId],
+      [
+        ['building_code', '=', buildingId],
+        ['rental_property_id', '=', false],
+        ['maintenance_unit_code', '=', false],
+      ],
+
       WORK_ORDER_FIELDS
     )
 
@@ -217,9 +242,9 @@ export const getWorkOrdersByBuildingId = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByBuildingId')
+    throw err
   }
 }
 
@@ -252,9 +277,43 @@ export const getWorkOrdersByMaintenanceUnitCode = async (
     }))
 
     return workOrders
-  } catch (error) {
-    console.error('Error fetching work orders:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByMaintenanceUnitCode')
+    throw err
+  }
+}
+
+export const getWorkOrderById = async (
+  id: number
+): Promise<WorkOrder | undefined> => {
+  try {
+    await odoo.connect()
+
+    const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
+      'maintenance.request',
+      [['id', '=', id]],
+      WORK_ORDER_FIELDS
+    )
+
+    const workOrder = odooWorkOrders[0]
+    if (!workOrder) {
+      return undefined
+    }
+
+    const odooWorkOrderMessages = await odoo.searchRead<OdooWorkOrderMessage>(
+      'mail.message',
+      MESSAGE_DOMAIN([workOrder.id]),
+      MESSAGE_FIELDS
+    )
+
+    return {
+      ...transformWorkOrder(workOrder),
+      Messages: transformMessages(odooWorkOrderMessages),
+      Url: WorkOrderUrl(workOrder.id),
+    }
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getWorkOrderById')
+    throw err
   }
 }
 
@@ -273,9 +332,28 @@ export const createWorkOrder = async (
     const newLeaseRecord = await createLeaseRecord(lease)
     const newTenantRecord = await createTenantRecord(tenant, details)
 
-    const newMaintenanceUnitRecord = rentalPropertyInfo.maintenanceUnits
+    const rowMaintenanceUnitCode = details.Rows[0].MaintenanceUnitCode
+    const selectedMaintenanceUnit = rowMaintenanceUnitCode
+      ? rentalPropertyInfo.maintenanceUnits?.find(
+          (mu) => mu.code === rowMaintenanceUnitCode
+        )
+      : undefined
+
+    if (rowMaintenanceUnitCode && !selectedMaintenanceUnit) {
+      logger.warn(
+        {
+          rowMaintenanceUnitCode,
+          rentalPropertyId: rentalPropertyInfo.id,
+          availableMaintenanceUnitCodes:
+            rentalPropertyInfo.maintenanceUnits?.map((mu) => mu.code) ?? [],
+        },
+        'createWorkOrder: maintenance unit code provided but not found on rental property'
+      )
+    }
+
+    const newMaintenanceUnitRecord = selectedMaintenanceUnit
       ? await createMaintenanceUnitRecord(
-          rentalPropertyInfo.maintenanceUnits[0],
+          selectedMaintenanceUnit,
           details.Rows[0]
         )
       : undefined
@@ -290,9 +368,9 @@ export const createWorkOrder = async (
     )
 
     return { ok: true, data: newWorkOrderId }
-  } catch (error) {
-    console.error('Error creating work order:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createWorkOrder')
+    throw err
   }
 }
 
@@ -316,9 +394,9 @@ const createRentalPropertyRecord = async (
       building_code: apartmentProperty.buildingCode,
       building: apartmentProperty.building,
     })
-  } catch (error) {
-    console.error('Error creating rental property record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createRentalPropertyRecord')
+    throw err
   }
 }
 
@@ -334,9 +412,9 @@ const createLeaseRecord = async (lease: Lease): Promise<number> => {
       contract_date: lease.contractDate || false,
       approval_date: lease.approvalDate || false,
     })
-  } catch (error) {
-    console.error('Error creating lease record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createLeaseRecord')
+    throw err
   }
 }
 
@@ -362,9 +440,9 @@ const createTenantRecord = async (
         (tenant.phoneNumbers ? tenant.phoneNumbers[0].phoneNumber : ''),
       is_tenant: true,
     })
-  } catch (error) {
-    console.error('Error creating tenant record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createTenantRecord')
+    throw err
   }
 }
 
@@ -382,9 +460,9 @@ const createMaintenanceUnitRecord = async (
       type: maintenanceUnit.type,
       code: code || maintenanceUnit.code,
     })
-  } catch (error) {
-    console.error('Error creating maintenance unit record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createMaintenanceUnitRecord')
+    throw err
   }
 }
 
@@ -397,14 +475,22 @@ const createWorkOrderRecord = async (
   details: CreateWorkOrderDetails
 ): Promise<number> => {
   try {
-    const supportedSpaceCodes = z.enum(['TV', 'BWC', 'KÖ'])
-    const captionForSpace: Record<
+    const supportedSpaceCodes = z.enum(['TV', 'BWC', 'KÖ', 'LGH', 'FÖR', 'KÄL'])
+    const odooSpaceCategory: Record<
       z.infer<typeof supportedSpaceCodes>,
       string
     > = {
       TV: 'Tvättstuga',
       BWC: 'Lägenhet',
       KÖ: 'Lägenhet',
+      LGH: 'Lägenhet',
+      FÖR: 'Lägenhet',
+      KÄL: 'Lägenhet',
+    }
+    const spaceInTitle: Record<z.infer<typeof supportedSpaceCodes>, string> = {
+      ...odooSpaceCategory,
+      FÖR: 'Förråd',
+      KÄL: 'Källare',
     }
 
     const uniqueSpaceCodes: z.infer<typeof supportedSpaceCodes>[] = []
@@ -414,7 +500,7 @@ const createWorkOrderRecord = async (
 
     details.Rows.forEach((row) => {
       const spaceCodeParseResult = supportedSpaceCodes.safeParse(
-        row.LocationCode
+        row.LocationCode.trim()
       )
       if (!spaceCodeParseResult.success) {
         throw new Error('Unsupported location code')
@@ -424,18 +510,19 @@ const createWorkOrderRecord = async (
       if (!uniqueSpaceCodes.includes(spaceCode)) {
         uniqueSpaceCodes.push(spaceCode)
 
-        if (!uniqueSpaceCaptions.includes(captionForSpace[spaceCode])) {
-          uniqueSpaceCaptions.push(captionForSpace[spaceCode])
+        if (!uniqueSpaceCaptions.includes(odooSpaceCategory[spaceCode])) {
+          uniqueSpaceCaptions.push(odooSpaceCategory[spaceCode])
         }
       }
 
-      if (!uniqueEquipmentCodes.includes(row.PartOfBuildingCode)) {
-        uniqueEquipmentCodes.push(row.PartOfBuildingCode)
+      const trimmedPartOfBuildingCode = row.PartOfBuildingCode.trim()
+      if (!uniqueEquipmentCodes.includes(trimmedPartOfBuildingCode)) {
+        uniqueEquipmentCodes.push(trimmedPartOfBuildingCode)
       }
 
       if (details.Rows.length > 1) {
         descriptions.push(
-          `${transformEquipmentCode(row.PartOfBuildingCode)}: ${row.Description}`
+          `${transformEquipmentCode(trimmedPartOfBuildingCode)}: ${row.Description}`
         )
       } else {
         descriptions.push(row.Description)
@@ -443,9 +530,12 @@ const createWorkOrderRecord = async (
     })
 
     const name =
-      uniqueEquipmentCodes.length > 1
-        ? `Felanmälda vitvaror - ${uniqueEquipmentCodes.map(transformEquipmentCode).join(', ')}`
-        : `Felanmäld ${captionForSpace[uniqueSpaceCodes[0]]} - ${transformEquipmentCode(uniqueEquipmentCodes[0])}`
+      uniqueEquipmentCodes.includes('SD') ||
+      uniqueEquipmentCodes.includes('DJUR')
+        ? `Felanmäld Skadedjur - ${[...new Set(uniqueSpaceCodes.map((c) => spaceInTitle[c]))].join(', ')}`
+        : uniqueEquipmentCodes.length > 1
+          ? `Felanmälda vitvaror - ${uniqueEquipmentCodes.map(transformEquipmentCode).join(', ')}`
+          : `Felanmäld ${spaceInTitle[uniqueSpaceCodes[0]]} - ${transformEquipmentCode(uniqueEquipmentCodes[0])}`
 
     return await odoo.create('maintenance.request', {
       rental_property_id: rentalPropertyRecord.toString(),
@@ -463,13 +553,15 @@ const createWorkOrderRecord = async (
       master_key: details.AccessOptions.Type === 0,
       space_caption: uniqueSpaceCaptions.join(', '),
       maintenance_team_id: maintenanceTeamId,
-      maintenance_request_category_id:
-        await getMaintenanceRequestCategoryId(uniqueSpaceCaptions),
+      maintenance_request_category_id: await getMaintenanceRequestCategoryId(
+        uniqueSpaceCaptions,
+        uniqueEquipmentCodes
+      ),
       creation_origin: 'mimer-nu',
     })
-  } catch (error) {
-    console.error('Error creating work order record:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.createWorkOrderRecord')
+    throw err
   }
 }
 
@@ -484,30 +576,182 @@ const getMaintenanceTeamId = async (teamName: string): Promise<number> => {
     }
 
     return team[0]
-  } catch (error) {
-    console.error('Error getting maintenance team id:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getMaintenanceTeamId')
+    throw err
   }
 }
 
 const getMaintenanceRequestCategoryId = async (
-  uniqueSpaceCaptions: string[]
+  uniqueSpaceCaptions: string[],
+  uniqueEquipmentCodes: string[]
+): Promise<number> => {
+  if (
+    uniqueEquipmentCodes.includes('SD') ||
+    uniqueEquipmentCodes.includes('DJUR')
+  ) {
+    return getMaintenanceRequestCategoryIdByName('Skadedjur')
+  }
+  if (uniqueSpaceCaptions.includes('Tvättstuga')) {
+    return getMaintenanceRequestCategoryIdByName('Tvättstuga')
+  }
+  return getMaintenanceRequestCategoryIdByName('Vitvara')
+}
+
+const getMaintenanceRequestCategoryIdByName = async (
+  name: string
 ): Promise<number> => {
   try {
-    if (uniqueSpaceCaptions.includes('Tvättstuga')) {
-      const categories = await odoo.search('maintenance.request.category', {
-        name: 'Tvättstuga',
-      })
-      return categories[0]
-    } else {
-      const categories = await odoo.search('maintenance.request.category', {
-        name: 'Vitvara',
-      })
-      return categories[0]
+    const categories: number[] = await odoo.search(
+      'maintenance.request.category',
+      { name }
+    )
+    if (categories.length === 0) {
+      throw new Error(`Maintenance request category "${name}" not found`)
     }
+    return categories[0]
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.getMaintenanceRequestCategoryIdByName')
+    throw err
+  }
+}
+
+// Lists the selectable resursgrupper (maintenance teams) for the inspection UI.
+export const getMaintenanceTeams = async (): Promise<
+  AdapterResult<MaintenanceTeam[], unknown>
+> => {
+  try {
+    await odoo.connect()
+    const teams = await odoo.searchRead<MaintenanceTeam>(
+      'maintenance.team',
+      [],
+      ['id', 'name']
+    )
+    return { ok: true, data: teams }
   } catch (error) {
-    console.error('Error getting maintenance request category id:', error)
-    throw error
+    logger.error({ err: error }, 'odooAdapter.getMaintenanceTeams')
+    return { ok: false, err: error }
+  }
+}
+
+/**
+ * Creates one work order per resursgrupp from an inspection. For each group we
+ * replicate what the Odoo create form's Save does server-side (its field
+ * population is @api.onchange UI-only and does not run on XML-RPC create):
+ * create a per-request maintenance.rental.property child from the residence
+ * info, then the maintenance.request with the chosen team + Besiktning category,
+ * then back-ref the child so it cascade-deletes with the request.
+ *
+ * When `inspectionId` is provided the operation is idempotent per
+ * (inspection, team): the record name encodes both, and if an open request
+ * with that name already exists (from a previous, possibly abandoned attempt)
+ * its description is refreshed instead of creating a duplicate — so retries
+ * after partial failures and re-submissions with added components are safe.
+ *
+ * Each group is an independent Odoo commit, so one failure does not abort the
+ * rest — the per-group outcome is returned to the caller in input order.
+ */
+export const createInspectionWorkOrders = async (
+  rentalProperty: RentalProperty,
+  groups: CreateInspectionWorkOrderGroup[],
+  inspectionId?: string
+): Promise<AdapterResult<CreateInspectionWorkOrderResult[], unknown>> => {
+  try {
+    await odoo.connect()
+    const categoryId = await getMaintenanceRequestCategoryIdByName(
+      INSPECTION_WORK_ORDER_CATEGORY
+    )
+
+    // The groups are independent commits — run them concurrently. The
+    // per-group try/catch converts failures into result entries, so
+    // Promise.all never rejects and result order matches the input.
+    const results = await Promise.all(
+      groups.map(async (group): Promise<CreateInspectionWorkOrderResult> => {
+        // The rentalProperty.id fallback covers callers that predate
+        // `inspectionId`; those names are not inspection-unique, so the
+        // upsert below is only attempted when inspectionId is present.
+        const name = `Besiktning ${inspectionId ?? rentalProperty.id} – ${group.maintenanceTeamName}`
+        try {
+          if (inspectionId) {
+            const existing = await odoo.searchRead<{ id: number }>(
+              'maintenance.request',
+              [
+                ['name', '=', name],
+                ['stage_id.done', '=', false],
+              ],
+              ['id']
+            )
+            if (existing.length > 0) {
+              // Created by a previous attempt — refresh the description so
+              // components assigned since then land on the same request.
+              await odoo.update('maintenance.request', existing[0].id, {
+                description: group.descriptionHtml,
+              })
+              return {
+                maintenanceTeamId: group.maintenanceTeamId,
+                ok: true,
+                workOrderId: existing[0].id,
+              }
+            }
+          }
+
+          // One rental-property child per request (it cascade-deletes with it).
+          const rentalPropertyRecord =
+            await createRentalPropertyRecord(rentalProperty)
+
+          const workOrderId = await odoo.create('maintenance.request', {
+            name,
+            space_caption: INSPECTION_SPACE_CAPTION,
+            description: group.descriptionHtml,
+            rental_property_id: rentalPropertyRecord.toString(),
+            maintenance_team_id: group.maintenanceTeamId,
+            maintenance_request_category_id: categoryId,
+            // Priority is the number of days until due — Odoo computes
+            // due_date = request_date + int(priority_expanded). '7' matches
+            // the default the agents use for besiktning requests.
+            priority_expanded: '7',
+            // search_type/search_value mirror what the Odoo create form stores
+            // when an agent looks up the property — odoo-onecore uses them to
+            // show how the request was matched to the rental object.
+            search_type: 'rentalObjectId',
+            search_value: rentalProperty.id,
+            // creation_origin: 'inspection' is intentionally omitted — Odoo rejects
+            // Selection values not in CREATION_ORIGINS. Re-add once the Odoo side
+            // adds the 'inspection' origin (the field is nullable, so omitting is safe).
+          })
+
+          // Back-ref so the child cascade-deletes with the request (matches Save).
+          await odoo.update(
+            'maintenance.rental.property',
+            rentalPropertyRecord,
+            {
+              maintenance_request_id: workOrderId,
+            }
+          )
+
+          return {
+            maintenanceTeamId: group.maintenanceTeamId,
+            ok: true,
+            workOrderId,
+          }
+        } catch (error) {
+          logger.error(
+            { err: error, maintenanceTeamId: group.maintenanceTeamId },
+            'odooAdapter.createInspectionWorkOrders.group'
+          )
+          return {
+            maintenanceTeamId: group.maintenanceTeamId,
+            ok: false,
+            err: error instanceof Error ? error.message : String(error),
+          }
+        }
+      })
+    )
+
+    return { ok: true, data: results }
+  } catch (error) {
+    logger.error({ err: error }, 'odooAdapter.createInspectionWorkOrders')
+    return { ok: false, err: error }
   }
 }
 
@@ -533,9 +777,9 @@ export const closeWorkOrder = async (workOrderId: number): Promise<boolean> => {
     return await odoo.update('maintenance.request', workOrderId, {
       stage_id: doneMaintenanceStages[0].id,
     })
-  } catch (error) {
-    console.error('Error closing work order:', error)
-    throw error
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.closeWorkOrder')
+    throw err
   }
 }
 
@@ -554,9 +798,55 @@ export const addMessageToWorkOrder = async (
         body_is_html: true,
       },
     ])
+  } catch (err) {
+    logger.error({ err }, 'odoo-adapter.addMessageToWorkOrder')
+    throw err
+  }
+}
+
+export const syncContact = async (
+  payload: SyncContactToWorkOrderPayload
+): Promise<
+  AdapterResult<
+    { updatedCount: number } | null,
+    'could-not-update-contact' | 'unknown'
+  >
+> => {
+  try {
+    await odoo.connect()
+
+    const tenantIds: number[] = await odoo.search('maintenance.tenant', {
+      contact_code: payload.contactCode,
+    })
+
+    if (tenantIds.length === 0) {
+      logger.warn(
+        { contactCode: payload.contactCode },
+        'No tenant found in Odoo, skipping'
+      )
+      return { ok: true, data: null }
+    }
+
+    const updateData: Record<string, string> = {
+      name: payload.fullName,
+    }
+
+    if (payload.emailAddress != null) {
+      updateData.email_address = payload.emailAddress
+    }
+
+    if (payload.phoneNumber != null) {
+      updateData.phone_number = payload.phoneNumber
+    }
+
+    for (const tenantId of tenantIds) {
+      await odoo.update('maintenance.tenant', tenantId, updateData)
+    }
+
+    return { ok: true, data: { updatedCount: tenantIds.length } }
   } catch (error) {
-    console.error('Error adding message to work order:', error)
-    throw error
+    logger.error(error, 'Error syncing contact to Odoo')
+    return { ok: false, err: 'could-not-update-contact' }
   }
 }
 

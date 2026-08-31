@@ -1,5 +1,5 @@
 import { sub } from 'date-fns'
-import { LeaseStatus } from '@onecore/types'
+import { LeaseStatus, LeaseType } from '@onecore/types'
 
 import { mapToOnecoreLease } from '../../helpers/tenfast'
 import * as factory from '../factories'
@@ -80,5 +80,54 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Ended)
+  })
+})
+
+describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
+  it.each([
+    ['bostad', LeaseType.HousingContract],
+    ['parkering', LeaseType.ParkingSpaceContract],
+    ['lokal', LeaseType.CommercialTenantContract],
+    ['garage', LeaseType.GarageContract],
+    ['forrad', LeaseType.StorageContract],
+    ['ovrigt', LeaseType.OtherContract],
+  ])('maps "%s" to %s', (typ, expected) => {
+    const lease = factory.tenfastLease.build({
+      hyresobjekt: [factory.tenfastRentalObject.build({ typ })],
+    })
+
+    expect(mapToOnecoreLease(lease).type).toBe(expected)
+  })
+
+  it('handles uppercase casing', () => {
+    const lease = factory.tenfastLease.build({
+      hyresobjekt: [factory.tenfastRentalObject.build({ typ: 'Bostad' })],
+    })
+
+    expect(mapToOnecoreLease(lease).type).toBe(LeaseType.HousingContract)
+  })
+
+  it('falls back to OtherContract for unknown typ', () => {
+    const lease = factory.tenfastLease.build({
+      hyresobjekt: [factory.tenfastRentalObject.build({ typ: 'unknown' })],
+    })
+
+    expect(mapToOnecoreLease(lease).type).toBe(LeaseType.OtherContract)
+  })
+
+  it('falls back to OtherContract when typ is undefined', () => {
+    const lease = factory.tenfastLease.build({
+      hyresobjekt: [factory.tenfastRentalObject.build({ typ: undefined })],
+    })
+
+    expect(mapToOnecoreLease(lease).type).toBe(LeaseType.OtherContract)
+  })
+
+  it('falls back to OtherContract when hyresobjekt is empty', () => {
+    const lease = factory.tenfastLease.build({
+      hyresobjekt: [],
+    })
+
+    expect(mapToOnecoreLease(lease).type).toBe(LeaseType.OtherContract)
   })
 })

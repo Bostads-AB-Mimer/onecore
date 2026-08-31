@@ -1,0 +1,339 @@
+/**
+ * Business logic service for processing scanned receipt images.
+ *
+ * Supports single-page images (JPEG, PNG, BMP) and multi-page PDFs.
+ * All inputs go through the same batch pipeline:
+ *
+ * 1. Extract frames (pdfjs-dist for PDF, Jimp for other formats)
+ * 2. Scan each frame for a QR code (zxing-wasm)
+ * 3. Group frames by decoded UUID
+ * 4. For each group: validate UUID, verify loan, create receipt
+ * 5. Extract each group's pages as a separate PDF for storage
+ *
+ * File storage and loan activation are handled by core.
+ */
+
+import { Knex } from 'knex'
+import { Jimp } from 'jimp'
+import { PDFDocument } from 'pdf-lib'
+import { logger } from '@onecore/utilities'
+import * as receiptsAdapter from './adapters/receipts-adapter'
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+interface Frame {
+  rgba: Uint8Array
+  width: number
+  height: number
+  qrData: string | null
+}
+
+export type ScanReceiptError =
+  | 'image-decode-failed'
+  | 'no-qr-found'
+  | 'invalid-uuid'
+  | 'loan-not-found'
+  | 'receipt-creation-failed'
+
+export type Result<T, E = string> =
+  | { ok: true; data: T }
+  | { ok: false; err: E; details?: string }
+
+interface BatchResult {
+  receiptId: string
+  keyLoanId: string
+  imageData: string
+}
+
+interface BatchError {
+  error: ScanReceiptError
+  details?: string
+  pageIndices: number[]
+}
+
+export interface BatchResponse {
+  results: BatchResult[]
+  errors: BatchError[]
+  unprocessedPdf?: string
+}
+
+/**
+ * Check PDF magic bytes: %PDF (25 50 44 46)
+ */
+function isPdf(buffer: Buffer): boolean {
+  if (buffer.length < 4) return false
+  return (
+    buffer[0] === 0x25 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x44 &&
+    buffer[3] === 0x46
+  )
+}
+
+/**
+ * Extract frames from a PDF buffer using pdfjs-dist.
+ * Each page is rendered to a @napi-rs/canvas, then we read RGBA pixel data.
+ */
+async function renderPdfPage(
+  page: { getViewport: Function; render: Function; cleanup: Function },
+  scale: number,
+  createCanvas: Function
+): Promise<Frame> {
+  const viewport = page.getViewport({ scale })
+  const canvas = createCanvas(viewport.width, viewport.height)
+  const context = canvas.getContext('2d')
+
+  await page.render({ canvas: canvas as any, viewport }).promise
+
+  // Only extract top-right quarter for QR detection
+  const cropW = Math.ceil(canvas.width / 2)
+  const cropH = Math.ceil(canvas.height / 2)
+  const cropX = canvas.width - cropW
+  const imageData = context.getImageData(cropX, 0, cropW, cropH)
+
+  return {
+    rgba: new Uint8Array(imageData.data),
+    width: cropW,
+    height: cropH,
+    qrData: null,
+  }
+}
+
+async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
+  const { createCanvas } = await import('@napi-rs/canvas')
+  const data = new Uint8Array(buffer)
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const doc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise
+  const frames: Frame[] = []
+
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i)
+
+    // Try zxing at scale 3.0 first, fall back to scale 6.0 if no QR found
+    let frame = await renderPdfPage(page, 3.0, createCanvas)
+    frame.qrData = await scanFrameForQrZxing(frame)
+
+    if (!frame.qrData) {
+      logger.info({ pageIndex: i - 1 }, 'No QR at scale 3.0, retrying at 6.0')
+      frame = await renderPdfPage(page, 6.0, createCanvas)
+      frame.qrData = await scanFrameForQrZxing(frame)
+    }
+
+    frames.push(frame)
+    page.cleanup()
+  }
+
+  await doc.cleanup()
+  return frames
+}
+
+/**
+ * Extract all frames from a buffer.
+ * PDF → pdfjs-dist (handles multi-page), other formats → Jimp (single frame).
+ */
+async function extractFrames(buffer: Buffer): Promise<Frame[]> {
+  if (isPdf(buffer)) {
+    return extractPdfFrames(buffer)
+  }
+
+  const image = await Jimp.read(buffer)
+  const { width, height, data } = image.bitmap
+  const frame: Frame = {
+    rgba: new Uint8Array(data),
+    width,
+    height,
+    qrData: null,
+  }
+  frame.qrData = await scanFrameForQrZxing(frame)
+  return [frame]
+}
+
+/**
+ * Scan a single frame for a QR code using zxing-wasm.
+ * Returns the decoded string or null if no QR found.
+ */
+async function scanFrameForQrZxing(frame: Frame): Promise<string | null> {
+  const { readBarcodes } = await import('zxing-wasm/reader')
+  const imageData = {
+    data: new Uint8ClampedArray(frame.rgba),
+    width: frame.width,
+    height: frame.height,
+  }
+  const results = await readBarcodes(imageData, { formats: ['QRCode'] })
+  return results[0]?.text || null
+}
+
+/**
+ * Extract specific pages from a PDF into a new PDF document.
+ * Page indices are 0-based.
+ */
+async function extractPdfPages(
+  originalBuffer: Buffer,
+  pageIndices: number[]
+): Promise<Buffer> {
+  const srcDoc = await PDFDocument.load(originalBuffer)
+  const newDoc = await PDFDocument.create()
+  const copiedPages = await newDoc.copyPages(srcDoc, pageIndices)
+  for (const page of copiedPages) {
+    newDoc.addPage(page)
+  }
+  const pdfBytes = await newDoc.save()
+  return Buffer.from(pdfBytes)
+}
+
+function validateUuid(value: string): boolean {
+  return UUID_REGEX.test(value)
+}
+
+/**
+ * Process a scanned receipt image (single or multi-page).
+ *
+ * Extracts frames, scans for QR codes, groups by UUID,
+ * and creates a receipt for each unique loan.
+ */
+export async function processScannedReceipts(
+  imageBuffer: Buffer,
+  dbConnection: Knex | Knex.Transaction
+): Promise<BatchResponse> {
+  const results: BatchResult[] = []
+  const errors: BatchError[] = []
+  const inputIsPdf = isPdf(imageBuffer)
+
+  // 1. Extract frames
+  let frames: Frame[]
+  try {
+    frames = await extractFrames(imageBuffer)
+  } catch (err) {
+    logger.error({ err }, 'Failed to decode image')
+    errors.push({
+      error: 'image-decode-failed',
+      pageIndices: [],
+    })
+    return { results, errors }
+  }
+
+  if (frames.length === 0) {
+    errors.push({ error: 'image-decode-failed', pageIndices: [] })
+    return { results, errors }
+  }
+
+  // 2. Scan each frame for QR and group by UUID
+  const groups = new Map<string, { pageIndices: number[] }>()
+  const noQrPages: number[] = []
+
+  for (let i = 0; i < frames.length; i++) {
+    const qrData = frames[i].qrData
+
+    if (!qrData) {
+      logger.warn({ pageIndex: i }, 'No QR code found on page')
+      noQrPages.push(i)
+      continue
+    }
+
+    if (!validateUuid(qrData)) {
+      logger.warn(
+        { pageIndex: i, qrData },
+        'QR code does not contain a valid UUID'
+      )
+      errors.push({
+        error: 'invalid-uuid',
+        details: qrData,
+        pageIndices: [i],
+      })
+      continue
+    }
+
+    const uuid = qrData.toLowerCase()
+    const existing = groups.get(uuid)
+    if (existing) {
+      existing.pageIndices.push(i)
+    } else {
+      groups.set(uuid, { pageIndices: [i] })
+    }
+  }
+
+  if (noQrPages.length > 0) {
+    errors.push({
+      error: 'no-qr-found',
+      details: `Pages without QR: ${noQrPages.join(', ')}`,
+      pageIndices: noQrPages,
+    })
+  }
+
+  if (groups.size === 0) {
+    return {
+      results,
+      errors,
+      unprocessedPdf: inputIsPdf ? imageBuffer.toString('base64') : undefined,
+    }
+  }
+
+  // 3. Process each UUID group
+  for (const [keyLoanId, group] of groups) {
+    const loanExists = await receiptsAdapter.keyLoanExists(
+      keyLoanId,
+      dbConnection
+    )
+    if (!loanExists) {
+      errors.push({
+        error: 'loan-not-found',
+        details: keyLoanId,
+        pageIndices: group.pageIndices,
+      })
+      continue
+    }
+
+    try {
+      const receipt = await receiptsAdapter.createReceipt(
+        {
+          keyLoanId,
+          receiptType: 'LOAN',
+          type: 'PHYSICAL',
+        },
+        dbConnection
+      )
+
+      let fileBuffer: Buffer
+      if (inputIsPdf) {
+        // Extract this group's pages from the original PDF
+        fileBuffer = await extractPdfPages(imageBuffer, group.pageIndices)
+      } else {
+        // Single image — store the original buffer
+        fileBuffer = imageBuffer
+      }
+
+      results.push({
+        receiptId: receipt.id,
+        keyLoanId,
+        imageData: fileBuffer.toString('base64'),
+      })
+    } catch (err) {
+      logger.error({ err, keyLoanId }, 'Failed to create receipt')
+      errors.push({
+        error: 'receipt-creation-failed',
+        details: keyLoanId,
+        pageIndices: group.pageIndices,
+      })
+    }
+  }
+
+  // Build a PDF of all unprocessed pages so they can be attached to error notifications
+  let unprocessedPdf: string | undefined
+  if (inputIsPdf && errors.length > 0) {
+    const unprocessedIndices = [
+      ...new Set(errors.flatMap((e) => e.pageIndices)),
+    ].sort((a, b) => a - b)
+
+    if (unprocessedIndices.length > 0) {
+      try {
+        const pdfBuffer = await extractPdfPages(imageBuffer, unprocessedIndices)
+        unprocessedPdf = pdfBuffer.toString('base64')
+      } catch (err) {
+        logger.error({ err }, 'Failed to build unprocessed pages PDF')
+      }
+    }
+  }
+
+  return { results, errors, unprocessedPdf }
+}

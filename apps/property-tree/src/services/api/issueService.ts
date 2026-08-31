@@ -1,5 +1,6 @@
+import { simulateDelay } from '@/shared/lib/delay'
+
 import { Issue } from '../types'
-import { simulateDelay } from '../../utils/delay'
 
 const mockIssues = {
   'residence-1': [

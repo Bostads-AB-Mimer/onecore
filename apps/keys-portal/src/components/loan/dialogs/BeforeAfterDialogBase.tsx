@@ -12,6 +12,12 @@ import { Spinner } from '@/components/ui/spinner'
 import type { Key } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 
+type SecondaryAction = {
+  label: string
+  onClick: () => void
+  variant?: 'default' | 'secondary' | 'outline' | 'destructive'
+}
+
 type Props = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -27,6 +33,8 @@ type Props = {
   acceptButtonText: string
   totalCount: number
   acceptDisabled?: boolean
+  primaryLabel?: string
+  secondaryAction?: SecondaryAction
 }
 
 export function BeforeAfterDialogBase({
@@ -44,6 +52,8 @@ export function BeforeAfterDialogBase({
   acceptButtonText,
   totalCount,
   acceptDisabled,
+  primaryLabel,
+  secondaryAction,
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,6 +109,15 @@ export function BeforeAfterDialogBase({
           >
             Avbryt
           </Button>
+          {secondaryAction && (
+            <Button
+              variant={secondaryAction.variant ?? 'secondary'}
+              onClick={secondaryAction.onClick}
+              disabled={isProcessing || totalCount === 0 || acceptDisabled}
+            >
+              {secondaryAction.label}
+            </Button>
+          )}
           <Button
             onClick={onAccept}
             disabled={isProcessing || totalCount === 0 || acceptDisabled}
@@ -108,6 +127,8 @@ export function BeforeAfterDialogBase({
                 <Spinner size="sm" />
                 {acceptButtonText}...
               </>
+            ) : primaryLabel ? (
+              `${primaryLabel} (${totalCount})`
             ) : (
               `Godkänn (${totalCount})`
             )}

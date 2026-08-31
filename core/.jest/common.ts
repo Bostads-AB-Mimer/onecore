@@ -8,7 +8,13 @@ jest.mock('@onecore/utilities', () => {
       error: () => {
         return
       },
+      warn: () => {
+        return
+      },
       debug: () => {
+        return
+      },
+      warn: () => {
         return
       },
     },
