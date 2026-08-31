@@ -1482,7 +1482,6 @@ describe('replyToOffer', () => {
         data: offer,
       })
       closeOfferByDenySpy.mockResolvedValueOnce({ ok: true, data: null })
-      getListingByListingIdSpy.mockResolvedValueOnce(undefined)
 
       const createOffer = jest
         .spyOn(createOfferProcesses, 'createOfferForInternalParkingSpace')
