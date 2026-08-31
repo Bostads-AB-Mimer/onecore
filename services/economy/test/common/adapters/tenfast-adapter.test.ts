@@ -249,6 +249,17 @@ describe('Tenfast Adapter', () => {
 
       const result = await getInvoicesForTenant('tenant-123')
 
+      expect(mockAxios.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: '/v1/hyresvard/hyror',
+          params: expect.objectContaining({
+            hyresvard: 'test-hyresvard-id',
+            hyresgast: 'tenant-123',
+            paginate: 'false',
+          }),
+        })
+      )
+
       assert(result.ok)
       expect(result.data).toHaveLength(1)
       expect(result.data[0].invoice).toMatchObject({
@@ -290,7 +301,7 @@ describe('Tenfast Adapter', () => {
       ]
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: mockInvoices,
+        data: { records: mockInvoices, prev: null, next: null, totalCount: 1 },
       })
 
       const result = await getInvoicesForTenant('tenant-123')
@@ -313,7 +324,7 @@ describe('Tenfast Adapter', () => {
 
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: paidInvoice,
+        data: { records: paidInvoice, prev: null, next: null, totalCount: 1 },
       })
 
       const result = await getInvoicesForTenant('tenant-123')
@@ -339,7 +350,7 @@ describe('Tenfast Adapter', () => {
 
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: invoices,
+        data: { records: invoices, prev: null, next: null, totalCount: 2 },
       })
 
       const result = await getInvoicesForTenant('tenant-123')

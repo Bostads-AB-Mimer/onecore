@@ -214,8 +214,12 @@ export const TenfastInvoiceSchema = z.object({
   gracePeriod: TenfastGracePeriodSchema.nullish(),
 })
 
-export const TenfastInvoicesByTenantIdResponseSchema =
-  z.array(TenfastInvoiceSchema)
+export const TenfastInvoicesByTenantIdResponseSchema = z.object({
+  records: z.array(TenfastInvoiceSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
 
 export const TenfastTenantSchema = z.object({
   _id: z.string(),
