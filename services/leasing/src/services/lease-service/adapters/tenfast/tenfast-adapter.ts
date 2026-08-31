@@ -343,18 +343,11 @@ export const getLeases = async (): Promise<
   }
 }
 
-/**
- * Fetches all non-archived leases across all pages using cursor-based
- * pagination on the search endpoint (/v1/hyresvard/avtal/search). Uses the
- * search endpoint (not the list endpoint) because it supports filter params
- * such as filter[isArchived], which is required to include preTermination
- * leases. Intended for full cache population.
- */
+// Uses search endpoint (not list) — only search supports filter[isArchived], needed to include preTermination leases.
 export async function getAllLeases(): Promise<
   AdapterResult<TenfastLease[], 'unknown'>
 > {
   try {
-    // Use the search endpoint — the list endpoint does not support filter params.
     // Tenfast requires literal brackets/commas — URLSearchParams encodes them.
     const qs = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
@@ -376,16 +369,11 @@ export async function getAllLeases(): Promise<
   }
 }
 
-/**
- * Fetches all leases updated at or after `since` using cursor-based pagination.
- * Pass a timestamp slightly in the past (e.g. lastSyncedAt - 30s) to guard
- * against clock skew between Tenfast and the calling service.
- */
+// Uses list endpoint — only list supports updatedAtSince. Pass since - 30s to guard against clock skew.
 export async function getLeasesUpdatedSince(
   since: Date
 ): Promise<AdapterResult<TenfastLease[], 'unknown'>> {
   try {
-    // The list endpoint supports updatedAtSince but not filter params.
     const params = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
       updatedAtSince: since.toISOString(),
