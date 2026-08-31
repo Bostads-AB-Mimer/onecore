@@ -15,7 +15,6 @@ import {
   TenfastLeaseSchema,
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
-  TenfastLeaseTemplateResponseSchema,
   TenfastPaginatedLeaseResponseSchema,
   TenfastTagSchema,
   TenfastTag,
@@ -302,44 +301,6 @@ export const uploadLeaseFile = async (
       'tenfast-adapter.uploadLeaseFile: caught exception'
     )
     return { ok: false, err: 'unknown' }
-  }
-}
-
-export const getLeases = async (): Promise<
-  AdapterResult<
-    Array<TenfastLease>,
-    'unknown' | 'bad-request' | 'not-found' | 'parsing-error'
-  >
-> => {
-  try {
-    const leaseResponse = await tenfastApi.request({
-      method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?populate=hyresobjekt,hyresgaster&limit=100000`,
-    })
-
-    if (leaseResponse.status === 400)
-      return handleTenfastError(leaseResponse.data.error, 'bad-request')
-    else if (leaseResponse.status !== 200 && leaseResponse.status !== 201)
-      return handleTenfastError(
-        {
-          error: leaseResponse.data.error,
-          status: leaseResponse.status,
-        },
-        'not-found'
-      )
-
-    const parsedLeaseResponse = TenfastLeaseTemplateResponseSchema.safeParse(
-      leaseResponse.data
-    )
-
-    if (!parsedLeaseResponse.success)
-      return handleTenfastError(parsedLeaseResponse.error, 'parsing-error')
-    return {
-      ok: true,
-      data: parsedLeaseResponse.data.records,
-    }
-  } catch (err: any) {
-    return handleTenfastError(err, 'unknown')
   }
 }
 
