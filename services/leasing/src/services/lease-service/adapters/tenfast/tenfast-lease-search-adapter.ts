@@ -1154,7 +1154,11 @@ async function searchLeasesFromCache(
   const pageSlice = sorted.slice((page - 1) * limit, page * limit)
 
   logger.info(
-    { totalInCache: leaseCache.getAll().length, afterFilters: totalCount, page },
+    {
+      totalInCache: leaseCache.getAll().length,
+      afterFilters: totalCount,
+      page,
+    },
     'lease-cache: search served from cache'
   )
 

@@ -74,7 +74,9 @@ describe('lease-cache', () => {
     })
 
     it('sets status to error if fullFetchFn throws and cache is empty', async () => {
-      const fullFetchFn = jest.fn().mockRejectedValue(new Error('network failure'))
+      const fullFetchFn = jest
+        .fn()
+        .mockRejectedValue(new Error('network failure'))
       const deltaFetchFn = jest.fn()
 
       cache.startLeaseCache(fullFetchFn, deltaFetchFn)
