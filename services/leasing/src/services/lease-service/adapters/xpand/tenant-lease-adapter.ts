@@ -833,11 +833,14 @@ const getEmailAndPhoneByContactCodes = async (
 ): Promise<Map<string, { email: string | null; phone: string | null }>> => {
   if (contactCodes.length === 0) return new Map()
 
+  // Trim input codes so they match the trimmed values stored in Xpand
+  const trimmed = contactCodes.map((c) => c.trim())
+
   const CHUNK_SIZE = 1000 // MSSQL caps WHERE IN at 2100 params
   const map = new Map<string, { email: string | null; phone: string | null }>()
 
-  for (let i = 0; i < contactCodes.length; i += CHUNK_SIZE) {
-    const chunk = contactCodes.slice(i, i + CHUNK_SIZE)
+  for (let i = 0; i < trimmed.length; i += CHUNK_SIZE) {
+    const chunk = trimmed.slice(i, i + CHUNK_SIZE)
     const rows = await xpandDb
       .from('cmctc')
       .select(
@@ -863,6 +866,7 @@ const getEmailAndPhoneByContactCodes = async (
       .where('cmctc.deletemark', '=', '0')
 
     for (const row of rows) {
+      if (!row.contactCode) continue
       map.set((row.contactCode as string).trim(), {
         email: row.email ? (row.email as string).trim() : null,
         phone: row.phone ? (row.phone as string).trim() : null,
