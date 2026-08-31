@@ -926,6 +926,32 @@ export async function searchRentalBlocks(
   }
 }
 
+export async function getRentalIdsWithBlock(
+  queryParams: QueryParams
+): Promise<AdapterResult<string[], 'unknown'>> {
+  try {
+    const params = new URLSearchParams()
+    Object.entries(queryParams).forEach(([key, value]) => {
+      if (value === undefined) return
+      if (Array.isArray(value)) {
+        value.forEach((v) => params.append(key, String(v)))
+      } else {
+        params.append(key, String(value))
+      }
+    })
+
+    const response = await axios.get(
+      `${config.propertyBaseService.url}/residences/rental-blocks/rental-ids`,
+      { params }
+    )
+
+    return { ok: true, data: response.data.content as string[] }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalIdsWithBlock')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function exportRentalBlocksToExcel(
   queryParams: QueryParams
 ): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {

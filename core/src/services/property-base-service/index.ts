@@ -1630,6 +1630,58 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/rental-blocks/rental-ids:
+   *   get:
+   *     summary: Rental ids carrying a matching rental block
+   *     description: >
+   *       Lean bulk lookup - distinct rental ids only, no pagination or
+   *       enrichment. Used by Odoo to render the "Spärr skadedjur" badge on
+   *       every kanban card from a single call.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved rental ids
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/rental-blocks/rental-ids', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await propertyBaseAdapter.getRentalIdsWithBlock(ctx.query)
+
+      if (!result.ok) {
+        logger.error({ err: result.err, metadata }, 'Internal server error')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /residences/block-reasons:
    *   get:
    *     summary: Get all block reasons
