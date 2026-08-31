@@ -20,6 +20,7 @@ import {
   getAllRentalBlocks,
   searchRentalBlocks,
   getDistinctBlockReasons,
+  getRentalIdsWithBlock,
   upsertMalarEnergiFacilityId,
 } from '../adapters/residence-adapter'
 import {
@@ -33,6 +34,7 @@ import {
   getAllRentalBlocksQueryParamsSchema,
   searchRentalBlocksQueryParamsSchema,
   exportRentalBlocksQueryParamsSchema,
+  rentalIdsWithBlockQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 import { property } from '@onecore/types'
@@ -105,15 +107,13 @@ export const routes = (router: KoaRouter) => {
           dbResidences = await getResidencesByBuildingCode(buildingCode)
         }
 
-        const responseContent = dbResidences.map(
-          (v): Residence => ({
-            code: v.code,
-            id: v.id,
-            name: v.name || '',
-            deleted: Boolean(v.deleted),
-            validityPeriod: { fromDate: v.fromDate, toDate: v.toDate },
-          })
-        )
+        const responseContent = dbResidences.map((v): Residence => ({
+          code: v.code,
+          id: v.id,
+          name: v.name || '',
+          deleted: Boolean(v.deleted),
+          validityPeriod: { fromDate: v.fromDate, toDate: v.toDate },
+        }))
 
         ctx.status = 200
         ctx.body = {
@@ -283,24 +283,22 @@ export const routes = (router: KoaRouter) => {
         // Search for residences by rental id and name
         const residences = await searchResidences(q, ['rentalId', 'name'])
 
-        const content = residences.map(
-          (r): ResidenceSearchResult => ({
-            id: r.id,
-            code: r.code,
-            name: r.name || '',
-            deleted: Boolean(r.deleted),
-            validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
-            rentalId: r.propertyObject.propertyStructures[0].rentalId,
-            property: {
-              code: r.propertyObject.propertyStructures[0].propertyCode,
-              name: r.propertyObject.propertyStructures[0].propertyName,
-            },
-            building: {
-              code: r.propertyObject.propertyStructures[0].buildingCode,
-              name: r.propertyObject.propertyStructures[0].buildingName,
-            },
-          })
-        )
+        const content = residences.map((r): ResidenceSearchResult => ({
+          id: r.id,
+          code: r.code,
+          name: r.name || '',
+          deleted: Boolean(r.deleted),
+          validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
+          rentalId: r.propertyObject.propertyStructures[0].rentalId,
+          property: {
+            code: r.propertyObject.propertyStructures[0].propertyCode,
+            name: r.propertyObject.propertyStructures[0].propertyName,
+          },
+          building: {
+            code: r.propertyObject.propertyStructures[0].buildingCode,
+            name: r.propertyObject.propertyStructures[0].buildingName,
+          },
+        }))
 
         // rentalId comes from a nested to-many relation, so it can't be ordered
         // in the Prisma query like the other search endpoints — sort the mapped
@@ -1108,6 +1106,71 @@ export const routes = (router: KoaRouter) => {
         }
       } catch (err) {
         logger.error(err, 'Error fetching all rental blocks')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/rental-ids:
+   *   get:
+   *     summary: Rental ids carrying a matching rental block
+   *     description: >
+   *       Lean companion to /residences/rental-blocks/search. Returns only the
+   *       distinct rental ids, with no pagination, rent data or district
+   *       enrichment - for consumers that need to answer "is this object
+   *       blocked" in bulk.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason caption (supports multiple values)
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: >
+   *           true = not yet ended (toDate >= today or null), false = already
+   *           ended (toDate < today). If omitted, all blocks.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved rental ids
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: string
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/rental-ids',
+    parseRequest({ query: rentalIdsWithBlockQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const rentalIds = await getRentalIdsWithBlock(ctx.request.parsedQuery)
+
+        ctx.status = 200
+        ctx.body = { content: rentalIds, ...metadata }
+      } catch (err) {
+        logger.error(err, 'Error fetching rental ids with block')
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'unknown error'

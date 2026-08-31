@@ -282,6 +282,20 @@ export type SearchRentalBlocksQueryParams = z.infer<
   typeof searchRentalBlocksQueryParamsSchema
 >
 
+export const rentalIdsWithBlockQueryParamsSchema = z
+  .object({
+    blockReason: arrayQueryParam,
+    active: booleanStringSchema.optional(),
+  })
+  .transform((data) => ({
+    blockReason: data.blockReason ?? undefined,
+    active: data.active ?? undefined,
+  }))
+
+export type RentalIdsWithBlockQueryParams = z.infer<
+  typeof rentalIdsWithBlockQueryParamsSchema
+>
+
 // Export uses base filters only (no pagination)
 export const exportRentalBlocksQueryParamsSchema = rentalBlocksFilterSchema
 

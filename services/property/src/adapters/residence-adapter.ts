@@ -1617,6 +1617,49 @@ export const searchRentalBlocks = async (
   }
 }
 
+export type RentalIdsWithBlockOptions = Pick<
+  SearchRentalBlocksOptions,
+  'blockReason' | 'active'
+>
+
+/**
+ * Distinct rental ids currently carrying a matching rental block.
+ *
+ * Deliberately lean. Consumers that only need "is this object blocked" —
+ * Odoo's kanban badges (MIM-1959) — must not pay for the COUNT, the rent
+ * lookup and the district enrichment that searchRentalBlocks does for the
+ * spärrlista UI. Reuses buildRentalBlockWhereClause so the filter semantics
+ * cannot drift from the list, including its base "rentalId is not empty"
+ * condition.
+ */
+export const getRentalIdsWithBlock = async (
+  options: RentalIdsWithBlockOptions
+): Promise<string[]> => {
+  try {
+    const rows = await prisma.rentalBlock.findMany({
+      where: buildRentalBlockWhereClause(options),
+      select: {
+        propertyStructure: {
+          select: {
+            rentalId: true,
+          },
+        },
+      },
+    })
+
+    return [
+      ...new Set(
+        rows
+          .map((row) => row.propertyStructure?.rentalId?.trim())
+          .filter((rentalId): rentalId is string => !!rentalId)
+      ),
+    ]
+  } catch (err) {
+    logger.error({ err }, 'residence-adapter.getRentalIdsWithBlock')
+    throw err
+  }
+}
+
 export const getAllBlockReasons = async () => {
   try {
     const blockReasons = await prisma.blockReason.findMany({
