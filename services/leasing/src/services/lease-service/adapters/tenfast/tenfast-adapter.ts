@@ -59,7 +59,10 @@ const fetchAllPages = async <
   let records: z.output<S>['records'] = []
   let page = 0
 
-  while (records.length === 0 || (next !== null && records.length < totalCount)) {
+  while (
+    records.length === 0 ||
+    (next !== null && records.length < totalCount)
+  ) {
     if (page >= MAX_PAGES) {
       throw new Error(
         `fetchAllPages: exceeded ${MAX_PAGES} pages (${records.length} records fetched, totalCount=${totalCount})`
@@ -320,8 +323,7 @@ export async function getAllLeases(): Promise<
       .replace(/%2C/gi, ',')
     const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${qs}`
     const records = await fetchAllPages(
-      (cursor) =>
-        cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl,
+      (cursor) => (cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl),
       TenfastPaginatedLeaseResponseSchema
     )
     return { ok: true, data: records }
