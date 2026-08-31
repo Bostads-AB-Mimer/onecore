@@ -40,6 +40,81 @@ describe('economy-adapter', () => {
     })
   })
 
+  it('returns ok:false instead of throwing when economy responds with a non-2xx status', async () => {
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(500, { error: 'Internal server error' })
+
+    const result = await economyAdapter.getInvoicesByContactCode('P123456')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  describe(economyAdapter.getInvoiceByInvoiceId, () => {
+    it('returns the invoice on success', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456/)
+        .reply(200, { content: mockedInvoices[0] })
+
+      const result = await economyAdapter.getInvoiceByInvoiceId('55123456')
+
+      expect(result).toEqual({
+        ok: true,
+        data: JSON.parse(JSON.stringify(mockedInvoices[0])),
+      })
+    })
+
+    it('returns not-found on 404', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456/)
+        .reply(404)
+
+      const result = await economyAdapter.getInvoiceByInvoiceId('55123456')
+
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+
+    it('returns ok:false instead of throwing on a 500', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456/)
+        .reply(500, { error: 'Internal server error' })
+
+      const result = await economyAdapter.getInvoiceByInvoiceId('55123456')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+  })
+
+  describe(economyAdapter.getInvoicePaymentEvents, () => {
+    it('returns not-found on 404', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456\/payment-events/)
+        .reply(404)
+
+      const result = await economyAdapter.getInvoicePaymentEvents('55123456')
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'not-found',
+        statusCode: 404,
+      })
+    })
+
+    it('returns ok:false instead of throwing on a 500', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456\/payment-events/)
+        .reply(500, { error: 'Internal server error' })
+
+      const result = await economyAdapter.getInvoicePaymentEvents('55123456')
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'unknown',
+        statusCode: 500,
+      })
+    })
+  })
+
   describe(economyAdapter.deferInvoice, () => {
     const params = {
       invoiceId: '55123456',
