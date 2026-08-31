@@ -108,6 +108,83 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /rental-objects/{rentalId}/kvv-area:
+   *   get:
+   *     summary: Get the KVV-area (förvaltningsområde) and district of a rental object
+   *     description: |
+   *       Object-level lookup for split properties: if the object's building
+   *       carries a KVV-area exception, that area wins over the property's
+   *       link. For objects in unsplit properties this answers the same as
+   *       the property-level lookup. The responsible kvartersvärd is hydrated
+   *       from Keycloak (`null` if unset or unreachable). 404 when nothing
+   *       resolves.
+   *     tags:
+   *       - Property KVV Area
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: KVV-area, cost center and responsible for the object
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/PropertyKvvAreaLookup'
+   *       404:
+   *         description: |
+   *           Unknown rental id or no KVV-area resolves. The body carries
+   *           `code: RENTAL_OBJECT_KVV_AREA_NOT_FOUND` so callers can tell
+   *           this apart from a routing 404.
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/rental-objects/:rentalId/kvv-area', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { rentalId } = ctx.params
+
+    const result = await propertyBaseAdapter.getKvvAreaByRentalId(rentalId)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Rental object has no KVV-area',
+          code: 'RENTAL_OBJECT_KVV_AREA_NOT_FOUND',
+          ...metadata,
+        }
+        return
+      }
+      logger.error(
+        { err: result.err, metadata },
+        'GET /rental-objects/:rentalId/kvv-area failed'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
+    const { kvvArea, costCenter, responsibleKeycloakUserId } = result.data
+
+    ctx.body = {
+      content: PropertyKvvAreaLookupSchema.parse({
+        kvvArea,
+        costCenter,
+        responsible: await resolveUserById(responsibleKeycloakUserId),
+      }),
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
    * /properties/{propertyCode}/kvv-area:
    *   put:
    *     summary: Set the KVV-area (förvaltningsområde) of a property
