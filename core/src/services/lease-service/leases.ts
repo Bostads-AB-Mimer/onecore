@@ -435,7 +435,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -1004,7 +1004,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
