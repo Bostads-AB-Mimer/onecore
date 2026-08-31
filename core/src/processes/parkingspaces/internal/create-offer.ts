@@ -105,16 +105,17 @@ export const createOfferForInternalParkingSpace = async (
       )
     }
 
-    const eligibleApplicant = await findAndDisqualifyIneligibleApplicant(
-      listing,
-      allApplicants.data,
-      log
-    )
+    const { eligibleApplicant, disqualifiedIds } =
+      await findAndDisqualifyIneligibleApplicant(
+        listing,
+        allApplicants.data,
+        log
+      )
 
-    // discard the first applicant since that is our eligibleApplicant
-    // leasing currently guarantees that the list is sorted correctly
-    const [_first, ...activeApplicants] = await getActiveApplicants(
-      allApplicants.data
+    const activeApplicants = (
+      await getActiveApplicants(allApplicants.data)
+    ).filter(
+      (a) => a.id !== eligibleApplicant?.id && !disqualifiedIds.includes(a.id)
     )
 
     if (!eligibleApplicant) {
@@ -136,7 +137,7 @@ export const createOfferForInternalParkingSpace = async (
         { listingId: listing.id },
         'No eligible applicant found, no offer created.'
       )
-      return makeProcessError(CreateOfferErrorCodes.NoApplicants, 500, {
+      return makeProcessError(CreateOfferErrorCodes.NoApplicants, 404, {
         message: 'No eligible applicant found, no offer created.',
       })
     }
@@ -287,6 +288,12 @@ export async function validateEligibilityAndDisqualifyIfNot(
   )
 
   if (!validationResultResArea.ok || !validationResultProperty.ok) {
+    // Set in-memory regardless of whether the remote update below succeeds:
+    // this applicant failed validation and must not be treated as an active
+    // candidate for the offer currently being built, even if persisting
+    // their Disqualified status fails (logged, not retried).
+    applicant.status = ApplicantStatus.Disqualified
+
     try {
       await leasingAdapter.updateApplicantStatus({
         applicantId: applicant.id,
@@ -325,17 +332,20 @@ async function findAndDisqualifyIneligibleApplicant(
   listing: Listing,
   applicants: DetailedApplicant[],
   log: string[]
-) {
+): Promise<{
+  eligibleApplicant: DetailedApplicant | undefined
+  disqualifiedIds: number[]
+}> {
+  const disqualifiedIds: number[] = []
   for (const a of applicants) {
-    if (
-      a.priority !== null &&
-      a.status === ApplicantStatus.Active &&
-      (await validateEligibilityAndDisqualifyIfNot(listing, a, log))
-    ) {
-      return a
+    if (a.priority !== null && a.status === ApplicantStatus.Active) {
+      if (await validateEligibilityAndDisqualifyIfNot(listing, a, log)) {
+        return { eligibleApplicant: a, disqualifiedIds }
+      }
+      disqualifiedIds.push(a.id)
     }
   }
-  return undefined
+  return { eligibleApplicant: undefined, disqualifiedIds }
 }
 
 // Ends a process gracefully by debugging log, logging the error, sending the error to the dev team and return a process error with the error code and details

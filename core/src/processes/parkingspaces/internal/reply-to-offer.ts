@@ -243,13 +243,15 @@ export const acceptOffer = async (
       const denyOtherOffers = await Promise.all(
         otherOffers.data.map((o) => denyOffer(o.id))
       )
-      const failedDenyOtherOffers = denyOtherOffers.filter(
-        (o) => o.processStatus === ProcessStatus.failed
-      )
-      if (failedDenyOtherOffers.length > 0) {
+      const failedDenyOtherOfferIds = otherOffers.data
+        .filter(
+          (_, i) => denyOtherOffers[i].processStatus === ProcessStatus.failed
+        )
+        .map((o) => o.id)
+      if (failedDenyOtherOfferIds.length > 0) {
         log.push(
           'Kunde inte neka följande andra erbjudanden för kunden: ' +
-            failedDenyOtherOffers.join(', ')
+            failedDenyOtherOfferIds.join(', ')
         )
       }
     }
@@ -363,48 +365,6 @@ export const denyOffer = async (
     }
     const offer = res.data
 
-    //Get listing
-    const listingWithoutRentalObject =
-      await leasingAdapter.getListingByListingId(offer.listingId)
-    if (!listingWithoutRentalObject) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        404,
-        `The listing ${offer.listingId.toString()} cannot be found.`
-      )
-    }
-
-    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
-      listingWithoutRentalObject.rentalObjectCode
-    )
-
-    if (!parkingSpacesResult.ok) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        500,
-        `RentalObject for listing with id ${listingWithoutRentalObject.id} not found`
-      )
-    }
-
-    const listing = {
-      ...listingWithoutRentalObject,
-      rentalObject: parkingSpacesResult.data,
-    }
-
-    if (
-      !listingWithoutRentalObject ||
-      !listing.rentalObject.residentialAreaCode
-    ) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        404,
-        `The listing ${offer.listingId.toString()} does not exist or is no longer available.`
-      )
-    }
-
     const closeOffer = await leasingAdapter.closeOfferByDeny(offer.id)
 
     if (!closeOffer.ok) {
@@ -431,7 +391,7 @@ export const denyOffer = async (
     return {
       processStatus: ProcessStatus.successful,
       httpStatus: 202,
-      data: { listingId: listing.id },
+      data: { listingId: offer.listingId },
     }
   } catch (err) {
     return endFailingProcess(
