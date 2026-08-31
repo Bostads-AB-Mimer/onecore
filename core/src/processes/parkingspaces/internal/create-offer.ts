@@ -284,6 +284,10 @@ export async function validateEligibilityAndDisqualifyIfNot(
   )
 
   if (!validationResultResArea.ok || !validationResultProperty.ok) {
+    // Set in-memory regardless of whether the remote update below succeeds:
+    // this applicant failed validation and must not be treated as an active
+    // candidate for the offer currently being built, even if persisting
+    // their Disqualified status fails (logged, not retried).
     applicant.status = ApplicantStatus.Disqualified
 
     try {

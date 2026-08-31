@@ -34,7 +34,11 @@ export const routes = (router: KoaRouter) => {
 
     if (affectedListingIds.ok) {
       ctx.body = { content: affectedListingIds.data, ...metadata }
+      return
     }
+
+    ctx.status = 500
+    ctx.body = { error: 'Error handling expired offers', ...metadata }
   })
 
   /**

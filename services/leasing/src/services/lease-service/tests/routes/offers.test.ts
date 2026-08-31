@@ -426,4 +426,28 @@ describe('offers', () => {
       expect(res.status).toBe(200)
     })
   })
+
+  describe('PUT /offers/handleexpired', () => {
+    it('responds with 200 and the affected listing ids on success', async () => {
+      jest
+        .spyOn(offerService, 'handleExpiredOffers')
+        .mockResolvedValueOnce({ ok: true, data: [1, 2] })
+
+      const res = await request(app.callback()).put('/offers/handleexpired')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([1, 2])
+    })
+
+    it('responds with 500 when handling expired offers fails', async () => {
+      jest
+        .spyOn(offerService, 'handleExpiredOffers')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).put('/offers/handleexpired')
+
+      expect(res.status).toBe(500)
+      expect(res.body).toHaveProperty('error')
+    })
+  })
 })
