@@ -14,94 +14,6 @@ import { mapToOnecoreLease } from '../../../helpers/tenfast'
 let tagTestClockOffset = 0
 const TAG_CACHE_BASE_TIME = new Date('2100-01-01').getTime()
 
-describe(tenfastAdapter.getLeaseTemplate, () => {
-  it('should return template when response is valid and status is 200', async () => {
-    // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    const mockResponse = {
-      status: 200,
-      data: mockTemplate,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('templateID')
-
-    // Assert
-    expect(result).toEqual({ ok: true, data: mockTemplate })
-  })
-
-  it('should return error "get-template-bad-request" when status is 400', async () => {
-    // Arrange
-    const mockResponse = {
-      status: 400,
-      data: { error: 'Bad request' },
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'get-template-bad-request',
-    })
-  })
-
-  it('should return error "could-not-get-template" when status is not 200 or 400', async () => {
-    // Arrange
-    const mockResponse = {
-      status: 500,
-      data: { error: 'Internal server error' },
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'could-not-get-template',
-    })
-  })
-
-  it('should return error "response-could-not-be-parsed" when schema parsing fails', async () => {
-    // Arrange
-    // Return a response with status 200 but invalid data for the schema
-    const invalidData = { notAValidTemplate: true }
-    const mockResponse = {
-      status: 200,
-      data: invalidData,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'response-could-not-be-parsed',
-    })
-  })
-
-  it('should return error "unknown" when tenfastApiRequest throws an exception', async () => {
-    // Arrange
-    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'unknown',
-    })
-  })
-})
-
 describe(tenfastAdapter.getRentalObject, () => {
   it('should return rental object when response is valid and status is 200', async () => {
     // Arrange
@@ -463,12 +375,6 @@ describe(tenfastAdapter.importContact, () => {
 describe(tenfastAdapter.createLease, () => {
   it('should return lease when all dependencies succeed and status is 200', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -508,11 +414,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should set vat to 0.25 in lease request data when includeVAT is true', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseTemplate')
-      .mockResolvedValue({ ok: true, data: mockTemplate })
-
     const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
@@ -541,11 +442,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should set vat to 0 in lease request data when includeVAT is false', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseTemplate')
-      .mockResolvedValue({ ok: true, data: mockTemplate })
-
     const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
@@ -574,12 +470,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return lease when all dependencies succeed and status is 201', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -618,12 +508,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "could-not-parse-lease" when Tenfast\'s create-lease response fails schema validation', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -654,77 +538,8 @@ describe(tenfastAdapter.createLease, () => {
     })
   })
 
-  it('should return error "rental-object-has-no-template" when rental object has no lease template set', async () => {
-    // Arrange
-    const mockRentalObject = factory.tenfastRentalObject.build({
-      contractTemplate: undefined,
-    })
-    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
-      ok: true,
-      data: mockRentalObject,
-    })
-
-    const contact = factory.contact.build()
-    const fromDate = new Date()
-
-    // Act
-    const result = await tenfastAdapter.createLease(
-      contact,
-      'RENTAL_CODE',
-      fromDate,
-      true
-    )
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'rental-object-has-no-template',
-    })
-  })
-
-  it('should return error "could-not-find-template" when getLeaseTemplate fails or returns no data', async () => {
-    // Arrange
-    const mockTenant = factory.tenfastTenant.build()
-    jest
-      .spyOn(tenfastAdapter, 'getTenantByContactCode')
-      .mockResolvedValue({ ok: true, data: mockTenant })
-
-    const mockRentalObject = factory.tenfastRentalObject.build()
-    jest
-      .spyOn(tenfastAdapter, 'getRentalObject')
-      .mockResolvedValue({ ok: true, data: mockRentalObject })
-
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: false,
-      err: 'could-not-get-template',
-    })
-
-    const contact = factory.contact.build()
-    const fromDate = new Date()
-
-    // Act
-    const result = await tenfastAdapter.createLease(
-      contact,
-      'RENTAL_CODE',
-      fromDate,
-      true
-    )
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'could-not-find-template',
-    })
-  })
-
   it('should return error "could-not-retrieve-tenant" when getOrCreateTenant fails or returns no data', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: false,
       err: 'could-not-retrieve-tenant',
@@ -750,12 +565,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "could-not-find-rental-object" when getRentalObject fails or returns no data', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -787,12 +596,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "rent-article-is-missing" when getRentalObject returns a rental object without rent article', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -827,12 +630,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "create-lease-bad-request" when leaseResponse status is 400', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -870,12 +667,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "lease-could-not-be-created" when leaseResponse status is not 200, 201, or 400', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -913,12 +704,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "lease-could-not-be-created" when tenfastApiRequest throws an exception', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,

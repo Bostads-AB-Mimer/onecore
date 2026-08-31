@@ -7,8 +7,6 @@ import {
   TenfastTenant,
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponseSchema,
-  TenfastLeaseTemplate,
-  TenfastLeaseTemplateSchema,
   TenfastTenantSchema,
   PreliminaryTerminationResponse,
   TenfastLease,
@@ -88,8 +86,6 @@ export const createLease = async (
 ): Promise<
   AdapterResult<
     Lease,
-    | 'could-not-find-template'
-    | 'rental-object-has-no-template'
     | 'could-not-retrieve-tenant'
     | 'could-not-create-tenant'
     | 'could-not-find-rental-object'
@@ -111,20 +107,11 @@ export const createLease = async (
     rentalObjectResponse.data.hyror.length === 0
   )
     return { ok: false, err: 'rent-article-is-missing' }
-  if (!rentalObjectResponse.data.contractTemplate)
-    return { ok: false, err: 'rental-object-has-no-template' }
-
-  const templateResponse = await getLeaseTemplate(
-    rentalObjectResponse.data.contractTemplate
-  )
-  if (!templateResponse.ok || !templateResponse.data)
-    return { ok: false, err: 'could-not-find-template' }
 
   try {
     const createLeaseRequestData = buildLeaseRequestData(
       tenantResult.data,
       rentalObjectResponse.data,
-      templateResponse.data,
       fromDate,
       includeVAT
     )
@@ -613,51 +600,6 @@ export const getRentalObjectAvailabilityInfo = async (
   }
 }
 
-export const getLeaseTemplate = async (
-  templateId: string
-): Promise<
-  AdapterResult<
-    TenfastLeaseTemplate | undefined,
-    | 'could-not-get-template'
-    | 'get-template-bad-request'
-    | 'response-could-not-be-parsed'
-    | 'unknown'
-  >
-> => {
-  try {
-    const templateResponse = await tenfastApi.request({
-      method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtalsmallar/${templateId}`,
-    })
-
-    if (templateResponse.status === 400)
-      return handleTenfastError(
-        templateResponse.data.error,
-        'get-template-bad-request'
-      )
-    else if (templateResponse.status !== 200)
-      return handleTenfastError(
-        {
-          error: templateResponse.data.error,
-          status: templateResponse.status,
-        },
-        'could-not-get-template'
-      )
-
-    const parsedTemplateResponse = TenfastLeaseTemplateSchema.safeParse(
-      templateResponse.data
-    )
-    if (!parsedTemplateResponse.success)
-      return handleTenfastError(
-        parsedTemplateResponse.error,
-        'response-could-not-be-parsed'
-      )
-    return { ok: true, data: parsedTemplateResponse.data ?? undefined }
-  } catch (err: any) {
-    return handleTenfastError(err, 'unknown')
-  }
-}
-
 export const getTenantByContactCode = async (
   contactCode: string
 ): Promise<
@@ -764,7 +706,6 @@ function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
 function buildLeaseRequestData(
   tenant: TenfastTenant,
   rentalObject: TenfastRentalObject,
-  template: TenfastLeaseTemplate,
   fromDate: Date,
   includeVAT: boolean
 ) {
@@ -789,8 +730,6 @@ function buildLeaseRequestData(
     betalningsOffset: '1d', //specifies the due date for the rent in relation to the start date of the rental period
     betalasForskott: true, //specifies whether the rent should be paid in advance or arrears
     vatEnabled: includeVAT,
-    originalTemplate: template._id,
-    template: template,
     method: 'simplesign',
   }
 }
