@@ -2297,7 +2297,10 @@ export const routes = (router: KoaRouter) => {
         triggeredBy
       )
       ctx.status = result.httpStatus
-      ctx.body = { content: result.response, ...metadata }
+      ctx.body =
+        result.processStatus === ProcessStatus.successful
+          ? { content: result.response, ...metadata }
+          : { error: result.error, content: result.response, ...metadata }
     } catch (error) {
       logger.error(error, 'Error')
       ctx.status = 500

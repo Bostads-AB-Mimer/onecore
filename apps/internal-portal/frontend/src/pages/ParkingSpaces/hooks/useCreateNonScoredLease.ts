@@ -17,6 +17,12 @@ export enum CreateNonScoredLeaseErrorCodes {
   ExternalCreditCheckFailed = 'external-credit-check-failed',
   InvalidAddress = 'invalid-address',
   AlreadyHasLease = 'already-has-lease',
+  ParkingSpaceNotFound = 'parking-space-not-found',
+  RentalObjectNotFound = 'rental-object-not-found',
+  ParkingSpaceNotExternal = 'parkingspace-not-external',
+  ApplicantNotFound = 'applicant-not-found',
+  FetchInvoicesFailed = 'fetch-invoices-failed',
+  CreateLeaseFailed = 'create-lease-failed',
   Unknown = 'unknown',
 }
 
@@ -95,6 +101,52 @@ export const useCreateNonScoredLease = (listingId: number) => {
           errorCode: CreateNonScoredLeaseErrorCodes.AlreadyHasLease,
           errorHeading: 'Kontrakt finns redan',
           errorMessage: 'Kunden har redan ett kontrakt för denna bilplats.',
+        }
+      case CreateNonScoredLeaseErrorCodes.ParkingSpaceNotFound:
+        return {
+          status: 404,
+          errorCode: CreateNonScoredLeaseErrorCodes.ParkingSpaceNotFound,
+          errorHeading: 'Bilplatsen hittades inte',
+          errorMessage:
+            'Bilplatsen finns inte längre eller är inte tillgänglig.',
+        }
+      case CreateNonScoredLeaseErrorCodes.RentalObjectNotFound:
+        return {
+          status: 404,
+          errorCode: CreateNonScoredLeaseErrorCodes.RentalObjectNotFound,
+          errorHeading: 'Hyresobjektet hittades inte',
+          errorMessage: 'Kunde inte hämta information om hyresobjektet.',
+        }
+      case CreateNonScoredLeaseErrorCodes.ParkingSpaceNotExternal:
+        return {
+          status: 404,
+          errorCode: CreateNonScoredLeaseErrorCodes.ParkingSpaceNotExternal,
+          errorHeading: 'Fel typ av bilplats',
+          errorMessage:
+            'Den här bilplatsen är poängsatt, inte extern, och kan inte hanteras här.',
+        }
+      case CreateNonScoredLeaseErrorCodes.ApplicantNotFound:
+        return {
+          status: 404,
+          errorCode: CreateNonScoredLeaseErrorCodes.ApplicantNotFound,
+          errorHeading: 'Sökande hittades inte',
+          errorMessage: 'Kunde inte hämta uppgifter om sökanden.',
+        }
+      case CreateNonScoredLeaseErrorCodes.FetchInvoicesFailed:
+        return {
+          status: 500,
+          errorCode: CreateNonScoredLeaseErrorCodes.FetchInvoicesFailed,
+          errorHeading: 'Kunde inte kontrollera fakturor',
+          errorMessage:
+            'Ett tekniskt fel inträffade vid hämtning av kundens fakturor. Försök igen.',
+        }
+      case CreateNonScoredLeaseErrorCodes.CreateLeaseFailed:
+        return {
+          status: 500,
+          errorCode: CreateNonScoredLeaseErrorCodes.CreateLeaseFailed,
+          errorHeading: 'Kunde inte skapa kontrakt',
+          errorMessage:
+            'Ett tekniskt fel inträffade när kontraktet skulle skapas i Tenfast. Försök igen eller kontakta support.',
         }
       default: {
         return defaultError
