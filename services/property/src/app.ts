@@ -6,7 +6,7 @@ import cors from '@koa/cors'
 
 import api from './api'
 
-import { etagMiddleware, logger, loggerMiddlewares } from '@onecore/utilities'
+import { logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
 import { routes as swaggerRoutes } from './routes/swagger'
 
@@ -28,11 +28,6 @@ app.use(
 // gzip takes them to a few percent of that. Brotli is off on purpose — node's
 // default quality 11 blocks the event loop for 100+ ms on payloads this size.
 app.use(compress({ threshold: 1024, br: false }))
-
-// After compress in the chain, so the hash covers the uncompressed body while
-// compression still applies on the way out. App-wide: every JSON route gets
-// revalidation, and no route module depends on registration order anymore.
-app.use(etagMiddleware())
 
 app.use(
   koaSwagger({

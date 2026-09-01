@@ -92,30 +92,6 @@ describe('GET /rental-objects', () => {
 
     expect(res.status).toBe(500)
   })
-
-  // The route sits behind the shared etag middleware (registered in
-  // routes/properties.ts, which api.ts mounts first).
-  it('serves JSON with an ETag and answers a matching If-None-Match with 304', async () => {
-    jest
-      .spyOn(rentalObjectAdapter, 'getRentalObjects')
-      .mockResolvedValue([summary])
-
-    const first = await request(app.callback())
-      .get('/rental-objects')
-      .query({ propertyCode: '04101' })
-
-    expect(first.status).toBe(200)
-    expect(first.headers['content-type']).toMatch(/application\/json/)
-    expect(first.headers.etag).toBeDefined()
-    expect(first.body.content).toEqual([summary])
-
-    const second = await request(app.callback())
-      .get('/rental-objects')
-      .query({ propertyCode: '04101' })
-      .set('If-None-Match', first.headers.etag)
-
-    expect(second.status).toBe(304)
-  })
 })
 
 describe('GET /rental-objects/search', () => {

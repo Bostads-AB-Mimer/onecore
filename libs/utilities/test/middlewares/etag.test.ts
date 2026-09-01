@@ -3,6 +3,7 @@ import { Context } from 'koa'
 import { etagMiddleware } from '../../src/middlewares/etag'
 
 type FakeCtx = {
+  method: string
   status: number
   body: unknown
   headers: Record<string, string>
@@ -14,6 +15,7 @@ type FakeCtx = {
 
 const makeCtx = (requestHeaders: Record<string, string> = {}): FakeCtx => {
   const ctx: FakeCtx = {
+    method: 'GET',
     status: 200,
     body: null,
     headers: {},
@@ -106,6 +108,21 @@ describe('etagMiddleware', () => {
 
     expect(ctx.headers['cache-control']).toBe('no-store')
     expect(ctx.headers.etag).toBeDefined()
+  })
+
+  it('leaves responses to unsafe methods untouched, even with a validator', async () => {
+    const first = makeCtx()
+    await run(first, { a: 1 })
+
+    // A mutation must never be short-circuited into a 304 after it ran.
+    const post = makeCtx({ 'if-none-match': first.headers.etag })
+    post.method = 'POST'
+    await run(post, { a: 1 })
+
+    expect(post.status).toBe(200)
+    expect(post.body).toEqual({ a: 1 })
+    expect(post.headers.etag).toBeUndefined()
+    expect(post.headers['cache-control']).toBeUndefined()
   })
 
   it('leaves buffers, strings and non-200 responses untouched', async () => {

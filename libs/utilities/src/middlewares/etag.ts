@@ -12,6 +12,11 @@ export const etagMiddleware = () => {
   return async (ctx: Context, next: Next) => {
     await next()
 
+    // Safe methods only: a mutation must never be short-circuited into a 304
+    // after it has run, and its response is nothing a cache should hold.
+    if (ctx.method !== 'GET' && ctx.method !== 'HEAD') {
+      return
+    }
     if (!ctx.body || ctx.status !== 200) {
       return
     }
