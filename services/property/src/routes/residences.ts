@@ -1153,12 +1153,7 @@ export const routes = (router: KoaRouter) => {
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: string
+   *               $ref: '#/components/schemas/GetRentalIdsWithBlockResponse'
    *       500:
    *         description: Internal server error
    */
@@ -1174,7 +1169,7 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 200
         ctx.body = { content: rentalIds, ...metadata }
       } catch (err) {
-        logger.error(err, 'Error fetching rental ids with block')
+        logger.error({ err }, 'Error fetching rental ids with block')
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'unknown error'

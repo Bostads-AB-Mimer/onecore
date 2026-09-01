@@ -45,9 +45,18 @@ describe('GET /residences/rental-blocks/rental-ids', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ blockReason: undefined, active: undefined })
+    expect(spy).toHaveBeenCalledWith({})
+  })
+
+  it('returns 400 for an unparseable active filter', async () => {
+    const spy = jest.spyOn(residenceAdapter, 'getRentalIdsWithBlock')
+
+    const res = await request(app.callback()).get(
+      '/residences/rental-blocks/rental-ids?active=maybe'
     )
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('returns 500 when the adapter throws', async () => {

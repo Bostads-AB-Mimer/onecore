@@ -62,6 +62,10 @@ export const routes = (router: KoaRouter) => {
     'RentalBlockWithRentalObject',
     schemas.RentalBlockWithRentalObjectSchema
   )
+  registerSchema(
+    'RentalIdsWithBlockResponse',
+    schemas.RentalIdsWithBlockResponseSchema
+  )
   registerSchema('FacilitySearchResult', schemas.FacilitySearchResultSchema)
   registerSchema('ResidenceSearchResult', schemas.ResidenceSearchResultSchema)
   registerSchema(
@@ -1648,21 +1652,39 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         style: form
    *         explode: true
+   *         description: Filter by block reason caption (supports multiple values)
    *       - in: query
    *         name: active
    *         schema:
    *           type: boolean
+   *         description: true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks.
    *     responses:
    *       200:
    *         description: Successfully retrieved rental ids
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/RentalIdsWithBlockResponse'
+   *       400:
+   *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
    */
   router.get('(.*)/residences/rental-blocks/rental-ids', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+    const queryParams =
+      schemas.GetRentalIdsWithBlockQueryParamsSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { error: queryParams.error.errors, ...metadata }
+      return
+    }
 
     try {
-      const result = await propertyBaseAdapter.getRentalIdsWithBlock(ctx.query)
+      const result = await propertyBaseAdapter.getRentalIdsWithBlock(
+        queryParams.data
+      )
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Internal server error')
