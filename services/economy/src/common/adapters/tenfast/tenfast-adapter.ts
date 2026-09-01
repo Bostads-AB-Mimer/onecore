@@ -708,7 +708,9 @@ const toTenfastDeferralSource = (
 }
 
 const transformToInvoice = (
-  tenfastInvoice: TenfastInvoice
+  tenfastInvoice: Omit<TenfastInvoice, 'avtal'> & {
+    avtal: { externalId: string }[]
+  }
 ): ParsedTenfastInvoice => {
   const remainingAmount = tenfastInvoice.amount - tenfastInvoice.amountPaid
 
@@ -1521,6 +1523,7 @@ export const mapToRentalLoss = async (
         invoiceNumber: rentalObjectExternalId,
         error: `Kunde inte hämta hyresartikel ${hyra.article}`,
       })
+      console.log('Kunde inte hämta hyresartikel')
       continue
     }
 
@@ -1674,6 +1677,20 @@ export const getRentalLosses = async (
     return rentalLoss.days.uncontracted > 0
   })
 
+  if (rentalLossResults.length === 0) {
+    logger.info(
+      { hyresvard: company.tenfastId },
+      'No rental objects with uncontracted days returned from Tenfast'
+    )
+    return {
+      ok: true,
+      data: {
+        rentalLosses: [],
+        errors: undefined,
+      },
+    }
+  }
+
   console.log('Actual rental losses', rentalLossResults.length)
 
   for (const tenfastRentalLoss of rentalLossResults) {
@@ -1688,7 +1705,7 @@ export const getRentalLosses = async (
   return {
     ok: true,
     data: {
-      rentalLosses: rentalLosses/*.slice(0, 10)*/,
+      rentalLosses: rentalLosses.slice(0, 10),
       errors: errors.length ? errors : undefined,
     },
   }

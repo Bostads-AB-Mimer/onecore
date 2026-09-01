@@ -1065,3 +1065,45 @@ describe(setGracePeriod, () => {
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })
+
+describe('TenfastInvoicesByExportedResponseSchema', () => {
+  // Regression test for AVTAL-36: the /v1/hyresvard/hyror endpoint returns
+  // lease objects that are far leaner than the full TenfastLeaseSchema (no
+  // populated hyresobjekt, no reference/invitationsToRegister/canDelete/
+  // depositState, etc). The schema must accept those payloads.
+  it('parses invoices whose avtal records only carry the fields used downstream', () => {
+    const TenfastInvoicesByExportedResponseSchema = jest.requireActual(
+      '@src/common/adapters/tenfast/schemas'
+    ).TenfastInvoicesByExportedResponseSchema
+
+    const leanInvoice = {
+      ...TenfastInvoiceFactory.build(),
+      avtal: [
+        {
+          _id: 'lease-lean',
+          externalId: '306-008-01-0201/01',
+          hyresgaster: [
+            {
+              _id: 'tenant-1',
+              externalId: 'P1',
+              displayName: 'Lean Tenant',
+            },
+          ],
+        },
+      ],
+    }
+
+    const parsed = TenfastInvoicesByExportedResponseSchema.safeParse({
+      records: [leanInvoice],
+    })
+
+    expect(parsed.success).toBe(true)
+    if (parsed.success) {
+      expect(parsed.data.records[0]).toMatchObject({
+        contractCode: '306-008-01-0201/01',
+        recipientContactCode: 'P1',
+        recipientName: 'Lean Tenant',
+      })
+    }
+  })
+})

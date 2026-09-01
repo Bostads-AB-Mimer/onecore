@@ -429,15 +429,34 @@ export const TenfastInvoiceSnapshotSchema = z.object({
   ),
 })
 
-// Getting invoices by the export endpoint returns records with full Lease objects but no snapshot
+// Looking up invoices by the export endpoint (/v1/hyresvard/hyror) returns
+// populated `avtal` objects, but those lease objects are far leaner than the
+// full `TenfastLeaseSchema` (hyresobjekt come back as IDs, many optional
+// fields are missing, etc.). Downstream only needs `_id`, `externalId`, and
+// the first tenant's `externalId` / `displayName`, so we use a permissive lean
+// schema here rather than the strict lease schema. Additional fields returned
+// by Tenfast are passed through untouched.
+const TenfastExportLeaseSchema = z
+  .object({
+    _id: z.string(),
+    externalId: z.string(),
+    hyresgaster: z
+      .array(
+        z.object({
+          _id: z.string(),
+          externalId: z.string(),
+          displayName: z.string(),
+        })
+      )
+      .min(1),
+    canVoid: z.boolean().optional(),
+  })
+  .passthrough()
+
 export const TenfastInvoicesByExportedResponseSchema = z.object({
   records: z.array(
     TenfastInvoiceSchema.extend({
-      avtal: z.array(
-        TenfastLeaseSchema.extend({
-          canVoid: z.boolean().optional(),
-        })
-      ),
+      avtal: z.array(TenfastExportLeaseSchema),
       ocrNumber: z.string().optional(),
       reference: z.coerce.string().optional(),
     }).transform((data) => ({

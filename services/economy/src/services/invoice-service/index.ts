@@ -91,13 +91,14 @@ export const routes = (router: KoaRouter) => {
       }
 
       let rentalLosses = await exportRentalLosses(companyId)
+      console.table(rentalLosses)
       rentalLosses = await handleRentalBlocks(rentalLosses)
-      /*const { aggregateRentalLossAccountingCsv, errors } = await createRentalLossAccounting(rentalLosses)
+      const { aggregateRentalLossAccountingCsv, errors } = await createRentalLossAccounting(rentalLosses)
 
       await uploadRentalLossCsvFile(
         companyId,
         aggregateRentalLossAccountingCsv
-      )*/
+      )
       ctx.status = 200
     }
   )
