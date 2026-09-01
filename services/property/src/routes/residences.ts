@@ -107,13 +107,15 @@ export const routes = (router: KoaRouter) => {
           dbResidences = await getResidencesByBuildingCode(buildingCode)
         }
 
-        const responseContent = dbResidences.map((v): Residence => ({
-          code: v.code,
-          id: v.id,
-          name: v.name || '',
-          deleted: Boolean(v.deleted),
-          validityPeriod: { fromDate: v.fromDate, toDate: v.toDate },
-        }))
+        const responseContent = dbResidences.map(
+          (v): Residence => ({
+            code: v.code,
+            id: v.id,
+            name: v.name || '',
+            deleted: Boolean(v.deleted),
+            validityPeriod: { fromDate: v.fromDate, toDate: v.toDate },
+          })
+        )
 
         ctx.status = 200
         ctx.body = {
@@ -283,22 +285,24 @@ export const routes = (router: KoaRouter) => {
         // Search for residences by rental id and name
         const residences = await searchResidences(q, ['rentalId', 'name'])
 
-        const content = residences.map((r): ResidenceSearchResult => ({
-          id: r.id,
-          code: r.code,
-          name: r.name || '',
-          deleted: Boolean(r.deleted),
-          validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
-          rentalId: r.propertyObject.propertyStructures[0].rentalId,
-          property: {
-            code: r.propertyObject.propertyStructures[0].propertyCode,
-            name: r.propertyObject.propertyStructures[0].propertyName,
-          },
-          building: {
-            code: r.propertyObject.propertyStructures[0].buildingCode,
-            name: r.propertyObject.propertyStructures[0].buildingName,
-          },
-        }))
+        const content = residences.map(
+          (r): ResidenceSearchResult => ({
+            id: r.id,
+            code: r.code,
+            name: r.name || '',
+            deleted: Boolean(r.deleted),
+            validityPeriod: { fromDate: r.fromDate, toDate: r.toDate },
+            rentalId: r.propertyObject.propertyStructures[0].rentalId,
+            property: {
+              code: r.propertyObject.propertyStructures[0].propertyCode,
+              name: r.propertyObject.propertyStructures[0].propertyName,
+            },
+            building: {
+              code: r.propertyObject.propertyStructures[0].buildingCode,
+              name: r.propertyObject.propertyStructures[0].buildingName,
+            },
+          })
+        )
 
         // rentalId comes from a nested to-many relation, so it can't be ordered
         // in the Prisma query like the other search endpoints — sort the mapped
