@@ -669,18 +669,6 @@ export async function fetchAllLeasesForExport(
   params: leasing.v1.LeaseSearchQueryParams,
   _ctx?: Context
 ): Promise<leasing.v1.LeaseSearchResult[]> {
-  // Check if batch-get path is needed (Xpand-bridged filters)
-  const needsBatchGet =
-    (params.buildingManager && params.buildingManager.length > 0) ||
-    (params.buildingCodes && params.buildingCodes.length > 0) ||
-    (params.areaCodes && params.areaCodes.length > 0) ||
-    (params.districtNames && params.districtNames.length > 0) ||
-    (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
-
-  if (needsBatchGet) {
-    return fetchAllLeasesForExportViaBatchGet(params)
-  }
-
   const queryParams = buildTenfastQueryParams({ ...params, limit: 500 })
   // Tenfast API expects literal brackets and commas, not URL-encoded
   const queryString = queryParams
@@ -757,95 +745,6 @@ export async function fetchLeasesUpdatedSinceForCache(
     )
   }
   return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
-}
-
-/**
- * Export path for Xpand-bridged filters (buildingManager, buildingCodes, etc.).
- * Fetches ALL matching rental object codes from Xpand, then batch-gets all
- * leases from Tenfast and applies local filters.
- */
-async function fetchAllLeasesForExportViaBatchGet(
-  params: leasing.v1.LeaseSearchQueryParams
-): Promise<leasing.v1.LeaseSearchResult[]> {
-  // Get rental object codes from Xpand for each active filter
-  const codeSetPromises: Promise<string[]>[] = []
-  const filterLabels: string[] = []
-
-  if (params.buildingManager && params.buildingManager.length > 0) {
-    codeSetPromises.push(
-      getRentalObjectCodesByBuildingManager(params.buildingManager)
-    )
-    filterLabels.push('buildingManager')
-  }
-  if (params.buildingCodes && params.buildingCodes.length > 0) {
-    codeSetPromises.push(
-      getRentalObjectCodesByBuildingCodes(params.buildingCodes)
-    )
-    filterLabels.push('buildingCodes')
-  }
-  if (params.areaCodes && params.areaCodes.length > 0) {
-    codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
-    filterLabels.push('areaCodes')
-  }
-  if (params.districtNames && params.districtNames.length > 0) {
-    codeSetPromises.push(
-      getRentalObjectCodesByDistrictNames(params.districtNames)
-    )
-    filterLabels.push('districtNames')
-  }
-  if (params.kvvAreaCodes && params.kvvAreaCodes.length > 0) {
-    codeSetPromises.push(
-      getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
-    )
-    filterLabels.push('kvvAreaCodes')
-  }
-
-  const codeSets = await Promise.all(codeSetPromises)
-
-  // Intersect all code sets
-  let codes = codeSets[0]
-  for (let i = 1; i < codeSets.length; i++) {
-    const set = new Set(codeSets[i])
-    codes = codes.filter((c) => set.has(c))
-  }
-
-  logger.info(
-    { filters: filterLabels, intersectedCount: codes.length },
-    'fetchAllLeasesForExportViaBatchGet: codes from Xpand'
-  )
-
-  if (codes.length === 0) return []
-
-  // Batch-get all leases from Tenfast
-  const batchSize = 500
-  const seenLeaseIds = new Set<string>()
-  const batchLeases: BatchGetLease[] = []
-
-  for (let i = 0; i < codes.length; i += batchSize) {
-    const batch = codes.slice(i, i + batchSize)
-    const res = await tenfastApi.request<RawBatchGetRentalObject[]>({
-      method: 'post',
-      url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
-      data: { externalIds: batch },
-    })
-
-    if (res.status !== 200 && res.status !== 201) continue
-
-    const parsed = parseBatchGetResponse(res.data, seenLeaseIds)
-    batchLeases.push(...parsed)
-  }
-
-  // Apply local filters (status, objectType, etc.)
-  let leases = batchLeases.map(mapBatchGetLeaseToOnecoreLease)
-  leases = applyLocalFilters(leases, batchLeases, params)
-
-  const batchLeaseMap = new Map(batchLeases.map((bl) => [bl.externalId, bl]))
-  return leases
-    .map((l) => {
-      const bl = batchLeaseMap.get(l.leaseId)
-      return bl ? mapBatchGetLeaseToSearchResult(bl) : undefined
-    })
-    .filter((r): r is leasing.v1.LeaseSearchResult => r !== undefined)
 }
 
 export async function fetchLeases(
@@ -1173,236 +1072,49 @@ export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  // For personnummer queries (idbeteckning), idbeteckning is not in the
-  // cache — fall through to Tenfast which can filter on it server-side.
+  const READY_TIMEOUT_MS = 5_000
+
+  if (!leaseCache.isReady()) {
+    const ready = await leaseCache.whenReady(READY_TIMEOUT_MS)
+    if (!ready) {
+      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+        headers: { 'Retry-After': '30' },
+      })
+    }
+  }
+
+  // idbeteckning (personnummer) is not stored in the cache — go to Tenfast.
   const apiFilters = params.q ? analyzeSearchTermForApi(params.q) : []
   const needsPersonnummerLookup = apiFilters.some(
     (f) => f.filterKey === 'filter[hyresgaster][idbeteckning]'
   )
 
-  if (leaseCache.isReady() && !needsPersonnummerLookup) {
-    return searchLeasesFromCache(params, ctx)
-  }
-
-  // Bridge Xpand-only filters via batch-get:
-  // buildingManager, buildingCodes, areaCodes, districtNames, kvvAreaCodes
-  // 1. Get rental object codes from Xpand for each active filter
-  // 2. Intersect the code sets (all filters must match)
-  // 3. Call Tenfast batch-get with those codes
-  // 4. Map, apply remaining filters, sort and paginate locally
-  const needsBatchGet =
-    (params.buildingManager && params.buildingManager.length > 0) ||
-    (params.buildingCodes && params.buildingCodes.length > 0) ||
-    (params.areaCodes && params.areaCodes.length > 0) ||
-    (params.districtNames && params.districtNames.length > 0) ||
-    (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
-
-  if (needsBatchGet) {
-    // Fetch rental object code sets in parallel for each active filter
-    const codeSetPromises: Promise<string[]>[] = []
-    const filterLabels: string[] = []
-
-    if (params.buildingManager && params.buildingManager.length > 0) {
-      codeSetPromises.push(
-        getRentalObjectCodesByBuildingManager(params.buildingManager)
+  if (needsPersonnummerLookup) {
+    const page = Math.max(1, params.page ?? 1)
+    const limit = Math.max(1, params.limit ?? 20)
+    const leasesResult = await fetchLeases(params)
+    if (!leasesResult.ok) {
+      throw new Error(
+        `Failed to fetch leases from Tenfast: ${leasesResult.err}`
       )
-      filterLabels.push('buildingManager')
     }
-    if (params.buildingCodes && params.buildingCodes.length > 0) {
-      codeSetPromises.push(
-        getRentalObjectCodesByBuildingCodes(params.buildingCodes)
-      )
-      filterLabels.push('buildingCodes')
-    }
-    if (params.areaCodes && params.areaCodes.length > 0) {
-      codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
-      filterLabels.push('areaCodes')
-    }
-    if (params.districtNames && params.districtNames.length > 0) {
-      codeSetPromises.push(
-        getRentalObjectCodesByDistrictNames(params.districtNames)
-      )
-      filterLabels.push('districtNames')
-    }
-    if (params.kvvAreaCodes && params.kvvAreaCodes.length > 0) {
-      codeSetPromises.push(
-        getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
-      )
-      filterLabels.push('kvvAreaCodes')
-    }
-
-    const codeSets = await Promise.all(codeSetPromises)
-
-    // Intersect all code sets — a rental object must match ALL active filters
-    let codes = codeSets[0]
-    for (let i = 1; i < codeSets.length; i++) {
-      const set = new Set(codeSets[i])
-      codes = codes.filter((c) => set.has(c))
-    }
-
-    logger.info(
-      {
-        filters: filterLabels,
-        codeCounts: codeSets.map((s, i) => `${filterLabels[i]}=${s.length}`),
-        intersectedCount: codes.length,
-      },
-      'Xpand-bridged filters: rental object codes from Xpand'
+    const { leases: tenfastLeases, totalCount } = leasesResult.data
+    const searchResults = tenfastLeases.map((l) =>
+      mapTenfastLeaseToSearchResult(l)
     )
-
-    if (codes.length === 0) {
-      return {
-        content: [],
-        _meta: {
-          totalRecords: 0,
-          page: params.page ?? 1,
-          limit: params.limit ?? 20,
-          count: 0,
-        },
-        _links: [],
-      }
-    }
-
-    // Lazy batch-get: fetch batches one at a time until we have enough
-    // results for the requested page. This avoids downloading ALL data
-    // when the code set is large (e.g., 10,000 codes for broad district filters).
-    //
-    // PERF (measured 2026-08-19 against tenfast-test): batch-get is the bottleneck
-    // for these bridged filters — a broad district takes ~7s regardless of client-side
-    // orchestration. Hard 500-code cap per request (400 above), ~2ms/code server time,
-    // ~2.5MB uncompressed JSON per batch, and concurrent requests are largely
-    // serialized server-side (parallel waves measured only ~15% faster). Asks for
-    // Tenfast: a) accept a LIST of hyresobjekt externalIds/phrases as a filter in
-    // /avtal/search so this whole bridge moves server-side, b) discuss raising the
-    // 500-code batch cap, c) gzip responses (2.57MB -> 0.14MB measured), d) slim
-    // mode/field selection — we use ~20% of the payload, and `hyror` (~70% of it)
-    // isn't needed for search results at all, e) a sort parameter on /avtal/search —
-    // without it cross-page sorting is impossible (cursor pagination, natural order;
-    // common sort param conventions are silently ignored), so sortBy/sortOrder
-    // currently only order rows within the fetched page.
-    //
-    // Main ask (sent to Tenfast, not prioritized yet): a filter[updatedAt] so we
-    // can keep a local cache, delta-sync against Tenfast, and filter ourselves.
-    const batchSize = 500
-    const page = params.page ?? 1
-    const limit = params.limit ?? 20
-    const needed = page * limit // total results needed to fill through current page
-
-    const seenLeaseIds = new Set<string>()
-    const batchLeases: BatchGetLease[] = []
-    const filteredLeases: Lease[] = []
-    let batchesFetched = 0
-    const totalBatches = Math.ceil(codes.length / batchSize)
-
-    for (let i = 0; i < codes.length; i += batchSize) {
-      const batch = codes.slice(i, i + batchSize)
-
-      const res = await tenfastApi.request<RawBatchGetRentalObject[]>({
-        method: 'post',
-        url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
-        data: { externalIds: batch },
-      })
-
-      batchesFetched++
-
-      if (res.status !== 200 && res.status !== 201) {
-        logger.error(
-          { status: res.status, data: res.data },
-          'Xpand-bridged filters: batch-get failed'
-        )
-        continue
-      }
-
-      const rentalObjects = res.data
-
-      const parsed = parseBatchGetResponse(rentalObjects, seenLeaseIds)
-      batchLeases.push(...parsed)
-
-      // Map + filter only the newly parsed leases; earlier batches are already done
-      const newLeases = parsed.map(mapBatchGetLeaseToOnecoreLease)
-      filteredLeases.push(...applyLocalFilters(newLeases, parsed, params))
-
-      // Stop fetching if we have enough to fill the requested page
-      if (filteredLeases.length >= needed) {
-        break
-      }
-    }
-
-    const leases = filteredLeases
-
-    // Estimate total count based on hit rate from fetched batches
-    const hitRate =
-      batchesFetched < totalBatches && leases.length > 0
-        ? leases.length / (batchesFetched * batchSize)
-        : 0
-    const estimatedTotal =
-      batchesFetched >= totalBatches
-        ? leases.length
-        : Math.round(hitRate * codes.length)
-    const totalCount =
-      batchesFetched >= totalBatches ? leases.length : estimatedTotal
-
-    // Map filtered leases to LeaseSearchResult
-    const batchLeaseMap = new Map(batchLeases.map((bl) => [bl.externalId, bl]))
-    const searchResults = leases
-      .map((l) => {
-        const bl = batchLeaseMap.get(l.leaseId)
-        return bl ? mapBatchGetLeaseToSearchResult(bl) : undefined
-      })
-      .filter((r): r is leasing.v1.LeaseSearchResult => r !== undefined)
-
-    logger.info(
-      {
-        batchesFetched,
-        totalBatches,
-        uniqueLeases: seenLeaseIds.size,
-        afterFilters: searchResults.length,
-        estimatedTotal: totalCount,
-      },
-      'Xpand-bridged filters: lazy batch-get completed'
-    )
-
-    const sorted = applySorting(searchResults, params)
-    const start = (page - 1) * limit
-    const pageSlice = sorted.slice(start, start + limit)
+    const sortedResults = applySorting(searchResults, params)
     const totalPages = Math.ceil(totalCount / limit)
-
     return {
-      content: pageSlice,
+      content: sortedResults,
       _meta: {
         totalRecords: totalCount,
         page,
         limit,
-        count: pageSlice.length,
+        count: sortedResults.length,
       },
       _links: buildPaginationLinks(ctx, page, limit, totalPages),
     }
   }
 
-  // Standard path — no post-filtering, Tenfast handles pagination
-  const page = Math.max(1, params.page ?? 1)
-  const limit = Math.max(1, params.limit ?? 20)
-  const leasesResult = await fetchLeases(params)
-
-  if (!leasesResult.ok) {
-    throw new Error(`Failed to fetch leases from Tenfast: ${leasesResult.err}`)
-  }
-
-  const { leases: tenfastLeases, totalCount } = leasesResult.data
-
-  const searchResults = tenfastLeases.map((l) =>
-    mapTenfastLeaseToSearchResult(l)
-  )
-  const sortedResults = applySorting(searchResults, params)
-  const totalPages = Math.ceil(totalCount / limit)
-
-  return {
-    content: sortedResults,
-    _meta: {
-      totalRecords: totalCount,
-      page,
-      limit,
-      count: sortedResults.length,
-    },
-    _links: buildPaginationLinks(ctx, page, limit, totalPages),
-  }
+  return searchLeasesFromCache(params, ctx)
 }

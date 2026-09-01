@@ -19,6 +19,23 @@ export function isReady(): boolean {
   return state.status === 'ready'
 }
 
+// Resolves true when cache becomes ready, false if it errors or times out.
+export function whenReady(timeoutMs: number): Promise<boolean> {
+  if (state.status === 'ready') return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const interval = setInterval(() => {
+      if (state.status === 'ready' || state.status === 'error') {
+        clearInterval(interval)
+        resolve(state.status === 'ready')
+      }
+    }, 200)
+    setTimeout(() => {
+      clearInterval(interval)
+      resolve(false)
+    }, timeoutMs)
+  })
+}
+
 export function getAll(): leasing.v1.LeaseSearchResult[] {
   return state.leases
 }
