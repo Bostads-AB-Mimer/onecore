@@ -400,7 +400,10 @@ export const routes = (router: KoaRouter) => {
       // Enrich contacts with email/phone from Xpand (Tenfast only has names)
       const contactCodes = [
         ...new Set(
-          rawLeases.flatMap((l) => l.contacts?.map((c) => c.contactCode) ?? [])
+          rawLeases
+            .flatMap((l) => l.contacts?.map((c) => c.contactCode) ?? [])
+            .map((c) => c.trim())
+            .filter((c) => c.length > 0)
         ),
       ]
       const contactInfoMap = await getEmailAndPhoneByContactCodes(contactCodes)

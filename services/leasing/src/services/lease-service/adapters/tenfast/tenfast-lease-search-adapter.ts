@@ -1089,8 +1089,8 @@ async function searchLeasesFromCache(
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> {
-  const page = params.page ?? 1
-  const limit = params.limit ?? 20
+  const page = Math.max(1, params.page ?? 1)
+  const limit = Math.max(1, params.limit ?? 20)
 
   // Xpand-bridged filters: resolve to rental object codes
   const needsXpandCodes =
@@ -1379,8 +1379,8 @@ export const searchLeases = async (
   }
 
   // Standard path — no post-filtering, Tenfast handles pagination
-  const page = params.page ?? 1
-  const limit = params.limit ?? 20
+  const page = Math.max(1, params.page ?? 1)
+  const limit = Math.max(1, params.limit ?? 20)
   const leasesResult = await fetchLeases(params)
 
   if (!leasesResult.ok) {
