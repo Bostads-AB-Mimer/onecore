@@ -32,6 +32,7 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     bankidSignatures: [],
     cancellation: {
       cancelled: false,
+      requested: false,
       doneAutomatically: false,
       receivedCancellationAt: null,
       notifiedAt: null,
