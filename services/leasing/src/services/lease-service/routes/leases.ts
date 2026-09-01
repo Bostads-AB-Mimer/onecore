@@ -464,6 +464,8 @@ export const routes = (router: KoaRouter) => {
       setExcelDownloadHeaders(ctx, 'hyreskontrakt')
       ctx.body = buffer
     } catch (error: unknown) {
+      // Re-throw Koa HTTP errors (e.g. 503 when cache is not ready)
+      if (error && typeof error === 'object' && 'status' in error) throw error
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
       ctx.status = 500
       ctx.body = {

@@ -659,57 +659,78 @@ export function buildTenfastQueryParams(
   return query
 }
 
-/**
- * Fetches all leases matching params using cursor-based pagination.
- * Unlike fetchLeases (which re-traverses from page 1 each call),
- * this function maintains cursor state internally — O(n) API calls total.
- * Used for export to avoid O(n²) repeated cursor traversal.
- */
 export async function fetchAllLeasesForExport(
   params: leasing.v1.LeaseSearchQueryParams,
-  _ctx?: Context
+  ctx: Context
 ): Promise<leasing.v1.LeaseSearchResult[]> {
-  const queryParams = buildTenfastQueryParams({ ...params, limit: 500 })
-  // Tenfast API expects literal brackets and commas, not URL-encoded
-  const queryString = queryParams
-    .toString()
-    .replace(/%5B/gi, '[')
-    .replace(/%5D/gi, ']')
-    .replace(/%2C/gi, ',')
-  const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${queryString}`
+  const READY_TIMEOUT_MS = 5_000
 
-  let cursor = ''
-  const allLeases: TenfastLease[] = []
-  const MAX_PAGES = 50 // safety limit: 50 * 500 = 25,000 max
-
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const url = cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl
-    const res = await tenfastApi.request({ method: 'get', url })
-
-    if (res.status !== 200) {
-      logger.error(
-        { status: res.status },
-        'fetchAllLeasesForExport: request failed'
-      )
-      break
+  if (!leaseCache.isReady()) {
+    const ready = await leaseCache.whenReady(READY_TIMEOUT_MS)
+    if (!ready) {
+      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+        headers: { 'Retry-After': '30' },
+      })
     }
-
-    const parsed = TenfastLeaseSchema.array().safeParse(res.data.records)
-    if (!parsed.success) {
-      logger.error(
-        { error: parsed.error.issues.slice(0, 3) },
-        'fetchAllLeasesForExport: parse error, skipping page'
-      )
-      break
-    }
-
-    allLeases.push(...parsed.data)
-    cursor = res.data.next ?? ''
-
-    if (!cursor || parsed.data.length === 0) break
   }
 
-  return allLeases.map((l) => mapTenfastLeaseToSearchResult(l))
+  const needsXpandCodes =
+    (params.buildingManager && params.buildingManager.length > 0) ||
+    (params.buildingCodes && params.buildingCodes.length > 0) ||
+    (params.areaCodes && params.areaCodes.length > 0) ||
+    (params.districtNames && params.districtNames.length > 0) ||
+    (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
+
+  let rentalObjectCodes: Set<string> | undefined
+
+  if (needsXpandCodes) {
+    const codeSetPromises: Promise<string[]>[] = []
+
+    if (params.buildingManager?.length)
+      codeSetPromises.push(
+        getRentalObjectCodesByBuildingManager(params.buildingManager)
+      )
+    if (params.buildingCodes?.length)
+      codeSetPromises.push(
+        getRentalObjectCodesByBuildingCodes(params.buildingCodes)
+      )
+    if (params.areaCodes?.length)
+      codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
+    if (params.districtNames?.length)
+      codeSetPromises.push(
+        getRentalObjectCodesByDistrictNames(params.districtNames)
+      )
+    if (params.kvvAreaCodes?.length)
+      codeSetPromises.push(
+        getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
+      )
+
+    const codeSets = await Promise.all(codeSetPromises)
+
+    let codes = codeSets[0]
+    for (let i = 1; i < codeSets.length; i++) {
+      const set = new Set(codeSets[i])
+      codes = codes.filter((c) => set.has(c))
+    }
+
+    if (codes.length === 0) return []
+
+    rentalObjectCodes = new Set(codes)
+  }
+
+  const filtered = applyCacheFilters(
+    leaseCache.getAll(),
+    params,
+    rentalObjectCodes
+  )
+  const sorted = applySorting(filtered, params)
+
+  logger.info(
+    { totalInCache: leaseCache.getAll().length, afterFilters: sorted.length },
+    'lease-cache: export served from cache'
+  )
+
+  return sorted
 }
 
 /**
