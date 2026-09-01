@@ -8,7 +8,7 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { RentalObjectAvailabilityInfo } from '@onecore/types'
 import {
   determineVacantFrom,
-  hasNoActiveBlock,
+  hasIndefiniteActiveBlock,
 } from '../helpers/rental-object-availability-helpers'
 import { mapToOnecoreRentalObjectRent } from '../helpers/tenfast'
 
@@ -324,8 +324,11 @@ export const routes = (router: KoaRouter) => {
       )
     })
 
-    // Filter out parking spaces with an active or future block (including blocks with no end date)
-    const vacantRentalObjects = rentalObjectResult.data.filter(hasNoActiveBlock)
+    // Filter out parking spaces with an indefinite (no end date) active block —
+    // a block with an end date is still listed, with vacantFrom computed below.
+    const vacantRentalObjects = rentalObjectResult.data.filter(
+      (ps) => !hasIndefiniteActiveBlock(ps)
+    )
 
     // Berika availability info med vacantFrom baserat på block end date och end date
     vacantRentalObjects.forEach((ps) => {
