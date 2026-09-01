@@ -411,8 +411,8 @@ export const routes = (router: KoaRouter) => {
         ...l,
         contacts: l.contacts?.map((c) => ({
           ...c,
-          email: contactInfoMap.get(c.contactCode)?.email ?? null,
-          phone: contactInfoMap.get(c.contactCode)?.phone ?? null,
+          email: contactInfoMap.get(c.contactCode.trim())?.email ?? null,
+          phone: contactInfoMap.get(c.contactCode.trim())?.phone ?? null,
         })),
       }))
 

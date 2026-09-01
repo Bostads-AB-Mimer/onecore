@@ -60,6 +60,7 @@ async function sync(
 
   try {
     if (hasData && lastSync) {
+      const syncStartedAt = new Date()
       const since = new Date(lastSync.getTime() - DELTA_BUFFER_MS)
       const changed = await deltaFetchFn(since)
       const idMap = new Map(state.leases.map((l) => [l.leaseId, l]))
@@ -67,7 +68,7 @@ async function sync(
         idMap.set(lease.leaseId, lease)
       }
       state.leases = Array.from(idMap.values())
-      state.lastSyncedAt = new Date()
+      state.lastSyncedAt = syncStartedAt
       state.status = 'ready'
       logger.info(
         { changed: changed.length, total: state.leases.length },

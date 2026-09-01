@@ -845,6 +845,7 @@ const getEmailAndPhoneByContactCodes = async (
       .from('cmctc')
       .select(
         'cmctc.cmctckod as contactCode',
+        'cmctc.lagsokt as protectedIdentity',
         'cmeml.cmemlben as email',
         'cmtel.cmtelben as phone'
       )
@@ -867,9 +868,19 @@ const getEmailAndPhoneByContactCodes = async (
 
     for (const row of rows) {
       if (!row.contactCode) continue
+      const isProtected = row.protectedIdentity !== null
+      const isProd = process.env.NODE_ENV === 'production'
       map.set((row.contactCode as string).trim(), {
-        email: row.email ? (row.email as string).trim() : null,
-        phone: row.phone ? (row.phone as string).trim() : null,
+        email: isProd
+          ? row.email == null || isProtected
+            ? null
+            : (row.email as string).trim()
+          : 'redacted',
+        phone: isProd
+          ? row.phone == null || isProtected
+            ? null
+            : (row.phone as string).trim()
+          : 'redacted',
       })
     }
   }

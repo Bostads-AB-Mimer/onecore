@@ -313,6 +313,7 @@ export async function getAllLeases(): Promise<
     const qs = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
       'filter[isArchived]': 'false',
+      limit: '500',
     })
       .toString()
       .replace(/%5B/gi, '[')
@@ -337,6 +338,7 @@ export async function getLeasesUpdatedSince(
     const params = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
       updatedAtSince: since.toISOString(),
+      limit: '500',
     })
     const records = await fetchAllPages(
       (cursor) =>
