@@ -80,7 +80,6 @@ const fetchPropertySubtrees = async (
   uniqueCodes: string[]
 ): Promise<Map<string, CostCenterTreeProperty>> => {
   const out = new Map<string, CostCenterTreeProperty>()
-  const startedAt = Date.now()
   const codesJson = JSON.stringify(uniqueCodes)
 
   try {
@@ -183,11 +182,6 @@ const fetchPropertySubtrees = async (
         GROUP BY fstcode
       `.then(trimStrings),
     ])
-
-    logger.info(
-      { ms: Date.now() - startedAt, properties: uniqueCodes.length },
-      'property-subtree-adapter.buildPropertySubtrees timing'
-    )
 
     const propertyByCode = new Map(properties.map((p) => [p.code, p]))
 

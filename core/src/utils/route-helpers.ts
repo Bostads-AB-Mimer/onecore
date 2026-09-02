@@ -68,7 +68,7 @@ export const parseUpstream = <T extends z.ZodTypeAny>(
   if (!parsed.success) {
     logger.error(
       { path: ctx.path, errors: parsed.error.errors },
-      'property-base-service upstream payload failed validation'
+      'upstream payload failed validation'
     )
     ctx.status = 500
     ctx.body = { reason: 'Internal server error', ...metadata }

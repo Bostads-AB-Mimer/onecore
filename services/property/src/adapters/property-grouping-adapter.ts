@@ -232,21 +232,11 @@ export const getPropertyTree = async (
   includeObjects = true
 ): Promise<PropertyTree | null> => {
   if (grouping === 'costCenter') {
-    const startedAt = Date.now()
     const membership = await costCenterMembershipCache.get(rootId)
     if (!membership) return null
-    const resolvedAt = Date.now()
 
     const { costCenter, propertyCodes } = membership
     const subtrees = await buildPropertyTreeNodes(propertyCodes, includeObjects)
-    logger.info(
-      {
-        membershipMs: resolvedAt - startedAt,
-        nodesMs: Date.now() - resolvedAt,
-        rootId,
-      },
-      'property-tree membership timing'
-    )
 
     return {
       grouping,
@@ -271,18 +261,8 @@ export const getPropertyTree = async (
     const area = areas.find((a) => a.code === rootId.trim())
     if (!area) return null
 
-    const startedAt = Date.now()
     const codes = await marketAreaCodesCache.get(area.code)
-    const resolvedAt = Date.now()
     const subtrees = await buildPropertyTreeNodes(codes, includeObjects)
-    logger.info(
-      {
-        membershipMs: resolvedAt - startedAt,
-        nodesMs: Date.now() - resolvedAt,
-        rootId,
-      },
-      'property-tree membership timing'
-    )
     return {
       grouping,
       id: area.id,

@@ -108,23 +108,13 @@ export const routes = (router: KoaRouter) => {
       const { groupBy, rootId, includeObjects } = ctx.request.parsedQuery
 
       try {
-        const startedAt = Date.now()
         const tree = await getPropertyTree(groupBy, rootId, includeObjects)
         if (!tree) {
           ctx.status = 404
           ctx.body = { reason: 'Root not found', ...metadata }
           return
         }
-        const builtAt = Date.now()
         const content = PropertyTreeSchema.parse(tree)
-        logger.info(
-          {
-            buildMs: builtAt - startedAt,
-            parseMs: Date.now() - builtAt,
-            rootId,
-          },
-          'property-tree timing'
-        )
         ctx.body = { content, ...metadata }
       } catch (err) {
         logger.error({ err }, 'Error fetching property tree')

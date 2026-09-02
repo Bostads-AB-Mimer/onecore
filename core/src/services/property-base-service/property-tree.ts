@@ -5,7 +5,11 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import { PROPERTY_MANAGER_ROLE } from './constants'
 import { getCachedUsersByRole, toUserSummary } from './keycloak-users'
-import { parseQuery, parseUpstream, replyError } from './route-helpers'
+import {
+  parseQuery,
+  parseUpstream,
+  replyError,
+} from '../../utils/route-helpers'
 import { PropertyGroupingSchema, PropertyTreeSchema } from './schemas'
 
 const GetPropertyTreeQuerySchema = z.object({
@@ -86,21 +90,11 @@ export const routes = (router: KoaRouter) => {
 
     // Only the cost-center grouping has responsible users; fetch them in
     // parallel with the tree so Keycloak never sits on the critical path.
-    const startedAt = Date.now()
-    let treeMs = 0
-    let keycloakMs = 0
     const [result, responsibleUsers] = await Promise.all([
-      propertyBaseAdapter.getPropertyTree(query).then((r) => {
-        treeMs = Date.now() - startedAt
-        return r
-      }),
-      (query.groupBy === 'costCenter'
+      propertyBaseAdapter.getPropertyTree(query),
+      query.groupBy === 'costCenter'
         ? getCachedUsersByRole(PROPERTY_MANAGER_ROLE)
-        : Promise.resolve(null)
-      ).then((r) => {
-        keycloakMs = Date.now() - startedAt
-        return r
-      }),
+        : Promise.resolve(null),
     ])
     if (!result.ok) {
       return replyError(ctx, result.err, metadata, {
@@ -108,6 +102,13 @@ export const routes = (router: KoaRouter) => {
       })
     }
 
+    // Degrades to responsible: null below — log it, or the blip is invisible.
+    if (responsibleUsers && !responsibleUsers.ok) {
+      logger.error(
+        { err: responsibleUsers.err, role: PROPERTY_MANAGER_ROLE },
+        'property-tree: responsible users lookup failed'
+      )
+    }
     const byId = new Map(
       responsibleUsers?.ok
         ? responsibleUsers.data.map((u) => [u.id, u] as const)
@@ -129,17 +130,7 @@ export const routes = (router: KoaRouter) => {
       }),
     }
 
-    const parseStartedAt = Date.now()
     const content = parseUpstream(ctx, PropertyTreeSchema, composed, metadata)
-    logger.info(
-      {
-        treeMs,
-        keycloakMs,
-        parseMs: Date.now() - parseStartedAt,
-        rootId: query.rootId,
-      },
-      'property-tree core timing'
-    )
     if (!content) return
     ctx.body = { content, ...metadata }
   })
