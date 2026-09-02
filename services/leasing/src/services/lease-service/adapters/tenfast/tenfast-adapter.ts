@@ -1,5 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { Contact, Lease, RentalObjectAvailabilityInfo } from '@onecore/types'
+import { Contact, RentalObjectAvailabilityInfo } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -23,7 +23,6 @@ import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
 import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
-import { mapToOnecoreLease } from '../../helpers/tenfast'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -85,7 +84,7 @@ export const createLease = async (
   includeVAT: boolean
 ): Promise<
   AdapterResult<
-    Lease,
+    string,
     | 'could-not-retrieve-tenant'
     | 'could-not-create-tenant'
     | 'could-not-find-rental-object'
@@ -132,11 +131,15 @@ export const createLease = async (
         'lease-could-not-be-created'
       )
 
-    const parsedLease = TenfastLeaseSchema.safeParse(leaseResponse.data)
-    if (!parsedLease.success)
-      return handleTenfastError(parsedLease.error, 'could-not-parse-lease')
+    // Only the id is needed by callers (see leases.ts route docs: response
+    // is { LeaseId: string }) — no need to parse the full lease shape, which
+    // would require populate=hyresobjekt,hyresgaster on this POST to avoid
+    // failing TenfastLeaseSchema's strict hyresgaster parse.
+    const leaseId = leaseResponse.data?.externalId
+    if (typeof leaseId !== 'string' || !leaseId)
+      return handleTenfastError(leaseResponse.data, 'could-not-parse-lease')
 
-    return { ok: true, data: mapToOnecoreLease(parsedLease.data) }
+    return { ok: true, data: leaseId }
   } catch (err) {
     const responseData = isAxiosError(err) ? err.response?.data : undefined
     logger.error(
