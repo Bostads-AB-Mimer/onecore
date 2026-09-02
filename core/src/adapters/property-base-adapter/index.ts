@@ -1200,6 +1200,11 @@ export async function getPropertyTree(
       return { ok: false, err: 'not-found' }
     }
     if (fetchResponse.response.status === 400) {
+      // The zod issues die with the response otherwise — see searchRentalObjects.
+      logger.warn(
+        { rejected: fetchResponse.error },
+        'property-base-adapter.getPropertyTree rejected upstream'
+      )
       return { ok: false, err: 'bad-request' }
     }
 

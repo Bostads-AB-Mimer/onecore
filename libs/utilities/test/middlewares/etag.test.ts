@@ -1,4 +1,6 @@
-import { Context } from 'koa'
+import http from 'http'
+import type { AddressInfo } from 'net'
+import Koa, { Context } from 'koa'
 
 import { etagMiddleware } from '../../src/middlewares/etag'
 
@@ -76,6 +78,14 @@ describe('etagMiddleware', () => {
     expect(second.status).toBe(304)
   })
 
+  it('treats If-None-Match: * as matching any representation', async () => {
+    const ctx = makeCtx({ 'if-none-match': '*' })
+    await run(ctx, { a: 1 })
+
+    expect(ctx.status).toBe(304)
+    expect(ctx.body).toBeNull()
+  })
+
   it('answers a full 200 when the body changed', async () => {
     const first = makeCtx()
     await run(first, { a: 1 })
@@ -138,5 +148,45 @@ describe('etagMiddleware', () => {
     const error = makeCtx()
     await run(error, { reason: 'nope' }, 404)
     expect(error.headers.etag).toBeUndefined()
+  })
+})
+
+// What the fake ctx cannot prove: Content-Type surviving the pre-serialized
+// string body, and Koa stripping the body on 304.
+describe('etagMiddleware over a real Koa app', () => {
+  const payload = { hello: 'world', padding: 'x'.repeat(2048) }
+  let server: http.Server
+  let url: string
+
+  beforeAll((done) => {
+    const app = new Koa()
+    app.use(etagMiddleware())
+    app.use((ctx) => {
+      ctx.status = 200
+      ctx.body = payload
+    })
+    server = http.createServer(app.callback()).listen(0, () => {
+      url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/`
+      done()
+    })
+  })
+
+  afterAll((done) => {
+    server.close(done)
+  })
+
+  it('serves tagged JSON and 304s the revalidation round trip', async () => {
+    const first = await fetch(url)
+    expect(first.status).toBe(200)
+    expect(first.headers.get('content-type')).toContain('application/json')
+    expect(first.headers.get('etag')).toMatch(/^W\/"[0-9a-f]{32}"$/)
+    expect(first.headers.get('cache-control')).toBe('private')
+    await expect(first.json()).resolves.toEqual(payload)
+
+    const etag = first.headers.get('etag') as string
+    const second = await fetch(url, { headers: { 'If-None-Match': etag } })
+    expect(second.status).toBe(304)
+    expect(await second.text()).toBe('')
+    expect(second.headers.get('cache-control')).toBe('private')
   })
 })

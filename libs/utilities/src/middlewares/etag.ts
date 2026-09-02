@@ -45,11 +45,12 @@ export const etagMiddleware = () => {
 
     // Compare on the bare tag: clients echo W/"..." back, but a proxy may
     // have stripped or added the prefix — either spelling is still ours.
+    // '*' matches any current representation (RFC 9110 §13.1.2) — ours exists.
     const revalidators = ctx
       .get('If-None-Match')
       .split(',')
       .map((value) => value.trim().replace(/^W\//, ''))
-    if (revalidators.includes(tag)) {
+    if (revalidators.includes('*') || revalidators.includes(tag)) {
       ctx.status = 304
       ctx.body = null
       return

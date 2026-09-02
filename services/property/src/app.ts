@@ -1,7 +1,6 @@
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
-import compress from 'koa-compress'
 import cors from '@koa/cors'
 
 import api from './api'
@@ -24,11 +23,9 @@ app.use(
   })
 )
 
-// Tree and rental-object payloads are hundreds of KB of highly repetitive JSON;
-// gzip takes them to a few percent of that. Brotli is off on purpose — node's
-// default quality 11 blocks the event loop for 100+ ms on payloads this size.
-app.use(compress({ threshold: 1024, br: false }))
-
+// No compression here on purpose: the only consumer is core, in-cluster,
+// where gzip measured ~4-5ms CPU to save ~0.3-2.5ms of transfer. Core
+// compresses the browser hop, which is where the 17x ratio pays.
 app.use(
   koaSwagger({
     routePrefix: '/swagger',
