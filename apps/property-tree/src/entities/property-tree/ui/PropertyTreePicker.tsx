@@ -736,15 +736,15 @@ export function PropertyTreePicker({
                   )
                 )}
                 {searchActive && visibleNodes.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={COLUMN_COUNT}
-                        className="py-8 text-center text-muted-foreground"
-                      >
-                        Inga träffar
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  <TableRow>
+                    <TableCell
+                      colSpan={COLUMN_COUNT}
+                      className="py-8 text-center text-muted-foreground"
+                    >
+                      Inga träffar
+                    </TableCell>
+                  </TableRow>
+                )}
               </>
             )}
           </TableBody>

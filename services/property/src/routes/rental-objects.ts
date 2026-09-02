@@ -235,9 +235,7 @@ export const routes = (router: KoaRouter) => {
           !!rentalIds?.length &&
           !Object.values(rest).some((v) => Array.isArray(v) && v.length > 0)
         const ids = new Set(rentalIds ?? [])
-        const content = idsOnly
-          ? rows.filter((d) => ids.has(d.rentalId))
-          : rows
+        const content = idsOnly ? rows.filter((d) => ids.has(d.rentalId)) : rows
         ctx.status = 200
         ctx.body = { content, ...metadata }
       } catch (err) {
