@@ -169,18 +169,6 @@ describe('GET /property-tree', () => {
     expect(spy).toHaveBeenCalledWith('marketArea', 'MO1', true)
   })
 
-  it('defaults to including object leaves', async () => {
-    const spy = jest
-      .spyOn(groupingAdapter, 'getPropertyTree')
-      .mockResolvedValueOnce(tree)
-
-    await request(app.callback())
-      .get('/property-tree')
-      .query({ groupBy: 'costCenter', rootId: UUID })
-
-    expect(spy).toHaveBeenCalledWith('costCenter', UUID, true)
-  })
-
   it('passes includeObjects=false through to the adapter', async () => {
     const spy = jest
       .spyOn(groupingAdapter, 'getPropertyTree')

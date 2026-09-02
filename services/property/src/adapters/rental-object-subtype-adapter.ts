@@ -4,7 +4,7 @@ import { trimStrings } from '@src/utils/data-conversion'
 import { cachedPromise } from '@src/utils/promise-cache'
 import type { RentalObjectSubtype } from '@src/types/rental-object'
 
-import { OPERATING_COMPANY_CODES } from './company-scope'
+import { operatingCompanyFilter } from './company-scope'
 import { prisma } from './db'
 
 /**
@@ -16,8 +16,6 @@ import { prisma } from './db'
  * up as filter options matching nothing.
  */
 const fetchRentalObjectSubtypes = async (): Promise<RentalObjectSubtype[]> => {
-  const companiesJson = JSON.stringify(OPERATING_COMPANY_CODES)
-
   try {
     const rows = await prisma.$queryRaw<RentalObjectSubtype[]>`
       SELECT DISTINCT
@@ -26,8 +24,7 @@ const fetchRentalObjectSubtypes = async (): Promise<RentalObjectSubtype[]> => {
       INNER JOIN dbo.balgh o ON o.keycmobj = s.keycmobj
       INNER JOIN dbo.balgt t ON t.keybalgt = o.keybalgt
       WHERE s.deletemark = 0 AND t.caption IS NOT NULL AND t.code IS NOT NULL
-        AND LTRIM(RTRIM(s.cmpcode)) IN
-            (SELECT value FROM OPENJSON(${companiesJson}))
+        AND ${operatingCompanyFilter('s.cmpcode')}
 
       UNION ALL
       SELECT DISTINCT
@@ -36,8 +33,7 @@ const fetchRentalObjectSubtypes = async (): Promise<RentalObjectSubtype[]> => {
       INNER JOIN dbo.babps o ON o.keycmobj = s.keycmobj
       INNER JOIN dbo.babpt t ON t.keybabpt = o.keybabpt
       WHERE s.deletemark = 0 AND t.caption IS NOT NULL AND t.code IS NOT NULL
-        AND LTRIM(RTRIM(s.cmpcode)) IN
-            (SELECT value FROM OPENJSON(${companiesJson}))
+        AND ${operatingCompanyFilter('s.cmpcode')}
 
       UNION ALL
       SELECT DISTINCT
@@ -46,8 +42,7 @@ const fetchRentalObjectSubtypes = async (): Promise<RentalObjectSubtype[]> => {
       INNER JOIN dbo.balok o ON o.keycmobj = s.keycmobj
       INNER JOIN dbo.balot t ON t.keybalot = o.keybalot
       WHERE s.deletemark = 0 AND t.caption IS NOT NULL AND t.code IS NOT NULL
-        AND LTRIM(RTRIM(s.cmpcode)) IN
-            (SELECT value FROM OPENJSON(${companiesJson}))
+        AND ${operatingCompanyFilter('s.cmpcode')}
 
       UNION ALL
       SELECT DISTINCT
@@ -56,8 +51,7 @@ const fetchRentalObjectSubtypes = async (): Promise<RentalObjectSubtype[]> => {
       INNER JOIN dbo.bahyr o ON o.keycmobj = s.keycmobj
       INNER JOIN dbo.bahyt t ON t.keybahyt = o.keybahyt
       WHERE s.deletemark = 0 AND t.caption IS NOT NULL AND t.code IS NOT NULL
-        AND LTRIM(RTRIM(s.cmpcode)) IN
-            (SELECT value FROM OPENJSON(${companiesJson}))
+        AND ${operatingCompanyFilter('s.cmpcode')}
 
       ORDER BY type, name
     `.then(trimStrings)

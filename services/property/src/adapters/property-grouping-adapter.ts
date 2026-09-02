@@ -8,7 +8,8 @@ import { cachedKeyed, cachedPromise } from '@src/utils/promise-cache'
 
 import {
   filterToOperatingCompanies,
-  OPERATING_COMPANY_CODES,
+  isOperatingCompany,
+  operatingCompanyFilter,
 } from './company-scope'
 import { fetchCostCenterMembership } from './cost-center-adapter'
 import { prisma } from './db'
@@ -42,8 +43,7 @@ const fetchMarketAreas = async (): Promise<MarketArea[]> => {
       INNER JOIN dbo.bafst f ON f.keybabya = a.keybabya
       INNER JOIN dbo.babuf s ON s.keyobjfst = f.keycmobj
       WHERE s.deletemark = 0
-        AND LTRIM(RTRIM(s.cmpcode)) IN
-            (SELECT value FROM OPENJSON(${JSON.stringify(OPERATING_COMPANY_CODES)}))
+        AND ${operatingCompanyFilter('s.cmpcode')}
       ORDER BY a.code
     `.then(trimStrings)
     return rows
@@ -89,8 +89,7 @@ export const resolveMarketAreaPropertyCodes = async (
       WHERE s.deletemark = 0
         AND s.fstcode IS NOT NULL
         AND LTRIM(RTRIM(a.code)) = ${areaCode.trim()}
-        AND LTRIM(RTRIM(s.cmpcode)) IN
-            (SELECT value FROM OPENJSON(${JSON.stringify(OPERATING_COMPANY_CODES)}))
+        AND ${operatingCompanyFilter('s.cmpcode')}
     `
     return rows.map((r) => r.propertyCode.trim())
   } catch (err) {
@@ -107,7 +106,7 @@ export const resolveCompanyPropertyCodes = async (
   companyCode: string
 ): Promise<string[]> => {
   const code = companyCode.trim()
-  if (!(OPERATING_COMPANY_CODES as readonly string[]).includes(code)) return []
+  if (!isOperatingCompany(code)) return []
 
   try {
     const rows = await prisma.$queryRaw<{ propertyCode: string }[]>`
@@ -145,6 +144,22 @@ export const resolveKvvAreaPropertyCodes = async (
     logger.error(
       { err, kvvAreaId },
       'property-grouping-adapter.resolveKvvAreaPropertyCodes'
+    )
+    throw err
+  }
+}
+
+/** Property codes of one cost center, via our own KVV-area links. */
+export const resolveCostCenterPropertyCodes = async (
+  costCenterId: string
+): Promise<string[] | null> => {
+  try {
+    const membership = await fetchCostCenterMembership(costCenterId)
+    return membership ? membership.propertyCodes : null
+  } catch (err) {
+    logger.error(
+      { err, costCenterId },
+      'property-grouping-adapter.resolveCostCenterPropertyCodes'
     )
     throw err
   }
@@ -215,10 +230,20 @@ const marketAreaCodesCache = cachedKeyed(
   MEMBERSHIP_CACHE_TTL_MS,
   resolveMarketAreaPropertyCodes
 )
+const fetchCompanyMembership = async (code: string) => {
+  const [codes, company] = await Promise.all([
+    resolveCompanyPropertyCodes(code),
+    prisma.company
+      .findFirst({ where: { code }, select: { name: true } })
+      .then(trimStrings),
+  ])
+  return { codes, name: company?.name ?? null }
+}
+
 // The largest tree (~263 properties) — a full babuf scan without this.
-const companyCodesCache = cachedKeyed(
+const companyMembershipCache = cachedKeyed(
   MEMBERSHIP_CACHE_TTL_MS,
-  resolveCompanyPropertyCodes
+  fetchCompanyMembership
 )
 
 /**
@@ -284,40 +309,24 @@ export const getPropertyTree = async (
   const code = rootId.trim()
   // null is "no such root" — an existing but empty company answers an empty
   // tree, not a 404.
-  if (!(OPERATING_COMPANY_CODES as readonly string[]).includes(code)) {
+  if (!isOperatingCompany(code)) {
     return null
   }
-  const codes = await companyCodesCache.get(code)
+  const { codes, name } = await companyMembershipCache.get(code)
   const subtrees = await buildPropertyTreeNodes(codes, includeObjects)
   return {
     grouping,
     id: code,
     code,
-    name: null,
+    name,
     groups: [
       {
         id: code,
         code,
-        name: null,
+        name,
         responsibleKeycloakUserId: null,
         properties: [...subtrees.values()],
       },
     ],
-  }
-}
-
-/** Property codes of one cost center, via our own KVV-area links. */
-export const resolveCostCenterPropertyCodes = async (
-  costCenterId: string
-): Promise<string[] | null> => {
-  try {
-    const membership = await fetchCostCenterMembership(costCenterId)
-    return membership ? membership.propertyCodes : null
-  } catch (err) {
-    logger.error(
-      { err, costCenterId },
-      'property-grouping-adapter.resolveCostCenterPropertyCodes'
-    )
-    throw err
   }
 }

@@ -12,7 +12,7 @@ import type {
 } from '@src/types/rental-object'
 import { RENTAL_OBJECT_TYPES } from '@src/types/rental-object'
 
-import { OPERATING_COMPANY_CODES } from './company-scope'
+import { operatingCompanyFilter } from './company-scope'
 import { prisma } from './db'
 
 type RentalObjectRow = {
@@ -137,8 +137,7 @@ const rentalObjectWhere = (typeCodes = Object.values(KEYCMOBT_BY_TYPE)) =>
     b.deletemark = 0
     AND b.hyresid IS NOT NULL
     AND b.hyresid NOT LIKE '%X'
-    AND LTRIM(RTRIM(b.cmpcode)) IN
-        (SELECT value FROM OPENJSON(${JSON.stringify(OPERATING_COMPANY_CODES)}))
+    AND ${operatingCompanyFilter('b.cmpcode')}
     AND o.keycmobt IN (SELECT value FROM OPENJSON(${JSON.stringify(typeCodes)}))
   `
 
@@ -202,7 +201,7 @@ const structureScopes = (params: StructureScope): Prisma.Sql[] => {
       scopes.push(
         Prisma.sql`EXISTS (
           SELECT 1 FROM OPENJSON(${JSON.stringify(pairs)})
-          WITH (b VARCHAR(30) '$.b', v VARCHAR(30) '$.v') j
+          WITH (b VARCHAR(50) '$.b', v VARCHAR(50) '$.v') j
           WHERE j.b = b.bygcode AND j.v = b.vancode
         )`
       )
@@ -344,8 +343,9 @@ export const getRentalObjects = async (scope: {
 type RentalObjectDetailsRow = {
   rentalId: string
   propertyCode: string | null
-  baseRent: number | null
-  area: number | null
+  // Decimal columns arrive as Prisma.Decimal; toDetails coerces via Number().
+  baseRent: number | Prisma.Decimal | null
+  area: number | Prisma.Decimal | null
   additionalInfo: string | null
   malarEnergiFacilityId: string | null
 }
@@ -511,6 +511,7 @@ export const searchRentalObjects = async (
   // Subtypes arrive as 'type:code' because a code is only unique per type, and
   // they restrict per type: picking a parking subtype narrows bilplatser and
   // leaves the other types alone. A type nobody picked a subtype for passes.
+  // VARCHARs sized wide: OPENJSON WITH truncates silently into a no-match.
   const subtypePairs = JSON.stringify(
     (params.subtypes ?? []).flatMap((s) => {
       const at = s.indexOf(':')
@@ -530,13 +531,15 @@ export const searchRentalObjects = async (
         )
         OR EXISTS (
           SELECT 1 FROM OPENJSON(${subtypePairs})
-          WITH (t VARCHAR(10) '$.t', c VARCHAR(15) '$.c') j
+          WITH (t VARCHAR(10) '$.t', c VARCHAR(50) '$.c') j
           WHERE j.t = o.keycmobt
             AND j.c = COALESCE(gt.code, pt.code, lt.code, ht.code)
         )
       )`
     : Prisma.empty
 
+  // q is taken verbatim: %, _ and [ keep their LIKE semantics on purpose —
+  // power users can wildcard, and a stray _ at worst over-matches.
   const searchSql = params.q
     ? Prisma.sql`AND (b.hyresid LIKE ${'%' + params.q + '%'}
         OR a.adress1 LIKE ${'%' + params.q + '%'}

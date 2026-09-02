@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { logger } from '@onecore/utilities'
 
 import { prisma } from './db'
@@ -16,6 +17,15 @@ import { prisma } from './db'
  */
 export const OPERATING_COMPANY_CODES = ['001', '006'] as const
 
+export const isOperatingCompany = (code: string): boolean =>
+  (OPERATING_COMPANY_CODES as readonly string[]).includes(code)
+
+/** `<alias>.cmpcode` restricted to the allowlist. The alias is spliced RAW —
+ * literals only, never input. cmpcode carries trailing spaces, hence the trim. */
+export const operatingCompanyFilter = (cmpcodeColumn: string) =>
+  Prisma.sql`LTRIM(RTRIM(${Prisma.raw(cmpcodeColumn)})) IN
+      (SELECT value FROM OPENJSON(${JSON.stringify(OPERATING_COMPANY_CODES)}))`
+
 /**
  * Narrow a set of property codes to those belonging to an operating company.
  * Also drops codes with no structure rows at all.
@@ -27,17 +37,14 @@ export const filterToOperatingCompanies = async (
   if (uniqueCodes.length === 0) return []
 
   const codesJson = JSON.stringify(uniqueCodes)
-  const companiesJson = JSON.stringify(OPERATING_COMPANY_CODES)
 
   try {
-    // cmpcode carries trailing spaces for some values, hence the trim.
     const rows = await prisma.$queryRaw<{ propertyCode: string }[]>`
       SELECT DISTINCT s.fstcode AS propertyCode
       FROM dbo.babuf s
       WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
         AND s.deletemark = 0
-        AND LTRIM(RTRIM(s.cmpcode)) IN
-            (SELECT value FROM OPENJSON(${companiesJson}))
+        AND ${operatingCompanyFilter('s.cmpcode')}
     `
     return rows.map((r) => r.propertyCode.trim())
   } catch (err) {
