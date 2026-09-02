@@ -4,9 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import type { RentalObjectDetails } from '@/services/api/core/propertyTreeService'
 import { propertyTreeService } from '@/services/api/core/propertyTreeService'
 
-import type { RentalObjectScopes } from '../model/scopes'
-import { hasAnyScope } from '../model/scopes'
-
 export type { RentalObjectDetails }
 
 // Rent and comments change more often than the hierarchy does, so these get a
@@ -16,20 +13,22 @@ const DETAILS_STALE_TIME = 5 * 60 * 1000
 const EMPTY: ReadonlyMap<string, RentalObjectDetails> = new Map()
 
 /**
- * Grundhyra, BRA, annan information och anläggnings-ID keyed by rental id, for
- * the same scope the listing searches — the server widens it to whole
- * properties, since its cache is keyed per property. Whole scope rather than
- * the drawn page, because a sort on rent needs every value in it; the map
- * covering objects the filters hide is harmless, as lookup is by rental id.
- * Only this listing mounts the hook, so the tree and the picker never hold it.
+ * Grundhyra, BRA, annan information och anläggnings-ID for the drawn page's
+ * rows, keyed by rental id. Scoped by the page's rentalIds rather than the
+ * applied selection — a district-wide scope shipped thousands of rows for a
+ * 50-row page. A future sort on rent needs the whole scope back.
+ *
+ * Deferred plan: fold details into /rental-objects/search as an optional
+ * includeDetails flag (route-level composition off the same details cache) —
+ * page-scoped by construction, and this hook plus its endpoint disappear.
  */
 export function useRentalObjectDetails(
-  scopes: RentalObjectScopes
+  rentalIds: string[]
 ): ReadonlyMap<string, RentalObjectDetails> {
   const query = useQuery({
-    queryKey: ['rentalObjectDetails', scopes],
-    queryFn: () => propertyTreeService.getRentalObjectDetails(scopes),
-    enabled: hasAnyScope(scopes),
+    queryKey: ['rentalObjectDetails', rentalIds],
+    queryFn: () => propertyTreeService.getRentalObjectDetails({ rentalIds }),
+    enabled: rentalIds.length > 0,
     staleTime: DETAILS_STALE_TIME,
     gcTime: DETAILS_STALE_TIME,
   })

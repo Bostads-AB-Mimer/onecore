@@ -211,6 +211,10 @@ export function PropertyTreePicker({
     [roots, searchActive, expandAll, expandOverrides, selectedRootKeys]
   )
   const treeState = usePropertyTrees(grouping, loadedRoots, open)
+  // Withhold search rows until every tree has landed: partial results reorder
+  // as slower districts arrive. If cold searches ever feel slow, the deferred
+  // fix is groupBy WITHOUT rootId answering all trees in one atomic response.
+  const searchSettling = searchActive && treeState.isLoading
 
   // One value object carries the whole object-level filter and the counts
   // derived from it, so no part of the tree has to know which is which.
@@ -685,6 +689,15 @@ export function PropertyTreePicker({
                   Laddar...
                 </TableCell>
               </TableRow>
+            ) : searchSettling ? (
+              <TableRow>
+                <TableCell
+                  colSpan={COLUMN_COUNT}
+                  className="py-4 text-center text-muted-foreground"
+                >
+                  Söker...
+                </TableCell>
+              </TableRow>
             ) : (
               <>
                 {rows.map((row) =>
@@ -722,19 +735,7 @@ export function PropertyTreePicker({
                     </Fragment>
                   )
                 )}
-                {searchActive && treeState.isLoading && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={COLUMN_COUNT}
-                      className="py-4 text-center text-muted-foreground"
-                    >
-                      Söker...
-                    </TableCell>
-                  </TableRow>
-                )}
-                {searchActive &&
-                  !treeState.isLoading &&
-                  visibleNodes.length === 0 && (
+                {searchActive && visibleNodes.length === 0 && (
                     <TableRow>
                       <TableCell
                         colSpan={COLUMN_COUNT}

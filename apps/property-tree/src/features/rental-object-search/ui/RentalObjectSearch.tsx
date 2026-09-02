@@ -75,9 +75,12 @@ export function RentalObjectSearch() {
     page,
   })
 
-  // Same scope as the search, minus its type/subtype filters: the server
-  // widens it to whole properties, so one trapphus costs one fastighet.
-  const details = useRentalObjectDetails(scopes)
+  // Details for just the rows on this page — see useRentalObjectDetails.
+  const pageRentalIds = useMemo(
+    () => search.objects.map((o) => o.rentalId),
+    [search.objects]
+  )
+  const details = useRentalObjectDetails(pageRentalIds)
 
   // Rows already on screen belong to the previous scope until this settles.
   const refreshing = search.isFetching && !search.isLoading

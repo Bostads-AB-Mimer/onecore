@@ -4,6 +4,8 @@
 
 import { memo } from 'react'
 
+import { useInView } from '@/shared/hooks/useInView'
+
 import { usePropertyTenants } from '../hooks/useOccupantData'
 import type { CheckState, PropertyTreeNode } from '../model/selection'
 import type { ObjectRowSpec } from '../model/treeRows'
@@ -25,10 +27,17 @@ export const ObjectTenantRow = memo(function ObjectTenantRow({
   selectableObjects: boolean
   onToggleObject: (node: PropertyTreeNode) => void
 }) {
-  const tenants = usePropertyTenants(row.propertyDesignation)
+  // Tenant lookup only once the row scrolls near the viewport: a broad search
+  // draws rows for ~every property, and eagerly fetching would page the lease
+  // search for all of them at once.
+  const { ref, inView } = useInView<HTMLTableRowElement>()
+  const tenants = usePropertyTenants(
+    inView ? row.propertyDesignation : undefined
+  )
 
   return (
     <ObjectRow
+      rowRef={ref}
       depth={row.depth}
       object={row.object}
       tenants={

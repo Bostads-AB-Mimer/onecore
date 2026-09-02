@@ -187,6 +187,9 @@ export const routes = (router: KoaRouter) => {
    *       its fastighet and nothing wider. Type and subtype filters are
    *       deliberately absent — the values are looked up by rental id, so
    *       narrowing them would only cost cache hits.
+   *
+   *       An ids-only scope answers exactly those ids; any other scope (mixed
+   *       ones included) answers the whole properties it touches.
    *     tags:
    *       - Rental objects
    *     parameters:
@@ -224,7 +227,17 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const propertyCodes = await resolveDetailsPropertyCodes(params)
-        const content = await buildRentalObjectDetails(propertyCodes)
+        const rows = await buildRentalObjectDetails(propertyCodes)
+        // Ids-only scope: the per-property cache widening stays internal
+        // payload. Mixed scopes are an OR-union and must stay unfiltered.
+        const { rentalIds, ...rest } = params
+        const idsOnly =
+          !!rentalIds?.length &&
+          !Object.values(rest).some((v) => Array.isArray(v) && v.length > 0)
+        const ids = new Set(rentalIds ?? [])
+        const content = idsOnly
+          ? rows.filter((d) => ids.has(d.rentalId))
+          : rows
         ctx.status = 200
         ctx.body = { content, ...metadata }
       } catch (err) {

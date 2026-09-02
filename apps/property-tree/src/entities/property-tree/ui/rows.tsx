@@ -179,6 +179,7 @@ export function ObjectRow({
   requiresTenants = true,
   onCheck,
   excluded = false,
+  rowRef,
 }: {
   depth: number
   object: RentalObject
@@ -192,6 +193,8 @@ export function ObjectRow({
   onCheck?: () => void
   /** Object-type filter: greyed and never ticked. */
   excluded?: boolean
+  /** For the parent's in-view observer (deferred tenant fetch). */
+  rowRef?: React.Ref<HTMLTableRowElement>
 }) {
   const TypeIcon = OBJECT_TYPE_ICONS[object.type]
   const reachable =
@@ -200,7 +203,7 @@ export function ObjectRow({
     reachable && !excluded ? checkState : 'unchecked'
   const codePath = getPropertyObjectPath(object.type, object.code)
   return (
-    <TableRow className={excluded ? 'opacity-60' : undefined}>
+    <TableRow ref={rowRef} className={excluded ? 'opacity-60' : undefined}>
       <TableCell className="py-1.5">
         <Indent depth={depth}>
           <span className="w-5 shrink-0" />

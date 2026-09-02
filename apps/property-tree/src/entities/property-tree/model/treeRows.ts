@@ -508,8 +508,10 @@ export function buildTreeRows(
       })
       return
     }
+    // A self-matching node stays collapsed: its own row already represents
+    // the hit, and street searches match a building AND its every address.
     const autoExpand =
-      (searchActive && a.anyChildVisible) ||
+      (searchActive && a.anyChildVisible && !a.selfMatch) ||
       (expandAllStructure && walk.expandOnAll)
     const isExpanded = isOpen(walk.node.key, autoExpand)
 
