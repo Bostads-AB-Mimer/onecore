@@ -100,9 +100,10 @@ export interface ContactWriter {
    * Creates a contact in the system of record, together with its applicant
    * role and web account.
    *
-   * This is **not** reversible. There is no delete operation, so a successful
-   * return means the contact exists permanently. Callers must not retry a call
-   * that may have succeeded — see `xpand-malformed-response`.
+   * ONECore has no way to undo this. A successful return means the contact
+   * exists in the system of record, and removing it again is manual work in
+   * Xpand. Callers must not retry a call that may have succeeded — see
+   * `xpand-malformed-response`.
    *
    * @returns the generated contact code (e.g. `P069077`) on success.
    */

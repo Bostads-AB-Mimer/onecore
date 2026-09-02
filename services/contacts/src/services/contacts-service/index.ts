@@ -65,9 +65,10 @@ export const routes = (
         'Creates a contact in Xpand together with its applicant role and a web ' +
         'account. Rejects with 409 when a contact with the same national ID ' +
         'already exists. ' +
-        'NOT REVERSIBLE. Once 201 is returned the contact exists permanently — ' +
-        'there is no delete operation. Callers must not retry a request that ' +
-        'may have succeeded. ' +
+        'NOT REVERSIBLE HERE. Once 201 is returned the contact exists in Xpand ' +
+        'and this API cannot remove it again; cleaning one up means manual work ' +
+        'in Xpand. Callers must not retry a request that may have succeeded — a ' +
+        'retry is rejected by the duplicate check. ' +
         'Housing queues and the application profile are not handled here; they ' +
         'are orchestrated by the caller.',
       tags: ['Contacts'],

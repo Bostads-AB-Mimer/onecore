@@ -90,7 +90,8 @@ const faultReason = (parsed: unknown): string | undefined => {
  * When no url is configured the client refuses every call outright. That is
  * deliberate and load-bearing: test and CI environments leave `XPAND_SOAP__URL`
  * unset, and this guard is what guarantees a test run can never write to a live
- * Xpand instance — contact creation has no delete operation to undo it with.
+ * Xpand instance — contacts created that way would have to be cleaned up by
+ * hand in Xpand.
  */
 export const makeSoapClient = (config: XpandSoapConfig): SoapClient => {
   const parser = new XMLParser(PARSER_OPTIONS)

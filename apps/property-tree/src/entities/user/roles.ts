@@ -6,7 +6,7 @@ export const INVOICE_DEFERRAL_ROLE = 'invoice-deferral'
  * Permission to create customers.
  *
  * Gated separately from reading because creating a contact writes to Xpand and
- * cannot be undone — there is no delete operation.
+ * ONECore cannot remove it again.
  */
 export const CONTACT_CREATE_ROLE = 'contacts:write'
 

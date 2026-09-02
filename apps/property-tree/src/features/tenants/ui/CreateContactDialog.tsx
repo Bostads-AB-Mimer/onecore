@@ -144,7 +144,7 @@ export const CreateContactDialog = () => {
         <DialogHeader>
           <DialogTitle>Ny kund</DialogTitle>
           <DialogDescription>
-            Kunden registreras i Xpand och kan inte tas bort i efterhand.
+            Kunden registreras i Xpand och kan inte tas bort härifrån.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

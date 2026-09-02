@@ -69,7 +69,7 @@ const refusingContactWriter: ContactWriter = {
         'Refusing to create a contact from the test suite.',
         'Pass a fake ContactWriter through makeTestAppFixture({ contactWriter }).',
         'You were just prevented from registering a real customer in Xpand,',
-        'which cannot be undone. Rejoice and be happy!',
+        'which nothing here can take back. Rejoice and be happy!',
       ].join('\n')
     )
   },

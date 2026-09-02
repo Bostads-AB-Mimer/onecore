@@ -154,8 +154,9 @@ export interface ContactsRepository {
    *
    * Distinct from `getByNationalIdNumber`, which matches the stored value
    * verbatim and is what the read endpoints use. This one normalises both
-   * sides, because it guards contact creation: Xpand has no delete operation,
-   * so a missed match becomes a permanent duplicate.
+   * sides, because it guards contact creation: ONECore cannot remove a contact
+   * it created, so a missed match becomes a duplicate that only manual work in
+   * Xpand can clear.
    *
    * @param nid - The national ID number in any common notation.
    *

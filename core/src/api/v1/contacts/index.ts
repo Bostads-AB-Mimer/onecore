@@ -167,7 +167,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
       const { contactCode } = created.data
       const warnings: string[] = []
 
-      // From here on the contact exists permanently. Every remaining step
+      // From here on the contact exists and we cannot remove it. Every remaining step
       // reports its own outcome; none of them may turn the response into an
       // error, because that would invite a retry that cannot succeed.
       let profileStatus: 'created' | 'skipped' | 'failed' = 'skipped'
