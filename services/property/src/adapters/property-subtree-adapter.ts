@@ -332,6 +332,7 @@ const objectCache = cachedBatch(
   (): RentalObjectSummary[] => []
 )
 
+// No caller yet — kept so core can grow a flush hook without a service change.
 export const clearPropertySubtreeCache = (): void => {
   subtreeCache.clear()
   objectCache.clear()

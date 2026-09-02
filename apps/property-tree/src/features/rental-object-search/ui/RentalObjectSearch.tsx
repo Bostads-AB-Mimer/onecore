@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Loader2, Plus, X } from 'lucide-react'
+import { Loader2, Plus } from 'lucide-react'
 
 import type {
   PropertyTreeFilters,
@@ -15,7 +15,10 @@ import {
   useTreeSelectionState,
 } from '@/entities/property-tree'
 
+import type { RentalObjectSummary } from '@/services/api/core/rentalObjectService'
+
 import { Button } from '@/shared/ui/Button'
+import { RemovableChip } from '@/shared/ui/filters'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -39,8 +42,6 @@ const NO_FILTERS: PropertyTreeFilters = {
   subtypes: [],
   grouping: 'costCenter',
 }
-
-type RentalObject = ReturnType<typeof useRentalObjectSearch>['objects'][number]
 
 /**
  * Object-level search: the same hierarchy picker used for målgrupper, but the
@@ -92,7 +93,8 @@ export function RentalObjectSearch() {
         ...OPTIONAL_COLUMNS.filter((c) => extraColumns.has(c.key)),
       ].map((column) => ({
         ...column,
-        render: (o: RentalObject) => column.render(o, details.get(o.rentalId)),
+        render: (o: RentalObjectSummary) =>
+          column.render(o, details.get(o.rentalId)),
       })),
     [extraColumns, details]
   )
@@ -185,31 +187,19 @@ export function RentalObjectSearch() {
       {(appliedNodes.length > 0 || filterChips.length > 0) && (
         <div className="flex flex-wrap items-center gap-2">
           {appliedNodes.map((node) => (
-            <span
+            <RemovableChip
               key={node.key}
-              className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-3 py-1 text-xs font-medium"
+              onRemove={() => removeNode(node)}
+              removeLabel={`Ta bort ${node.label}`}
             >
               <span className="text-muted-foreground">
                 {LEVEL_LABELS[node.level]}:
-              </span>
+              </span>{' '}
               {node.label}
-              <button
-                type="button"
-                onClick={() => removeNode(node)}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label={`Ta bort ${node.label}`}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
+            </RemovableChip>
           ))}
           {filterChips.map((chip) => (
-            <span
-              key={chip.key}
-              className="inline-flex items-center rounded-full border bg-muted px-3 py-1 text-xs font-medium"
-            >
-              {chip.text}
-            </span>
+            <RemovableChip key={chip.key}>{chip.text}</RemovableChip>
           ))}
           <Button variant="ghost" size="sm" onClick={clearAll}>
             Rensa urval
@@ -285,7 +275,7 @@ export function RentalObjectSearch() {
             <ResponsiveTable
               data={search.objects}
               columns={columns}
-              keyExtractor={(o: RentalObject) => o.rentalId}
+              keyExtractor={(o: RentalObjectSummary) => o.rentalId}
               emptyMessage="Inga hyresobjekt hittades"
             />
           </div>

@@ -65,6 +65,7 @@ const marketAreaCache = cachedPromise(
   fetchMarketAreas
 )
 
+// No caller yet — kept so core can grow a flush hook without a service change.
 export const clearMarketAreaCache = (): void => marketAreaCache.clear()
 
 /** Marknadsområde (babya) — a flat attribute on the property, not a hierarchy. */

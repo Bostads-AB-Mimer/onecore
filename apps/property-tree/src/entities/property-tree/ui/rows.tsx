@@ -1,6 +1,6 @@
 // Presentational row atoms for the picker table. No state, no data fetching.
 
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode, Ref } from 'react'
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown, ChevronRight } from 'lucide-react'
@@ -10,8 +10,7 @@ import { Checkbox } from '@/shared/ui/Checkbox'
 import { TableCell, TableRow } from '@/shared/ui/Table'
 
 import type { OccupantTenant } from '../hooks/useOccupantData'
-import { RENTAL_OBJECT_TYPE_LABELS } from '../hooks/useOccupantData'
-import { LEVEL_LABELS } from '../model/labels'
+import { LEVEL_LABELS, RENTAL_OBJECT_TYPE_LABELS } from '../model/labels'
 import type { CheckState, PropertyTreeNode } from '../model/selection'
 import type { NodeRowSpec, RentalObject } from '../model/treeRows'
 import { LEVEL_ICONS, OBJECT_TYPE_ICONS } from './icons'
@@ -27,7 +26,7 @@ function Indent({ depth, children }: { depth: number; children?: ReactNode }) {
   return (
     <div
       className="flex items-center gap-2 pl-[calc(var(--indent-depth)*12px)] @xl:pl-[calc(var(--indent-depth)*20px)]"
-      style={{ '--indent-depth': depth } as React.CSSProperties}
+      style={{ '--indent-depth': depth } as CSSProperties}
     >
       {children}
     </div>
@@ -194,7 +193,7 @@ export function ObjectRow({
   /** Object-type filter: greyed and never ticked. */
   excluded?: boolean
   /** For the parent's in-view observer (deferred tenant fetch). */
-  rowRef?: React.Ref<HTMLTableRowElement>
+  rowRef?: Ref<HTMLTableRowElement>
 }) {
   const TypeIcon = OBJECT_TYPE_ICONS[object.type]
   const reachable =

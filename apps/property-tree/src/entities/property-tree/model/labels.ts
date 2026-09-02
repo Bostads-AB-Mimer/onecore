@@ -1,4 +1,4 @@
-import type { PropertyTreeLevel } from './selection'
+import type { PropertyTreeLevel, RentalObjectType } from './selection'
 
 export const LEVEL_LABELS: Record<PropertyTreeLevel, string> = {
   district: 'Distrikt',
@@ -9,6 +9,26 @@ export const LEVEL_LABELS: Record<PropertyTreeLevel, string> = {
   parkingArea: 'Parkeringsområde',
   staircase: 'Trapphus',
   object: 'Hyresobjekt',
+}
+
+/** What a grouping's roots are called — the picker's switcher buttons. */
+export const GROUPING_LABELS = {
+  costCenter: LEVEL_LABELS.district,
+  marketArea: LEVEL_LABELS.marketArea,
+} as const
+
+export const RENTAL_OBJECT_GROUP_LABELS: Record<RentalObjectType, string> = {
+  residence: 'Bostäder',
+  parkingSpace: 'Bilplatser',
+  facility: 'Lokaler',
+  other: 'Övrigt',
+}
+
+export const RENTAL_OBJECT_TYPE_LABELS: Record<RentalObjectType, string> = {
+  residence: 'Bostad',
+  parkingSpace: 'Bilplats',
+  facility: 'Lokal',
+  other: 'Övrigt',
 }
 
 // Stored criterion values are bare codes for some levels (building, kvv-area).

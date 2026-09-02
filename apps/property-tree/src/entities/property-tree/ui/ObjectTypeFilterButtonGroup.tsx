@@ -4,11 +4,11 @@ import { ChevronDown } from 'lucide-react'
 import { Checkbox } from '@/shared/ui/Checkbox'
 import { Popover, PopoverAnchor, PopoverContent } from '@/shared/ui/Popover'
 
-import { RENTAL_OBJECT_GROUP_LABELS } from '../hooks/useOccupantData'
 import {
   subtypeKey,
   useRentalObjectSubtypes,
 } from '../hooks/useRentalObjectSubtypes'
+import { RENTAL_OBJECT_GROUP_LABELS } from '../model/labels'
 import type { RentalObjectType } from '../model/selection'
 import { ALL_RENTAL_OBJECT_TYPES } from '../model/selection'
 import { OBJECT_TYPE_ICONS } from './icons'

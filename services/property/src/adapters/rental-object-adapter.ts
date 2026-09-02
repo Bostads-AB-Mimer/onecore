@@ -434,6 +434,7 @@ const detailsCache = cachedBatch<RentalObjectDetails[]>(
   () => []
 )
 
+// No caller yet — kept so core can grow a flush hook without a service change.
 export const clearRentalObjectDetailsCache = (): void => detailsCache.clear()
 
 /**

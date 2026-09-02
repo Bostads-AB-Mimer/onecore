@@ -43,7 +43,7 @@ import {
   nodeExcluded,
   rowCheckState,
 } from '../model/facets'
-import { rememberNodeLabel } from '../model/labels'
+import { GROUPING_LABELS, rememberNodeLabel } from '../model/labels'
 import type {
   PropertyTreeNode,
   PropertyTreeSelection,
@@ -512,11 +512,25 @@ export function PropertyTreePicker({
       expandedDescendants,
     ]
   )
+  // The mount-time emit with nothing selected is a no-op for every consumer —
+  // skipping it keeps a remount from wiping what the page already applied.
+  const selectionEmpty =
+    effectiveSelection.size === 0 && expandedDescendants.length === 0
+  const hasEmittedRef = useRef(false)
   useEffect(() => {
     if (applyMode !== 'live' || overCap || descendantsPending) return
+    if (selectionEmpty && !hasEmittedRef.current) return
+    hasEmittedRef.current = true
     emitApply()
     // emitApply reads both refs; applySignature is the real dependency.
-  }, [applyMode, overCap, descendantsPending, applySignature, emitApply])
+  }, [
+    applyMode,
+    overCap,
+    descendantsPending,
+    applySignature,
+    selectionEmpty,
+    emitApply,
+  ])
 
   // An explicit override either way, so folding a search hit sticks even
   // though auto-expansion would reopen it.
@@ -603,7 +617,7 @@ export function PropertyTreePicker({
                   : 'bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted'
               }
             >
-              {g === 'costCenter' ? 'Distrikt' : 'Marknadsområde'}
+              {GROUPING_LABELS[g]}
             </button>
           ))}
         </div>

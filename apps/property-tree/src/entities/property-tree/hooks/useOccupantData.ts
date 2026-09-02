@@ -14,20 +14,6 @@ export type { RentalObjectSummary, RentalObjectType }
 // so this is the largest page we can ask for.
 const PAGE_SIZE = 100
 
-export const RENTAL_OBJECT_GROUP_LABELS: Record<RentalObjectType, string> = {
-  residence: 'Bostäder',
-  parkingSpace: 'Bilplatser',
-  facility: 'Lokaler',
-  other: 'Övrigt',
-}
-
-export const RENTAL_OBJECT_TYPE_LABELS: Record<RentalObjectType, string> = {
-  residence: 'Bostad',
-  parkingSpace: 'Bilplats',
-  facility: 'Lokal',
-  other: 'Övrigt',
-}
-
 export interface OccupantTenant {
   contactCode: string
   name: string

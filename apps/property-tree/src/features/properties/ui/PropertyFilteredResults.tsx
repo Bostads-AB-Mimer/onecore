@@ -1,10 +1,9 @@
-import { Building, X } from 'lucide-react'
+import { Building } from 'lucide-react'
 
 import type { Property } from '@/services/types'
 
-import { Badge } from '@/shared/ui/Badge'
-import { Button } from '@/shared/ui/Button'
 import { EmptyState } from '@/shared/ui/EmptyState'
+import { RemovableChip } from '@/shared/ui/filters'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
 import type { SearchTypeFilter } from '../hooks/usePropertyFilters'
@@ -64,23 +63,9 @@ export const PropertyFilteredResults = ({
       {filterChips.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {filterChips.map((chip, index) => (
-            <Badge
-              key={index}
-              variant="secondary"
-              className="px-3 py-1 text-sm flex items-center gap-2"
-            >
-              <span>
-                {chip.label}: {chip.value}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0 hover:bg-transparent"
-                onClick={chip.onRemove}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
+            <RemovableChip key={index} onRemove={chip.onRemove}>
+              {chip.label}: {chip.value}
+            </RemovableChip>
           ))}
         </div>
       )}

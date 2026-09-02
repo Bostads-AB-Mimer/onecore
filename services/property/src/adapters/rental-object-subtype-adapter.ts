@@ -74,6 +74,7 @@ const subtypeCache = cachedPromise(
   fetchRentalObjectSubtypes
 )
 
+// No caller yet — kept so core can grow a flush hook without a service change.
 export const clearRentalObjectSubtypeCache = (): void => subtypeCache.clear()
 
 export const listRentalObjectSubtypes = (): Promise<RentalObjectSubtype[]> =>

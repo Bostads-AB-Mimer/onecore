@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 
 import { RENTAL_OBJECT_TYPE_LABELS } from '@/entities/property-tree'
 
-import type { RentalObjectSummary as RentalObject } from '@/services/api/core/rentalObjectService'
+import type { RentalObjectSummary } from '@/services/api/core/rentalObjectService'
 
 import { getPropertyObjectPath } from '@/shared/routes'
 
@@ -17,7 +17,7 @@ export interface RentalObjectColumn {
   key: string
   label: string
   render: (
-    object: RentalObject,
+    object: RentalObjectSummary,
     details: RentalObjectDetails | undefined
   ) => ReactNode
   hideOnMobile?: boolean
@@ -47,7 +47,7 @@ const formatRentPerArea = (
     : `${numberFormat.format((rent * 12) / area)} kr/m²/år`
 
 /** Each type has its own detail page; 'Övrigt' has none, so those stay text. */
-function RentalObjectLink({ object }: { object: RentalObject }) {
+function RentalObjectLink({ object }: { object: RentalObjectSummary }) {
   const path = getPropertyObjectPath(object.type, object.rentalId)
   if (!path) return <>{object.rentalId}</>
   return (
