@@ -45,7 +45,10 @@
     "overrides": {
       "is-generator-function": "1.1.0",
       "@types/koa__router": "12.0.4"
-    }
+    },
+    "ignoredBuiltDependencies": [
+      "core-js"
+    ]
   },
   "dependencies": {
     "@azure/msal-node": "^2.9.2"
