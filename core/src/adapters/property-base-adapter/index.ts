@@ -926,6 +926,32 @@ export async function searchRentalBlocks(
   }
 }
 
+type GetRentalIdsWithBlockQuery = NonNullable<
+  paths['/residences/rental-blocks/rental-ids']['get']['parameters']['query']
+>
+
+export async function getRentalIdsWithBlock(
+  query: GetRentalIdsWithBlockQuery
+): Promise<AdapterResult<string[], 'unknown'>> {
+  try {
+    // openapi-fetch serializes the query itself: arrays as style "form" with
+    // explode (?blockReason=A&blockReason=B) and undefined values omitted
+    const response = await client().GET(
+      '/residences/rental-blocks/rental-ids',
+      { params: { query } }
+    )
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    throw new Error(`Unexpected response status: ${response.response.status}`)
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalIdsWithBlock')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function exportRentalBlocksToExcel(
   queryParams: QueryParams
 ): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {

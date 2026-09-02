@@ -20,6 +20,7 @@ import {
   getAllRentalBlocks,
   searchRentalBlocks,
   getDistinctBlockReasons,
+  getRentalIdsWithBlock,
   upsertMalarEnergiFacilityId,
 } from '../adapters/residence-adapter'
 import {
@@ -33,6 +34,7 @@ import {
   getAllRentalBlocksQueryParamsSchema,
   searchRentalBlocksQueryParamsSchema,
   exportRentalBlocksQueryParamsSchema,
+  rentalIdsWithBlockQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 import { property } from '@onecore/types'
@@ -1108,6 +1110,66 @@ export const routes = (router: KoaRouter) => {
         }
       } catch (err) {
         logger.error(err, 'Error fetching all rental blocks')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/rental-ids:
+   *   get:
+   *     summary: Rental ids carrying a matching rental block
+   *     description: >
+   *       Lean companion to /residences/rental-blocks/search. Returns only the
+   *       distinct rental ids, with no pagination, rent data or district
+   *       enrichment - for consumers that need to answer "is this object
+   *       blocked" in bulk.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason caption (supports multiple values)
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: >
+   *           true = not yet ended (toDate >= today or null), false = already
+   *           ended (toDate < today). If omitted, all blocks.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved rental ids
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/GetRentalIdsWithBlockResponse'
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/rental-ids',
+    parseRequest({ query: rentalIdsWithBlockQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const rentalIds = await getRentalIdsWithBlock(ctx.request.parsedQuery)
+
+        ctx.status = 200
+        ctx.body = { content: rentalIds, ...metadata }
+      } catch (err) {
+        logger.error({ err }, 'Error fetching rental ids with block')
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'unknown error'

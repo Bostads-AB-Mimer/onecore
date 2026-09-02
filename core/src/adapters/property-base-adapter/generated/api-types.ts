@@ -1375,6 +1375,34 @@ export interface paths {
       }
     }
   }
+  '/residences/rental-blocks/rental-ids': {
+    /**
+     * Rental ids carrying a matching rental block
+     * @description Lean companion to /residences/rental-blocks/search. Returns only the distinct rental ids, with no pagination, rent data or district enrichment - for consumers that need to answer "is this object blocked" in bulk.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by block reason caption (supports multiple values) */
+          blockReason?: string[]
+          /** @description true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks. */
+          active?: boolean
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved rental ids */
+        200: {
+          content: {
+            'application/json': components['schemas']['GetRentalIdsWithBlockResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/residences/block-reasons': {
     /**
      * Get all block reasons
@@ -3633,6 +3661,18 @@ export interface components {
     BlockReason: {
       id: string
       caption: string
+    }
+    GetRentalIdsWithBlockResponse: {
+      content: string[]
+      _links: {
+        self: {
+          href: string
+        }
+        link: {
+          href: string
+          templated: boolean
+        }
+      }
     }
     ComponentCategory: {
       /** Format: uuid */
