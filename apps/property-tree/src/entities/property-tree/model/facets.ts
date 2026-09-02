@@ -102,18 +102,24 @@ export interface ObjectFilterView {
   facets: FacetIndex
 }
 
-// A node's counts are known once its root's walk is indexed — the root is
-// the node's first ancestor, or the node itself at the top.
+// Keyed on the node itself (its parent for uncounted object leaves), not its
+// root: selected nodes keep the root of the grouping they were picked under.
 const facetKnown = (
   view: ObjectFilterView,
-  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>
-): boolean => view.facets.totalByKey.has(node.ancestors[0] ?? node.key)
+  node: Pick<PropertyTreeNode, 'key' | 'level' | 'ancestors'>
+): boolean => {
+  const key =
+    node.level === 'object'
+      ? (node.ancestors[node.ancestors.length - 1] ?? node.key)
+      : node.key
+  return view.facets.totalByKey.has(key)
+}
 
 /** Objects under a node matching the active filter — the "Antal" column.
  * Undefined until the node's root's objects have arrived; a missing key under
  * a settled root is a branch that truly holds nothing, so it reads 0. */
 export function nodeCount(
-  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
+  node: Pick<PropertyTreeNode, 'key' | 'level' | 'ancestors'>,
   view: ObjectFilterView
 ): number | undefined {
   if (!facetKnown(view, node)) return undefined
@@ -139,7 +145,7 @@ export function nodeExcluded(
 /** Some but not all of the node's objects match — a selected node then renders
  * indeterminate, since "checked" would claim its greyed members too. */
 export function nodePartiallyExcluded(
-  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
+  node: Pick<PropertyTreeNode, 'key' | 'level' | 'ancestors'>,
   view: ObjectFilterView
 ): boolean {
   if (!facetKnown(view, node)) return false
@@ -152,7 +158,7 @@ export function nodePartiallyExcluded(
  * selected node holding filtered-out objects reads indeterminate. */
 export function rowCheckState(
   selection: PropertyTreeSelection,
-  node: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
+  node: Pick<PropertyTreeNode, 'key' | 'level' | 'ancestors'>,
   view: ObjectFilterView,
   covered: ReadonlySet<string>
 ): CheckState {

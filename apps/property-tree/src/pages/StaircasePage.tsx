@@ -5,15 +5,15 @@ import { StaircaseTabs } from '@/widgets/staircase-tabs'
 import { StaircaseBasicInfo, useStaircaseDetails } from '@/features/buildings'
 
 import { toTitleCase } from '@/shared/lib/textUtils'
+import { parseStaircaseId } from '@/shared/routes'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 export function StaircasePage() {
   const { staircaseId } = useParams()
-  // The canonical id is `<bygcode>-<vancode>`; the API takes the codes
-  // separately, and vancodes never contain a dash, so split at the last one.
-  const seam = staircaseId?.lastIndexOf('-') ?? -1
-  const buildingCode = seam > 0 ? staircaseId?.slice(0, seam) : undefined
-  const staircaseCode = seam > 0 ? staircaseId?.slice(seam + 1) : undefined
+  // The API takes the two codes separately.
+  const parts = parseStaircaseId(staircaseId)
+  const buildingCode = parts?.buildingCode
+  const staircaseCode = parts?.staircaseCode
   const { state } = useLocation()
   const { building, staircase, residences, isLoading, error } =
     useStaircaseDetails(buildingCode, staircaseCode)

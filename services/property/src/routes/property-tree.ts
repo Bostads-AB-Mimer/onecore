@@ -10,16 +10,28 @@ import {
 
 import { parseRequest } from '../middleware/parse-request'
 
-const GetPropertyTreeQueryParamsSchema = z.object({
-  groupBy: PropertyGroupingSchema,
-  // Cost center: uuid. Marknadsområde: babya.code. Företag: company code.
-  rootId: z.string().min(1),
-  // 'false' skips the rental-object leaves, for structure-only consumers.
-  includeObjects: z
-    .enum(['true', 'false'])
-    .default('true')
-    .transform((v) => v === 'true'),
-})
+const GetPropertyTreeQueryParamsSchema = z
+  .object({
+    groupBy: PropertyGroupingSchema,
+    // Cost center: uuid. Marknadsområde: babya.code. Företag: company code.
+    rootId: z.string().min(1),
+    // 'false' skips the rental-object leaves, for structure-only consumers.
+    includeObjects: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+  })
+  // onecore_cost_center.id is a uniqueidentifier: a non-uuid would throw in
+  // Prisma and surface as a 500 instead of this 400.
+  .superRefine(({ groupBy, rootId }, ctx) => {
+    if (groupBy !== 'costCenter') return
+    if (z.string().uuid().safeParse(rootId).success) return
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['rootId'],
+      message: 'rootId must be a uuid when groupBy is costCenter',
+    })
+  })
 
 /**
  * @swagger
@@ -62,7 +74,7 @@ export const routes = (router: KoaRouter) => {
    *         required: true
    *         schema:
    *           type: string
-   *         description: Cost center id (uuid), market area code, or company code
+   *         description: Cost center id (must be a uuid), market area code, or company code
    *       - in: query
    *         name: includeObjects
    *         required: false

@@ -55,16 +55,8 @@ export function nodeKey(level: PropertyTreeLevel, id: string): string {
   return `${level}:${id}`
 }
 
-// Defined once so tree building (treeRows) and object counting (facets) can't
-// drift: staircase/parking-area codes are only unique within their parent.
-export const staircaseComposite = (
-  buildingCode: string,
-  staircaseCode: string
-) => `${buildingCode}-${staircaseCode}`
-
-export const staircaseKey = (buildingCode: string, staircaseCode: string) =>
-  nodeKey('staircase', staircaseComposite(buildingCode, staircaseCode))
-
+// Parking-area codes are only unique within their property. (Staircase ids
+// are already composite `<byg>-<van>` from the API; see shared/routes.)
 export const parkingAreaKey = (propertyCode: string, parkingAreaCode: string) =>
   nodeKey('parkingArea', `${propertyCode}:${parkingAreaCode}`)
 

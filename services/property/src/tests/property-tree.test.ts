@@ -91,6 +91,20 @@ describe('GET /property-tree', () => {
     )
   })
 
+  it('returns 400 when a costCenter rootId is not a uuid', async () => {
+    const spy = jest.spyOn(groupingAdapter, 'getPropertyTree')
+
+    const res = await request(app.callback())
+      .get('/property-tree')
+      .query({ groupBy: 'costCenter', rootId: 'not-a-uuid' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.data).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: ['rootId'] })])
+    )
+    expect(spy).not.toHaveBeenCalled()
+  })
+
   it('returns 400 when groupBy is not a known grouping', async () => {
     const res = await request(app.callback())
       .get('/property-tree')

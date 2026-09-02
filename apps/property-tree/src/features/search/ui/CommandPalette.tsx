@@ -19,7 +19,7 @@ import { formatCurrency, formatDate } from '@/entities/lease'
 
 import { debounce } from '@/shared/lib/debounce'
 import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
-import { paths } from '@/shared/routes'
+import { paths, staircaseId } from '@/shared/routes'
 
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import { type CombinedSearchResult, useSearch } from '../hooks/useSearch'
@@ -116,7 +116,7 @@ function getResultProps(item: CombinedSearchResult) {
         label: item.name ?? item.code,
         prefix: '[UPP]',
         subtitle: item.building.name ?? item.property.name ?? undefined,
-        path: paths.staircase(`${item.building.code}-${item.code}`),
+        path: paths.staircase(staircaseId(item.building.code, item.code)),
         state: {
           buildingCode: item.building.code,
           propertyCode: item.property.code,

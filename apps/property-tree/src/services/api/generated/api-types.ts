@@ -2710,7 +2710,7 @@ export interface paths {
       parameters: {
         query: {
           groupBy: 'costCenter' | 'marketArea' | 'company'
-          /** @description Cost center id (uuid), market area code, or company code */
+          /** @description Cost center id (must be a uuid), market area code, or company code */
           rootId: string
           /** @description Pass 'false' to omit the rental-object leaves */
           includeObjects?: 'true' | 'false'

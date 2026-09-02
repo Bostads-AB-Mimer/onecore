@@ -73,6 +73,20 @@ export const paths = {
   },
 }
 
+/** The canonical staircase id used in URLs and tree nodes: `<bygcode>-<vancode>`. */
+export const staircaseId = (buildingCode: string, staircaseCode: string) =>
+  `${buildingCode}-${staircaseCode}`
+
+/** Inverse of staircaseId. Vancodes never contain a dash, so split at the last. */
+export function parseStaircaseId(
+  id: string | undefined
+): { buildingCode: string; staircaseCode: string } | null {
+  if (!id) return null
+  const seam = id.lastIndexOf('-')
+  if (seam <= 0 || seam === id.length - 1) return null
+  return { buildingCode: id.slice(0, seam), staircaseCode: id.slice(seam + 1) }
+}
+
 // Build a rental-object detail path from its type label + code. Folds the
 // varied labels (Bostad/Lägenhet, Lokal/Förråd, Bilplats/parkering); returns
 // null when unlinkable (e.g. Övrigt) or the code is missing.

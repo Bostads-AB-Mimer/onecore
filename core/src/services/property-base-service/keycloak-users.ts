@@ -32,13 +32,20 @@ export function getCachedUsersByRole(role: string): Promise<RoleUsersResult> {
     promise: getUsersByRole(role),
     expiresAt: now + ROLE_USERS_TTL_MS,
   }
-  // Failures resolve as ok:false rather than throw — evict them so one blip
-  // doesn't pin a null "responsible" for the whole TTL.
-  entry.promise.then((result) => {
-    if (!result.ok && roleUsersCache.get(role) === entry) {
-      roleUsersCache.delete(role)
+  // Evict failures (ok:false or a rejection) so one blip doesn't pin a null
+  // "responsible" for the whole TTL. Callers see the settlement untouched.
+  entry.promise.then(
+    (result) => {
+      if (!result.ok && roleUsersCache.get(role) === entry) {
+        roleUsersCache.delete(role)
+      }
+    },
+    () => {
+      if (roleUsersCache.get(role) === entry) {
+        roleUsersCache.delete(role)
+      }
     }
-  })
+  )
   roleUsersCache.set(role, entry)
   return entry.promise
 }

@@ -6,7 +6,7 @@ import { Building, Staircase } from '@/services/types'
 
 import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
 import { toTitleCase } from '@/shared/lib/textUtils'
-import { matchesRoute, paths, routes } from '@/shared/routes'
+import { matchesRoute, paths, routes, staircaseId } from '@/shared/routes'
 import { SidebarMenuButton, SidebarMenuItem } from '@/shared/ui/Sidebar'
 
 import { useHierarchicalSelection } from '../hooks/useHierarchicalSelection'
@@ -56,7 +56,7 @@ export function StaircaseNavigation({
         isSelectedInHierarchy={isInHierarchy && !isDirectlySelected}
       >
         <Link
-          to={paths.staircase(`${building.code}-${staircase.code}`)}
+          to={paths.staircase(staircaseId(building.code, staircase.code))}
           state={{
             propertyCode,
             buildingCode: building.code,

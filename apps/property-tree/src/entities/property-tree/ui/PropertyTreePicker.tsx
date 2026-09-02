@@ -162,13 +162,18 @@ export function PropertyTreePicker({
   const query = debouncedSearch.trim().toLowerCase()
   const searchActive = query.length >= MIN_SEARCH_LENGTH
 
-  // A new search always starts fully auto-opened: manual closes reset.
+  // A search *starting* opens everything: manual closes reset. Refining or
+  // backspacing an active search keeps them — folding a hit should stick.
+  const searchWasActive = useRef(false)
   useEffect(() => {
+    const started = searchActive && !searchWasActive.current
+    searchWasActive.current = searchActive
+    if (!started) return
     setExpandOverrides((prev) => {
       if (![...prev.values()].some((open) => !open)) return prev
       return new Map([...prev].filter(([, open]) => open))
     })
-  }, [query])
+  }, [query, searchActive])
 
   const { roots, isLoading: rootsLoading } = usePropertyTreeRoots(grouping)
 
