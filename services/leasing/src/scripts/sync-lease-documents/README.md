@@ -25,8 +25,14 @@ run has not been done.** Two things are outstanding:
   `related-docs`, `upload-file` and an unrelated rent-article import accept a
   file at all. Until then the Xpand `Uppsägning av …` PDFs (3,116 of them) land
   in `related-docs` and `termination-file-url` keeps returning
-  `404 Uppsägningsdokumentet hittades inte`. When the endpoint lands, terminations
-  should be routed there instead of to `related-docs`.
+  `404 Uppsägningsdokumentet hittades inte`.
+
+  When the endpoint lands: `classifyDocument` already tags these `uppsagning`,
+  so it needs a third target in `planLease` alongside `contract`/`related`, and
+  an upload function in `tenfast-documents.ts`. Decide too what to do with the
+  copies already sitting in `related-docs` from earlier runs — move them, or set
+  the termination file and leave them.
+
 - **33 documents exceed Tenfast's 15 MiB limit** and will not be imported.
   Tenfast will not raise the cap; Mimer handles these manually. They are listed
   in `oversized.csv` on every run. All 33 are scanned application paperwork
@@ -162,7 +168,11 @@ Nothing suggests Tenfast rate-limits — 694 uploads at 4-way concurrency drew n
 halve the wall clock; watch the first minutes, and `--max-failures` plus resume
 make backing off cheap.
 
-## Measured against the test environment
+## Measured against the test environment, 2026-09-02
+
+These figures drift: the test environment is in use, and the lease count moved
+from 20,392 to 20,404 over the two days this was built. Run `--dry-run` for
+current numbers before trusting any of them.
 
 |                                  |                                                          |
 | -------------------------------- | -------------------------------------------------------- |
