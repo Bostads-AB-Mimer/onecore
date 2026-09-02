@@ -266,10 +266,12 @@ export type TenfastAccountConfiguration = z.infer<
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
-  label: z.string(),
-  type: z.string(),
-  accountNr: z.string().nullable(),
-  createdAt: z.string(),
+  // label, type and accountNr are no longer returned by the Tenfast API for
+  // newer articles (title/defaultLabel are used instead), so they are optional.
+  label: z.string().optional(),
+  type: z.string().optional(),
+  accountNr: z.string().nullable().optional(),
+  createdAt: z.string().nullable(),
   hyresvard: z.string(),
   code: z.string(),
   title: z.string(),

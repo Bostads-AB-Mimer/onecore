@@ -627,6 +627,10 @@ export const getInvoiceArticle = async (
 
     const parsedResponse = TenfastRentArticleSchema.safeParse(result.data)
     if (!parsedResponse.success) {
+      logger.error(
+        { articleId, issues: parsedResponse.error.issues },
+        'tenfast-adapter.getInvoiceArticle: response failed schema validation'
+      )
       return { ok: false, err: 'schema-error' }
     }
 
@@ -1005,6 +1009,7 @@ const transformToInvoiceRow = (
     totalAmount: tenfastInvoiceRow.amount * (1 + tenfastInvoiceRow.vat),
     printGroup: tenfastInvoiceRow.consolidationLabel ?? null,
     invoiceRowText: tenfastInvoiceRow.label,
+    rentalObject: tenfastInvoiceRow.hyresobjekt,
     // We do not have the fields below in tenfast at the moment
     deduction: 0,
     roundoff: 0,
@@ -1203,7 +1208,6 @@ export const getInvoicesNotExported = async (
         roundoff: invoiceResult.roundingAmount,
         recipientContactCode: invoiceResult.recipientContactCode,
         recipientName: invoiceResult.recipientName,
-        invoiceRows: [],
       }
 
       if (!invoice.invoiceId) {

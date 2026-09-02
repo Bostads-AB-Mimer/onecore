@@ -421,6 +421,57 @@ describe('Tenfast Adapter', () => {
       })
     })
 
+    it('should accept articles without label, type and accountNr', async () => {
+      // Newer articles from the Tenfast API no longer include label, type
+      // or a top-level accountNr (title/defaultLabel are used instead).
+      const mockArticle = {
+        _id: '6a0ed9d2c08642aaffb6323a',
+        hyresvard: '6909970c8825e06c8eca329b',
+        createdAt: '2026-05-21T10:09:22.520Z',
+        updatedAt: '2026-05-21T10:09:22.520Z',
+        title: 'Ersättning för värme och kyla',
+        defaultLabel: 'Ersättning för värme och kyla',
+        code: 'NAVETVÄRMEM',
+        accountConfigurations: [
+          {
+            projectCode: '',
+            accountNr: 3016,
+            categoryCode: 'Intäkter',
+            debitType: 'HYRA',
+            costCenter: '0061',
+            property: '26001',
+            freeText: '20006',
+          },
+        ],
+        consolidationLabel: '',
+        rentalLoss: false,
+        vat: 0,
+        category: 'Hyra/Inkasso',
+        description: '',
+        includeInContract: true,
+        adjustmentType: 'negotiation',
+      }
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: mockArticle,
+      })
+
+      const result = await getInvoiceArticle('NAVETVÄRMEM')
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          _id: mockArticle._id,
+          hyresvard: mockArticle.hyresvard,
+          createdAt: mockArticle.createdAt,
+          title: mockArticle.title,
+          code: mockArticle.code,
+          includeInContract: true,
+          accountConfigurations: mockArticle.accountConfigurations,
+        },
+      })
+    })
+
     it('should return error when article is not found', async () => {
       mockAxios.request.mockResolvedValue({
         status: 404,
