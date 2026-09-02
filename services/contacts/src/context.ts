@@ -2,6 +2,8 @@ import { loggerMiddlewares, type Resource } from '@onecore/utilities'
 import { Knex } from 'knex'
 import { Config } from './common/config'
 import { ContactsRepository, xpandContactsRepository } from './adapters'
+import { ContactWriter } from './adapters/contact-writer'
+import { xpandSoapContactWriter } from './adapters/xpand/soap'
 import { xpandDbClient } from './adapters/xpand/db'
 import Koa from 'koa'
 
@@ -34,6 +36,10 @@ export interface AppContext {
      * The ContactsRepository implementation to use.
      */
     contactsRepository: ContactsRepository
+    /**
+     * The ContactWriter implementation to use for creating contacts.
+     */
+    contactWriter: ContactWriter
   }
 }
 
@@ -49,8 +55,16 @@ export type AppModules = AppContext['modules']
 
 /**
  * Construct an ApplicationContext from a Config instance.
+ *
+ * `overrides` replaces individual modules after they are constructed. It exists
+ * for tests, which inject a fake ContactWriter so no test run can reach a live
+ * Xpand environment — contact creation cannot be undone, so that guarantee is
+ * worth an explicit seam rather than relying on configuration being unset.
  */
-export const makeAppContext = (config: Config): AppContext => {
+export const makeAppContext = (
+  config: Config,
+  overrides: Partial<AppModules> = {}
+): AppContext => {
   const xpandDb = xpandDbClient(config.xpandDatabase)
 
   /**
@@ -76,6 +90,8 @@ export const makeAppContext = (config: Config): AppContext => {
     },
     modules: {
       contactsRepository: xpandContactsRepository(xpandDb),
+      contactWriter: xpandSoapContactWriter(config.xpandSoap),
+      ...overrides,
     },
   }
 }

@@ -1173,30 +1173,6 @@ export interface paths {
       }
     }
   }
-  '/offers/{offerId}/expire': {
-    /**
-     * Expire an offer
-     * @description Expires an offer
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the offer to expire */
-          offerId: string
-        }
-      }
-      responses: {
-        /** @description Offer expired successful. */
-        202: {
-          content: never
-        }
-        /** @description Internal server error. Failed to expire the offer. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/applicants': {
     /**
      * Get applicants by contact code
@@ -2265,6 +2241,10 @@ export interface paths {
       responses: {
         /** @description Offer creation successful. */
         201: {
+          content: never
+        }
+        /** @description No eligible applicant found for the listing. */
+        404: {
           content: never
         }
         /** @description Internal server error. Failed to create the offer. */
@@ -10621,6 +10601,201 @@ export interface paths {
         }
       }
     }
+    /**
+     * Create a contact
+     * @description Creates a contact, then optionally records an application profile and enrols the customer in the requested waiting lists. NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists this endpoint always answers 201, reporting any later step that failed under `warnings` — those steps are idempotent and should be completed on the created contact rather than by creating it again.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateContactRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                contactCode: string
+                contact:
+                  | (
+                      | {
+                          contactCode: string
+                          communication: {
+                            phoneNumbers: {
+                              phoneNumber: string
+                              /** @enum {string} */
+                              type:
+                                | 'work'
+                                | 'home'
+                                | 'mobile'
+                                | 'direct-line'
+                                | 'fax'
+                                | 'pager'
+                                | 'unspecified'
+                              comment?: string
+                              isPrimary: boolean
+                            }[]
+                            emailAddresses: {
+                              emailAddress: string
+                              type: string
+                              isPrimary: boolean
+                            }[]
+                            specialAttention: boolean
+                          }
+                          addresses: {
+                            careOf?: string
+                            street: string | null
+                            zipCode: string | null
+                            city: string | null
+                            region: string | null
+                            country: string | null
+                          }[]
+                          relatedContacts?: {
+                            contactCode: string
+                            /** @enum {string} */
+                            role:
+                              | 'trustee'
+                              | 'administrator'
+                              | 'trusteeFor'
+                              | 'administratorFor'
+                              | 'otherInvoiceRecipient'
+                              | 'otherInvoiceRecipientFor'
+                            fullName: string
+                            firstName: string
+                            lastName: string
+                          }[]
+                          /** @enum {string} */
+                          type: 'individual'
+                          personal: {
+                            nationalRegistrationNumber: string | null
+                            birthDate: string | null
+                            firstName: string | null
+                            lastName: string | null
+                            fullName: string
+                          }
+                        }
+                      | {
+                          contactCode: string
+                          communication: {
+                            phoneNumbers: {
+                              phoneNumber: string
+                              /** @enum {string} */
+                              type:
+                                | 'work'
+                                | 'home'
+                                | 'mobile'
+                                | 'direct-line'
+                                | 'fax'
+                                | 'pager'
+                                | 'unspecified'
+                              comment?: string
+                              isPrimary: boolean
+                            }[]
+                            emailAddresses: {
+                              emailAddress: string
+                              type: string
+                              isPrimary: boolean
+                            }[]
+                            specialAttention: boolean
+                          }
+                          addresses: {
+                            careOf?: string
+                            street: string | null
+                            zipCode: string | null
+                            city: string | null
+                            region: string | null
+                            country: string | null
+                          }[]
+                          relatedContacts?: {
+                            contactCode: string
+                            /** @enum {string} */
+                            role:
+                              | 'trustee'
+                              | 'administrator'
+                              | 'trusteeFor'
+                              | 'administratorFor'
+                              | 'otherInvoiceRecipient'
+                              | 'otherInvoiceRecipientFor'
+                            fullName: string
+                            firstName: string
+                            lastName: string
+                          }[]
+                          /** @enum {string} */
+                          type: 'organisation'
+                          organisation: {
+                            organisationNumber: string
+                            name: string
+                          }
+                        }
+                    )
+                  | null
+                applicationProfile: {
+                  /** @enum {string} */
+                  status: 'created' | 'skipped' | 'failed'
+                  error?: string
+                }
+                waitingLists: {
+                  /** @enum {number} */
+                  waitingListType: 1 | 2 | 3
+                  /** @enum {string} */
+                  status: 'created' | 'skipped' | 'failed'
+                  error?: string
+                }[]
+              }
+              warnings?: string[]
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Service Unavailable */
+        503: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+      }
+    }
   }
   '/v1/contacts/by-codes': {
     /**
@@ -15118,6 +15293,62 @@ export interface components {
           templated?: boolean
         }
       }
+    }
+    CreateContactRequest: {
+      nationalId: string
+      firstName: string
+      lastName: string
+      addresses: {
+        careOf?: string
+        street: string
+        zipCode: string
+        city: string
+        country?: string
+      }[]
+      emailAddresses: {
+        /** Format: email */
+        emailAddress: string
+        /**
+         * @default private
+         * @enum {string}
+         */
+        type?: 'private' | 'work' | 'unspecified'
+        /** @default true */
+        isPrimary?: boolean
+      }[]
+      /** @default [] */
+      phoneNumbers?: {
+        phoneNumber: string
+        /**
+         * @default mobile
+         * @enum {string}
+         */
+        type?: 'mobile' | 'home' | 'work'
+        /** @default false */
+        isPrimary?: boolean
+      }[]
+      applicationProfile?: {
+        /** @enum {string} */
+        housingType:
+          | 'LIVES_WITH_FAMILY'
+          | 'LODGER'
+          | 'RENTAL'
+          | 'SUB_RENTAL'
+          | 'OWNS_HOUSE'
+          | 'OWNS_FLAT'
+          | 'OWNS_ROW_HOUSE'
+          | 'OTHER'
+        landlord: string | null
+        numAdults: number
+        numChildren: number
+        housingTypeDescription: string | null
+        housingReference: {
+          email: string | null
+          phone: string | null
+        }
+      }
+      /** @default [] */
+      waitingLists?: (1 | 2 | 3)[]
     }
     ContactV1:
       | {

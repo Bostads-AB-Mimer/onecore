@@ -648,6 +648,12 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      if (!res.ok && res.err == 'waiting-list-type-not-found') {
+        ctx.status = 500
+        ctx.body = { error: 'Waiting list type does not exist in Xpand' }
+        return
+      }
+
       ctx.status = 201
       ctx.body = {
         message: 'Applicant successfully added to waiting list',
@@ -718,21 +724,39 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      if (!res.ok && res.err == 'waiting-list-type-not-found') {
+        ctx.status = 500
+        ctx.body = { error: 'Waiting list type does not exist in Xpand' }
+        return
+      }
+
       //add to waitinglist
-      await addApplicantToToWaitingList(
+      const addResult = await addApplicantToToWaitingList(
         ctx.params.contactCode,
         request.waitingListType as WaitingListType
       )
 
-      if (!res.ok && res.err == 'unknown') {
+      // Note: these check `addResult`, not `res`. They previously re-tested the
+      // remove result, so a failed add reported success and left the contact
+      // removed from the queue without being re-added.
+      if (!addResult.ok && addResult.err == 'unknown') {
         ctx.status = 500
         ctx.body = { error: 'Unknown error' }
         return
       }
 
-      if (!res.ok && res.err == 'waiting-list-type-not-implemented') {
+      if (
+        !addResult.ok &&
+        addResult.err == 'waiting-list-type-not-implemented'
+      ) {
         ctx.status = 404
         ctx.body = { error: 'Waiting List Type not Implemented' }
+        return
+      }
+
+      if (!addResult.ok && addResult.err == 'waiting-list-type-not-found') {
+        ctx.status = 500
+        ctx.body = { error: 'Waiting list type does not exist in Xpand' }
         return
       }
 

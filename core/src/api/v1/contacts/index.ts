@@ -3,23 +3,57 @@ import { OkapiRouter } from 'koa-okapi-router'
 
 import {
   ContactSchema,
+  CreateContactErrorResponseBodySchema_APIv1,
+  CreateContactRequestBodySchema_APIv1,
+  CreateContactResponseBodySchema_APIv1,
   GetContactResponseBodySchema,
   GetContactsListResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
 } from './schema'
 import {
   generateRouteMetadata,
+  logger,
   makeSuccessResponseBody,
   RouteMetadata,
 } from '@onecore/utilities'
-import { paginatedResponseSchema } from '@onecore/types'
+import { paginatedResponseSchema, WaitingListType } from '@onecore/types'
 
 import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
+import * as leasingAdapter from '../../../adapters/leasing-adapter'
+import { makeClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
 import { transformContact, transformContacts } from './transform'
 import { Config } from '@/common/config'
 import { AdapterResult } from '@/adapters/types'
 import type { Contact } from '@onecore/contacts/domain'
 import { ParameterizedContext } from 'koa'
+
+/**
+ * Status a create failure maps to.
+ *
+ * Only reachable before the contact exists — once it does, the route always
+ * answers 201 and reports later problems as warnings instead.
+ */
+type CreateContactFailureStatus = 400 | 409 | 422 | 502 | 503
+
+const CREATE_CONTACT_STATUS: Record<string, CreateContactFailureStatus> = {
+  'duplicate-contact': 409,
+  'invalid-national-id': 422,
+  'invalid-request': 400,
+  'xpand-rejected': 422,
+  'xpand-fault': 502,
+  'xpand-auth-failed': 502,
+  'xpand-malformed-response': 502,
+  'xpand-unavailable': 503,
+  'write-backend-not-configured': 503,
+  'contacts-service-error': 502,
+}
+
+/** Swedish queue names for caseworker-facing warnings. */
+const WAITING_LIST_LABELS: Record<WaitingListType, string> = {
+  [WaitingListType.Housing]: 'bostad',
+  [WaitingListType.ParkingSpace]: 'bilplats',
+  [WaitingListType.Storage]: 'förråd',
+}
 
 export const routes = (router: OkapiRouter, config: Config) => {
   const contactsServiceUrl = config.contactsService.url
@@ -71,6 +105,166 @@ export const routes = (router: OkapiRouter, config: Config) => {
   router.addEntities({
     ContactV1: ContactSchema,
   })
+
+  router.post(
+    '/v1/contacts',
+    {
+      summary: 'Create a contact',
+      description:
+        'Creates a contact, then optionally records an application profile ' +
+        'and enrols the customer in the requested waiting lists. ' +
+        'NOT TRANSACTIONAL. The contact is created in Xpand and cannot be ' +
+        'removed. Once it exists this endpoint always answers 201, reporting ' +
+        'any later step that failed under `warnings` — those steps are ' +
+        'idempotent and should be completed on the created contact rather than ' +
+        'by creating it again.',
+      tags: ['Contacts'],
+      body: {
+        name: 'CreateContactRequest',
+        schema: CreateContactRequestBodySchema_APIv1,
+      },
+      response: {
+        201: CreateContactResponseBodySchema_APIv1,
+        400: CreateContactErrorResponseBodySchema_APIv1,
+        409: CreateContactErrorResponseBodySchema_APIv1,
+        422: CreateContactErrorResponseBodySchema_APIv1,
+        502: CreateContactErrorResponseBodySchema_APIv1,
+        503: CreateContactErrorResponseBodySchema_APIv1,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      // OkapiRouter uses the body schema for documentation and typing only, so
+      // validation has to happen here or an unchecked body reaches the adapter.
+      const parsed = CreateContactRequestBodySchema_APIv1.safeParse(
+        ctx.request.body
+      )
+
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'invalid-request',
+          detail: parsed.error.issues
+            .map((i) => `${i.path.join('.')}: ${i.message}`)
+            .join('; '),
+          ...metadata,
+        }
+        return
+      }
+
+      const { applicationProfile, waitingLists, ...contact } = parsed.data
+
+      const created = await contactsAdapter.createContact(contact)
+
+      if (!created.ok) {
+        // Nothing was created, so this is a plain failure the caller can act on.
+        ctx.status = CREATE_CONTACT_STATUS[created.err] ?? 502
+        ctx.body = { error: created.err, detail: created.detail, ...metadata }
+        return
+      }
+
+      const { contactCode } = created.data
+      const warnings: string[] = []
+
+      // From here on the contact exists permanently. Every remaining step
+      // reports its own outcome; none of them may turn the response into an
+      // error, because that would invite a retry that cannot succeed.
+      let profileStatus: 'created' | 'skipped' | 'failed' = 'skipped'
+      let profileError: string | undefined
+
+      if (applicationProfile) {
+        const result =
+          await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
+            contactCode,
+            makeClientApplicationProfileRequestParams(
+              applicationProfile,
+              undefined
+            )
+          )
+
+        if (result.ok) {
+          profileStatus = 'created'
+        } else {
+          profileStatus = 'failed'
+          profileError = result.err
+          warnings.push(
+            'Kunden skapades men hushållsuppgifterna kunde inte sparas.'
+          )
+          logger.error(
+            { contactCode, err: result.err },
+            'createContact.applicationProfileFailed'
+          )
+        }
+      }
+
+      // Sequential rather than concurrent: these are writes against the same
+      // contact, and Xpand's own registration flow issues them one at a time.
+      const waitingListResults: {
+        waitingListType: WaitingListType
+        status: 'created' | 'failed'
+        error?: string
+      }[] = []
+
+      const failedWaitingList = (
+        waitingListType: WaitingListType,
+        error: string
+      ) => {
+        waitingListResults.push({ waitingListType, status: 'failed', error })
+        warnings.push(
+          `Kunden skapades men kunde inte ställas i kön för ${WAITING_LIST_LABELS[waitingListType]}.`
+        )
+      }
+
+      for (const waitingListType of waitingLists) {
+        try {
+          const res = await leasingAdapter.addApplicantToWaitingList(
+            contactCode,
+            waitingListType
+          )
+
+          // The status has to be checked explicitly: the adapter returns the
+          // raw axios response, and the shared instance treats everything below
+          // 500 as a resolved call. Without this a 404 from leasing would be
+          // reported to the caseworker as a queue the customer is now in.
+          if (res.status === 201) {
+            waitingListResults.push({ waitingListType, status: 'created' })
+          } else {
+            failedWaitingList(waitingListType, String(res.status))
+            logger.error(
+              { contactCode, waitingListType, status: res.status },
+              'createContact.addToWaitingListRejected'
+            )
+          }
+        } catch (err) {
+          failedWaitingList(waitingListType, 'unknown')
+          logger.error(
+            { contactCode, waitingListType, err },
+            'createContact.addToWaitingListFailed'
+          )
+        }
+      }
+
+      ctx.status = 201
+      ctx.body = {
+        ...makeSuccessResponseBody(
+          {
+            contactCode,
+            contact: created.data.contact
+              ? transformContact(created.data.contact)
+              : null,
+            applicationProfile: {
+              status: profileStatus,
+              ...(profileError ? { error: profileError } : {}),
+            },
+            waitingLists: waitingListResults,
+          },
+          metadata
+        ),
+        ...(warnings.length > 0 ? { warnings } : {}),
+      }
+    }
+  )
 
   router.get(
     '/v1/contacts',

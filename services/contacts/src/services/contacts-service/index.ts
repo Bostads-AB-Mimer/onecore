@@ -7,8 +7,14 @@ import {
   parsePaginationParams,
 } from '@onecore/utilities'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
+import { ContactWriter } from '@src/adapters/contact-writer'
+import { withParsedBody } from '@src/middlewares/parse-request-body'
+import { createContact, CreateContactError } from './create-contact'
 import {
   ContactSchema,
+  CreateContactErrorResponseBodySchema,
+  CreateContactRequestBodySchema,
+  CreateContactResponseBodySchema,
   ErrorResponseBodySchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
@@ -25,10 +31,78 @@ import { paginatedResponseSchema } from '@onecore/types'
 // would otherwise silently enable the include even when the caller said no.
 const isTrue = (v: unknown): boolean => v === true || v === 'true'
 
+/**
+ * Maps a create failure onto an HTTP status.
+ *
+ * 5xx is split deliberately: 502 means the upstream system answered with
+ * something we could not act on, 503 means we never got a usable answer at all
+ * and a retry is reasonable. The difference matters because a malformed
+ * response may mean the contact was created.
+ */
+const CREATE_CONTACT_STATUS: Record<CreateContactError, number> = {
+  'duplicate-contact': 409,
+  'invalid-national-id': 422,
+  'xpand-rejected': 422,
+  'xpand-fault': 502,
+  'xpand-auth-failed': 502,
+  'xpand-malformed-response': 502,
+  'xpand-unavailable': 503,
+  'write-backend-not-configured': 503,
+}
+
 export const routes = (
   router: OkapiRouter,
-  { contactsRepository }: { contactsRepository: ContactsRepository }
+  {
+    contactsRepository,
+    contactWriter,
+  }: { contactsRepository: ContactsRepository; contactWriter: ContactWriter }
 ) => {
+  router.post(
+    '/contacts',
+    {
+      summary: 'Create a contact',
+      description:
+        'Creates a contact in Xpand together with its applicant role and a web ' +
+        'account. Rejects with 409 when a contact with the same national ID ' +
+        'already exists. ' +
+        'NOT REVERSIBLE. Once 201 is returned the contact exists permanently — ' +
+        'there is no delete operation. Callers must not retry a request that ' +
+        'may have succeeded. ' +
+        'Housing queues and the application profile are not handled here; they ' +
+        'are orchestrated by the caller.',
+      tags: ['Contacts'],
+      body: {
+        name: 'CreateContactRequest',
+        schema: CreateContactRequestBodySchema,
+      },
+      response: {
+        201: CreateContactResponseBodySchema,
+        400: ErrorResponseBodySchema,
+        409: CreateContactErrorResponseBodySchema,
+        422: CreateContactErrorResponseBodySchema,
+        502: CreateContactErrorResponseBodySchema,
+        503: CreateContactErrorResponseBodySchema,
+      },
+    },
+    withParsedBody(CreateContactRequestBodySchema, async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const result = await createContact(
+        { contactsRepository, contactWriter },
+        ctx.request.body
+      )
+
+      if (!result.ok) {
+        ctx.status = CREATE_CONTACT_STATUS[result.err]
+        ctx.body = { error: result.err, detail: result.detail, ...metadata }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    })
+  )
+
   router.get(
     '/contacts',
     {

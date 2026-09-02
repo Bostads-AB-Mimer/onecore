@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 
 import { useTenantSearch } from '@/entities/tenant'
+import { CONTACT_CREATE_ROLE, RequireRole } from '@/entities/user'
+
+import { CreateContactDialog } from '@/features/tenants'
 
 import { paths } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
@@ -29,11 +32,16 @@ export function TenantsPage() {
 
   return (
     <ViewLayout>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Kunder</h1>
-        <p className="text-muted-foreground">
-          Sök och hitta hyresgäster och sökande
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Kunder</h1>
+          <p className="text-muted-foreground">
+            Sök och hitta hyresgäster och sökande
+          </p>
+        </div>
+        <RequireRole roles={[CONTACT_CREATE_ROLE]}>
+          <CreateContactDialog />
+        </RequireRole>
       </div>
 
       <Card>
