@@ -215,6 +215,11 @@ const marketAreaCodesCache = cachedKeyed(
   MEMBERSHIP_CACHE_TTL_MS,
   resolveMarketAreaPropertyCodes
 )
+// The largest tree (~263 properties) — a full babuf scan without this.
+const companyCodesCache = cachedKeyed(
+  MEMBERSHIP_CACHE_TTL_MS,
+  resolveCompanyPropertyCodes
+)
 
 /**
  * A property tree for any grouping. Membership is cached per root on a TTL;
@@ -302,7 +307,7 @@ export const getPropertyTree = async (
   if (!(OPERATING_COMPANY_CODES as readonly string[]).includes(code)) {
     return null
   }
-  const codes = await resolveCompanyPropertyCodes(code)
+  const codes = await companyCodesCache.get(code)
   const subtrees = await buildPropertyTreeNodes(codes, includeObjects)
   return {
     grouping,

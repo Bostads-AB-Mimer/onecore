@@ -10,6 +10,7 @@ import type {
   RentalObjectType,
   SearchRentalObjectsQueryParams,
 } from '@src/types/rental-object'
+import { RENTAL_OBJECT_TYPES } from '@src/types/rental-object'
 
 import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
@@ -278,14 +279,11 @@ const toSummary = (
 })
 
 /** Structure rows → one summary per rental id, in row order. */
-const dedupeByRentalId = (
-  rows: RentalObjectRow[],
-  exclude?: Set<RentalObjectType>
-): RentalObjectSummary[] => {
+const dedupeByRentalId = (rows: RentalObjectRow[]): RentalObjectSummary[] => {
   const byRentalId = new Map<string, RentalObjectSummary>()
   for (const row of rows) {
     const type = TYPE_BY_KEYCMOBT[row.objectTypeId]
-    if (!type || exclude?.has(type) || byRentalId.has(row.rentalId)) continue
+    if (!type || byRentalId.has(row.rentalId)) continue
     byRentalId.set(row.rentalId, toSummary(row, type))
   }
   return [...byRentalId.values()]
@@ -306,19 +304,27 @@ export const getRentalObjects = async (scope: {
       ? Prisma.sql`b.fstcode = ${scope.propertyCode}`
       : Prisma.sql`b.bygcode = ${scope.buildingCode}`
 
+    // Inverted into the include list the WHERE takes — excluded types are
+    // never joined or shipped, rather than dropped here after the fact.
+    const typeCodes = scope.exclude?.length
+      ? RENTAL_OBJECT_TYPES.filter((t) => !scope.exclude?.includes(t)).map(
+          (t) => KEYCMOBT_BY_TYPE[t]
+        )
+      : undefined
+
     const rows = await prisma
       .$queryRaw<RentalObjectRow[]>(
         Prisma.sql`
           ${OBJECT_SELECT}
           ${OBJECT_FROM}
-          WHERE ${rentalObjectWhere()}
+          WHERE ${rentalObjectWhere(typeCodes)}
             AND ${scopeSql}
           ORDER BY b.hyresid
         `
       )
       .then(trimStrings)
 
-    return dedupeByRentalId(rows, new Set(scope.exclude ?? []))
+    return dedupeByRentalId(rows)
   } catch (err) {
     logger.error({ err, scope }, 'rental-object-adapter.getRentalObjects')
     throw err

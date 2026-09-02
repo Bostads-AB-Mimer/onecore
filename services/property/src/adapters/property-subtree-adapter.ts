@@ -194,7 +194,8 @@ const fetchPropertySubtrees = async (
     type BuildingOut = CostCenterTreeProperty['buildings'][number]
     type StaircaseOut = BuildingOut['staircases']
 
-    // propertyCode:buildingCode → staircases
+    // propertyCode:buildingCode → staircases. Lists are sorted below —
+    // DISTINCT/GROUP BY scan order is nondeterministic between refreshes.
     const staircasesByBuilding = new Map<string, StaircaseOut>()
     for (const s of staircaseRows) {
       if (!s.propertyCode || !s.buildingCode || !s.code) continue
@@ -209,6 +210,9 @@ const fetchPropertySubtrees = async (
         otherCount: Number(s.otherCount),
       })
       staircasesByBuilding.set(key, list)
+    }
+    for (const list of staircasesByBuilding.values()) {
+      list.sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0))
     }
 
     const buildingCountsByBuilding = new Map(
@@ -259,6 +263,9 @@ const fetchPropertySubtrees = async (
       })
       parkingAreasByProperty.set(pa.propertyCode, list)
     }
+    for (const list of parkingAreasByProperty.values()) {
+      list.sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0))
+    }
 
     const countsByProperty = new Map(countRows.map((c) => [c.propertyCode, c]))
 
@@ -270,7 +277,15 @@ const fetchPropertySubtrees = async (
         code,
         designation: prop?.designation ?? null,
         tract: prop?.tract ?? null,
-        buildings: bld ? Array.from(bld.values()) : [],
+        buildings: bld
+          ? Array.from(bld.values()).sort((a, b) =>
+              a.buildingCode < b.buildingCode
+                ? -1
+                : a.buildingCode > b.buildingCode
+                  ? 1
+                  : 0
+            )
+          : [],
         parkingAreas: parkingAreasByProperty.get(code) ?? [],
         aggregates: {
           residenceCount: cnt ? Number(cnt.residenceCount) : 0,
@@ -310,8 +325,7 @@ const groupByPropertyCode = (rows: RentalObjectSummary[]) => {
 
 // Two halves of the same stock on one TTL: the structure the tree renders and
 // every rental object under it (clients filter and count those locally).
-// Each is awaited on its own — the tree must not wait for the object query —
-// and each request primes the other half, so one page load fills both.
+// Each is awaited on its own — the tree must not wait for the object query.
 const subtreeCache = cachedBatch(
   SUBTREE_CACHE_TTL_MS,
   fetchPropertySubtrees,
@@ -343,10 +357,10 @@ export const clearPropertySubtreeCache = (): void => {
 export const buildPropertySubtrees = async (
   propertyCodes: string[]
 ): Promise<Map<string, CostCenterTreeProperty>> => {
-  const uniqueCodes = Array.from(new Set(propertyCodes))
+  // Sorted for stable output: resolver DISTINCT order is nondeterministic.
+  const uniqueCodes = Array.from(new Set(propertyCodes)).sort()
   if (uniqueCodes.length === 0) return new Map()
 
-  objectCache.prime(uniqueCodes)
   const subtrees = await subtreeCache.get(uniqueCodes)
   return new Map(uniqueCodes.map((code, i) => [code, subtrees[i]]))
 }
@@ -461,7 +475,8 @@ export const buildPropertyTreeNodes = async (
   propertyCodes: string[],
   includeObjects = true
 ): Promise<Map<string, PropertyTreeNode>> => {
-  const uniqueCodes = Array.from(new Set(propertyCodes))
+  // Sorted for stable output: resolver DISTINCT order is nondeterministic.
+  const uniqueCodes = Array.from(new Set(propertyCodes)).sort()
   if (uniqueCodes.length === 0) return new Map()
 
   const [subtrees, objectsPerProperty] = await Promise.all([

@@ -13,10 +13,9 @@ import { buildPropertySubtrees } from './property-subtree-adapter'
  * being linked stays in our own table, so unfiltered links would show ghosts
  * with their tenants still attached.
  *
- * Deliberately NOT cached — it is a single cheap query against our own
- * tables, and reading it fresh keeps admin edits correct immediately without
- * any invalidation logic. The expensive half (everything below the property
- * level) is cached by the property-subtree adapter.
+ * Uncached HERE so /cost-centers/:id/tree shows admin edits immediately; the
+ * /property-tree path caches this per root for 15 min (grouping adapter).
+ * The expensive below-property half has its own cache (subtree adapter).
  */
 export const fetchCostCenterMembership = async (id: string) => {
   const costCenter = await prisma.onecoreCostCenter
