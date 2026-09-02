@@ -236,7 +236,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           statusCode: response.status,
         }
       } catch (err) {
-        logger.error({ err }, 'contactsAdapter.createContact')
+        // Not the raw error: an AxiosError carries the request body, which
+        // holds the customer's national ID and address.
+        const { code, message } = (err ?? {}) as {
+          code?: string
+          message?: string
+        }
+        logger.error({ code, message }, 'contactsAdapter.createContact')
         return { ok: false, err: 'contacts-service-error' }
       }
     },

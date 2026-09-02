@@ -158,6 +158,23 @@ describe('buildCreateApplicantEnvelope', () => {
   })
 
   /**
+   * The service runs in a UTC container. 22:30 UTC on 2 September is already
+   * 00:30 on 3 September in Stockholm, and the address must carry the Swedish
+   * date — regardless of the time zone the process or the test runner is in.
+   */
+  it('stamps FromDate with the Swedish calendar date, not the process one', () => {
+    const lateEvening = new Date('2026-09-02T22:30:00Z')
+    expect(
+      buildCreateApplicantEnvelope(config, input(), lateEvening)
+    ).toContain('<data:FromDate>2026-09-03T00:00:00</data:FromDate>')
+
+    const midday = new Date('2026-09-02T10:00:00Z')
+    expect(buildCreateApplicantEnvelope(config, input(), midday)).toContain(
+      '<data:FromDate>2026-09-02T00:00:00</data:FromDate>'
+    )
+  })
+
+  /**
    * A coordination number stores its day offset by 60, so 1990-07-29 is written
    * as ...0789.... Slicing the digits produces day 89, which is not a date —
    * Xpand rejects the whole envelope, making these customers uncreatable.

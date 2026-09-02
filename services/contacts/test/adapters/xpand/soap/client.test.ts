@@ -1,4 +1,5 @@
 import soapRequest from 'easy-soap-request'
+import { logger } from '@onecore/utilities'
 
 import { makeSoapClient } from '@src/adapters/xpand/soap/client'
 import { XpandSoapConfig } from '@src/common/config'
@@ -147,5 +148,36 @@ describe('makeSoapClient', () => {
       ok: false,
       err: 'xpand-malformed-response',
     })
+  })
+
+  /**
+   * An AxiosError carries its request config: the Basic Authorization header
+   * and the submitted envelope, with the national ID and the clear-text
+   * password. Logs ship to Elasticsearch, so none of it may reach the logger.
+   */
+  it('never logs credentials or the submitted envelope on a transport error', async () => {
+    const errorSpy = jest.spyOn(logger, 'error')
+    soapRequestMock.mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 500'), {
+        code: 'ERR_BAD_RESPONSE',
+        config: {
+          headers: { Authorization: 'Basic c2VjcmV0' },
+          data: '<soap:Envelope><data:CivicNumber>199007292387</data:CivicNumber><data:Password>hemligt</data:Password></soap:Envelope>',
+        },
+        response: { status: 500, data: '<html>oops</html>' },
+      })
+    )
+
+    await makeSoapClient(config).call('urn:action', '<xml/>')
+
+    expect(errorSpy).toHaveBeenCalled()
+    const logged = JSON.stringify(errorSpy.mock.calls)
+    expect(logged).not.toContain('Authorization')
+    expect(logged).not.toContain('c2VjcmV0')
+    expect(logged).not.toContain('199007292387')
+    expect(logged).not.toContain('hemligt')
+    // The allowlisted metadata still gets through.
+    expect(logged).toContain('ERR_BAD_RESPONSE')
+    expect(logged).toContain('500')
   })
 })

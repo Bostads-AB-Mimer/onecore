@@ -61,25 +61,29 @@ const dataElOpt = (
 const dataWrap = (name: string, children: string) =>
   wrap(name, children, 'data')
 
-const pad = (value: number): string => String(value).padStart(2, '0')
+/**
+ * Pinned to Swedish time rather than the process time zone: the service runs
+ * in a UTC container, so an address created late in the Swedish evening would
+ * otherwise be stamped with the previous calendar day. An explicit time zone
+ * also makes the result independent of where tests run.
+ */
+const SWEDISH_TIME_ZONE = 'Europe/Stockholm'
+
+/** sv-SE formats as YYYY-MM-DD. */
+const swedishDate = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: SWEDISH_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
 
 /**
- * Serialises a local calendar date as DataContractSerializer expects it.
- *
- * Built from the local date parts rather than via `toISOString()`: Xpand runs
- * on Swedish time, where UTC is an hour or two behind, so serialising local
- * midnight through UTC would stamp the previous day.
+ * Midnight of the Swedish calendar date of `now`, serialised as
+ * DataContractSerializer expects — the FromDate mimer.nu stamps on new
+ * addresses.
  */
-const xsDateTime = (date: Date): string =>
-  [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join(
-    '-'
-  ) + 'T00:00:00'
-
-/** Midnight today, matching the FromDate mimer.nu stamps on new addresses. */
-const today = (): Date => {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
-}
+const stockholmMidnight = (now: Date): string =>
+  `${swedishDate.format(now)}T00:00:00`
 
 /**
  * Derives the birth date from a personal identity number.
@@ -103,14 +107,17 @@ const birthDateFrom = (nationalId: string): string | null => {
  * street line goes in PostalAddress. Emitting them empty would set them to
  * blank rather than leaving them at their default.
  */
-const renderAddress = (address: CreateContactInput['addresses'][number]) =>
+const renderAddress = (
+  address: CreateContactInput['addresses'][number],
+  now: Date
+) =>
   dataWrap(
     'Address',
     [
       dataEl('AddressType', ADDRESS_KIND_INVOICE),
       dataEl('City', address.city.toUpperCase()),
       dataEl('Country', (address.country ?? 'SVERIGE').toUpperCase()),
-      dataEl('FromDate', xsDateTime(today())),
+      dataEl('FromDate', stockholmMidnight(now)),
       dataEl('PostalAddress', address.street),
       // The contract has no CareOf member; PostalAddress2 is where mimer.nu's
       // own registration puts the c/o line, so we follow that convention.
@@ -180,11 +187,15 @@ const renderCredentials = (
  */
 export const buildCreateApplicantEnvelope = (
   config: XpandSoapConfig,
-  input: CreateContactInput
+  input: CreateContactInput,
+  now: Date = new Date()
 ): string => {
   const applicant = [
     // --- ContactRoleBaseDataContractOfApplicantEntity ---
-    dataWrap('Addresses', input.addresses.map(renderAddress).join('')),
+    dataWrap(
+      'Addresses',
+      input.addresses.map((address) => renderAddress(address, now)).join('')
+    ),
     dataElOpt('BirthDate', birthDateFrom(input.nationalId)),
     dataEl('CivicNumber', input.nationalId),
     dataEl('ContactCategoryCode', CONTACT_CATEGORY_PERSON),

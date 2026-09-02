@@ -51,6 +51,28 @@ const errorResponse = (
 }
 
 /**
+ * The only parts of a transport error that may be logged.
+ *
+ * easy-soap-request rejects with an AxiosError, and serialising that whole
+ * object writes its request config to the log — including the Basic
+ * Authorization header and the submitted envelope, which carries the
+ * customer's national ID and the generated password in clear text. Logs are
+ * shipped to Elasticsearch, so the error is reduced to an allowlist here and
+ * the raw object must never be passed to the logger.
+ */
+const transportErrorSummary = (
+  err: unknown
+): { status?: number; code?: string; message?: string } => {
+  if (typeof err !== 'object' || err === null) return {}
+  const { code, message } = err as { code?: unknown; message?: unknown }
+  return {
+    status: errorResponse(err)?.status,
+    code: typeof code === 'string' ? code : undefined,
+    message: typeof message === 'string' ? message : undefined,
+  }
+}
+
+/**
  * Extracts the human-readable reason from a SOAP Fault, when the body is one.
  *
  * Incit signals *business* rejections as `Success: false` inside a 200
@@ -123,7 +145,10 @@ export const makeSoapClient = (config: XpandSoapConfig): SoapClient => {
         const status = response?.status
 
         if (status === 401 || status === 403) {
-          logger.error({ err, action, status }, 'xpandSoapClient.call')
+          logger.error(
+            { action, error: transportErrorSummary(err) },
+            'xpandSoapClient.call'
+          )
           return { ok: false, err: 'xpand-auth-failed' }
         }
 
@@ -133,12 +158,18 @@ export const makeSoapClient = (config: XpandSoapConfig): SoapClient => {
         if (typeof response?.data === 'string') {
           const reason = faultReason(parser.parse(response.data))
           if (reason) {
-            logger.error({ err, action, reason }, 'xpandSoapClient.call')
+            logger.error(
+              { action, reason, error: transportErrorSummary(err) },
+              'xpandSoapClient.call'
+            )
             return { ok: false, err: 'xpand-fault', detail: reason }
           }
         }
 
-        logger.error({ err, action, status }, 'xpandSoapClient.call')
+        logger.error(
+          { action, error: transportErrorSummary(err) },
+          'xpandSoapClient.call'
+        )
         return { ok: false, err: 'xpand-unavailable' }
       }
 
@@ -165,7 +196,10 @@ export const makeSoapClient = (config: XpandSoapConfig): SoapClient => {
 
         return { ok: true, data: envelopeBody as SoapBody }
       } catch (err) {
-        logger.error({ err, action }, 'xpandSoapClient.call')
+        logger.error(
+          { action, error: transportErrorSummary(err) },
+          'xpandSoapClient.call'
+        )
         return { ok: false, err: 'xpand-malformed-response' }
       }
     },

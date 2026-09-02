@@ -157,11 +157,14 @@ export const createContactErrorMessages: Record<string, string> = {
   'xpand-auth-failed': 'ONECore saknar behörighet att skapa kunder i Xpand.',
   'xpand-malformed-response':
     'Xpand svarade med något vi inte kunde tolka. Kontrollera om kunden ändå skapades innan du försöker igen.',
+  // A timeout can strike after Xpand has already written, so neither of the
+  // transport errors may promise that nothing was created.
   'xpand-unavailable':
-    'Xpand går inte att nå just nu. Ingen kund har skapats — försök igen senare.',
+    'Xpand går inte att nå just nu. Kontrollera om kunden skapades innan du försöker igen.',
   'write-backend-not-configured':
     'Kundregistrering är inte konfigurerad i den här miljön.',
-  'contacts-service-error': 'Ett oväntat fel uppstod. Ingen kund har skapats.',
+  'contacts-service-error':
+    'Ett tekniskt fel uppstod. Kontrollera om kunden skapades innan du försöker igen.',
 }
 
 /**

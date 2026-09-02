@@ -18,12 +18,14 @@ const LENGTH = 24
  * Generates the initial password for a newly provisioned web account.
  *
  * Policy: a high-entropy value that is never returned to any caller, never
- * logged, and never stored on our side. The customer sets their own password
- * through the "forgot password" flow instead.
+ * logged, and never stored on our side. Xpand does not generate one — the
+ * create operation takes credentials as input — and a provisioned account with
+ * an empty password would be worse than one nobody knows.
  *
- * That flow only works for contacts the public site's own API knows about, so
- * this policy depends on the password-reset fallback being deployed. Until it
- * is, a customer created here can neither sign in nor reset.
+ * The customer gets in through Mina sidor's "forgot password" flow, which
+ * sends a reset link to the e-mail address given when the customer was
+ * created. That flow has to recognise contacts created here, so verify it
+ * against the test environment before the first production rollout.
  *
  * SWAP POINT — if the policy changes to caller-supplied or shown-once, this
  * module and the `password` field on the request schema are the only things

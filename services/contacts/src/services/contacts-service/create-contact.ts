@@ -113,15 +113,22 @@ export const createContact = async (
   // into a normal success. Retrying instead would either duplicate the contact
   // or be blocked by the duplicate check above, so it must not be left to the
   // caller.
-  if (created.err === 'xpand-malformed-response') {
+  // A transport failure is just as ambiguous: a timeout or dropped connection
+  // may have struck after Xpand committed the write. The duplicate check above
+  // already makes a retry safe (it answers 409 with the existing code), but
+  // recovering here gives the caller the right answer immediately instead.
+  if (
+    created.err === 'xpand-malformed-response' ||
+    created.err === 'xpand-unavailable'
+  ) {
     const recovered = await contactWriter.findContactCodeByNationalId(
       forms.twelveDigits
     )
 
     if (recovered.ok && recovered.data.contactCode) {
       logger.warn(
-        { contactCode: recovered.data.contactCode },
-        'createContact.recoveredContactCodeAfterMalformedResponse'
+        { contactCode: recovered.data.contactCode, err: created.err },
+        'createContact.recoveredContactCodeAfterAmbiguousFailure'
       )
 
       return {

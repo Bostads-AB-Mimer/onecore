@@ -178,6 +178,49 @@ describe('createContact', () => {
     expect(result).toMatchObject({ ok: true, data: { contactCode: 'P099999' } })
   })
 
+  /**
+   * A timeout may strike after Xpand has committed the write, so a transport
+   * failure is as ambiguous as an unreadable response and gets the same
+   * recovery. When nothing is found, the original failure stands.
+   */
+  it('recovers the contact code after a transport failure', async () => {
+    const result = await createContact(
+      {
+        contactsRepository: repository(),
+        contactWriter: writer({
+          createContact: jest
+            .fn()
+            .mockResolvedValue({ ok: false, err: 'xpand-unavailable' }),
+          findContactCodeByNationalId: jest
+            .fn()
+            .mockResolvedValue({ ok: true, data: { contactCode: 'P099999' } }),
+        }),
+      },
+      request()
+    )
+
+    expect(result).toMatchObject({ ok: true, data: { contactCode: 'P099999' } })
+  })
+
+  it('keeps the transport failure when nothing can be recovered', async () => {
+    const result = await createContact(
+      {
+        contactsRepository: repository(),
+        contactWriter: writer({
+          createContact: jest
+            .fn()
+            .mockResolvedValue({ ok: false, err: 'xpand-unavailable' }),
+          findContactCodeByNationalId: jest
+            .fn()
+            .mockResolvedValue({ ok: true, data: { contactCode: null } }),
+        }),
+      },
+      request()
+    )
+
+    expect(result).toMatchObject({ ok: false, err: 'xpand-unavailable' })
+  })
+
   it('does not attempt recovery when the request was rejected', async () => {
     const findContactCodeByNationalId = jest.fn()
 
