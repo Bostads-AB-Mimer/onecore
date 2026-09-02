@@ -6,6 +6,7 @@ import * as propertyManagementAdapter from '../../../adapters/property-managemen
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import * as workOrderAdapter from '../../../adapters/work-order-adapter'
+import * as logWrites from '../../../adapters/communication-adapter/log-writes'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
 import * as factory from '../../../../test/factories'
@@ -957,6 +958,58 @@ describe('work-order-service index', () => {
         buildingId,
         { limit: undefined, skip: undefined, sortAscending: undefined }
       )
+    })
+  })
+
+  describe('POST /work-orders/log-my-pages-message', () => {
+    it('writes a my-pages dispatch row for the tenant', async () => {
+      const logSpy = jest
+        .spyOn(logWrites, 'logOutboundDispatch')
+        .mockResolvedValue({ ok: true, data: { dispatchId: 'dispatch-1' } })
+
+      const res = await request(app.callback())
+        .post('/work-orders/log-my-pages-message')
+        .send({
+          workOrderCode: 'od-12345',
+          contactCode: 'P123456',
+          text: 'Vi har bokat in ett besök på tisdag.',
+          triggeredByUser: 'Anna Handläggare',
+        })
+
+      expect(res.status).toBe(200)
+      expect(logSpy).toHaveBeenCalledWith({
+        channel: 'my-pages',
+        fromAddress: 'Mimer',
+        body: 'Vi har bokat in ett besök på tisdag.',
+        messageType: 'work_order_tenant_my_pages',
+        provider: 'odoo',
+        triggeredByUser: 'Anna Handläggare',
+        workOrderCode: 'od-12345',
+        recipients: [
+          {
+            contactCode: 'P123456',
+            toAddress: 'Mina sidor',
+            status: 'sent',
+          },
+        ],
+      })
+    })
+
+    it('rejects a request missing contactCode or text', async () => {
+      const logSpy = jest
+        .spyOn(logWrites, 'logOutboundDispatch')
+        .mockResolvedValue({ ok: true, data: { dispatchId: 'dispatch-1' } })
+      // jest.spyOn re-wraps the same underlying mock across `it` blocks in
+      // this file (no global clearMocks), so start from a clean call count
+      // rather than one carried over from the previous test.
+      logSpy.mockClear()
+
+      const res = await request(app.callback())
+        .post('/work-orders/log-my-pages-message')
+        .send({ workOrderCode: 'od-12345' })
+
+      expect(res.status).toBe(400)
+      expect(logSpy).not.toHaveBeenCalled()
     })
   })
 })
