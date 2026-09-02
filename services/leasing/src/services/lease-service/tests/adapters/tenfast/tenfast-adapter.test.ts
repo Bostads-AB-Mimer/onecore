@@ -7,7 +7,6 @@ import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
 import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
-import { mapToOnecoreLease } from '../../../helpers/tenfast'
 
 // Shared clock offset used to bust the module-level tag cache (TTL: 5 min) between tests.
 // Each test that needs a fresh tag fetch increments this by 1 hour before mocking Date.now.
@@ -408,8 +407,43 @@ describe(tenfastAdapter.createLease, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: mapToOnecoreLease(mockLease),
+      data: mockLease.externalId,
     })
+  })
+
+  it('does not fail when hyresgaster/hyresobjekt in the response are unpopulated ObjectId strings', async () => {
+    // Arrange — only externalId is read from the response, so an unpopulated
+    // response (raw ObjectId strings, which would fail TenfastLeaseSchema's
+    // strict hyresgaster parse) must not matter here.
+    const mockTenant = factory.tenfastTenant.build()
+    jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValue({ ok: true, data: mockTenant })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObject')
+      .mockResolvedValue({ ok: true, data: mockRentalObject })
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: {
+        externalId: '216-704-00-0022/02',
+        hyresgaster: ['tenant-object-id'],
+        hyresobjekt: ['rental-object-id'],
+      },
+    })
+
+    // Act
+    const contact = factory.contact.build()
+    const result = await tenfastAdapter.createLease(
+      contact,
+      'RENTAL_CODE',
+      new Date(),
+      true
+    )
+
+    // Assert
+    expect(result).toEqual({ ok: true, data: '216-704-00-0022/02' })
   })
 
   it('should set vat to 0.25 in lease request data when includeVAT is true', async () => {
@@ -502,7 +536,7 @@ describe(tenfastAdapter.createLease, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: mapToOnecoreLease(mockLease),
+      data: mockLease.externalId,
     })
   })
 
