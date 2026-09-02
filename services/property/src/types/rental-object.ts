@@ -4,46 +4,17 @@ import { z } from 'zod'
 import { PropertyGroupingSchema } from './property-tree'
 
 // Shared vocabulary (libs/types) — re-exported so local consumers keep their
-// existing imports; do not re-declare it here.
-export const { RENTAL_OBJECT_TYPES, RentalObjectTypeSchema } = property
+// existing imports; do not re-declare it here. The query-param schemas below
+// stay local: they are this service's validation, not shared shapes.
+export const {
+  RENTAL_OBJECT_TYPES,
+  RentalObjectTypeSchema,
+  RentalObjectSummarySchema,
+  RentalObjectSubtypeSchema,
+} = property
 export type RentalObjectType = property.RentalObjectType
-
-// One rental object (balgh/babps/balok/bahyr structure row) — what it is,
-// where it sits (building/staircase) and its postal address. subtypeName is
-// the Xpand type caption ("3 rum och kök", "Garage", "3 G Antenner"...).
-export const RentalObjectSummarySchema = z.object({
-  rentalId: z.string(),
-  type: RentalObjectTypeSchema,
-  code: z.string().nullable(),
-  name: z.string().nullable(),
-  // Both forms: the caption is what a user reads, the code is what filters
-  // match on (`type:code`, unique only within the type).
-  subtypeCode: z.string().nullable(),
-  subtypeName: z.string().nullable(),
-  address: z.string().nullable(),
-  buildingCode: z.string().nullable(),
-  // staircaseName rides on rows because trapphus groups are derived from
-  // them; building/parkingArea names live on their tree nodes instead.
-  staircaseCode: z.string().nullable(),
-  staircaseName: z.string().nullable(),
-  parkingAreaCode: z.string().nullable(),
-  // Fastighetsbeteckning, for search results listed outside the tree.
-  propertyCode: z.string().nullable(),
-  propertyName: z.string().nullable(),
-})
-
-export type RentalObjectSummary = z.infer<typeof RentalObjectSummarySchema>
-
-// A subtype caption an object can carry, scoped to the type it belongs to:
-// residences have "3 rum och kök", parking has "Centralgarage", and so on.
-// The code is only unique within a type, so filters must carry both.
-export const RentalObjectSubtypeSchema = z.object({
-  type: RentalObjectTypeSchema,
-  code: z.string(),
-  name: z.string(),
-})
-
-export type RentalObjectSubtype = z.infer<typeof RentalObjectSubtypeSchema>
+export type RentalObjectSummary = property.RentalObjectSummary
+export type RentalObjectSubtype = property.RentalObjectSubtype
 
 export const GetRentalObjectsQueryParamsSchema = z
   .object({
@@ -62,26 +33,8 @@ export type GetRentalObjectsQueryParams = z.infer<
   typeof GetRentalObjectsQueryParamsSchema
 >
 
-/**
- * The extra per-object values a listing may show, keyed by rental id and kept
- * out of RentalObjectSummary on purpose: only the object list wants them, so
- * the tree, the picker and the sidebar neither fetch nor hold them.
- */
-export const RentalObjectDetailsSchema = z.object({
-  rentalId: z.string(),
-  // Grundhyra (hyinf.akthyratot) — a monthly amount, as Xpand stores it.
-  baseRent: z.number().nullable(),
-  // BRA (cmval, quantity type 'BRA'). Hyra per m² is derived, never stored.
-  area: z.number().nullable(),
-  // "Annan information av vikt" (hyinf.otherinfo).
-  additionalInfo: z.string().nullable(),
-  // Anläggnings-ID Mälarenergi — a typed comment, residences only. Named as
-  // the residence routes already name it; "facility" here would collide with
-  // the lokal object type.
-  malarEnergiFacilityId: z.string().nullable(),
-})
-
-export type RentalObjectDetails = z.infer<typeof RentalObjectDetailsSchema>
+export const { RentalObjectDetailsSchema } = property
+export type RentalObjectDetails = property.RentalObjectDetails
 
 const repeatable = <T extends z.ZodTypeAny>(schema: T) =>
   z

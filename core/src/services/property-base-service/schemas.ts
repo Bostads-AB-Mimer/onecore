@@ -1171,77 +1171,32 @@ export const KeycloakUserSummarySchema = z.object({
   employeeId: z.string().optional(),
 })
 
-// A trapphus of a building; name is typically the street address + entrance.
-// Code '99' is Xpand's catch-all for objects attached to the building but not
-// to any entrance — often unnamed, and where building-level parking hangs.
-export const CostCenterTreeStaircaseSchema = z.object({
-  code: z.string(),
-  name: z.string().nullable(),
-  residenceCount: z.number().int().nonnegative(),
-  parkingCount: z.number().int().nonnegative(),
-  facilityCount: z.number().int().nonnegative(),
-  otherCount: z.number().int().nonnegative(),
-})
+// Cost-center tree building blocks come from libs/types; core's divergence —
+// Keycloak ids expanded to user summaries, plus capabilities — is derived here.
+export const CostCenterTreeStaircaseSchema =
+  property.CostCenterTreeStaircaseSchema
+export const CostCenterTreeBuildingSchema =
+  property.CostCenterTreeBuildingSchema
+export const CostCenterTreeParkingAreaSchema =
+  property.CostCenterTreeParkingAreaSchema
+export const CostCenterTreeAggregatesSchema =
+  property.CostCenterTreeAggregatesSchema
+export const CostCenterTreePropertySchema =
+  property.CostCenterTreePropertySchema
 
-// A building of a property; buildingName is typically the street address.
-// Counts cover ALL the building's objects (incl. staircase-less ones).
-export const CostCenterTreeBuildingSchema = z.object({
-  buildingCode: z.string(),
-  buildingName: z.string().nullable(),
-  buildingType: z
-    .object({
-      code: z.string().nullable(),
-      name: z.string().nullable(),
-    })
-    .nullable(),
-  staircases: z.array(CostCenterTreeStaircaseSchema),
-  residenceCount: z.number().int().nonnegative(),
-  parkingCount: z.number().int().nonnegative(),
-  facilityCount: z.number().int().nonnegative(),
-  otherCount: z.number().int().nonnegative(),
-})
-
-// Markområde (bayta) containing parking spaces; code = the shared prefix of
-// its spaces' rental object codes (e.g. '607-705-00').
-export const CostCenterTreeParkingAreaSchema = z.object({
-  code: z.string(),
-  name: z.string().nullable(),
-  parkingCount: z.number().int().nonnegative(),
-})
-
-export const CostCenterTreeAggregatesSchema = z.object({
-  residenceCount: z.number().int().nonnegative(),
-  parkingCount: z.number().int().nonnegative(),
-  entranceCount: z.number().int().nonnegative(),
-  facilityCount: z.number().int().nonnegative(),
-  otherCount: z.number().int().nonnegative(),
-})
-
-export const CostCenterTreePropertySchema = z.object({
-  code: z.string(),
-  designation: z.string().nullable(),
-  tract: z.string().nullable(),
-  buildings: z.array(CostCenterTreeBuildingSchema),
-  parkingAreas: z.array(CostCenterTreeParkingAreaSchema),
-  aggregates: CostCenterTreeAggregatesSchema,
-})
-
-export const CostCenterTreeKvvAreaSchema = z.object({
-  id: z.string().uuid(),
-  code: z.string(),
-  name: z.string().nullable(),
-  responsible: KeycloakUserSummarySchema.nullable(),
-  properties: z.array(CostCenterTreePropertySchema),
-})
+export const CostCenterTreeKvvAreaSchema =
+  property.CostCenterTreeKvvAreaSchema.omit({
+    responsibleKeycloakUserId: true,
+  }).extend({ responsible: KeycloakUserSummarySchema.nullable() })
 
 export const CostCenterTreeCapabilitiesSchema = z.object({
   canEdit: z.boolean(),
 })
 
-export const CostCenterTreeSchema = z.object({
-  id: z.string().uuid(),
-  code: z.string(),
-  name: z.string(),
+export const CostCenterTreeSchema = property.CostCenterTreeSchema.omit({
+  leadKeycloakUserId: true,
+  deputyKeycloakUserId: true,
+}).extend({
   lead: KeycloakUserSummarySchema.nullable(),
   deputy: KeycloakUserSummarySchema.nullable(),
   capabilities: CostCenterTreeCapabilitiesSchema,
@@ -1250,13 +1205,9 @@ export const CostCenterTreeSchema = z.object({
 
 export type CostCenterTree = z.infer<typeof CostCenterTreeSchema>
 
-export const CostCenterSummarySchema = z.object({
-  id: z.string().uuid(),
-  code: z.string(),
-  name: z.string(),
-})
+export const CostCenterSummarySchema = property.CostCenterSummarySchema
 
-export type CostCenterSummary = z.infer<typeof CostCenterSummarySchema>
+export type CostCenterSummary = property.CostCenterSummary
 
 // KVV-area (kvartersvärdsområde) as listed by GET /kvv-areas: the shared
 // service shape with the responsible Keycloak id hydrated to a user summary.
@@ -1295,117 +1246,26 @@ export const PropertyKvvAreaLinkSchema = z.object({
 
 export type PropertyKvvAreaLink = z.infer<typeof PropertyKvvAreaLinkSchema>
 
-// Shared vocabulary (libs/types) — same enum the property service uses.
+// Rental-object shapes come from libs/types — served through core unchanged.
 export const RentalObjectTypeSchema = property.RentalObjectTypeSchema
-
-// Flat rental-object structure row (babuf): what it is, where it sits and its
-// postal address. Mirrors the property service's RentalObjectSummary.
-export const RentalObjectSummarySchema = z.object({
-  rentalId: z.string(),
-  type: RentalObjectTypeSchema,
-  code: z.string().nullable(),
-  name: z.string().nullable(),
-  // Both forms: the caption is what a user reads, the code is what filters
-  // match on (`type:code`, unique only within the type).
-  subtypeCode: z.string().nullable(),
-  subtypeName: z.string().nullable(),
-  address: z.string().nullable(),
-  buildingCode: z.string().nullable(),
-  staircaseCode: z.string().nullable(),
-  staircaseName: z.string().nullable(),
-  parkingAreaCode: z.string().nullable(),
-  // Fastighetsbeteckning, for search results listed outside the tree.
-  propertyCode: z.string().nullable(),
-  propertyName: z.string().nullable(),
-})
-
-export type RentalObjectSummary = z.infer<typeof RentalObjectSummarySchema>
-
-// Listing-only values, keyed by rental id and kept out of the summary: only
-// the object list shows them, so the tree and the picker never carry them.
-export const RentalObjectDetailsSchema = z.object({
-  rentalId: z.string(),
-  // Grundhyra (monthly, as Xpand stores it) and BRA. Hyra per m² is derived.
-  baseRent: z.number().nullable(),
-  area: z.number().nullable(),
-  additionalInfo: z.string().nullable(),
-  // Named as the residence routes name it — "facility" would collide with the
-  // lokal object type.
-  malarEnergiFacilityId: z.string().nullable(),
-})
-
-// A subtype caption an object carries, scoped to its object type — the code is
-// only unique within a type, so filters pass `type:code` pairs.
-export const RentalObjectSubtypeSchema = z.object({
-  type: RentalObjectTypeSchema,
-  code: z.string(),
-  name: z.string(),
-})
+export const RentalObjectSummarySchema = property.RentalObjectSummarySchema
+export type RentalObjectSummary = property.RentalObjectSummary
+export const RentalObjectDetailsSchema = property.RentalObjectDetailsSchema
+export const RentalObjectSubtypeSchema = property.RentalObjectSubtypeSchema
 
 // ---- Property tree (any grouping) ----
-// Mirrors the property service: one uniform node shape for every level below
-// a group, down to the rental-object leaves. Stamped per depth via factories,
-// not recursive — swagger's $refStrategy 'none' degrades self-references (and
-// reused zod instances) to any/invalid TS.
-export const PropertyGroupingSchema = z.enum([
-  'costCenter',
-  'marketArea',
-  'company',
-])
+// Node and root shapes come from libs/types; core's divergence — the group's
+// responsibleKeycloakUserId expanded to a user summary — is derived here.
+export const PropertyGroupingSchema = property.PropertyGroupingSchema
+export const PROPERTY_TREE_NODE_TYPES = property.PROPERTY_TREE_NODE_TYPES
+export const PropertyTreeNodeSchema = property.PropertyTreeNodeSchema
+export type PropertyTreeNode = property.PropertyTreeNode
 
-export const PROPERTY_TREE_NODE_TYPES = [
-  'property',
-  'building',
-  'staircase',
-  'parkingArea',
-  ...property.RENTAL_OBJECT_TYPES,
-] as const
+export const PropertyTreeGroupSchema = property.PropertyTreeGroupSchema.omit({
+  responsibleKeycloakUserId: true,
+}).extend({ responsible: KeycloakUserSummarySchema.nullable() })
 
-const propertyTreeNodeFields = () => ({
-  type: z.enum(PROPERTY_TREE_NODE_TYPES),
-  code: z.string(),
-  name: z.string().nullable(),
-  subtypeCode: z.string().nullable(),
-  subtypeName: z.string().nullable(),
-})
-
-const propertyTreeLeaf = () => z.object(propertyTreeNodeFields())
-const propertyTreeDepth1 = () =>
-  z.object({
-    ...propertyTreeNodeFields(),
-    children: z.array(propertyTreeLeaf()).optional(),
-  })
-const propertyTreeDepth2 = () =>
-  z.object({
-    ...propertyTreeNodeFields(),
-    children: z.array(propertyTreeDepth1()).optional(),
-  })
-
-export const PropertyTreeNodeSchema = z.object({
-  ...propertyTreeNodeFields(),
-  children: z.array(propertyTreeDepth2()).optional(),
-})
-
-export type PropertyTreeNode = z.infer<typeof PropertyTreeNodeSchema>
-
-export const PropertyTreeGroupSchema = z.object({
-  id: z.string(),
-  code: z.string(),
-  name: z.string().nullable(),
-  // Expanded from the property service's responsibleKeycloakUserId, and only
-  // for the cost-center grouping — the others have no such concept.
-  responsible: KeycloakUserSummarySchema.nullable(),
-  properties: z.array(PropertyTreeNodeSchema),
-})
-
-// Properties hang off groups only. Groupings without an intermediate level
-// (marknadsområde, företag) emit a single group mirroring the root, so
-// consumers always walk root → groups → properties.
-export const PropertyTreeSchema = z.object({
-  grouping: PropertyGroupingSchema,
-  id: z.string(),
-  code: z.string(),
-  name: z.string().nullable(),
+export const PropertyTreeSchema = property.PropertyTreeSchema.extend({
   groups: z.array(PropertyTreeGroupSchema),
 })
 
