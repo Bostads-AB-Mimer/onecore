@@ -136,11 +136,13 @@ export const ListingPreview = ({
             {renderParagraphs(
               block.content || '',
               {
+                // Mirrors the public site, where "Underrubrik 2" renders as an h3
+                // (Graphik 1.375rem, weight 500)
                 width: '100%',
-                fontSize: '1rem',
+                fontSize: '1.375rem',
                 fontFamily: 'graphikRegular',
-                fontWeight: 700,
-                lineHeight: 1.7,
+                fontWeight: 500,
+                lineHeight: 1.1,
               },
               'Underrubrik 2...'
             )}
