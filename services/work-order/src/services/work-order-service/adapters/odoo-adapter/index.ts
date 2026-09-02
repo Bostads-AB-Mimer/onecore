@@ -75,6 +75,7 @@ const MESSAGE_DOMAIN = (workOrderIds: number[]) => [
     'in',
     [
       'from_tenant',
+      'receipt_to_tenant', // Acknowledgement receipt when a handler/contractor confirms a tenant message (MIM-1960)
       'tenant_sms',
       'tenant_mail',
       'tenant_mail_and_sms',
