@@ -29,9 +29,8 @@ export type CreateContactError =
  * must not silently fall through to the catch-all, which would drop the
  * `detail` text the new code was created to carry.
  */
-const KNOWN_CREATE_ERRORS: ReadonlySet<string> = new Set<CreateContactErrorCode>(
-  CreateContactErrorCodeSchema.options
-)
+const KNOWN_CREATE_ERRORS: ReadonlySet<string> =
+  new Set<CreateContactErrorCode>(CreateContactErrorCodeSchema.options)
 
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
