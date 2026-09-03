@@ -40,7 +40,7 @@
     "migrate:up": "knex migrate:latest --knexfile knexfile.cjs",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
-    "start": "pnpm migrate:up && node -r dotenv/config build/esm/index",
+    "start": "node -r dotenv/config build/esm/index",
     "test": "pnpm test:create-db && DOTENV_CONFIG_PATH=.env.test jest --detectOpenHandles",
     "test:create-db": "./scripts/create-test-db.sh",
     "test:ci": "pnpm test:create-db && DOTENV_CONFIG_PATH=.env.ci jest",
