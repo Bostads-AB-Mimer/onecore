@@ -3,11 +3,7 @@ import { Building, CarFront, Home, Warehouse, Wrench } from 'lucide-react'
 import { FilterChip } from '@/shared/ui/filters'
 
 type SearchTypeFilter =
-  | 'property'
-  | 'residence'
-  | 'parking-space'
-  | 'facility'
-  | 'maintenance-unit'
+  'property' | 'residence' | 'parking-space' | 'facility' | 'maintenance-unit'
 
 interface PropertyTypeFiltersProps {
   searchTypeFilter: SearchTypeFilter

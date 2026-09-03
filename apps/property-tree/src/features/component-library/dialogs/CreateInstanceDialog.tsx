@@ -40,10 +40,7 @@ export const CreateInstanceDialog = ({
     depreciationPriceAtPurchase: 0,
     economicLifespan: 0,
     status: 'ACTIVE' as
-      | 'ACTIVE'
-      | 'INACTIVE'
-      | 'MAINTENANCE'
-      | 'DECOMMISSIONED',
+      'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED',
     quantity: 1,
     ncsCode: '',
   })

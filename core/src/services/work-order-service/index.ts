@@ -312,37 +312,35 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data.map(
-              (v): schemas.CoreWorkOrder => ({
-                accessCaption: v.AccessCaption,
-                caption: v.Caption,
-                code: v.Code,
-                contactCode: v.ContactCode,
-                description: v.Description,
-                detailsCaption: v.DetailsCaption,
-                externalResource: v.ExternalResource,
-                id: v.Id,
-                lastChanged: new Date(v.LastChanged),
-                priority: v.Priority,
-                registered: new Date(v.Registered),
-                rentalObjectCode: v.RentalObjectCode,
-                status: v.Status,
-                dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                hiddenFromMyPages: v.HiddenFromMyPages,
-                workOrderRows: v.WorkOrderRows.map((row) => ({
-                  description: row.Description,
-                  locationCode: row.LocationCode,
-                  equipmentCode: row.EquipmentCode,
-                })),
-                messages: v.Messages?.map((message) => ({
-                  id: message.id,
-                  body: message.body,
-                  messageType: message.messageType,
-                  author: message.author,
-                  createDate: new Date(message.createDate),
-                })),
-              })
-            ),
+            workOrders: result.data.map((v): schemas.CoreWorkOrder => ({
+              accessCaption: v.AccessCaption,
+              caption: v.Caption,
+              code: v.Code,
+              contactCode: v.ContactCode,
+              description: v.Description,
+              detailsCaption: v.DetailsCaption,
+              externalResource: v.ExternalResource,
+              id: v.Id,
+              lastChanged: new Date(v.LastChanged),
+              priority: v.Priority,
+              registered: new Date(v.Registered),
+              rentalObjectCode: v.RentalObjectCode,
+              status: v.Status,
+              dueDate: v.DueDate ? new Date(v.DueDate) : null,
+              hiddenFromMyPages: v.HiddenFromMyPages,
+              workOrderRows: v.WorkOrderRows.map((row) => ({
+                description: row.Description,
+                locationCode: row.LocationCode,
+                equipmentCode: row.EquipmentCode,
+              })),
+              messages: v.Messages?.map((message) => ({
+                id: message.id,
+                body: message.body,
+                messageType: message.messageType,
+                author: message.author,
+                createDate: new Date(message.createDate),
+              })),
+            })),
           },
           ...metadata,
         }
@@ -421,30 +419,28 @@ export const routes = (router: KoaRouter) => {
           ctx.body = {
             content: {
               totalCount: result.data.length,
-              workOrders: result.data.map(
-                (v): schemas.CoreWorkOrder => ({
-                  accessCaption: v.AccessCaption,
-                  caption: v.Caption,
-                  code: v.Code,
-                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                  contactCode: v.ContactCode,
-                  description: v.Description,
-                  detailsCaption: v.DetailsCaption,
-                  externalResource: v.ExternalResource,
-                  id: v.Id,
-                  lastChanged: new Date(v.LastChanged),
-                  priority: v.Priority,
-                  registered: new Date(v.Registered),
-                  rentalObjectCode: v.RentalObjectCode,
-                  status: v.Status,
-                  url: v.Url,
-                  workOrderRows: v.WorkOrderRows.map((row) => ({
-                    description: row.Description,
-                    locationCode: row.LocationCode,
-                    equipmentCode: row.EquipmentCode,
-                  })),
-                })
-              ),
+              workOrders: result.data.map((v): schemas.CoreWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                contactCode: v.ContactCode,
+                description: v.Description,
+                detailsCaption: v.DetailsCaption,
+                externalResource: v.ExternalResource,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+                url: v.Url,
+                workOrderRows: v.WorkOrderRows.map((row) => ({
+                  description: row.Description,
+                  locationCode: row.LocationCode,
+                  equipmentCode: row.EquipmentCode,
+                })),
+              })),
             },
             ...metadata,
           }
@@ -525,30 +521,28 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data.map(
-              (v): schemas.CoreWorkOrder => ({
-                accessCaption: v.AccessCaption,
-                caption: v.Caption,
-                code: v.Code,
-                dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                contactCode: v.ContactCode,
-                description: v.Description,
-                detailsCaption: v.DetailsCaption,
-                externalResource: v.ExternalResource,
-                id: v.Id,
-                lastChanged: new Date(v.LastChanged),
-                priority: v.Priority,
-                registered: new Date(v.Registered),
-                rentalObjectCode: v.RentalObjectCode,
-                status: v.Status,
-                url: v.Url,
-                workOrderRows: v.WorkOrderRows.map((row) => ({
-                  description: row.Description,
-                  locationCode: row.LocationCode,
-                  equipmentCode: row.EquipmentCode,
-                })),
-              })
-            ),
+            workOrders: result.data.map((v): schemas.CoreWorkOrder => ({
+              accessCaption: v.AccessCaption,
+              caption: v.Caption,
+              code: v.Code,
+              dueDate: v.DueDate ? new Date(v.DueDate) : null,
+              contactCode: v.ContactCode,
+              description: v.Description,
+              detailsCaption: v.DetailsCaption,
+              externalResource: v.ExternalResource,
+              id: v.Id,
+              lastChanged: new Date(v.LastChanged),
+              priority: v.Priority,
+              registered: new Date(v.Registered),
+              rentalObjectCode: v.RentalObjectCode,
+              status: v.Status,
+              url: v.Url,
+              workOrderRows: v.WorkOrderRows.map((row) => ({
+                description: row.Description,
+                locationCode: row.LocationCode,
+                equipmentCode: row.EquipmentCode,
+              })),
+            })),
           },
           ...metadata,
         }
@@ -628,30 +622,28 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data.map(
-              (v): schemas.CoreWorkOrder => ({
-                accessCaption: v.AccessCaption,
-                caption: v.Caption,
-                code: v.Code,
-                dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                contactCode: v.ContactCode,
-                description: v.Description,
-                detailsCaption: v.DetailsCaption,
-                externalResource: v.ExternalResource,
-                id: v.Id,
-                lastChanged: new Date(v.LastChanged),
-                priority: v.Priority,
-                registered: new Date(v.Registered),
-                rentalObjectCode: v.RentalObjectCode,
-                status: v.Status,
-                url: v.Url,
-                workOrderRows: v.WorkOrderRows.map((row) => ({
-                  description: row.Description,
-                  locationCode: row.LocationCode,
-                  equipmentCode: row.EquipmentCode,
-                })),
-              })
-            ),
+            workOrders: result.data.map((v): schemas.CoreWorkOrder => ({
+              accessCaption: v.AccessCaption,
+              caption: v.Caption,
+              code: v.Code,
+              dueDate: v.DueDate ? new Date(v.DueDate) : null,
+              contactCode: v.ContactCode,
+              description: v.Description,
+              detailsCaption: v.DetailsCaption,
+              externalResource: v.ExternalResource,
+              id: v.Id,
+              lastChanged: new Date(v.LastChanged),
+              priority: v.Priority,
+              registered: new Date(v.Registered),
+              rentalObjectCode: v.RentalObjectCode,
+              status: v.Status,
+              url: v.Url,
+              workOrderRows: v.WorkOrderRows.map((row) => ({
+                description: row.Description,
+                locationCode: row.LocationCode,
+                equipmentCode: row.EquipmentCode,
+              })),
+            })),
           },
           ...metadata,
         }
@@ -734,30 +726,28 @@ export const routes = (router: KoaRouter) => {
           ctx.body = {
             content: {
               totalCount: result.data.length,
-              workOrders: result.data.map(
-                (v): schemas.CoreWorkOrder => ({
-                  accessCaption: v.AccessCaption,
-                  caption: v.Caption,
-                  code: v.Code,
-                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                  contactCode: v.ContactCode,
-                  description: v.Description,
-                  detailsCaption: v.DetailsCaption,
-                  externalResource: v.ExternalResource,
-                  id: v.Id,
-                  lastChanged: new Date(v.LastChanged),
-                  priority: v.Priority,
-                  registered: new Date(v.Registered),
-                  rentalObjectCode: v.RentalObjectCode,
-                  status: v.Status,
-                  url: v.Url,
-                  workOrderRows: v.WorkOrderRows.map((row) => ({
-                    description: row.Description,
-                    locationCode: row.LocationCode,
-                    equipmentCode: row.EquipmentCode,
-                  })),
-                })
-              ),
+              workOrders: result.data.map((v): schemas.CoreWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                contactCode: v.ContactCode,
+                description: v.Description,
+                detailsCaption: v.DetailsCaption,
+                externalResource: v.ExternalResource,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+                url: v.Url,
+                workOrderRows: v.WorkOrderRows.map((row) => ({
+                  description: row.Description,
+                  locationCode: row.LocationCode,
+                  equipmentCode: row.EquipmentCode,
+                })),
+              })),
             },
             ...metadata,
           }
@@ -871,21 +861,19 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data.map(
-              (v): schemas.CoreXpandWorkOrder => ({
-                accessCaption: v.AccessCaption,
-                caption: v.Caption,
-                code: v.Code,
-                contactCode: v.ContactCode,
-                id: v.Id,
-                lastChanged: new Date(v.LastChanged),
-                priority: v.Priority,
-                dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                registered: new Date(v.Registered),
-                rentalObjectCode: v.RentalObjectCode,
-                status: v.Status,
-              })
-            ),
+            workOrders: result.data.map((v): schemas.CoreXpandWorkOrder => ({
+              accessCaption: v.AccessCaption,
+              caption: v.Caption,
+              code: v.Code,
+              contactCode: v.ContactCode,
+              id: v.Id,
+              lastChanged: new Date(v.LastChanged),
+              priority: v.Priority,
+              dueDate: v.DueDate ? new Date(v.DueDate) : null,
+              registered: new Date(v.Registered),
+              rentalObjectCode: v.RentalObjectCode,
+              status: v.Status,
+            })),
           },
           ...metadata,
         }
@@ -983,21 +971,19 @@ export const routes = (router: KoaRouter) => {
           ctx.body = {
             content: {
               totalCount: result.data.length,
-              workOrders: result.data.map(
-                (v): schemas.CoreXpandWorkOrder => ({
-                  accessCaption: v.AccessCaption,
-                  caption: v.Caption,
-                  code: v.Code,
-                  contactCode: v.ContactCode,
-                  id: v.Id,
-                  lastChanged: new Date(v.LastChanged),
-                  priority: v.Priority,
-                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                  registered: new Date(v.Registered),
-                  rentalObjectCode: v.RentalObjectCode,
-                  status: v.Status,
-                })
-              ),
+              workOrders: result.data.map((v): schemas.CoreXpandWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                contactCode: v.ContactCode,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+              })),
             },
             ...metadata,
           }
@@ -1096,21 +1082,19 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data.map(
-              (v): schemas.CoreXpandWorkOrder => ({
-                accessCaption: v.AccessCaption,
-                caption: v.Caption,
-                code: v.Code,
-                contactCode: v.ContactCode,
-                id: v.Id,
-                lastChanged: new Date(v.LastChanged),
-                priority: v.Priority,
-                dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                registered: new Date(v.Registered),
-                rentalObjectCode: v.RentalObjectCode,
-                status: v.Status,
-              })
-            ),
+            workOrders: result.data.map((v): schemas.CoreXpandWorkOrder => ({
+              accessCaption: v.AccessCaption,
+              caption: v.Caption,
+              code: v.Code,
+              contactCode: v.ContactCode,
+              id: v.Id,
+              lastChanged: new Date(v.LastChanged),
+              priority: v.Priority,
+              dueDate: v.DueDate ? new Date(v.DueDate) : null,
+              registered: new Date(v.Registered),
+              rentalObjectCode: v.RentalObjectCode,
+              status: v.Status,
+            })),
           },
           ...metadata,
         }
@@ -1205,21 +1189,19 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             totalCount: result.data.length,
-            workOrders: result.data.map(
-              (v): schemas.CoreXpandWorkOrder => ({
-                accessCaption: v.AccessCaption,
-                caption: v.Caption,
-                code: v.Code,
-                contactCode: v.ContactCode,
-                id: v.Id,
-                lastChanged: new Date(v.LastChanged),
-                priority: v.Priority,
-                dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                registered: new Date(v.Registered),
-                rentalObjectCode: v.RentalObjectCode,
-                status: v.Status,
-              })
-            ),
+            workOrders: result.data.map((v): schemas.CoreXpandWorkOrder => ({
+              accessCaption: v.AccessCaption,
+              caption: v.Caption,
+              code: v.Code,
+              contactCode: v.ContactCode,
+              id: v.Id,
+              lastChanged: new Date(v.LastChanged),
+              priority: v.Priority,
+              dueDate: v.DueDate ? new Date(v.DueDate) : null,
+              registered: new Date(v.Registered),
+              rentalObjectCode: v.RentalObjectCode,
+              status: v.Status,
+            })),
           },
           ...metadata,
         }
@@ -1335,21 +1317,19 @@ export const routes = (router: KoaRouter) => {
           ctx.body = {
             content: {
               totalCount: result.data.length,
-              workOrders: result.data.map(
-                (v): schemas.CoreXpandWorkOrder => ({
-                  accessCaption: v.AccessCaption,
-                  caption: v.Caption,
-                  code: v.Code,
-                  contactCode: v.ContactCode,
-                  id: v.Id,
-                  lastChanged: new Date(v.LastChanged),
-                  priority: v.Priority,
-                  dueDate: v.DueDate ? new Date(v.DueDate) : null,
-                  registered: new Date(v.Registered),
-                  rentalObjectCode: v.RentalObjectCode,
-                  status: v.Status,
-                })
-              ),
+              workOrders: result.data.map((v): schemas.CoreXpandWorkOrder => ({
+                accessCaption: v.AccessCaption,
+                caption: v.Caption,
+                code: v.Code,
+                contactCode: v.ContactCode,
+                id: v.Id,
+                lastChanged: new Date(v.LastChanged),
+                priority: v.Priority,
+                dueDate: v.DueDate ? new Date(v.DueDate) : null,
+                registered: new Date(v.Registered),
+                rentalObjectCode: v.RentalObjectCode,
+                status: v.Status,
+              })),
             },
             ...metadata,
           }

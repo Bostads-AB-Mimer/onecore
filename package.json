@@ -48,28 +48,28 @@
     }
   },
   "dependencies": {
-    "@azure/msal-node": "^2.9.2"
+    "@azure/msal-node": "^2.16.3"
   },
   "devDependencies": {
     "@eslint/js": "9.32.0",
     "@iteam/eslint-config-react": "^0.4.0",
     "cross-env": "10.0.0",
-    "eslint": "^9.31.0",
+    "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-n": "17.21.3",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.11",
-    "eslint-plugin-testing-library": "^7.6.1",
-    "globals": "^15.9.0",
-    "launch-goblin": "^0.1.1",
-    "prettier": "^3.6.2",
-    "semver": "^7.7.2",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "eslint-plugin-testing-library": "^7.16.2",
+    "globals": "^15.15.0",
+    "launch-goblin": "^0.1.5",
+    "prettier": "^3.9.6",
+    "semver": "^7.8.5",
     "syncpack": "^13.0.4",
-    "turbo": "^2.5.5",
-    "typescript": "^5.6.2",
+    "turbo": "^2.10.10",
+    "typescript": "^5.9.3",
     "typescript-eslint": "8.42.0"
   }
 }

@@ -2803,11 +2803,7 @@ export interface paths {
         query: {
           /** @description The type of the identifier used to fetch work order data. */
           handler:
-            | 'rentalObjectId'
-            | 'leaseId'
-            | 'pnr'
-            | 'phoneNumber'
-            | 'contactCode'
+            'rentalObjectId' | 'leaseId' | 'pnr' | 'phoneNumber' | 'contactCode'
         }
         path: {
           /** @description The identifier value for fetching work order data. */
@@ -14375,12 +14371,7 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          | 'pending'
-          | 'sent'
-          | 'delivered'
-          | 'failed'
-          | 'bounced'
-          | 'received'
+          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -14423,12 +14414,7 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          | 'pending'
-          | 'sent'
-          | 'delivered'
-          | 'failed'
-          | 'bounced'
-          | 'received'
+          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null

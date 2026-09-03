@@ -158,8 +158,7 @@ export const upsertPropertyKvvArea = async (
 }
 
 export type UpdateKvvAreaResponsibleResult =
-  | { ok: true; data: OnecoreKvvArea }
-  | { ok: false; err: 'not-found' }
+  { ok: true; data: OnecoreKvvArea } | { ok: false; err: 'not-found' }
 
 export const updateKvvAreaResponsible = async (
   id: string,

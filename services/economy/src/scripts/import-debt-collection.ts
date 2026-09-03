@@ -79,27 +79,21 @@ export const getDebtCollectionFiles = async (client: SftpClient) => {
   const otherInvoiceFiles = await client.list(otherInvoicesDirectory, filter)
 
   return [
-    ...rentInvoiceFiles.map(
-      (fileInfo): DebtCollectionFile => ({
-        type: 'rentInvoice',
-        directory: rentInvoicesDirectory,
-        fileName: fileInfo.name,
-      })
-    ),
-    ...otherInvoiceFiles.map(
-      (fileInfo): DebtCollectionFile => ({
-        type: 'otherInvoice',
-        directory: otherInvoicesDirectory,
-        fileName: fileInfo.name,
-      })
-    ),
-    ...balanceCorrectionFiles.map(
-      (fileInfo): DebtCollectionFile => ({
-        type: 'balanceCorrection',
-        directory: balanceCorrectionsDirectory,
-        fileName: fileInfo.name,
-      })
-    ),
+    ...rentInvoiceFiles.map((fileInfo): DebtCollectionFile => ({
+      type: 'rentInvoice',
+      directory: rentInvoicesDirectory,
+      fileName: fileInfo.name,
+    })),
+    ...otherInvoiceFiles.map((fileInfo): DebtCollectionFile => ({
+      type: 'otherInvoice',
+      directory: otherInvoicesDirectory,
+      fileName: fileInfo.name,
+    })),
+    ...balanceCorrectionFiles.map((fileInfo): DebtCollectionFile => ({
+      type: 'balanceCorrection',
+      directory: balanceCorrectionsDirectory,
+      fileName: fileInfo.name,
+    })),
   ]
 }
 

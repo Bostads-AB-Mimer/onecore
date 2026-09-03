@@ -13,16 +13,14 @@ import { Knex } from 'knex'
 import * as keyEventsAdapter from './adapters/key-events-adapter'
 
 export type KeyEventValidationError =
-  | 'empty-keys-array'
-  | 'incomplete-event-conflict'
+  'empty-keys-array' | 'incomplete-event-conflict'
 
 export interface ConflictDetails {
   conflictingKeys: string[]
 }
 
 export type Result<T, E = string> =
-  | { ok: true; data: T }
-  | { ok: false; err: E; details?: ConflictDetails }
+  { ok: true; data: T } | { ok: false; err: E; details?: ConflictDetails }
 
 /**
  * Validate keys array (already parsed by Zod schema)
