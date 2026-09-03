@@ -776,6 +776,57 @@ describe(tenfastAdapter.importLease, () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    // Default: no existing lease, so the create path runs as before. Tests
+    // for the idempotency guard itself override this per-test.
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValue({ ok: false, err: 'not-found' })
+  })
+
+  // Restore the getLeaseByExternalId spy so it doesn't leak into the
+  // separate describe(tenfastAdapter.getLeaseByExternalId, ...) suite below,
+  // which needs the real implementation.
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('skips creating a lease and returns the existing one when externalId already exists', async () => {
+    const existingLease = factory.tenfastLease.build({
+      _id: 'existing-lease-id',
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValue({ ok: true, data: existingLease })
+    const getTenantSpy = jest.spyOn(tenfastAdapter, 'getTenantByContactCode')
+    const getRentalObjectSpy = jest.spyOn(tenfastAdapter, 'getRentalObject')
+
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      'P12345',
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: true, data: { _id: 'existing-lease-id' } })
+    expect(request).not.toHaveBeenCalled()
+    expect(getTenantSpy).not.toHaveBeenCalled()
+    expect(getRentalObjectSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns "unknown" when checking for an existing lease fails', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValue({ ok: false, err: 'unknown' })
+
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      'P12345',
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('sends externalId=leaseId and the expected sync payload to Tenfast', async () => {

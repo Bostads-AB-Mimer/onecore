@@ -173,6 +173,28 @@ export const importLease = async (
     | 'unknown'
   >
 > => {
+  // Idempotency guard: a retry (e.g. after a network error on a previous
+  // attempt that Tenfast actually committed) must not import the same lease
+  // twice. Tenfast's import endpoint doesn't reject/upsert cleanly on a
+  // repeat externalId — it appends to hyror instead of replacing it, so a
+  // second call produces duplicate rent rows on the same avtal. Mirrors the
+  // same check already used by terminateLease/voidLease.
+  const existing = await getLeaseByExternalId(leaseId)
+  if (existing.ok) {
+    logger.info(
+      { leaseId },
+      'tenfast-adapter.importLease: lease already exists, skipping import'
+    )
+    return { ok: true, data: { _id: existing.data._id } }
+  }
+  if (existing.err !== 'not-found') {
+    logger.error(
+      { leaseId, err: existing.err },
+      'tenfast-adapter.importLease: failed to check for existing lease'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+
   try {
     logger.info(
       { leaseId, contactCode, rentalObjectCode },
