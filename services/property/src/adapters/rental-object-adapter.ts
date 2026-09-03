@@ -55,6 +55,24 @@ const KEYCMOBT_BY_TYPE: Record<RentalObjectType, string> = {
   other: 'bahyr',
 }
 
+// Self-key form of the type test: an object ROW points at itself through its
+// type's keyobj* column. Verified equivalent to cmobj.keycmobt across the
+// whole stock — and the cmobj join cost ~1.2s/query at portfolio scope.
+const KEYOBJ_COLUMN_BY_TYPE: Record<RentalObjectType, string> = {
+  residence: 'keyobjlgh',
+  parkingSpace: 'keyobjbps',
+  facility: 'keyobjlok',
+  other: 'keyobjhyr',
+}
+
+// keycmobt equivalent derived from the self-key, for output and subtype match.
+const OBJECT_TYPE_EXPR = Prisma.raw(`CASE
+    WHEN b.keycmobj = b.keyobjlgh THEN 'balgh'
+    WHEN b.keycmobj = b.keyobjbps THEN 'babps'
+    WHEN b.keycmobj = b.keyobjlok THEN 'balok'
+    WHEN b.keycmobj = b.keyobjhyr THEN 'bahyr'
+  END`)
+
 const codeAndName = (
   type: RentalObjectType,
   row: RentalObjectRow
@@ -93,7 +111,7 @@ const codeAndName = (
 const OBJECT_SELECT = Prisma.sql`
   SELECT DISTINCT
     b.hyresid    AS rentalId,
-    o.keycmobt   AS objectTypeId,
+    ${OBJECT_TYPE_EXPR} AS objectTypeId,
     b.lghcode    AS residenceCode,
     b.lghcaption AS residenceName,
     b.bpscode    AS parkingSpaceCode,
@@ -115,12 +133,10 @@ const OBJECT_SELECT = Prisma.sql`
     a.adress1    AS address
 `
 
-// The spine both shapes walk: the structure row, its object type, and the
-// residence row (lägenhetstyp here, anläggnings-ID in the details query).
-const BASE_FROM = Prisma.sql`
+// The spine is babuf alone — the type test is the self-key, so no join. The
+// caption/address joins are split off so slim queries can skip them.
+const CORE_FROM = Prisma.sql`
   FROM dbo.babuf b
-  INNER JOIN dbo.cmobj o ON o.keycmobj = b.keycmobj
-  LEFT JOIN dbo.balgh lg ON lg.keycmobj = b.keycmobj
 `
 
 /**
@@ -133,13 +149,17 @@ const BASE_FROM = Prisma.sql`
  * rental ids directly, so the allowlist must bind on every row — not only
  * where property codes are resolved. cmpcode must sit in the index INCLUDE.
  */
-const rentalObjectWhere = (typeCodes = Object.values(KEYCMOBT_BY_TYPE)) =>
+const rentalObjectWhere = (
+  typeColumns: readonly string[] = Object.values(KEYOBJ_COLUMN_BY_TYPE)
+) =>
   Prisma.sql`
     b.deletemark = 0
     AND b.hyresid IS NOT NULL
     AND b.hyresid NOT LIKE '%X'
     AND ${operatingCompanyFilter('b.cmpcode')}
-    AND o.keycmobt IN ${openJsonList(typeCodes)}
+    AND b.keycmobj IN (${Prisma.raw(
+      typeColumns.map((c) => `b.${c}`).join(', ')
+    )})
   `
 
 /** Property-code scope, the input both root-scoped queries take. */
@@ -221,7 +241,6 @@ export const resolveStructurePropertyCodes = async (
         Prisma.sql`
           SELECT DISTINCT b.fstcode AS propertyCode
           FROM dbo.babuf b
-          INNER JOIN dbo.cmobj o ON o.keycmobj = b.keycmobj
           WHERE ${rentalObjectWhere()}
             AND (${Prisma.join(scopes, ' OR ')})
         `
@@ -235,8 +254,9 @@ export const resolveStructurePropertyCodes = async (
   }
 }
 
-const OBJECT_FROM = Prisma.sql`
-  ${BASE_FROM}
+// Subtype captions per type; gt hangs off the residence row (lg).
+const SUBTYPE_JOINS = Prisma.sql`
+  LEFT JOIN dbo.balgh lg ON lg.keycmobj = b.keycmobj
   LEFT JOIN dbo.balgt gt ON gt.keybalgt = lg.keybalgt
   LEFT JOIN dbo.babps ps ON ps.keycmobj = b.keycmobj
   LEFT JOIN dbo.babpt pt ON pt.keybabpt = ps.keybabpt
@@ -244,6 +264,9 @@ const OBJECT_FROM = Prisma.sql`
   LEFT JOIN dbo.balot lt ON lt.keybalot = lk.keybalot
   LEFT JOIN dbo.bahyr hr ON hr.keycmobj = b.keycmobj
   LEFT JOIN dbo.bahyt ht ON ht.keybahyt = hr.keybahyt
+`
+
+const ADDRESS_APPLY = Prisma.sql`
   -- TOP 1: a second address row must not multiply rows, or paging skews.
   OUTER APPLY (
     SELECT TOP 1 adr.adress1
@@ -252,6 +275,12 @@ const OBJECT_FROM = Prisma.sql`
       AND adr.keydbtbl = '_RQA11RNMA'
       AND adr.keycmtyp = 'adrpost'
   ) a
+`
+
+const OBJECT_FROM = Prisma.sql`
+  ${CORE_FROM}
+  ${SUBTYPE_JOINS}
+  ${ADDRESS_APPLY}
 `
 
 const toSummary = (
@@ -299,10 +328,10 @@ export const getRentalObjects = async (scope: {
       : Prisma.sql`b.bygcode = ${scope.buildingCode}`
 
     // Inverted into the include list the WHERE takes — excluded types are
-    // never joined or shipped, rather than dropped here after the fact.
-    const typeCodes = scope.exclude?.length
+    // never fetched or shipped, rather than dropped here after the fact.
+    const typeColumns = scope.exclude?.length
       ? RENTAL_OBJECT_TYPES.filter((t) => !scope.exclude?.includes(t)).map(
-          (t) => KEYCMOBT_BY_TYPE[t]
+          (t) => KEYOBJ_COLUMN_BY_TYPE[t]
         )
       : undefined
 
@@ -311,7 +340,7 @@ export const getRentalObjects = async (scope: {
         Prisma.sql`
           ${OBJECT_SELECT}
           ${OBJECT_FROM}
-          WHERE ${rentalObjectWhere(typeCodes)}
+          WHERE ${rentalObjectWhere(typeColumns)}
             AND ${scopeSql}
           ORDER BY b.hyresid
         `
@@ -360,7 +389,6 @@ const DETAILS_SELECT = Prisma.sql`
 // multiply rows, and first-row-wins would flap between cache refreshes).
 const DETAILS_FROM = Prisma.sql`
   FROM dbo.babuf b
-  INNER JOIN dbo.cmobj o ON o.keycmobj = b.keycmobj
   LEFT JOIN dbo.balgh lg ON lg.keycmobj = b.keycmobj
   LEFT JOIN dbo.hyinf hi ON hi.keycmobj = b.keycmobj
   OUTER APPLY (
@@ -503,9 +531,9 @@ export const searchRentalObjects = async (
   if (scopes.length === 0) return { rows: [], totalCount: 0 }
 
   const scopeSql = Prisma.join(scopes, ' OR ')
-  const typeCodes = params.types?.length
-    ? params.types.map((t) => KEYCMOBT_BY_TYPE[t])
-    : Object.values(KEYCMOBT_BY_TYPE)
+  const typeColumns = params.types?.length
+    ? params.types.map((t) => KEYOBJ_COLUMN_BY_TYPE[t])
+    : Object.values(KEYOBJ_COLUMN_BY_TYPE)
 
   // Subtypes arrive as 'type:code' because a code is only unique per type, and
   // they restrict per type: picking a parking subtype narrows bilplatser and
@@ -526,12 +554,12 @@ export const searchRentalObjects = async (
         NOT EXISTS (
           SELECT 1 FROM OPENJSON(${subtypePairs})
           WITH (t VARCHAR(10) '$.t') j
-          WHERE j.t = o.keycmobt
+          WHERE j.t = ${OBJECT_TYPE_EXPR}
         )
         OR EXISTS (
           SELECT 1 FROM OPENJSON(${subtypePairs})
           WITH (t VARCHAR(10) '$.t', c VARCHAR(50) '$.c') j
-          WHERE j.t = o.keycmobt
+          WHERE j.t = ${OBJECT_TYPE_EXPR}
             AND j.c = COALESCE(gt.code, pt.code, lt.code, ht.code)
         )
       )`
@@ -545,9 +573,15 @@ export const searchRentalObjects = async (
         OR b.fstcaption LIKE ${'%' + params.q + '%'})`
     : Prisma.empty
 
-  const from = Prisma.sql`
-    ${OBJECT_FROM}
-    WHERE ${rentalObjectWhere(typeCodes)}
+  // Count and id-page run on this slim spine, carrying only the joins an
+  // ACTIVE filter reads. The heavy joins (captions, address APPLY) run in
+  // phase 2 over the page's 50 ids, so their cost is flat in scope size —
+  // at portfolio scope they dominated the whole request (~4s for 22k rows).
+  const filteredFrom = Prisma.sql`
+    ${CORE_FROM}
+    ${params.subtypes?.length ? SUBTYPE_JOINS : Prisma.empty}
+    ${params.q ? ADDRESS_APPLY : Prisma.empty}
+    WHERE ${rentalObjectWhere(typeColumns)}
       AND (${scopeSql})
       ${subtypeSql}
       ${searchSql}
@@ -555,24 +589,39 @@ export const searchRentalObjects = async (
 
   try {
     const offset = (params.page - 1) * params.limit
-    const [countRows, rows] = await Promise.all([
+    // Counting and paging share the DISTINCT hyresid unit, so totalCount and
+    // page boundaries can't disagree by construction.
+    const [countRows, idRows] = await Promise.all([
       prisma.$queryRaw<{ total: number | bigint }[]>(
-        Prisma.sql`SELECT COUNT(DISTINCT b.hyresid) AS total ${from}`
+        Prisma.sql`SELECT COUNT(DISTINCT b.hyresid) AS total ${filteredFrom}`
       ),
-      prisma
-        .$queryRaw<RentalObjectRow[]>(
-          // Pages ROWS while totalCount counts DISTINCT hyresid — safe since
-          // every join is 1:1 by construction (address via OUTER APPLY TOP 1);
-          // dedupeByRentalId below is belt and braces.
-          Prisma.sql`
-            ${OBJECT_SELECT}
-            ${from}
-            ORDER BY b.hyresid
-            OFFSET ${offset} ROWS FETCH NEXT ${params.limit} ROWS ONLY
-          `
-        )
-        .then(trimStrings),
+      prisma.$queryRaw<{ rentalId: string }[]>(
+        Prisma.sql`
+          SELECT DISTINCT b.hyresid AS rentalId
+          ${filteredFrom}
+          ORDER BY b.hyresid
+          OFFSET ${offset} ROWS FETCH NEXT ${params.limit} ROWS ONLY
+        `
+      ),
     ])
+
+    const pageIds = idRows.map((r) => r.rentalId.trim())
+    // Phase 2: hydrate the page's ids. rentalObjectWhere again on purpose —
+    // rooms/components share their parent's hyresid.
+    const rows =
+      pageIds.length === 0
+        ? []
+        : await prisma
+            .$queryRaw<RentalObjectRow[]>(
+              Prisma.sql`
+                ${OBJECT_SELECT}
+                ${OBJECT_FROM}
+                WHERE ${rentalObjectWhere(typeColumns)}
+                  AND b.hyresid IN ${openJsonList(pageIds)}
+                ORDER BY b.hyresid
+              `
+            )
+            .then(trimStrings)
 
     return {
       rows: dedupeByRentalId(rows),
