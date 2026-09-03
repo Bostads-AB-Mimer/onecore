@@ -11,6 +11,7 @@ const baseConfig = {
   },
   migrations: {
     tableName: 'knex_migrations',
+    extension: 'cjs',
   },
 }
 
@@ -19,12 +20,5 @@ const baseConfig = {
  */
 module.exports = {
   development: baseConfig,
-  test: {
-    ...baseConfig,
-    connection: {
-      ...baseConfig.connection,
-      database: 'contacts-test',
-    },
-  },
   production: baseConfig,
 }

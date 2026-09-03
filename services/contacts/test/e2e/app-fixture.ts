@@ -85,13 +85,15 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
     },
     async stop(): Promise<void> {
       if (server) {
-        return new Promise((resolve) => {
+        await new Promise<void>((resolve) => {
           server!.close(() => {
             server = undefined
             resolve()
           })
         })
       }
+      await ctx.infrastructure.xpandDb.close()
+      await ctx.infrastructure.contactsDb.close()
     },
     port() {
       if (server) {
