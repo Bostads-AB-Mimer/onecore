@@ -25,7 +25,7 @@ export const RemovableChip = ({
         size="sm"
         className="h-4 w-4 p-0 hover:bg-transparent"
         onClick={onRemove}
-        aria-label={removeLabel}
+        aria-label={removeLabel ?? 'Ta bort'}
       >
         <X className="h-3 w-3" />
       </Button>

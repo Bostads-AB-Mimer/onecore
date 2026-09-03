@@ -31,6 +31,11 @@ export const etagMiddleware = () => {
       return
     }
 
+    // A validator a route (or proxied upstream) set deliberately wins.
+    if (ctx.response.get('ETag')) {
+      return
+    }
+
     const content = JSON.stringify(body)
     const tag = `"${crypto.createHash('md5').update(content).digest('hex')}"`
 

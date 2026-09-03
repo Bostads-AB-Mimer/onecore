@@ -1106,6 +1106,10 @@ export async function getRentalObjects(
       return { ok: false, err: 'bad-request' }
     }
 
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.getRentalObjects unexpected upstream status'
+    )
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getRentalObjects')
@@ -1149,6 +1153,10 @@ export async function searchRentalObjects(
       return { ok: false, err: 'bad-request' }
     }
 
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.searchRentalObjects unexpected upstream status'
+    )
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.searchRentalObjects')
@@ -1168,6 +1176,10 @@ export async function listRentalObjectSubtypes(): Promise<
       return { ok: true, data: fetchResponse.data.content }
     }
 
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.listRentalObjectSubtypes unexpected upstream status'
+    )
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.listRentalObjectSubtypes')
@@ -1208,6 +1220,10 @@ export async function getPropertyTree(
       return { ok: false, err: 'bad-request' }
     }
 
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.getPropertyTree unexpected upstream status'
+    )
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getPropertyTree')
@@ -1244,6 +1260,10 @@ export async function getRentalObjectDetails(
       return { ok: false, err: 'bad-request' }
     }
 
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.getRentalObjectDetails unexpected upstream status'
+    )
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getRentalObjectDetails')

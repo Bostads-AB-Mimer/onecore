@@ -673,7 +673,7 @@ export function PropertyTreePicker({
                     aria-label={
                       anyExpanded ? 'Fäll ihop alla' : 'Expandera alla'
                     }
-                    aria-expanded={anyExpanded}
+                    aria-pressed={anyExpanded}
                   >
                     {anyExpanded ? (
                       <ChevronsDownUp className="h-4 w-4" />
@@ -751,7 +751,7 @@ export function PropertyTreePicker({
                     </Fragment>
                   )
                 )}
-                {searchActive && visibleNodes.length === 0 && (
+                {searchActive && rows.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={COLUMN_COUNT}

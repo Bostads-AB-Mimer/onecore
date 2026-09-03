@@ -120,6 +120,18 @@ describe('etagMiddleware', () => {
     expect(ctx.headers.etag).toBeDefined()
   })
 
+  it('leaves a route-set ETag alone, body included', async () => {
+    const ctx = makeCtx()
+    await middleware(ctx as unknown as Context, async () => {
+      ctx.status = 200
+      ctx.body = { a: 1 }
+      ctx.set('ETag', '"route-owned"')
+    })
+
+    expect(ctx.headers.etag).toBe('"route-owned"')
+    expect(ctx.body).toEqual({ a: 1 })
+  })
+
   it('leaves responses to unsafe methods untouched, even with a validator', async () => {
     const first = makeCtx()
     await run(first, { a: 1 })

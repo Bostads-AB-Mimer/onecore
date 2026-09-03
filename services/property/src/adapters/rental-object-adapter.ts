@@ -255,10 +255,14 @@ const OBJECT_FROM = Prisma.sql`
   LEFT JOIN dbo.balot lt ON lt.keybalot = lk.keybalot
   LEFT JOIN dbo.bahyr hr ON hr.keycmobj = b.keycmobj
   LEFT JOIN dbo.bahyt ht ON ht.keybahyt = hr.keybahyt
-  LEFT JOIN dbo.cmadr a
-    ON a.keycode = b.keycmobj
-   AND a.keydbtbl = '_RQA11RNMA'
-   AND a.keycmtyp = 'adrpost'
+  -- TOP 1: a second address row must not multiply rows, or paging skews.
+  OUTER APPLY (
+    SELECT TOP 1 adr.adress1
+    FROM dbo.cmadr adr
+    WHERE adr.keycode = b.keycmobj
+      AND adr.keydbtbl = '_RQA11RNMA'
+      AND adr.keycmtyp = 'adrpost'
+  ) a
 `
 
 const toSummary = (
@@ -338,9 +342,9 @@ export const getRentalObjects = async (scope: {
  * rather than columns on the structure rows — only the object list shows
  * these, so the tree and the picker never carry them.
  *
- * Every join here is one row per object: hyinf is 1:1 on keycmobj, cmval is
- * filtered to one quantity type, and the anläggnings-ID comment is collapsed
- * with TOP 1 (several template rows can match).
+ * Every join here is one row per object: hyinf is 1:1 on keycmobj; the BRA
+ * value and the anläggnings-ID comment are collapsed with TOP 1, so a
+ * duplicate source row can never multiply details rows or flap between reads.
  */
 type RentalObjectDetailsRow = {
   rentalId: string
@@ -362,17 +366,20 @@ const DETAILS_SELECT = Prisma.sql`
     fac.text      AS malarEnergiFacilityId
 `
 
-// Every join is one row per object: hyinf is 1:1 on keycmobj, cmval is
-// filtered to a single quantity type, and the anläggnings-ID comment is
-// collapsed with TOP 1 (several template rows can match).
+// Every join is one row per object: hyinf is 1:1 on keycmobj; BRA and the
+// anläggnings-ID comment are collapsed with TOP 1 (duplicates would otherwise
+// multiply rows, and first-row-wins would flap between cache refreshes).
 const DETAILS_FROM = Prisma.sql`
   FROM dbo.babuf b
   INNER JOIN dbo.cmobj o ON o.keycmobj = b.keycmobj
   LEFT JOIN dbo.balgh lg ON lg.keycmobj = b.keycmobj
   LEFT JOIN dbo.hyinf hi ON hi.keycmobj = b.keycmobj
-  LEFT JOIN dbo.cmval bra
-    ON bra.keycode = b.keycmobj
-   AND bra.keycmvat = 'BRA'
+  OUTER APPLY (
+    SELECT TOP 1 val.value
+    FROM dbo.cmval val
+    WHERE val.keycode = b.keycmobj
+      AND val.keycmvat = 'BRA'
+  ) bra
   OUTER APPLY (
     SELECT TOP 1 tx.text
     FROM dbo.cmtex tx
@@ -565,9 +572,9 @@ export const searchRentalObjects = async (
       ),
       prisma
         .$queryRaw<RentalObjectRow[]>(
-          // Pages ROWS while totalCount counts DISTINCT hyresid. Verified 1:1
-          // across the whole stock; if a column ever multiplies rows, paging
-          // breaks first — dedupeByRentalId below guards the rows, not this.
+          // Pages ROWS while totalCount counts DISTINCT hyresid — safe since
+          // every join is 1:1 by construction (address via OUTER APPLY TOP 1);
+          // dedupeByRentalId below is belt and braces.
           Prisma.sql`
             ${OBJECT_SELECT}
             ${from}

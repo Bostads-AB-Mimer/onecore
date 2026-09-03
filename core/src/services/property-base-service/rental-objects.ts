@@ -17,7 +17,7 @@ import {
 
 const repeatable = z
   .union([z.string(), z.array(z.string())])
-  .transform((v) => (Array.isArray(v) ? v : [v]))
+  .transform((v) => (Array.isArray(v) ? v : [v]).filter((s) => s.length > 0))
   .optional()
 
 // Where to look for rental objects — alternatives, not a conjunction. Shared

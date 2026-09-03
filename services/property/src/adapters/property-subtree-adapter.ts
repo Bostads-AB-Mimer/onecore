@@ -9,6 +9,7 @@ import type {
 } from '@src/types/property-tree'
 import type { RentalObjectSummary } from '@src/types/rental-object'
 
+import { operatingCompanyFilter } from './company-scope'
 import { prisma } from './db'
 import { getRentalObjectsByPropertyCodes } from './rental-object-adapter'
 
@@ -103,6 +104,8 @@ const fetchPropertySubtrees = async (
       // Raw SQL + OPENJSON IN-list: Prisma's per-element parameter binding on
       // a 65-code IN(?,?,...) dominated wall-clock (3s → 388ms after this).
       // Do NOT "tidy" back into prisma.propertyStructure.findMany.
+      // Every scan carries the company allowlist: object leaves cut company
+      // 999 via rentalObjectWhere, and counts must agree with the leaves.
       prisma.$queryRaw<BuildingRow[]>`
         SELECT DISTINCT
           s.fstcode     AS propertyCode,
@@ -115,6 +118,7 @@ const fetchPropertySubtrees = async (
         LEFT JOIN dbo.babyt t ON t.keybabyt = b.keybabyt
         WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
           AND s.deletemark = 0
+          AND ${operatingCompanyFilter('s.cmpcode')}
           AND s.bygcode IS NOT NULL
       `.then(trimStrings),
       // Trapphus (vancode) per building, with per-type object counts.
@@ -133,6 +137,7 @@ const fetchPropertySubtrees = async (
         FROM dbo.babuf s
         WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
           AND s.deletemark = 0
+          AND ${operatingCompanyFilter('s.cmpcode')}
           AND s.bygcode IS NOT NULL
           AND s.vancode IS NOT NULL
         GROUP BY s.fstcode, s.bygcode, s.vancode
@@ -150,6 +155,7 @@ const fetchPropertySubtrees = async (
         FROM dbo.babuf s
         WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
           AND s.deletemark = 0
+          AND ${operatingCompanyFilter('s.cmpcode')}
           AND s.bygcode IS NOT NULL
         GROUP BY s.fstcode, s.bygcode
       `.then(trimStrings),
@@ -164,6 +170,7 @@ const fetchPropertySubtrees = async (
         FROM dbo.babuf s
         WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
           AND s.deletemark = 0
+          AND ${operatingCompanyFilter('s.cmpcode')}
           AND s.ytacode IS NOT NULL
           AND s.keyobjbps IS NOT NULL
         GROUP BY s.fstcode, s.ytacode
@@ -179,6 +186,7 @@ const fetchPropertySubtrees = async (
         FROM dbo.babuf
         WHERE fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
           AND deletemark = 0
+          AND ${operatingCompanyFilter('cmpcode')}
         GROUP BY fstcode
       `.then(trimStrings),
     ])

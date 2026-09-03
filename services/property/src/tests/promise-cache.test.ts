@@ -174,5 +174,4 @@ describe('cachedBatch', () => {
     await expect(cache.get(['a'])).resolves.toEqual(['fresh'])
     expect(fetch).toHaveBeenCalledTimes(2)
   })
-
 })

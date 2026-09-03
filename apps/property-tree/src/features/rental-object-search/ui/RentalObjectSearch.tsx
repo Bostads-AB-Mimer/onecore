@@ -153,14 +153,28 @@ export function RentalObjectSearch() {
     setPage(1)
   }
 
+  // Removing the last active type means "back to all", not "none" — an
+  // empty active set reads as an empty result in picker semantics.
+  const removeTypeChip = (type: RentalObjectType) => {
+    setActiveObjectTypes((prev) => {
+      if (!prev.has(type)) return prev
+      if (prev.size === 1) return new Set(ALL_RENTAL_OBJECT_TYPES)
+      const next = new Set(prev)
+      next.delete(type)
+      return next
+    })
+  }
+
   const filterChips = [
     ...appliedFilters.objectTypes.map((type) => ({
       key: `type:${type}`,
       text: RENTAL_OBJECT_TYPE_LABELS[type],
+      onRemove: () => removeTypeChip(type),
     })),
     ...appliedFilters.subtypes.map((key) => ({
       key: `subtype:${key}`,
       text: subtypeNames.get(key) ?? key,
+      onRemove: () => handleToggleSubtype(key),
     })),
   ]
 
@@ -199,7 +213,13 @@ export function RentalObjectSearch() {
             </RemovableChip>
           ))}
           {filterChips.map((chip) => (
-            <RemovableChip key={chip.key}>{chip.text}</RemovableChip>
+            <RemovableChip
+              key={chip.key}
+              onRemove={chip.onRemove}
+              removeLabel={`Ta bort ${chip.text}`}
+            >
+              {chip.text}
+            </RemovableChip>
           ))}
           <Button variant="ghost" size="sm" onClick={clearAll}>
             Rensa urval
