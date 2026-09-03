@@ -216,6 +216,7 @@ export const TenfastLeaseSchema = z.object({
   bankidSignatures: z.array(z.string()),
   cancellation: z.object({
     cancelled: z.boolean(),
+    requested: z.boolean().optional().nullable(), // Whether termination notice has been given (not withdrawn)
     doneAutomatically: z.boolean(),
     receivedCancellationAt: optionalDateField, // When TenFAST received the cancellation
     notifiedAt: optionalDateField, // When TenFAST notified the tenant about the cancellation

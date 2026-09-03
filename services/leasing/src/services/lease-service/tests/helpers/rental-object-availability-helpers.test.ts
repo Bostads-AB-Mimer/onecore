@@ -1,5 +1,5 @@
 import {
-  hasNoActiveBlock,
+  hasIndefiniteActiveBlock,
   determineVacantFrom,
 } from '../../helpers/rental-object-availability-helpers'
 import { RentalObjectFactory } from '../factories/rental-object'
@@ -16,63 +16,39 @@ describe('rental-object-availability-helpers', () => {
     jest.useRealTimers()
   })
 
-  describe('hasNoActiveBlock', () => {
-    it('returns true when there is no blockStartDate', () => {
+  describe('hasIndefiniteActiveBlock', () => {
+    it('returns false when there is no blockStartDate', () => {
       const ps = RentalObjectFactory.build()
-      expect(hasNoActiveBlock(ps)).toBe(true)
+      expect(hasIndefiniteActiveBlock(ps)).toBe(false)
     })
 
-    it('returns true when block starts in the future and has no end date', () => {
+    it('returns false when block has an end date, even while currently active', () => {
       const ps = RentalObjectFactory.build({
-        blockStartDate: new Date('2026-04-01'),
+        blockStartDate: new Date('2026-03-01'),
+        blockEndDate: new Date('2026-04-30'),
       })
-      expect(hasNoActiveBlock(ps)).toBe(true)
+      expect(hasIndefiniteActiveBlock(ps)).toBe(false)
     })
 
-    it('returns false when block started today and has no end date', () => {
+    it('returns true when an indefinite block started today', () => {
       const ps = RentalObjectFactory.build({
         blockStartDate: new Date('2026-03-31'),
       })
-      expect(hasNoActiveBlock(ps)).toBe(false)
+      expect(hasIndefiniteActiveBlock(ps)).toBe(true)
     })
 
-    it('returns false when block started in the past and has no end date', () => {
+    it('returns true when an indefinite block started in the past', () => {
       const ps = RentalObjectFactory.build({
         blockStartDate: new Date('2026-03-01'),
       })
-      expect(hasNoActiveBlock(ps)).toBe(false)
+      expect(hasIndefiniteActiveBlock(ps)).toBe(true)
     })
 
-    it('returns false when today is within the block period', () => {
-      const ps = RentalObjectFactory.build({
-        blockStartDate: new Date('2026-03-01'),
-        blockEndDate: new Date('2026-04-30'),
-      })
-      expect(hasNoActiveBlock(ps)).toBe(false)
-    })
-
-    it('returns false when block ends today', () => {
-      const ps = RentalObjectFactory.build({
-        blockStartDate: new Date('2026-03-01'),
-        blockEndDate: new Date('2026-03-31'),
-      })
-      expect(hasNoActiveBlock(ps)).toBe(false)
-    })
-
-    it('returns true when block ended yesterday', () => {
-      const ps = RentalObjectFactory.build({
-        blockStartDate: new Date('2026-03-01'),
-        blockEndDate: new Date('2026-03-30'),
-      })
-      expect(hasNoActiveBlock(ps)).toBe(true)
-    })
-
-    it('returns true when block starts and ends in the future', () => {
+    it('returns false when an indefinite block starts in the future', () => {
       const ps = RentalObjectFactory.build({
         blockStartDate: new Date('2026-04-01'),
-        blockEndDate: new Date('2026-04-30'),
       })
-      expect(hasNoActiveBlock(ps)).toBe(true)
+      expect(hasIndefiniteActiveBlock(ps)).toBe(false)
     })
   })
 

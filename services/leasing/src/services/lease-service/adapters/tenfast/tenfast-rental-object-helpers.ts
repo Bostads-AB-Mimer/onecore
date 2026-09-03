@@ -12,7 +12,13 @@ export const getLatestActiveLeasesEndDate = (
     'about-to-end',
     'upcoming',
   ])
-    .filter((lease) => lease.cancellation.cancelled)
+    // `requested` indicates notice was given; `cancelled` means that
+    // termination notice was itself later withdrawn, so both must be
+    // checked — `requested` alone doesn't necessarily flip back to false
+    // when a notice is withdrawn.
+    .filter(
+      (lease) => lease.cancellation.requested && !lease.cancellation.cancelled
+    )
     .map((lease) => lease.endDate)
     .filter((date): date is Date => date != null)
     .sort((a, b) => b.getTime() - a.getTime()) // Sort descending to get the latest date first

@@ -1,25 +1,20 @@
 import { RentalObject } from '@onecore/types'
 
 /**
- * Returns true if the rental object has no currently active block.
- * A block is considered active if its start date is today or earlier and it has no end date,
- * or if today falls within the block's start and end dates (inclusive).
- * A block that starts in the future is not considered active.
+ * Returns true if the rental object has an indefinite block (no end date)
+ * that has already started. Such a block has no way to determine a future
+ * vacant-from date, so the rental object should be excluded from vacancy
+ * listings entirely — unlike a block with an end date, which should still
+ * be listed with a computed vacant-from date (see determineVacantFrom).
  */
-export function hasNoActiveBlock(ps: RentalObject): boolean {
-  if (!ps.blockStartDate) return true
+export function hasIndefiniteActiveBlock(ps: RentalObject): boolean {
+  if (!ps.blockStartDate || ps.blockEndDate) return false
   const today = new Date()
   today.setUTCHours(0, 0, 0, 0)
   const start = new Date(ps.blockStartDate)
   start.setUTCHours(0, 0, 0, 0)
-  if (!ps.blockEndDate) {
-    // Block with no end date, active if start is today or earlier
-    return start > today
-  }
-  const end = new Date(ps.blockEndDate)
-  end.setUTCHours(0, 0, 0, 0)
-  // Block is active if today is between start and end (inclusive)
-  return today < start || today > end
+  // Active if start is today or earlier
+  return start <= today
 }
 
 /**
