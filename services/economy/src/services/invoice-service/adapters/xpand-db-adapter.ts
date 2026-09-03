@@ -483,7 +483,13 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   )
 
   return {
-    reference: contactCode,
+    // The invoice's actual paying contact — for invoices found via a shared
+    // lease this is the other holder, not the contact the lookup was made
+    // for. Matches the Xledger transform, where reference is the subledger
+    // (customer) code.
+    reference: row.recipientContactCode
+      ? (row.recipientContactCode as string).trimEnd()
+      : contactCode,
     invoiceId: row.invoiceId.trim(),
     leaseId: row.leaseId?.trim(),
     amount: Math.round((amount + Number.EPSILON) * 100) / 100,
@@ -502,15 +508,7 @@ function transformFromDbInvoice(row: any, contactCode: string): Invoice {
   }
 }
 
-export const getInvoicesByContactCode = async (
-  contactKey: string,
-  filters?: { from?: Date }
-): Promise<Invoice[] | undefined> => {
-  logger.info(
-    { contactCode: contactKey },
-    'Getting invoices by contact code from Xpand DB'
-  )
-
+const buildInvoicesByContactCodeQuery = (filters?: { from?: Date }) => {
   let query = db
     .select(
       'krfkh.invoice as invoiceId',
@@ -526,20 +524,113 @@ export const getInvoicesByContactCode = async (
       'krfkh.debstatus as debitStatus',
       'krfkh.paystatus as paymentStatus',
       'krfkh.keyrevrt as transactionType',
-      'revrt.name as transactionTypeName'
+      'revrt.name as transactionTypeName',
+      'cmctc.cmctckod as recipientContactCode',
+      'krfkh.keykrfkh as invoiceRowKey'
     )
     .from('krfkh')
     .innerJoin('cmctc', 'cmctc.keycmctc', 'krfkh.keycmctc')
     .innerJoin('revrt', 'revrt.keyrevrt', 'krfkh.keyrevrt')
-    .where({ 'cmctc.cmctckod': contactKey })
-    .andWhere('krfkh.type', 'in', [1, 2])
+    .whereIn('krfkh.type', [1, 2])
     .orderBy('krfkh.fromdate', 'desc')
 
   if (filters?.from) {
     query = query.andWhere('krfkh.fromdate', '>=', filters.from)
   }
 
-  const rows = await query
+  return query
+}
+
+/*
+ * Leases where the contact is a (co-)holder. Invoices in krfkh are bound to
+ * a single paying contact (keycmctc), so a co-holder on a shared lease has no
+ * invoices of their own — their household's invoices must be looked up via
+ * the leases they hold (MIM-1160). Only INNEHAVARE relations count, mirroring
+ * isLeaseHolderRelation in the leasing service — other relation types (e.g.
+ * guarantors) must not expose invoices.
+ *
+ * Terminated leases are excluded (like the leasing service's default): hyavk
+ * rows survive termination, and a former co-holder must not keep seeing
+ * invoices issued to whoever remains on the contract. Upcoming leases are
+ * kept — their advance invoices are relevant to both holders.
+ */
+const getHolderLeaseIds = async (contactKey: string): Promise<string[]> => {
+  try {
+    const rows = await db
+      .from('hyavk')
+      .select('hyobj.hyobjben as leaseId', 'hyobj.sistadeb as lastDebitDate')
+      .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
+      .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
+      .where('cmctc.cmctckod', contactKey)
+      .where('hyavk.keyhyakt', 'INNEHAVARE')
+
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+
+    return rows
+      .filter(
+        (row) => row.lastDebitDate == null || row.lastDebitDate >= startOfToday
+      )
+      .map((row) => row.leaseId?.trimEnd())
+      .filter((leaseId: string | undefined): leaseId is string =>
+        Boolean(leaseId)
+      )
+  } catch (err) {
+    // Degrade to recipient-only invoices rather than failing the whole
+    // invoice lookup for every contact.
+    logger.error({ err }, 'adapter.getHolderLeaseIds')
+    return []
+  }
+}
+
+export const getInvoicesByContactCode = async (
+  contactKey: string,
+  filters?: { from?: Date }
+): Promise<Invoice[] | undefined> => {
+  logger.info(
+    { contactCode: contactKey },
+    'Getting invoices by contact code from Xpand DB'
+  )
+
+  const [recipientRows, holderLeaseIds] = await Promise.all([
+    buildInvoicesByContactCodeQuery(filters).where({
+      'cmctc.cmctckod': contactKey,
+    }),
+    getHolderLeaseIds(contactKey),
+  ])
+
+  // Chunked to stay below MSSQL's 2100-bind-parameter limit — an organisation
+  // contact can hold a very large number of lease objects.
+  const LEASE_CHUNK_SIZE = 500
+  const leaseRows: typeof recipientRows = []
+  for (let i = 0; i < holderLeaseIds.length; i += LEASE_CHUNK_SIZE) {
+    const chunkRows = await buildInvoicesByContactCodeQuery(filters).whereIn(
+      'krfkh.reference',
+      holderLeaseIds.slice(i, i + LEASE_CHUNK_SIZE)
+    )
+    leaseRows.push(...chunkRows)
+  }
+
+  // Merge both lookups, dropping duplicate rows (an invoice where the contact
+  // is both recipient and lease holder is returned by both queries). Keyed on
+  // krfkh's primary key — invoice numbers are not guaranteed unique, so two
+  // distinct rows sharing a number must both survive.
+  const seenRowKeys = new Set<string>()
+  const rows: typeof recipientRows = []
+  for (const row of [...recipientRows, ...leaseRows]) {
+    const rowKey = row.invoiceRowKey?.trimEnd()
+    if (rowKey) {
+      if (seenRowKeys.has(rowKey)) {
+        continue
+      }
+      seenRowKeys.add(rowKey)
+    }
+    rows.push(row)
+  }
+
+  rows.sort(
+    (a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime()
+  )
 
   if (rows && rows.length > 0) {
     const invoices: Invoice[] = rows

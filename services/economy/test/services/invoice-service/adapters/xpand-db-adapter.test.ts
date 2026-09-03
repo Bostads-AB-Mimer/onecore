@@ -2,41 +2,94 @@ const mockRaw = jest.fn()
 
 // Per-table query results for the chainable query-builder mock (db('table')...).
 // Tests set entries here to control what `await db('repsk').innerJoin(...).where(...)` resolves to.
+// Two modes:
+// - static: an array of row objects — every query for the table resolves to it
+// - queue: an array of arrays — each query for the table consumes the next
+//   result set, so two queries against the same table can get different rows
 const mockTableQueries: Record<string, unknown[]> = {}
 
-const createChainable = (resolveValue: unknown[]) => {
-  const chain: Record<string, unknown> = {
-    then: (resolve: (value: unknown[]) => unknown) => resolve(resolveValue),
-    catch: () => chain,
+const resolveTableResult = (table: string | undefined): unknown[] => {
+  const entry = mockTableQueries[table ?? '']
+  if (!entry) {
+    return []
   }
-  for (const method of [
-    'innerJoin',
-    'leftJoin',
-    'where',
-    'andWhere',
-    'andWhereLike',
-    'whereIn',
-    'orWhere',
-    'orWhereLike',
-    'whereLike',
-    'distinct',
-    'select',
-    'from',
-    'orderBy',
-    'limit',
-    'offset',
-  ]) {
+  if (entry.length > 0 && Array.isArray(entry[0])) {
+    return (entry.shift() as unknown[]) ?? []
+  }
+  return entry
+}
+
+const chainMethods = [
+  'innerJoin',
+  'leftJoin',
+  'where',
+  'andWhere',
+  'andWhereLike',
+  'whereIn',
+  'orWhere',
+  'orWhereLike',
+  'whereLike',
+  'distinct',
+  'select',
+  'orderBy',
+  'limit',
+  'offset',
+] as const
+
+type MockChain = {
+  [M in (typeof chainMethods)[number]]: jest.Mock
+} & {
+  then: (resolve: (value: unknown[]) => unknown) => unknown
+  catch: () => MockChain
+  from: jest.Mock
+}
+
+// Chainables recorded per table, in creation order, so tests can assert on the
+// jest.fn query methods of a specific query (e.g. which args `whereIn` got).
+const mockTableChains: Record<string, MockChain[]> = {}
+
+// Resolves lazily via the table name so both `db('krfkh')` and
+// `db.select(...).from('krfkh')` pick their result set from mockTableQueries.
+const createChainable = (table?: string): MockChain => {
+  let resolveTable = table
+  const chain = {} as MockChain
+  chain.then = (resolve) => resolve(resolveTableResult(resolveTable))
+  chain.catch = () => chain
+  const register = (t: string) => {
+    resolveTable = t
+    mockTableChains[t] = mockTableChains[t] ?? []
+    mockTableChains[t].push(chain)
+  }
+  for (const method of chainMethods) {
     chain[method] = jest.fn().mockReturnValue(chain)
   }
+  chain.from = jest.fn((t: string) => {
+    register(t)
+    return chain
+  })
+  if (table) register(table)
   return chain
 }
 
-const mockDb: any = jest.fn((table: string) =>
-  createChainable(mockTableQueries[table] ?? [])
-)
+const mockDb: any = jest.fn((table: string) => createChainable(table))
 mockDb.raw = mockRaw
+mockDb.select = jest.fn((...args: unknown[]) => {
+  const chain = createChainable()
+  chain.select(...args)
+  return chain
+})
+mockDb.from = jest.fn((table: string) => createChainable(table))
 
 jest.mock('knex', () => () => mockDb)
+
+const clearTableMocks = () => {
+  for (const key of Object.keys(mockTableQueries)) {
+    delete mockTableQueries[key]
+  }
+  for (const key of Object.keys(mockTableChains)) {
+    delete mockTableChains[key]
+  }
+}
 
 import { schemas } from '@onecore/types'
 
@@ -78,7 +131,9 @@ describe(adapter.getInvoiceRows, () => {
   const pad = (n: number) => String(n).padStart(2, '0')
   const y = now.getFullYear()
   const m = pad(now.getMonth() + 1)
-  const lastDay = pad(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate())
+  const lastDay = pad(
+    new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  )
   const startOfCurrentMonthString = `${y}${m}01`
   const endOfCurrentMonthString = `${y}${m}${lastDay}`
 
@@ -177,11 +232,7 @@ describe(adapter.getInvoiceRows, () => {
 })
 
 describe(adapter.enrichInvoiceRows, () => {
-  beforeEach(() => {
-    for (const key of Object.keys(mockTableQueries)) {
-      delete mockTableQueries[key]
-    }
-  })
+  beforeEach(clearTableMocks)
 
   const xpandInvoice = {
     invdate: '20250115',
@@ -258,9 +309,7 @@ describe(adapter.enrichInvoiceRows, () => {
     const result = await adapter.enrichInvoiceRows(rows, invoices)
 
     expect(result.rows).toHaveLength(2)
-    expect(
-      result.rows.every((row) => row.invoiceNumber === 'INV-1')
-    ).toBe(true)
+    expect(result.rows.every((row) => row.invoiceNumber === 'INV-1')).toBe(true)
     expect(result.errors).toHaveLength(1)
     expect(result.errors[0].invoiceNumber).toBe('INV-2')
   })
@@ -291,8 +340,163 @@ describe(adapter.enrichInvoiceRows, () => {
     const result = await adapter.enrichInvoiceRows(rows, invoices)
 
     expect(result.rows).toHaveLength(0)
-    expect(
-      result.errors.some((e) => e.invoiceNumber === 'INV-MISSING')
-    ).toBe(true)
+    expect(result.errors.some((e) => e.invoiceNumber === 'INV-MISSING')).toBe(
+      true
+    )
+  })
+})
+
+describe(adapter.getInvoicesByContactCode, () => {
+  beforeEach(clearTableMocks)
+
+  const sharedLeaseId = '924-033-01-0201/10'
+
+  const invoiceRow = {
+    invoiceId: '552012345678    ',
+    leaseId: `${sharedLeaseId}    `,
+    amount: 7000,
+    reduction: 0,
+    vat: 0,
+    roundoff: 0,
+    fromDate: new Date('2026-01-01'),
+    toDate: new Date('2026-01-31'),
+    invoiceDate: new Date('2025-12-15'),
+    expirationDate: new Date('2025-12-31'),
+    debitStatus: 1,
+    paymentStatus: 2,
+    transactionType: '_S2Y14GIUN',
+    transactionTypeName: 'HYRA    ',
+    recipientContactCode: 'P083974    ',
+    invoiceRowKey: '_KRFKH0001    ',
+  }
+
+  // MIM-1160/MIM-1221: a co-holder (INNEHAVARE in hyavk) has no invoices bound
+  // to their own contact (krfkh.keycmctc points at the paying tenant only), so
+  // invoices must also be fetched for the leases the contact holds.
+  it('queries invoices for leases where the contact is a lease holder', async () => {
+    mockTableQueries['hyavk'] = [
+      { leaseId: `${sharedLeaseId}    `, lastDebitDate: null },
+    ]
+    mockTableQueries['krfkh'] = [invoiceRow]
+
+    const result = await adapter.getInvoicesByContactCode('P083975')
+
+    // Only INNEHAVARE relations may widen the invoice lookup — other relation
+    // types (e.g. guarantors) must not expose invoices. Filtered in SQL.
+    const hyavkQuery = (mockTableChains['hyavk'] ?? [])[0]
+    expect(hyavkQuery).toBeDefined()
+    expect(hyavkQuery?.where).toHaveBeenCalledWith(
+      'hyavk.keyhyakt',
+      'INNEHAVARE'
+    )
+
+    const leaseQuery = (mockTableChains['krfkh'] ?? []).find((chain) =>
+      chain.whereIn.mock.calls.some(
+        (call: unknown[]) => call[0] === 'krfkh.reference'
+      )
+    )
+    expect(leaseQuery).toBeDefined()
+    expect(leaseQuery?.whereIn).toHaveBeenCalledWith('krfkh.reference', [
+      sharedLeaseId,
+    ])
+
+    expect(result).toBeDefined()
+    expect(result?.map((i) => i.invoiceId)).toEqual(['552012345678'])
+    // reference must be the actual payer, not the contact the lookup was for
+    expect(result?.[0].reference).toBe('P083974')
+  })
+
+  it('excludes leases that are no longer billed (terminated)', async () => {
+    mockTableQueries['hyavk'] = [
+      { leaseId: sharedLeaseId, lastDebitDate: null },
+      { leaseId: '111-111-11-1111/01', lastDebitDate: new Date('2023-01-31') },
+    ]
+    mockTableQueries['krfkh'] = [invoiceRow]
+
+    await adapter.getInvoicesByContactCode('P083975')
+
+    // A former co-holder must not keep seeing invoices for a lease that has
+    // stopped being billed.
+    const leaseQuery = (mockTableChains['krfkh'] ?? []).find((chain) =>
+      chain.whereIn.mock.calls.some(
+        (call: unknown[]) => call[0] === 'krfkh.reference'
+      )
+    )
+    expect(leaseQuery?.whereIn).toHaveBeenCalledWith('krfkh.reference', [
+      sharedLeaseId,
+    ])
+  })
+
+  // The headline MIM-1160 scenario: the co-holder has ZERO invoices bound to
+  // their own contact — everything must come from the lease lookup. Uses
+  // queue mode so the recipient query returns [] and the lease query returns
+  // the household invoice. This test fails if the lease merge is removed.
+  it('returns household invoices for a co-holder with no own invoices', async () => {
+    mockTableQueries['hyavk'] = [
+      { leaseId: sharedLeaseId, lastDebitDate: null },
+    ]
+    mockTableQueries['krfkh'] = [
+      [], // recipient query: no invoices bound to the co-holder
+      [invoiceRow], // lease query: the household's invoice
+    ]
+
+    const result = await adapter.getInvoicesByContactCode('P083975')
+
+    expect(result).toHaveLength(1)
+    expect(result?.[0].invoiceId).toBe('552012345678')
+    expect(result?.[0].reference).toBe('P083974')
+  })
+
+  it('keeps two distinct rows that share an invoice number', async () => {
+    // krfkh invoice numbers are not guaranteed unique — dedupe must key on
+    // the primary key, not the number.
+    mockTableQueries['hyavk'] = []
+    mockTableQueries['krfkh'] = [
+      { ...invoiceRow, invoiceRowKey: '_KRFKH0001' },
+      { ...invoiceRow, invoiceRowKey: '_KRFKH0002' },
+    ]
+
+    const result = await adapter.getInvoicesByContactCode('P083975')
+
+    expect(result).toHaveLength(2)
+  })
+
+  it('deduplicates invoices found both via recipient and via lease', async () => {
+    mockTableQueries['hyavk'] = [
+      { leaseId: sharedLeaseId, lastDebitDate: null },
+    ]
+    // Both the recipient query and the lease query resolve the same row.
+    mockTableQueries['krfkh'] = [invoiceRow]
+
+    const result = await adapter.getInvoicesByContactCode('P083974')
+
+    expect(result).toHaveLength(1)
+  })
+
+  it('does not query invoices by lease when the contact holds no leases', async () => {
+    mockTableQueries['hyavk'] = []
+    mockTableQueries['krfkh'] = [invoiceRow]
+
+    await adapter.getInvoicesByContactCode('P083975')
+
+    const leaseQueries = (mockTableChains['krfkh'] ?? []).filter((chain) =>
+      chain.whereIn.mock.calls.some(
+        (call: unknown[]) => call[0] === 'krfkh.reference'
+      )
+    )
+    expect(leaseQueries).toHaveLength(0)
+  })
+
+  it('excludes deleted invoices and returns undefined when nothing remains', async () => {
+    mockTableQueries['hyavk'] = []
+    // debitStatus 6 = makulerad and must be filtered out
+    mockTableQueries['krfkh'] = [{ ...invoiceRow, debitStatus: 6 }]
+
+    const withDeleted = await adapter.getInvoicesByContactCode('P083975')
+    expect(withDeleted).toEqual([])
+
+    mockTableQueries['krfkh'] = []
+    const withNoRows = await adapter.getInvoicesByContactCode('P083975')
+    expect(withNoRows).toBeUndefined()
   })
 })
