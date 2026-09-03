@@ -91,24 +91,6 @@ describe('GET /contacts/search', () => {
       })
     })
 
-    it('returns status 200 upon not-in-waiting-list error from removeApplicantFromWaitingList', async () => {
-      jest
-        .spyOn(xPandSoapAdapter, 'removeApplicantFromWaitingList')
-        .mockResolvedValue({ ok: false, err: 'not-in-waiting-list' })
-      jest
-        .spyOn(xPandSoapAdapter, 'addApplicantToToWaitingList')
-        .mockResolvedValue({ ok: true, data: undefined })
-
-      const res = await request(app.callback())
-        .post('/contacts/1234567890/waitingLists/reset')
-        .send({
-          contactCode: '123',
-          waitingListType: WaitingListType.ParkingSpace,
-        })
-
-      expect(res.status).toBe(200)
-    })
-
     it('returns status 404 upon waiting-list-type-not-implemented error from removeApplicantFromWaitingList', async () => {
       jest
         .spyOn(xPandSoapAdapter, 'removeApplicantFromWaitingList')

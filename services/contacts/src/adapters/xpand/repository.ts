@@ -12,10 +12,12 @@ import {
 } from '@src/domain'
 import {
   cmlogContactChanges,
+  contactCodeForNationalId,
   contactObjectKeysForEmailAddress,
   contactObjectKeysForPhoneNumber,
   contactsQuery,
 } from './query'
+import { parseNationalId } from '@src/domain/national-id'
 import { contactsByCodesQuery, ContactIncludeOptions } from './batch-query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
@@ -208,6 +210,22 @@ export const xpandContactsRepository = (
         contact.contactCode
       )
       return contact
+    },
+
+    existsByNationalIdNumber: async (nid: NationalIdNumber) => {
+      const forms = parseNationalId(nid)
+
+      // Not a valid identity number, so it cannot match an existing contact.
+      // The caller validates and reports that separately; returning null here
+      // simply means "no duplicate found", which is correct.
+      if (!forms) return null
+
+      try {
+        return await contactCodeForNationalId(db.get(), forms)
+      } catch (err) {
+        logger.error({ err }, 'contactsRepository.existsByNationalIdNumber')
+        throw err
+      }
     },
 
     /**

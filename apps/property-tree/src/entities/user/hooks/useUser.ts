@@ -49,7 +49,14 @@ export function useUser() {
           throw 'unknown'
         }
 
-        return res.json()
+        // /auth/profile returns the raw JWT payload. Keycloak puts realm
+        // roles under realm_access.roles, not in a flat roles claim — fall
+        // back to it so role gating works without a custom token mapper.
+        const profile = await res.json()
+        return {
+          ...profile,
+          roles: profile.roles ?? profile.realm_access?.roles ?? [],
+        }
       } catch (error) {
         // Network errors (DNS failure, connection refused, timeout)
         // This happens when backend is down or unreachable
