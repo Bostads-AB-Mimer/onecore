@@ -18,7 +18,7 @@ afterEach(async () => {
 })
 
 afterAll(async () => {
-  await dbResource.get().destroy()
+  await dbResource.close()
 })
 
 describe('contact_relation', () => {
