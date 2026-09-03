@@ -49,6 +49,13 @@ const config = configPackage({
     xpandSoap: {
       // Empty by default. An unset url disables the SOAP write path entirely
       // rather than falling back to some other environment — see XpandSoapConfig.
+      //
+      // Must point at the SAME Xpand environment as xpandDatabase: the
+      // duplicate check that guards every create reads the database, while the
+      // write goes through this url. A mismatched pair (database on test, SOAP
+      // on production) makes that guard vacuous. The two cannot be asserted
+      // against each other at startup — different hosts per protocol — so this
+      // is a deployment-checklist item, as it already is for leasing's pair.
       url: '',
       username: '',
       password: '',

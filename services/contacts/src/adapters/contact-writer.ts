@@ -110,17 +110,4 @@ export interface ContactWriter {
   createContact: (
     input: CreateContactInput
   ) => Promise<AdapterResult<{ contactCode: string }, ContactWriteError>>
-
-  /**
-   * Looks up an existing contact code by national id number.
-   *
-   * Exists to recover from `xpand-malformed-response`: when a create call may
-   * have succeeded but its response could not be parsed, this resolves the
-   * code of the contact that was created.
-   *
-   * @returns the contact code, or null when no contact has that national id.
-   */
-  findContactCodeByNationalId: (
-    nationalId: string
-  ) => Promise<AdapterResult<{ contactCode: string | null }, ContactWriteError>>
 }

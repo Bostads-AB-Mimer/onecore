@@ -73,9 +73,6 @@ const refusingContactWriter: ContactWriter = {
       ].join('\n')
     )
   },
-  async findContactCodeByNationalId() {
-    return { ok: true, data: { contactCode: null } }
-  },
 }
 
 export type FixtureOptions = {

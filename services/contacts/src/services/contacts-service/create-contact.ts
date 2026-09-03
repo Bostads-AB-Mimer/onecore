@@ -108,37 +108,32 @@ export const createContact = async (
     }
   }
 
-  // A malformed response is the one failure where the contact may well exist —
-  // we simply could not read its code. Recovering it turns the worst outcome
-  // into a normal success. Retrying instead would either duplicate the contact
-  // or be blocked by the duplicate check above, so it must not be left to the
-  // caller.
-  // A transport failure is just as ambiguous: a timeout or dropped connection
-  // may have struck after Xpand committed the write. The duplicate check above
-  // already makes a retry safe (it answers 409 with the existing code), but
-  // recovering here gives the caller the right answer immediately instead.
+  // Two failures are ambiguous: a malformed response (the call went through
+  // but its code was unreadable) and a transport failure (a timeout may have
+  // struck after Xpand committed). In both the contact may well exist, so the
+  // code is recovered with the same lookup the duplicate check used — Xpand's
+  // database shows the new row immediately. Retrying instead would either
+  // duplicate the contact or be blocked by that check, so recovery must not be
+  // left to the caller.
   if (
     created.err === 'xpand-malformed-response' ||
     created.err === 'xpand-unavailable'
   ) {
-    const recovered = await contactWriter.findContactCodeByNationalId(
+    const recovered = await contactsRepository.existsByNationalIdNumber(
       forms.twelveDigits
     )
 
-    if (recovered.ok && recovered.data.contactCode) {
+    if (recovered) {
       logger.warn(
-        { contactCode: recovered.data.contactCode, err: created.err },
+        { contactCode: recovered, err: created.err },
         'createContact.recoveredContactCodeAfterAmbiguousFailure'
       )
 
       return {
         ok: true,
         data: {
-          contactCode: recovered.data.contactCode,
-          contact: await readBack(
-            contactsRepository,
-            recovered.data.contactCode
-          ),
+          contactCode: recovered,
+          contact: await readBack(contactsRepository, recovered),
         },
       }
     }

@@ -8,11 +8,6 @@ import {
   buildCreateApplicantEnvelope,
   parseCreateApplicantResponse,
 } from './create-applicant'
-import {
-  GET_TENANT_CODE_ACTION,
-  buildGetTenantCodeEnvelope,
-  parseGetTenantCodeResponse,
-} from './get-tenant-code'
 
 /**
  * A `ContactWriter` backed by Xpand's Incit SOAP service.
@@ -47,25 +42,6 @@ export const xpandSoapContactWriter = (
         // returned, a contact may exist whose code we never read, and the
         // caller must recover it instead of retrying into the duplicate check.
         logger.error({ err }, 'xpandSoapContactWriter.createContact')
-        return { ok: false, err: 'xpand-malformed-response' }
-      }
-    },
-
-    findContactCodeByNationalId: async (nationalId) => {
-      try {
-        const response = await client.call(
-          GET_TENANT_CODE_ACTION,
-          buildGetTenantCodeEnvelope(config, nationalId)
-        )
-
-        if (!response.ok) return response
-
-        return parseGetTenantCodeResponse(response.data)
-      } catch (err) {
-        logger.error(
-          { err },
-          'xpandSoapContactWriter.findContactCodeByNationalId'
-        )
         return { ok: false, err: 'xpand-malformed-response' }
       }
     },

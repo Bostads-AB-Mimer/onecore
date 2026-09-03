@@ -58,31 +58,53 @@ export const requiresHousingDescription = (
  */
 const NATIONAL_ID_PATTERN = /^(19|20)?\d{6}[-+]?\d{4}$/
 
-const applicationProfileSchema = z.object({
-  numAdults: z.coerce
-    .number({ invalid_type_error: 'Ange antal vuxna' })
-    .int()
-    .min(1, 'Minst en vuxen'),
-  numChildren: z.coerce
-    .number({ invalid_type_error: 'Ange antal barn' })
-    .int()
-    .min(0),
-  housingType: z.enum(HOUSING_TYPES, {
-    required_error: 'Välj boendeform',
-  }),
-  housingTypeDescription: z.string().nullable().default(null),
-  landlord: z.string().nullable().default(null),
-  // Optional to mirror mina-sidor, where the reference is collected later in
-  // the application flow — a caseworker rarely has it at registration time.
-  housingReference: z.object({
-    phone: z.string().optional(),
-    email: z
-      .string()
-      .email('Ange en giltig e-postadress')
-      .optional()
-      .or(z.literal('')),
-  }),
-})
+const applicationProfileSchema = z
+  .object({
+    numAdults: z.coerce
+      .number({ invalid_type_error: 'Ange antal vuxna' })
+      .int()
+      .min(1, 'Minst en vuxen'),
+    numChildren: z.coerce
+      .number({ invalid_type_error: 'Ange antal barn' })
+      .int()
+      .min(0),
+    housingType: z.enum(HOUSING_TYPES, {
+      required_error: 'Välj boendeform',
+    }),
+    housingTypeDescription: z.string().nullable().default(null),
+    landlord: z.string().nullable().default(null),
+    // Optional to mirror mina-sidor, where the reference is collected later in
+    // the application flow — a caseworker rarely has it at registration time.
+    housingReference: z.object({
+      phone: z.string().optional(),
+      email: z
+        .string()
+        .email('Ange en giltig e-postadress')
+        .optional()
+        .or(z.literal('')),
+    }),
+  })
+  // Landlord and description are only meaningful for some housing types, and
+  // for those they are required — mina-sidor blocks the same omission.
+  .superRefine((profile, ctx) => {
+    if (requiresLandlord(profile.housingType) && !profile.landlord?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['landlord'],
+        message: 'Ange hyresvärd',
+      })
+    }
+    if (
+      requiresHousingDescription(profile.housingType) &&
+      !profile.housingTypeDescription?.trim()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['housingTypeDescription'],
+        message: 'Beskriv boendet',
+      })
+    }
+  })
 
 /**
  * The queues offered at registration, in the order mina-sidor lists them.
@@ -193,7 +215,13 @@ export const createContactErrorMessage = (
 
   // Xpand's own validation text is the only thing that says which field is
   // wrong, so pass it through rather than hiding it behind our summary.
-  return code === 'xpand-rejected' && detail ? `${message} ${detail}` : message
+  if (code === 'xpand-rejected' && detail) return `${message} ${detail}`
+
+  // The service's own Swedish reason — "Kunden måste vara minst 16 år." says
+  // far more than "Personnumret är inte giltigt." would.
+  if (code === 'invalid-national-id' && detail) return detail
+
+  return message
 }
 
 /**

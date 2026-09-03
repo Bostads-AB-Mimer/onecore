@@ -36,11 +36,20 @@ const writer = (overrides: Partial<ContactWriter> = {}): ContactWriter => ({
   createContact: jest
     .fn()
     .mockResolvedValue({ ok: true, data: { contactCode: 'P069077' } }),
-  findContactCodeByNationalId: jest
-    .fn()
-    .mockResolvedValue({ ok: true, data: { contactCode: null } }),
   ...overrides,
 })
+
+/**
+ * Repository whose national-id lookup answers null for the duplicate check
+ * and `recoveredCode` for the recovery lookup that follows a failed create.
+ */
+const recoveringRepository = (recoveredCode: string | null) =>
+  repository({
+    existsByNationalIdNumber: jest
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(recoveredCode),
+  })
 
 describe('createContact', () => {
   it('returns the contact code on success', async () => {
@@ -156,20 +165,18 @@ describe('createContact', () => {
 
   /**
    * A malformed response may mean the contact was created but its code was
-   * unreadable. Recovering the code turns the worst failure mode into a normal
-   * success; retrying would duplicate or be blocked by the duplicate check.
+   * unreadable. Recovering the code — through the same database lookup the
+   * duplicate check uses — turns the worst failure mode into a normal success;
+   * retrying would duplicate or be blocked by the duplicate check.
    */
   it('recovers the contact code after an unreadable response', async () => {
     const result = await createContact(
       {
-        contactsRepository: repository(),
+        contactsRepository: recoveringRepository('P099999'),
         contactWriter: writer({
           createContact: jest
             .fn()
             .mockResolvedValue({ ok: false, err: 'xpand-malformed-response' }),
-          findContactCodeByNationalId: jest
-            .fn()
-            .mockResolvedValue({ ok: true, data: { contactCode: 'P099999' } }),
         }),
       },
       request()
@@ -186,14 +193,11 @@ describe('createContact', () => {
   it('recovers the contact code after a transport failure', async () => {
     const result = await createContact(
       {
-        contactsRepository: repository(),
+        contactsRepository: recoveringRepository('P099999'),
         contactWriter: writer({
           createContact: jest
             .fn()
             .mockResolvedValue({ ok: false, err: 'xpand-unavailable' }),
-          findContactCodeByNationalId: jest
-            .fn()
-            .mockResolvedValue({ ok: true, data: { contactCode: 'P099999' } }),
         }),
       },
       request()
@@ -205,14 +209,11 @@ describe('createContact', () => {
   it('keeps the transport failure when nothing can be recovered', async () => {
     const result = await createContact(
       {
-        contactsRepository: repository(),
+        contactsRepository: recoveringRepository(null),
         contactWriter: writer({
           createContact: jest
             .fn()
             .mockResolvedValue({ ok: false, err: 'xpand-unavailable' }),
-          findContactCodeByNationalId: jest
-            .fn()
-            .mockResolvedValue({ ok: true, data: { contactCode: null } }),
         }),
       },
       request()
@@ -222,26 +223,26 @@ describe('createContact', () => {
   })
 
   it('does not attempt recovery when the request was rejected', async () => {
-    const findContactCodeByNationalId = jest.fn()
+    const existsByNationalIdNumber = jest.fn().mockResolvedValue(null)
 
     const result = await createContact(
       {
-        contactsRepository: repository(),
+        contactsRepository: repository({ existsByNationalIdNumber }),
         contactWriter: writer({
           createContact: jest.fn().mockResolvedValue({
             ok: false,
             err: 'xpand-rejected',
             detail: 'Personnumret är felaktigt',
           }),
-          findContactCodeByNationalId,
         }),
       },
       request()
     )
 
     // Nothing was created, so there is nothing to recover — and looking would
-    // risk adopting an unrelated contact that happens to share the number.
-    expect(findContactCodeByNationalId).not.toHaveBeenCalled()
+    // risk adopting an unrelated contact that happens to share the number. The
+    // single call is the duplicate check that precedes the write.
+    expect(existsByNationalIdNumber).toHaveBeenCalledTimes(1)
     expect(result).toMatchObject({ ok: false, err: 'xpand-rejected' })
   })
 
