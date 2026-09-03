@@ -24,8 +24,9 @@ const LENGTH = 24
  *
  * The customer gets in through Mina sidor's "forgot password" flow, which
  * sends a reset link to the e-mail address given when the customer was
- * created. That flow has to recognise contacts created here, so verify it
- * against the test environment before the first production rollout.
+ * created. Contacts created here do not exist in Mina sidor's mirror
+ * database, so that flow depends on Mina sidor's API falling back to Xpand for
+ * unknown customers (its forgot-password and set-password handlers).
  *
  * SWAP POINT — if the policy changes to caller-supplied or shown-once, this
  * module and the `password` field on the request schema are the only things
