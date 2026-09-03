@@ -10,9 +10,8 @@ import { useRentalProperties } from '@/entities/rental-property'
 import { TenantCard, useRelatedContacts, useTenant } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
-import type { Tenant } from '@/services/types'
-
 import { tenantService } from '@/services/api/core/tenantService'
+import type { Tenant } from '@/services/types'
 
 import { useSingleEmail, useSingleSms } from '@/shared/hooks'
 import { Card, CardContent } from '@/shared/ui/Card'

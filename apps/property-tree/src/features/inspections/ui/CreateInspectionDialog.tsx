@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/Select'
+
 import {
   INSPECTION_TYPE,
   INSPECTION_TYPE_LABELS,

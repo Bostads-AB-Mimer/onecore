@@ -1,5 +1,3 @@
-import { Separator } from '@/shared/ui/Separator'
-
 interface SubComponentSpecs {
   ekonomiskLivslangd: string
   tekniskLivslangd: string

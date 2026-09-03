@@ -1,5 +1,5 @@
-import type { components, paths } from './generated/api-types'
 import { GET } from './baseApi'
+import type { components, paths } from './generated/api-types'
 
 export type ApartmentTemperaturePoint =
   components['schemas']['ApartmentTemperaturePoint']
