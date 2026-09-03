@@ -114,9 +114,11 @@ export const CreateContactDialog = () => {
     createContact.mutate(values, {
       onSuccess: (result) => {
         handleOpenChange(false)
+        // No welcome e-mail exists, so the caseworker is the one who tells the
+        // customer how to get in.
         toast({
           title: 'Kund skapad',
-          description: `Kundnummer ${result.content.contactCode}`,
+          description: `Kundnummer ${result.content.contactCode}. Kunden loggar in via "Glömt lösenord" på Mina sidor.`,
         })
         // The customer exists even when a later step failed. The warnings say
         // which step needs completing — show them verbatim.
