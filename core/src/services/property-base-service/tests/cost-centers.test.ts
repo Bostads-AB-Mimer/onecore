@@ -128,6 +128,33 @@ describe('GET /cost-centers/:id/tree', () => {
     })
   })
 
+  it('keeps the partial flag on split properties through the parse', async () => {
+    const splitTree = {
+      ...baseTree,
+      kvvAreas: [
+        {
+          ...baseTree.kvvAreas[0],
+          properties: [
+            { ...baseTree.kvvAreas[0].properties[0], partial: true },
+          ],
+        },
+      ],
+    }
+    jest
+      .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
+      .mockResolvedValueOnce({ ok: true, data: splitTree })
+    jest
+      .spyOn(keycloakAdapter, 'getUsersByRole')
+      .mockResolvedValue({ ok: true, data: [] })
+
+    const res = await request(app.callback()).get(
+      `/cost-centers/${TREE_ID}/tree`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.kvvAreas[0].properties[0].partial).toBe(true)
+  })
+
   it('returns the tree with null users when keycloak fails', async () => {
     jest
       .spyOn(propertyBaseAdapter, 'getCostCenterTreeById')
