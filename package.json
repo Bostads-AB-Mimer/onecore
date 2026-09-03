@@ -34,7 +34,7 @@
     "dev": "turbo run dev",
     "dev:prop": "turbo run dev --filter=@onecore/types --filter=@onecore/utilities --filter=dax-client --filter=@onecore/core --filter=@onecore/contacts --filter=@onecore/leasing --filter=@onecore/property --filter=@onecore/file-storage --filter=@onecore/property-tree",
     "dev:property": "pnpm run dev:prop",
-    "dev:odoo": "turbo run dev --filter=@onecore/types --filter=@onecore/utilities --filter=dax-client --filter=@onecore/core --filter=@onecore/contacts --filter=@onecore/leasing --filter=@onecore/property --filter=@onecore/file-storage --filter=@onecore/property-tree --filter=@onecore/communication --filter=@onecore/work-order --filter=@onecore/economy --filter=@onecore/inspection --filter=@onecore/property-management",
+    "dev:odoo": "pnpm run dev:prop --filter=@onecore/communication --filter=@onecore/work-order --filter=@onecore/economy --filter=@onecore/inspection --filter=@onecore/property-management",
     "dev:pick": "pnpx launch-goblin",
     "generate:static": "pnpm -r run generate:static",
     "git:configure": "git config merge.semver.driver \"scripts/git/merge-semver.js %O %A %B\"",
