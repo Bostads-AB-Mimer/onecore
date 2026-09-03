@@ -607,7 +607,8 @@ export const searchRentalObjects = async (
 
     const pageIds = idRows.map((r) => r.rentalId.trim())
     // Phase 2: hydrate the page's ids. rentalObjectWhere again on purpose —
-    // rooms/components share their parent's hyresid.
+    // rooms/components share their parent's hyresid. The scope too: an id
+    // with rows under several properties must display its IN-scope placement.
     const rows =
       pageIds.length === 0
         ? []
@@ -617,6 +618,7 @@ export const searchRentalObjects = async (
                 ${OBJECT_SELECT}
                 ${OBJECT_FROM}
                 WHERE ${rentalObjectWhere(typeColumns)}
+                  AND (${scopeSql})
                   AND b.hyresid IN ${openJsonList(pageIds)}
                 ORDER BY b.hyresid
               `
