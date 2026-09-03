@@ -9,6 +9,8 @@ import type {
 } from '@src/types/property-tree'
 import type { RentalObjectSummary } from '@src/types/rental-object'
 
+import { openJsonList } from '@src/utils/sql'
+
 import { operatingCompanyFilter } from './company-scope'
 import { prisma } from './db'
 import { getRentalObjectsByPropertyCodes } from './rental-object-adapter'
@@ -81,7 +83,7 @@ const fetchPropertySubtrees = async (
   uniqueCodes: string[]
 ): Promise<Map<string, CostCenterTreeProperty>> => {
   const out = new Map<string, CostCenterTreeProperty>()
-  const codesJson = JSON.stringify(uniqueCodes)
+  const codesList = openJsonList(uniqueCodes)
 
   try {
     const [
@@ -116,7 +118,7 @@ const fetchPropertySubtrees = async (
         FROM dbo.babuf s
         LEFT JOIN dbo.babyg b ON b.keycmobj = s.keyobjbyg
         LEFT JOIN dbo.babyt t ON t.keybabyt = b.keybabyt
-        WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
+        WHERE s.fstcode IN ${codesList}
           AND s.deletemark = 0
           AND ${operatingCompanyFilter('s.cmpcode')}
           AND s.bygcode IS NOT NULL
@@ -135,7 +137,7 @@ const fetchPropertySubtrees = async (
           COUNT(DISTINCT s.keyobjlok) AS facilityCount,
           COUNT(DISTINCT s.keyobjhyr) AS otherCount
         FROM dbo.babuf s
-        WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
+        WHERE s.fstcode IN ${codesList}
           AND s.deletemark = 0
           AND ${operatingCompanyFilter('s.cmpcode')}
           AND s.bygcode IS NOT NULL
@@ -153,7 +155,7 @@ const fetchPropertySubtrees = async (
           COUNT(DISTINCT s.keyobjlok) AS facilityCount,
           COUNT(DISTINCT s.keyobjhyr) AS otherCount
         FROM dbo.babuf s
-        WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
+        WHERE s.fstcode IN ${codesList}
           AND s.deletemark = 0
           AND ${operatingCompanyFilter('s.cmpcode')}
           AND s.bygcode IS NOT NULL
@@ -168,7 +170,7 @@ const fetchPropertySubtrees = async (
           MAX(s.ytacaption) AS name,
           COUNT(DISTINCT s.keyobjbps) AS parkingCount
         FROM dbo.babuf s
-        WHERE s.fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
+        WHERE s.fstcode IN ${codesList}
           AND s.deletemark = 0
           AND ${operatingCompanyFilter('s.cmpcode')}
           AND s.ytacode IS NOT NULL
@@ -184,7 +186,7 @@ const fetchPropertySubtrees = async (
           COUNT(DISTINCT keyobjlok) AS facilityCount,
           COUNT(DISTINCT keyobjhyr) AS otherCount
         FROM dbo.babuf
-        WHERE fstcode IN (SELECT value FROM OPENJSON(${codesJson}))
+        WHERE fstcode IN ${codesList}
           AND deletemark = 0
           AND ${operatingCompanyFilter('cmpcode')}
         GROUP BY fstcode

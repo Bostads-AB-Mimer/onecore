@@ -3,6 +3,7 @@ import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 import { cachedBatch } from '@src/utils/promise-cache'
+import { openJsonList } from '@src/utils/sql'
 import type {
   RentalObjectDetails,
   RentalObjectScopeParams,
@@ -138,14 +139,12 @@ const rentalObjectWhere = (typeCodes = Object.values(KEYCMOBT_BY_TYPE)) =>
     AND b.hyresid IS NOT NULL
     AND b.hyresid NOT LIKE '%X'
     AND ${operatingCompanyFilter('b.cmpcode')}
-    AND o.keycmobt IN (SELECT value FROM OPENJSON(${JSON.stringify(typeCodes)}))
+    AND o.keycmobt IN ${openJsonList(typeCodes)}
   `
 
 /** Property-code scope, the input both root-scoped queries take. */
 const propertyCodeScope = (propertyCodes: string[]) =>
-  Prisma.sql`b.fstcode IN (SELECT value FROM OPENJSON(${JSON.stringify(
-    propertyCodes
-  )}))`
+  Prisma.sql`b.fstcode IN ${openJsonList(propertyCodes)}`
 
 /** Composite '504-017-01' = buildingCode '504-017' + staircase '01'. */
 const staircasePairs = (composites: string[]) =>
@@ -175,27 +174,17 @@ const structureScopes = (params: StructureScope): Prisma.Sql[] => {
   const scopes: Prisma.Sql[] = []
 
   if (params.buildingCodes?.length) {
-    scopes.push(
-      Prisma.sql`b.bygcode IN (SELECT value FROM OPENJSON(${JSON.stringify(
-        params.buildingCodes
-      )}))`
-    )
+    scopes.push(Prisma.sql`b.bygcode IN ${openJsonList(params.buildingCodes)}`)
   }
   if (params.parkingAreaCodes?.length) {
     // Bare ytacode on purpose: exactly one code in real data spans two
     // fastigheter, and selecting both halves of it is acceptable.
     scopes.push(
-      Prisma.sql`b.ytacode IN (SELECT value FROM OPENJSON(${JSON.stringify(
-        params.parkingAreaCodes
-      )}))`
+      Prisma.sql`b.ytacode IN ${openJsonList(params.parkingAreaCodes)}`
     )
   }
   if (params.rentalIds?.length) {
-    scopes.push(
-      Prisma.sql`b.hyresid IN (SELECT value FROM OPENJSON(${JSON.stringify(
-        params.rentalIds
-      )}))`
-    )
+    scopes.push(Prisma.sql`b.hyresid IN ${openJsonList(params.rentalIds)}`)
   }
   if (params.staircaseCodes?.length) {
     const pairs = staircasePairs(params.staircaseCodes)
