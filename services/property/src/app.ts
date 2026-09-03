@@ -23,6 +23,9 @@ app.use(
   })
 )
 
+// No compression here on purpose: the only consumer is core, in-cluster,
+// where gzip measured ~4-5ms CPU to save ~0.3-2.5ms of transfer. Core
+// compresses the browser hop, which is where the 17x ratio pays.
 app.use(
   koaSwagger({
     routePrefix: '/swagger',

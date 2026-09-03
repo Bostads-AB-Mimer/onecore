@@ -29,6 +29,8 @@ export const swaggerSpec = {
     `${basePath}/routes/cost-centers.{ts,js}`,
     `${basePath}/routes/kvv-areas.{ts,js}`,
     `${basePath}/routes/market-areas.{ts,js}`,
+    `${basePath}/routes/rental-objects.{ts,js}`,
+    `${basePath}/routes/property-tree.{ts,js}`,
     `${basePath}/routes/ai-analysis.{ts,js}`,
     `${basePath}/routes/apartment-temperatures.{ts,js}`,
     `${basePath}/routes/health.{ts,js}`,

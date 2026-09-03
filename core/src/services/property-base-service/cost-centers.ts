@@ -76,7 +76,8 @@ export const routes = (router: KoaRouter) => {
    *   get:
    *     summary: Get a cost center management tree
    *     description: |
-   *       Returns the cost center with KVV areas, properties (addresses + aggregates)
+   *       Returns the cost center with KVV areas, properties (buildings,
+   *       parkeringsområden + aggregates)
    *       and Keycloak-expanded lead, deputy and responsible users. If Keycloak is
    *       unreachable, the tree is returned with user fields set to null.
    *     tags:
@@ -109,7 +110,14 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
 
-    const treeResult = await propertyBaseAdapter.getCostCenterTreeById(id)
+    // The user lookups are independent of the tree — run all four in parallel.
+    const [treeResult, responsibleResult, leadResult, deputyResult] =
+      await Promise.all([
+        propertyBaseAdapter.getCostCenterTreeById(id),
+        getUsersByRole(PROPERTY_MANAGER_ROLE),
+        getUsersByRole(DISTRICT_MANAGER_ROLE),
+        getUsersByRole(DEPUTY_DISTRICT_MANAGER_ROLE),
+      ])
     if (!treeResult.ok) {
       if (treeResult.err === 'not-found') {
         ctx.status = 404
@@ -122,12 +130,6 @@ export const routes = (router: KoaRouter) => {
     }
 
     const raw = treeResult.data
-
-    const [responsibleResult, leadResult, deputyResult] = await Promise.all([
-      getUsersByRole(PROPERTY_MANAGER_ROLE),
-      getUsersByRole(DISTRICT_MANAGER_ROLE),
-      getUsersByRole(DEPUTY_DISTRICT_MANAGER_ROLE),
-    ])
 
     const buildUserMap = (users: KeycloakUser[]) => {
       const map = new Map<string, KeycloakUser>()

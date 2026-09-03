@@ -14,24 +14,13 @@ interface SearchResultsTableProps {
 }
 
 export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
-  const hasResidences = results.some((r) => r.type === 'residence')
   const hasProperties = results.some((r) => r.type === 'property')
-  const hasParkingSpaces = results.some((r) => r.type === 'parking-space')
-  const hasFacilities = results.some((r) => r.type === 'facility')
   const hasMaintenanceUnits = results.some((r) => r.type === 'maintenance-unit')
 
   const getTypeDisplay = (result: SearchResult) => {
     switch (result.type) {
       case 'property':
         return 'Fastighet'
-      case 'building':
-        return 'Byggnad'
-      case 'residence':
-        return 'Lägenhet'
-      case 'parking-space':
-        return 'Parkering'
-      case 'facility':
-        return 'Lokal'
       case 'maintenance-unit':
         return result.maintenanceType || 'Underhållsenhet'
     }
@@ -41,14 +30,6 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
     switch (type) {
       case 'property':
         return 'bg-blue-100 text-blue-800'
-      case 'building':
-        return 'bg-purple-100 text-purple-800'
-      case 'residence':
-        return 'bg-green-100 text-green-800'
-      case 'parking-space':
-        return 'bg-orange-100 text-orange-800'
-      case 'facility':
-        return 'bg-yellow-100 text-yellow-800'
       case 'maintenance-unit':
         return 'bg-teal-100 text-teal-800'
       default:
@@ -60,18 +41,8 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
     switch (result.type) {
       case 'property':
         return paths.property(result.code)
-      case 'building':
-        return paths.building(result.code)
-      case 'residence':
-        return result.rentalId ? paths.residence(result.rentalId) : '#'
-      case 'parking-space':
-        return paths.parkingSpace(result.rentalId)
-      case 'facility':
-        return paths.facility(result.rentalId)
       case 'maintenance-unit':
         return paths.maintenanceUnit(result.code)
-      default:
-        return '#'
     }
   }
 
@@ -79,39 +50,12 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
     switch (result.type) {
       case 'property':
         return result.designation
-      case 'building':
-        return result.name || result.code
-      case 'residence':
-        return result.name || result.rentalId || '-'
-      case 'parking-space':
-        return result.name || result.code
-      case 'facility':
-        return result.name || result.code
       case 'maintenance-unit':
         return result.caption || result.code
-      default:
-        return ''
     }
   }
 
-  const getSecondaryInfo = (result: SearchResult) => {
-    switch (result.type) {
-      case 'property':
-        return result.code
-      case 'building':
-        return result.code
-      case 'residence':
-        return result.rentalId || '-'
-      case 'parking-space':
-        return result.rentalId
-      case 'facility':
-        return result.rentalId
-      case 'maintenance-unit':
-        return result.code
-      default:
-        return ''
-    }
-  }
+  const getSecondaryInfo = (result: SearchResult) => result.code
 
   const sortedResults = useMemo(
     () =>
@@ -140,11 +84,7 @@ export const SearchResultsTable = ({ results }: SearchResultsTableProps) => {
         {
           key: 'info',
           label:
-            hasProperties &&
-            !hasResidences &&
-            !hasParkingSpaces &&
-            !hasFacilities &&
-            !hasMaintenanceUnits
+            hasProperties && !hasMaintenanceUnits
               ? 'Fastighetsnummer'
               : !hasProperties
                 ? 'Objektsnummer'

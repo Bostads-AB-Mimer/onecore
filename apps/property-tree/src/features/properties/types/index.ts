@@ -1,3 +1,5 @@
+// Only what usePropertyFilters actually constructs. The old cross-type search
+// (residences, buildings, parking, facilities) lives on in git history.
 export type SearchResult =
   | {
       type: 'property'
@@ -5,29 +7,6 @@ export type SearchResult =
       code: string
       designation: string
       municipality: string
-    }
-  | {
-      type: 'residence'
-      id: string
-      name: string | null
-      rentalId: string | null
-    }
-  | { type: 'building'; id: string; code: string; name: string | null }
-  | {
-      type: 'parking-space'
-      id: string
-      rentalId: string
-      code: string
-      name: string | null
-      property: { name: string | null; code: string | null }
-    }
-  | {
-      type: 'facility'
-      id: string
-      rentalId: string
-      code: string
-      name: string | null
-      property: { name: string | null; code: string | null }
     }
   | {
       type: 'maintenance-unit'

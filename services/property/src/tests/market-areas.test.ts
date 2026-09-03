@@ -1,7 +1,7 @@
 import request from 'supertest'
 
 import app from '../app'
-import * as marketAreaAdapter from '../adapters/market-area-adapter'
+import * as marketAreaAdapter from '../adapters/property-grouping-adapter'
 
 afterEach(() => {
   jest.restoreAllMocks()

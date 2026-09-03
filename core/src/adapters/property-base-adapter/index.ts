@@ -1082,6 +1082,195 @@ export async function getCostCenterTreeById(
   }
 }
 
+type GetRentalObjectsQuery = NonNullable<
+  paths['/rental-objects']['get']['parameters']['query']
+>
+type GetRentalObjectsResponse = components['schemas']['RentalObjectSummary'][]
+
+export async function getRentalObjects(
+  query: GetRentalObjectsQuery
+): Promise<AdapterResult<GetRentalObjectsResponse, 'bad-request' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/rental-objects', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+    if (fetchResponse.response.status === 400) {
+      logger.warn(
+        { rejected: fetchResponse.error },
+        'property-base-adapter.getRentalObjects rejected upstream'
+      )
+      return { ok: false, err: 'bad-request' }
+    }
+
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.getRentalObjects unexpected upstream status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalObjects')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type SearchRentalObjectsQuery = NonNullable<
+  paths['/rental-objects/search']['get']['parameters']['query']
+>
+
+export async function searchRentalObjects(
+  query: SearchRentalObjectsQuery
+): Promise<
+  AdapterResult<
+    { content: GetRentalObjectsResponse; totalCount: number },
+    'bad-request' | 'unknown'
+  >
+> {
+  try {
+    const fetchResponse = await client().GET('/rental-objects/search', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: {
+          content: fetchResponse.data.content,
+          totalCount: fetchResponse.data.totalCount ?? 0,
+        },
+      }
+    }
+    if (fetchResponse.response.status === 400) {
+      // The zod issues die with the response otherwise, and core can't tell
+      // the caller which parameter upstream objected to.
+      logger.warn(
+        { rejected: fetchResponse.error },
+        'property-base-adapter.searchRentalObjects rejected upstream'
+      )
+      return { ok: false, err: 'bad-request' }
+    }
+
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.searchRentalObjects unexpected upstream status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.searchRentalObjects')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type ListSubtypesResponse = components['schemas']['RentalObjectSubtype'][]
+
+export async function listRentalObjectSubtypes(): Promise<
+  AdapterResult<ListSubtypesResponse, 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/rental-object-subtypes', {})
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.listRentalObjectSubtypes unexpected upstream status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.listRentalObjectSubtypes')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetPropertyTreeQuery = NonNullable<
+  paths['/property-tree']['get']['parameters']['query']
+>
+type GetPropertyTreeResponse = components['schemas']['PropertyTree']
+
+export async function getPropertyTree(
+  query: GetPropertyTreeQuery
+): Promise<
+  AdapterResult<
+    GetPropertyTreeResponse,
+    'not-found' | 'bad-request' | 'unknown'
+  >
+> {
+  try {
+    const fetchResponse = await client().GET('/property-tree', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+    if (fetchResponse.response.status === 400) {
+      // The zod issues die with the response otherwise — see searchRentalObjects.
+      logger.warn(
+        { rejected: fetchResponse.error },
+        'property-base-adapter.getPropertyTree rejected upstream'
+      )
+      return { ok: false, err: 'bad-request' }
+    }
+
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.getPropertyTree unexpected upstream status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getPropertyTree')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+type GetRentalObjectDetailsResponse =
+  components['schemas']['RentalObjectDetails'][]
+type GetRentalObjectDetailsQuery = NonNullable<
+  paths['/rental-objects/details']['get']['parameters']['query']
+>
+
+// No 'not-found': details are scoped, not addressed by id — an unknown scope
+// is an empty result, and a missing one is a 400.
+export async function getRentalObjectDetails(
+  query: GetRentalObjectDetailsQuery
+): Promise<
+  AdapterResult<GetRentalObjectDetailsResponse, 'bad-request' | 'unknown'>
+> {
+  try {
+    const fetchResponse = await client().GET('/rental-objects/details', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+    if (fetchResponse.response.status === 400) {
+      logger.warn(
+        { rejected: fetchResponse.error },
+        'property-base-adapter.getRentalObjectDetails rejected upstream'
+      )
+      return { ok: false, err: 'bad-request' }
+    }
+
+    logger.error(
+      { status: fetchResponse.response.status },
+      'property-base-adapter.getRentalObjectDetails unexpected upstream status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalObjectDetails')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
 
 export { getApartmentTemperatures } from './apartment-temperatures'

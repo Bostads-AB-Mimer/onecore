@@ -7,7 +7,6 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { z } from 'zod'
 
-import { etagMiddleware } from '../middleware/etag'
 import {
   getProperties,
   getPropertyByCode,
@@ -38,7 +37,6 @@ import { parseRequest } from '../middleware/parse-request'
  *     description: Operations related to properties
  */
 export const routes = (router: KoaRouter) => {
-  router.use(etagMiddleware())
   /**
    * @swagger
    * /properties:
