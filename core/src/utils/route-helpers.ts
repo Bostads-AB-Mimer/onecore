@@ -22,7 +22,10 @@ export const parseQuery = <T extends z.ZodTypeAny>(
     ctx.status = 400
     ctx.body = {
       reason: 'Invalid query parameters',
-      errors: parsed.error.errors,
+      errors: parsed.error.errors.map(({ path, message }) => ({
+        path,
+        message,
+      })),
       ...metadata,
     }
     return undefined
