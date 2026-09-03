@@ -179,6 +179,8 @@ export function PropertyTreePicker({
 
   // With "inkludera underliggande" on, roots carrying selected nodes must load
   // too. Signature-keyed so more picks under one root don't re-walk the rows.
+  // TODO(målgrupp): ancestors[0] is the grouping the node was picked UNDER —
+  // after a grouping switch it matches no current root (cf. the facets fix).
   const selectedRootKeySignature = useMemo(() => {
     if (!includeDescendants) return ''
     const keys = new Set<string>()

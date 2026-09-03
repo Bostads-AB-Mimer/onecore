@@ -2628,6 +2628,9 @@ export interface paths {
      * its fastighet and nothing wider. Type and subtype filters are
      * deliberately absent — the values are looked up by rental id, so
      * narrowing them would only cost cache hits.
+     *
+     * An ids-only scope answers exactly those ids; any other scope (mixed
+     * ones included) answers the whole properties it touches.
      */
     get: {
       parameters: {

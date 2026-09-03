@@ -175,14 +175,4 @@ describe('cachedBatch', () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
-  it('prime starts the fetch so a later get reuses it', async () => {
-    const fetch = jest.fn(
-      async (keys: string[]) => new Map(keys.map((k) => [k, 'v']))
-    )
-    const cache = cachedBatch(100, fetch, () => 'fallback')
-
-    cache.prime(['a'])
-    await expect(cache.get(['a'])).resolves.toEqual(['v'])
-    expect(fetch).toHaveBeenCalledTimes(1)
-  })
 })

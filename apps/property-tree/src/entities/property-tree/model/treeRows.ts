@@ -252,11 +252,11 @@ export type RentalObject = Omit<PropertyTreeDataNode, 'type' | 'children'> & {
   type: RentalObjectType
 }
 
-/** An object as a node under its parent; selectable=false keeps it display-only. */
+/** An object as a node under its parent. Display-only gating happens at the
+ * picker boundary (getParentInfo), not at construction. */
 export function objectNode(
   object: RentalObject,
-  parent: Pick<PropertyTreeNode, 'key' | 'ancestors'>,
-  selectable = true
+  parent: Pick<PropertyTreeNode, 'key' | 'ancestors'>
 ): PropertyTreeNode {
   return {
     key: nodeKey('object', object.code),
@@ -264,7 +264,6 @@ export function objectNode(
     value: object.code,
     label: object.code,
     ancestors: [...parent.ancestors, parent.key],
-    ...(selectable ? {} : { selectable: false }),
   }
 }
 
@@ -361,9 +360,10 @@ function buildWalkTree(
           }
         }
         case 'parkingArea': {
+          // Key is property-scoped (a split area draws one row per property),
+          // but the scope value is the bare code on purpose: one shared code
+          // exists in real data, and selecting both halves is acceptable.
           const node: PropertyTreeNode = {
-            // Property-scoped: one physical parkeringsområde can be split
-            // between two fastigheter, and then its code alone isn't unique.
             key: parkingAreaKey(p.code, n.code),
             level: 'parkingArea',
             value: n.code,
@@ -491,10 +491,26 @@ export function buildTreeRows(
   // Through the cache: this runs per root per render, and the walk carries an
   // object leaf per rental object.
   const walk = tree ? walkTreeFor(root, tree) : buildWalkTree(root, tree)
-  const analysis = analyse(walk, query, searchActive)
-  if (searchActive && !analysis.visible) return []
 
   const rows: RowSpec[] = []
+
+  // Browse mode: no matching to compute, so wrap the walk lazily instead of
+  // running analyse() — the children getter only fires for expanded nodes,
+  // so collapsed subtrees (and their object leaves) are never visited.
+  const passThrough = (w: WalkNode): Analysis => ({
+    walk: w,
+    selfMatch: false,
+    anyChildVisible: false,
+    visible: true,
+    get children() {
+      return w.children.map(passThrough)
+    },
+  })
+
+  const analysis = searchActive
+    ? analyse(walk, query, searchActive)
+    : passThrough(walk)
+  if (!analysis.visible) return []
 
   const emit = (a: Analysis, depth: number, showAll: boolean) => {
     const { walk } = a

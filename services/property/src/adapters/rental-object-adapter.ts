@@ -182,6 +182,8 @@ const structureScopes = (params: StructureScope): Prisma.Sql[] => {
     )
   }
   if (params.parkingAreaCodes?.length) {
+    // Bare ytacode on purpose: exactly one code in real data spans two
+    // fastigheter, and selecting both halves of it is acceptable.
     scopes.push(
       Prisma.sql`b.ytacode IN (SELECT value FROM OPENJSON(${JSON.stringify(
         params.parkingAreaCodes

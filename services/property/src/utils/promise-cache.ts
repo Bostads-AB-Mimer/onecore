@@ -76,8 +76,6 @@ export const cachedKeyed = <T>(
 }
 
 export interface CachedBatch<V> {
-  /** Start a refresh for any missing or stale key without awaiting it. */
-  prime(uniqueKeys: string[]): void
   /** The value per key, in the given order, fetching where needed. */
   get(uniqueKeys: string[]): Promise<V[]>
   clear(): void
@@ -134,7 +132,6 @@ export const cachedBatch = <V>(
   }
 
   return {
-    prime,
     get(uniqueKeys) {
       prime(uniqueKeys)
       return Promise.all(

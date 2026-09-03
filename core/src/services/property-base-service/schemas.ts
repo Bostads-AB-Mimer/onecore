@@ -1184,19 +1184,25 @@ export const CostCenterTreeAggregatesSchema =
 export const CostCenterTreePropertySchema =
   property.CostCenterTreePropertySchema
 
-export const CostCenterTreeKvvAreaSchema =
-  property.CostCenterTreeKvvAreaSchema.omit({
-    responsibleKeycloakUserId: true,
-  }).extend({ responsible: KeycloakUserSummarySchema.nullable() })
+// Spelled as literals (not omit/extend): the divergence stays readable, and
+// key order is preserved — the swagger generator dedups repeated shapes by
+// referencing the FIRST occurrence, which must stay a plain property path.
+export const CostCenterTreeKvvAreaSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+  properties: z.array(property.CostCenterTreePropertySchema),
+})
 
 export const CostCenterTreeCapabilitiesSchema = z.object({
   canEdit: z.boolean(),
 })
 
-export const CostCenterTreeSchema = property.CostCenterTreeSchema.omit({
-  leadKeycloakUserId: true,
-  deputyKeycloakUserId: true,
-}).extend({
+export const CostCenterTreeSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
   lead: KeycloakUserSummarySchema.nullable(),
   deputy: KeycloakUserSummarySchema.nullable(),
   capabilities: CostCenterTreeCapabilitiesSchema,
@@ -1261,11 +1267,20 @@ export const PROPERTY_TREE_NODE_TYPES = property.PROPERTY_TREE_NODE_TYPES
 export const PropertyTreeNodeSchema = property.PropertyTreeNodeSchema
 export type PropertyTreeNode = property.PropertyTreeNode
 
-export const PropertyTreeGroupSchema = property.PropertyTreeGroupSchema.omit({
-  responsibleKeycloakUserId: true,
-}).extend({ responsible: KeycloakUserSummarySchema.nullable() })
+// Literal for the same key-order reason as the cost-center tree above.
+export const PropertyTreeGroupSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+  properties: z.array(property.PropertyTreeNodeSchema),
+})
 
-export const PropertyTreeSchema = property.PropertyTreeSchema.extend({
+export const PropertyTreeSchema = z.object({
+  grouping: property.PropertyGroupingSchema,
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
   groups: z.array(PropertyTreeGroupSchema),
 })
 

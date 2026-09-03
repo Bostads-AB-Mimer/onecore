@@ -3,6 +3,8 @@
 // state cascades visually: a node covers its subtree, ancestors render
 // indeterminate.
 
+import { property } from '@onecore/types'
+
 import type { RentalObjectType } from '@/services/api/core/rentalObjectService'
 
 export type PropertyTreeLevel =
@@ -16,15 +18,12 @@ export type PropertyTreeLevel =
   | 'object' // single rental object; selectable only where a consumer opts in
 
 // Object-type vocabulary, used end-to-end (rows, filters, URL params, wire
-// enum). Comes from the objects endpoint so the picker can't drift from it.
+// enum). The lib tuple itself: a fifth type added there breaks the build here
+// instead of silently missing from filters and leaf detection.
 export type { RentalObjectType }
 
-export const ALL_RENTAL_OBJECT_TYPES: readonly RentalObjectType[] = [
-  'residence',
-  'parkingSpace',
-  'facility',
-  'other',
-]
+export const ALL_RENTAL_OBJECT_TYPES: readonly RentalObjectType[] =
+  property.RENTAL_OBJECT_TYPES
 
 export interface PropertyTreeNode {
   key: string // unique, e.g. 'district:61110' or 'building:504-017'

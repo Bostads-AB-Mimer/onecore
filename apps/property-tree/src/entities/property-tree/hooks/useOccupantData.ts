@@ -58,7 +58,8 @@ async function fetchPropertyTenants(
         }
       }
     }
-    const total = result._meta.totalRecords ?? 0
+    // Unknown total pages until an empty page: ?? 0 would end after page one.
+    const total = result._meta.totalRecords ?? Infinity
     if (fetched >= total || result.content.length === 0) {
       return { tenantsByCode }
     }
