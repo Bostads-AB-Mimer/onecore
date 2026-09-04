@@ -8,8 +8,10 @@ import {
 
 import { TenfastLease } from './schemas'
 import * as tenfastApi from './tenfast-api'
+import * as tenfastAdapter from './tenfast-adapter'
 import { TenfastLeaseSchema } from './schemas'
 import config from '../../../../common/config'
+import * as leaseCache from '../../../../common/lease-cache'
 import { AdapterResult } from '../types'
 import {
   mapTenfastTypToLeaseType,
@@ -391,7 +393,7 @@ const STATUS_TO_TENFAST_STAGE: Record<string, string> = {
   active: 'active',
   upcoming: 'upcoming',
   abouttoend: 'terminationScheduled',
-  ended: 'terminated',
+  ended: 'terminated,archived',
   pendingsignature: 'signingInProgress',
   preliminaryterminated: 'preTermination',
   notsent: 'draft',
@@ -665,7 +667,7 @@ export function buildTenfastQueryParams(
  */
 export async function fetchAllLeasesForExport(
   params: leasing.v1.LeaseSearchQueryParams,
-  _ctx: Context
+  _ctx?: Context
 ): Promise<leasing.v1.LeaseSearchResult[]> {
   // Check if batch-get path is needed (Xpand-bridged filters)
   const needsBatchGet =
@@ -720,6 +722,41 @@ export async function fetchAllLeasesForExport(
   }
 
   return allLeases.map((l) => mapTenfastLeaseToSearchResult(l))
+}
+
+/**
+ * Fetches all leases for the in-memory cache using full cursor pagination on
+ * the list endpoint (/v1/hyresvard/avtal). Uses getAllLeases() which follows
+ * the `next` cursor across all pages, unlike getLeases() which returns only
+ * the first page (Tenfast ignores the limit=100000 hint).
+ */
+export async function fetchAllLeasesForCache(): Promise<
+  leasing.v1.LeaseSearchResult[]
+> {
+  const result = await tenfastAdapter.getAllLeases()
+  if (!result.ok) {
+    throw new Error(
+      `fetchAllLeasesForCache: failed to fetch leases — ${result.err}`
+    )
+  }
+  return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
+}
+
+/**
+ * Fetches only leases updated since `since` for delta cache refresh.
+ * Uses a 30-second look-back buffer (applied by the caller) to guard against
+ * clock skew between Tenfast and this service.
+ */
+export async function fetchLeasesUpdatedSinceForCache(
+  since: Date
+): Promise<leasing.v1.LeaseSearchResult[]> {
+  const result = await tenfastAdapter.getLeasesUpdatedSince(since)
+  if (!result.ok) {
+    throw new Error(
+      `fetchLeasesUpdatedSinceForCache: failed to fetch delta leases — ${result.err}`
+    )
+  }
+  return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
 }
 
 /**
@@ -915,6 +952,22 @@ const applySorting = (
         aVal = a.leaseId
         bVal = b.leaseId
         break
+      case 'objectType':
+        aVal = a.objectTypeCode
+        bVal = b.objectTypeCode
+        break
+      case 'address':
+        aVal = a.address
+        bVal = b.address
+        break
+      case 'rentalObjectCode':
+        aVal = a.rentalObjectCode
+        bVal = b.rentalObjectCode
+        break
+      case 'tenantName':
+        aVal = a.contacts?.find((c) => c.contactType === 'tenant')?.name
+        bVal = b.contacts?.find((c) => c.contactType === 'tenant')?.name
+        break
       default:
         aVal = a.startDate
         bVal = b.startDate
@@ -937,10 +990,200 @@ const applySorting = (
   })
 }
 
+/**
+ * Filter all leases from the in-memory cache according to the given params.
+ * `rentalObjectCodes` is pre-resolved from Xpand for Xpand-bridged filters
+ * (buildingCodes, areaCodes, kvvAreaCodes, buildingManager); pass undefined
+ * when none of those filters are active.
+ */
+function applyCacheFilters(
+  leases: leasing.v1.LeaseSearchResult[],
+  params: leasing.v1.LeaseSearchQueryParams,
+  rentalObjectCodes?: Set<string>
+): leasing.v1.LeaseSearchResult[] {
+  return leases.filter((lease) => {
+    if (
+      rentalObjectCodes &&
+      (!lease.rentalObjectCode ||
+        !rentalObjectCodes.has(lease.rentalObjectCode))
+    )
+      return false
+
+    if (params.status && params.status.length > 0) {
+      const allowed = new Set(
+        params.status
+          .map((s) => STATUS_PARAM_TO_LEASE_STATUS[s.toLowerCase()])
+          .filter((s): s is LeaseStatus => s !== undefined)
+      )
+      if (!allowed.has(lease.status)) return false
+    }
+
+    if (params.objectType && params.objectType.length > 0) {
+      const paramTypes = params.objectType.map((t) => t.toLowerCase())
+      const includesOvrigt = paramTypes.includes('ovrigt')
+      const allowedTypes = new Set(
+        paramTypes.flatMap((t) => OBJECT_TYPE_PARAM_TO_LEASE_TYPES[t] ?? [])
+      )
+      if (lease.leaseType === undefined) return false
+      const matches =
+        allowedTypes.has(lease.leaseType) ||
+        (includesOvrigt && !KNOWN_NON_OVRIGT_TYPES.has(lease.leaseType))
+      if (!matches) return false
+    }
+
+    if (params.q) {
+      const q = params.q.toLowerCase().trim()
+      const fields = [
+        lease.leaseId,
+        lease.rentalObjectCode ?? '',
+        lease.address ?? '',
+        ...(lease.contacts?.map((c) => c.contactCode) ?? []),
+        ...(lease.contacts?.map((c) => c.name) ?? []),
+      ]
+      if (!fields.some((f) => f.toLowerCase().includes(q))) return false
+    }
+
+    if (params.name) {
+      const name = params.name.toLowerCase().trim()
+      if (!lease.contacts?.some((c) => c.name.toLowerCase().includes(name)))
+        return false
+    }
+
+    if (params.address) {
+      const addr = params.address.toLowerCase().trim()
+      if (!(lease.address ?? '').toLowerCase().includes(addr)) return false
+    }
+
+    if (params.property && params.property.length > 0) {
+      const propSet = new Set(params.property.map((p) => p.toLowerCase()))
+      if (!lease.property || !propSet.has(lease.property.toLowerCase()))
+        return false
+    }
+
+    if (params.startDateFrom && lease.startDate) {
+      if (new Date(lease.startDate) < new Date(params.startDateFrom))
+        return false
+    }
+    if (params.startDateTo && lease.startDate) {
+      if (new Date(lease.startDate) > new Date(params.startDateTo)) return false
+    }
+    if (params.endDateFrom || params.endDateTo) {
+      if (!lease.lastDebitDate) return false
+      if (
+        params.endDateFrom &&
+        new Date(lease.lastDebitDate) < new Date(params.endDateFrom)
+      )
+        return false
+      if (
+        params.endDateTo &&
+        new Date(lease.lastDebitDate) > new Date(params.endDateTo)
+      )
+        return false
+    }
+
+    return true
+  })
+}
+
+async function searchLeasesFromCache(
+  params: leasing.v1.LeaseSearchQueryParams,
+  ctx: Context
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> {
+  const page = Math.max(1, params.page ?? 1)
+  const limit = Math.max(1, params.limit ?? 20)
+
+  // Xpand-bridged filters: resolve to rental object codes
+  const needsXpandCodes =
+    (params.buildingManager && params.buildingManager.length > 0) ||
+    (params.buildingCodes && params.buildingCodes.length > 0) ||
+    (params.areaCodes && params.areaCodes.length > 0) ||
+    (params.districtNames && params.districtNames.length > 0) ||
+    (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
+
+  let rentalObjectCodes: Set<string> | undefined
+
+  if (needsXpandCodes) {
+    const codeSetPromises: Promise<string[]>[] = []
+
+    if (params.buildingManager?.length)
+      codeSetPromises.push(
+        getRentalObjectCodesByBuildingManager(params.buildingManager)
+      )
+    if (params.buildingCodes?.length)
+      codeSetPromises.push(
+        getRentalObjectCodesByBuildingCodes(params.buildingCodes)
+      )
+    if (params.areaCodes?.length)
+      codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
+    if (params.districtNames?.length)
+      codeSetPromises.push(
+        getRentalObjectCodesByDistrictNames(params.districtNames)
+      )
+    if (params.kvvAreaCodes?.length)
+      codeSetPromises.push(
+        getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
+      )
+
+    const codeSets = await Promise.all(codeSetPromises)
+
+    let codes = codeSets[0]
+    for (let i = 1; i < codeSets.length; i++) {
+      const set = new Set(codeSets[i])
+      codes = codes.filter((c) => set.has(c))
+    }
+
+    if (codes.length === 0) {
+      return {
+        content: [],
+        _meta: { totalRecords: 0, page, limit, count: 0 },
+        _links: [],
+      }
+    }
+
+    rentalObjectCodes = new Set(codes)
+  }
+
+  const filtered = applyCacheFilters(
+    leaseCache.getAll(),
+    params,
+    rentalObjectCodes
+  )
+  const sorted = applySorting(filtered, params)
+  const totalCount = sorted.length
+  const totalPages = Math.ceil(totalCount / limit)
+  const pageSlice = sorted.slice((page - 1) * limit, page * limit)
+
+  logger.info(
+    {
+      totalInCache: leaseCache.getAll().length,
+      afterFilters: totalCount,
+      page,
+    },
+    'lease-cache: search served from cache'
+  )
+
+  return {
+    content: pageSlice,
+    _meta: { totalRecords: totalCount, page, limit, count: pageSlice.length },
+    _links: buildPaginationLinks(ctx, page, limit, totalPages),
+  }
+}
+
 export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  // For personnummer queries (idbeteckning), idbeteckning is not in the
+  // cache — fall through to Tenfast which can filter on it server-side.
+  const apiFilters = params.q ? analyzeSearchTermForApi(params.q) : []
+  const needsPersonnummerLookup = apiFilters.some(
+    (f) => f.filterKey === 'filter[hyresgaster][idbeteckning]'
+  )
+
+  if (leaseCache.isReady() && !needsPersonnummerLookup) {
+    return searchLeasesFromCache(params, ctx)
+  }
+
   // Bridge Xpand-only filters via batch-get:
   // buildingManager, buildingCodes, areaCodes, districtNames, kvvAreaCodes
   // 1. Get rental object codes from Xpand for each active filter
@@ -1136,8 +1379,8 @@ export const searchLeases = async (
   }
 
   // Standard path — no post-filtering, Tenfast handles pagination
-  const page = params.page ?? 1
-  const limit = params.limit ?? 20
+  const page = Math.max(1, params.page ?? 1)
+  const limit = Math.max(1, params.limit ?? 20)
   const leasesResult = await fetchLeases(params)
 
   if (!leasesResult.ok) {

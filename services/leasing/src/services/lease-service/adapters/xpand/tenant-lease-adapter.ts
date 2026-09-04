@@ -828,6 +828,55 @@ const formatDate = (date: Date) => {
   return date.toISOString().split('T')[0]
 }
 
+const getEmailAndPhoneByContactCodes = async (
+  contactCodes: string[]
+): Promise<Map<string, { email: string | null; phone: string | null }>> => {
+  if (contactCodes.length === 0) return new Map()
+
+  // Trim input codes so they match the trimmed values stored in Xpand
+  const trimmed = contactCodes.map((c) => c.trim())
+
+  const CHUNK_SIZE = 1000 // MSSQL caps WHERE IN at 2100 params
+  const map = new Map<string, { email: string | null; phone: string | null }>()
+
+  for (let i = 0; i < trimmed.length; i += CHUNK_SIZE) {
+    const chunk = trimmed.slice(i, i + CHUNK_SIZE)
+    const rows = await xpandDb
+      .from('cmctc')
+      .select(
+        'cmctc.cmctckod as contactCode',
+        'cmeml.cmemlben as email',
+        'cmtel.cmtelben as phone'
+      )
+      .leftJoin('cmeml', function () {
+        this.on('cmeml.keycmobj', '=', 'cmctc.keycmobj').andOn(
+          'cmeml.main',
+          '=',
+          xpandDb.raw('1')
+        )
+      })
+      .leftJoin('cmtel', function () {
+        this.on('cmtel.keycmobj', '=', 'cmctc.keycmobj').andOn(
+          'cmtel.main',
+          '=',
+          xpandDb.raw('1')
+        )
+      })
+      .whereIn('cmctc.cmctckod', chunk)
+      .where('cmctc.deletemark', '=', '0')
+
+    for (const row of rows) {
+      if (!row.contactCode) continue
+      map.set((row.contactCode as string).trim(), {
+        email: row.email ? (row.email as string).trim() : null,
+        phone: row.phone ? (row.phone as string).trim() : null,
+      })
+    }
+  }
+
+  return map
+}
+
 export {
   getLeases,
   getContactByNationalRegistrationNumber,
@@ -845,4 +894,5 @@ export {
   getContactsForIdentityCheck,
   transformFromDbContact,
   getContactsByLeaseId,
+  getEmailAndPhoneByContactCodes,
 }

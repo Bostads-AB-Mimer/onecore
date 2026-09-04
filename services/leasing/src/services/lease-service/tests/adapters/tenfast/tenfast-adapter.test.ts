@@ -1879,7 +1879,7 @@ describe(tenfastAdapter.getLeasesByTenantId, () => {
       expect.objectContaining({
         method: 'get',
         url: expect.stringContaining(
-          '/v1/hyresvard/avtal?hyresgast=tenant-1&populate=hyresobjekt%2Chyresgaster&paginate='
+          '/v1/hyresvard/avtal?hyresgast=tenant-1&populate=hyresobjekt%2Chyresgaster'
         ),
       })
     )

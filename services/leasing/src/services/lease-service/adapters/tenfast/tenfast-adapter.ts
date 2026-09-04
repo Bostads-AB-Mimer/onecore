@@ -13,7 +13,6 @@ import {
   TenfastLeaseSchema,
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
-  TenfastLeaseTemplateResponseSchema,
   TenfastPaginatedLeaseResponseSchema,
   TenfastTagSchema,
   TenfastTag,
@@ -32,8 +31,8 @@ type SchemaError = { tag: 'schema-error'; error: z.ZodError }
 /**
  * Fetches all pages from a paginated Tenfast endpoint.
  *
- * @param buildUrl - Called with the current page cursor on each iteration.
- *                   Pass an empty string for the first page.
+ * @param buildUrl - Called with the cursor string for subsequent pages, or
+ *                   null on the first request (no paginate param).
  * @param schema   - Zod schema for the paginated response. Must have
  *                   `records`, `next`, and `totalCount` fields.
  * @returns        - All records across all pages combined, typed as the
@@ -47,14 +46,23 @@ const fetchAllPages = async <
     totalCount: number
   }>,
 >(
-  buildUrl: (paginate: string) => string,
+  buildUrl: (paginate: string | null) => string,
   schema: S
 ): Promise<z.output<S>['records']> => {
-  let next: string | null = ''
+  const MAX_PAGES = 300
+
+  let next: string | null = null
   let totalCount = Infinity
   let records: z.output<S>['records'] = []
+  let page = 0
 
-  while (next !== null && records.length < totalCount) {
+  while (page === 0 || (next !== null && records.length < totalCount)) {
+    if (page >= MAX_PAGES) {
+      throw new Error(
+        `fetchAllPages: exceeded ${MAX_PAGES} pages (${records.length} records fetched, totalCount=${totalCount})`
+      )
+    }
+
     const response = await tenfastApi.request({
       method: 'get',
       url: buildUrl(next),
@@ -72,6 +80,7 @@ const fetchAllPages = async <
     records.push(...parsed.data.records)
     next = parsed.data.next
     totalCount = parsed.data.totalCount
+    page++
   }
 
   return records
@@ -307,39 +316,48 @@ export const uploadLeaseFile = async (
   }
 }
 
-export const getLeases = async (): Promise<
-  AdapterResult<
-    Array<TenfastLease>,
-    'unknown' | 'bad-request' | 'not-found' | 'parsing-error'
-  >
-> => {
+// Uses search endpoint (not list) — only search supports filter[isArchived], needed to include preTermination leases.
+export async function getAllLeases(): Promise<
+  AdapterResult<TenfastLease[], 'unknown'>
+> {
   try {
-    const leaseResponse = await tenfastApi.request({
-      method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtal?populate=hyresobjekt,hyresgaster&limit=100000`,
+    // Tenfast requires literal brackets/commas — URLSearchParams encodes them.
+    const qs = new URLSearchParams({
+      populate: 'hyresobjekt,hyresgaster',
+      'filter[isArchived]': 'false',
     })
-
-    if (leaseResponse.status === 400)
-      return handleTenfastError(leaseResponse.data.error, 'bad-request')
-    else if (leaseResponse.status !== 200 && leaseResponse.status !== 201)
-      return handleTenfastError(
-        {
-          error: leaseResponse.data.error,
-          status: leaseResponse.status,
-        },
-        'not-found'
-      )
-
-    const parsedLeaseResponse = TenfastLeaseTemplateResponseSchema.safeParse(
-      leaseResponse.data
+      .toString()
+      .replace(/%5B/gi, '[')
+      .replace(/%5D/gi, ']')
+      .replace(/%2C/gi, ',')
+    const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${qs}`
+    const records = await fetchAllPages(
+      (cursor) => (cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl),
+      TenfastPaginatedLeaseResponseSchema
     )
+    return { ok: true, data: records }
+  } catch (err: any) {
+    return handleTenfastError(err, 'unknown')
+  }
+}
 
-    if (!parsedLeaseResponse.success)
-      return handleTenfastError(parsedLeaseResponse.error, 'parsing-error')
-    return {
-      ok: true,
-      data: parsedLeaseResponse.data.records,
-    }
+// Uses list endpoint — only list supports updatedAtSince. Pass since - 30s to guard against clock skew.
+export async function getLeasesUpdatedSince(
+  since: Date
+): Promise<AdapterResult<TenfastLease[], 'unknown'>> {
+  try {
+    const params = new URLSearchParams({
+      populate: 'hyresobjekt,hyresgaster',
+      updatedAtSince: since.toISOString(),
+    })
+    const records = await fetchAllPages(
+      (cursor) =>
+        cursor
+          ? `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${cursor}`
+          : `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}`,
+      TenfastPaginatedLeaseResponseSchema
+    )
+    return { ok: true, data: records }
   } catch (err: any) {
     return handleTenfastError(err, 'unknown')
   }
@@ -974,8 +992,10 @@ export async function getLeasesByTenantId(
     })
 
     const leases = await fetchAllPages(
-      (paginate) =>
-        `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${paginate}`,
+      (cursor) =>
+        cursor
+          ? `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}&paginate=${cursor}`
+          : `${tenfastBaseUrl}/v1/hyresvard/avtal?${params}`,
       TenfastPaginatedLeaseResponseSchema
     )
 
@@ -1149,8 +1169,10 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     })
 
     const records = await fetchAllPages(
-      (paginate) =>
-        `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}&paginate=${paginate}`,
+      (cursor) =>
+        cursor
+          ? `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}&paginate=${cursor}`
+          : `${tenfastBaseUrl}/v1/hyresvard/extras/avtal/articles/${encodeURIComponent(articleId)}?${params}`,
       TenfastPaginatedLeaseResponseSchema
     )
 
