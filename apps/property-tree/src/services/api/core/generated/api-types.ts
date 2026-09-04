@@ -2373,6 +2373,38 @@ export interface paths {
       }
     }
   }
+  '/listing-text-content/existence': {
+    /**
+     * Check which rental objects have listing text content
+     * @description Bulk existence check. Takes a list of rental object codes and
+     * returns the subset of codes that have listing text content.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['ListingTextContentExistenceRequest']
+        }
+      }
+      responses: {
+        /** @description The subset of codes that have listing text content */
+        200: {
+          content: {
+            'application/json': {
+              content?: string[]
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/listing-text-content/{rentalObjectCode}': {
     /**
      * Get listing text content by rental object code
@@ -8871,6 +8903,42 @@ export interface paths {
       }
     }
   }
+  '/key-systems/{id}/deactivate': {
+    /**
+     * Deactivate a key system and dispose all its keys
+     * @description Sets isActive=false and disposes every non-disposed key in the system in one transaction. Writes an audit log entry on the system listing all disposed key ids (the manual-rollback record).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to deactivate */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deactivated and keys disposed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DeactivateKeySystemResponse']
+            }
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/key-systems/{id}/upload-schema': {
     /** Upload a schema file for a key system */
     post: {
@@ -10617,6 +10685,9 @@ export interface components {
             url: string
           }
       )[]
+    }
+    ListingTextContentExistenceRequest: {
+      rentalObjectCodes: string[]
     }
     ListingAreaTextContent: {
       /** Format: uuid */
@@ -12628,6 +12699,10 @@ export interface components {
       isActive?: boolean
       notes?: string | null
       schemaFileId?: string | null
+    }
+    DeactivateKeySystemResponse: {
+      keySystem: components['schemas']['KeySystem']
+      disposedKeys: components['schemas']['Key'][]
     }
     CreateLogRequest: {
       userName: string

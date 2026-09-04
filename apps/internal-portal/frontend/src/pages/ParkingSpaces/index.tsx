@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { TabContext, TabPanel } from '@mui/lab'
 
 import { SearchBar, Tab, Tabs } from '../../components'
+import { useListingTextContentExistence } from '../../common/hooks/useListingTextContentExistence'
 import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
 import {
@@ -23,6 +24,12 @@ const ParkingSpaces = () => {
   const currentTypeSearchParam = getTab(searchParams.get('type'))
 
   const parkingSpaces = useParkingSpaceListings(currentTypeSearchParam)
+
+  const rentalObjectCodes = useMemo(
+    () => (parkingSpaces.data ?? []).map((l) => l.rentalObjectCode),
+    [parkingSpaces.data]
+  )
+  const { hasTextContent } = useListingTextContentExistence(rentalObjectCodes)
 
   const handleSearch = useCallback((v: string) => setSearchString(v), [])
   const onSearch = useMemo(
@@ -89,7 +96,7 @@ const ParkingSpaces = () => {
           <TabPanel value="published" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
+                getActionColumns(hasTextContent)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -99,7 +106,7 @@ const ParkingSpaces = () => {
           <TabPanel value="ready-for-offer" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
+                getActionColumns(hasTextContent)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -109,7 +116,7 @@ const ParkingSpaces = () => {
           <TabPanel value="offered" sx={{ padding: 0 }}>
             <Listings
               columns={getOfferedColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns()
+                getActionColumns(hasTextContent)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -119,7 +126,7 @@ const ParkingSpaces = () => {
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter, false).concat(
-                getActionColumns()
+                getActionColumns(hasTextContent)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}

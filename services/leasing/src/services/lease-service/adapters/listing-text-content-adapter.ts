@@ -59,6 +59,34 @@ const getByRentalObjectCode = async (
   return transformFromDbListingTextContent(result)
 }
 
+const getExistingRentalObjectCodes = async (
+  rentalObjectCodes: string[],
+  dbConnection = db
+): Promise<AdapterResult<string[], Error>> => {
+  try {
+    const rows = await dbConnection
+      .from('listing_text_content')
+      .select<Array<Pick<DbListingTextContent, 'RentalObjectCode'>>>(
+        'RentalObjectCode'
+      )
+      .whereIn('RentalObjectCode', rentalObjectCodes)
+
+    return {
+      ok: true,
+      data: rows.map((row) => row.RentalObjectCode),
+    }
+  } catch (error) {
+    logger.error(
+      { count: rentalObjectCodes.length, error },
+      'listingTextContentAdapter.getExistingRentalObjectCodes'
+    )
+    return {
+      ok: false,
+      err: error instanceof Error ? error : new Error('Unknown error'),
+    }
+  }
+}
+
 const create = async (
   listingTextContent: CreateListingTextContentRequest,
   dbConnection = db
@@ -197,4 +225,10 @@ const remove = async (
   }
 }
 
-export default { getByRentalObjectCode, create, update, remove }
+export default {
+  getByRentalObjectCode,
+  getExistingRentalObjectCodes,
+  create,
+  update,
+  remove,
+}

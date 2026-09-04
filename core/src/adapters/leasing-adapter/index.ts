@@ -914,6 +914,27 @@ const getListingTextContentByRentalObjectCode = async (
   }
 }
 
+const getListingTextContentExistence = async (
+  rentalObjectCodes: string[]
+): Promise<AdapterResult<string[], 'unknown'>> => {
+  try {
+    const response = await axios.post<{
+      content: string[]
+    }>(`${tenantsLeasesServiceUrl}/listing-text-content/existence`, {
+      rentalObjectCodes,
+    })
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(err, 'Error getting listing text content existence:')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const createListingTextContent = async (
   data: CreateListingTextContentRequest
 ): Promise<AdapterResult<ListingTextContent, 'conflict' | 'unknown'>> => {
@@ -1084,6 +1105,7 @@ export {
   withdrawApplicantByManager,
   withdrawApplicantByUser,
   getListingTextContentByRentalObjectCode,
+  getListingTextContentExistence,
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,

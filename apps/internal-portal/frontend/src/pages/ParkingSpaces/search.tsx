@@ -1,6 +1,7 @@
 import { Box, Typography } from '@mui/material'
 import { useCallback, useMemo, useState } from 'react'
 import { SearchBar } from '../../components'
+import { useListingTextContentExistence } from '../../common/hooks/useListingTextContentExistence'
 import { useParkingSpaceListings } from './hooks/useParkingSpaceListings'
 import * as utils from '../../utils'
 import { getActionColumns, getSearchColumns } from './helpers/columnsHelper'
@@ -11,6 +12,12 @@ const SearchParkingSpaces = () => {
   const [searchString, setSearchString] = useState<string>()
 
   const parkingSpaces = useParkingSpaceListings('all')
+
+  const rentalObjectCodes = useMemo(
+    () => (parkingSpaces.data ?? []).map((l) => l.rentalObjectCode),
+    [parkingSpaces.data]
+  )
+  const { hasTextContent } = useListingTextContentExistence(rentalObjectCodes)
 
   const handleSearch = useCallback((v: string) => setSearchString(v), [])
   const onSearch = useMemo(
@@ -50,7 +57,7 @@ const SearchParkingSpaces = () => {
       <Box paddingTop="1rem">
         <Listings
           columns={getSearchColumns(dateFormatter, numberFormatter).concat(
-            getActionColumns()
+            getActionColumns(hasTextContent)
           )}
           rows={filterListings(parkingSpaces.data ?? [], searchString)}
           loading={parkingSpaces.status === 'pending'}

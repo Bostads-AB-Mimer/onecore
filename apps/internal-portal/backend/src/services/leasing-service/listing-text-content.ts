@@ -23,6 +23,26 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.post('(.*)/listing-text-content/existence', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = ctx.request.body
+
+    const result = await coreAdapter.getListingTextContentExistence(
+      params.rentalObjectCodes
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        ...metadata,
+      }
+    } else {
+      ctx.status = result.statusCode
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
   router.post('(.*)/listing-text-content', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = ctx.request.body

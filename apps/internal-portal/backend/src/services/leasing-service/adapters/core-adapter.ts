@@ -777,6 +777,21 @@ const getListingTextContentByRentalObjectCode = async (
   }
 }
 
+const getListingTextContentExistence = async (
+  rentalObjectCodes: string[]
+): Promise<AdapterResult<string[], 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: string[] }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listing-text-content/existence`,
+      data: { rentalObjectCodes },
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
 const createListingTextContent = async (
   data: CreateListingTextContentRequest
 ): Promise<AdapterResult<ListingTextContent, 'conflict' | 'unknown'>> => {
@@ -974,6 +989,7 @@ export {
   getLeasesByContactCode,
   createLeaseForNonScoredParkingSpace,
   getListingTextContentByRentalObjectCode,
+  getListingTextContentExistence,
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,

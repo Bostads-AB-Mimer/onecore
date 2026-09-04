@@ -30,6 +30,82 @@ export const routes = (router: KoaRouter) => {
     'UpdateListingTextContentRequest',
     leasing.v1.UpdateListingTextContentRequestSchema
   )
+  registerSchema(
+    'ListingTextContentExistenceRequest',
+    leasing.v1.ListingTextContentExistenceRequestSchema
+  )
+
+  /**
+   * @swagger
+   * /listing-text-content/existence:
+   *   post:
+   *     summary: Check which rental objects have listing text content
+   *     description: |
+   *       Bulk existence check. Takes a list of rental object codes and
+   *       returns the subset of codes that have listing text content.
+   *     tags: [ListingTextContent]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/ListingTextContentExistenceRequest'
+   *     responses:
+   *       200:
+   *         description: The subset of codes that have listing text content
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: string
+   *       400:
+   *         description: Invalid request body
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/listing-text-content/existence',
+    parseRequestBody(leasing.v1.ListingTextContentExistenceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      // TODO: Something wrong with parseRequestBody types.
+      // Body should be inferred from middleware
+      const body = ctx.request.body as z.infer<
+        typeof leasing.v1.ListingTextContentExistenceRequestSchema
+      >
+
+      try {
+        const result = await leasingAdapter.getListingTextContentExistence(
+          body.rentalObjectCodes
+        )
+
+        if (!result.ok) {
+          ctx.status = 500
+          ctx.body = {
+            error: 'Failed to check listing text content existence',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+      } catch (err) {
+        logger.error(
+          { err, metadata },
+          'Error checking listing text content existence in leasing'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+      }
+    }
+  )
 
   /**
    * @swagger
