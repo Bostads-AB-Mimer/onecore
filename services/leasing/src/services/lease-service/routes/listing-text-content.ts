@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 import listingTextContentAdapter from '../adapters/listing-text-content-adapter'
 import { leasing } from '@onecore/types'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -31,7 +32,6 @@ export const routes = (router: KoaRouter) => {
    *               rentalObjectCodes:
    *                 type: array
    *                 minItems: 1
-   *                 maxItems: 1000
    *                 items:
    *                   type: string
    *                 description: The rental object codes to check.
@@ -54,39 +54,30 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/listing-text-content/existence', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const parseResult =
-      leasing.v1.ListingTextContentExistenceRequestSchema.safeParse(
-        ctx.request.body
-      )
+  router.post(
+    '(.*)/listing-text-content/existence',
+    parseRequestBody(leasing.v1.ListingTextContentExistenceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalObjectCodes } = ctx.request.body
 
-    if (!parseResult.success) {
-      ctx.status = 400
-      ctx.body = {
-        error: 'Invalid request body',
-        invalid: ctx.request.body,
-        detail: parseResult.error,
-        ...metadata,
+      const result =
+        await listingTextContentAdapter.getExistingRentalObjectCodes(
+          rentalObjectCodes
+        )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to check listing text content existence',
+          ...metadata,
+        }
+        return
       }
-      return
+
+      ctx.body = { content: result.data, ...metadata }
     }
-
-    const result = await listingTextContentAdapter.getExistingRentalObjectCodes(
-      parseResult.data.rentalObjectCodes
-    )
-
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = {
-        error: 'Failed to check listing text content existence',
-        ...metadata,
-      }
-      return
-    }
-
-    ctx.body = { content: result.data, ...metadata }
-  })
+  )
 
   /**
    * @swagger

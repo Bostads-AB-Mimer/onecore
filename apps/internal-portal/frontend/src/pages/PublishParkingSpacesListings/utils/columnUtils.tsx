@@ -4,7 +4,6 @@ import { memo, useCallback } from 'react'
 
 import { RentalObjectWithListingHistory } from '../../../types'
 import { printVacantFrom } from '../../../common/formattingUtils'
-import { ListingTextContentIconLink } from '../../../components'
 
 // Memoized Select component to prevent unnecessary re-renders
 const RentalRuleSelect = memo(
@@ -95,25 +94,6 @@ export const getParkingSpaceColumns = (
       valueFormatter: ({ value }) => (value ?? 0).toString(),
     },
   ]
-}
-
-export const getListingTextContentColumn = (
-  hasTextContent: (rentalObjectCode: string) => boolean | undefined
-): GridColDef<RentalObjectWithListingHistory> => {
-  return {
-    field: 'listing-text-content',
-    headerName: '',
-    sortable: false,
-    filterable: false,
-    flex: 0.3,
-    disableColumnMenu: true,
-    renderCell: ({ row }) => (
-      <ListingTextContentIconLink
-        rentalObjectCode={row.rentalObjectCode}
-        hasContent={hasTextContent(row.rentalObjectCode)}
-      />
-    ),
-  }
 }
 
 export const getRentalRuleActionColumn = (

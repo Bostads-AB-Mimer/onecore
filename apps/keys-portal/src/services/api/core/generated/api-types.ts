@@ -4844,7 +4844,8 @@ export interface paths {
   '/cost-centers/{id}/tree': {
     /**
      * Get a cost center management tree
-     * @description Returns the cost center with KVV areas, properties (addresses + aggregates)
+     * @description Returns the cost center with KVV areas, properties (buildings,
+     * parkeringsområden + aggregates)
      * and Keycloak-expanded lead, deputy and responsible users. If Keycloak is
      * unreachable, the tree is returned with user fields set to null.
      */

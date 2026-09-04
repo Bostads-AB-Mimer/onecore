@@ -36,10 +36,22 @@ describe('POST /listing-text-content/existence', () => {
     expect(res.status).toBe(400)
   })
 
+  it('responds with 400 if leasing rejects the request', async () => {
+    jest
+      .spyOn(leasingAdapter, 'getListingTextContentExistence')
+      .mockResolvedValueOnce({ ok: false, err: 'bad-request' })
+
+    const res = await request(app.callback())
+      .post('/listing-text-content/existence')
+      .send({ rentalObjectCodes: ['CODE-1'] })
+
+    expect(res.status).toBe(400)
+  })
+
   it('responds with 500 if adapter fails', async () => {
     jest
       .spyOn(leasingAdapter, 'getListingTextContentExistence')
-      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      .mockResolvedValueOnce({ ok: false, err: 'request-failed' })
 
     const res = await request(app.callback())
       .post('/listing-text-content/existence')

@@ -66,7 +66,7 @@ describe('listing-text-content routes', () => {
         .send({ rentalObjectCodes: [] })
 
       expect(res.status).toBe(400)
-      expect(res.body.error).toBe('Invalid request body')
+      expect(res.body.status).toBe('error')
     })
 
     it('responds with 500 when adapter fails', async () => {

@@ -29,7 +29,7 @@ const ParkingSpaces = () => {
     () => (parkingSpaces.data ?? []).map((l) => l.rentalObjectCode),
     [parkingSpaces.data]
   )
-  const { hasTextContent } = useListingTextContentExistence(rentalObjectCodes)
+  const textContentExistence = useListingTextContentExistence(rentalObjectCodes)
 
   const handleSearch = useCallback((v: string) => setSearchString(v), [])
   const onSearch = useMemo(
@@ -96,7 +96,7 @@ const ParkingSpaces = () => {
           <TabPanel value="published" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns(hasTextContent)
+                getActionColumns(textContentExistence)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -106,7 +106,7 @@ const ParkingSpaces = () => {
           <TabPanel value="ready-for-offer" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns(hasTextContent)
+                getActionColumns(textContentExistence)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -116,7 +116,7 @@ const ParkingSpaces = () => {
           <TabPanel value="offered" sx={{ padding: 0 }}>
             <Listings
               columns={getOfferedColumns(dateFormatter, numberFormatter).concat(
-                getActionColumns(hasTextContent)
+                getActionColumns(textContentExistence)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}
@@ -126,7 +126,7 @@ const ParkingSpaces = () => {
           <TabPanel value="historical" sx={{ padding: 0 }}>
             <Listings
               columns={getColumns(dateFormatter, numberFormatter, false).concat(
-                getActionColumns(hasTextContent)
+                getActionColumns(textContentExistence)
               )}
               rows={filterListings(parkingSpaces.data ?? [], searchString)}
               loading={parkingSpaces.status === 'pending'}

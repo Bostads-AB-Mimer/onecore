@@ -18,7 +18,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
     () => [parkingSpaceListing.rentalObjectCode],
     [parkingSpaceListing.rentalObjectCode]
   )
-  const { hasTextContent } = useListingTextContentExistence(rentalObjectCodes)
+  const textContentExistence = useListingTextContentExistence(rentalObjectCodes)
 
   const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   const numberFormatter = new Intl.NumberFormat('sv-SE', {
@@ -80,7 +80,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Annonsinnehåll</Typography>
             <ListingTextContentIconLink
               rentalObjectCode={parkingSpaceListing.rentalObjectCode}
-              hasContent={hasTextContent(parkingSpaceListing.rentalObjectCode)}
+              existence={textContentExistence}
             />
           </Box>
           <Box height="50px" />

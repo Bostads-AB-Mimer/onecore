@@ -171,7 +171,7 @@ describe('listing-area-text-content routes', () => {
     it('responds with 500 on unexpected adapter error', async () => {
       jest
         .spyOn(listingAreaTextContentAdapter, 'create')
-        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+        .mockResolvedValueOnce({ ok: false, err: 'database-error' })
 
       const res = await request(app.callback())
         .post('/listing-area-text-content')
@@ -232,7 +232,7 @@ describe('listing-area-text-content routes', () => {
     it('responds with 500 on unexpected adapter error', async () => {
       jest
         .spyOn(listingAreaTextContentAdapter, 'update')
-        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+        .mockResolvedValueOnce({ ok: false, err: 'database-error' })
 
       const res = await request(app.callback())
         .put('/listing-area-text-content/VAL')
@@ -276,7 +276,7 @@ describe('listing-area-text-content routes', () => {
     it('responds with 500 on unexpected adapter error', async () => {
       jest
         .spyOn(listingAreaTextContentAdapter, 'remove')
-        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+        .mockResolvedValueOnce({ ok: false, err: 'database-error' })
 
       const res = await request(app.callback()).delete(
         '/listing-area-text-content/VAL'

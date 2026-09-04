@@ -20,10 +20,10 @@ import { useVacantParkingSpaces } from '../ParkingSpaces/hooks/useVacantParkingS
 import { usePublishParkingSpaces } from './hooks/usePublishParkingSpaces'
 import { useRentalRules } from './hooks/useRentalRules'
 import {
-  getListingTextContentColumn,
   getParkingSpaceColumns,
   getRentalRuleActionColumn,
 } from './utils/columnUtils'
+import { getListingTextContentColumn } from '../../components'
 import { useListingTextContentExistence } from '../../common/hooks/useListingTextContentExistence'
 import * as utils from '../../utils'
 import { RentalObject } from '@onecore/types'
@@ -94,16 +94,18 @@ export const PublishParkingSpacesListingsPage = () => {
     () => (parkingSpaces ?? []).map((p) => p.rentalObjectCode),
     [parkingSpaces]
   )
-  const { hasTextContent } = useListingTextContentExistence(rentalObjectCodes)
+  const textContentExistence = useListingTextContentExistence(rentalObjectCodes)
 
   // Memoize columns to prevent unnecessary re-renders
   const columns = useMemo(
     () => [
       ...getParkingSpaceColumns(dateFormatter),
       getRentalRuleActionColumn(rentalRules, handleRentalRuleChange),
-      getListingTextContentColumn(hasTextContent),
+      getListingTextContentColumn<RentalObjectWithListingHistory>(
+        textContentExistence
+      ),
     ],
-    [rentalRules, handleRentalRuleChange, hasTextContent]
+    [rentalRules, handleRentalRuleChange, textContentExistence]
   )
 
   // Handle publish with batch size warning

@@ -17,7 +17,7 @@ const SearchParkingSpaces = () => {
     () => (parkingSpaces.data ?? []).map((l) => l.rentalObjectCode),
     [parkingSpaces.data]
   )
-  const { hasTextContent } = useListingTextContentExistence(rentalObjectCodes)
+  const textContentExistence = useListingTextContentExistence(rentalObjectCodes)
 
   const handleSearch = useCallback((v: string) => setSearchString(v), [])
   const onSearch = useMemo(
@@ -57,7 +57,7 @@ const SearchParkingSpaces = () => {
       <Box paddingTop="1rem">
         <Listings
           columns={getSearchColumns(dateFormatter, numberFormatter).concat(
-            getActionColumns(hasTextContent)
+            getActionColumns(textContentExistence)
           )}
           rows={filterListings(parkingSpaces.data ?? [], searchString)}
           loading={parkingSpaces.status === 'pending'}

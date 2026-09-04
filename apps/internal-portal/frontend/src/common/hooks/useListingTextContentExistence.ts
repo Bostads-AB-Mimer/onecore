@@ -1,25 +1,17 @@
 import { useCallback, useMemo } from 'react'
-import axios, { AxiosError } from 'axios'
-import { useQuery } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
-
-// The backend caps each existence request at 1000 codes
-const MAX_CODES_PER_REQUEST = 1000
+import apiClient from '../../utils/api-client'
+import { ListingTextContentExistence } from '../../components'
 
 const fetchExistingCodes = (rentalObjectCodes: string[]): Promise<string[]> =>
-  axios
-    .post<{ content: string[] }>(
-      `${backendUrl}/listing-text-content/existence`,
-      { rentalObjectCodes },
-      {
-        headers: {
-          Accept: 'application/json',
-          'Access-Control-Allow-Credentials': true,
-        },
-        withCredentials: true,
-      }
-    )
+  apiClient
+    .post<{ content: string[] }>('/listing-text-content/existence', {
+      rentalObjectCodes,
+    })
+    // Return a plain array so react-query's structural sharing keeps the
+    // data identity stable across refetches that yield the same result.
     .then((res) => res.data.content)
 
 // Bulk existence check: which of the given rental object codes have listing
@@ -28,40 +20,38 @@ const fetchExistingCodes = (rentalObjectCodes: string[]): Promise<string[]> =>
 //
 // Keyed under the 'listingTextContent' prefix so the editor's create/update/
 // delete mutations (which invalidate that prefix) also refresh this query.
-export const useListingTextContentExistence = (rentalObjectCodes: string[]) => {
+export const useListingTextContentExistence = (
+  rentalObjectCodes: string[]
+): ListingTextContentExistence => {
   const sortedCodes = useMemo(
     () => Array.from(new Set(rentalObjectCodes)).sort(),
     [rentalObjectCodes]
   )
 
-  const query = useQuery<Set<string>, AxiosError>({
+  const query = useQuery<string[], AxiosError>({
     queryKey: ['listingTextContent', 'existence', sortedCodes],
-    queryFn: async () => {
-      const chunks: string[][] = []
-      for (let i = 0; i < sortedCodes.length; i += MAX_CODES_PER_REQUEST) {
-        chunks.push(sortedCodes.slice(i, i + MAX_CODES_PER_REQUEST))
-      }
-      const results = await Promise.all(chunks.map(fetchExistingCodes))
-      return new Set(results.flat())
-    },
+    queryFn: () => fetchExistingCodes(sortedCodes),
     enabled: sortedCodes.length > 0,
-    retry: (failureCount: number, error: AxiosError) => {
-      if (error.response?.status === 401) {
-        return false
-      } else {
-        return failureCount < 3
-      }
-    },
+    // Keep the previous answer while a changed code list (tab switch,
+    // listing refetch) is loading so icons don't flip to disabled meanwhile.
+    placeholderData: keepPreviousData,
+    retry: (failureCount: number, error: AxiosError) =>
+      error.response?.status !== 401 && failureCount < 3,
   })
+
+  const existingCodes = useMemo(
+    () => (query.data ? new Set(query.data) : undefined),
+    [query.data]
+  )
 
   // undefined while the existence is unknown (loading or error). Stable
   // identity so consumers can use it as a useMemo/useCallback dependency.
-  const existingCodes = query.data
   const hasTextContent = useCallback(
     (rentalObjectCode: string): boolean | undefined =>
       existingCodes?.has(rentalObjectCode),
     [existingCodes]
   )
 
-  return { ...query, hasTextContent }
+  const isError = query.isError
+  return useMemo(() => ({ hasTextContent, isError }), [hasTextContent, isError])
 }

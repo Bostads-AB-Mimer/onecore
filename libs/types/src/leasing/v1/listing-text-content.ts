@@ -63,13 +63,11 @@ export const UpdateListingTextContentRequestSchema =
   }).partial()
 
 // Bulk existence check: which of the given rental object codes have listing
-// text. The response is the matching subset of codes. Capped at 1000 to keep
-// a single SQL `whereIn` under SQL Server's ~2100-parameter limit.
+// text. The response is the matching subset of codes. The leasing adapter
+// batches the lookup internally, so callers need not chunk the list.
 export const ListingTextContentExistenceRequestSchema = z.object({
-  rentalObjectCodes: z.array(z.string()).min(1).max(1000),
+  rentalObjectCodes: z.array(z.string()).min(1),
 })
-
-export const ListingTextContentExistenceResponseSchema = z.array(z.string())
 
 // Market-area text: one template per Xpand market area (babya), attached
 // read-only to every housing listing in that area after the object-specific

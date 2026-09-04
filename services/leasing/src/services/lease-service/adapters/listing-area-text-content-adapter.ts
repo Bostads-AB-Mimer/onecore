@@ -97,7 +97,9 @@ const getByMarketAreaCode = async (
 const create = async (
   listingAreaTextContent: CreateListingAreaTextContentRequest,
   dbConnection = db
-): Promise<AdapterResult<ListingAreaTextContent, 'duplicate' | 'unknown'>> => {
+): Promise<
+  AdapterResult<ListingAreaTextContent, 'duplicate' | 'database-error'>
+> => {
   try {
     const [inserted] = await dbConnection
       .table('listing_area_text_content')
@@ -124,7 +126,7 @@ const create = async (
       { err, marketAreaCode: listingAreaTextContent.marketAreaCode },
       'listingAreaTextContentAdapter.create'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'database-error' }
   }
 }
 
@@ -132,7 +134,9 @@ const update = async (
   marketAreaCode: string,
   updateData: UpdateListingAreaTextContentRequest,
   dbConnection = db
-): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<ListingAreaTextContent, 'not-found' | 'database-error'>
+> => {
   try {
     const updateFields: Record<string, unknown> = {}
 
@@ -166,14 +170,14 @@ const update = async (
       { err, marketAreaCode },
       'listingAreaTextContentAdapter.update'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'database-error' }
   }
 }
 
 const remove = async (
   marketAreaCode: string,
   dbConnection = db
-): Promise<AdapterResult<void, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<void, 'not-found' | 'database-error'>> => {
   try {
     const deletedCount = await dbConnection
       .table('listing_area_text_content')
@@ -197,7 +201,7 @@ const remove = async (
       { err, marketAreaCode },
       'listingAreaTextContentAdapter.remove'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'database-error' }
   }
 }
 
