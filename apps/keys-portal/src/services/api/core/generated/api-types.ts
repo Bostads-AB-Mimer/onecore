@@ -2373,6 +2373,38 @@ export interface paths {
       }
     }
   }
+  '/listing-text-content/existence': {
+    /**
+     * Check which rental objects have listing text content
+     * @description Bulk existence check. Takes a list of rental object codes and
+     * returns the subset of codes that have listing text content.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['ListingTextContentExistenceRequest']
+        }
+      }
+      responses: {
+        /** @description The subset of codes that have listing text content */
+        200: {
+          content: {
+            'application/json': {
+              content?: string[]
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/listing-text-content/{rentalObjectCode}': {
     /**
      * Get listing text content by rental object code
@@ -4812,7 +4844,8 @@ export interface paths {
   '/cost-centers/{id}/tree': {
     /**
      * Get a cost center management tree
-     * @description Returns the cost center with KVV areas, properties (addresses + aggregates)
+     * @description Returns the cost center with KVV areas, properties (buildings,
+     * parkeringsområden + aggregates)
      * and Keycloak-expanded lead, deputy and responsible users. If Keycloak is
      * unreachable, the tree is returned with user fields set to null.
      */
@@ -10850,6 +10883,9 @@ export interface components {
             url: string
           }
       )[]
+    }
+    ListingTextContentExistenceRequest: {
+      rentalObjectCodes: string[]
     }
     ListingAreaTextContent: {
       /** Format: uuid */

@@ -2,6 +2,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 import listingTextContentAdapter from '../adapters/listing-text-content-adapter'
 import { leasing } from '@onecore/types'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
  * @swagger
@@ -10,6 +11,74 @@ import { leasing } from '@onecore/types'
  *     description: Endpoints related to operations regarding listing text content.
  */
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /listing-text-content/existence:
+   *   post:
+   *     summary: Check which rental objects have listing text content
+   *     description: |
+   *       Bulk existence check. Takes a list of rental object codes and
+   *       returns the subset of codes that have listing text content.
+   *     tags: [ListingTextContent]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - rentalObjectCodes
+   *             properties:
+   *               rentalObjectCodes:
+   *                 type: array
+   *                 minItems: 1
+   *                 items:
+   *                   type: string
+   *                 description: The rental object codes to check.
+   *     responses:
+   *       200:
+   *         description: The subset of codes that have listing text content
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: string
+   *       400:
+   *         description: Invalid request body
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '(.*)/listing-text-content/existence',
+    parseRequestBody(leasing.v1.ListingTextContentExistenceRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalObjectCodes } = ctx.request.body
+
+      const result =
+        await listingTextContentAdapter.getExistingRentalObjectCodes(
+          rentalObjectCodes
+        )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to check listing text content existence',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
+
   /**
    * @swagger
    * /listing-text-content/{rentalObjectCode}:

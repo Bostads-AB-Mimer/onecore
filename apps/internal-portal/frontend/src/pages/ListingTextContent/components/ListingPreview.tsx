@@ -110,7 +110,7 @@ export const ListingPreview = ({
               whiteSpace: 'pre-line',
             }}
           >
-            {block.content || 'Underrubrik...'}
+            {block.content || 'Underrubrik 2...'}
           </Typography>
         )
 
@@ -136,7 +136,7 @@ export const ListingPreview = ({
             {renderParagraphs(
               block.content || '',
               {
-                // Mirrors the public site, where "Underrubrik 2" renders as an h3
+                // Mirrors the public site, where "Underrubrik 3" renders as an h3
                 // (Graphik 1.375rem, weight 500)
                 width: '100%',
                 fontSize: '1.375rem',
@@ -144,7 +144,7 @@ export const ListingPreview = ({
                 fontWeight: 500,
                 lineHeight: 1.1,
               },
-              'Underrubrik 2...'
+              'Underrubrik 3...'
             )}
           </Box>
         )

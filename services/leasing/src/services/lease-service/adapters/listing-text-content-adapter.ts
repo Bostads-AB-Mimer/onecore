@@ -5,6 +5,7 @@ import { logger } from '@onecore/utilities'
 import { RequestError } from 'tedious'
 
 import { db } from './db'
+import { chunkArray } from './utils'
 
 type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
 type CreateListingTextContentRequest = z.infer<
@@ -57,6 +58,41 @@ const getByRentalObjectCode = async (
   }
 
   return transformFromDbListingTextContent(result)
+}
+
+// SQL Server allows ~2100 parameters per query, so large code lists are
+// looked up in batches of 1000.
+const EXISTENCE_BATCH_SIZE = 1000
+
+const getExistingRentalObjectCodes = async (
+  rentalObjectCodes: string[],
+  dbConnection = db
+): Promise<AdapterResult<string[], Error>> => {
+  try {
+    const existingCodes: string[] = []
+
+    for (const batch of chunkArray(rentalObjectCodes, EXISTENCE_BATCH_SIZE)) {
+      const rows = await dbConnection
+        .from('listing_text_content')
+        .select<
+          Array<Pick<DbListingTextContent, 'RentalObjectCode'>>
+        >('RentalObjectCode')
+        .whereIn('RentalObjectCode', batch)
+
+      existingCodes.push(...rows.map((row) => row.RentalObjectCode))
+    }
+
+    return { ok: true, data: existingCodes }
+  } catch (err) {
+    logger.error(
+      { err, count: rentalObjectCodes.length },
+      'listingTextContentAdapter.getExistingRentalObjectCodes'
+    )
+    return {
+      ok: false,
+      err: err instanceof Error ? err : new Error('Unknown error'),
+    }
+  }
 }
 
 const create = async (
@@ -197,4 +233,10 @@ const remove = async (
   }
 }
 
-export default { getByRentalObjectCode, create, update, remove }
+export default {
+  getByRentalObjectCode,
+  getExistingRentalObjectCodes,
+  create,
+  update,
+  remove,
+}

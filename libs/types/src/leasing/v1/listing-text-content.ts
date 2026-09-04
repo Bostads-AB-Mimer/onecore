@@ -62,6 +62,13 @@ export const UpdateListingTextContentRequestSchema =
     contentBlocks: true,
   }).partial()
 
+// Bulk existence check: which of the given rental object codes have listing
+// text. The response is the matching subset of codes. The leasing adapter
+// batches the lookup internally, so callers need not chunk the list.
+export const ListingTextContentExistenceRequestSchema = z.object({
+  rentalObjectCodes: z.array(z.string()).min(1),
+})
+
 // Market-area text: one template per Xpand market area (babya), attached
 // read-only to every housing listing in that area after the object-specific
 // text. Keyed by the market area code (e.g. "VAL" for Vallby).

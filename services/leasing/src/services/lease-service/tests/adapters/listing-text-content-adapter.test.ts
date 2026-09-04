@@ -38,6 +38,75 @@ describe('listing-text-content-adapter', () => {
       }))
   })
 
+  describe(listingTextContentAdapter.getExistingRentalObjectCodes, () => {
+    it('returns only the codes that have content', () =>
+      withContext(async (ctx) => {
+        const testData = factory.listingTextContent.build()
+        const createResult = await listingTextContentAdapter.create(
+          {
+            rentalObjectCode: testData.rentalObjectCode,
+            contentBlocks: testData.contentBlocks,
+          },
+          ctx.db
+        )
+        expect(createResult.ok).toBe(true)
+
+        const result =
+          await listingTextContentAdapter.getExistingRentalObjectCodes(
+            [testData.rentalObjectCode, 'NON_EXISTENT_CODE'],
+            ctx.db
+          )
+
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data).toEqual([testData.rentalObjectCode])
+        }
+      }))
+
+    it('returns empty array when no codes have content', () =>
+      withContext(async (ctx) => {
+        const result =
+          await listingTextContentAdapter.getExistingRentalObjectCodes(
+            ['NON_EXISTENT_CODE_1', 'NON_EXISTENT_CODE_2'],
+            ctx.db
+          )
+
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data).toEqual([])
+        }
+      }))
+
+    it('handles more codes than fit in a single query batch', () =>
+      withContext(async (ctx) => {
+        const testData = factory.listingTextContent.build()
+        const createResult = await listingTextContentAdapter.create(
+          {
+            rentalObjectCode: testData.rentalObjectCode,
+            contentBlocks: testData.contentBlocks,
+          },
+          ctx.db
+        )
+        expect(createResult.ok).toBe(true)
+
+        // 2500 codes forces three batches; the existing code sits in the
+        // last one so the result must be merged across batches.
+        const codes = Array.from({ length: 2499 }, (_, i) => `MISSING-${i}`)
+        codes.push(testData.rentalObjectCode)
+
+        const result =
+          await listingTextContentAdapter.getExistingRentalObjectCodes(
+            codes,
+            ctx.db
+          )
+
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data).toEqual([testData.rentalObjectCode])
+        }
+      }))
+  })
+
   describe(listingTextContentAdapter.create, () => {
     it('creates new content successfully', () =>
       withContext(async (ctx) => {

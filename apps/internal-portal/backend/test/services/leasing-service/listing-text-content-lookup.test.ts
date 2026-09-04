@@ -346,7 +346,7 @@ describe('getListingTextContentLookup', () => {
 
   it('returns not ok when the object text lookup fails unexpectedly', async () => {
     mockedLeasingCoreAdapter.getListingTextContentByRentalObjectCode.mockResolvedValueOnce(
-      { ok: false, err: 'unknown', statusCode: 500 }
+      { ok: false, err: 'request-failed', statusCode: 500 }
     )
     mockedLeasingCoreAdapter.getRentalPropertyByCode.mockResolvedValueOnce({
       ok: true,
@@ -355,7 +355,11 @@ describe('getListingTextContentLookup', () => {
 
     const result = await getListingTextContentLookup('123-456-789')
 
-    expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
+    expect(result).toEqual({
+      ok: false,
+      err: 'request-failed',
+      statusCode: 500,
+    })
     expect(
       mockedPropertyBaseCoreAdapter.getPropertyDetails
     ).not.toHaveBeenCalled()

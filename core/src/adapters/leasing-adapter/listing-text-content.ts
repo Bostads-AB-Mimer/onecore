@@ -13,52 +13,31 @@ import config from '../../common/config'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
+type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
+type CreateListingTextContentRequest = z.infer<
+  typeof leasing.v1.CreateListingTextContentRequestSchema
+>
+type UpdateListingTextContentRequest = z.infer<
+  typeof leasing.v1.UpdateListingTextContentRequestSchema
+>
+
 // Error codes:
 //   'bad-request'    leasing rejected the request body (400)
-//   'not-found'      no text content for the market area (404)
-//   'conflict'       text content already exists for the market area (409)
+//   'not-found'      no text content for the rental object (404)
+//   'conflict'       text content already exists for the rental object (409)
 //   'request-failed' leasing answered with an unexpected status, or the
 //                    request itself failed (5xx, network error)
 
-type ListingAreaTextContent = z.infer<
-  typeof leasing.v1.ListingAreaTextContentSchema
->
-type CreateListingAreaTextContentRequest = z.infer<
-  typeof leasing.v1.CreateListingAreaTextContentRequestSchema
->
-type UpdateListingAreaTextContentRequest = z.infer<
-  typeof leasing.v1.UpdateListingAreaTextContentRequestSchema
->
-
-const listListingAreaTextContent = async (): Promise<
-  AdapterResult<ListingAreaTextContent[], 'request-failed'>
-> => {
-  try {
-    const response = await axios.get<{
-      content: ListingAreaTextContent[]
-    }>(`${tenantsLeasesServiceUrl}/listing-area-text-content`)
-
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    return { ok: false, err: 'request-failed' }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.listListingAreaTextContent')
-    return { ok: false, err: 'request-failed' }
-  }
-}
-
-const getListingAreaTextContentByMarketAreaCode = async (
-  marketAreaCode: string
+const getListingTextContentByRentalObjectCode = async (
+  rentalObjectCode: string
 ): Promise<
-  AdapterResult<ListingAreaTextContent, 'not-found' | 'request-failed'>
+  AdapterResult<ListingTextContent, 'not-found' | 'request-failed'>
 > => {
   try {
     const response = await axios.get<{
-      content: ListingAreaTextContent
+      content: ListingTextContent
     }>(
-      `${tenantsLeasesServiceUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`
+      `${tenantsLeasesServiceUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`
     )
 
     if (response.status === 200) {
@@ -73,24 +52,49 @@ const getListingAreaTextContentByMarketAreaCode = async (
   } catch (err) {
     logger.error(
       { err },
-      'leasing-adapter.getListingAreaTextContentByMarketAreaCode'
+      'leasing-adapter.getListingTextContentByRentalObjectCode'
     )
     return { ok: false, err: 'request-failed' }
   }
 }
 
-const createListingAreaTextContent = async (
-  data: CreateListingAreaTextContentRequest
+const getListingTextContentExistence = async (
+  rentalObjectCodes: string[]
+): Promise<AdapterResult<string[], 'bad-request' | 'request-failed'>> => {
+  try {
+    const response = await axios.post<{
+      content: string[]
+    }>(`${tenantsLeasesServiceUrl}/listing-text-content/existence`, {
+      rentalObjectCodes,
+    })
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.status === 400) {
+      return { ok: false, err: 'bad-request' }
+    }
+
+    return { ok: false, err: 'request-failed' }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getListingTextContentExistence')
+    return { ok: false, err: 'request-failed' }
+  }
+}
+
+const createListingTextContent = async (
+  data: CreateListingTextContentRequest
 ): Promise<
   AdapterResult<
-    ListingAreaTextContent,
+    ListingTextContent,
     'bad-request' | 'conflict' | 'request-failed'
   >
 > => {
   try {
     const response = await axios.post<{
-      content: ListingAreaTextContent
-    }>(`${tenantsLeasesServiceUrl}/listing-area-text-content`, data)
+      content: ListingTextContent
+    }>(`${tenantsLeasesServiceUrl}/listing-text-content`, data)
 
     if (response.status === 201) {
       return { ok: true, data: response.data.content }
@@ -106,25 +110,25 @@ const createListingAreaTextContent = async (
 
     return { ok: false, err: 'request-failed' }
   } catch (err) {
-    logger.error({ err }, 'leasing-adapter.createListingAreaTextContent')
+    logger.error({ err }, 'leasing-adapter.createListingTextContent')
     return { ok: false, err: 'request-failed' }
   }
 }
 
-const updateListingAreaTextContent = async (
-  marketAreaCode: string,
-  data: UpdateListingAreaTextContentRequest
+const updateListingTextContent = async (
+  rentalObjectCode: string,
+  data: UpdateListingTextContentRequest
 ): Promise<
   AdapterResult<
-    ListingAreaTextContent,
+    ListingTextContent,
     'bad-request' | 'not-found' | 'request-failed'
   >
 > => {
   try {
     const response = await axios.put<{
-      content: ListingAreaTextContent
+      content: ListingTextContent
     }>(
-      `${tenantsLeasesServiceUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`,
+      `${tenantsLeasesServiceUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`,
       data
     )
 
@@ -142,17 +146,17 @@ const updateListingAreaTextContent = async (
 
     return { ok: false, err: 'request-failed' }
   } catch (err) {
-    logger.error({ err }, 'leasing-adapter.updateListingAreaTextContent')
+    logger.error({ err }, 'leasing-adapter.updateListingTextContent')
     return { ok: false, err: 'request-failed' }
   }
 }
 
-const deleteListingAreaTextContent = async (
-  marketAreaCode: string
+const deleteListingTextContent = async (
+  rentalObjectCode: string
 ): Promise<AdapterResult<void, 'not-found' | 'request-failed'>> => {
   try {
     const response = await axios.delete(
-      `${tenantsLeasesServiceUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`
+      `${tenantsLeasesServiceUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`
     )
 
     if (response.status === 200) {
@@ -165,15 +169,15 @@ const deleteListingAreaTextContent = async (
 
     return { ok: false, err: 'request-failed' }
   } catch (err) {
-    logger.error({ err }, 'leasing-adapter.deleteListingAreaTextContent')
+    logger.error({ err }, 'leasing-adapter.deleteListingTextContent')
     return { ok: false, err: 'request-failed' }
   }
 }
 
 export {
-  listListingAreaTextContent,
-  getListingAreaTextContentByMarketAreaCode,
-  createListingAreaTextContent,
-  updateListingAreaTextContent,
-  deleteListingAreaTextContent,
+  getListingTextContentByRentalObjectCode,
+  getListingTextContentExistence,
+  createListingTextContent,
+  updateListingTextContent,
+  deleteListingTextContent,
 }

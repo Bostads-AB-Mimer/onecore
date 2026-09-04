@@ -46,6 +46,42 @@ describe('listing-text-content routes', () => {
     })
   })
 
+  describe('POST /listing-text-content/existence', () => {
+    it('responds with 200 and the subset of codes that have content', async () => {
+      jest
+        .spyOn(listingTextContentAdapter, 'getExistingRentalObjectCodes')
+        .mockResolvedValueOnce({ ok: true, data: ['CODE-1'] })
+
+      const res = await request(app.callback())
+        .post('/listing-text-content/existence')
+        .send({ rentalObjectCodes: ['CODE-1', 'CODE-2'] })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(['CODE-1'])
+    })
+
+    it('responds with 400 for invalid body', async () => {
+      const res = await request(app.callback())
+        .post('/listing-text-content/existence')
+        .send({ rentalObjectCodes: [] })
+
+      expect(res.status).toBe(400)
+      expect(res.body.status).toBe('error')
+    })
+
+    it('responds with 500 when adapter fails', async () => {
+      jest
+        .spyOn(listingTextContentAdapter, 'getExistingRentalObjectCodes')
+        .mockResolvedValueOnce({ ok: false, err: new Error('db error') })
+
+      const res = await request(app.callback())
+        .post('/listing-text-content/existence')
+        .send({ rentalObjectCodes: ['CODE-1'] })
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   describe('POST /listing-text-content', () => {
     it('responds with 201 on success', async () => {
       const testData = factory.listingTextContent.build()
