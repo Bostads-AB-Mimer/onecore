@@ -15,7 +15,8 @@ export const routes = {
   property: '/fastigheter/:propertyCode', // -- byts ut mot :propertyCode
   propertyAreas: '/forvaltningsomraden',
   building: '/byggnader/:buildingCode', // klar
-  staircase: '/uppgangar/:buildingCode/:staircaseCode', // klar
+  // Canonical staircase id: `<bygcode>-<vancode>`, e.g. 307-040-01.
+  staircase: '/uppgangar/:staircaseId', // klar
   residence: '/bostader/:rentalId',
   room: '/bostader/:rentalId/rum/:roomCode',
   parkingSpace: '/bilplatser/:rentalId', // klar
@@ -39,7 +40,7 @@ export type RoutePath = (typeof routes)[keyof typeof routes]
  *
  *   paths.property('123')            →  '/fastigheter/123'
  *   paths.building('B01')            →  '/byggnader/B01'
- *   paths.staircase('B01', 'S1')     →  '/uppgangar/B01/S1'
+ *   paths.staircase('B01-S1')        →  '/uppgangar/B01-S1'
  *   paths.room('rentalId', 'RM1')     →  '/bostader/rentalId/rum/RM1'
  */
 export const paths = {
@@ -47,8 +48,8 @@ export const paths = {
     generatePath(routes.property, { propertyCode }),
   building: (buildingCode: string) =>
     generatePath(routes.building, { buildingCode }),
-  staircase: (buildingCode: string, staircaseCode: string) =>
-    generatePath(routes.staircase, { buildingCode, staircaseCode }),
+  staircase: (staircaseId: string) =>
+    generatePath(routes.staircase, { staircaseId }),
   residence: (rentalId: string) => generatePath(routes.residence, { rentalId }),
   room: (rentalId: string, roomCode: string) =>
     generatePath(routes.room, { rentalId, roomCode }),
@@ -72,9 +73,25 @@ export const paths = {
   },
 }
 
+/** The canonical staircase id used in URLs and tree nodes: `<bygcode>-<vancode>`. */
+export const staircaseId = (buildingCode: string, staircaseCode: string) =>
+  `${buildingCode}-${staircaseCode}`
+
+/** Inverse of staircaseId. Vancodes never contain a dash, so split at the last. */
+export function parseStaircaseId(
+  id: string | undefined
+): { buildingCode: string; staircaseCode: string } | null {
+  if (!id) return null
+  const seam = id.lastIndexOf('-')
+  if (seam <= 0 || seam === id.length - 1) return null
+  return { buildingCode: id.slice(0, seam), staircaseCode: id.slice(seam + 1) }
+}
+
 // Build a rental-object detail path from its type label + code. Folds the
 // varied labels (Bostad/Lägenhet, Lokal/Förråd, Bilplats/parkering); returns
 // null when unlinkable (e.g. Övrigt) or the code is missing.
+// TODO: key this on the RentalObjectType enum instead, and let lease rows
+// (whose data really is Swedish free text) map their labels at the edge.
 export function getRentalObjectPath(
   type: string | null | undefined,
   code: string | null | undefined
@@ -90,6 +107,56 @@ export function getRentalObjectPath(
     case 'lokal':
     case 'förråd':
       return paths.facility(code)
+    default:
+      return null
+  }
+}
+
+/** Everything a picker row can be: the tree's structural levels plus the
+ * rental-object types. Mirrors PropertyTreeLevel and RentalObjectType
+ * (entities/property-tree) structurally, so shared/ doesn't import upward —
+ * drift is caught at the call sites. */
+export type PropertyObjectType =
+  | 'district'
+  | 'kvvArea'
+  | 'marketArea'
+  | 'parkingArea'
+  | 'property'
+  | 'building'
+  | 'staircase'
+  | 'residence'
+  | 'parkingSpace'
+  | 'facility'
+  | 'other'
+  // The generic object level: unlinkable as such — objects route by their
+  // RentalObjectType above.
+  | 'object'
+
+/**
+ * Detail-page path for any property-tree entity, or null where no page
+ * exists (districts, KVV-/marknadsområden, parkeringsområden, Övrigt).
+ *
+ * The value is the entity's linking code: fstcode for a property (not the
+ * beteckning — tree nodes carry it as `id`), rentalId for objects, and the
+ * canonical `<bygcode>-<vancode>` id for a staircase.
+ */
+export function getPropertyObjectPath(
+  type: PropertyObjectType,
+  value: string
+): string | null {
+  switch (type) {
+    case 'property':
+      return paths.property(value)
+    case 'building':
+      return paths.building(value)
+    case 'staircase':
+      return paths.staircase(value)
+    case 'residence':
+      return paths.residence(value)
+    case 'parkingSpace':
+      return paths.parkingSpace(value)
+    case 'facility':
+      return paths.facility(value)
     default:
       return null
   }

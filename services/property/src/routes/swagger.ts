@@ -237,6 +237,16 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
+  ...zodToJsonSchema(types.PropertyTreeSchema, {
+    name: 'PropertyTree',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.RentalObjectSubtypeSchema, {
+    name: 'RentalObjectSubtype',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
   ...zodToJsonSchema(types.PutPropertyKvvAreaBodySchema, {
     name: 'PutPropertyKvvAreaBody',
     target: 'openApi3',
@@ -254,6 +264,16 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(types.MarketAreaSchema, {
     name: 'MarketArea',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.RentalObjectSummarySchema, {
+    name: 'RentalObjectSummary',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.RentalObjectDetailsSchema, {
+    name: 'RentalObjectDetails',
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,

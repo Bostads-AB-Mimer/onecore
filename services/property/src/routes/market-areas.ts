@@ -2,7 +2,9 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { z } from 'zod'
 
-import { listMarketAreas } from '../adapters/market-area-adapter'
+// The grouping adapter's listMarketAreas: filtered to areas holding live
+// stock in an operating company, and cached — the tree shares it.
+import { listMarketAreas } from '../adapters/property-grouping-adapter'
 import { MarketAreaSchema } from '../types/market-area'
 
 /**

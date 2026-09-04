@@ -5,10 +5,15 @@ import { StaircaseTabs } from '@/widgets/staircase-tabs'
 import { StaircaseBasicInfo, useStaircaseDetails } from '@/features/buildings'
 
 import { toTitleCase } from '@/shared/lib/textUtils'
+import { parseStaircaseId } from '@/shared/routes'
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 export function StaircasePage() {
-  const { staircaseCode, buildingCode } = useParams()
+  const { staircaseId } = useParams()
+  // The API takes the two codes separately.
+  const parts = parseStaircaseId(staircaseId)
+  const buildingCode = parts?.buildingCode
+  const staircaseCode = parts?.staircaseCode
   const { state } = useLocation()
   const { building, staircase, residences, isLoading, error } =
     useStaircaseDetails(buildingCode, staircaseCode)
@@ -23,7 +28,7 @@ export function StaircasePage() {
         error={error}
         data={staircase}
         notFoundMessage="Uppgång hittades inte"
-        searchedFor={staircaseCode}
+        searchedFor={staircaseId}
       >
         {(staircase) => (
           <>

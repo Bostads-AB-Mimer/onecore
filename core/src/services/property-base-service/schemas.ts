@@ -1171,37 +1171,28 @@ export const KeycloakUserSummarySchema = z.object({
   employeeId: z.string().optional(),
 })
 
-export const CostCenterTreeAddressSchema = z.object({
-  buildingCode: z.string(),
-  buildingName: z.string().nullable(),
-  buildingType: z
-    .object({
-      code: z.string().nullable(),
-      name: z.string().nullable(),
-    })
-    .nullable(),
-})
+// Cost-center tree building blocks come from libs/types; core's divergence —
+// Keycloak ids expanded to user summaries, plus capabilities — is derived here.
+export const CostCenterTreeStaircaseSchema =
+  property.CostCenterTreeStaircaseSchema
+export const CostCenterTreeBuildingSchema =
+  property.CostCenterTreeBuildingSchema
+export const CostCenterTreeParkingAreaSchema =
+  property.CostCenterTreeParkingAreaSchema
+export const CostCenterTreeAggregatesSchema =
+  property.CostCenterTreeAggregatesSchema
+export const CostCenterTreePropertySchema =
+  property.CostCenterTreePropertySchema
 
-export const CostCenterTreeAggregatesSchema = z.object({
-  residenceCount: z.number().int().nonnegative(),
-  parkingCount: z.number().int().nonnegative(),
-  entranceCount: z.number().int().nonnegative(),
-})
-
-export const CostCenterTreePropertySchema = z.object({
-  code: z.string(),
-  designation: z.string().nullable(),
-  tract: z.string().nullable(),
-  addresses: z.array(CostCenterTreeAddressSchema),
-  aggregates: CostCenterTreeAggregatesSchema,
-})
-
+// Spelled as literals (not omit/extend): the divergence stays readable, and
+// key order is preserved — the swagger generator dedups repeated shapes by
+// referencing the FIRST occurrence, which must stay a plain property path.
 export const CostCenterTreeKvvAreaSchema = z.object({
   id: z.string().uuid(),
   code: z.string(),
   name: z.string().nullable(),
   responsible: KeycloakUserSummarySchema.nullable(),
-  properties: z.array(CostCenterTreePropertySchema),
+  properties: z.array(property.CostCenterTreePropertySchema),
 })
 
 export const CostCenterTreeCapabilitiesSchema = z.object({
@@ -1220,13 +1211,9 @@ export const CostCenterTreeSchema = z.object({
 
 export type CostCenterTree = z.infer<typeof CostCenterTreeSchema>
 
-export const CostCenterSummarySchema = z.object({
-  id: z.string().uuid(),
-  code: z.string(),
-  name: z.string(),
-})
+export const CostCenterSummarySchema = property.CostCenterSummarySchema
 
-export type CostCenterSummary = z.infer<typeof CostCenterSummarySchema>
+export type CostCenterSummary = property.CostCenterSummary
 
 // KVV-area (kvartersvärdsområde) as listed by GET /kvv-areas: the shared
 // service shape with the responsible Keycloak id hydrated to a user summary.
@@ -1264,6 +1251,40 @@ export const PropertyKvvAreaLinkSchema = z.object({
 })
 
 export type PropertyKvvAreaLink = z.infer<typeof PropertyKvvAreaLinkSchema>
+
+// Rental-object shapes come from libs/types — served through core unchanged.
+export const RentalObjectTypeSchema = property.RentalObjectTypeSchema
+export const RentalObjectSummarySchema = property.RentalObjectSummarySchema
+export type RentalObjectSummary = property.RentalObjectSummary
+export const RentalObjectDetailsSchema = property.RentalObjectDetailsSchema
+export const RentalObjectSubtypeSchema = property.RentalObjectSubtypeSchema
+
+// ---- Property tree (any grouping) ----
+// Node and root shapes come from libs/types; core's divergence — the group's
+// responsibleKeycloakUserId expanded to a user summary — is derived here.
+export const PropertyGroupingSchema = property.PropertyGroupingSchema
+export const PROPERTY_TREE_NODE_TYPES = property.PROPERTY_TREE_NODE_TYPES
+export const PropertyTreeNodeSchema = property.PropertyTreeNodeSchema
+export type PropertyTreeNode = property.PropertyTreeNode
+
+// Literal for the same key-order reason as the cost-center tree above.
+export const PropertyTreeGroupSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  responsible: KeycloakUserSummarySchema.nullable(),
+  properties: z.array(property.PropertyTreeNodeSchema),
+})
+
+export const PropertyTreeSchema = z.object({
+  grouping: property.PropertyGroupingSchema,
+  id: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  groups: z.array(PropertyTreeGroupSchema),
+})
+
+export type PropertyTree = z.infer<typeof PropertyTreeSchema>
 
 export const PatchKvvAreaResponsibleBodySchema = z.object({
   keycloakUserId: z.string().uuid(),

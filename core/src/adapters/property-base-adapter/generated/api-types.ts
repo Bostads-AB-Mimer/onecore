@@ -2385,6 +2385,9 @@ export interface paths {
      * aggregate counts) and the Keycloak user IDs for lead, deputy and
      * responsible. Keycloak user details are NOT expanded here — that
      * composition happens in core.
+     *
+     * Responses are cached in-memory for up to one hour, so structural
+     * changes may take that long to appear.
      */
     get: {
       parameters: {
@@ -2510,6 +2513,228 @@ export interface paths {
               content?: components['schemas']['MarketArea'][]
             }
           }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects': {
+    /**
+     * List rental objects of a property or building
+     * @description Returns every rental object (residence, parking space, facility,
+     * other) under one property or one building as flat structure rows
+     * with type, subtype caption, postal address and building/staircase
+     * placement. Provide exactly one of propertyCode or buildingCode.
+     */
+    get: {
+      parameters: {
+        query?: {
+          propertyCode?: string
+          buildingCode?: string
+          /** @description Object types to exclude (repeatable) */
+          exclude?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+        }
+      }
+      responses: {
+        /** @description List of rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/search': {
+    /**
+     * Search rental objects across several scopes
+     * @description Returns rental objects under ANY of the given scopes — cost centres,
+     * KVV-areas,
+     * marknadsområden, properties, buildings, trapphus or
+     * parkeringsområden — narrowed by object type, subtype and a free-text
+     * match on rental id, address or property name. At least one scope is
+     * required; a district-wide search is thousands of objects, so results
+     * are paginated.
+     *
+     * Cost centres and marknadsområden are resolved to property codes
+     * first, since the structure table carries neither.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          /** @description Composite buildingCode-staircaseCode */
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+          /** @description type:code pairs, e.g. residence:12 */
+          subtypes?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Matching rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectSummary'][]
+              totalCount?: number
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/details': {
+    /**
+     * Listing-only values for the objects a selection covers
+     * @description Grundhyra, BRA, "annan information av vikt" and anläggnings-ID keyed
+     * by rental id. Kept apart from the objects themselves so the tree, the
+     * picker and the sidebar — which never show these — neither fetch nor
+     * hold them. Cached on a shorter TTL than the structure, since rent
+     * changes more often.
+     *
+     * Takes the same scopes as the search, but resolves all of them to
+     * property codes: the cache is keyed per property, so a trapphus costs
+     * its fastighet and nothing wider. Type and subtype filters are
+     * deliberately absent — the values are looked up by rental id, so
+     * narrowing them would only cost cache hits.
+     *
+     * An ids-only scope answers exactly those ids; any other scope (mixed
+     * ones included) answers the whole properties it touches.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          /** @description Composite buildingCode-staircaseCode */
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+        }
+      }
+      responses: {
+        /** @description Details per rental id */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectDetails'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-object-subtypes': {
+    /**
+     * List the subtype captions rental objects can carry
+     * @description The Xpand type captions ("3 rum och kök", "Centralgarage", "3G
+     * Antenner") grouped by the object type they belong to. Only subtypes
+     * in use by operating-company stock are returned, so every option
+     * matches something. Codes are unique within a type, not across types.
+     */
+    get: {
+      responses: {
+        /** @description List of subtypes */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectSubtype'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/property-tree': {
+    /**
+     * Get the property tree for one grouping root
+     * @description Returns properties (with buildings, trapphus, parkeringsområden and
+     * per-type counts) beneath one grouping root. `groups` carries the
+     * intermediate level when the grouping has one — KVV-areas for
+     * costCenter — and `properties` carries them directly otherwise.
+     *
+     * Only stock belonging to an operating company is returned: Xpand
+     * moves sold properties to company 999 rather than delete-marking
+     * them, so they are filtered out here.
+     *
+     * Everything is served from in-memory caches: membership (which root
+     * holds which properties) for up to 15 minutes, the property-and-below
+     * half for up to an hour per property — so a moved property or a
+     * structural change in Xpand may take that long to appear.
+     */
+    get: {
+      parameters: {
+        query: {
+          groupBy: 'costCenter' | 'marketArea' | 'company'
+          /** @description Cost center id (must be a uuid), market area code, or company code */
+          rootId: string
+          /** @description Pass 'false' to omit the rental-object leaves */
+          includeObjects?: 'true' | 'false'
+        }
+      }
+      responses: {
+        /** @description Property tree */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyTree']
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Root not found */
+        404: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -4232,18 +4457,37 @@ export interface components {
           code: string
           designation: string | null
           tract: string | null
-          addresses: {
+          buildings: {
             buildingCode: string
             buildingName: string | null
             buildingType: {
               code: string | null
               name: string | null
             } | null
+            staircases: {
+              code: string
+              name: string | null
+              residenceCount: number
+              parkingCount: number
+              facilityCount: number
+              otherCount: number
+            }[]
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          parkingAreas: {
+            code: string
+            name: string | null
+            parkingCount: number
           }[]
           aggregates: {
             residenceCount: number
             parkingCount: number
             entranceCount: number
+            facilityCount: number
+            otherCount: number
           }
         }[]
       }[]
@@ -4282,6 +4526,89 @@ export interface components {
       }
       responsibleKeycloakUserId: string | null
     }
+    PropertyTree: {
+      /** @enum {string} */
+      grouping: 'costCenter' | 'marketArea' | 'company'
+      id: string
+      code: string
+      name: string | null
+      groups: {
+        id: string
+        code: string
+        name: string | null
+        responsibleKeycloakUserId: string | null
+        properties: {
+          /** @enum {string} */
+          type:
+            | 'property'
+            | 'building'
+            | 'staircase'
+            | 'parkingArea'
+            | 'residence'
+            | 'parkingSpace'
+            | 'facility'
+            | 'other'
+          code: string
+          name: string | null
+          subtypeCode: string | null
+          subtypeName: string | null
+          children?: {
+            /** @enum {string} */
+            type:
+              | 'property'
+              | 'building'
+              | 'staircase'
+              | 'parkingArea'
+              | 'residence'
+              | 'parkingSpace'
+              | 'facility'
+              | 'other'
+            code: string
+            name: string | null
+            subtypeCode: string | null
+            subtypeName: string | null
+            children?: {
+              /** @enum {string} */
+              type:
+                | 'property'
+                | 'building'
+                | 'staircase'
+                | 'parkingArea'
+                | 'residence'
+                | 'parkingSpace'
+                | 'facility'
+                | 'other'
+              code: string
+              name: string | null
+              subtypeCode: string | null
+              subtypeName: string | null
+              children?: {
+                /** @enum {string} */
+                type:
+                  | 'property'
+                  | 'building'
+                  | 'staircase'
+                  | 'parkingArea'
+                  | 'residence'
+                  | 'parkingSpace'
+                  | 'facility'
+                  | 'other'
+                code: string
+                name: string | null
+                subtypeCode: string | null
+                subtypeName: string | null
+              }[]
+            }[]
+          }[]
+        }[]
+      }[]
+    }
+    RentalObjectSubtype: {
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string
+      name: string
+    }
     PutPropertyKvvAreaBody: {
       /** Format: uuid */
       kvvAreaId: string
@@ -4312,6 +4639,29 @@ export interface components {
       id: string
       code: string
       name: string | null
+    }
+    RentalObjectSummary: {
+      rentalId: string
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string | null
+      name: string | null
+      subtypeCode: string | null
+      subtypeName: string | null
+      address: string | null
+      buildingCode: string | null
+      staircaseCode: string | null
+      staircaseName: string | null
+      parkingAreaCode: string | null
+      propertyCode: string | null
+      propertyName: string | null
+    }
+    RentalObjectDetails: {
+      rentalId: string
+      baseRent: number | null
+      area: number | null
+      additionalInfo: string | null
+      malarEnergiFacilityId: string | null
     }
     ApartmentTemperaturePoint: {
       /** @description Unix timestamp (seconds) at the start of the aggregation bucket. */

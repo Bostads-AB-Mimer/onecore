@@ -4,6 +4,7 @@ import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
+import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
 
 export type BuildingWithRelations = Prisma.BuildingGetPayload<{
@@ -210,7 +211,7 @@ const searchBuildings = async (
           propertyObject: {
             propertyStructures: {
               some: {
-                companyCode: '001',
+                companyCode: { in: [...OPERATING_COMPANY_CODES] },
               },
             },
           },
