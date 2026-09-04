@@ -42,10 +42,10 @@ interface ContentBlockEditorProps {
 export const blockTypeLabels: Record<ContentBlockType, string> = {
   preamble: 'Ingress',
   headline: 'Rubrik',
-  subtitle: 'Underrubrik',
+  subtitle: 'Underrubrik 2',
   text: 'Text',
   bullet_list: 'Punktlista',
-  bold_text: 'Underrubrik 2',
+  bold_text: 'Underrubrik 3',
   link: 'Länk',
 }
 
