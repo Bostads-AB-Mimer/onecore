@@ -1,6 +1,9 @@
 import {
   classifyDocument,
   inspectPdf,
+  isOperativeUppsagning,
+  isKontraktBilaga,
+  isUppsagningsbekraftelse,
   pickContract,
   type ContractCandidate,
 } from './classification'
@@ -56,6 +59,85 @@ describe('classifyDocument', () => {
   it('handles an empty or missing title', () => {
     expect(classifyDocument('')).toBe('ovrigt')
     expect(classifyDocument(null)).toBe('ovrigt')
+  })
+})
+
+describe('isOperativeUppsagning', () => {
+  it.each([
+    'Uppsägning av bostad',
+    'Uppsägning av bilplats',
+    'BILPLATS-04-DIGITAL Uppsägning av bilplats',
+    'BOSTAD-05-DIGITAL Uppsägning av bostad',
+    'Uppsägning',
+    'inkommen uppsägning',
+    'Uppsägning dödsbo',
+  ])('treats "%s" as an actual uppsägning', (title) => {
+    expect(isOperativeUppsagning(title)).toBe(true)
+  })
+
+  it.each([
+    // Mimer's outgoing letters about a termination, not the termination itself
+    'BOSTAD-03-DIGITAL Bekräftelse på uppsägning av bostad',
+    'BILPLATS-03-DIGITAL Bekräftelse på uppsägning av bilplats',
+    'UPPSÄGNING-02-DIGITAL Ändring av uppsägningstid',
+    'BOSTAD-08-DIGITAL Återtagen uppsägning',
+  ])('does not treat "%s" as the termination document', (title) => {
+    expect(isOperativeUppsagning(title)).toBe(false)
+  })
+
+  it('is false for documents that are not uppsägningar at all', () => {
+    expect(isOperativeUppsagning('Hyreskontrakt')).toBe(false)
+    expect(isOperativeUppsagning('Nyckelkvittens')).toBe(false)
+    expect(isOperativeUppsagning('')).toBe(false)
+  })
+})
+
+describe('isKontraktBilaga', () => {
+  it.each([
+    // Scrive bundles: page 1 is the full contract, the bilaga follows —
+    // xpand just titles the document after the bilaga.
+    'Hyreskontrakt för digital signering, Bilaga A',
+    'Hyreskontrakt för digital signering, Bilaga K',
+    'BOSTAD-02:A-DIGITAL Hyreskontrakt för digital signering, Bilaga A',
+    'BOSTAD-02:S-DIGITAL Hyreskontrakt för digital signering, Bilaga S (IMD',
+    'Student hyreskontrakt med tilläggsbilaga',
+  ])('treats "%s" as a contract bundle', (title) => {
+    expect(isKontraktBilaga(title)).toBe(true)
+  })
+
+  it.each([
+    // a bilaga without a contract word is just an appendix
+    'Bilaga A',
+    'Besiktningsprotokoll, Bilaga',
+    // not bilaga-classified at all
+    'Hyreskontrakt för digital signering',
+    'Nyckelkvittens',
+    // contract word present but not a lease contract
+    'Köpekontrakt, Bilaga A',
+    '',
+  ])('does not treat "%s" as a contract bundle', (title) => {
+    expect(isKontraktBilaga(title)).toBe(false)
+  })
+})
+
+describe('isUppsagningsbekraftelse', () => {
+  it.each([
+    'BOSTAD-03-DIGITAL Bekräftelse på uppsägning av bostad',
+    'BILPLATS-03-DIGITAL Bekräftelse på uppsägning av bilplats',
+    'LOKAL-03-DIGITAL Bekräftelse på uppsägning av förråd',
+    'DÖDSBO-03-DIGITAL Bekräftelse på uppsägning av dödsbo',
+  ])('treats "%s" as a bekräftelse', (title) => {
+    expect(isUppsagningsbekraftelse(title)).toBe(true)
+  })
+
+  it.each([
+    'Uppsägning av bostad',
+    'UPPSÄGNING-02-DIGITAL Ändring av uppsägningstid',
+    'BOSTAD-08-DIGITAL Återtagen uppsägning',
+    'Hyreskontrakt',
+    '',
+  ])('does not treat "%s" as a bekräftelse', (title) => {
+    expect(isUppsagningsbekraftelse(title)).toBe(false)
   })
 })
 

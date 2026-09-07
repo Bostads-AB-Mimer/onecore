@@ -24,11 +24,22 @@ const PageSchema = z.object({
       stage: z.string().nullable().optional(),
       file: FileSchema.optional().nullable(),
       files: z.array(FileSchema).optional().nullable(),
+      // Undocumented but present on every listing record; carries the
+      // termination file set via upload-termination-file (or by Tenfast).
+      cancellation: z
+        .object({ file: FileSchema.optional().nullable() })
+        .optional()
+        .nullable(),
     })
   ),
   next: z.string().nullable().optional(),
   totalCount: z.number().optional(),
 })
+
+export type TenfastRelatedFile = {
+  key: string
+  originalName: string
+}
 
 export type TenfastLeaseSummary = {
   id: string
@@ -36,7 +47,9 @@ export type TenfastLeaseSummary = {
   stage: string
   hasMainFile: boolean
   mainFileName: string
-  relatedNames: string[]
+  relatedFiles: TenfastRelatedFile[]
+  hasTerminationFile: boolean
+  terminationFileName: string
 }
 
 /**
@@ -74,9 +87,16 @@ export const fetchLeases = async (): Promise<TenfastLeaseSummary[]> => {
         stage: record.stage ?? '',
         hasMainFile: Boolean(record.file?.key),
         mainFileName: (record.file?.originalName ?? '').trim(),
-        relatedNames: (record.files ?? [])
-          .map((file) => (file.originalName ?? '').trim())
-          .filter(Boolean),
+        relatedFiles: (record.files ?? [])
+          .map((file) => ({
+            key: (file.key ?? '').trim(),
+            originalName: (file.originalName ?? '').trim(),
+          }))
+          .filter((file) => file.originalName),
+        hasTerminationFile: Boolean(record.cancellation?.file?.key),
+        terminationFileName: (
+          record.cancellation?.file?.originalName ?? ''
+        ).trim(),
       })
     }
 
@@ -269,3 +289,32 @@ export const uploadRelatedDocument = (
     content,
     filename
   )
+
+/** Sets the lease's termination document. */
+export const uploadTerminationFile = (
+  leaseId: string,
+  content: Buffer,
+  filename: string
+): Promise<UploadResult> =>
+  postFile(
+    `${baseUrl()}/${leaseId}/upload-termination-file?${company()}`,
+    content,
+    filename
+  )
+
+/**
+ * Whether the lease already has a termination document. The avtal listing does
+ * not carry it, so the only way to know is whether the signed-url lookup finds
+ * one — 404 with "Uppsägningsdokumentet hittades inte" means it does not.
+ */
+export const hasTerminationFile = async (leaseId: string): Promise<boolean> => {
+  const response = await tenfastApi.request({
+    method: 'get',
+    url: `${baseUrl()}/${leaseId}/termination-file-url?${company()}`,
+  })
+  if (response.status === 200) return true
+  if (response.status === 404) return false
+  throw new Error(
+    `termination-file-url for lease ${leaseId} answered ${response.status}`
+  )
+}

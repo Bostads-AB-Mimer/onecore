@@ -1,11 +1,15 @@
+import * as tenfastApi from '../../services/lease-service/adapters/tenfast/tenfast-api'
 import {
   MAX_UPLOAD_BYTES,
   contentDispositionFor,
+  fetchLeases,
+  hasTerminationFile,
   isRetryableResponse,
   isRetryableStatus,
   isTooLarge,
   relatedDocDeletePath,
   retryDelayMs,
+  uploadTerminationFile,
 } from './tenfast-documents'
 
 describe('contentDispositionFor', () => {
@@ -100,5 +104,109 @@ describe('file size limit', () => {
     )
     expect(isRetryableResponse(429, '')).toBe(true)
     expect(isRetryableResponse(400, '')).toBe(false)
+  })
+})
+
+const mockRequest = (response: { status: number; data?: unknown }) =>
+  jest
+    .spyOn(tenfastApi, 'request')
+    .mockResolvedValue(
+      response as Awaited<ReturnType<typeof tenfastApi.request>>
+    )
+
+describe('fetchLeases', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it('reads the termination file from the listing record', async () => {
+    mockRequest({
+      status: 200,
+      data: {
+        records: [
+          {
+            _id: '6a8db7b89bdba910355c7dda',
+            externalId: '104-012-01-0214/11',
+            stage: 'terminated',
+            file: { key: 'k1', originalName: 'Kontrakt.pdf' },
+            files: [{ key: 'k2', originalName: 'Nyckelkvittens.pdf' }],
+            cancellation: {
+              requested: true,
+              file: {
+                key: '6a8db/6a9e/hashed.pdf',
+                originalName: 'Uppsägning av bostad.pdf',
+              },
+            },
+          },
+          {
+            _id: '6a8db7b89bdba910355c0000',
+            externalId: '104-012-01-0214/12',
+            stage: 'active',
+            cancellation: { requested: false },
+          },
+        ],
+        next: null,
+      },
+    })
+
+    const [withFile, withoutFile] = await fetchLeases()
+
+    expect(withFile.hasTerminationFile).toBe(true)
+    expect(withFile.terminationFileName).toBe('Uppsägning av bostad.pdf')
+    expect(withoutFile.hasTerminationFile).toBe(false)
+    expect(withoutFile.terminationFileName).toBe('')
+  })
+})
+
+describe('hasTerminationFile', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it('is true when Tenfast answers with a signed url', async () => {
+    const spy = mockRequest({ status: 200, data: { url: 'https://signed' } })
+
+    await expect(hasTerminationFile('6a8db7b79bdba910355c6765')).resolves.toBe(
+      true
+    )
+    expect(spy.mock.calls[0][0].url).toContain(
+      '/avtal/6a8db7b79bdba910355c6765/termination-file-url'
+    )
+  })
+
+  it('is false on the 404 Tenfast returns when no file is set', async () => {
+    mockRequest({
+      status: 404,
+      data: { error: 'Uppsägningsdokumentet hittades inte' },
+    })
+
+    await expect(hasTerminationFile('6a8db7b79bdba910355c6765')).resolves.toBe(
+      false
+    )
+  })
+
+  it('throws on any other status rather than guessing', async () => {
+    mockRequest({ status: 500 })
+
+    await expect(hasTerminationFile('6a8db')).rejects.toThrow('500')
+  })
+})
+
+describe('uploadTerminationFile', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it('posts the file to the upload-termination-file endpoint', async () => {
+    const fetchSpy = jest
+      .spyOn(global, 'fetch')
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+
+    const result = await uploadTerminationFile(
+      '6a8db7b79bdba910355c6765',
+      Buffer.from('%PDF-1.4'),
+      'Uppsägning av bostad.pdf'
+    )
+
+    expect(result).toEqual({ ok: true })
+    const url = String(fetchSpy.mock.calls[0][0])
+    expect(url).toContain(
+      '/avtal/6a8db7b79bdba910355c6765/upload-termination-file'
+    )
   })
 })

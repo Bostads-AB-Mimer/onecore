@@ -135,4 +135,22 @@ describe('resume log parsing', () => {
     const row = 'x/01,id,related-docs,_K1,"a""b.pdf",10,uploaded,'
     expect(completedKeyFromRow(row)).toBe('x/01|related-docs|_K1')
   })
+
+  it('reads back an uploaded termination file', () => {
+    const row =
+      '104-071-06-0403/12,6a8db,upload-termination-file,_7J1,Uppsägning.pdf,845692,uploaded,'
+    expect(completedKeyFromRow(row)).toBe(
+      '104-071-06-0403/12|upload-termination-file|_7J1'
+    )
+  })
+
+  it('reads back a completed related-docs deletion', () => {
+    // Deletions are resumed too: a crash between deleting the first and
+    // second copy must not delete-then-404 on the next run.
+    const row =
+      '104-071-06-0403/12,6a8db,delete-related,stored/xaujYd23.pdf,Uppsägning.pdf,0,deleted,'
+    expect(completedKeyFromRow(row)).toBe(
+      '104-071-06-0403/12|delete-related|stored/xaujYd23.pdf'
+    )
+  })
 })

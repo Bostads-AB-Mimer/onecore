@@ -47,6 +47,57 @@ export const classifyDocument = (
   return 'ovrigt'
 }
 
+/**
+ * A bilaga-titled document that is really a contract bundle: Mimer's Scrive
+ * flow signs the contract and its bilaga as one PDF, and xpand titles it after
+ * the bilaga ("Hyreskontrakt för digital signering, Bilaga K"). Page 1 is the
+ * full contract, so when a lease has no contract-titled document the bundle
+ * stands in as the main file.
+ */
+export const isKontraktBilaga = (title: string | null | undefined): boolean => {
+  if (classifyDocument(title) !== 'bilaga') return false
+  const name = (title ?? '').toLowerCase()
+  if (!name.includes('kontrakt') && !name.includes('hyresavtal')) return false
+  return !NOT_A_LEASE_CONTRACT.some(
+    (word) => word !== 'bilaga' && name.includes(word)
+  )
+}
+
+// Uppsägning-classified documents that are about a termination without being
+// the termination itself: Mimer's outgoing confirmation letter, a change of
+// notice period, a withdrawal. They stay related documents — only an actual
+// uppsägning may become the lease's termination file.
+const NOT_THE_TERMINATION = [
+  'bekräftelse',
+  'bekraftelse',
+  'ändring',
+  'andring',
+  'återtagen',
+  'atertagen',
+]
+
+export const isOperativeUppsagning = (
+  title: string | null | undefined
+): boolean =>
+  classifyDocument(title) === 'uppsagning' &&
+  !NOT_THE_TERMINATION.some((word) =>
+    (title ?? '').toLowerCase().includes(word)
+  )
+
+/**
+ * Mimer's "Bekräftelse på uppsägning" — sent through Scrive and signed by the
+ * tenant with BankID. In the digital termination flow it is the only document
+ * produced, so it stands in as the termination file when no actual uppsägning
+ * exists. Ändring/återtagen letters never qualify.
+ */
+export const isUppsagningsbekraftelse = (
+  title: string | null | undefined
+): boolean =>
+  classifyDocument(title) === 'uppsagning' &&
+  ['bekräftelse', 'bekraftelse'].some((word) =>
+    (title ?? '').toLowerCase().includes(word)
+  )
+
 type PdfTraits = {
   signed: boolean
   isScan: boolean

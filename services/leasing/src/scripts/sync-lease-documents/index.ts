@@ -2,14 +2,16 @@ import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '@onecore/utilities'
 
-import { inspectPdf } from './classification'
+import { inspectPdf, isKontraktBilaga } from './classification'
 import { LeasePlan, PdfTraits, planLease, uploadFilename } from './plan'
 import {
   MAX_UPLOAD_BYTES,
+  deleteRelatedDocument,
   fetchLeases,
   isTooLarge,
   uploadMainContract,
   uploadRelatedDocument,
+  uploadTerminationFile,
 } from './tenfast-documents'
 import {
   XpandLeaseDocument,
@@ -37,11 +39,17 @@ type Options = {
 type Action = {
   leaseId: string
   tenfastId: string
-  target: 'upload-file' | 'related-docs'
+  target:
+    | 'upload-file'
+    | 'related-docs'
+    | 'upload-termination-file'
+    | 'delete-related'
+  // For delete-related rows this column carries the stored related-doc key
+  // instead — the unique identity of the entry being removed.
   keydorev: string
   filename: string
   bytes: number
-  status: 'uploaded' | 'failed' | 'no-content' | 'too-large'
+  status: 'uploaded' | 'deleted' | 'failed' | 'no-content' | 'too-large'
   error?: string
 }
 
@@ -158,7 +166,7 @@ const ACTIONS_HEADER =
 export const completedKeyFromRow = (line: string): string | null => {
   if (!line.trim() || line === ACTIONS_HEADER) return null
   const [leaseId, , target, keydorev, , , status] = parseCsvLine(line)
-  if (status !== 'uploaded') return null
+  if (status !== 'uploaded' && status !== 'deleted') return null
   return `${leaseId}|${target}|${keydorev}`
 }
 
@@ -215,13 +223,26 @@ export const syncLeaseDocuments = async (options: Options) => {
   const actionsPath = path.join(options.outDir, 'actions.csv')
   const decisionsPath = path.join(options.outDir, 'contract-decisions.csv')
 
-  // Resume: anything already recorded as uploaded is not sent again.
+  // Resume: anything already recorded as uploaded is not sent again. Leases
+  // whose termination file we set on an earlier run are remembered separately —
+  // their related-docs copy still needs deleting, and the file must not be
+  // mistaken for one Tenfast generated itself.
   const done = new Set<string>()
+  const terminationUploadedLeases = new Set<string>()
+  const mainFileUploadedLeases = new Set<string>()
   try {
     const existing = await fs.readFile(actionsPath, 'utf-8')
     for (const line of existing.split('\n')) {
       const key = completedKeyFromRow(line)
-      if (key) done.add(key)
+      if (!key) continue
+      done.add(key)
+      const [leaseId, target] = key.split('|')
+      if (target === 'upload-termination-file') {
+        terminationUploadedLeases.add(leaseId)
+      }
+      if (target === 'upload-file') {
+        mainFileUploadedLeases.add(leaseId)
+      }
     }
   } catch {
     await fs.writeFile(actionsPath, `${ACTIONS_HEADER}\n`, 'utf-8')
@@ -257,9 +278,28 @@ export const syncLeaseDocuments = async (options: Options) => {
       ? leases.slice(0, options.limitLeases)
       : leases
 
+    // The listing's cancellation.file already says whether a termination file
+    // is set. The resume log tops it up in case a just-finished upload has not
+    // reached the listing yet.
+    for (const lease of selected) {
+      if (terminationUploadedLeases.has(lease.externalId)) {
+        lease.hasTerminationFile = true
+      }
+    }
+
+    const runStateFor = (lease: { externalId: string }) => ({
+      terminationUploadedByUs: terminationUploadedLeases.has(lease.externalId),
+      mainFileUploadedByUs: mainFileUploadedLeases.has(lease.externalId),
+    })
+
     // First pass: plan without touching file contents.
     const plans: LeasePlan[] = selected.map((lease) =>
-      planLease(lease, documentsByLease.get(lease.externalId) ?? [])
+      planLease(
+        lease,
+        documentsByLease.get(lease.externalId) ?? [],
+        undefined,
+        runStateFor(lease)
+      )
     )
 
     // Second pass: only leases with competing contracts need their PDFs read.
@@ -288,7 +328,8 @@ export const syncLeaseDocuments = async (options: Options) => {
         planLease(
           plan.lease,
           documentsByLease.get(plan.lease.externalId) ?? [],
-          traits
+          traits,
+          runStateFor(plan.lease)
         )
       )
     }
@@ -322,6 +363,13 @@ export const syncLeaseDocuments = async (options: Options) => {
     const summary = {
       leases: resolved.length,
       withContract: resolved.filter((plan) => plan.contract).length,
+      contractFromBilagaBundle: resolved.filter(
+        (plan) => plan.contract && isKontraktBilaga(plan.contract.title)
+      ).length,
+      contractCopiesToDelete: resolved.reduce(
+        (total, plan) => total + plan.contractCopiesInRelated.length,
+        0
+      ),
       contested: contested.length,
       noDocuments: resolved.filter(
         (plan) => plan.contractSkippedReason === 'no documents in xpand'
@@ -340,6 +388,16 @@ export const syncLeaseDocuments = async (options: Options) => {
         (total, plan) => total + plan.alreadyAttached.length,
         0
       ),
+      withTermination: resolved.filter((plan) => plan.termination).length,
+      terminationAlreadySet: resolved.filter(
+        (plan) =>
+          plan.terminationSkippedReason ===
+          'lease already has a termination file'
+      ).length,
+      terminationCopiesToDelete: resolved.reduce(
+        (total, plan) => total + plan.terminationCopiesInRelated.length,
+        0
+      ),
     }
     logger.info(summary, 'sync-lease-documents: plan')
 
@@ -354,6 +412,43 @@ export const syncLeaseDocuments = async (options: Options) => {
               plan.filenames.get(plan.contract.keydorev) ??
                 uploadFilename(plan.contract),
               plan.contract.title,
+            ]
+              .map(csvField)
+              .join(',')
+          )
+        }
+        if (plan.termination) {
+          preview.push(
+            [
+              plan.lease.externalId,
+              'upload-termination-file',
+              plan.filenames.get(plan.termination.keydorev) ??
+                uploadFilename(plan.termination),
+              plan.termination.title,
+            ]
+              .map(csvField)
+              .join(',')
+          )
+        }
+        for (const copy of plan.contractCopiesInRelated) {
+          preview.push(
+            [
+              plan.lease.externalId,
+              'delete-related',
+              copy.originalName,
+              'copy of the main file',
+            ]
+              .map(csvField)
+              .join(',')
+          )
+        }
+        for (const copy of plan.terminationCopiesInRelated) {
+          preview.push(
+            [
+              plan.lease.externalId,
+              'delete-related',
+              copy.originalName,
+              'copy of the termination file',
             ]
               .map(csvField)
               .join(',')
@@ -391,6 +486,7 @@ export const syncLeaseDocuments = async (options: Options) => {
 
     // Upload.
     let uploaded = 0
+    let deleted = 0
     let failed = 0
     const oversized: OversizedDocument[] = []
     let actionsChain: Promise<void> = Promise.resolve()
@@ -416,13 +512,15 @@ export const syncLeaseDocuments = async (options: Options) => {
       return actionsChain
     }
 
+    // Returns whether the document is in place — uploaded now, or already
+    // recorded as uploaded by an earlier run.
     const send = async (
       plan: LeasePlan,
       document: XpandLeaseDocument,
-      target: Action['target']
-    ) => {
+      target: 'upload-file' | 'related-docs' | 'upload-termination-file'
+    ): Promise<boolean> => {
       const key = `${plan.lease.externalId}|${target}|${document.keydorev}`
-      if (done.has(key)) return
+      if (done.has(key)) return true
 
       const filename =
         plan.filenames.get(document.keydorev) ?? uploadFilename(document)
@@ -437,7 +535,7 @@ export const syncLeaseDocuments = async (options: Options) => {
           bytes: 0,
           status: 'no-content',
         })
-        return
+        return false
       }
 
       if (isTooLarge(content)) {
@@ -463,13 +561,16 @@ export const syncLeaseDocuments = async (options: Options) => {
           status: 'too-large',
           error: `exceeds Tenfast's ${MAX_UPLOAD_BYTES} byte limit`,
         })
-        return
+        return false
       }
 
-      const result =
+      const upload =
         target === 'upload-file'
-          ? await uploadMainContract(plan.lease.id, content, filename)
-          : await uploadRelatedDocument(plan.lease.id, content, filename)
+          ? uploadMainContract
+          : target === 'upload-termination-file'
+            ? uploadTerminationFile
+            : uploadRelatedDocument
+      const result = await upload(plan.lease.id, content, filename)
 
       if (result.ok) uploaded++
       else failed++
@@ -483,6 +584,33 @@ export const syncLeaseDocuments = async (options: Options) => {
         status: result.ok ? 'uploaded' : 'failed',
         error: result.ok ? undefined : result.error,
       })
+      return result.ok
+    }
+
+    // Removes the related-docs copies an earlier run left of a main or
+    // termination file we have since set. Only called once the upload is
+    // confirmed (this run, or by the resume log).
+    const deleteRelatedCopies = async (
+      plan: LeasePlan,
+      copies: LeasePlan['terminationCopiesInRelated']
+    ) => {
+      for (const copy of copies) {
+        const key = `${plan.lease.externalId}|delete-related|${copy.key}`
+        if (done.has(key)) continue
+        const result = await deleteRelatedDocument(plan.lease.id, copy.key)
+        if (result.ok) deleted++
+        else failed++
+        await record({
+          leaseId: plan.lease.externalId,
+          tenfastId: plan.lease.id,
+          target: 'delete-related',
+          keydorev: copy.key,
+          filename: copy.originalName,
+          bytes: 0,
+          status: result.ok ? 'deleted' : 'failed',
+          error: result.ok ? undefined : result.error,
+        })
+      }
     }
 
     let cursor = 0
@@ -496,7 +624,28 @@ export const syncLeaseDocuments = async (options: Options) => {
           if (index >= resolved.length) return
           const plan = resolved[index]
           try {
-            if (plan.contract) await send(plan, plan.contract, 'upload-file')
+            if (plan.contract) {
+              const inPlace = await send(plan, plan.contract, 'upload-file')
+              if (inPlace) {
+                await deleteRelatedCopies(plan, plan.contractCopiesInRelated)
+              }
+            } else if (plan.contractCopiesInRelated.length) {
+              // Upload done on an earlier run (that is the only way copies are
+              // marked while contract is null); only the cleanup remains.
+              await deleteRelatedCopies(plan, plan.contractCopiesInRelated)
+            }
+            if (plan.termination) {
+              const inPlace = await send(
+                plan,
+                plan.termination,
+                'upload-termination-file'
+              )
+              if (inPlace) {
+                await deleteRelatedCopies(plan, plan.terminationCopiesInRelated)
+              }
+            } else if (plan.terminationCopiesInRelated.length) {
+              await deleteRelatedCopies(plan, plan.terminationCopiesInRelated)
+            }
             for (const document of plan.related) {
               await send(plan, document, 'related-docs')
             }
@@ -559,6 +708,7 @@ export const syncLeaseDocuments = async (options: Options) => {
       options,
       ...summary,
       uploaded,
+      deleted,
       failed,
       tooLarge: oversized.length,
       aborted,
