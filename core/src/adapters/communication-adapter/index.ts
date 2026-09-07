@@ -272,6 +272,7 @@ export const sendWorkOrderSms = async ({
   externalContractorName,
   contactCode,
   triggeredByUser,
+  workOrderCode,
 }: WorkOrderSms): Promise<AdapterResult<any, 'error'>> => {
   try {
     const axiosOptions = {
@@ -291,6 +292,7 @@ export const sendWorkOrderSms = async ({
           externalContractorName,
           contactCode,
           triggeredByUser,
+          workOrderCode,
         },
       }
     )
@@ -312,6 +314,7 @@ export const sendWorkOrderEmail = async ({
   externalContractorName,
   contactCode,
   triggeredByUser,
+  workOrderCode,
 }: WorkOrderEmail): Promise<AdapterResult<any, 'error'>> => {
   try {
     const axiosOptions = {
@@ -332,6 +335,7 @@ export const sendWorkOrderEmail = async ({
           externalContractorName,
           contactCode,
           triggeredByUser,
+          workOrderCode,
         },
       }
     )

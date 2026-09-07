@@ -2971,7 +2971,11 @@ export interface paths {
         query: {
           /** @description The type of the identifier used to fetch work order data. */
           handler:
-            'rentalObjectId' | 'leaseId' | 'pnr' | 'phoneNumber' | 'contactCode'
+            | 'rentalObjectId'
+            | 'leaseId'
+            | 'pnr'
+            | 'phoneNumber'
+            | 'contactCode'
         }
         path: {
           /** @description The identifier value for fetching work order data. */
@@ -3694,6 +3698,8 @@ export interface paths {
             phoneNumber?: string
             /** @description The message to be sent via SMS. */
             text?: string
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
+            workOrderCode?: string
           }
         }
       }
@@ -3743,6 +3749,8 @@ export interface paths {
             subject?: string
             /** @description The message to be sent in the email. */
             text?: string
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
+            workOrderCode?: string
           }
         }
       }
@@ -3773,6 +3781,42 @@ export interface paths {
               text?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/work-orders/log-my-pages-message': {
+    /**
+     * Log a message published to a tenant's Mina sidor
+     * @description Records a work-order message that was published to Mina sidor without an SMS or email notification. Nothing is sent — the message is already visible to the tenant by existing in Odoo; this only writes the communication log entry. Called by Odoo.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description od-<odoo id> of the errand, e.g. od-12345. */
+            workOrderCode: string
+            /** @description The tenant the message was published to. */
+            contactCode: string
+            /** @description The message body. */
+            text: string
+            /** @description The Odoo user who published the message. */
+            triggeredByUser?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Log entry written. */
+        200: {
+          content: never
+        }
+        /** @description Bad request. Missing or invalid parameters. */
+        400: {
+          content: never
+        }
+        /** @description Failed to write the log entry. */
+        500: {
+          content: never
         }
       }
     }
@@ -15447,7 +15491,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'my-pages'
         fromAddress: string
         subject: string | null
         body: string
@@ -15462,6 +15506,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
       }
@@ -15474,7 +15519,12 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -15490,7 +15540,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'my-pages'
         fromAddress: string
         subject: string | null
         body: string
@@ -15505,6 +15555,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
       }
@@ -15517,7 +15568,12 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
