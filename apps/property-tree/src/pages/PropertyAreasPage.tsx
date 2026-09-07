@@ -221,8 +221,7 @@ export function PropertyAreasPage() {
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const data = event.active.data.current as
-        | { type?: string; propertyCode?: string }
-        | undefined
+        { type?: string; propertyCode?: string } | undefined
       if (data?.type !== 'property' || !data.propertyCode) return
 
       // Find the displayed card so the overlay can mirror it 1:1.
@@ -244,11 +243,9 @@ export function PropertyAreasPage() {
       if (!over) return
 
       const activeData = active.data.current as
-        | { type?: string; propertyCode?: string }
-        | undefined
+        { type?: string; propertyCode?: string } | undefined
       const overData = over.data.current as
-        | { type?: string; kvvAreaId?: string }
-        | undefined
+        { type?: string; kvvAreaId?: string } | undefined
 
       if (activeData?.type !== 'property') return
       if (overData?.type !== 'column') return

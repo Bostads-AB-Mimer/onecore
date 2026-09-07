@@ -1034,7 +1034,7 @@ const exportLeasesToExcel = async (
       data: {
         data: response.data,
         contentType:
-          response.headers['content-type'] ||
+          response.headers['content-type']?.toString() ||
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         contentDisposition:
           response.headers['content-disposition'] ||
