@@ -104,10 +104,9 @@ export function ParentHierarchySelector({
   const selectedSubtype = subtypes?.find((s) => s.id === selectedSubtypeId)
   const selectedModel = models?.find((m) => m.id === selectedModelId)
 
-  // Get the direct parent ID based on entity type
-
   // Notify parent component when the direct parent changes
   useEffect(() => {
+    // Get the direct parent ID based on entity type
     const getDirectParentId = (): string | undefined => {
       switch (entityType) {
         case 'type':
