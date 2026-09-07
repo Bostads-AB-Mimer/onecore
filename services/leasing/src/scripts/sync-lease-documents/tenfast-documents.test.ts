@@ -40,6 +40,19 @@ describe('contentDispositionFor', () => {
   it('always names the form field file', () => {
     expect(contentDispositionFor('x.pdf')).toContain('name="file"')
   })
+
+  it('percent-encodes the characters rfc 5987 forbids but encodeURIComponent leaves bare', () => {
+    // Tenfast answers 500 "Ingen fil bifogades." when filename* carries a
+    // bare ( ) ' or * — 82 documents in the full run failed on exactly this.
+    const disposition = contentDispositionFor(
+      "Student hyreskontrakt (220726) 'test' *x.pdf"
+    )
+    const extValue = disposition.split("filename*=UTF-8''")[1]
+    expect(extValue).not.toMatch(/[()'*]/)
+    expect(extValue).toContain('%28220726%29')
+    expect(extValue).toContain('%27test%27')
+    expect(extValue).toContain('%2Ax.pdf')
+  })
 })
 
 describe('relatedDocDeletePath', () => {
@@ -83,8 +96,11 @@ describe('retry policy', () => {
 })
 
 describe('file size limit', () => {
-  it('knows Tenfast rejects anything over 15MB', () => {
-    expect(MAX_UPLOAD_BYTES).toBe(15 * 1024 * 1024)
+  it('knows Tenfast rejects anything over 15 decimal MB', () => {
+    // "Filer får inte överstiga 15MB" means 15,000,000 — the full run had six
+    // documents between 15 MB and 15 MiB rejected by Tenfast after passing a
+    // 15 MiB pre-check.
+    expect(MAX_UPLOAD_BYTES).toBe(15 * 1000 * 1000)
     expect(isTooLarge(Buffer.alloc(0))).toBe(false)
     expect(isTooLarge({ length: MAX_UPLOAD_BYTES } as Buffer)).toBe(false)
     expect(isTooLarge({ length: MAX_UPLOAD_BYTES + 1 } as Buffer)).toBe(true)

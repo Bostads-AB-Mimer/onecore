@@ -141,14 +141,23 @@ export const contentDispositionFor = (filename: string): string => {
     .map((char) => (char.charCodeAt(0) > 126 ? '_' : char))
     .join('')
     .replace(/["\\]/g, '_')
-  return `form-data; name="file"; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`
+  // encodeURIComponent leaves ' ( ) * bare, but they are not RFC 5987
+  // attr-chars — Tenfast's parser rejects the whole file part with
+  // 500 "Ingen fil bifogades." when they appear unencoded.
+  const extValue = encodeURIComponent(filename).replace(
+    /['()*]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+  )
+  return `form-data; name="file"; filename="${fallback}"; filename*=UTF-8''${extValue}`
 }
 
 const BOUNDARY = '----onecoreSyncLeaseDocuments'
 const MAX_ATTEMPTS = 3
 
-/** Tenfast refuses anything larger, with a 500 and a Swedish message. */
-export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+/** Tenfast refuses anything larger, with a 500 and a Swedish message. The
+ * limit is 15 decimal MB, not 15 MiB — documents between the two were accepted
+ * by a MiB pre-check and still rejected by Tenfast. */
+export const MAX_UPLOAD_BYTES = 15 * 1000 * 1000
 
 export const isTooLarge = (content: Buffer): boolean =>
   content.length > MAX_UPLOAD_BYTES
