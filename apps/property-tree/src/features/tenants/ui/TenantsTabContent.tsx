@@ -1,5 +1,5 @@
 import { LeaseInfo } from '@/entities/lease'
-import { TenantLeaseCard, formatTenantName } from '@/entities/tenant'
+import { formatTenantName, TenantLeaseCard } from '@/entities/tenant'
 
 import { Lease } from '@/services/api/core/leaseService'
 import { tenantService } from '@/services/api/core/tenantService'

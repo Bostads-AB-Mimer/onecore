@@ -513,7 +513,8 @@ export const sendEmail = async ({
     }
 
     return { ok: true, data: result.data.content }
-  } catch (e) {
+  } catch (err) {
+    logger.error(err)
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }

@@ -34,7 +34,7 @@ export function useCompanyByPropertyId(propertyId: string | undefined) {
           if (properties?.some((p: any) => p.id === propertyId)) {
             return company
           }
-        } catch (error) {
+        } catch {
           continue
         }
       }

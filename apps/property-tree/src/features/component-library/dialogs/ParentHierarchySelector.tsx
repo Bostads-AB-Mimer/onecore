@@ -104,27 +104,33 @@ export function ParentHierarchySelector({
   const selectedSubtype = subtypes?.find((s) => s.id === selectedSubtypeId)
   const selectedModel = models?.find((m) => m.id === selectedModelId)
 
-  // Get the direct parent ID based on entity type
-  const getDirectParentId = (): string | undefined => {
-    switch (entityType) {
-      case 'type':
-        return selectedCategoryId
-      case 'subtype':
-        return selectedTypeId
-      case 'model':
-        return selectedSubtypeId
-      case 'instance':
-        return selectedModelId
-      default:
-        return undefined
-    }
-  }
-
   // Notify parent component when the direct parent changes
   useEffect(() => {
+    // Get the direct parent ID based on entity type
+    const getDirectParentId = (): string | undefined => {
+      switch (entityType) {
+        case 'type':
+          return selectedCategoryId
+        case 'subtype':
+          return selectedTypeId
+        case 'model':
+          return selectedSubtypeId
+        case 'instance':
+          return selectedModelId
+        default:
+          return undefined
+      }
+    }
     const directParentId = getDirectParentId()
     onParentChange(directParentId)
-  }, [selectedCategoryId, selectedTypeId, selectedSubtypeId, selectedModelId])
+  }, [
+    selectedCategoryId,
+    selectedTypeId,
+    selectedSubtypeId,
+    selectedModelId,
+    onParentChange,
+    entityType,
+  ])
 
   // Handle category change - reset all child selections
   const handleCategoryChange = (categoryId: string) => {
