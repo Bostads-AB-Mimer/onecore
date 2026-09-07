@@ -18,8 +18,22 @@ the script dies with `Failed to connect`.
 
 ## Status, as of 2026-09-07
 
-The script is finished; contract, related **and termination** paths are
-verified against the test environment. **The full run has not been done.**
+**The full run against the test environment is done**: 39,121 documents
+uploaded across 20,411 leases (~5.5 h wall clock at `--concurrency 4`,
+including reruns), 96 stale related-docs copies deleted. End state: 15,442
+leases carry a main file, 1,110 a termination file. What remains:
+
+- **39 oversized documents** (over Tenfast's 15 **decimal** MB cap) in
+  `oversized.csv` — Mimer imports these manually.
+- **2 leases Tenfast refuses to touch** (`211-140-03-0905/02`,
+  `211-724-00-0050/02`): any file upload triggers avtal re-validation, which
+  fails with "Hyresradernas summa får inte vara negativ" — their rent rows in
+  Tenfast need fixing first, then a rerun picks them up.
+- **3 documents with no decodable content** in xpand (`no-content` rows).
+- Tenfast's gateway 502s intermittently under sustained load (~1–2/min at
+  4-way concurrency). Retries absorb most; run with `--max-failures 500`, and
+  know that a 502 sometimes arrives **after** the file was stored — the next
+  rerun sees it attached and skips it.
 
 - **Termination documents upload and are verified.** Tenfast added
   `POST /avtal/{id}/upload-termination-file`, and the script sends the
