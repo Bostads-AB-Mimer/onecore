@@ -28,6 +28,7 @@ import {
   createWorkOrder,
   getMaintenanceTeams,
   getWorkOrderById,
+  getWorkOrdersByContactCode,
 } from '../../../adapters/odoo-adapter'
 
 describe('odoo-adapter createWorkOrder', () => {
@@ -403,5 +404,34 @@ describe('odoo-adapter createInspectionWorkOrders', () => {
 
     expect(result.ok).toBe(false)
     expect(odooMock.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('odoo-adapter message domain', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    odooMock.connect.mockResolvedValue(undefined)
+  })
+
+  // The Mina sidor feed only returns message types named in MESSAGE_DOMAIN, so a
+  // missing type is invisible to the tenant even though the message exists in
+  // Odoo. tenant_my_pages is the MIM-1957 "publish without SMS/e-post" type.
+  it('includes tenant_my_pages so Mina sidor-only messages reach the tenant', async () => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByContactCode('P123456')
+
+    const messageCall = odooMock.searchRead.mock.calls.find(
+      (call: unknown[]) => call[0] === 'mail.message'
+    )
+    expect(messageCall).toBeDefined()
+    const domain = messageCall![1] as unknown[][]
+    const messageTypeClause = domain.find(
+      (clause) => clause[0] === 'message_type'
+    )
+    expect(messageTypeClause).toBeDefined()
+    expect(messageTypeClause![2] as string[]).toContain('tenant_my_pages')
   })
 })

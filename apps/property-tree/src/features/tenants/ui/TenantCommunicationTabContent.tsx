@@ -3,7 +3,9 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  ExternalLink,
   Filter,
+  Home,
   Inbox,
   Mail,
   MessageSquare,
@@ -14,6 +16,7 @@ import { useTenantCommunication } from '@/entities/tenant'
 
 import type { CustomerMessage } from '@/services/api/core/communicationService'
 
+import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
@@ -46,26 +49,36 @@ const formatTimestamp = (iso: string): string =>
     minute: '2-digit',
   })
 
-const channelLabel = (channel: Channel) =>
-  channel === 'sms' ? 'SMS' : 'E-post'
+const CHANNEL_META: Record<
+  Channel,
+  { label: string; icon: typeof MessageSquare; className: string }
+> = {
+  sms: {
+    label: 'SMS',
+    icon: MessageSquare,
+    className: 'bg-blue-50 text-blue-700 border-blue-200',
+  },
+  email: {
+    label: 'E-post',
+    icon: Mail,
+    className: 'bg-purple-50 text-purple-700 border-purple-200',
+  },
+  // Published to Mina sidor with no SMS/e-post notification (MIM-1957).
+  'my-pages': {
+    label: 'Mina sidor',
+    icon: Home,
+    className: 'bg-teal-50 text-teal-700 border-teal-200',
+  },
+}
+
+const channelLabel = (channel: Channel) => CHANNEL_META[channel].label
 
 function ChannelBadge({ channel }: { channel: Channel }) {
-  const isSms = channel === 'sms'
+  const { label, icon: Icon, className } = CHANNEL_META[channel]
   return (
-    <Badge
-      variant="outline"
-      className={`gap-1 px-2 py-0.5 ${
-        isSms
-          ? 'bg-blue-50 text-blue-700 border-blue-200'
-          : 'bg-purple-50 text-purple-700 border-purple-200'
-      }`}
-    >
-      {isSms ? (
-        <MessageSquare className="h-3 w-3" />
-      ) : (
-        <Mail className="h-3 w-3" />
-      )}
-      {channelLabel(channel)}
+    <Badge variant="outline" className={`gap-1 px-2 py-0.5 ${className}`}>
+      <Icon className="h-3 w-3" />
+      {label}
     </Badge>
   )
 }
@@ -118,7 +131,14 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function MessageRow({ message }: { message: CustomerMessage }) {
   const [isOpen, setIsOpen] = useState(false)
   const { dispatch, recipient } = message
-  const title = dispatch.subject ?? channelLabel(dispatch.channel)
+  const workOrderCode = dispatch.workOrderCode
+  // Mina sidor rows carry no subject; the ticket asks them to read
+  // "meddelande Mina sidor" with the errand beside it (MIM-1957).
+  const title =
+    dispatch.subject ??
+    (dispatch.channel === 'my-pages'
+      ? 'Meddelande Mina sidor'
+      : channelLabel(dispatch.channel))
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -131,6 +151,24 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                   <ChannelBadge channel={dispatch.channel} />
                   <h3 className="font-medium text-foreground">{title}</h3>
                   <StatusBadge status={recipient.status} />
+                  {workOrderCode && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 gap-1 text-sm"
+                      onClick={(e) => {
+                        // The whole card is a CollapsibleTrigger; without this
+                        // the click would also toggle the row open.
+                        e.stopPropagation()
+                        linkToWorkOrderInOdoo({
+                          code: workOrderCode,
+                        })
+                      }}
+                    >
+                      ärende {workOrderCode}
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground break-words line-clamp-2">
                   till {recipient.toAddress} — {dispatch.body}
@@ -253,6 +291,7 @@ export function TenantCommunicationTabContent({
                 <SelectItem value="all">Alla kanaler</SelectItem>
                 <SelectItem value="sms">SMS</SelectItem>
                 <SelectItem value="email">E-post</SelectItem>
+                <SelectItem value="my-pages">Mina sidor</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -30,6 +30,7 @@ const logWorkOrderTenantSms = async (params: {
   contactCode: string
   body: string
   triggeredByUser?: string
+  workOrderCode?: string
   sendResult: { messages?: Array<{ messageId: string }> }
 }): Promise<string[]> => {
   try {
@@ -40,6 +41,7 @@ const logWorkOrderTenantSms = async (params: {
       messageType: 'work_order_tenant_sms',
       provider: SMS_PROVIDER,
       triggeredByUser: params.triggeredByUser,
+      workOrderCode: params.workOrderCode,
       recipients: [
         {
           contactCode: params.contactCode,
@@ -149,6 +151,7 @@ export const routes = (router: KoaRouter) => {
             contactCode: sms.contactCode,
             body: sms.text,
             triggeredByUser: sms.triggeredByUser,
+            workOrderCode: sms.workOrderCode,
             sendResult: result,
           })
         : []
