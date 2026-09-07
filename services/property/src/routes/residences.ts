@@ -1154,6 +1154,8 @@ export const routes = (router: KoaRouter) => {
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/GetRentalIdsWithBlockResponse'
+   *       400:
+   *         description: Invalid query parameters.
    *       500:
    *         description: Internal server error
    */

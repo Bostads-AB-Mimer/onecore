@@ -1618,7 +1618,7 @@ export const searchRentalBlocks = async (
 }
 
 export type RentalIdsWithBlockOptions = Pick<
-  SearchRentalBlocksOptions,
+  RentalBlockFilterOptions,
   'blockReason' | 'active'
 >
 

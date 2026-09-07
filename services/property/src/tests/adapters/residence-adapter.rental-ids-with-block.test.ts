@@ -4,6 +4,8 @@ jest.mock('../../adapters/db', () => ({
   },
 }))
 
+import { Prisma } from '@prisma/client'
+
 import { prisma } from '../../adapters/db'
 import { getRentalIdsWithBlock } from '../../adapters/residence-adapter'
 
@@ -20,7 +22,7 @@ const row = (rentalId: string | null) => ({
 // condition when there is only one and an AND list otherwise. Normalise to a
 // list so assertions don't depend on how many filters were passed.
 const whereArg = () => mockPrisma.rentalBlock.findMany.mock.calls[0][0].where
-const andConditions = (): Record<string, any>[] => {
+const andConditions = (): Prisma.RentalBlockWhereInput[] => {
   const where = whereArg()
   return where.AND ?? [where]
 }

@@ -1396,6 +1396,10 @@ export interface paths {
             'application/json': components['schemas']['GetRentalIdsWithBlockResponse']
           }
         }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
         /** @description Internal server error */
         500: {
           content: never
