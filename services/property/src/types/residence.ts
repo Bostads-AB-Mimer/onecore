@@ -282,6 +282,18 @@ export type SearchRentalBlocksQueryParams = z.infer<
   typeof searchRentalBlocksQueryParamsSchema
 >
 
+// Derived from the shared filter schema so the two filters the lean endpoint
+// exposes keep identical semantics to /rental-blocks/search
+export const rentalIdsWithBlockQueryParamsSchema =
+  rentalBlocksFilterSchema.pick({
+    blockReason: true,
+    active: true,
+  })
+
+export type RentalIdsWithBlockQueryParams = z.infer<
+  typeof rentalIdsWithBlockQueryParamsSchema
+>
+
 // Export uses base filters only (no pagination)
 export const exportRentalBlocksQueryParamsSchema = rentalBlocksFilterSchema
 
@@ -291,6 +303,10 @@ export type ExportRentalBlocksQueryParams = z.infer<
 
 export const GetRentalBlocksByRentalIdResponseSchema =
   createGenericResponseSchema(z.array(RentalBlockSchema))
+
+export const GetRentalIdsWithBlockResponseSchema = createGenericResponseSchema(
+  z.array(z.string())
+)
 
 export type ExternalResidence = z.infer<typeof ResidenceSchema>
 export type Residence = ExternalResidence
@@ -306,4 +322,7 @@ export type RentalBlockWithRentalObject = z.infer<
 export type BlockReason = z.infer<typeof BlockReasonSchema>
 export type GetRentalBlocksByRentalIdResponse = z.infer<
   typeof GetRentalBlocksByRentalIdResponseSchema
+>
+export type GetRentalIdsWithBlockResponse = z.infer<
+  typeof GetRentalIdsWithBlockResponseSchema
 >

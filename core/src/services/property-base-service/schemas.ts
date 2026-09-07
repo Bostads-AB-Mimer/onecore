@@ -587,6 +587,21 @@ export const GetAllRentalBlocksQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
+// Koa parses a single repeated query param as a string, an array only from the
+// second occurrence onwards
+const arrayQueryParam = z
+  .preprocess((v) => (typeof v === 'string' ? [v] : v), z.array(z.string()))
+  .optional()
+
+export const GetRentalIdsWithBlockQueryParamsSchema = z.object({
+  blockReason: arrayQueryParam,
+  active: booleanStringSchema.optional(),
+})
+
+export const RentalIdsWithBlockResponseSchema = z.object({
+  content: z.array(z.string()),
+})
+
 export type Building = z.infer<typeof BuildingSchema>
 export type Company = z.infer<typeof CompanySchema>
 export type Property = z.infer<typeof PropertySchema>
