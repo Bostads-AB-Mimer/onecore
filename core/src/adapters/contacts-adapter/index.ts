@@ -20,9 +20,7 @@ import config from '../../common/config'
  * catch-all for a response we do not recognise at all.
  */
 export type CreateContactError =
-  | CreateContactErrorCode
-  | 'invalid-request'
-  | 'contacts-service-error'
+  CreateContactErrorCode | 'invalid-request' | 'contacts-service-error'
 
 /**
  * Derived from the schema rather than listed here: a code added by the service
