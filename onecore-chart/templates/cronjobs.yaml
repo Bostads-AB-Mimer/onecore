@@ -1,0 +1,57 @@
+{{/*
+Copyright Bostads AB Mimer.
+SPDX-License-Identifier: AGPL-3.0-only
+*/}}
+
+# CronJobs definierade per komponent
+{{- range $name, $config := $.Values.components }}
+{{- if kindIs "map" $config }}
+{{- if $config.enabled }}
+{{- if $config.cronJobs }}
+{{- range $cronName, $cronConfig := $config.cronJobs }}
+{{- if $cronConfig.enabled }}
+{{- $jobName := printf "%s-%s" $name $cronName }}
+{{- $image := $cronConfig.image | default $config.image }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "onecore.componentName" (dict "root" $ "name" $jobName) }}
+  namespace: {{ $.Values.global.namespace | default $.Release.Namespace }}
+  labels:
+{{ include "onecore.labels" (dict "root" $ "name" $jobName) | indent 4 }}
+spec:
+  schedule: {{ $cronConfig.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+{{ include "onecore.selectorLabels" (dict "root" $ "name" $jobName) | indent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          {{- if $.Values.global.imagePullSecret }}
+          imagePullSecrets:
+            - name: {{ $.Values.global.imagePullSecret }}
+          {{- end }}
+          containers:
+            - name: job
+              image: {{ $image }}
+              {{- if $cronConfig.command }}
+              command:
+{{- toYaml $cronConfig.command | nindent 16 }}
+              {{- end }}
+              {{- if $cronConfig.env }}
+              env:
+{{- range $key, $value := $cronConfig.env }}
+                - name: {{ $key }}
+                  value: {{ $value | quote }}
+{{- end }}
+              {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
