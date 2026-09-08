@@ -26,9 +26,8 @@ import {
   relatedContactsForMany,
   otherInvoiceRecipientRelations,
   otherInvoiceRecipientForRelations,
-  ADMINISTRATOR_FORVTYP,
-  TRUSTEE_FORVTYP,
 } from './related-contacts-query'
+import { ADMINISTRATOR_FORVTYP, TRUSTEE_FORVTYP } from './relation-sql'
 
 /**
  * Populates `relatedContacts` on a batch of contacts using a single grouped
