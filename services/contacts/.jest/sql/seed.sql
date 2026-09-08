@@ -392,3 +392,25 @@ INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKTEN0006    ', '_OBJ000006     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900005';
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKFM00008    ', '_OBJ000006     ', keycmctc, 'ANNANFM', NULL, NULL FROM cmctc WHERE cmctckod = 'P900013';
+
+-- Conflict fixture for the relation import: P900006 holds two active leases
+-- (OBJ7, OBJ8) with two *different* ANNANFM recipients (P900014, P900015).
+-- Cannot be collapsed to contact level → must be reported, not imported.
+-- Kept out of FULL_TEST_DATA_SET like the other P9000xx contacts.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900006    ', '_OIRO900006    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900006', 'Holder Conflict', 1053, 'OIR9000006'),
+  ('_OIRC900014    ', '_OIRO900014    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900014', 'Recipient ConflictA', 1053, 'OIR9000014'),
+  ('_OIRC900015    ', '_OIRO900015    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900015', 'Recipient ConflictB', 1053, 'OIR9000015');
+
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000007     ', '100-001-01-0007/01', NULL),
+  ('_OBJ000008     ', '100-001-01-0008/01', NULL);
+
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0007    ', '_OBJ000007     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900006';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0008    ', '_OBJ000008     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900006';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00009    ', '_OBJ000007     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900014';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00010    ', '_OBJ000008     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900015';
