@@ -30,6 +30,8 @@ const KeyTypeLabels: Record<string, string> = {
   HL: 'Hänglås',
   FÖR: 'Förrådsnyckel',
   SOP: 'Sopsug',
+  MB: 'Miljöbod',
+  TV: 'Tvättstuga',
   ÖVR: 'Övrigt',
 }
 

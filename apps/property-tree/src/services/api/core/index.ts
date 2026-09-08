@@ -1,5 +1,4 @@
 export * from './apartmentTemperatureService'
-export * from './apartmentTemperatureService'
 export * from './authService'
 export * from './buildingService'
 export * from './commentService'

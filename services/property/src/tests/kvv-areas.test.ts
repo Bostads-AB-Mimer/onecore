@@ -7,34 +7,54 @@ afterEach(() => {
   jest.restoreAllMocks()
 })
 
+const kvvAreaListItem = (code: string, responsible: string | null) => ({
+  id: '11111111-1111-1111-1111-111111111111',
+  code,
+  name: null,
+  costCenter: {
+    id: '33333333-3333-3333-3333-333333333333',
+    code: '61140',
+    name: 'Distrikt Väst',
+  },
+  responsibleKeycloakUserId: responsible,
+})
+
 describe('GET /kvv-areas', () => {
-  it('returns codes for matching responsible user ids', async () => {
+  it('returns the matching kvv-areas (with cost center) for responsible user ids', async () => {
     const spy = jest
-      .spyOn(kvvAreaAdapter, 'findKvvAreaCodesByResponsibles')
-      .mockResolvedValue(['A1', 'A2'])
+      .spyOn(kvvAreaAdapter, 'listKvvAreas')
+      .mockResolvedValue([
+        kvvAreaListItem('A1', 'u1'),
+        kvvAreaListItem('A2', 'u2'),
+      ])
 
     const res = await request(app.callback()).get(
       '/kvv-areas?responsibleUserId=u1&responsibleUserId=u2'
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content).toEqual([{ code: 'A1' }, { code: 'A2' }])
-    expect(spy).toHaveBeenCalledWith(['u1', 'u2'])
+    expect(res.body.content).toEqual([
+      kvvAreaListItem('A1', 'u1'),
+      kvvAreaListItem('A2', 'u2'),
+    ])
+    expect(spy).toHaveBeenCalledWith({ responsibleUserIds: ['u1', 'u2'] })
   })
 
-  it('returns 200 with empty content when no responsibleUserId param', async () => {
-    jest
-      .spyOn(kvvAreaAdapter, 'findKvvAreaCodesByResponsibles')
-      .mockResolvedValue([])
+  it('returns every kvv-area when no responsibleUserId param is given', async () => {
+    const spy = jest
+      .spyOn(kvvAreaAdapter, 'listKvvAreas')
+      .mockResolvedValue([kvvAreaListItem('A1', null)])
 
     const res = await request(app.callback()).get('/kvv-areas')
+
     expect(res.status).toBe(200)
-    expect(res.body.content).toEqual([])
+    expect(res.body.content).toEqual([kvvAreaListItem('A1', null)])
+    expect(spy).toHaveBeenCalledWith({ responsibleUserIds: undefined })
   })
 
   it('returns 500 when the adapter throws', async () => {
     jest
-      .spyOn(kvvAreaAdapter, 'findKvvAreaCodesByResponsibles')
+      .spyOn(kvvAreaAdapter, 'listKvvAreas')
       .mockRejectedValue(new Error('boom'))
 
     const res = await request(app.callback()).get(

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-09-03-v370-1",
+    "date": "2026-09-03",
+    "title": "Sök hyresobjekt via fastighetsträdet",
+    "description": "Fastigheter-sidan har en ny flik: Hyresobjekt. Kryssa i distrikt, kvartersvärdsområden, fastigheter, byggnader, trapphus eller parkeringsområden i ett träd, så listas alla hyresobjekt i urvalet direkt. Listan kan filtreras på objekttyp (bostad, bilplats, lokal, övrigt) och undertyp, till exempel lägenhetstyp, och det går att lägga till kolumner som grundhyra, BRA och anläggnings-ID. Varje objekt länkar till sin sida.",
+    "category": "feature"
+  }
+]

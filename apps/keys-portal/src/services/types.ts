@@ -50,6 +50,8 @@ export type CreateKeySystemRequest =
   components['schemas']['CreateKeySystemRequest']
 export type UpdateKeySystemRequest =
   components['schemas']['UpdateKeySystemRequest']
+export type DeactivateKeySystemResponse =
+  components['schemas']['DeactivateKeySystemResponse']
 export type CreateKeyBundleRequest =
   components['schemas']['CreateKeyBundleRequest']
 export type UpdateKeyBundleRequest =
@@ -107,6 +109,8 @@ export const KeyTypeLabels = {
   HL: 'Hänglås',
   FÖR: 'Förrådsnyckel',
   SOP: 'Sopsug',
+  MB: 'Miljöbod',
+  TV: 'Tvättstuga',
   ÖVR: 'Övrigt',
 } as const
 

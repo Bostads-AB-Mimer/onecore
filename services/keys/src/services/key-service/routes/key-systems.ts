@@ -12,6 +12,7 @@ const {
   KeySystemSchema,
   CreateKeySystemRequestSchema,
   UpdateKeySystemRequestSchema,
+  DeactivateKeySystemResponseSchema,
   PaginationMetaSchema,
   PaginationLinksSchema,
   PaginatedResponseSchema,
@@ -30,6 +31,10 @@ export const routes = (router: KoaRouter) => {
   // Register schemas from @onecore/types
   registerSchema('CreateKeySystemRequest', CreateKeySystemRequestSchema)
   registerSchema('UpdateKeySystemRequest', UpdateKeySystemRequestSchema)
+  registerSchema(
+    'DeactivateKeySystemResponse',
+    DeactivateKeySystemResponseSchema
+  )
   registerSchema('KeySystem', KeySystemSchema)
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
@@ -436,6 +441,61 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /key-systems/{id}/deactivate:
+   *   post:
+   *     summary: Deactivate a key system and dispose all its keys
+   *     description: Sets isActive=false and marks every non-disposed key in the system as disposed, in one transaction. Returns the disposed keys.
+   *     tags: [Key Systems]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the key system to deactivate
+   *     responses:
+   *       200:
+   *         description: Key system deactivated and keys disposed
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/DeactivateKeySystemResponse'
+   *       404:
+   *         description: Key system not found
+   *       500:
+   *         description: Internal server error
+   */
+  router.post('/key-systems/:id/deactivate', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    try {
+      const result = await keySystemsAdapter.deactivateKeySystemAndDisposeKeys(
+        ctx.params.id,
+        db
+      )
+
+      if (!result) {
+        ctx.status = 404
+        ctx.body = { reason: 'Key system not found', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result satisfies keys.DeactivateKeySystemResponse,
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error(err, 'Error deactivating key system')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
 
   /**
    * @swagger

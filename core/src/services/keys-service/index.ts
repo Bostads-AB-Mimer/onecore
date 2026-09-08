@@ -40,6 +40,7 @@ const {
   UpdateKeyLoanRequestSchema,
   CreateKeySystemRequestSchema,
   UpdateKeySystemRequestSchema,
+  DeactivateKeySystemResponseSchema,
   CreateLogRequestSchema,
   CreateKeyNoteRequestSchema,
   UpdateKeyNoteRequestSchema,
@@ -115,6 +116,11 @@ export const routes = (router: KoaRouter) => {
   registerSchema('UpdateKeyLoanRequest', UpdateKeyLoanRequestSchema)
   registerSchema('CreateKeySystemRequest', CreateKeySystemRequestSchema)
   registerSchema('UpdateKeySystemRequest', UpdateKeySystemRequestSchema)
+  registerSchema(
+    'DeactivateKeySystemResponse',
+    DeactivateKeySystemResponseSchema,
+    { KeySystem: KeySystemSchema, Key: KeySchema }
+  )
   registerSchema('CreateLogRequest', CreateLogRequestSchema)
   registerSchema('CreateKeyNoteRequest', CreateKeyNoteRequestSchema)
   registerSchema('UpdateKeyNoteRequest', UpdateKeyNoteRequestSchema)

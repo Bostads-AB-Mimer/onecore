@@ -454,8 +454,14 @@ describe('leases routes', () => {
   describe('GET /leases/search', () => {
     it('resolves buildingManager to kvvAreaCodes before calling leasing', async () => {
       const lookupSpy = jest
-        .spyOn(propertyBaseAdapter, 'findKvvAreaCodesByResponsibles')
-        .mockResolvedValue({ ok: true, data: ['KVV21', 'KVV22'] })
+        .spyOn(propertyBaseAdapter, 'listKvvAreas')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            factory.kvvAreaWithCostCenter.build({ code: 'KVV21' }),
+            factory.kvvAreaWithCostCenter.build({ code: 'KVV22' }),
+          ],
+        })
       const searchSpy = jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([]))
@@ -465,7 +471,7 @@ describe('leases routes', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(lookupSpy).toHaveBeenCalledWith(['user-1'])
+      expect(lookupSpy).toHaveBeenCalledWith({ responsibleUserIds: ['user-1'] })
       expect(searchSpy).toHaveBeenCalledWith(
         expect.objectContaining({ kvvAreaCodes: ['KVV21', 'KVV22'] })
       )
@@ -476,7 +482,7 @@ describe('leases routes', () => {
 
     it('forwards sentinel kvvAreaCodes when buildingManager matches no areas', async () => {
       jest
-        .spyOn(propertyBaseAdapter, 'findKvvAreaCodesByResponsibles')
+        .spyOn(propertyBaseAdapter, 'listKvvAreas')
         .mockResolvedValue({ ok: true, data: [] })
       const searchSpy = jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
@@ -495,7 +501,7 @@ describe('leases routes', () => {
 
     it('returns 500 when building manager resolution fails', async () => {
       jest
-        .spyOn(propertyBaseAdapter, 'findKvvAreaCodesByResponsibles')
+        .spyOn(propertyBaseAdapter, 'listKvvAreas')
         .mockResolvedValue({ ok: false, err: 'unknown' })
       const searchSpy = jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
@@ -513,8 +519,11 @@ describe('leases routes', () => {
   describe('GET /leases/export', () => {
     it('resolves buildingManager to kvvAreaCodes before calling leasing', async () => {
       const lookupSpy = jest
-        .spyOn(propertyBaseAdapter, 'findKvvAreaCodesByResponsibles')
-        .mockResolvedValue({ ok: true, data: ['KVV21'] })
+        .spyOn(propertyBaseAdapter, 'listKvvAreas')
+        .mockResolvedValue({
+          ok: true,
+          data: [factory.kvvAreaWithCostCenter.build({ code: 'KVV21' })],
+        })
       const exportSpy = jest
         .spyOn(tenantLeaseAdapter, 'exportLeasesToExcel')
         .mockResolvedValue({
@@ -531,7 +540,7 @@ describe('leases routes', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(lookupSpy).toHaveBeenCalledWith(['user-1'])
+      expect(lookupSpy).toHaveBeenCalledWith({ responsibleUserIds: ['user-1'] })
       expect(exportSpy).toHaveBeenCalledWith(
         expect.objectContaining({ kvvAreaCodes: ['KVV21'] })
       )

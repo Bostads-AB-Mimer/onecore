@@ -12,7 +12,10 @@ import { calculateResidenceStatus } from './calculate-residence-status'
 import { routes as componentRoutes } from './components'
 import { routes as costCenterRoutes } from './cost-centers'
 import { routes as kvvAreaRoutes } from './kvv-areas'
+import { routes as marketAreaRoutes } from './market-areas'
 import { routes as propertyKvvAreaRoutes } from './property-kvv-area'
+import { routes as propertyTreeRoutes } from './property-tree'
+import { routes as rentalObjectRoutes } from './rental-objects'
 
 /**
  * @swagger
@@ -135,7 +138,15 @@ export const routes = (router: KoaRouter) => {
   )
 
   registerSchema('KeycloakUserSummary', schemas.KeycloakUserSummarySchema)
-  registerSchema('CostCenterTreeAddress', schemas.CostCenterTreeAddressSchema)
+  registerSchema(
+    'CostCenterTreeStaircase',
+    schemas.CostCenterTreeStaircaseSchema
+  )
+  registerSchema('CostCenterTreeBuilding', schemas.CostCenterTreeBuildingSchema)
+  registerSchema(
+    'CostCenterTreeParkingArea',
+    schemas.CostCenterTreeParkingAreaSchema
+  )
   registerSchema(
     'CostCenterTreeAggregates',
     schemas.CostCenterTreeAggregatesSchema
@@ -144,16 +155,26 @@ export const routes = (router: KoaRouter) => {
   registerSchema('CostCenterTreeKvvArea', schemas.CostCenterTreeKvvAreaSchema)
   registerSchema('CostCenterTree', schemas.CostCenterTreeSchema)
   registerSchema('CostCenterSummary', schemas.CostCenterSummarySchema)
-  registerSchema('KvvAreaSummary', schemas.KvvAreaSummarySchema)
+  registerSchema('KvvAreaWithResponsible', schemas.KvvAreaWithResponsibleSchema)
+  registerSchema('MarketArea', property.MarketAreaSchema)
+  registerSchema('PropertyKvvAreaLookup', schemas.PropertyKvvAreaLookupSchema)
   registerSchema('PutPropertyKvvAreaBody', schemas.PutPropertyKvvAreaBodySchema)
   registerSchema('PropertyKvvAreaLink', schemas.PropertyKvvAreaLinkSchema)
   registerSchema('PatchedKvvArea', schemas.PatchedKvvAreaSchema)
+  registerSchema('RentalObjectSummary', schemas.RentalObjectSummarySchema)
+  registerSchema('RentalObjectDetails', schemas.RentalObjectDetailsSchema)
+  registerSchema('RentalObjectSubtype', schemas.RentalObjectSubtypeSchema)
+  registerSchema('PropertyTreeGroup', schemas.PropertyTreeGroupSchema)
+  registerSchema('PropertyTree', schemas.PropertyTreeSchema)
 
   // Component routes (categories, types, subtypes, models, components, installations, uploads)
   componentRoutes(router)
   costCenterRoutes(router)
   kvvAreaRoutes(router)
+  marketAreaRoutes(router)
   propertyKvvAreaRoutes(router)
+  rentalObjectRoutes(router)
+  propertyTreeRoutes(router)
 
   /**
    * @swagger

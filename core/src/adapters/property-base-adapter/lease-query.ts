@@ -1,4 +1,4 @@
-import { findKvvAreaCodesByResponsibles } from './index'
+import { listKvvAreas } from './index'
 
 export type LeaseQuery = Record<string, string | string[] | undefined>
 
@@ -29,7 +29,7 @@ export async function resolveBuildingManagerToKvvAreaCodes(
     return { ok: true, query: rest, emptyResult: false }
   }
 
-  const lookup = await findKvvAreaCodesByResponsibles(userIds)
+  const lookup = await listKvvAreas({ responsibleUserIds: userIds })
   if (!lookup.ok) {
     return { ok: false, reason: 'Failed to resolve building managers' }
   }
@@ -43,7 +43,7 @@ export async function resolveBuildingManagerToKvvAreaCodes(
 
   return {
     ok: true,
-    query: { ...rest, kvvAreaCodes: lookup.data },
+    query: { ...rest, kvvAreaCodes: lookup.data.map(a => a.code) },
     emptyResult: false,
   }
 }

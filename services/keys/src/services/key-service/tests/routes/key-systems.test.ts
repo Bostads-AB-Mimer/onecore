@@ -138,6 +138,44 @@ describe('PUT /key-systems/:id', () => {
   })
 })
 
+describe('POST /key-systems/:id/deactivate', () => {
+  it('deactivates system, disposes keys and returns 200 with both', async () => {
+    const keySystem = factory.keySystem.build({
+      id: 'system-123',
+      isActive: false,
+    })
+    const disposedKeys = factory.key.buildList(2, {
+      keySystemId: 'system-123',
+      disposed: true,
+    })
+
+    const deactivateSpy = jest
+      .spyOn(keySystemsAdapter, 'deactivateKeySystemAndDisposeKeys')
+      .mockResolvedValueOnce({ keySystem, disposedKeys })
+
+    const res = await request(app.callback()).post(
+      '/key-systems/system-123/deactivate'
+    )
+
+    expect(deactivateSpy).toHaveBeenCalledWith('system-123', expect.anything())
+    expect(res.status).toBe(200)
+    expect(res.body.content.keySystem.isActive).toBe(false)
+    expect(res.body.content.disposedKeys).toHaveLength(2)
+  })
+
+  it('returns 404 when key system does not exist', async () => {
+    jest
+      .spyOn(keySystemsAdapter, 'deactivateKeySystemAndDisposeKeys')
+      .mockResolvedValueOnce(undefined)
+
+    const res = await request(app.callback()).post(
+      '/key-systems/missing/deactivate'
+    )
+
+    expect(res.status).toBe(404)
+  })
+})
+
 describe('DELETE /key-systems/:id', () => {
   it('deletes key system successfully and returns 200', async () => {
     jest

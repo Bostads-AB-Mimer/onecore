@@ -4,6 +4,7 @@ import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
+import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
 
 export type BuildingWithRelations = Prisma.BuildingGetPayload<{
@@ -24,6 +25,46 @@ export type BuildingWithRelations = Prisma.BuildingGetPayload<{
     }
   }
 }>
+
+export type BuildingProperty = {
+  id?: string
+  code: string
+  name: string | null
+}
+
+export type BuildingWithProperty = BuildingWithRelations & {
+  property: BuildingProperty | null
+}
+
+// A building's property is not a relation in Xpand, but the property-structure
+// row (babuf) carries fstcode/fstcaption inline, so one lookup is enough —
+// no second hop to bafst. `propertyObjectId` is unique on babuf.
+// The bafst `id` (uuid) is deliberately not resolved here: no consumer reads it
+// (Odoo stamps errands with the property *code*), and fetching it would double
+// the queries on a latency-sensitive path — Odoo calls this on every form open
+// for building-level errands.
+const resolveBuildingProperty = async (
+  buildingObjectId: string
+): Promise<BuildingProperty | null> => {
+  const structure = await prisma.propertyStructure
+    .findUnique({
+      where: { propertyObjectId: buildingObjectId, deleteMark: 0 },
+      select: { propertyCode: true, propertyName: true },
+    })
+    .then(trimStrings)
+
+  if (!structure?.propertyCode) return null
+
+  return { code: structure.propertyCode, name: structure.propertyName ?? null }
+}
+
+const withProperty = async (
+  building: BuildingWithRelations | null
+): Promise<BuildingWithProperty | null> => {
+  if (!building) return null
+  const property = await resolveBuildingProperty(building.propertyObjectId)
+  return { ...building, property }
+}
 
 const getBuildings = async (
   propertyCode: string
@@ -74,7 +115,7 @@ const getBuildings = async (
 
 const getBuildingById = async (
   id: string
-): Promise<BuildingWithRelations | null> => {
+): Promise<BuildingWithProperty | null> => {
   try {
     return prisma.building
       .findFirst({
@@ -99,6 +140,7 @@ const getBuildingById = async (
         },
       })
       .then(trimStrings)
+      .then(withProperty)
   } catch (err) {
     logger.error({ err, id }, 'building-adapter.getBuildingById')
     throw err
@@ -107,7 +149,7 @@ const getBuildingById = async (
 
 const getBuildingByCode = async (
   code: string
-): Promise<BuildingWithRelations | null> => {
+): Promise<BuildingWithProperty | null> => {
   try {
     return prisma.building
       .findFirst({
@@ -132,6 +174,7 @@ const getBuildingByCode = async (
         },
       })
       .then(trimStrings)
+      .then(withProperty)
   } catch (err) {
     logger.error({ err, code }, 'building-adapter.getBuildingByCode')
     throw err
@@ -168,7 +211,7 @@ const searchBuildings = async (
           propertyObject: {
             propertyStructures: {
               some: {
-                companyCode: '001',
+                companyCode: { in: [...OPERATING_COMPANY_CODES] },
               },
             },
           },

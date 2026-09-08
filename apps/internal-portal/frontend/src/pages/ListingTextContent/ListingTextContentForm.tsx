@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
+  Alert,
   Box,
   Button,
   TextField,
@@ -12,13 +13,14 @@ import {
 import SaveIcon from '@mui/icons-material/Save'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { AxiosError } from 'axios'
 
 import { ContentBlocksList } from './components/ContentBlocksList'
 import { ListingPreview } from './components/ListingPreview'
 import { ContentBlock } from './components/ContentBlockEditor'
+import { ReadOnlyContentBlocks } from './components/ReadOnlyContentBlocks'
 import {
   useListingTextContent,
   useCreateListingTextContent,
@@ -26,6 +28,11 @@ import {
   useDeleteListingTextContent,
 } from './hooks/useListingTextContent'
 import { useValidateRentalObject } from './hooks/useValidateRentalObject'
+import {
+  fromApiBlocks,
+  toApiBlocks,
+  hasInvalidBlock,
+} from './utils/contentBlocks'
 
 const ListingTextContentForm = () => {
   const navigate = useNavigate()
@@ -43,30 +50,34 @@ const ListingTextContentForm = () => {
   // Validate rental object code
   const validationQuery = useValidateRentalObject(objectCode)
 
-  // Fetch existing data in edit mode
+  // Fetch the lookup (object text + market-area text) in edit mode, and in
+  // create mode for the (debounced) object number that actually validated.
+  const validatedCode = validationQuery.validatedCode?.trim()
+  const lookupCode = isEditMode
+    ? rentalObjectCode
+    : validationQuery.data === true && validatedCode
+      ? validatedCode
+      : undefined
   const {
     data: existingData,
     isLoading: isLoadingExisting,
     error: loadError,
-  } = useListingTextContent(isEditMode ? rentalObjectCode : undefined)
+  } = useListingTextContent(lookupCode)
 
   // Mutations
   const createMutation = useCreateListingTextContent()
   const updateMutation = useUpdateListingTextContent()
   const deleteMutation = useDeleteListingTextContent()
 
-  // Load existing data when in edit mode
+  // Load existing content into the editor once the lookup resolves. Only in
+  // edit mode - in create mode the lookup is used to warn about existing
+  // content, not to pre-populate the form.
   useEffect(() => {
-    if (existingData) {
-      setObjectCode(existingData.rentalObjectCode)
-      setBlocks(
-        existingData.contentBlocks.map((block, index) => ({
-          ...block,
-          id: `block-${index}`,
-        }))
-      )
+    if (isEditMode && existingData?.content) {
+      setObjectCode(existingData.content.rentalObjectCode)
+      setBlocks(fromApiBlocks(existingData.content.contentBlocks))
     }
-  }, [existingData])
+  }, [isEditMode, existingData])
 
   const handleSubmit = async () => {
     if (!objectCode.trim()) {
@@ -85,44 +96,13 @@ const ListingTextContentForm = () => {
       return
     }
 
-    // Validate blocks
-    const hasInvalidBlock = blocks.some((block) => {
-      if (block.type === 'link') {
-        // Link blocks need both name and valid URL
-        if (!block.name?.trim() || !block.url?.trim()) return true
-        try {
-          new URL(block.url)
-          return false
-        } catch {
-          return true
-        }
-      } else {
-        // Text blocks need content
-        return !block.content?.trim()
-      }
-    })
-
-    if (hasInvalidBlock) {
+    if (hasInvalidBlock(blocks)) {
       toast.error('Kontrollera att alla block har giltigt innehåll')
       return
     }
 
     try {
-      // Format blocks for API - remove the id field and ensure correct structure
-      const contentBlocks = blocks.map((block) => {
-        if (block.type === 'link') {
-          return {
-            type: block.type,
-            name: block.name || '',
-            url: block.url || '',
-          }
-        } else {
-          return {
-            type: block.type,
-            content: block.content || '',
-          }
-        }
-      })
+      const contentBlocks = toApiBlocks(blocks)
 
       if (isEditMode && rentalObjectCode) {
         await updateMutation.mutateAsync({
@@ -170,7 +150,10 @@ const ListingTextContentForm = () => {
     updateMutation.isPending ||
     deleteMutation.isPending
 
-  if (isLoadingExisting) {
+  // Only edit mode waits for the lookup. In create mode it merely feeds the
+  // "already exists" alert and the market-area panel, and unmounting the form
+  // here would blank the object-number field while the user is typing.
+  if (isEditMode && isLoadingExisting) {
     return (
       <Box display="flex" justifyContent="center" padding={4}>
         <CircularProgress />
@@ -178,7 +161,8 @@ const ListingTextContentForm = () => {
     )
   }
 
-  if (loadError && isEditMode) {
+  // In edit mode, an object with no listing text has nothing to edit here.
+  if (isEditMode && (loadError || existingData?.content === null)) {
     return (
       <Box padding={3}>
         <Typography color="error" gutterBottom>
@@ -190,6 +174,16 @@ const ListingTextContentForm = () => {
       </Box>
     )
   }
+
+  const marketArea = existingData?.marketArea ?? null
+  const areaContent = existingData?.areaContent ?? null
+  const marketAreaLabel = marketArea?.name ?? marketArea?.code ?? ''
+
+  // In create mode, the lookup can reveal that the typed object number
+  // already has listing text - creating would just 409, so point to the
+  // existing entry instead.
+  const hasExistingContent =
+    !isEditMode && existingData != null && existingData.content !== null
 
   return (
     <Box>
@@ -251,7 +245,7 @@ const ListingTextContentForm = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             onClick={handleSubmit}
-            disabled={isSaving}
+            disabled={isSaving || hasExistingContent}
           >
             {isSaving ? 'Sparar...' : 'Spara'}
           </Button>
@@ -293,14 +287,85 @@ const ListingTextContentForm = () => {
                 />
               </Box>
 
+              {hasExistingContent && (
+                <Alert
+                  severity="info"
+                  action={
+                    <Button
+                      component={Link}
+                      to={`/annonsinnehall/${objectCode.trim()}/redigera`}
+                      size="small"
+                    >
+                      Öppna befintligt
+                    </Button>
+                  }
+                >
+                  Annonsinnehåll finns redan för detta objektsnummer.
+                </Alert>
+              )}
+
               <ContentBlocksList blocks={blocks} onBlocksChange={setBlocks} />
+
+              {marketArea && (
+                <Paper variant="outlined" sx={{ padding: 2 }}>
+                  <Stack spacing={1.5}>
+                    <Box>
+                      <Typography variant="subtitle1">
+                        Områdestext – {marketAreaLabel}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Visas automatiskt efter objektets text i alla annonser i
+                        området. Redigeras under Områdestexter.
+                      </Typography>
+                    </Box>
+
+                    {areaContent ? (
+                      <>
+                        <ReadOnlyContentBlocks
+                          blocks={areaContent.contentBlocks}
+                        />
+                        <Box>
+                          <Button
+                            component={Link}
+                            to={`/omradestexter/${marketArea.code}/redigera`}
+                            variant="outlined"
+                            size="small"
+                          >
+                            Redigera områdestext
+                          </Button>
+                        </Box>
+                      </>
+                    ) : (
+                      <Stack spacing={1}>
+                        <Typography color="text.secondary">
+                          Ingen områdestext finns för {marketAreaLabel} ännu.
+                        </Typography>
+                        <Box>
+                          <Button
+                            component={Link}
+                            to={`/omradestexter/ny?code=${marketArea.code}`}
+                            variant="outlined"
+                            size="small"
+                          >
+                            Skapa områdestext
+                          </Button>
+                        </Box>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Paper>
+              )}
             </Stack>
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={5}>
           <Box position="sticky" top={16}>
-            <ListingPreview blocks={blocks} rentalObjectCode={objectCode} />
+            <ListingPreview
+              blocks={blocks}
+              areaBlocks={areaContent?.contentBlocks}
+              rentalObjectCode={objectCode}
+            />
           </Box>
         </Grid>
       </Grid>

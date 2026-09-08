@@ -31,6 +31,8 @@ export const KeyTypeSchema = z.enum([
   'HL',
   'FÖR',
   'SOP',
+  'MB',
+  'TV',
   'ÖVR',
 ])
 export const KeySystemTypeSchema = z.enum([
@@ -215,6 +217,12 @@ export const UpdateKeySystemRequestSchema = z.object({
   isActive: z.boolean().optional(),
   notes: z.string().nullable().optional(),
   schemaFileId: z.string().nullable().optional(),
+})
+
+// disposedKeys is the audit record of what the deactivation changed (manual rollback)
+export const DeactivateKeySystemResponseSchema = z.object({
+  keySystem: KeySystemSchema,
+  disposedKeys: z.array(KeySchema),
 })
 
 // Request schemas for key loans

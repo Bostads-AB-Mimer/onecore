@@ -10,6 +10,7 @@ export type KeyLoanWithDetails = keys.KeyLoanWithDetails
 export type CreateKeyLoanRequest = keys.CreateKeyLoanRequest
 export type UpdateKeyLoanRequest = keys.UpdateKeyLoanRequest
 export type KeySystem = keys.KeySystem
+export type DeactivateKeySystemResponse = keys.DeactivateKeySystemResponse
 export type Log = keys.Log
 export type CreateLogRequest = keys.CreateLogRequest
 export type KeyNote = keys.KeyNote
@@ -36,6 +37,7 @@ export const {
   KeyLoanSchema,
   KeyLoanWithDetailsSchema,
   KeySystemSchema,
+  DeactivateKeySystemResponseSchema,
   LogSchema,
   ReceiptSchema,
   KeyEventSchema,

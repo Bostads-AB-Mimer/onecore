@@ -19,8 +19,7 @@ export interface ConflictDetails {
 }
 
 export type Result<T, E = string> =
-  | { ok: true; data: T }
-  | { ok: false; err: E; details?: ConflictDetails }
+  { ok: true; data: T } | { ok: false; err: E; details?: ConflictDetails }
 
 /**
  * Validate keys array (already parsed by Zod schema)
