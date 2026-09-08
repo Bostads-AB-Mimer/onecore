@@ -5,6 +5,7 @@ import { ContactsRepository, xpandContactsRepository } from './adapters'
 import { ContactWriter } from './adapters/contact-writer'
 import { xpandSoapContactWriter } from './adapters/xpand/soap'
 import { xpandDbClient } from './adapters/xpand/db'
+import { contactsDbClient } from './adapters/db'
 import Koa from 'koa'
 
 /**
@@ -23,6 +24,10 @@ export interface AppContext {
      * Knex database connection for the Xpand database
      */
     xpandDb: Resource<Knex>
+    /**
+     * Knex database connection for the contacts service's own database
+     */
+    contactsDb: Resource<Knex>
     /**
      * Configurable Koa middlewares.
      */
@@ -66,6 +71,7 @@ export const makeAppContext = (
   overrides: Partial<AppModules> = {}
 ): AppContext => {
   const xpandDb = xpandDbClient(config.xpandDatabase)
+  const contactsDb = contactsDbClient(config.contactsDatabase)
 
   /**
    * Attach logger middlewares if logging is enabled.
@@ -86,6 +92,7 @@ export const makeAppContext = (
     config: config,
     infrastructure: {
       xpandDb,
+      contactsDb,
       middlewares: middlewares,
     },
     modules: {

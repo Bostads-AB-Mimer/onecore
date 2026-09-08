@@ -22,7 +22,6 @@ export {
   TextContentBlockFactory as textContentBlock,
   LinkContentBlockFactory as linkContentBlock,
 } from './listing-text-content'
-export { TenfastLeaseTemplateFactory as tenfastTemplate } from './tenfast-template'
 export { TenfastLeaseFactory as tenfastLease } from './tenfast-lease'
 export { TenfastTenantFactory as tenfastTenant } from './tenfast-tenant'
 export { TenfastRentalObjectFactory as tenfastRentalObject } from './tenfast-rental-object'

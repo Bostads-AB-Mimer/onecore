@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ExternalLink, Key, Loader2 } from 'lucide-react'
 
 import { formatDate, LeaseStatus } from '@/entities/lease'
@@ -249,10 +249,13 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
 
   const keysUrl = resolve('VITE_KEYS_URL', '')
 
-  const openInKeysPortal = (rentalObjectCode: string) => {
-    if (!keysUrl) return
-    window.open(`${keysUrl}/KeyLoan?object=${rentalObjectCode}`, '_blank')
-  }
+  const openInKeysPortal = useCallback(
+    (rentalObjectCode: string) => {
+      if (!keysUrl) return
+      window.open(`${keysUrl}/KeyLoan?object=${rentalObjectCode}`, '_blank')
+    },
+    [keysUrl]
+  )
 
   // Build table rows: one row per loan, plus rows for active leases with no loans
   const tableRows = useMemo<TableRow[]>(() => {
@@ -378,7 +381,7 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
           ]
         : []),
     ],
-    [keysUrl]
+    [keysUrl, openInKeysPortal]
   )
 
   if (isLoading) {

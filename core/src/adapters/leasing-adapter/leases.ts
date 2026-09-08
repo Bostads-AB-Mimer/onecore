@@ -85,26 +85,41 @@ export const createLease = async (
       companyCode,
       includeVAT,
     },
+    validateStatus: () => true,
   }
 
-  const result = await axios(tenantsLeasesServiceUrl + '/leases', axiosOptions)
+  try {
+    const result = await axios(
+      tenantsLeasesServiceUrl + '/leases',
+      axiosOptions
+    )
 
-  if (result.status == 200) {
-    return { ok: true, data: result.data.content }
-  } else if (
-    result.status == 404 &&
-    result.data.error === 'Lease cannot be created on this rental object'
-  ) {
-    logger.error(
-      { objectId, contactId, fromDate },
-      'Lease could not be created for rental object'
-    )
-    return { ok: false, err: 'create-lease-failed' }
-  } else {
-    logger.error(
-      { error: result.data.error },
-      'Unknown error when creating lease'
-    )
+    if (result.status == 200) {
+      return { ok: true, data: result.data.content }
+    } else if (
+      result.status == 404 &&
+      result.data.error === 'Lease cannot be created on this rental object'
+    ) {
+      logger.error(
+        { objectId, contactId, fromDate },
+        'Lease could not be created for rental object'
+      )
+      return { ok: false, err: 'create-lease-failed' }
+    } else {
+      logger.error(
+        {
+          objectId,
+          contactId,
+          fromDate,
+          status: result.status,
+          data: result.data,
+        },
+        'Unknown error when creating lease'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+  } catch (err: any) {
+    logger.error(err, 'leasing-adapter.createLease')
     return { ok: false, err: 'unknown' }
   }
 }

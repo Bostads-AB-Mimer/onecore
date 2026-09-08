@@ -720,6 +720,12 @@ const createLeaseForNonScoredParkingSpace = async (params: {
     | 'external-credit-check-failed'
     | 'invalid-address'
     | 'already-has-lease'
+    | 'parking-space-not-found'
+    | 'rental-object-not-found'
+    | 'parkingspace-not-external'
+    | 'applicant-not-found'
+    | 'fetch-invoices-failed'
+    | 'create-lease-failed'
     | 'unknown'
   >
 > => {
@@ -738,24 +744,25 @@ const createLeaseForNonScoredParkingSpace = async (params: {
       const errorCode =
         err.response.data?.error || err.response.data?.content?.errorCode
 
-      // Handle both 400 BadRequest and 404 NotFound for validation errors
-      if (statusCode === HttpStatusCode.BadRequest || statusCode === 404) {
-        // Map error codes from core service
-        if (errorCode === 'internal-credit-check-failed') {
-          return { ok: false, err: 'internal-credit-check-failed', statusCode }
-        }
-        if (errorCode === 'external-credit-check-failed') {
-          return { ok: false, err: 'external-credit-check-failed', statusCode }
-        }
-        if (
-          errorCode === 'invalid-address' ||
-          errorCode === 'applicant-missing-address'
-        ) {
+      // Map known error codes from core service regardless of status code —
+      // core returns 404 for some validation errors and 500 for some
+      // technical failures, but both carry a specific, user-facing reason.
+      // `internal-error` (core's own catch-all) is intentionally excluded —
+      // it carries no more information than 'unknown' does.
+      switch (errorCode) {
+        case 'internal-credit-check-failed':
+        case 'external-credit-check-failed':
+        case 'already-has-lease':
+        case 'parking-space-not-found':
+        case 'rental-object-not-found':
+        case 'parkingspace-not-external':
+        case 'applicant-not-found':
+        case 'fetch-invoices-failed':
+        case 'create-lease-failed':
+          return { ok: false, err: errorCode, statusCode }
+        case 'invalid-address':
+        case 'applicant-missing-address':
           return { ok: false, err: 'invalid-address', statusCode }
-        }
-        if (errorCode === 'already-has-lease') {
-          return { ok: false, err: 'already-has-lease', statusCode }
-        }
       }
     }
 

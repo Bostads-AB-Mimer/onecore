@@ -1,5 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { Contact, Lease, RentalObjectAvailabilityInfo } from '@onecore/types'
+import { Contact, RentalObjectAvailabilityInfo } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -7,8 +7,6 @@ import {
   TenfastTenant,
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponseSchema,
-  TenfastLeaseTemplate,
-  TenfastLeaseTemplateSchema,
   TenfastTenantSchema,
   PreliminaryTerminationResponse,
   TenfastLease,
@@ -25,7 +23,6 @@ import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
 import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
-import { mapToOnecoreLease } from '../../helpers/tenfast'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -87,9 +84,7 @@ export const createLease = async (
   includeVAT: boolean
 ): Promise<
   AdapterResult<
-    Lease,
-    | 'could-not-find-template'
-    | 'rental-object-has-no-template'
+    string,
     | 'could-not-retrieve-tenant'
     | 'could-not-create-tenant'
     | 'could-not-find-rental-object'
@@ -111,20 +106,11 @@ export const createLease = async (
     rentalObjectResponse.data.hyror.length === 0
   )
     return { ok: false, err: 'rent-article-is-missing' }
-  if (!rentalObjectResponse.data.contractTemplate)
-    return { ok: false, err: 'rental-object-has-no-template' }
-
-  const templateResponse = await getLeaseTemplate(
-    rentalObjectResponse.data.contractTemplate
-  )
-  if (!templateResponse.ok || !templateResponse.data)
-    return { ok: false, err: 'could-not-find-template' }
 
   try {
     const createLeaseRequestData = buildLeaseRequestData(
       tenantResult.data,
       rentalObjectResponse.data,
-      templateResponse.data,
       fromDate,
       includeVAT
     )
@@ -145,11 +131,15 @@ export const createLease = async (
         'lease-could-not-be-created'
       )
 
-    const parsedLease = TenfastLeaseSchema.safeParse(leaseResponse.data)
-    if (!parsedLease.success)
-      return handleTenfastError(parsedLease.error, 'could-not-parse-lease')
+    // Only the id is needed by callers (see leases.ts route docs: response
+    // is { LeaseId: string }) — no need to parse the full lease shape, which
+    // would require populate=hyresobjekt,hyresgaster on this POST to avoid
+    // failing TenfastLeaseSchema's strict hyresgaster parse.
+    const leaseId = leaseResponse.data?.externalId
+    if (typeof leaseId !== 'string' || !leaseId)
+      return handleTenfastError(leaseResponse.data, 'could-not-parse-lease')
 
-    return { ok: true, data: mapToOnecoreLease(parsedLease.data) }
+    return { ok: true, data: leaseId }
   } catch (err) {
     const responseData = isAxiosError(err) ? err.response?.data : undefined
     logger.error(
@@ -183,6 +173,28 @@ export const importLease = async (
     | 'unknown'
   >
 > => {
+  // Idempotency guard: a retry (e.g. after a network error on a previous
+  // attempt that Tenfast actually committed) must not import the same lease
+  // twice. Tenfast's import endpoint doesn't reject/upsert cleanly on a
+  // repeat externalId — it appends to hyror instead of replacing it, so a
+  // second call produces duplicate rent rows on the same avtal. Mirrors the
+  // same check already used by terminateLease/voidLease.
+  const existing = await getLeaseByExternalId(leaseId)
+  if (existing.ok) {
+    logger.info(
+      { leaseId },
+      'tenfast-adapter.importLease: lease already exists, skipping import'
+    )
+    return { ok: true, data: { _id: existing.data._id } }
+  }
+  if (existing.err !== 'not-found') {
+    logger.error(
+      { leaseId, err: existing.err },
+      'tenfast-adapter.importLease: failed to check for existing lease'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+
   try {
     logger.info(
       { leaseId, contactCode, rentalObjectCode },
@@ -613,51 +625,6 @@ export const getRentalObjectAvailabilityInfo = async (
   }
 }
 
-export const getLeaseTemplate = async (
-  templateId: string
-): Promise<
-  AdapterResult<
-    TenfastLeaseTemplate | undefined,
-    | 'could-not-get-template'
-    | 'get-template-bad-request'
-    | 'response-could-not-be-parsed'
-    | 'unknown'
-  >
-> => {
-  try {
-    const templateResponse = await tenfastApi.request({
-      method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtalsmallar/${templateId}`,
-    })
-
-    if (templateResponse.status === 400)
-      return handleTenfastError(
-        templateResponse.data.error,
-        'get-template-bad-request'
-      )
-    else if (templateResponse.status !== 200)
-      return handleTenfastError(
-        {
-          error: templateResponse.data.error,
-          status: templateResponse.status,
-        },
-        'could-not-get-template'
-      )
-
-    const parsedTemplateResponse = TenfastLeaseTemplateSchema.safeParse(
-      templateResponse.data
-    )
-    if (!parsedTemplateResponse.success)
-      return handleTenfastError(
-        parsedTemplateResponse.error,
-        'response-could-not-be-parsed'
-      )
-    return { ok: true, data: parsedTemplateResponse.data ?? undefined }
-  } catch (err: any) {
-    return handleTenfastError(err, 'unknown')
-  }
-}
-
 export const getTenantByContactCode = async (
   contactCode: string
 ): Promise<
@@ -764,7 +731,6 @@ function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
 function buildLeaseRequestData(
   tenant: TenfastTenant,
   rentalObject: TenfastRentalObject,
-  template: TenfastLeaseTemplate,
   fromDate: Date,
   includeVAT: boolean
 ) {
@@ -789,8 +755,6 @@ function buildLeaseRequestData(
     betalningsOffset: '1d', //specifies the due date for the rent in relation to the start date of the rental period
     betalasForskott: true, //specifies whether the rent should be paid in advance or arrears
     vatEnabled: includeVAT,
-    originalTemplate: template._id,
-    template: template,
     method: 'simplesign',
   }
 }

@@ -1,12 +1,5 @@
 import KoaRouter from '@koa/router'
-import {
-  probe,
-  SystemHealth,
-  HealthCheckTarget,
-  pollSystemHealth,
-} from '@onecore/utilities'
-
-const healthChecks: Map<string, SystemHealth> = new Map()
+import { HealthCheckTarget, pollSystemHealth } from '@onecore/utilities'
 
 const subsystems: HealthCheckTarget[] = [
   // Add subsystem health checks here as needed

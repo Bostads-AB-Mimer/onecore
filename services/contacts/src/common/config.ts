@@ -9,6 +9,7 @@ export interface Config {
   port: number
   applicationName: string
   xpandDatabase: KnexConnectionParameters
+  contactsDatabase: KnexConnectionParameters
   xpandSoap: XpandSoapConfig
   logging: {
     enabled: boolean
@@ -46,6 +47,10 @@ const config = configPackage({
       healthCheckInterval: 1,
       healthCheckTimeUnit: 'm',
     },
+    contactsDatabase: {
+      healthCheckInterval: 1,
+      healthCheckTimeUnit: 'm',
+    },
     xpandSoap: {
       // Empty by default. An unset url disables the SOAP write path entirely
       // rather than falling back to some other environment — see XpandSoapConfig.
@@ -74,5 +79,6 @@ export default {
   logging: config.get('logging'),
   applicationName: config.get('applicationName'),
   xpandDatabase: config.get('xpandDatabase'),
+  contactsDatabase: config.get('contactsDatabase'),
   xpandSoap: config.get('xpandSoap'),
 } satisfies Config

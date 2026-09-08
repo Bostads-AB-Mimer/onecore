@@ -229,11 +229,16 @@ export const TenfastRentArticleFactory = Factory.define<TenfastRentArticle>(
 )
 
 export const TenfastInvoicesByTenantIdResponseFactory =
-  Factory.define<TenfastInvoicesByTenantIdResponse>(() => [
-    TenfastInvoiceFactory.build({
-      hyror: [TenfastInvoiceRowFactory.build()],
-    }),
-  ])
+  Factory.define<TenfastInvoicesByTenantIdResponse>(() => ({
+    records: [
+      TenfastInvoiceFactory.build({
+        hyror: [TenfastInvoiceRowFactory.build()],
+      }),
+    ],
+    prev: null,
+    next: null,
+    totalCount: 1,
+  }))
 
 export const TenfastAutogiroConsentFactory =
   Factory.define<TenfastAutogiroConsent>(({ sequence }) => ({

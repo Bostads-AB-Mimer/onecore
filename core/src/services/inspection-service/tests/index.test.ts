@@ -812,11 +812,9 @@ describe('inspection-service index', () => {
           data: mockDetailedInspection,
         })
 
-      const getLeaseSpy = jest
-        .spyOn(leasingAdapter, 'getLease')
-        .mockResolvedValue(mockLease)
+      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease)
 
-      const getResidenceByRentalIdSpy = jest
+      jest
         .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
         .mockResolvedValue({
           ok: true,
@@ -854,11 +852,9 @@ describe('inspection-service index', () => {
           data: mockDetailedInspection,
         })
 
-      const getLeaseSpy = jest
-        .spyOn(leasingAdapter, 'getLease')
-        .mockResolvedValue(mockLease)
+      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease)
 
-      const getResidenceByRentalIdSpy = jest
+      jest
         .spyOn(propertyBaseAdapter, 'getResidenceByRentalId')
         .mockResolvedValue({
           ok: true,

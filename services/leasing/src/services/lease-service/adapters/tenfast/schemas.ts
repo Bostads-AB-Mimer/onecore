@@ -155,23 +155,6 @@ export const TenfastContractSchema = z.object({
 
 export type TenfastContract = z.infer<typeof TenfastContractSchema>
 
-export const TenfastLeaseTemplateSchema = z.object({
-  _id: z.string(),
-  hyresvardar: z.array(z.string()),
-  public: z.boolean(),
-  official: z.boolean(),
-  category: z.string(),
-  addons: z.array(z.any()),
-  name: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  __v: z.number(),
-  type: z.string(),
-  id: z.string(),
-})
-
-export type TenfastLeaseTemplate = z.infer<typeof TenfastLeaseTemplateSchema>
-
 export interface PreliminaryTerminationResponse {
   message: string
 }
