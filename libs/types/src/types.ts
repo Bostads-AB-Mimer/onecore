@@ -230,6 +230,10 @@ interface Listing {
   listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
   applicants?: Applicant[]
   rentalObject: RentalObject
+  // Whether listing text content ("annonsinnehåll") exists for the rental
+  // object. Only populated by the leasing read queries that join
+  // listing_text_content (listings with applicants, listing by id).
+  hasListingTextContent?: boolean
 }
 
 interface Applicant {

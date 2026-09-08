@@ -37,6 +37,14 @@ const setCachedContent = (
         : { content, marketArea: null, areaContent: null }
   )
 
+// Listings carry a hasListingTextContent flag (used for the icon link in the
+// parking space tables and detail view), so they must be refetched after a
+// text content change.
+const invalidateListingQueries = (queryClient: QueryClient) => {
+  queryClient.invalidateQueries({ queryKey: ['parkingSpaceListings'] })
+  queryClient.invalidateQueries({ queryKey: ['parkingSpaceListing'] })
+}
+
 // GET - Fetch listing text content by rental object code, together with the
 // market-area text of the property it belongs to (null for non-housing).
 export const useListingTextContent = (rentalObjectCode?: string) =>
@@ -93,6 +101,7 @@ export const useCreateListingTextContent = () => {
       queryClient.invalidateQueries({
         queryKey: ['listingTextContent'],
       })
+      invalidateListingQueries(queryClient)
     },
   })
 }
@@ -124,6 +133,7 @@ export const useUpdateListingTextContent = () => {
       queryClient.invalidateQueries({
         queryKey: ['listingTextContent'],
       })
+      invalidateListingQueries(queryClient)
     },
   })
 }
@@ -146,6 +156,7 @@ export const useDeleteListingTextContent = () => {
       queryClient.invalidateQueries({
         queryKey: ['listingTextContent'],
       })
+      invalidateListingQueries(queryClient)
       queryClient.removeQueries({
         queryKey: ['listingTextContent', variables.rentalObjectCode],
       })

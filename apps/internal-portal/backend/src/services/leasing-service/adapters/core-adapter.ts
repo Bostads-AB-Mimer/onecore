@@ -809,24 +809,6 @@ const getListingTextContentByRentalObjectCode = async (
   }
 }
 
-const getListingTextContentExistence = async (
-  rentalObjectCodes: string[]
-): Promise<AdapterResult<string[], TextContentError>> => {
-  try {
-    const response = await getFromCore<{ content: string[] }>({
-      method: 'post',
-      url: `${coreBaseUrl}/listing-text-content/existence`,
-      data: { rentalObjectCodes },
-    })
-    return { ok: true, data: response.data.content }
-  } catch (err) {
-    return toTextContentError(
-      err,
-      'core-adapter.getListingTextContentExistence'
-    )
-  }
-}
-
 const createListingTextContent = async (
   data: CreateListingTextContentRequest
 ): Promise<AdapterResult<ListingTextContent, TextContentError>> => {
@@ -1006,7 +988,6 @@ export {
   getLeasesByContactCode,
   createLeaseForNonScoredParkingSpace,
   getListingTextContentByRentalObjectCode,
-  getListingTextContentExistence,
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,

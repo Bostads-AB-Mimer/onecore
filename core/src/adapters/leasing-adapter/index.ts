@@ -1027,7 +1027,6 @@ export {
 
 export {
   getListingTextContentByRentalObjectCode,
-  getListingTextContentExistence,
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,

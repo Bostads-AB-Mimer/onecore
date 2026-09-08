@@ -1,10 +1,8 @@
-import { useMemo } from 'react'
 import { Box, Typography } from '@mui/material'
 import OpenInNew from '@mui/icons-material/OpenInNew'
 import currency from 'currency.js'
 
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
-import { useListingTextContentExistence } from '../../../common/hooks/useListingTextContentExistence'
 import { printVacantFrom } from '../../../common/formattingUtils'
 import { ListingStatus } from '@onecore/types'
 import { ListingTextContentIconLink } from '../../../components'
@@ -13,12 +11,6 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
   const { data: parkingSpaceListing } = useParkingSpaceListing({
     id: props.listingId,
   })
-
-  const rentalObjectCodes = useMemo(
-    () => [parkingSpaceListing.rentalObjectCode],
-    [parkingSpaceListing.rentalObjectCode]
-  )
-  const textContentExistence = useListingTextContentExistence(rentalObjectCodes)
 
   const dateFormatter = new Intl.DateTimeFormat('sv-SE', { timeZone: 'UTC' })
   const numberFormatter = new Intl.NumberFormat('sv-SE', {
@@ -80,7 +72,7 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
             <Typography>Annonsinnehåll</Typography>
             <ListingTextContentIconLink
               rentalObjectCode={parkingSpaceListing.rentalObjectCode}
-              existence={textContentExistence}
+              hasTextContent={parkingSpaceListing.hasListingTextContent}
             />
           </Box>
           <Box height="50px" />

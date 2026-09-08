@@ -13,10 +13,7 @@ import {
 import { Link } from 'react-router-dom'
 import { IconButton } from '@mui/material'
 import Chevron from '@mui/icons-material/ChevronRight'
-import {
-  getListingTextContentColumn,
-  ListingTextContentExistence,
-} from '../../../components'
+import { getListingTextContentColumn } from '../../../components'
 import currency from 'currency.js'
 
 export const sharedColumnProps = {
@@ -129,9 +126,7 @@ export const getColumns = (
   return columns
 }
 
-export const getActionColumns = (
-  textContentExistence: ListingTextContentExistence
-): Array<GridColDef<ListingWithOffer>> => {
+export const getActionColumns = (): Array<GridColDef<ListingWithOffer>> => {
   return [
     {
       field: 'actions',
@@ -161,7 +156,7 @@ export const getActionColumns = (
         }
       },
     },
-    getListingTextContentColumn<ListingWithOffer>(textContentExistence),
+    getListingTextContentColumn<ListingWithOffer>(),
     {
       field: 'action-link',
       headerName: '',

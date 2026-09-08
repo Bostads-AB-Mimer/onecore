@@ -4,12 +4,7 @@ import { z } from 'zod'
 
 import { AdapterResult } from '../types'
 import config from '../../common/config'
-
-// The response.status === 400/404/409 branches below rely on
-// axios.defaults.validateStatus being set process-wide in
-// leasing-adapter/index.ts (status < 500 resolves instead of throwing), so
-// this file must be imported via the leasing-adapter folder index for that
-// side effect to run.
+import { mapLeasingResponse } from './map-leasing-response'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -38,11 +33,7 @@ const listListingAreaTextContent = async (): Promise<
       content: ListingAreaTextContent[]
     }>(`${tenantsLeasesServiceUrl}/listing-area-text-content`)
 
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(response, {}, (body) => body.content)
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.listListingAreaTextContent')
     return { ok: false, err: 'request-failed' }
@@ -61,15 +52,11 @@ const getListingAreaTextContentByMarketAreaCode = async (
       `${tenantsLeasesServiceUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(
+      response,
+      { 404: 'not-found' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error(
       { err },
@@ -92,19 +79,11 @@ const createListingAreaTextContent = async (
       content: ListingAreaTextContent
     }>(`${tenantsLeasesServiceUrl}/listing-area-text-content`, data)
 
-    if (response.status === 201) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 400) {
-      return { ok: false, err: 'bad-request' }
-    }
-
-    if (response.status === 409) {
-      return { ok: false, err: 'conflict' }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(
+      response,
+      { 400: 'bad-request', 409: 'conflict' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.createListingAreaTextContent')
     return { ok: false, err: 'request-failed' }
@@ -128,19 +107,11 @@ const updateListingAreaTextContent = async (
       data
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 400) {
-      return { ok: false, err: 'bad-request' }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(
+      response,
+      { 400: 'bad-request', 404: 'not-found' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.updateListingAreaTextContent')
     return { ok: false, err: 'request-failed' }
@@ -155,15 +126,7 @@ const deleteListingAreaTextContent = async (
       `${tenantsLeasesServiceUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: undefined }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(response, { 404: 'not-found' }, () => undefined)
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.deleteListingAreaTextContent')
     return { ok: false, err: 'request-failed' }

@@ -23,8 +23,6 @@ import {
   getParkingSpaceColumns,
   getRentalRuleActionColumn,
 } from './utils/columnUtils'
-import { getListingTextContentColumn } from '../../components'
-import { useListingTextContentExistence } from '../../common/hooks/useListingTextContentExistence'
 import * as utils from '../../utils'
 import { RentalObject } from '@onecore/types'
 
@@ -90,22 +88,13 @@ export const PublishParkingSpacesListingsPage = () => {
     [handleSearch]
   )
 
-  const rentalObjectCodes = useMemo(
-    () => (parkingSpaces ?? []).map((p) => p.rentalObjectCode),
-    [parkingSpaces]
-  )
-  const textContentExistence = useListingTextContentExistence(rentalObjectCodes)
-
   // Memoize columns to prevent unnecessary re-renders
   const columns = useMemo(
     () => [
       ...getParkingSpaceColumns(dateFormatter),
       getRentalRuleActionColumn(rentalRules, handleRentalRuleChange),
-      getListingTextContentColumn<RentalObjectWithListingHistory>(
-        textContentExistence
-      ),
     ],
-    [rentalRules, handleRentalRuleChange, textContentExistence]
+    [rentalRules, handleRentalRuleChange]
   )
 
   // Handle publish with batch size warning

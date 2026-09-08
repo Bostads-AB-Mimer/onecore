@@ -4,12 +4,7 @@ import { z } from 'zod'
 
 import { AdapterResult } from '../types'
 import config from '../../common/config'
-
-// The response.status === 400/404/409 branches below rely on
-// axios.defaults.validateStatus being set process-wide in
-// leasing-adapter/index.ts (status < 500 resolves instead of throwing), so
-// this file must be imported via the leasing-adapter folder index for that
-// side effect to run.
+import { mapLeasingResponse } from './map-leasing-response'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -40,45 +35,16 @@ const getListingTextContentByRentalObjectCode = async (
       `${tenantsLeasesServiceUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(
+      response,
+      { 404: 'not-found' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error(
       { err },
       'leasing-adapter.getListingTextContentByRentalObjectCode'
     )
-    return { ok: false, err: 'request-failed' }
-  }
-}
-
-const getListingTextContentExistence = async (
-  rentalObjectCodes: string[]
-): Promise<AdapterResult<string[], 'bad-request' | 'request-failed'>> => {
-  try {
-    const response = await axios.post<{
-      content: string[]
-    }>(`${tenantsLeasesServiceUrl}/listing-text-content/existence`, {
-      rentalObjectCodes,
-    })
-
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 400) {
-      return { ok: false, err: 'bad-request' }
-    }
-
-    return { ok: false, err: 'request-failed' }
-  } catch (err) {
-    logger.error({ err }, 'leasing-adapter.getListingTextContentExistence')
     return { ok: false, err: 'request-failed' }
   }
 }
@@ -96,19 +62,11 @@ const createListingTextContent = async (
       content: ListingTextContent
     }>(`${tenantsLeasesServiceUrl}/listing-text-content`, data)
 
-    if (response.status === 201) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 400) {
-      return { ok: false, err: 'bad-request' }
-    }
-
-    if (response.status === 409) {
-      return { ok: false, err: 'conflict' }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(
+      response,
+      { 400: 'bad-request', 409: 'conflict' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.createListingTextContent')
     return { ok: false, err: 'request-failed' }
@@ -132,19 +90,11 @@ const updateListingTextContent = async (
       data
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 400) {
-      return { ok: false, err: 'bad-request' }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(
+      response,
+      { 400: 'bad-request', 404: 'not-found' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.updateListingTextContent')
     return { ok: false, err: 'request-failed' }
@@ -159,15 +109,7 @@ const deleteListingTextContent = async (
       `${tenantsLeasesServiceUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: undefined }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'request-failed' }
+    return mapLeasingResponse(response, { 404: 'not-found' }, () => undefined)
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.deleteListingTextContent')
     return { ok: false, err: 'request-failed' }
@@ -176,7 +118,6 @@ const deleteListingTextContent = async (
 
 export {
   getListingTextContentByRentalObjectCode,
-  getListingTextContentExistence,
   createListingTextContent,
   updateListingTextContent,
   deleteListingTextContent,

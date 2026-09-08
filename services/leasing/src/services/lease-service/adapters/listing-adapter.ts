@@ -42,6 +42,53 @@ function transformDbApplicant(row: DbApplicant): Applicant {
   }
 }
 
+// Select fragments shared by the listing read queries. Both expect the
+// listing table to be aliased as `l`.
+//
+// Applicants are serialized to a JSON string by SQL Server (FOR JSON PATH)
+// and parsed in transformDbListingWithApplicants.
+const APPLICANTS_JSON_SELECT = `
+  (
+    SELECT a.*
+    FROM applicant a
+    WHERE a.ListingId = l.Id
+    FOR JSON PATH
+  ) as applicants
+`
+
+// listing_text_content has a unique index on RentalObjectCode, so this
+// EXISTS is an index seek. CAST to bit so tedious returns a boolean.
+const HAS_LISTING_TEXT_CONTENT_SELECT = `
+  CAST(CASE WHEN EXISTS (
+    SELECT 1
+    FROM listing_text_content ltc
+    WHERE ltc.RentalObjectCode = l.RentalObjectCode
+  ) THEN 1 ELSE 0 END AS bit) as HasListingTextContent
+`
+
+type DbListingWithApplicants = DbListing & {
+  applicants: string | null
+  HasListingTextContent: boolean
+}
+
+function transformDbListingWithApplicants(
+  row: DbListingWithApplicants
+): ListingWithoutRentalObject {
+  const applicants: Array<DbApplicant> = row.applicants
+    ? JSON.parse(row.applicants)
+    : []
+
+  return {
+    ...transformFromDbListing(row),
+    applicants: applicants.map(transformDbApplicant).map((applicant) => ({
+      ...applicant,
+      // Dates inside the FOR JSON PATH payload arrive as strings
+      applicationDate: new Date(applicant.applicationDate),
+    })),
+    hasListingTextContent: row.HasListingTextContent,
+  }
+}
+
 const createListing = async (
   listingData: Omit<ListingWithoutRentalObject, 'id'>,
   dbConnection = db
@@ -206,36 +253,13 @@ const getListingById = async (
   logger.info({ listingId }, `Getting listing ${listingId} from leasing DB`)
   const result = await dbConnection
     .from('listing AS l')
-    .select<DbListing & { applicants: string | null }>(
+    .select<DbListingWithApplicants>(
       'l.*',
-      db.raw(`
-      (
-        SELECT a.*
-        FROM applicant a
-        WHERE a.ListingId = l.Id
-        FOR JSON PATH
-      ) as applicants
-    `)
+      db.raw(APPLICANTS_JSON_SELECT),
+      db.raw(HAS_LISTING_TEXT_CONTENT_SELECT)
     )
     .where('l.Id', listingId)
     .first()
-
-  const parseApplicantsJson = (applicants: string | null) =>
-    applicants ? JSON.parse(applicants) : []
-
-  const parseApplicantsApplicationDate = (applicant: Applicant): Applicant => ({
-    ...applicant,
-    applicationDate: new Date(applicant.applicationDate),
-  })
-
-  const transformListing = (
-    row: DbListing & { applicants: Array<DbApplicant> }
-  ): ListingWithoutRentalObject => ({
-    ...transformFromDbListing(row),
-    applicants: row.applicants
-      .map(transformDbApplicant)
-      .map(parseApplicantsApplicationDate),
-  })
 
   if (!result) {
     logger.info(
@@ -247,10 +271,7 @@ const getListingById = async (
 
   logger.info({ listingId }, 'Getting listing from leasing DB complete')
 
-  return transformListing({
-    ...result,
-    applicants: parseApplicantsJson(result.applicants),
-  })
+  return transformDbListingWithApplicants(result)
 }
 
 /**
@@ -428,49 +449,17 @@ const getListingsWithApplicants = async (
       )
       .otherwise(() => db.raw('WHERE 1=1'))
 
-    const listings = db.raw<Array<DbListing & { applicants: string | null }>>(
+    const rows = await db.raw<Array<DbListingWithApplicants>>(
       `
         SELECT l.*,
-        (
-          SELECT a.*
-          FROM applicant a
-          WHERE a.ListingId = l.Id
-          FOR JSON PATH
-        ) as applicants
+        ${APPLICANTS_JSON_SELECT},
+        ${HAS_LISTING_TEXT_CONTENT_SELECT}
         FROM listing l
         ${whereClause}
       `
     )
 
-    const parseApplicantsJson = (applicants: string | null) =>
-      applicants ? JSON.parse(applicants) : []
-
-    const parseApplicantsApplicationDate = (
-      applicant: Applicant
-    ): Applicant => ({
-      ...applicant,
-      applicationDate: new Date(applicant.applicationDate),
-    })
-
-    const transformListing = (
-      row: DbListing & { applicants: Array<DbApplicant> }
-    ): ListingWithoutRentalObject => ({
-      ...transformFromDbListing(row),
-      applicants: row.applicants
-        .map(transformDbApplicant)
-        .map(parseApplicantsApplicationDate),
-    })
-
-    const result = await listings.then((rows) =>
-      rows.map((row) =>
-        transformListing({
-          ...row,
-          applicants: parseApplicantsJson(row.applicants),
-        })
-      )
-    )
-
-    return { ok: true, data: result }
+    return { ok: true, data: rows.map(transformDbListingWithApplicants) }
   } catch (err) {
     logger.error(err, 'listingAdapter.getListingsWithApplicants')
     return { ok: false, err: 'unknown' }
