@@ -97,6 +97,50 @@ Two guards protect what is already in Tenfast:
   terminated via SimpleSign carries a Tenfast-generated termination document,
   and its Xpand uppsägning copy is left alone as a related document.
 
+## Running it in production
+
+The script is environment-agnostic — it reads Xpand and Tenfast from `.env` —
+so the production import is the same command with production configuration.
+The checklist, in order:
+
+1. **Fresh output directory — this is the one hard rule.** `actions.csv` is
+   the resume log and lease ids are identical across environments: pointing a
+   production run at the test run's `--out` marks almost everything as already
+   done. Use e.g. `--out ~/avtal112-prod-run`, and never mix environments in
+   one directory.
+2. **Point `.env` at production**: `TENFAST__BASE_URL`, `TENFAST__API_KEY`,
+   `TENFAST__COMPANY_ID` for production Tenfast, and `XPAND_DATABASE__*` (host,
+   port, user, password, database) at the production Xpand — mind that the
+   tunnel on `localhost:11434` must go to the **prod** host.
+3. **`--dry-run` first, and read the plan before uploading.** Sanity-check the
+   counts against the test run (20,411 leases; ~15.5k planned main files, ~1k
+   termination files) and especially `alreadyHadMainFile` /
+   `terminationAlreadySet`: production Tenfast has its own signed contracts
+   and SimpleSign termination documents, and those numbers are the skips
+   protecting them. If they look implausibly low, stop.
+4. **Run with `--max-failures 500`** (the test env threw intermittent gateway
+   502s under sustained load, ~1–2/min; default 25 aborts within the hour) and
+   keep the machine awake:
+
+   ```sh
+   caffeinate -i nohup pnpm run dev:script:sync-lease-documents -- \
+     --out ~/avtal112-prod-run --max-failures 500 \
+     > ~/avtal112-prod-run.log 2>&1 &
+   ```
+
+   Expect ~5.5 h at `--concurrency 4` (planning inspects a few thousand PDFs
+   for ~10 min first, so early silence is normal).
+
+5. **When it finishes, rerun the same command once** as a mop-up: failed rows
+   are retried, interrupted deletions finish. A 502 sometimes lands after the
+   file was stored — the mop-up sees it attached and skips it. Rerun until the
+   remaining failures are explainable (in test: only leases whose rent rows
+   Tenfast itself refuses to validate).
+6. **Hand `oversized.csv` to Mimer** for manual import (39 documents >15 MB in
+   test data), and keep the output directory — `actions.csv` and
+   `contract-decisions.csv` are the audit trail of what was placed where and
+   why.
+
 ## Flags
 
 | Flag                 | Meaning                                                 |
