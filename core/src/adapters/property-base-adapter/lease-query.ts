@@ -43,7 +43,7 @@ export async function resolveBuildingManagerToKvvAreaCodes(
 
   return {
     ok: true,
-    query: { ...rest, kvvAreaCodes: lookup.data.map(a => a.code) },
+    query: { ...rest, kvvAreaCodes: lookup.data.map((a) => a.code) },
     emptyResult: false,
   }
 }
