@@ -43,6 +43,12 @@ const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
  * All writes happen in one transaction; `dryRun` skips them entirely.
  * Rows kept only because their holder is a conflict this run are reported as
  * `protected`.
+ *
+ * `inserted`/`softDeleted`/`unchanged`/`protected` on the returned report are
+ * the planned counts from the reconcile step, not affected-row counts read
+ * back from the database. `now` is the as-of date used only for lease and
+ * relation validity in Xpand; `created_at`/`deleted_at` on the written rows
+ * use the database clock (write time), not `now`.
  */
 export const runImport = async ({
   xpandDb,

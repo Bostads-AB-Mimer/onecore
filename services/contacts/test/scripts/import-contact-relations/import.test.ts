@@ -7,6 +7,7 @@ import {
   runImport,
 } from '@src/scripts/import-contact-relations/import'
 import { DbContactRelationRow } from '@src/adapters/contact-relations'
+import * as relationsRepository from '@src/adapters/contact-relations/repository'
 import { connect, prepareDataSet } from '../../e2e/app-fixture'
 import { FULL_TEST_DATA_SET } from '../../e2e/data-set'
 
@@ -190,5 +191,27 @@ describe('runImport', () => {
       'P900006',
     ])
     expect(await activeTriples()).toEqual(EXPECTED_FIRST_RUN)
+  })
+
+  it('writes nothing when a write fails inside the transaction', async () => {
+    // Seed one import-owned row that the run will want to delete, so both
+    // an insert and a delete are planned.
+    await contacts('contact_relation').insert({
+      subject_contact_code: 'P000111',
+      related_contact_code: 'P000222',
+      role_type: 'god_man',
+      created_by: IMPORT_ACTOR,
+    })
+    const spy = jest
+      .spyOn(relationsRepository, 'softDeleteByIds')
+      .mockRejectedValue(new Error('boom'))
+    try {
+      await expect(
+        runImport({ xpandDb: xpand, contactsDb: contacts })
+      ).rejects.toThrow('boom')
+    } finally {
+      spy.mockRestore()
+    }
+    expect(await activeTriples()).toEqual([['P000111', 'P000222', 'god_man']])
   })
 })

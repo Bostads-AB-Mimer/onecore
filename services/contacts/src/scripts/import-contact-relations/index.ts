@@ -14,20 +14,47 @@
  *   pnpm dev:script:import-contact-relations             # write
  *
  * Output: a summary on stdout and, when there are holders with conflicting
- * recipients, a CSV file ./contact-relations-conflicts-<timestamp>.csv in the
- * current working directory. Exit code 1 on failure; nothing is partially
- * written (single transaction).
+ * recipients, a CSV file ./contact-relations-conflicts-<timestamp>.csv (or
+ * ./contact-relations-conflicts-dry-run-<timestamp>.csv in --dry-run mode) in
+ * the current working directory — written in dry-run mode too, since it
+ * doesn't touch contact_relation. Exit code 1 on failure; nothing is
+ * partially written (single transaction).
  */
 import fs from 'node:fs/promises'
-import { logger } from '@onecore/utilities'
+import knex, { Knex } from 'knex'
+import { KnexConnectionParameters, logger } from '@onecore/utilities'
 import config from '@src/common/config'
-import { makeAppContext } from '@src/context'
 import { ImportReport, runImport } from './import'
 import { Conflict } from './collapse'
 
-const parseArgs = (argv: string[]): { dryRun: boolean } => ({
-  dryRun: argv.includes('--dry-run'),
-})
+const USAGE = 'Usage: pnpm dev:script:import-contact-relations [--dry-run]'
+
+// Plain, one-shot knex instances rather than the app's Resource wrapper: a
+// Resource whose init() throws skips its own finally (the other resource's
+// healthcheck interval and the failed one's forever-retrying heal timer keep
+// the process alive after "failed" is logged), and a healthcheck blip during
+// a long run would call knex.destroy() out from under the running
+// transaction. Neither is appropriate for a script that runs once and exits.
+const connect = (params: KnexConnectionParameters): Knex =>
+  knex({
+    client: 'mssql',
+    connection: {
+      host: params.host,
+      user: params.user,
+      password: params.password,
+      port: Number(params.port),
+      database: params.database,
+    },
+    pool: { min: 1, max: 5 },
+  })
+
+const parseArgs = (argv: string[]): { dryRun: boolean } => {
+  const unknown = argv.filter((a) => a !== '--dry-run')
+  if (unknown.length > 0) {
+    throw new Error(`Unknown argument(s): ${unknown.join(' ')}\n${USAGE}`)
+  }
+  return { dryRun: argv.includes('--dry-run') }
+}
 
 const formatReport = (report: ImportReport): string =>
   [
@@ -58,14 +85,16 @@ const conflictsCsv = (conflicts: Conflict[]): string =>
 
 const main = async () => {
   const { dryRun } = parseArgs(process.argv.slice(2))
-  const { infrastructure } = makeAppContext(config)
-  const { xpandDb, contactsDb } = infrastructure
 
-  await Promise.all([xpandDb.init(), contactsDb.init()])
+  let xpandDb: Knex | undefined
+  let contactsDb: Knex | undefined
   try {
+    xpandDb = connect(config.xpandDatabase)
+    contactsDb = connect(config.contactsDatabase)
+
     const report = await runImport({
-      xpandDb: xpandDb.get(),
-      contactsDb: contactsDb.get(),
+      xpandDb,
+      contactsDb,
       dryRun,
     })
     logger.info({ report }, 'import-contact-relations: summary')
@@ -73,12 +102,12 @@ const main = async () => {
 
     if (report.conflicts.length > 0) {
       const stamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const file = `contact-relations-conflicts-${stamp}.csv`
+      const file = `contact-relations-conflicts-${dryRun ? 'dry-run-' : ''}${stamp}.csv`
       await fs.writeFile(file, `${conflictsCsv(report.conflicts)}\n`, 'utf8')
       process.stdout.write(`Konflikter skrivna till ${file}\n`)
     }
   } finally {
-    await Promise.all([xpandDb.close(), contactsDb.close()])
+    await Promise.all([xpandDb?.destroy(), contactsDb?.destroy()])
   }
 }
 
