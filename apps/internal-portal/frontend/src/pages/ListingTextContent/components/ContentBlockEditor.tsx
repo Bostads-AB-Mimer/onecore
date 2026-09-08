@@ -13,7 +13,7 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import { leasing } from '@onecore/types'
 import { z } from 'zod'
 
-type ContentBlockType = z.infer<typeof leasing.v1.ContentBlockTypeSchema>
+export type ContentBlockType = z.infer<typeof leasing.v1.ContentBlockTypeSchema>
 
 // ContentBlock can be either a text block or a link block
 export interface ContentBlock {
@@ -24,6 +24,9 @@ export interface ContentBlock {
   // Link block fields
   name?: string
   url?: string
+  // UI-only writing hint set by templates, shown as the field placeholder.
+  // Never persisted (see toApiBlocks).
+  placeholder?: string
 }
 
 interface ContentBlockEditorProps {
@@ -37,6 +40,8 @@ interface ContentBlockEditorProps {
   onDelete: (id: string) => void
   isDragging?: boolean
   dragListeners?: Record<string, unknown>
+  // Marks an empty text block as invalid (shown after a failed save attempt).
+  showEmptyError?: boolean
 }
 
 export const blockTypeLabels: Record<ContentBlockType, string> = {
@@ -66,9 +71,11 @@ export const ContentBlockEditor = ({
   onDelete,
   isDragging = false,
   dragListeners,
+  showEmptyError = false,
 }: ContentBlockEditorProps) => {
   const isLinkBlock = block.type === 'link'
   const urlValid = isLinkBlock ? isValidUrl(block.url || '') : true
+  const contentMissing = showEmptyError && !block.content?.trim()
 
   return (
     <Paper
@@ -192,14 +199,18 @@ export const ContentBlockEditor = ({
               value={block.content || ''}
               onChange={(e) => onUpdate(block.id, 'content', e.target.value)}
               placeholder={
-                block.type === 'bullet_list'
+                block.placeholder ??
+                (block.type === 'bullet_list'
                   ? 'Skriv en punkt per rad...'
-                  : 'Skriv innehåll...'
+                  : 'Skriv innehåll...')
               }
+              error={contentMissing}
               helperText={
-                block.type === 'bullet_list'
-                  ? 'Skriv varje punkt på en ny rad'
-                  : ''
+                contentMissing
+                  ? 'Innehåll krävs'
+                  : block.type === 'bullet_list'
+                    ? 'Skriv varje punkt på en ny rad'
+                    : ''
               }
             />
           )}

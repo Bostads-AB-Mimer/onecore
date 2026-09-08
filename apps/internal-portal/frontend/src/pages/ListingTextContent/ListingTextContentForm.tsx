@@ -33,6 +33,8 @@ import {
   toApiBlocks,
   hasInvalidBlock,
 } from './utils/contentBlocks'
+import { roomCountFromProperty } from './utils/templates'
+import { listingTextTemplates } from './templates/listingTextTemplates'
 
 const ListingTextContentForm = () => {
   const navigate = useNavigate()
@@ -46,6 +48,8 @@ const ListingTextContentForm = () => {
   )
   const [blocks, setBlocks] = useState<ContentBlock[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  // Per-block validation errors are only shown after a failed save attempt.
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
 
   // Validate rental object code
   const validationQuery = useValidateRentalObject(objectCode)
@@ -55,9 +59,19 @@ const ListingTextContentForm = () => {
   const validatedCode = validationQuery.validatedCode?.trim()
   const lookupCode = isEditMode
     ? rentalObjectCode
-    : validationQuery.data === true && validatedCode
+    : validationQuery.data != null && validatedCode
       ? validatedCode
       : undefined
+
+  // Suggests how many room sections a template should start with.
+  const suggestedRoomCount = roomCountFromProperty(
+    validationQuery.data?.property
+  )
+
+  // In create mode the object number must be confirmed to exist before
+  // saving; a failed lookup (not just a 404) also blocks the save.
+  const objectNotFound = !isEditMode && validationQuery.data === null
+  const objectLookupFailed = !isEditMode && validationQuery.isError
   const {
     data: existingData,
     isLoading: isLoadingExisting,
@@ -85,9 +99,13 @@ const ListingTextContentForm = () => {
       return
     }
 
-    // Check if rental object code is valid
-    if (!isEditMode && validationQuery.data === false) {
+    if (objectNotFound) {
       toast.error('Objektsnumret finns inte i systemet')
+      return
+    }
+
+    if (objectLookupFailed) {
+      toast.error('Objektsnumret kunde inte verifieras, försök igen')
       return
     }
 
@@ -97,9 +115,12 @@ const ListingTextContentForm = () => {
     }
 
     if (hasInvalidBlock(blocks)) {
+      setShowValidationErrors(true)
       toast.error('Kontrollera att alla block har giltigt innehåll')
       return
     }
+
+    setShowValidationErrors(false)
 
     try {
       const contentBlocks = toApiBlocks(blocks)
@@ -267,9 +288,8 @@ const ListingTextContentForm = () => {
                   placeholder="Ange objektsnummer..."
                   disabled={isEditMode}
                   error={
-                    !isEditMode &&
                     objectCode.trim().length > 0 &&
-                    validationQuery.data === false
+                    (objectNotFound || objectLookupFailed)
                   }
                   helperText={
                     isEditMode
@@ -278,11 +298,13 @@ const ListingTextContentForm = () => {
                         ? 'Ange ett objektsnummer'
                         : validationQuery.isLoading
                           ? 'Verifierar objektsnummer...'
-                          : validationQuery.data === false
+                          : objectNotFound
                             ? 'Objektsnumret hittas inte'
-                            : validationQuery.data === true
-                              ? 'Objektsnumret är giltigt'
-                              : 'Ange ett objektsnummer'
+                            : objectLookupFailed
+                              ? 'Objektsnumret kunde inte verifieras'
+                              : validationQuery.data != null
+                                ? 'Objektsnumret är giltigt'
+                                : 'Ange ett objektsnummer'
                   }
                 />
               </Box>
@@ -304,7 +326,13 @@ const ListingTextContentForm = () => {
                 </Alert>
               )}
 
-              <ContentBlocksList blocks={blocks} onBlocksChange={setBlocks} />
+              <ContentBlocksList
+                blocks={blocks}
+                onBlocksChange={setBlocks}
+                templates={listingTextTemplates}
+                suggestedRoomCount={suggestedRoomCount}
+                showValidationErrors={showValidationErrors}
+              />
 
               {marketArea && (
                 <Paper variant="outlined" sx={{ padding: 2 }}>
