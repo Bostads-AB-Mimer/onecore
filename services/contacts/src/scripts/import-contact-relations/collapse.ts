@@ -10,12 +10,13 @@ export type Conflict = {
   recipients: { contactCode: string; leaseIds: string[] }[]
 }
 
-const byCode = (a: string, b: string) => a.localeCompare(b)
+const ascending = (a: string, b: string) => a.localeCompare(b)
 
 /**
  * Collapses Xpand's per-lease annan fakturamottagare rows to contact level:
  * one edge per holder when every lease agrees on the recipient, otherwise a
- * conflict. Output is sorted by holder code for deterministic reports.
+ * conflict. Output is sorted by holder code, and within a conflict by
+ * recipient code and lease id, for deterministic reports.
  */
 export const collapseInvoiceRecipients = (
   candidates: InvoiceRecipientCandidate[]
@@ -35,7 +36,7 @@ export const collapseInvoiceRecipients = (
   const conflicts: Conflict[] = []
 
   for (const [holder, recipients] of [...byHolder.entries()].sort(([a], [b]) =>
-    byCode(a, b)
+    ascending(a, b)
   )) {
     if (recipients.size === 1) {
       const [recipient] = recipients.keys()
@@ -48,10 +49,10 @@ export const collapseInvoiceRecipients = (
       conflicts.push({
         holderContactCode: holder,
         recipients: [...recipients.entries()]
-          .sort(([a], [b]) => byCode(a, b))
+          .sort(([a], [b]) => ascending(a, b))
           .map(([contactCode, leaseIds]) => ({
             contactCode,
-            leaseIds: [...leaseIds].sort(byCode),
+            leaseIds: [...leaseIds].sort(ascending),
           })),
       })
     }

@@ -23,9 +23,9 @@ describe('collapseInvoiceRecipients', () => {
 
   it('reports a holder with two different recipients as a conflict, with lease ids', () => {
     const result = collapseInvoiceRecipients([
+      { holderContactCode: 'P1', recipientContactCode: 'P9', leaseId: 'L3' },
       { holderContactCode: 'P1', recipientContactCode: 'P8', leaseId: 'L1' },
       { holderContactCode: 'P1', recipientContactCode: 'P9', leaseId: 'L2' },
-      { holderContactCode: 'P1', recipientContactCode: 'P9', leaseId: 'L3' },
     ])
 
     expect(result.edges).toEqual([])
@@ -35,6 +35,24 @@ describe('collapseInvoiceRecipients', () => {
         recipients: [
           { contactCode: 'P8', leaseIds: ['L1'] },
           { contactCode: 'P9', leaseIds: ['L2', 'L3'] },
+        ],
+      },
+    ])
+  })
+
+  it('dedupes identical candidate rows so a lease id appears once', () => {
+    const result = collapseInvoiceRecipients([
+      { holderContactCode: 'P1', recipientContactCode: 'P8', leaseId: 'L1' },
+      { holderContactCode: 'P1', recipientContactCode: 'P8', leaseId: 'L1' },
+      { holderContactCode: 'P1', recipientContactCode: 'P9', leaseId: 'L2' },
+    ])
+
+    expect(result.conflicts).toEqual([
+      {
+        holderContactCode: 'P1',
+        recipients: [
+          { contactCode: 'P8', leaseIds: ['L1'] },
+          { contactCode: 'P9', leaseIds: ['L2'] },
         ],
       },
     ])
