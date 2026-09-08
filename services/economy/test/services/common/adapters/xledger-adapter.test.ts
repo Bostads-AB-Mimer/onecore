@@ -327,6 +327,7 @@ describe(adapter.getPaymentsSince, () => {
     cursor?: string
     invoiceNumber?: string | null
     extIdentifier?: string | null
+    amount?: string
   }) => {
     const sourceCode = overrides?.sourceCode ?? 'OCR'
     return {
@@ -341,7 +342,7 @@ describe(adapter.getPaymentsSince, () => {
           overrides?.extIdentifier !== undefined
             ? overrides.extIdentifier
             : '55123456',
-        amount: '1000.00',
+        amount: overrides?.amount ?? '-1000.00',
         text: 'Hyra',
         paymentDate: '2026-04-01',
         lastPaymentDate: '2026-04-01',
@@ -395,7 +396,7 @@ describe(adapter.getPaymentsSince, () => {
     expect(result.events[0]).toMatchObject({
       invoiceId: '55123456',
       matchId: 42,
-      amount: 1000,
+      amount: -1000,
       paymentDate: new Date('2026-04-02'),
       transactionSourceCode: 'OCR',
     })
