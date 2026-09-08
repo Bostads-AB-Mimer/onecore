@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs'
 import { defineConfig } from 'eslint/config'
 import typescriptEslint from 'typescript-eslint'
 import nPlugin from 'eslint-plugin-n'
@@ -5,6 +6,8 @@ import js from '@eslint/js'
 import globals from 'globals'
 import importPlugin from 'eslint-plugin-import'
 import prettier from 'eslint-config-prettier'
+
+const { engines } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)))
 
 export default defineConfig([
   js.configs.recommended,
@@ -35,6 +38,7 @@ export default defineConfig([
       },
       node: {
         tryExtensions: ['.js', '.ts'],
+        version: engines.node,
       },
     },
     linterOptions: {
